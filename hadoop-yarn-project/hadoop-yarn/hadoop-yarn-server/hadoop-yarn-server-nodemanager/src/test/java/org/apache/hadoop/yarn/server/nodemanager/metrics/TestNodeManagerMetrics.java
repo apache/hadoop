@@ -50,6 +50,7 @@ public class TestNodeManagerMetrics {
   @Before
   public void setup() {
     DefaultMetricsSystem.initialize("NodeManager");
+    DefaultMetricsSystem.setMiniClusterMode(true);
     metrics = NodeManagerMetrics.create();
   }
 
@@ -180,9 +181,8 @@ public class TestNodeManagerMetrics {
   }
 
   @Test
-  public void testDispatcherNMMetricsHistogram() throws Exception {
+  public void testNMDispatcherMetricsHistogram() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
-    DefaultMetricsSystem.setMiniClusterMode(true);
 
     NodeManager nm = new NodeManager();
     nm.init(conf);
@@ -192,7 +192,7 @@ public class TestNodeManagerMetrics {
         "GenericEventTypeMetrics for " + TestEnum.class.getName(),
         "Metrics for " + dispatcher.getName());
 
-    GenericEventTypeMetrics genericEventTypeMetrics =
+    GenericEventTypeMetrics<TestEnum> genericEventTypeMetrics =
         new GenericEventTypeMetrics.EventTypeMetricsBuilder()
         .setMs(DefaultMetricsSystem.instance())
         .setInfo(metricsInfo)
@@ -200,8 +200,7 @@ public class TestNodeManagerMetrics {
         .setEnums(TestEnum.class.getEnumConstants())
         .build().registerMetrics();
 
-    dispatcher.addMetrics(genericEventTypeMetrics,
-        genericEventTypeMetrics.getEnumClass());
+    dispatcher.addMetrics(genericEventTypeMetrics, genericEventTypeMetrics.getEnumClass());
     dispatcher.init(conf);
 
     // Register handler

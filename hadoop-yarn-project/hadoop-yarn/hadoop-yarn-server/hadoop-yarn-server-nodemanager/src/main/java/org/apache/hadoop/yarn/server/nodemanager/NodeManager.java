@@ -1010,8 +1010,9 @@ public class NodeManager extends CompositeService
    */
   protected AsyncDispatcher createNMDispatcher() {
     dispatcher = new AsyncDispatcher("NM Event dispatcher");
-    GenericEventTypeMetrics eventTypeMetrics = GenericEventTypeMetricsManager.create(
-        dispatcher.getName(), ContainerManagerEventType.class);
+    GenericEventTypeMetrics<ContainerManagerEventType> eventTypeMetrics =
+        GenericEventTypeMetricsManager.create(
+            dispatcher.getName(), ContainerManagerEventType.class);
     dispatcher.addMetrics(eventTypeMetrics, eventTypeMetrics.getEnumClass());
     return dispatcher;
   }

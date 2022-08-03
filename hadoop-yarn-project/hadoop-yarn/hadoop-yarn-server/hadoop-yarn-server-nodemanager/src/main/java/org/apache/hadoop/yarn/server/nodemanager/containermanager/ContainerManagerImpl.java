@@ -124,10 +124,6 @@ import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 
-import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
@@ -339,59 +335,47 @@ public class ContainerManagerImpl extends CompositeService implements
   protected AsyncDispatcher createContainerManagerDispatcher() {
     dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
 
-    GenericEventTypeMetrics
-        containerEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), ContainerEventType.class);
+    GenericEventTypeMetrics containerEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(dispatcher.getName(), ContainerEventType.class);
     dispatcher.addMetrics(containerEventTypeMetrics,
         containerEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        localizationEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), LocalizationEventType.class);
+    GenericEventTypeMetrics localizationEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizationEventType.class);
     dispatcher.addMetrics(localizationEventTypeMetrics,
         localizationEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        applicationEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), ApplicationEventType.class);
+    GenericEventTypeMetrics<ApplicationEventType> applicationEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(dispatcher.getName(), ApplicationEventType.class);
     dispatcher.addMetrics(applicationEventTypeMetrics,
         applicationEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        containersLauncherEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), ContainersLauncherEventType.class);
+    GenericEventTypeMetrics<ContainersLauncherEventType> containersLauncherEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(
+            dispatcher.getName(), ContainersLauncherEventType.class);
     dispatcher.addMetrics(containersLauncherEventTypeMetrics,
         containersLauncherEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        containerSchedulerEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), ContainerSchedulerEventType.class);
+    GenericEventTypeMetrics<ContainerSchedulerEventType> containerSchedulerEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(
+            dispatcher.getName(), ContainerSchedulerEventType.class);
     dispatcher.addMetrics(containerSchedulerEventTypeMetrics,
         containerSchedulerEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        containersMonitorEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), ContainersMonitorEventType.class);
+    GenericEventTypeMetrics<ContainersMonitorEventType> containersMonitorEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(
+            dispatcher.getName(), ContainersMonitorEventType.class);
     dispatcher.addMetrics(containersMonitorEventTypeMetrics,
          containersMonitorEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        auxServicesEventTypeTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), AuxServicesEventType.class);
+    GenericEventTypeMetrics<AuxServicesEventType> auxServicesEventTypeTypeMetrics =
+        GenericEventTypeMetricsManager.create(
+            dispatcher.getName(), AuxServicesEventType.class);
     dispatcher.addMetrics(auxServicesEventTypeTypeMetrics,
         auxServicesEventTypeTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics
-        localizerEventTypeMetrics =
-        GenericEventTypeMetricsManager.
-            create(dispatcher.getName(), LocalizerEventType.class);
+    GenericEventTypeMetrics localizerEventTypeMetrics = GenericEventTypeMetricsManager.create(
+        dispatcher.getName(), LocalizerEventType.class);
     dispatcher.addMetrics(localizerEventTypeMetrics,
         localizerEventTypeMetrics.getEnumClass());
 
