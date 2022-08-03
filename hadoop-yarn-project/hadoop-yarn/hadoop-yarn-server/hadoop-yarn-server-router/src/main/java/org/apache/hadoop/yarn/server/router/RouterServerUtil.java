@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.omg.SendingContext.RunTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +80,26 @@ public final class RouterServerUtil {
     } else {
       LOG.error(errMsg);
       throw new IOException(errMsg);
+    }
+  }
+
+  /**
+   * Throws an RunTimeException due to an error.
+   *
+   * @param errMsg the error message
+   * @param t the throwable raised in the called class.
+   * @throws RuntimeException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowRunTimeException(String errMsg, Throwable t)
+      throws RuntimeException {
+    if (t != null) {
+      LOG.error(errMsg, t);
+      throw new RuntimeException(errMsg, t);
+    } else {
+      LOG.error(errMsg);
+      throw new RuntimeException(errMsg);
     }
   }
 
