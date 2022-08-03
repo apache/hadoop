@@ -1002,8 +1002,14 @@ the same for as the existing account on which other requests are made.
 `fs.azure.metric.account.key`: This is the access key for the storage account
 used for pushing metrics to the store.
 
-`fs.azure.enable.metric.collection`: This configuration provides an option to
-specify whether we want to push the metrics or not.
+`fs.azure.enable.backoff.metric.collection`: This configuration provides an
+option to
+specify whether we want to push the backoff metrics or not.
+By default, this config will be set to false.
+
+`fs.azure.enable.footer.metric.collection`: This configuration provides an
+option to
+specify whether we want to push the footer metrics or not.
 By default, this config will be set to false.
 
 `fs.azure.metric.uri`: This configuration provides the uri in the format of
