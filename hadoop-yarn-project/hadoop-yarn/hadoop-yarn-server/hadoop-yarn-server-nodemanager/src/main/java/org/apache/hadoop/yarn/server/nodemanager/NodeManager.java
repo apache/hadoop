@@ -148,8 +148,6 @@ public class NodeManager extends CompositeService
 
   private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
 
-  private GenericEventTypeMetrics containerManagerEventTypeMetrics;
-
   /**
    * Default Container State transition listener.
    */
@@ -1012,10 +1010,9 @@ public class NodeManager extends CompositeService
    */
   protected AsyncDispatcher createNMDispatcher() {
     dispatcher = new AsyncDispatcher("NM Event dispatcher");
-    containerManagerEventTypeMetrics = GenericEventTypeMetricsManager.create(
+    GenericEventTypeMetrics eventTypeMetrics = GenericEventTypeMetricsManager.create(
         dispatcher.getName(), ContainerManagerEventType.class);
-    dispatcher.addMetrics(containerManagerEventTypeMetrics,
-        containerManagerEventTypeMetrics.getEnumClass());
+    dispatcher.addMetrics(eventTypeMetrics, eventTypeMetrics.getEnumClass());
     return dispatcher;
   }
 
@@ -1066,11 +1063,5 @@ public class NodeManager extends CompositeService
   @Private
   public AsyncDispatcher getDispatcher() {
     return dispatcher;
-  }
-
-  @VisibleForTesting
-  @Private
-  public GenericEventTypeMetrics getContainerManagerEventTypeMetrics() {
-    return containerManagerEventTypeMetrics;
   }
 }
