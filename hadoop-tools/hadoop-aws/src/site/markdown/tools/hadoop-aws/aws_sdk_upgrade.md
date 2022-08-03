@@ -45,7 +45,7 @@ were under `com.amazonaws`.
 - Interface change: [com.amazonaws.auth.AWSCredentialsProvider](https://github.com/aws/aws-sdk-java/blob/master/aws-java-sdk-core/src/main/java/com/amazonaws/auth/AWSCredentialsProvider.java)
 has been replaced by [software.amazon.awssdk.auth.credentials.AwsCredentialsProvider](https://github.com/aws/aws-sdk-java-v2/blob/master/core/auth/src/main/java/software/amazon/awssdk/auth/credentials/AwsCredentialsProvider.java).
 - Credential provider class changes: the package and class names of credential providers have
-  changed.
+changed.
 
 The change in interface will mean that custom credential providers will need to be updated to now 
 implement `AwsCredentialsProvider` instead of `AWSCredentialProvider`.
@@ -72,6 +72,4 @@ Interface change: [com.amazonaws.auth.Signer](https://github.com/aws/aws-sdk-jav
 has been replaced by [software.amazon.awssdk.core.signer.Signer](https://github.com/aws/aws-sdk-java-v2/blob/master/core/sdk-core/src/main/java/software/amazon/awssdk/core/signer/Signer.java).
 
 The change in signers will mean the custom signers will need to be updated to implement the new 
-interface. 
-
-
+interface.

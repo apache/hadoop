@@ -58,9 +58,13 @@ import org.apache.hadoop.io.IOUtils;
  *   rethrown; exceptions other than 'no credentials' have priority.</li>
  *   <li>Special handling of {@link AnonymousAWSCredentials}.</li>
  * </ol>
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@Deprecated
 public class AWSCredentialProviderList implements AWSCredentialsProvider,
     AutoCloseable {
 
