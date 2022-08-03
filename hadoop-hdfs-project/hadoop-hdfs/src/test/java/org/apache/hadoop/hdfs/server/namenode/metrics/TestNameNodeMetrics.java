@@ -1131,6 +1131,7 @@ public class TestNameNodeMetrics {
     }
 
   }
+
   @Test
   public void testNNRPCMetricIntegrity() {
     RpcDetailedMetrics metrics =
