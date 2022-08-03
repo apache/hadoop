@@ -2159,10 +2159,10 @@ public class MiniDFSCluster implements AutoCloseable {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
-        LOG.error("Test resulted in an unexpected exit",
-            ExitUtil.getFirstExitException());
+        ExitUtil.ExitException exitException = ExitUtil.getFirstExitException();
+        LOG.error("Test resulted in an unexpected exit", exitException);
         ExitUtil.resetFirstExitException();
-        throw new AssertionError("Test resulted in an unexpected exit");
+        throw new AssertionError("Test resulted in an unexpected exit", exitException);
       }
     }
     if (closeFileSystem) {
