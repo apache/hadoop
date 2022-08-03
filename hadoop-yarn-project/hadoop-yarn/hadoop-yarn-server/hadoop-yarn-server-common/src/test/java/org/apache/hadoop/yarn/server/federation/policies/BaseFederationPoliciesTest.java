@@ -203,9 +203,9 @@ public abstract class BaseFederationPoliciesTest {
         + "\"appsRunning\":0, \"appsFailed\":0, \"appsKilled\":1,\"reservedMB\":0,\"availableMB\":"
         + mem + ", \"allocatedMB\":0,\"reservedVirtualCores\":0, \"availableVirtualCores\":2216,"
         + "\"allocatedVirtualCores\":0, \"containersAllocated\":0,\"containersReserved\":0,"
-        + "\"containersPending\":0,\"totalMB\":28364800, \"totalVirtualCores\":2216,"
-        + "\"totalNodes\":278,\"lostNodes\":1,\"unhealthyNodes\":0,\"decommissionedNodes\":0,"
-        + "\"rebootedNodes\":0,\"activeNodes\":277}}";
+        + "\"containersPending\":0,\"totalMB\":28364800, \"totalVirtualCores\":2216,\"totalNodes\":278,"
+        + "\"lostNodes\":1,\"unhealthyNodes\":0,\"decommissionedNodes\":0, \"rebootedNodes\":0,"
+        + "\"activeNodes\":277}}";
     return clusterMetrics;
   }
 
