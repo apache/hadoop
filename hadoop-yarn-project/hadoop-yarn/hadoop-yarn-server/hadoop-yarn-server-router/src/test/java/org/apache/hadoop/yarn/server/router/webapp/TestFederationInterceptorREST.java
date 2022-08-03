@@ -714,7 +714,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         ApplicationAttemptId.newInstance(appId, 1);
 
     ContainerInfo containerInfo = interceptor.getContainer(null, null,
-        appId.toString(), appAttemptId.toString(), 0);
+        appId.toString(), appAttemptId.toString(), "0");
     Assert.assertNotNull(containerInfo);
   }
 }
