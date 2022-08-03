@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -99,7 +100,7 @@ public class GetSubClustersInfoResponsePBImpl
       builder.clearSubClusterInfos();
       return;
     }
-    this.subClusterInfos.addAll(subClusters);
+    this.subClusterInfos = subClusters.stream().collect(Collectors.toList());
   }
 
   private void initSubClustersInfoList() {
