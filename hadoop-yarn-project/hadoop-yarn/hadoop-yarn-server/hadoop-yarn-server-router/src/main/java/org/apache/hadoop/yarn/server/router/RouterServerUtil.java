@@ -60,4 +60,23 @@ public final class RouterServerUtil {
     }
   }
 
+  /**
+   * Throws an RunTimeException due to an error.
+   *
+   * @param errMsg the error message
+   * @param t the throwable raised in the called class.
+   * @throws RuntimeException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowRunTimeException(String errMsg, Throwable t)
+          throws RuntimeException {
+    if (t != null) {
+      LOG.error(errMsg, t);
+      throw new RuntimeException(errMsg, t);
+    } else {
+      LOG.error(errMsg);
+      throw new RuntimeException(errMsg);
+    }
+  }
 }

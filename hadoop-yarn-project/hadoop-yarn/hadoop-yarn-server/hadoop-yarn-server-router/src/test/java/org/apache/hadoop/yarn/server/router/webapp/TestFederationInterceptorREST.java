@@ -25,11 +25,9 @@ import java.util.HashMap;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -52,6 +50,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.Assert;
@@ -625,5 +624,22 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(node2Value);
     Assert.assertEquals(1, node2Value.getNodeLabelsName().size());
     Assert.assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
+  }
+
+  @Test
+  public void testGetContainer()
+      throws IOException, InterruptedException, YarnException {
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerInfo containerInfo = interceptor.getContainer(null, null,
+        appId.toString(), appAttemptId.toString(), "0");
+    Assert.assertNotNull(containerInfo);
   }
 }
