@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class AbfsDriverMetrics {
+public class AbfsBackoffMetrics {
 
   private AtomicLong numberOfRequestsSucceeded;
 
@@ -54,10 +54,10 @@ public class AbfsDriverMetrics {
 
   private AtomicLong numberOfRequestsFailed;
 
-  private final Map<String, AbfsDriverMetrics> metricsMap
+  private final Map<String, AbfsBackoffMetrics> metricsMap
       = new ConcurrentHashMap<>();
 
-  public AbfsDriverMetrics() {
+  public AbfsBackoffMetrics() {
     initializeMap();
     this.numberOfIOPSThrottledRequests = new AtomicLong();
     this.numberOfBandwidthThrottledRequests = new AtomicLong();
@@ -69,7 +69,7 @@ public class AbfsDriverMetrics {
     this.numberOfNetworkFailedRequests = new AtomicLong();
   }
 
-  public AbfsDriverMetrics(String retryCount) {
+  public AbfsBackoffMetrics(String retryCount) {
     this.retryCount = retryCount;
     this.numberOfRequestsSucceeded = new AtomicLong();
     this.minBackoff = new AtomicLong(Long.MAX_VALUE);
@@ -82,7 +82,7 @@ public class AbfsDriverMetrics {
     ArrayList<String> retryCountList = new ArrayList<String>(
         Arrays.asList("1", "2", "3", "4", "5_15", "15_25", "25AndAbove"));
     for (String s : retryCountList) {
-      metricsMap.put(s, new AbfsDriverMetrics(s));
+      metricsMap.put(s, new AbfsBackoffMetrics(s));
     }
   }
 
@@ -130,7 +130,7 @@ public class AbfsDriverMetrics {
     return totalNumberOfRequests;
   }
 
-  public Map<String, AbfsDriverMetrics> getMetricsMap() {
+  public Map<String, AbfsBackoffMetrics> getMetricsMap() {
     return metricsMap;
   }
 
@@ -169,7 +169,7 @@ public class AbfsDriverMetrics {
         + numberOfOtherThrottledRequests.get();
     double percentageOfRequestsThrottled =
         ((double) totalRequestsThrottled / totalNumberOfRequests.get()) * 100;
-    for (Map.Entry<String, AbfsDriverMetrics> entry : metricsMap.entrySet()) {
+    for (Map.Entry<String, AbfsBackoffMetrics> entry : metricsMap.entrySet()) {
       metricString.append("#RCTSI#_").append(entry.getKey())
           .append("R_").append("=")
           .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");

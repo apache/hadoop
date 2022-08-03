@@ -177,7 +177,14 @@ public class TracingContext {
       header = clientCorrelationID + ":" + clientRequestId;
       break;
     case INTERNAL_METRIC_FORMAT:
-      header = clientCorrelationID + ":" + clientRequestId + ":" +  fileSystemID + ":" + metricResults;
+      String[] metric = metricResults.split("@");
+      header = clientCorrelationID + ":" + clientRequestId + ":" +  fileSystemID + ":" + "BO:" + metric[0] + "FO:" + metric[1];
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      header = clientCorrelationID + ":" + clientRequestId + ":" +  fileSystemID + ":" + "FO:" + metricResults;
+      break;
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      header = clientCorrelationID + ":" + clientRequestId + ":" +  fileSystemID + ":" + "BO:" + metricResults;
       break;
     default:
       header = clientRequestId; //case SINGLE_ID_FORMAT

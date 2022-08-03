@@ -65,7 +65,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private final IOStatisticsStore ioStatisticsStore;
 
-  private AtomicReference<AbfsDriverMetrics> abfsDriverMetrics = null;
+  private AtomicReference<AbfsBackoffMetrics> abfsBackoffMetrics = null;
 
   private List<AbfsReadFooterMetrics> readFooterMetricsList;
 
@@ -127,7 +127,7 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
-    abfsDriverMetrics = new AtomicReference<>(new AbfsDriverMetrics());
+    abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
     readFooterMetricsList = new ArrayList<>();
   }
 
@@ -196,8 +196,8 @@ public class AbfsCountersImpl implements AbfsCounters {
     return registry;
   }
 
-  public AbfsDriverMetrics getAbfsDriverMetrics() {
-    return abfsDriverMetrics.get();
+  public AbfsBackoffMetrics getAbfsBackoffMetrics() {
+    return abfsBackoffMetrics.get();
   }
 
   public List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics() {

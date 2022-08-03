@@ -36,7 +36,7 @@ public class TestAbfsRestOperation extends
   }
 
   @Test
-  public void testDriverRetryMetrics() throws Exception {
+  public void testBackoffRetryMetrics() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(getFileSystem()));
 
@@ -53,7 +53,7 @@ public class TestAbfsRestOperation extends
       getMetrics.invoke(op, retryCount, statusCode);
     }
     //For retry count greater than max configured value, the request should fail
-    Assert.assertEquals(testClient.getAbfsCounters().getAbfsDriverMetrics().getNumberOfRequestsFailed().toString(), "3");
+    Assert.assertEquals(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed().toString(), "3");
     fs.close();
   }
 }
