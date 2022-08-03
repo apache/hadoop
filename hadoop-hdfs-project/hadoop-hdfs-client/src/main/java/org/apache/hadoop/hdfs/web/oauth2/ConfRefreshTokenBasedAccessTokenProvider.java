@@ -19,20 +19,17 @@
 package org.apache.hadoop.hdfs.web.oauth2;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Timer;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
@@ -42,8 +39,17 @@ import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_ID;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.EXPIRES_IN;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.GRANT_TYPE;
 import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.REFRESH_TOKEN;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.URLENCODED;
 import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
+
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.EntityBuilder;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.RequestBuilder;
+import org.apache.http.entity.ContentType;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
 
 /**
  * Supply a access token obtained via a refresh token (provided through the
@@ -103,30 +109,35 @@ public class ConfRefreshTokenBasedAccessTokenProvider
   }
 
   void refresh() throws IOException {
-    OkHttpClient client =
-        new OkHttpClient.Builder().connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-                TimeUnit.MILLISECONDS)
-            .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
+    HttpEntity reqEntity = EntityBuilder.create()
+            .setContentType(ContentType.APPLICATION_FORM_URLENCODED.withCharset(StandardCharsets.UTF_8))
+            .setParameters(
+                    new BasicNameValuePair(GRANT_TYPE, REFRESH_TOKEN),
+                    new BasicNameValuePair(REFRESH_TOKEN, refreshToken),
+                    new BasicNameValuePair(CLIENT_ID, clientId))
             .build();
 
-    String bodyString =
-        Utils.postBody(GRANT_TYPE, REFRESH_TOKEN, REFRESH_TOKEN, refreshToken, CLIENT_ID, clientId);
+    HttpUriRequest request = RequestBuilder
+            .post(refreshURL)
+            .setEntity(reqEntity)
+            .build();
 
-    RequestBody body = RequestBody.create(bodyString, URLENCODED);
+    RequestConfig reqConf = RequestConfig.custom()
+            .setConnectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
+            .setSocketTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
+            .build();
 
-    Request request = new Request.Builder().url(refreshURL).post(body).build();
-    try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        throw new IOException("Unexpected code " + response);
-      }
-      if (response.code() != HttpStatus.SC_OK) {
+    HttpClientBuilder clientBuilder = HttpClientBuilder.create().setDefaultRequestConfig(reqConf);
+    try (CloseableHttpClient client = clientBuilder.build();
+         CloseableHttpResponse response = client.execute(request)) {
+      int statusCode = response.getStatusLine().getStatusCode();
+      String respText = IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+      if (statusCode != HttpStatus.SC_OK) {
         throw new IllegalArgumentException(
-            "Received invalid http response: " + response.code() + ", text = "
-                + response.toString());
+                "Received invalid http response: " + statusCode + ", text = " + respText);
       }
 
-      Map<?, ?> responseBody = JsonSerialization.mapReader().readValue(response.body().string());
-
+      Map<?, ?> responseBody = JsonSerialization.mapReader().readValue(respText);
       String newExpiresIn = responseBody.get(EXPIRES_IN).toString();
       accessTokenTimer.setExpiresIn(newExpiresIn);
 
