@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -49,17 +49,18 @@ import static java.util.Objects.requireNonNull;
 /**
  * Provides an {@link InputStream} that allows reading from an S3 file.
  */
-public abstract class S3InputStream
+public abstract class S3ARemoteInputStream
     extends InputStream
     implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
 
-  private static final Logger LOG = LoggerFactory.getLogger(S3InputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ARemoteInputStream.class);
 
   // The S3 file read by this instance.
-  private S3File s3File;
+  private S3ARemoteObject remoteObject;
 
   // Reading of S3 file takes place through this reader.
-  private S3Reader reader;
+  private S3ARemoteObjectReader reader;
 
   // Name of this stream. Used only for logging.
   private final String name;
@@ -93,7 +94,7 @@ public abstract class S3InputStream
   private final IOStatistics ioStatistics;
 
   /**
-   * Initializes a new instance of the {@code S3InputStream} class.
+   * Initializes a new instance of the {@code S3ARemoteInputStream} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -104,7 +105,7 @@ public abstract class S3InputStream
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
    */
-  public S3InputStream(
+  public S3ARemoteInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
@@ -115,7 +116,7 @@ public abstract class S3InputStream
     this.client = requireNonNull(client);
     this.streamStatistics = requireNonNull(streamStatistics);
     this.ioStatistics = streamStatistics.getIOStatistics();
-    this.name = S3File.getPath(s3Attributes);
+    this.name = S3ARemoteObject.getPath(s3Attributes);
     this.changeTracker = new ChangeTracker(
         this.name,
         context.getChangeDetectionPolicy(),
@@ -130,8 +131,8 @@ public abstract class S3InputStream
 
     this.blockData = new BlockData(fileSize, bufferSize);
     this.fpos = new FilePosition(fileSize, bufferSize);
-    this.s3File = this.getS3File();
-    this.reader = new S3Reader(this.s3File);
+    this.remoteObject = this.getS3File();
+    this.reader = new S3ARemoteObjectReader(this.remoteObject);
 
     this.seekTargetPos = 0;
   }
@@ -254,7 +255,7 @@ public abstract class S3InputStream
   public int read() throws IOException {
     this.throwIfClosed();
 
-    if (this.s3File.size() == 0 || this.seekTargetPos >= this.s3File.size()) {
+    if (this.remoteObject.size() == 0 || this.seekTargetPos >= this.remoteObject.size()) {
       return -1;
     }
 
@@ -300,7 +301,7 @@ public abstract class S3InputStream
       return 0;
     }
 
-    if (this.s3File.size() == 0 || this.seekTargetPos >= this.s3File.size()) {
+    if (this.remoteObject.size() == 0 || this.seekTargetPos >= this.remoteObject.size()) {
       return -1;
     }
 
@@ -328,11 +329,11 @@ public abstract class S3InputStream
     return numBytesRead;
   }
 
-  protected S3File getFile() {
-    return this.s3File;
+  protected S3ARemoteObject getFile() {
+    return this.remoteObject;
   }
 
-  protected S3Reader getReader() {
+  protected S3ARemoteObjectReader getReader() {
     return this.reader;
   }
 
@@ -378,8 +379,8 @@ public abstract class S3InputStream
     }
   }
 
-  protected S3File getS3File() {
-    return new S3File(
+  protected S3ARemoteObject getS3File() {
+    return new S3ARemoteObject(
         this.context,
         this.s3Attributes,
         this.client,
@@ -413,7 +414,7 @@ public abstract class S3InputStream
     this.blockData = null;
     this.reader.close();
     this.reader = null;
-    this.s3File = null;
+    this.remoteObject = null;
     this.fpos.invalidate();
     try {
       this.client.close();

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 
 import java.io.IOException;
@@ -45,8 +45,8 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 /**
  * Encapsulates low level interactions with S3 object on AWS.
  */
-public class S3File {
-  private static final Logger LOG = LoggerFactory.getLogger(S3File.class);
+public class S3ARemoteObject {
+  private static final Logger LOG = LoggerFactory.getLogger(S3ARemoteObject.class);
 
   /**
    * Read-specific operation context.
@@ -90,7 +90,7 @@ public class S3File {
   private static final int DRAIN_BUFFER_SIZE = 16384;
 
   /**
-   * Initializes a new instance of the {@code S3File} class.
+   * Initializes a new instance of the {@code S3ARemoteObject} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -104,7 +104,7 @@ public class S3File {
    * @throws IllegalArgumentException if streamStatistics is null.
    * @throws IllegalArgumentException if changeTracker is null.
    */
-  public S3File(
+  public S3ARemoteObject(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,

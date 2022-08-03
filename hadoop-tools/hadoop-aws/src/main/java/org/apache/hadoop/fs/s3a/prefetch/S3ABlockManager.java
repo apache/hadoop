@@ -17,57 +17,43 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
-import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
-import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
-import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 /**
- * Provides access to S3 file one block at a time.
+ * Provides read access to S3 file one block at a time.
+ *
+ * A naive implementation of a {@code BlockManager} that provides no prefetching or caching.
+ * Useful baseline for comparing performance difference against {@code S3ACachingBlockManager}.
  */
-public class S3CachingBlockManager extends CachingBlockManager {
-  private static final Logger LOG = LoggerFactory.getLogger(S3CachingBlockManager.class);
+public class S3ABlockManager extends BlockManager {
 
   /**
    * Reader that reads from S3 file.
    */
-  private final S3Reader reader;
+  private final S3ARemoteObjectReader reader;
 
   /**
-   * Constructs an instance of a {@code S3CachingBlockManager}.
+   * Constructs an instance of {@code S3ABlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
-   * @param reader reader that reads from S3 file.
+   * @param reader a reader that reads from S3 file.
    * @param blockData information about each block of the S3 file.
-   * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
-   * @param streamStatistics statistics for this stream.
    *
    * @throws IllegalArgumentException if reader is null.
+   * @throws IllegalArgumentException if blockData is null.
    */
-  public S3CachingBlockManager(
-      ExecutorServiceFuturePool futurePool,
-      S3Reader reader,
-      BlockData blockData,
-      int bufferPoolSize,
-      S3AInputStreamStatistics streamStatistics) {
-    super(futurePool, blockData, bufferPoolSize, streamStatistics);
+  public S3ABlockManager(S3ARemoteObjectReader reader, BlockData blockData) {
+    super(blockData);
 
     Validate.checkNotNull(reader, "reader");
 
     this.reader = reader;
-  }
-
-  protected S3Reader getReader() {
-    return this.reader;
   }
 
   /**
@@ -85,9 +71,7 @@ public class S3CachingBlockManager extends CachingBlockManager {
   }
 
   @Override
-  public synchronized void close() {
+  public void close() {
     this.reader.close();
-
-    super.close();
   }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.Closeable;
 import java.io.EOFException;
@@ -39,14 +39,15 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 /**
  * Provides functionality to read S3 file one block at a time.
  */
-public class S3Reader implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(S3Reader.class);
+public class S3ARemoteObjectReader implements Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ARemoteObjectReader.class);
 
   // We read from the underlying input stream in blocks of this size.
   private static final int READ_BUFFER_SIZE = 64 * 1024;
 
   // The S3 file to read.
-  private final S3File s3File;
+  private final S3ARemoteObject remoteObject;
 
   // Set to true by close().
   private volatile boolean closed;
@@ -54,17 +55,17 @@ public class S3Reader implements Closeable {
   private final S3AInputStreamStatistics streamStatistics;
 
   /**
-   * Constructs an instance of {@link S3Reader}.
+   * Constructs an instance of {@link S3ARemoteObjectReader}.
    *
-   * @param s3File The S3 file to read.
+   * @param remoteObject The S3 file to read.
    *
-   * @throws IllegalArgumentException if s3File is null.
+   * @throws IllegalArgumentException if remoteObject is null.
    */
-  public S3Reader(S3File s3File) {
-    Validate.checkNotNull(s3File, "s3File");
+  public S3ARemoteObjectReader(S3ARemoteObject remoteObject) {
+    Validate.checkNotNull(remoteObject, "remoteObject");
 
-    this.s3File = s3File;
-    this.streamStatistics = this.s3File.getStatistics();
+    this.remoteObject = remoteObject;
+    this.streamStatistics = this.remoteObject.getStatistics();
   }
 
   /**
@@ -83,14 +84,14 @@ public class S3Reader implements Closeable {
    */
   public int read(ByteBuffer buffer, long offset, int size) throws IOException {
     Validate.checkNotNull(buffer, "buffer");
-    Validate.checkWithinRange(offset, "offset", 0, this.s3File.size());
+    Validate.checkWithinRange(offset, "offset", 0, this.remoteObject.size());
     Validate.checkPositiveInteger(size, "size");
 
     if (this.closed) {
       return -1;
     }
 
-    int reqSize = (int) Math.min(size, this.s3File.size() - offset);
+    int reqSize = (int) Math.min(size, this.remoteObject.size() - offset);
     return readOneBlockWithRetries(buffer, offset, reqSize);
   }
 
@@ -103,9 +104,9 @@ public class S3Reader implements Closeable {
       throws IOException {
 
     this.streamStatistics.readOperationStarted(offset, size);
-    Invoker invoker = this.s3File.getReadInvoker();
+    Invoker invoker = this.remoteObject.getReadInvoker();
 
-    int invokerResponse = invoker.retry("read", this.s3File.getPath(), true,
+    int invokerResponse = invoker.retry("read", this.remoteObject.getPath(), true,
         trackDurationOfOperation(streamStatistics, STREAM_READ_REMOTE_BLOCK_READ, () -> {
           try {
             this.readOneBlock(buffer, offset, size);
@@ -115,7 +116,7 @@ public class S3Reader implements Closeable {
           } catch (SocketTimeoutException e) {
             throw e;
           } catch (IOException e) {
-            this.s3File.getStatistics().readException();
+            this.remoteObject.getStatistics().readException();
             throw e;
           }
           return 0;
@@ -123,7 +124,7 @@ public class S3Reader implements Closeable {
 
     int numBytesRead = buffer.position();
     buffer.limit(numBytesRead);
-    this.s3File.getStatistics().readOperationCompleted(size, numBytesRead);
+    this.remoteObject.getStatistics().readOperationCompleted(size, numBytesRead);
 
     if (invokerResponse < 0) {
       return invokerResponse;
@@ -138,7 +139,7 @@ public class S3Reader implements Closeable {
       return;
     }
 
-    InputStream inputStream = s3File.openForRead(offset, readSize);
+    InputStream inputStream = remoteObject.openForRead(offset, readSize);
     int numRemainingBytes = readSize;
     byte[] bytes = new byte[READ_BUFFER_SIZE];
 
@@ -163,7 +164,7 @@ public class S3Reader implements Closeable {
       }
       while (!this.closed && (numRemainingBytes > 0));
     } finally {
-      s3File.close(inputStream, numRemainingBytes);
+      remoteObject.close(inputStream, numRemainingBytes);
     }
   }
 }

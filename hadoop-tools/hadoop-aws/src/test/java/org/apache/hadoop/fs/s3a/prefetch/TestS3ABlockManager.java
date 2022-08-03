@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,12 +26,12 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
-import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 
-public class TestS3BlockManager extends AbstractHadoopTestBase {
+public class TestS3ABlockManager extends AbstractHadoopTestBase {
 
   static final int FILE_SIZE = 12;
   static final int BLOCK_SIZE = 3;
@@ -39,40 +39,40 @@ public class TestS3BlockManager extends AbstractHadoopTestBase {
   @Test
   public void testArgChecks() throws Exception {
     BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
-    MockS3File s3File = new MockS3File(FILE_SIZE, false);
-    S3Reader reader = new S3Reader(s3File);
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
 
     // Should not throw.
-    new S3BlockManager(reader, blockData);
+    new S3ABlockManager(reader, blockData);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'reader' must not be null",
-        () -> new S3BlockManager(null, blockData));
+        () -> new S3ABlockManager(null, blockData));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'blockData' must not be null",
-        () -> new S3BlockManager(reader, null));
+        () -> new S3ABlockManager(reader, null));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-        () -> new S3BlockManager(reader, blockData).get(-1));
+        () -> new S3ABlockManager(reader, blockData).get(-1));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'data' must not be null",
-        () -> new S3BlockManager(reader, blockData).release(null));
+        () -> new S3ABlockManager(reader, blockData).release(null));
   }
 
   @Test
   public void testGet() throws IOException {
     BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
-    MockS3File s3File = new MockS3File(FILE_SIZE, false);
-    S3Reader reader = new S3Reader(s3File);
-    S3BlockManager blockManager = new S3BlockManager(reader, blockData);
+    MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
+    S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
+    S3ABlockManager blockManager = new S3ABlockManager(reader, blockData);
 
     for (int b = 0; b < blockData.getNumBlocks(); b++) {
       BufferData data = blockManager.get(b);

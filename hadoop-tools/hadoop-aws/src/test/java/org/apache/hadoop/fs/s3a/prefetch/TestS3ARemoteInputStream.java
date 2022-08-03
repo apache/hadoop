@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -38,54 +38,54 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Applies the same set of tests to both S3CachingInputStream and S3InMemoryInputStream.
+ * Applies the same set of tests to both S3ACachingInputStream and S3AInMemoryInputStream.
  */
-public class TestS3InputStream extends AbstractHadoopTestBase {
+public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
   private static final int FILE_SIZE = 10;
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
   private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
-  private final S3AInputStream.InputStreamCallbacks client = MockS3File.createClient("bucket");
+  private final S3AInputStream.InputStreamCallbacks client = MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
-    S3AReadOpContext readContext = Fakes.createReadContext(futurePool, "key", 10, 10, 1);
-    S3ObjectAttributes attrs = Fakes.createObjectAttributes("bucket", "key", 10);
+    S3AReadOpContext readContext = S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
+    S3ObjectAttributes attrs = S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();
 
     // Should not throw.
-    new S3CachingInputStream(readContext, attrs, client, stats);
+    new S3ACachingInputStream(readContext, attrs, client, stats);
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3CachingInputStream(null, attrs, client, stats));
+        () -> new S3ACachingInputStream(null, attrs, client, stats));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3CachingInputStream(readContext, null, client, stats));
+        () -> new S3ACachingInputStream(readContext, null, client, stats));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3CachingInputStream(readContext, attrs, null, stats));
+        () -> new S3ACachingInputStream(readContext, attrs, null, stats));
 
     ExceptionAsserts.assertThrows(
         NullPointerException.class,
-        () -> new S3CachingInputStream(readContext, attrs, client, null));
+        () -> new S3ACachingInputStream(readContext, attrs, client, null));
   }
 
   @Test
   public void testRead0SizedFile() throws Exception {
-    S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 0);
+    S3ARemoteInputStream inputStream =
+        S3APrefetchFakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 0);
     testRead0SizedFileHelper(inputStream, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 0, 5, 2);
+    inputStream = S3APrefetchFakes.createS3CachingInputStream(futurePool, "bucket", "key", 0, 5, 2);
     testRead0SizedFileHelper(inputStream, 5);
   }
 
-  private void testRead0SizedFileHelper(S3InputStream inputStream, int bufferSize)
+  private void testRead0SizedFileHelper(S3ARemoteInputStream inputStream, int bufferSize)
       throws Exception {
     assertEquals(0, inputStream.available());
     assertEquals(-1, inputStream.read());
@@ -98,16 +98,16 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
 
   @Test
   public void testRead() throws Exception {
-    S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE);
+    S3ARemoteInputStream inputStream =
+        S3APrefetchFakes.createS3InMemoryInputStream(futurePool, "bucket", "key", FILE_SIZE);
     testReadHelper(inputStream, FILE_SIZE);
 
     inputStream =
-        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", FILE_SIZE, 5, 2);
+        S3APrefetchFakes.createS3CachingInputStream(futurePool, "bucket", "key", FILE_SIZE, 5, 2);
     testReadHelper(inputStream, 5);
   }
 
-  private void testReadHelper(S3InputStream inputStream, int bufferSize) throws Exception {
+  private void testReadHelper(S3ARemoteInputStream inputStream, int bufferSize) throws Exception {
     assertEquals(bufferSize, inputStream.available());
     assertEquals(0, inputStream.read());
     assertEquals(1, inputStream.read());
@@ -141,15 +141,15 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
 
   @Test
   public void testSeek() throws Exception {
-    S3InputStream inputStream;
-    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+    S3ARemoteInputStream inputStream;
+    inputStream = S3APrefetchFakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testSeekHelper(inputStream, 9, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
+    inputStream = S3APrefetchFakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
     testSeekHelper(inputStream, 5, 9);
   }
 
-  private void testSeekHelper(S3InputStream inputStream, int bufferSize, int fileSize)
+  private void testSeekHelper(S3ARemoteInputStream inputStream, int bufferSize, int fileSize)
       throws Exception {
     assertEquals(0, inputStream.getPos());
     inputStream.seek(7);
@@ -177,15 +177,15 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
 
   @Test
   public void testRandomSeek() throws Exception {
-    S3InputStream inputStream;
-    inputStream = Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+    S3ARemoteInputStream inputStream;
+    inputStream = S3APrefetchFakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testRandomSeekHelper(inputStream, 9, 9);
 
-    inputStream = Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
+    inputStream = S3APrefetchFakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 1);
     testRandomSeekHelper(inputStream, 5, 9);
   }
 
-  private void testRandomSeekHelper(S3InputStream inputStream, int bufferSize, int fileSize)
+  private void testRandomSeekHelper(S3ARemoteInputStream inputStream, int bufferSize, int fileSize)
       throws Exception {
     assertEquals(0, inputStream.getPos());
     inputStream.seek(7);
@@ -213,16 +213,16 @@ public class TestS3InputStream extends AbstractHadoopTestBase {
 
   @Test
   public void testClose() throws Exception {
-    S3InputStream inputStream =
-        Fakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
+    S3ARemoteInputStream inputStream =
+        S3APrefetchFakes.createS3InMemoryInputStream(futurePool, "bucket", "key", 9);
     testCloseHelper(inputStream, 9);
 
     inputStream =
-        Fakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 3);
+        S3APrefetchFakes.createS3CachingInputStream(futurePool, "bucket", "key", 9, 5, 3);
     testCloseHelper(inputStream, 5);
   }
 
-  private void testCloseHelper(S3InputStream inputStream, int bufferSize) throws Exception {
+  private void testCloseHelper(S3ARemoteInputStream inputStream, int bufferSize) throws Exception {
     assertEquals(bufferSize, inputStream.available());
     assertEquals(0, inputStream.read());
     assertEquals(1, inputStream.read());

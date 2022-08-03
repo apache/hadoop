@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 
@@ -41,8 +41,9 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTra
  * Prefetched blocks are cached to local disk if a seek away from the
  * current block is issued.
  */
-public class S3CachingInputStream extends S3InputStream {
-  private static final Logger LOG = LoggerFactory.getLogger(S3CachingInputStream.class);
+public class S3ACachingInputStream extends S3ARemoteInputStream {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ACachingInputStream.class);
 
   /**
    * Number of blocks queued for prefching.
@@ -52,7 +53,7 @@ public class S3CachingInputStream extends S3InputStream {
   private final BlockManager blockManager;
 
   /**
-   * Initializes a new instance of the {@code S3CachingInputStream} class.
+   * Initializes a new instance of the {@code S3ACachingInputStream} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -63,7 +64,7 @@ public class S3CachingInputStream extends S3InputStream {
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
    */
-  public S3CachingInputStream(
+  public S3ACachingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
@@ -198,10 +199,10 @@ public class S3CachingInputStream extends S3InputStream {
 
   protected BlockManager createBlockManager(
       ExecutorServiceFuturePool futurePool,
-      S3Reader reader,
+      S3ARemoteObjectReader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize,
+    return new S3ACachingBlockManager(futurePool, reader, blockData, bufferPoolSize,
         this.getS3AStreamStatistics());
   }
 }

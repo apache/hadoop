@@ -17,57 +17,58 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.nio.ByteBuffer;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 
-public class TestS3Reader extends AbstractHadoopTestBase {
+public class TestS3ARemoteObjectReader extends AbstractHadoopTestBase {
 
   private static final int FILE_SIZE = 9;
   private static final int BUFFER_SIZE = 2;
-  private final S3File s3File = new MockS3File(FILE_SIZE, false);
+  private final S3ARemoteObject remoteObject = new MockS3ARemoteObject(FILE_SIZE, false);
 
   @Test
   public void testArgChecks() throws Exception {
     // Should not throw.
-    S3Reader reader = new S3Reader(s3File);
+    S3ARemoteObjectReader reader = new S3ARemoteObjectReader(remoteObject);
 
     // Verify it throws correctly.
-    ExceptionAsserts.assertThrows(
-        IllegalArgumentException.class,
-        "'s3File' must not be null",
-        () -> new S3Reader(null));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
+        IllegalArgumentException.class,
+        "'remoteObject' must not be null",
+        () -> new S3ARemoteObjectReader(null));
+
+    intercept(
         IllegalArgumentException.class,
         "'buffer' must not be null",
         () -> reader.read(null, 10, 2));
 
     ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'offset' (-1) must be within the range [0, 9]",
         () -> reader.read(buffer, -1, 2));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'offset' (11) must be within the range [0, 9]",
         () -> reader.read(buffer, 11, 2));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
         () -> reader.read(buffer, 1, 0));
 
-    ExceptionAsserts.assertThrows(
+    intercept(
         IllegalArgumentException.class,
         "'size' must be a positive integer",
         () -> reader.read(buffer, 1, -1));
@@ -85,7 +86,7 @@ public class TestS3Reader extends AbstractHadoopTestBase {
       throws Exception {
     int numBlocks = 0;
     ByteBuffer buffer;
-    S3Reader reader = new S3Reader(new MockS3File(FILE_SIZE, testWithRetry));
+    S3ARemoteObjectReader reader = new S3ARemoteObjectReader(new MockS3ARemoteObject(FILE_SIZE, testWithRetry));
     int remainingSize = FILE_SIZE - (int) startOffset;
     for (int bufferSize = 0; bufferSize <= FILE_SIZE + 1; bufferSize++) {
       buffer = ByteBuffer.allocate(bufferSize);

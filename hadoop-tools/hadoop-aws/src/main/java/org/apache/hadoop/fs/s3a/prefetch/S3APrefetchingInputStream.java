@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 
@@ -44,16 +44,17 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * This implementation provides improved read throughput by asynchronously prefetching
  * blocks of configurable size from the underlying S3 file.
  */
-public class S3PrefetchingInputStream
+public class S3APrefetchingInputStream
     extends FSInputStream
     implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
-  private static final Logger LOG = LoggerFactory.getLogger(S3PrefetchingInputStream.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3APrefetchingInputStream.class);
 
   // Underlying input stream used for reading S3 file.
-  private S3InputStream inputStream;
+  private S3ARemoteInputStream inputStream;
 
   /**
-   * Initializes a new instance of the {@code S3PrefetchingInputStream} class.
+   * Initializes a new instance of the {@code S3APrefetchingInputStream} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -64,7 +65,7 @@ public class S3PrefetchingInputStream
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
    */
-  public S3PrefetchingInputStream(
+  public S3APrefetchingInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
@@ -80,9 +81,9 @@ public class S3PrefetchingInputStream
 
     long fileSize = s3Attributes.getLen();
     if (fileSize <= context.getPrefetchBlockSize()) {
-      this.inputStream = new S3InMemoryInputStream(context, s3Attributes, client, streamStatistics);
+      this.inputStream = new S3AInMemoryInputStream(context, s3Attributes, client, streamStatistics);
     } else {
-      this.inputStream = new S3CachingInputStream(context, s3Attributes, client, streamStatistics);
+      this.inputStream = new S3ACachingInputStream(context, s3Attributes, client, streamStatistics);
     }
   }
 

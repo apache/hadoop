@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,13 +38,14 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
  * Use of this class is recommended only for small files that can fit
  * entirely in memory.
  */
-public class S3InMemoryInputStream extends S3InputStream {
-  private static final Logger LOG = LoggerFactory.getLogger(S3InMemoryInputStream.class);
+public class S3AInMemoryInputStream extends S3ARemoteInputStream {
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3AInMemoryInputStream.class);
 
   private ByteBuffer buffer;
 
   /**
-   * Initializes a new instance of the {@code S3InMemoryInputStream} class.
+   * Initializes a new instance of the {@code S3AInMemoryInputStream} class.
    *
    * @param context read-specific operation context.
    * @param s3Attributes attributes of the S3 object being read.
@@ -55,7 +56,7 @@ public class S3InMemoryInputStream extends S3InputStream {
    * @throws IllegalArgumentException if s3Attributes is null.
    * @throws IllegalArgumentException if client is null.
    */
-  public S3InMemoryInputStream(
+  public S3AInMemoryInputStream(
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,

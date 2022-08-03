@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -63,7 +63,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
 
 /**
- * Provides 'fake' implementations of S3InputStream variants.
+ * Provides 'fake' implementations of S3ARemoteInputStream variants.
  *
  * These implementations avoid accessing the following real resources:
  * -- S3 store
@@ -73,9 +73,9 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStat
  * implementations without accessing external resources. It also helps
  * avoid test flakiness introduced by external factors.
  */
-public final class Fakes {
+public final class S3APrefetchFakes {
 
-  private Fakes() {}
+  private S3APrefetchFakes() {}
 
   public static final String E_TAG = "eTag";
   public static final String OWNER = "owner";
@@ -208,8 +208,8 @@ public final class Fakes {
   }
 
 
-  public static S3InputStream createInputStream(
-      Class<? extends S3InputStream> clazz,
+  public static S3ARemoteInputStream createInputStream(
+      Class<? extends S3ARemoteInputStream> clazz,
       ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
@@ -232,26 +232,26 @@ public final class Fakes {
     S3AInputStreamStatistics stats =
         s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
 
-    if (clazz == TestS3InMemoryInputStream.class) {
-      return new TestS3InMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
-    } else if (clazz == TestS3CachingInputStream.class) {
-      return new TestS3CachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
+    if (clazz == FakeS3AInMemoryInputStream.class) {
+      return new FakeS3AInMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
+    } else if (clazz == FakeS3ACachingInputStream.class) {
+      return new FakeS3ACachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
     }
 
     throw new RuntimeException("Unsupported class: " + clazz);
   }
 
-  public static TestS3InMemoryInputStream createS3InMemoryInputStream(
+  public static FakeS3AInMemoryInputStream createS3InMemoryInputStream(
       ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
       int fileSize) {
 
-    return (TestS3InMemoryInputStream) createInputStream(
-        TestS3InMemoryInputStream.class, futurePool, bucket, key, fileSize, 1, 1);
+    return (FakeS3AInMemoryInputStream) createInputStream(
+        FakeS3AInMemoryInputStream.class, futurePool, bucket, key, fileSize, 1, 1);
   }
 
-  public static TestS3CachingInputStream createS3CachingInputStream(
+  public static FakeS3ACachingInputStream createS3CachingInputStream(
       ExecutorServiceFuturePool futurePool,
       String bucket,
       String key,
@@ -259,8 +259,8 @@ public final class Fakes {
       int prefetchBlockSize,
       int prefetchBlockCount) {
 
-    return (TestS3CachingInputStream) createInputStream(
-        TestS3CachingInputStream.class,
+    return (FakeS3ACachingInputStream) createInputStream(
+        FakeS3ACachingInputStream.class,
         futurePool,
         bucket,
         key,
@@ -269,8 +269,9 @@ public final class Fakes {
         prefetchBlockCount);
   }
 
-  public static class TestS3InMemoryInputStream extends S3InMemoryInputStream {
-    public TestS3InMemoryInputStream(
+  public static class FakeS3AInMemoryInputStream
+      extends S3AInMemoryInputStream {
+    public FakeS3AInMemoryInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
         S3AInputStream.InputStreamCallbacks client,
@@ -279,18 +280,18 @@ public final class Fakes {
     }
 
     @Override
-    protected S3File getS3File() {
+    protected S3ARemoteObject getS3File() {
       randomDelay(200);
-      return new MockS3File((int) this.getS3ObjectAttributes().getLen(), false);
+      return new MockS3ARemoteObject((int) this.getS3ObjectAttributes().getLen(), false);
     }
   }
 
-  public static class TestS3FilePerBlockCache extends SingleFilePerBlockCache {
+  public static class FakeS3FilePerBlockCache extends SingleFilePerBlockCache {
     private final Map<Path, byte[]> files;
     private final int readDelay;
     private final int writeDelay;
 
-    public TestS3FilePerBlockCache(int readDelay, int writeDelay) {
+    public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
       super(new EmptyS3AStatisticsContext().newInputStreamStatistics());
       this.files = new ConcurrentHashMap<>();
       this.readDelay = readDelay;
@@ -339,10 +340,11 @@ public final class Fakes {
     }
   }
 
-  public static class TestS3CachingBlockManager extends S3CachingBlockManager {
-    public TestS3CachingBlockManager(
+  public static class FakeS3ACachingBlockManager
+      extends S3ACachingBlockManager {
+    public FakeS3ACachingBlockManager(
         ExecutorServiceFuturePool futurePool,
-        S3Reader reader,
+        S3ARemoteObjectReader reader,
         BlockData blockData,
         int bufferPoolSize) {
       super(futurePool, reader, blockData, bufferPoolSize,
@@ -359,12 +361,12 @@ public final class Fakes {
     protected BlockCache createCache() {
       final int readDelayMs = 50;
       final int writeDelayMs = 200;
-      return new TestS3FilePerBlockCache(readDelayMs, writeDelayMs);
+      return new FakeS3FilePerBlockCache(readDelayMs, writeDelayMs);
     }
   }
 
-  public static class TestS3CachingInputStream extends S3CachingInputStream {
-    public TestS3CachingInputStream(
+  public static class FakeS3ACachingInputStream extends S3ACachingInputStream {
+    public FakeS3ACachingInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
         S3AInputStream.InputStreamCallbacks client,
@@ -373,18 +375,18 @@ public final class Fakes {
     }
 
     @Override
-    protected S3File getS3File() {
+    protected S3ARemoteObject getS3File() {
       randomDelay(200);
-      return new MockS3File((int) this.getS3ObjectAttributes().getLen(), false);
+      return new MockS3ARemoteObject((int) this.getS3ObjectAttributes().getLen(), false);
     }
 
     @Override
-    protected S3CachingBlockManager createBlockManager(
+    protected S3ACachingBlockManager createBlockManager(
         ExecutorServiceFuturePool futurePool,
-        S3Reader reader,
+        S3ARemoteObjectReader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      return new TestS3CachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+      return new FakeS3ACachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
     }
   }
 }

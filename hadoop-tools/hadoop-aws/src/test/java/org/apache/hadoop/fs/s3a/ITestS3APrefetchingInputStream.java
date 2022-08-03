@@ -43,27 +43,27 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
- * Test the prefetching input stream, validates that the underlying S3CachingInputStream and
- * S3InMemoryInputStream are working as expected.
+ * Test the prefetching input stream, validates that the underlying S3ACachingInputStream and
+ * S3AInMemoryInputStream are working as expected.
  */
-public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
+public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
-  public ITestS3PrefetchingInputStream() {
+  public ITestS3APrefetchingInputStream() {
     super(true);
   }
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3PrefetchingInputStream.class);
+      LoggerFactory.getLogger(ITestS3APrefetchingInputStream.class);
 
   private static final int S_1K = 1024;
   private static final int S_1M = S_1K * S_1K;
-  // Path for file which should have length > block size so S3CachingInputStream is used
+  // Path for file which should have length > block size so S3ACachingInputStream is used
   private Path largeFile;
   private FileSystem largeFileFS;
   private int numBlocks;
   private int blockSize;
   private long largeFileSize;
-  // Size should be < block size so S3InMemoryInputStream is used
+  // Size should be < block size so S3AInMemoryInputStream is used
   private static final int SMALL_FILE_SIZE = S_1K * 16;
 
 
@@ -104,7 +104,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testReadLargeFileFully() throws Throwable {
-    describe("read a large file fully, uses S3CachingInputStream");
+    describe("read a large file fully, uses S3ACachingInputStream");
     IOStatistics ioStats;
     openFS();
 
@@ -134,7 +134,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testRandomReadLargeFile() throws Throwable {
-    describe("random read on a large file, uses S3CachingInputStream");
+    describe("random read on a large file, uses S3ACachingInputStream");
     IOStatistics ioStats;
     openFS();
 
@@ -163,7 +163,7 @@ public class ITestS3PrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testRandomReadSmallFile() throws Throwable {
-    describe("random read on a small file, uses S3InMemoryInputStream");
+    describe("random read on a small file, uses S3AInMemoryInputStream");
 
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'a', 26);
     Path smallFile = path("randomReadSmallFile");

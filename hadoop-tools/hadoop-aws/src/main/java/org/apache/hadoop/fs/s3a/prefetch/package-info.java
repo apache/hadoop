@@ -22,7 +22,7 @@
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;

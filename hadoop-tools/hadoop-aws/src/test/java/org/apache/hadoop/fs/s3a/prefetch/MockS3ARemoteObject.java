@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.fs.s3a.read;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,7 +35,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 /**
  * A mock s3 file with some fault injection.
  */
-class MockS3File extends S3File {
+class MockS3ARemoteObject extends S3ARemoteObject {
   private byte[] contents;
 
   // If true, throws IOException on open request just once.
@@ -45,17 +45,17 @@ class MockS3File extends S3File {
   private static final String BUCKET = "bucket";
   private static final String KEY = "key";
 
-  MockS3File(int size) {
+  MockS3ARemoteObject(int size) {
     this(size, false);
   }
 
-  MockS3File(int size, boolean throwExceptionOnOpen) {
+  MockS3ARemoteObject(int size, boolean throwExceptionOnOpen) {
     super(
-        Fakes.createReadContext(null, KEY, size, 1, 1),
-        Fakes.createObjectAttributes(BUCKET, KEY, size),
-        Fakes.createInputStreamCallbacks(BUCKET, KEY),
+        S3APrefetchFakes.createReadContext(null, KEY, size, 1, 1),
+        S3APrefetchFakes.createObjectAttributes(BUCKET, KEY, size),
+        S3APrefetchFakes.createInputStreamCallbacks(BUCKET, KEY),
         new EmptyS3AStatisticsContext().EMPTY_INPUT_STREAM_STATISTICS,
-        Fakes.createChangeTracker(BUCKET, KEY, size)
+        S3APrefetchFakes.createChangeTracker(BUCKET, KEY, size)
     );
 
     this.throwExceptionOnOpen = throwExceptionOnOpen;
