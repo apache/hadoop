@@ -132,12 +132,11 @@ public final class RouterServerUtil {
     String configuredInterceptorClassNames = conf.get(pipeLineClass, interceptorClass);
     List<String> interceptorClassNames = new ArrayList<>();
     Collection<String> tempList =
-            StringUtils.getStringCollection(configuredInterceptorClassNames);
+        StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {
       interceptorClassNames.add(item.trim());
     }
     return interceptorClassNames;
-  }
 
   /**
    * Throws an IOException due to an error.
@@ -158,4 +157,5 @@ public final class RouterServerUtil {
       throw new IOException(errMsg);
     }
   }
+
 }
