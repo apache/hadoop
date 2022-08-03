@@ -1915,19 +1915,20 @@ public class TestDecommission extends AdminStatesBaseTest {
   public void testDeleteCorruptReplicaForUnderReplicatedBlock() throws Exception {
     testDeleteCorruptReplicaForUnderReplicatedBlockInternal();
   }
-  
+
   /*
   Same test as testDeleteCorruptReplicaForUnderReplicatedBlock except
   "dfs.namenode.corrupt.block.delete.immediately.enabled = false" such that the block invalidation
   gets postponed.
    */
   @Test(timeout = 60000)
-  public void testDeleteCorruptReplicaForUnderReplicatedBlockWithInvalidationPostponed() throws Exception {
+  public void testDeleteCorruptReplicaForUnderReplicatedBlockWithInvalidationPostponed()
+      throws Exception {
     getConf().setBoolean(DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
         false);
     testDeleteCorruptReplicaForUnderReplicatedBlockInternal();
   }
-  
+
   public void testDeleteCorruptReplicaForUnderReplicatedBlockInternal() throws Exception {
     // Constants
     final Path file = new Path("/test-file");

@@ -55,12 +55,20 @@ public class CorruptReplicasMap{
   }
 
   private static class CorruptBlockReplica {
-    public final Reason reason;
-    public final long generationStamp;
+    private final Reason reason;
+    private final long generationStamp;
 
     CorruptBlockReplica(Reason reason, long generationStamp) {
       this.reason = reason;
       this.generationStamp = generationStamp;
+    }
+
+    public Reason getReason() {
+      return reason;
+    }
+
+    public long getGenerationStamp() {
+      return generationStamp;
     }
   }
 
@@ -144,7 +152,7 @@ public class CorruptReplicasMap{
     // if reasons can be compared but don't match, return false.
     CorruptBlockReplica corruptReplica = datanodes.get(datanode);
     if (reason != Reason.ANY && corruptReplica != null &&
-        reason != corruptReplica.reason) {
+        reason != corruptReplica.getReason()) {
       return false;
     }
 
@@ -268,7 +276,7 @@ public class CorruptReplicasMap{
     Long generationStamp = null;
     if(corruptReplicasMap.containsKey(block)) {
       if (corruptReplicasMap.get(block).containsKey(node)) {
-        generationStamp = corruptReplicasMap.get(block).get(node).generationStamp;
+        generationStamp = corruptReplicasMap.get(block).get(node).getGenerationStamp();
       }
     }
     return generationStamp;
@@ -285,7 +293,7 @@ public class CorruptReplicasMap{
     Reason reason = null;
     if(corruptReplicasMap.containsKey(block)) {
       if (corruptReplicasMap.get(block).containsKey(node)) {
-        reason = corruptReplicasMap.get(block).get(node).reason;
+        reason = corruptReplicasMap.get(block).get(node).getReason();
       }
     }
     if (reason != null) {
