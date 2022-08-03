@@ -30,16 +30,6 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Timer;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.ACCESS_TOKEN;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_CREDENTIALS;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_ID;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_SECRET;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.EXPIRES_IN;
-import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.GRANT_TYPE;
-import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
@@ -51,6 +41,16 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.ACCESS_TOKEN;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_CREDENTIALS;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_ID;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.CLIENT_SECRET;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.EXPIRES_IN;
+import static org.apache.hadoop.hdfs.web.oauth2.OAuth2Constants.GRANT_TYPE;
+import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
 
 /**
  * Obtain an access token via the credential-based OAuth2 workflow.  This
