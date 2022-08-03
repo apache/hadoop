@@ -94,12 +94,7 @@ public final class ExitUtil {
       if (message == null) {
         message = super.toString();
       }
-      String finalString = status + ": " + message;
-      Throwable cause = getCause();
-      if (cause != null) {
-        finalString = finalString + " : \n" + "cause: " + cause.getMessage();
-      }
-      return finalString;
+      return Integer.toString(status) + ": " + message;
     }
   }
 
@@ -144,12 +139,7 @@ public final class ExitUtil {
       if (message == null) {
         message = super.toString();
       }
-      String finalString = status + ": " + message;
-      Throwable cause = getCause();
-      if (cause != null) {
-        finalString = finalString + " : \n" + "cause: " + cause.getMessage();
-      }
-      return finalString;
+      return Integer.toString(status) + ": " + message;
     }
 
   }
