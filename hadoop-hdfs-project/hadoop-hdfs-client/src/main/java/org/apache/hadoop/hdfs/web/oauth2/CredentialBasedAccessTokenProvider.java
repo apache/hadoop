@@ -137,7 +137,7 @@ public abstract class CredentialBasedAccessTokenProvider
 
       accessToken = responseBody.get(ACCESS_TOKEN).toString();
     } catch (Exception e) {
-      throw new IOException("Exception while refreshing access token", e);
+      throw new IOException("Unable to obtain access token from credential", e);
     }
   }
 }
