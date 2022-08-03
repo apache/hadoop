@@ -46,9 +46,11 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -60,6 +62,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -91,12 +94,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -1161,7 +1166,32 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Class[] argsClasses = new Class[]{Set.class};
+      Object[] args = new Object[]{labels};
+      ClientMethod remoteMethod = new ClientMethod("getLabelsToNodes", argsClasses, args);
+      Map<SubClusterInfo, LabelsToNodesInfo> labelsToNodesInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, LabelsToNodesInfo.class);
+
+      Map<NodeLabelInfo, NodeIDsInfo> labelToNodesMap = new HashMap<>();
+      labelsToNodesInfoMap.values().forEach(labelsToNode -> {
+        Map<NodeLabelInfo, NodeIDsInfo> values = labelsToNode.getLabelsToNodes();
+        for (Map.Entry<NodeLabelInfo, NodeIDsInfo> item : values.entrySet()) {
+          NodeLabelInfo key = item.getKey();
+          NodeIDsInfo leftValue = item.getValue();
+          NodeIDsInfo rightValue = labelToNodesMap.getOrDefault(key, null);
+          NodeIDsInfo newValue = NodeIDsInfo.add(leftValue, rightValue);
+          labelToNodesMap.put(key, newValue);
+        }
+      });
+      return new LabelsToNodesInfo(labelToNodesMap);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getLabelsToNodes error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1179,7 +1209,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      Set<NodeLabel> hashSets = Sets.newHashSet();
+      nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
+      return new NodeLabelsInfo(hashSets);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1197,7 +1243,23 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class};
+      Object[] args = new Object[]{hsrCopy, nodeId};
+      ClientMethod remoteMethod = new ClientMethod("getLabelsOnNode", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      Set<NodeLabel> hashSets = Sets.newHashSet();
+      nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
+      return new NodeLabelsInfo(hashSets);
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1357,6 +1419,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
   public void setNextInterceptor(RESTRequestInterceptor next) {
     throw new YarnRuntimeException("setNextInterceptor is being called on "
         + "FederationInterceptorREST, which should be the last one "
@@ -1396,7 +1471,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           R ret = clazz.cast(retObj);
           return ret;
         } catch (Exception e) {
-          LOG.error("SubCluster %s failed to call %s method.",
+          LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
           return null;
         }

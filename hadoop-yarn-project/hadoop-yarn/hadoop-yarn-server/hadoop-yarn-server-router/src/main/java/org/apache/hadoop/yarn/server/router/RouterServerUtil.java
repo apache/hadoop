@@ -34,6 +34,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.io.IOException;
 
 /**
  * Common utility methods used by the Router server.
@@ -136,6 +137,25 @@ public final class RouterServerUtil {
       interceptorClassNames.add(item.trim());
     }
     return interceptorClassNames;
+
+  /**
+   * Throws an IOException due to an error.
+   *
+   * @param errMsg the error message
+   * @param t the throwable raised in the called class.
+   * @throws IOException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowIOException(String errMsg, Throwable t)
+      throws IOException {
+    if (t != null) {
+      LOG.error(errMsg, t);
+      throw new IOException(errMsg, t);
+    } else {
+      LOG.error(errMsg);
+      throw new IOException(errMsg);
+    }
   }
 
 }
