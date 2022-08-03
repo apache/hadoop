@@ -224,7 +224,7 @@ public class RegistryAdminService extends RegistryOperationsService {
           bindingDiagnosticDetails(),
           dumpRegistryRobustly(true));
 
-      LOG.error(" Failure {}", e.getMessage(), e);
+      LOG.error(" Failure {}", e, e);
       LOG.error(message);
 
       // TODO: this is something temporary to deal with the problem
