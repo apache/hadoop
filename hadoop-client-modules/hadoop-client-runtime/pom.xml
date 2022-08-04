@@ -108,6 +108,12 @@
       <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jsch</artifactId>
+      <optional>true</optional>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
   <profiles>
     <profile>
