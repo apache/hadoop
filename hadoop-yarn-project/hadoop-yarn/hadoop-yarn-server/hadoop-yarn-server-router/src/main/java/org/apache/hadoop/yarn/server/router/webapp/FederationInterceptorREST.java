@@ -1365,7 +1365,30 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-    throw new NotImplementedException("Code is not implemented");
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
+
+      if (subClusterInfo == null) {
+        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = "
+            + applicationId, null);
+      }
+
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppAttempts(hsr, appId);
+    } catch (IllegalArgumentException e) {
+      String msg = String.format("Unable to get the AppAttempt appId: %s.", appId);
+      RouterServerUtil.logAndThrowRunTimeException(msg, e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
@@ -1377,7 +1400,35 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+    if (appAttemptId == null || appAttemptId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
+    }
+
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
+
+      if (subClusterInfo == null) {
+        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = "
+            + applicationId, null);
+      }
+
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppAttempt(req, res, appId, appAttemptId);
+    } catch (IllegalArgumentException e) {
+      String msg = String.format("Unable to get the AppAttempt appId: %s, appAttemptId: %s.",
+          appId, appAttemptId);
+      RouterServerUtil.logAndThrowRunTimeException(msg, e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
@@ -1432,8 +1483,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
 
       if (subClusterInfo == null) {
-        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = " +
-            applicationId, null);
+        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = "
+            + applicationId, null);
       }
 
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -1491,8 +1542,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
 
       if (subClusterInfo == null) {
-        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = " +
-            applicationId, null);
+        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = "
+            + applicationId, null);
       }
 
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -1565,7 +1616,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @return HomeSubCluster
    * @throws YarnException on failure
    */
-  private SubClusterInfo getHomeSubClusterInfoByAppId(ApplicationId applicationId) throws YarnException {
+  private SubClusterInfo getHomeSubClusterInfoByAppId(ApplicationId applicationId)
+      throws YarnException {
     SubClusterInfo subClusterInfo = null;
     SubClusterId subClusterId = null;
     try {

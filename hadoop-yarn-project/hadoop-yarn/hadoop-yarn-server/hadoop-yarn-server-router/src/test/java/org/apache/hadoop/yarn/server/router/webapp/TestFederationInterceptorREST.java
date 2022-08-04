@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -716,5 +717,38 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ContainerInfo containerInfo = interceptor.getContainer(null, null,
         appId.toString(), appAttemptId.toString(), "0");
     Assert.assertNotNull(containerInfo);
+  }
+
+  @Test
+  public void testGetAppAttempts()
+      throws IOException, InterruptedException, YarnException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
+    Assert.assertNotNull(appAttemptsInfo);
+    Assert.assertTrue(!appAttemptsInfo.getAttempts().isEmpty());
+  }
+
+  @Test
+  public void testGetAppAttempt()
+      throws IOException, InterruptedException, YarnException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    ApplicationAttemptId appAttemptIdExcept = ApplicationAttemptId.newInstance(appId, 1);
+
+    org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(),
+        appAttemptIdExcept.toString());
+    Assert.assertNotNull(appAttemptInfo);
+
+    Assert.assertEquals(appAttemptIdExcept, appAttemptInfo.getAppAttemptId());
   }
 }
