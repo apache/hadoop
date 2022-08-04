@@ -19,12 +19,12 @@ This work is tracked in [HADOOP-18073](https://issues.apache.org/jira/browse/HAD
 
 ## Why do we want to upgrade?
 
-- Moving to SDK V2 will provide performance benefits. 
+- Moving to SDK V2 will provide performance benefits.
 For example, the [transfer manager for SDKV2](https://aws.amazon.com/blogs/developer/introducing-amazon-s3-transfer-manager-in-the-aws-sdk-for-java-2-x/)
-is built using java bindings of the AWS Common Runtime S3 
-client (https://github.com/awslabs/aws-crt-java) (CRT). 
+is built using java bindings of the AWS Common Runtime S3
+client (https://github.com/awslabs/aws-crt-java) (CRT).
 CRT is a set of packages written in C, designed for maximising performance when interacting with AWS
-services such as S3. 
+services such as S3.
 - New features such as [additional checksum algorithms](https://aws.amazon.com/blogs/aws/new-additional-checksum-algorithms-for-amazon-s3/)
 which S3A will benefit from are not available in SDKV1.
 
@@ -63,7 +63,7 @@ Custom credential providers used in delegation token binding classes will also n
 The s3 client is an instance of `S3Client` in V2 rather than `AmazonS3`.
 
 For this reason, the `S3ClientFactory` will be deprecated and replaced by one that creates a V2
-`S3Client`. 
+`S3Client`.
 
 The `getAmazonS3ClientForTesting()` method will also be updated to return the `S3Client`.
 
