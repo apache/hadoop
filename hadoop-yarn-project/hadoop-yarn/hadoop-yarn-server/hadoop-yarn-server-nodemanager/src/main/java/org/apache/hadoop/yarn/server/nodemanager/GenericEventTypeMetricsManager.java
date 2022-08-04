@@ -29,6 +29,7 @@ public final class GenericEventTypeMetricsManager {
   }
 
   // Construct a GenericEventTypeMetrics for dispatcher
+  @SuppressWarnings("unchecked")
   public static <T extends Enum<T>> GenericEventTypeMetrics
       create(String dispatcherName, Class<T> eventTypeClass) {
     return new GenericEventTypeMetrics.EventTypeMetricsBuilder<T>()

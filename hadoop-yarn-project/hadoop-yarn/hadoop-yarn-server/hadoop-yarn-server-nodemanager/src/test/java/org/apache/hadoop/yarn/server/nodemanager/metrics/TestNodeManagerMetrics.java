@@ -181,6 +181,7 @@ public class TestNodeManagerMetrics {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testNMDispatcherMetricsHistogram() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
 
