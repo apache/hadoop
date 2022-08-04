@@ -1655,7 +1655,7 @@ public class TestIPC {
     final AtomicInteger callReturned = new AtomicInteger(0);
     final AtomicInteger callException = new AtomicInteger(0);
 
-    try (final Client client = new Client(LongWritable.class, copyConf)) {
+    try (Client client = new Client(LongWritable.class, copyConf)) {
       Thread[] threads = new Thread[2];
       for (int i = 0; i < 2; i++) {
         threads[i] = new Thread(new Runnable(){
