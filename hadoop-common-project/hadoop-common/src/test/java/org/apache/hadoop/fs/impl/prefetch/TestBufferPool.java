@@ -71,7 +71,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
         "'blockNumber' must not be negative",
          () -> pool.tryAcquire(-1));
 
-    intercept(IllegalArgumentException.class, "'data' must not be null",
+    intercept(NullPointerException.class, "data",
         () -> pool.release((BufferData) null));
 
   }
