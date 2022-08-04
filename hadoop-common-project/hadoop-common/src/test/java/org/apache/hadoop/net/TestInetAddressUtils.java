@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 
 public class TestInetAddressUtils {
@@ -35,10 +36,13 @@ public class TestInetAddressUtils {
 
     // Precondition: host name and canonical host name for unresolved returns an IP address.
     assertEquals(localhost.getHostAddress(), unresolved.getHostName());
-    assertEquals(localhost.getHostAddress(), unresolved.getCanonicalHostName());
 
     // Test: Get the canonical name despite InetAddress caching
-    assertEquals(localhost.getHostName(), InetAddressUtils.getCanonicalHostName(unresolved));
+    String canonicalHostName = InetAddressUtils.getCanonicalHostName(unresolved);
+
+    // Verify: The canonical host name doesn't match the host address but does match the localhost.
+    assertNotEquals(localhost.getHostAddress(), canonicalHostName);
+    assertEquals(localhost.getCanonicalHostName(), canonicalHostName);
   }
 
 }
