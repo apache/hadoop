@@ -645,7 +645,8 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
-        // Update the remote address so that reconnections are with the updated address.  This avoids thrashing.
+        // Update the remote address so that reconnections are with the updated address.  This
+        // avoids thrashing.
         remoteId.setAddress(currentAddr);
         UserGroupInformation ticket = remoteId.getTicket();
         this.setName("IPC Client (" + socketFactory.hashCode()
