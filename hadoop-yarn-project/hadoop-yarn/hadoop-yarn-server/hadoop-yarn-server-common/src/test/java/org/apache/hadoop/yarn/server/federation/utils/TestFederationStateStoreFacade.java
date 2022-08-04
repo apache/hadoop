@@ -169,7 +169,7 @@ public class TestFederationStateStoreFacade {
   }
 
   @Test
-  public void testGetHomeSubClusterForApp() throws YarnException {
+  public void getApplicationHomeSubCluster() throws YarnException {
     for (int i = 0; i < numApps; i++) {
       ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
       Assert.assertEquals(stateStoreTestUtil.queryApplicationHomeSC(appId),
@@ -204,6 +204,21 @@ public class TestFederationStateStoreFacade {
 
     Assert.assertEquals(facade.getApplicationHomeSubCluster(appId), result);
     Assert.assertEquals(subClusterId1, result);
+  }
+
+  @Test
+  public void testGetApplicationHomeSubClusterCache() throws YarnException {
+    ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
+
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, subClusterId1);
+    SubClusterId subClusterIdAdd =
+        facade.addApplicationHomeSubCluster(appHomeSubCluster);
+
+    SubClusterId subClusterIdCache = facade.getApplicationHomeSubCluster(appId);
+    Assert.assertEquals(subClusterIdCache, subClusterIdAdd);
+    Assert.assertEquals(subClusterId1, subClusterIdAdd);
   }
 
 }
