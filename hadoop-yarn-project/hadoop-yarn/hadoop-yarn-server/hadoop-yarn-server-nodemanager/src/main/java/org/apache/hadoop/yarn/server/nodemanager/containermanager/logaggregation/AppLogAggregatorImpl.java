@@ -86,6 +86,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final Dispatcher dispatcher;
   private final ApplicationId appId;
   private final String applicationId;
+  private final boolean enableLocalCleanup;
   private boolean logAggregationDisabled = false;
   private final Configuration conf;
   private final DeletionService delService;
@@ -172,6 +173,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.logAggregationContext = logAggregationContext;
     this.context = context;
     this.nodeId = nodeId;
+    this.enableLocalCleanup =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP);
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
     this.logFileSizeThreshold =
@@ -337,26 +341,26 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             appFinished, finishedContainers.contains(container));
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
-          LOG.trace("Uploaded the following files for {}: {}",
-              container, uploadedFilePathsInThisCycle.toString());
-          List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
-          uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
-          if (LOG.isDebugEnabled()) {
-            for (Path uploadedFilePath : uploadedFilePathsInThisCycleList) {
-              try {
-                long fileSize = lfs.getFileStatus(uploadedFilePath).getLen();
-                if (fileSize >= logFileSizeThreshold) {
-                  LOG.debug("Log File " + uploadedFilePath
-                      + " size is " + fileSize + " bytes");
+          if (enableLocalCleanup) {
+            LOG.trace("Uploaded the following files for {}: {}", container,
+                uploadedFilePathsInThisCycle.toString());
+            List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
+            uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
+            if (LOG.isDebugEnabled()) {
+              for (Path uploadedFilePath : uploadedFilePathsInThisCycleList) {
+                try {
+                  long fileSize = lfs.getFileStatus(uploadedFilePath).getLen();
+                  if (fileSize >= logFileSizeThreshold) {
+                    LOG.debug("Log File " + uploadedFilePath + " size is " + fileSize + " bytes");
+                  }
+                } catch (Exception e1) {
+                  LOG.error("Failed to get log file size " + e1);
                 }
-              } catch (Exception e1) {
-                LOG.error("Failed to get log file size " + e1);
               }
             }
+            deletionTask = new FileDeletionTask(delService, this.userUgi.getShortUserName(), null,
+                uploadedFilePathsInThisCycleList);
           }
-          deletionTask = new FileDeletionTask(delService,
-              this.userUgi.getShortUserName(), null,
-              uploadedFilePathsInThisCycleList);
         }
 
         // This container is finished, and all its logs have been uploaded,
@@ -472,7 +476,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // do post clean up of log directories on any other exception
       LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
-      doAppLogAggregationPostCleanUp();
+      if (enableLocalCleanup) {
+        doAppLogAggregationPostCleanUp();
+      }
     } finally {
       if (!this.appAggregationFinished.get() && !this.aborted.get()) {
         LOG.warn("Log aggregation did not complete for application " + appId);
@@ -516,7 +522,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // App is finished, upload the container logs.
       uploadLogsForContainers(true);
 
-      doAppLogAggregationPostCleanUp();
+      if (enableLocalCleanup) {
+        doAppLogAggregationPostCleanUp();
+      }
     } catch (LogAggregationDFSException e) {
       LOG.error("Error during log aggregation", e);
     }
