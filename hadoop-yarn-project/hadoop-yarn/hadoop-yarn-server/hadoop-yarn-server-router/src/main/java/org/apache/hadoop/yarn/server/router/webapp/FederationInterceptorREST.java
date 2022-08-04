@@ -1376,8 +1376,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       return interceptor.getAppAttempts(hsr, appId);
     } catch (IllegalArgumentException e) {
-      RouterServerUtil.logAndThrowRunTimeException(
-          "Unable to get the AppAttempt appId: %s.", e, appId);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the AppAttempt appId: %s.", appId);
     } catch (YarnException e) {
       RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
     }
@@ -1409,8 +1409,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       return interceptor.getAppAttempt(req, res, appId, appAttemptId);
     } catch (IllegalArgumentException e) {
-      RouterServerUtil.logAndThrowRunTimeException(
-          "Unable to get the AppAttempt appId: %s, appAttemptId: %s.", e, appId, appAttemptId);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the AppAttempt appId: %s, appAttemptId: %s.", appId, appAttemptId);
     } catch (YarnException e) {
       RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
     }
@@ -1599,14 +1599,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ApplicationId applicationId = ApplicationId.fromString(appId);
       SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
       if (subClusterId == null) {
-        RouterServerUtil.logAndThrowException("Can't get HomeSubCluster by applicationId %s",
-            null, applicationId);
+        RouterServerUtil.logAndThrowException(null,
+            "Can't get HomeSubCluster by applicationId %s", applicationId);
       }
       subClusterInfo = federationFacade.getSubCluster(subClusterId);
       return subClusterInfo;
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowException("Get HomeSubClusterInfo by applicationId %s failed.",
-          e, appId);
+      RouterServerUtil.logAndThrowException(e,
+          "Get HomeSubClusterInfo by applicationId %s failed.", appId);
     }
     throw new YarnException("Unable to get subCluster by applicationId = " + appId);
   }
