@@ -80,9 +80,6 @@ import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 /**
  * This class mocks the RESTRequestInterceptor.
  */
@@ -436,8 +433,8 @@ public class MockDefaultRequestInterceptorREST
     }
 
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)), "user",
-        "queue", "appname", "host", 124, null,
+        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
+        "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
 

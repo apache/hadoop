@@ -754,7 +754,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
 
     Assert.assertNotNull(appAttemptInfo);
-    Assert.assertEquals(expectAppAttemptId, appAttemptInfo.getAppAttemptId());
+    Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
     Assert.assertEquals("url", appAttemptInfo.getTrackingUrl());
     Assert.assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
     Assert.assertEquals(124, appAttemptInfo.getRpcPort());

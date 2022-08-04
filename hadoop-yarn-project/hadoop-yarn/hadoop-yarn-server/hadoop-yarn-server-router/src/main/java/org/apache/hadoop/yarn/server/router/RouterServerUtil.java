@@ -45,20 +45,22 @@ public final class RouterServerUtil {
   /**
    * Throws an exception due to an error.
    *
-   * @param errMsgFormat the error message Format
-   * @param t      the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param t the throwable raised in the called class.
+   * @param args referenced by the format specifiers in the format string.
    * @throws YarnException on failure
    */
   @Public
   @Unstable
   public static void logAndThrowException(String errMsgFormat, Throwable t, Object... args)
-          throws YarnException {
+      throws YarnException {
+    String msg = String.format(errMsgFormat, args);
     if (t != null) {
-      LOG.error(String.format(errMsgFormat, args), t);
-      throw new YarnException(errMsgFormat, t);
+      LOG.error(msg, t);
+      throw new YarnException(msg, t);
     } else {
-      LOG.error(String.format(errMsgFormat, args));
-      throw new YarnException(errMsgFormat);
+      LOG.error(msg);
+      throw new YarnException(msg);
     }
   }
 
@@ -125,8 +127,9 @@ public final class RouterServerUtil {
   /**
    * Throws an RunTimeException due to an error.
    *
-   * @param errMsgFormat the error message
+   * @param errMsgFormat the error message format string.
    * @param t the throwable raised in the called class.
+   * @param args referenced by the format specifiers in the format string.
    * @throws RuntimeException on failure
    */
   @Public
