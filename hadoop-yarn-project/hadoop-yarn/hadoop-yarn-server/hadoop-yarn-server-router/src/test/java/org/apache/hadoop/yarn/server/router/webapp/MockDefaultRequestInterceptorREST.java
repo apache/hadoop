@@ -36,7 +36,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
@@ -58,12 +57,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
@@ -86,6 +79,9 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -466,24 +462,8 @@ public class MockDefaultRequestInterceptorREST
     }
 
     AppAttemptsInfo infos = new AppAttemptsInfo();
-
-    try {
-      Configuration conf = new Configuration();
-      MockRM rm = new MockRM(conf);
-      rm.start();
-      MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
-      RMApp app1 = MockRMAppSubmitter.submitWithMemory(1024, rm);
-      amNodeManager.nodeHeartbeat(true);
-      RMAppAttempt appAttempt = app1.getCurrentAppAttempt();
-      org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo
-          appAttemptInfo1 = new org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo(rm,
-          appAttempt, Boolean.TRUE, "user", "http://");
-      infos.add(appAttemptInfo1);
-
-    } catch (Exception e) {
-      throw new RuntimeException("Test getAppAttempts Error.", e);
-    }
-
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(0));
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(1));
     return infos;
   }
 }

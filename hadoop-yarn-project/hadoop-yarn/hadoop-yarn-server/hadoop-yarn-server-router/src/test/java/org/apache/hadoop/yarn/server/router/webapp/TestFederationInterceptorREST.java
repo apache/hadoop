@@ -42,21 +42,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -731,24 +717,47 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
     Assert.assertNotNull(appAttemptsInfo);
-    Assert.assertTrue(!appAttemptsInfo.getAttempts().isEmpty());
+
+    ArrayList<AppAttemptInfo> attemptLists = appAttemptsInfo.getAttempts();
+    Assert.assertNotNull(appAttemptsInfo);
+    Assert.assertEquals(2, attemptLists.size());
+
+    AppAttemptInfo attemptInfo1 = attemptLists.get(0);
+    Assert.assertNotNull(attemptInfo1);
+    Assert.assertEquals(0, attemptInfo1.getAttemptId());
+    Assert.assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
+    Assert.assertEquals("LogLink_0", attemptInfo1.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo1.getFinishedTime());
+
+    AppAttemptInfo attemptInfo2 = attemptLists.get(1);
+    Assert.assertNotNull(attemptInfo2);
+    Assert.assertEquals(0, attemptInfo2.getAttemptId());
+    Assert.assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());
+    Assert.assertEquals("LogLink_1", attemptInfo2.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo2.getFinishedTime());
   }
 
   @Test
   public void testGetAppAttempt()
       throws IOException, InterruptedException, YarnException {
-    // Submit application to multiSubCluster
+
+    // Generate ApplicationId information
     ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(), 1);
     ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
     Assert.assertNotNull(interceptor.submitApplication(context, null));
-    ApplicationAttemptId appAttemptIdExcept = ApplicationAttemptId.newInstance(appId, 1);
+    ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
 
     org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
-        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(),
-        appAttemptIdExcept.toString());
-    Assert.assertNotNull(appAttemptInfo);
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
 
-    Assert.assertEquals(appAttemptIdExcept, appAttemptInfo.getAppAttemptId());
+    Assert.assertNotNull(appAttemptInfo);
+    Assert.assertEquals(expectAppAttemptId, appAttemptInfo.getAppAttemptId());
+    Assert.assertEquals("url", appAttemptInfo.getTrackingUrl());
+    Assert.assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
+    Assert.assertEquals(124, appAttemptInfo.getRpcPort());
+    Assert.assertEquals("host", appAttemptInfo.getHost());
   }
 }

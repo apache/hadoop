@@ -30,11 +30,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test class to validate RouterWebServiceUtil methods.
@@ -578,5 +582,14 @@ public class TestRouterWebServiceUtil {
     metrics.setRebootedNodes(rand.nextInt(1000));
     metrics.setActiveNodes(rand.nextInt(1000));
     metrics.setShutdownNodes(rand.nextInt(1000));
+  }
+
+  public static AppAttemptInfo generateAppAttemptInfo(int attemptId) {
+    AppAttemptInfo appAttemptInfo = mock(AppAttemptInfo.class);
+    when(appAttemptInfo.getAppAttemptId()).thenReturn("AppAttemptId_" + attemptId);
+    when(appAttemptInfo.getAttemptId()).thenReturn(0);
+    when(appAttemptInfo.getFinishedTime()).thenReturn(1659621705L);
+    when(appAttemptInfo.getLogsLink()).thenReturn("LogLink_" + attemptId);
+    return appAttemptInfo;
   }
 }
