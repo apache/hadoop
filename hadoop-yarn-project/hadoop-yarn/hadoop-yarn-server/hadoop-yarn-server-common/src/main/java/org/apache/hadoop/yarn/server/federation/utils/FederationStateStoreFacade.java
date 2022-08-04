@@ -86,6 +86,8 @@ public final class FederationStateStoreFacade {
   private static final String GET_SUBCLUSTERS_CACHEID = "getSubClusters";
   private static final String GET_POLICIES_CONFIGURATIONS_CACHEID =
       "getPoliciesConfigurations";
+  private static final String GET_APPLICATION_HOME_SUBCLUSTER_CACHEID =
+      "getApplicationHomeSubCluster";
 
   private static final FederationStateStoreFacade FACADE =
       new FederationStateStoreFacade();
@@ -376,10 +378,20 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterId getApplicationHomeSubCluster(ApplicationId appId)
       throws YarnException {
-    GetApplicationHomeSubClusterResponse response =
-        stateStore.getApplicationHomeSubCluster(
+    try {
+      if (isCachingEnabled()) {
+        Map<ApplicationId, SubClusterId> cacheAppSubCluster =
+            (Map<ApplicationId, SubClusterId>)
+                cache.get(buildGetApplicationHomeSubClusterRequest(appId.toString()));
+        return cacheAppSubCluster.get(appId);
+      } else {
+        GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
-    return response.getApplicationHomeSubCluster().getHomeSubCluster();
+        return response.getApplicationHomeSubCluster().getHomeSubCluster();
+      }
+    } catch (Throwable ex) {
+      throw new YarnException(ex);
+    }
   }
 
   /**
@@ -510,6 +522,30 @@ public final class FederationStateStoreFacade {
                 return buildPolicyConfigMap(policyConfigs);
               }
             });
+    return cacheRequest;
+  }
+
+  private Map<ApplicationId, SubClusterId> buildApplicationSubClusterMap(
+      GetApplicationHomeSubClusterResponse response) {
+    ApplicationHomeSubCluster applicationHomeSubCluster = response.getApplicationHomeSubCluster();
+    SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
+    ApplicationId applicationId = applicationHomeSubCluster.getApplicationId();
+    Map<ApplicationId, SubClusterId> appSubCluster = new HashMap<>();
+    appSubCluster.put(applicationId, subClusterId);
+    return appSubCluster;
+  }
+
+  private Object buildGetApplicationHomeSubClusterRequest(String appId) {
+    final String cacheKey = buildCacheKey(getClass().getSimpleName(),
+        GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, appId);
+    CacheRequest<String, Map<ApplicationId, SubClusterId>> cacheRequest =
+        new CacheRequest<>(cacheKey,
+        input -> {
+          ApplicationId applicationId = ApplicationId.fromString(input);
+          GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
+              GetApplicationHomeSubClusterRequest.newInstance(applicationId));
+          return buildApplicationSubClusterMap(response);
+        });
     return cacheRequest;
   }
 
