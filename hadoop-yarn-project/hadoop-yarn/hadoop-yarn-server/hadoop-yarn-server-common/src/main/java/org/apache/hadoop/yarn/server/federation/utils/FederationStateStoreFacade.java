@@ -525,6 +525,7 @@ public final class FederationStateStoreFacade {
     return cacheRequest;
   }
 
+  @SuppressWarnings("unchecked")
   private Object buildGetApplicationHomeSubClusterRequest(String appId) {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
         GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, appId);
