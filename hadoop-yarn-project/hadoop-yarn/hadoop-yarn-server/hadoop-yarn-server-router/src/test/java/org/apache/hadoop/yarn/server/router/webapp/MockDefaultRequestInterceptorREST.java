@@ -35,6 +35,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
@@ -47,6 +48,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -362,5 +364,52 @@ public class MockDefaultRequestInterceptorREST
     } else {
       return null;
     }
+  }
+
+  @Override
+  public ContainerInfo getContainer(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId, String containerId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ContainerId newContainerId = ContainerId.newContainerId(
+        ApplicationAttemptId.fromString(appAttemptId), Integer.valueOf(containerId));
+
+    Resource allocatedResource = Resource.newInstance(1024, 2);
+
+    int subClusterId = Integer.valueOf(getSubClusterId().getId());
+    NodeId assignedNode = NodeId.newInstance("Node", subClusterId);
+    Priority priority = Priority.newInstance(subClusterId);
+    long creationTime = subClusterId;
+    long finishTime = subClusterId;
+    String diagnosticInfo = "Diagnostic " + subClusterId;
+    String logUrl = "Log " + subClusterId;
+    int containerExitStatus = subClusterId;
+    ContainerState containerState = ContainerState.COMPLETE;
+    String nodeHttpAddress = "HttpAddress " + subClusterId;
+
+    ContainerReport containerReport = ContainerReport.newInstance(
+        newContainerId, allocatedResource, assignedNode, priority,
+        creationTime, finishTime, diagnosticInfo, logUrl,
+        containerExitStatus, containerState, nodeHttpAddress);
+
+    return new ContainerInfo(containerReport);
+  }
+
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (!EnumUtils.isValidEnum(SignalContainerCommand.class, command.toUpperCase())) {
+      String errMsg = "Invalid command: " + command.toUpperCase() + ", valid commands are: "
+          + Arrays.asList(SignalContainerCommand.values());
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    return Response.status(Status.OK).build();
   }
 }
