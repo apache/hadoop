@@ -850,9 +850,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       LOG.debug("Using delegation tokens");
       LOG.warn(
-          "The credential provider interface has changed in AWS SDK V2, custom credential providers "
-              + "used in delegation tokens binding classes will need to be updated once S3A is "
-              + "upgraded to SDK V2");
+          "The credential provider interface has changed in AWS SDK V2, custom credential "
+              + "providers used in delegation tokens binding classes will need to be updated once "
+              + "S3A is upgraded to SDK V2");
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
       tokens.bindToFileSystem(getCanonicalUri(),
