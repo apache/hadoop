@@ -217,7 +217,8 @@ public class TestNodeManagerMetrics {
     GenericTestUtils.waitFor(() -> genericEventTypeMetrics.
         get(TestEnum.TestEventType) == 3, 1000, 10000);
 
-    String testEventTypeCountExpect = Long.toString(genericEventTypeMetrics.get(TestEnum.TestEventType));
+    String testEventTypeCountExpect =
+        Long.toString(genericEventTypeMetrics.get(TestEnum.TestEventType));
     Assert.assertNotNull(testEventTypeCountExpect);
     String testEventTypeCountMetric =
         genericEventTypeMetrics.getRegistry().get("TestEventType_event_count").toString();

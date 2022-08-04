@@ -332,15 +332,16 @@ public class ContainerManagerImpl extends CompositeService implements
     recover();
   }
 
+  @SuppressWarnings("unchecked")
   protected AsyncDispatcher createContainerManagerDispatcher() {
     dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
 
-    GenericEventTypeMetrics containerEventTypeMetrics =
+    GenericEventTypeMetrics<ContainerEventType> containerEventTypeMetrics =
         GenericEventTypeMetricsManager.create(dispatcher.getName(), ContainerEventType.class);
     dispatcher.addMetrics(containerEventTypeMetrics,
         containerEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics localizationEventTypeMetrics =
+    GenericEventTypeMetrics<LocalizationEventType> localizationEventTypeMetrics =
         GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizationEventType.class);
     dispatcher.addMetrics(localizationEventTypeMetrics,
         localizationEventTypeMetrics.getEnumClass());
@@ -369,15 +370,13 @@ public class ContainerManagerImpl extends CompositeService implements
          containersMonitorEventTypeMetrics.getEnumClass());
 
     GenericEventTypeMetrics<AuxServicesEventType> auxServicesEventTypeTypeMetrics =
-        GenericEventTypeMetricsManager.create(
-            dispatcher.getName(), AuxServicesEventType.class);
+        GenericEventTypeMetricsManager.create(dispatcher.getName(), AuxServicesEventType.class);
     dispatcher.addMetrics(auxServicesEventTypeTypeMetrics,
         auxServicesEventTypeTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics localizerEventTypeMetrics = GenericEventTypeMetricsManager.create(
-        dispatcher.getName(), LocalizerEventType.class);
-    dispatcher.addMetrics(localizerEventTypeMetrics,
-        localizerEventTypeMetrics.getEnumClass());
+    GenericEventTypeMetrics<LocalizerEventType> localizerEventTypeMetrics =
+        GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizerEventType.class);
+    dispatcher.addMetrics(localizerEventTypeMetrics, localizerEventTypeMetrics.getEnumClass());
 
     return dispatcher;
   }

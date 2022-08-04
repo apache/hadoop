@@ -1008,6 +1008,7 @@ public class NodeManager extends CompositeService
   /**
    * Unit test friendly.
    */
+  @SuppressWarnings("unchecked")
   protected AsyncDispatcher createNMDispatcher() {
     dispatcher = new AsyncDispatcher("NM Event dispatcher");
     GenericEventTypeMetrics<ContainerManagerEventType> eventTypeMetrics =
