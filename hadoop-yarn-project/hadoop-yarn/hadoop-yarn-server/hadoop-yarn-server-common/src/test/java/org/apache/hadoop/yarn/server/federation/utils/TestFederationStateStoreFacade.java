@@ -169,7 +169,7 @@ public class TestFederationStateStoreFacade {
   }
 
   @Test
-  public void getApplicationHomeSubCluster() throws YarnException {
+  public void testGetHomeSubClusterForApp() throws YarnException {
     for (int i = 0; i < numApps; i++) {
       ApplicationId appId = ApplicationId.newInstance(clusterTs, i);
       Assert.assertEquals(stateStoreTestUtil.queryApplicationHomeSC(appId),
