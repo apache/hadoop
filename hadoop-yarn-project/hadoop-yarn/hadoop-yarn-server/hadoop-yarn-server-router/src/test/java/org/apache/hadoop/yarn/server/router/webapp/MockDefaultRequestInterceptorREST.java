@@ -421,8 +421,8 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @Override
-  public org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo getAppAttempt(HttpServletRequest req, HttpServletResponse res,
-                                                                               String appId, String appAttemptId) {
+  public AppAttemptInfo getAppAttempt(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId) {
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
