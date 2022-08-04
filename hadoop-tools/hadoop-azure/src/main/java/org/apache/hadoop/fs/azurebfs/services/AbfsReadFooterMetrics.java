@@ -90,18 +90,20 @@ public class AbfsReadFooterMetrics {
     for (AbfsReadFooterMetrics abfsReadFooterMetrics : isNonParquetList) {
       String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
       String[] offDiffFirstSecondRead = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
-      for(int i=0; i<firstReadSize.length; i++){
+      for (int i = 0; i < firstReadSize.length; i++) {
         store[i] += Long.parseLong(firstReadSize[i]);
-        store[i+size] += Long.parseLong(offDiffFirstSecondRead[i]);
+        store[i + size] += Long.parseLong(offDiffFirstSecondRead[i]);
       }
     }
     StringBuilder firstReadSize = new StringBuilder();
     StringBuilder offDiffFirstSecondRead = new StringBuilder();
     firstReadSize.append(String.format("%.3f", store[0] / isNonParquetList.size()));
     offDiffFirstSecondRead.append(String.format("%.3f", store[size] / isNonParquetList.size()));
-    for(int j=1; j<size; j++) {
-      firstReadSize.append("_").append(String.format("%.3f", store[j] / isNonParquetList.size()));
-      offDiffFirstSecondRead.append("_").append(String.format("%.3f", store[j + size] / isNonParquetList.size()));
+    for (int j = 1; j < size; j++) {
+      firstReadSize.append("_")
+          .append(String.format("%.3f", store[j] / isNonParquetList.size()));
+      offDiffFirstSecondRead.append("_")
+          .append(String.format("%.3f", store[j + size] / isNonParquetList.size()));
     }
     avgNonParquetReadFooterMetrics.setSizeReadByFirstRead(firstReadSize.toString());
     avgNonParquetReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead.toString());
@@ -124,14 +126,16 @@ public class AbfsReadFooterMetrics {
    */
   public static String getReadFooterMetrics(AbfsReadFooterMetrics avgReadFooterMetrics) {
     String readFooterMetric = "";
-    if(avgReadFooterMetrics.getIsParquetFile()){
+    if (avgReadFooterMetrics.getIsParquetFile()) {
       readFooterMetric += "Parquet:";
-    }else{
+    } else {
       readFooterMetric += "NonParquet:";
     }
     readFooterMetric += " #FR=" + avgReadFooterMetrics.getSizeReadByFirstRead()
-        + " #SR=" + avgReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
-        + " #FL=" + String.format("%.3f", avgReadFooterMetrics.getAvgFileLength());
+        + " #SR="
+        + avgReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
+        + " #FL=" + String.format("%.3f",
+        avgReadFooterMetrics.getAvgFileLength());
     return readFooterMetric + " ";
   }
 
@@ -153,7 +157,7 @@ public class AbfsReadFooterMetrics {
       AbfsReadFooterMetrics.getParquetReadFooterMetricsAverage(isParquetList, avgParquetReadFooterMetrics);
       readFooterMetric += AbfsReadFooterMetrics.getReadFooterMetrics(avgParquetReadFooterMetrics);
     }
-    if(!isNonParquetList.isEmpty()) {
+    if (!isNonParquetList.isEmpty()) {
       avgNonparquetReadFooterMetrics.setParquetFile(false);
       AbfsReadFooterMetrics.getNonParquetReadFooterMetricsAverage(isNonParquetList, avgNonparquetReadFooterMetrics);
       readFooterMetric += AbfsReadFooterMetrics.getReadFooterMetrics(avgNonparquetReadFooterMetrics);

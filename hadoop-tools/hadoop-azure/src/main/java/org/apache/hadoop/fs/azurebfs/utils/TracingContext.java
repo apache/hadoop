@@ -19,10 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.util.UUID;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.LinkedHashSet;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;

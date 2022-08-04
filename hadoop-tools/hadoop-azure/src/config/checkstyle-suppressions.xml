@@ -47,7 +47,11 @@
     <suppress checks="MagicNumber"
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]AbfsDriverMetrics.java"/>
     <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]AbfsBackoffMetrics.java"/>
+    <suppress checks="MagicNumber"
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]AbfsRestOperation.java"/>
+    <suppress checks="MagicNumber"
+              files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]AbfsInputStream.java"/>
     <suppress checks="MagicNumber"
               files="org[\\/]apache[\\/]hadoop[\\/]fs[\\/]azurebfs[\\/]services[\\/]TestAbfsRestOperation.java"/>
     <suppress checks="ParameterNumber|MagicNumber"

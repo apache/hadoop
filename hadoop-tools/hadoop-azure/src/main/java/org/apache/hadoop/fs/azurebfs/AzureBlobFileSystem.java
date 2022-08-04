@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -43,7 +42,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicLong;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -122,9 +120,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
-import static org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat.INTERNAL_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat.INTERNAL_BACKOFF_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat.INTERNAL_FOOTER_METRIC_FORMAT;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;

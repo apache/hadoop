@@ -710,10 +710,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    if(this.collectStreamMetrics) {
+    if (this.collectStreamMetrics) {
       checkIsParquet(abfsReadFooterMetrics);
-      this.client.getAbfsCounters()
-          .getAbfsReadFooterMetrics()
+      this.client.getAbfsCounters().getAbfsReadFooterMetrics()
           .add(abfsReadFooterMetrics);
     }
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
@@ -722,7 +721,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private void checkIsParquet(AbfsReadFooterMetrics abfsReadFooterMetrics) {
     String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
     String[] offDiffFirstSecondRead  = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
-    if((firstReadSize[0].equals(firstReadSize[1])) && (offDiffFirstSecondRead[0].equals(offDiffFirstSecondRead[1]))){
+    if ((firstReadSize[0].equals(firstReadSize[1]))
+        && (offDiffFirstSecondRead[0].equals(offDiffFirstSecondRead[1]))) {
       abfsReadFooterMetrics.setParquetFile(true);
       abfsReadFooterMetrics.setSizeReadByFirstRead(firstReadSize[0]);
       abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead[0]);
