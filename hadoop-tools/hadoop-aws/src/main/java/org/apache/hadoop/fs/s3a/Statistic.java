@@ -308,6 +308,23 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in an input stream",
       TYPE_COUNTER),
+  STREAM_READ_VECTORED_OPERATIONS(
+          StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+          "Count of readVectored() operations in an input stream.",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_READ_BYTES_DISCARDED(
+          StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
+          "Count of bytes discarded during readVectored() operation." +
+                  " in an input stream",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_INCOMING_RANGES(
+          StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES,
+          "Count of incoming file ranges during readVectored() operation.",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_COMBINED_RANGES(
+          StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES,
+          "Count of combined file ranges during readVectored() operation.",
+          TYPE_COUNTER),
   STREAM_READ_REMOTE_STREAM_ABORTED(
       StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
       "Duration of aborting a remote stream during stream IO",
