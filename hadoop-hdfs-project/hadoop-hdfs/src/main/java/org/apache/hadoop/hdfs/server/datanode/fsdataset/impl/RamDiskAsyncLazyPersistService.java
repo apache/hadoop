@@ -78,15 +78,10 @@ class RamDiskAsyncLazyPersistService {
   }
 
   private void addExecutorForVolume(final String storageId) {
-    ThreadFactory threadFactory = new ThreadFactory() {
-
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread t = new Thread(threadGroup, r);
-        t.setName("Async RamDisk lazy persist worker " +
-            " for volume with id " + storageId);
-        return t;
-      }
+    ThreadFactory threadFactory = r -> {
+      Thread t = new Thread(threadGroup, r);
+      t.setName("Async RamDisk lazy persist worker for volume with id " + storageId);
+      return t;
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(

@@ -126,13 +126,7 @@ public class BlockPoolSlice {
   private static ForkJoinPool addReplicaThreadPool = null;
   private static final int VOLUMES_REPLICA_ADD_THREADPOOL_SIZE = Runtime
       .getRuntime().availableProcessors();
-  private static final Comparator<File> FILE_COMPARATOR =
-      new Comparator<File>() {
-    @Override
-    public int compare(File f1, File f2) {
-      return f1.getName().compareTo(f2.getName());
-    }
-  };
+  private static final Comparator<File> FILE_COMPARATOR = Comparator.comparing(File::getName);
 
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private volatile GetSpaceUsed dfsUsage;
@@ -228,13 +222,10 @@ public class BlockPoolSlice {
       initializeAddReplicaPool(conf, (FsDatasetImpl) volume.getDataset());
     }
     // Make the dfs usage to be saved during shutdown.
-    shutdownHook = new Runnable() {
-      @Override
-      public void run() {
-        if (!dfsUsedSaved) {
-          saveDfsUsed();
-          addReplicaThreadPool.shutdownNow();
-        }
+    shutdownHook = () -> {
+      if (!dfsUsedSaved) {
+        saveDfsUsed();
+        addReplicaThreadPool.shutdownNow();
       }
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,

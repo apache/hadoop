@@ -166,24 +166,19 @@ class StripedBlockReader {
 
   Callable<BlockReadStats> readFromBlock(final int length,
                                final CorruptedBlocks corruptedBlocks) {
-    return new Callable<BlockReadStats>() {
-
-      @Override
-      public BlockReadStats call() throws Exception {
-        try {
-          getReadBuffer().limit(length);
-          return actualReadFromBlock();
-        } catch (ChecksumException e) {
-          LOG.warn("Found Checksum error for {} from {} at {}", block,
-              source, e.getPos());
-          corruptedBlocks.addCorruptedBlock(block, source);
-          throw e;
-        } catch (IOException e) {
-          LOG.info(e.getMessage());
-          throw e;
-        } finally {
-          DataNodeFaultInjector.get().interceptBlockReader();
-        }
+    return () -> {
+      try {
+        getReadBuffer().limit(length);
+        return actualReadFromBlock();
+      } catch (ChecksumException e) {
+        LOG.warn("Found Checksum error for {} from {} at {}", block, source, e.getPos());
+        corruptedBlocks.addCorruptedBlock(block, source);
+        throw e;
+      } catch (IOException e) {
+        LOG.info(e.getMessage());
+        throw e;
+      } finally {
+        DataNodeFaultInjector.get().interceptBlockReader();
       }
     };
   }

@@ -123,14 +123,11 @@ class BlockPoolManager {
   synchronized void startAll() throws IOException {
     try {
       UserGroupInformation.getLoginUser().doAs(
-          new PrivilegedExceptionAction<Object>() {
-            @Override
-            public Object run() throws Exception {
-              for (BPOfferService bpos : offerServices) {
-                bpos.start();
-              }
-              return null;
+          (PrivilegedExceptionAction<Object>) () -> {
+            for (BPOfferService bpos : offerServices) {
+              bpos.start();
             }
+            return null;
           });
     } catch (InterruptedException ex) {
       IOException ioe = new IOException();
@@ -274,13 +271,10 @@ class BlockPoolManager {
           nnIds.add(nnId);
         }
         try {
-          UserGroupInformation.getLoginUser()
-              .doAs(new PrivilegedExceptionAction<Object>() {
-                @Override
-                public Object run() throws Exception {
-                  bpos.refreshNNList(nsToRefresh, nnIds, addrs, lifelineAddrs);
-                  return null;
-                }
+          UserGroupInformation.getLoginUser().doAs(
+              (PrivilegedExceptionAction<Object>) () -> {
+                bpos.refreshNNList(nsToRefresh, nnIds, addrs, lifelineAddrs);
+                return null;
               });
         } catch (InterruptedException ex) {
           IOException ioe = new IOException();

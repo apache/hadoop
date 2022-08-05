@@ -124,7 +124,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -202,7 +201,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
@@ -1176,16 +1174,13 @@ public class DataNode extends ReconfigurableBase
 
           Preconditions.checkNotNull(data, "Storage not yet initialized");
           for (final StorageLocation location : changedVolumes.newLocations) {
-            exceptions.add(service.submit(new Callable<IOException>() {
-              @Override
-              public IOException call() {
-                try {
-                  data.addVolume(location, nsInfos);
-                } catch (IOException e) {
-                  return e;
-                }
-                return null;
+            exceptions.add(service.submit(() -> {
+              try {
+                data.addVolume(location, nsInfos);
+              } catch (IOException e) {
+                return e;
               }
+              return null;
             }));
           }
 
@@ -2242,14 +2237,10 @@ public class DataNode extends ReconfigurableBase
         dnAddr, addr);
     final UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     try {
-      return loginUgi
-          .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
-            @Override
-            public InterDatanodeProtocol run() throws IOException {
-              return new InterDatanodeProtocolTranslatorPB(addr, loginUgi,
-                  conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
-            }
-          });
+      return loginUgi.doAs(
+          (PrivilegedExceptionAction<InterDatanodeProtocol>) () ->
+              new InterDatanodeProtocolTranslatorPB(addr, loginUgi, conf,
+                  NetUtils.getDefaultSocketFactory(conf), socketTimeout));
     } catch (InterruptedException ie) {
       throw new IOException(ie.getMessage());
     }
@@ -3029,14 +3020,8 @@ public class DataNode extends ReconfigurableBase
    */
   public DataEncryptionKeyFactory getDataEncryptionKeyFactoryForBlock(
       final ExtendedBlock block) {
-    return new DataEncryptionKeyFactory() {
-      @Override
-      public DataEncryptionKey newDataEncryptionKey() {
-        return dnConf.encryptDataTransfer ?
-          blockPoolTokenSecretManager.generateDataEncryptionKey(
-            block.getBlockPoolId()) : null;
-      }
-    };
+    return () -> dnConf.encryptDataTransfer ?
+      blockPoolTokenSecretManager.generateDataEncryptionKey(block.getBlockPoolId()) : null;
   }
 
   /**

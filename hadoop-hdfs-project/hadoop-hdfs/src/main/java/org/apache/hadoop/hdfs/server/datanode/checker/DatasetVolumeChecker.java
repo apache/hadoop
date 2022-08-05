@@ -225,13 +225,8 @@ public class DatasetVolumeChecker {
         allVolumes.add(reference.getVolume());
         Futures.addCallback(olf.get(),
             new ResultHandler(reference, healthyVolumes, failedVolumes,
-                numVolumes, new Callback() {
-                  @Override
-                  public void call(Set<FsVolumeSpi> ignored1,
-                                   Set<FsVolumeSpi> ignored2) {
-                    latch.countDown();
-                  }
-                }), MoreExecutors.directExecutor());
+                numVolumes, (ignored1, ignored2) -> latch.countDown()),
+            MoreExecutors.directExecutor());
       } else {
         IOUtils.cleanupWithLogger(null, reference);
         if (numVolumes.decrementAndGet() == 0) {

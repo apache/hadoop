@@ -489,13 +489,9 @@ public class BlockPoolSliceStorage extends Storage {
     if (callables == null) {
       doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV, conf);
     } else {
-      callables.add(new Callable<StorageDirectory>() {
-        @Override
-        public StorageDirectory call() throws Exception {
-          doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV,
-              conf);
-          return bpSd;
-        }
+      callables.add(() -> {
+        doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV, conf);
+        return bpSd;
       });
     }
   }

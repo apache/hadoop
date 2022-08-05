@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -135,13 +134,8 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
     }
 
     LOG.info("Scheduling a check for {}", target);
-    final ListenableFuture<V> lfWithoutTimeout = executorService.submit(
-        new Callable<V>() {
-          @Override
-          public V call() throws Exception {
-            return target.check(context);
-          }
-        });
+    final ListenableFuture<V> lfWithoutTimeout =
+        executorService.submit(() -> target.check(context));
     final ListenableFuture<V> lf;
 
     if (diskCheckTimeout > 0) {
