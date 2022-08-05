@@ -1549,6 +1549,13 @@
   </property>
 
   <property>
+    <description>Whether to clean up nodemanager logs when log aggregation is enabled
+    </description>
+    <name>yarn.log-aggregation.enable-local-cleanup</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Time in seconds to retain user logs. Only applicable if
     log aggregation is disabled
     </description>
