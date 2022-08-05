@@ -41,6 +41,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+import javax.cache.Cache;
+
 /**
  * Unit tests for FederationStateStoreFacade.
  */
@@ -64,12 +66,14 @@ public class TestFederationStateStoreFacade {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade =
       FederationStateStoreFacade.getInstance();
+  private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
     conf = new Configuration();
     if (!(isCachingEnabled.booleanValue())) {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
+    this.isCachingEnabled = isCachingEnabled;
   }
 
   @Before
@@ -216,9 +220,17 @@ public class TestFederationStateStoreFacade {
     SubClusterId subClusterIdAdd =
         facade.addApplicationHomeSubCluster(appHomeSubCluster);
 
-    SubClusterId subClusterIdCache = facade.getApplicationHomeSubCluster(appId);
-    Assert.assertEquals(subClusterIdCache, subClusterIdAdd);
+    SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
+    Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);
     Assert.assertEquals(subClusterId1, subClusterIdAdd);
+
+    if (isCachingEnabled.booleanValue()) {
+      Cache<Object, Object> cache = facade.getCache();
+      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId.toString());
+      Object subClusterIdByCache = cache.get(cacheKey);
+      Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
+      Assert.assertEquals(subClusterId1, subClusterIdByCache);
+    }
   }
 
 }

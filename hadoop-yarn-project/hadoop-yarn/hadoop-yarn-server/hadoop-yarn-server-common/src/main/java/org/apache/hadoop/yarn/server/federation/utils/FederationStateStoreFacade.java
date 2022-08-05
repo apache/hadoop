@@ -646,4 +646,14 @@ public final class FederationStateStoreFacade {
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
   }
+
+  @VisibleForTesting
+  public Cache<Object, Object> getCache() {
+    return cache;
+  }
+
+  @VisibleForTesting
+  protected Object getAppHomeSubClusterCacheRequest(String appId) {
+    return buildGetApplicationHomeSubClusterRequest(appId);
+  }
 }
