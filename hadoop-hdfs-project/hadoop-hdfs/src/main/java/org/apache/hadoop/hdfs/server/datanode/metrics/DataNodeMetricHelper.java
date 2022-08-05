@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
-import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.Interns;
