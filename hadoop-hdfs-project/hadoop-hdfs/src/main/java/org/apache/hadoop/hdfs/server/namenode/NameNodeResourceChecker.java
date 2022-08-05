@@ -35,8 +35,6 @@ import org.apache.hadoop.hdfs.server.common.Util;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import com.google.common.base.Preconditions;
-
 /**
  * 
  * NameNodeResourceChecker provides a method -
@@ -176,11 +174,12 @@ public class NameNodeResourceChecker {
    *         otherwise.
    */
   public boolean hasAvailableDiskSpace() {
-    Preconditions.checkArgument(minimumRedundantVolumes <= volumes.size(), 
-    "The setting for " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY + 
-    " is " + minimumRedundantVolumes +
-    " which is less than the total number of existing storage volumes " + volumes.size() + 
-    " and will result in adding resources and still not being able to turn off safe mode.");
+    if (minimumRedundantVolumes > volumes.size()){
+      throw new IllegalArgumentException(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY + 
+      " is " + minimumRedundantVolumes +
+      " which is greater than the total number of existing storage volumes " + volumes.size() + 
+      " and will result in adding resources and still not being able to turn off safe mode.");
+    }
     return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
         minimumRedundantVolumes);
   }
