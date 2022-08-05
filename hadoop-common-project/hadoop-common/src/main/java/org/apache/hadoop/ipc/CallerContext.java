@@ -21,6 +21,7 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 
 import java.nio.charset.Charset;
@@ -119,6 +120,51 @@ public final class CallerContext {
       str += new String(signature, SIGNATURE_ENCODING);
     }
     return str;
+  }
+
+  /**
+   * Try to obtain the value corresponding to the key by parsing the content.
+   * @param content the full content to be parsed.
+   * @param key trying to obtain the value of the key.
+   * @return the value corresponding to the key.
+   */
+  @VisibleForTesting
+  public static String parseSpecialValue(String content, String key) {
+    int posn = content.indexOf(key);
+    if (posn != -1) {
+      posn += key.length();
+      int end = content.indexOf(",", posn);
+      return end == -1 ? content.substring(posn) : content.substring(posn, end);
+    }
+    return null;
+  }
+
+  /**
+   * Get client ip content from caller context.
+   * @param context The context here is obtained from outside.
+   * @return Filter the value carried by 'clientIp:' from the context.
+   *         If not, return null.
+   */
+  public static String getRealClientIp(String context) {
+    if (context != null && !context.equals("")) {
+      String ipKey = CLIENT_IP_STR + Builder.KEY_VALUE_SEPARATOR;
+      return parseSpecialValue(context, ipKey);
+    }
+    return null;
+  }
+
+  /**
+   * Get client port content from caller context.
+   * @param context The context here is obtained from outside.
+   * @return Filter the value carried by 'clientPort:' from the context.
+   *         If not, return null.
+   */
+  public static String getRealClientPort(String context) {
+    if (context != null && !context.equals("")) {
+      String portKey = CLIENT_PORT_STR + Builder.KEY_VALUE_SEPARATOR;
+      return parseSpecialValue(context, portKey);
+    }
+    return null;
   }
 
   /** The caller context builder. */

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.addDirectory;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.countContents;
@@ -127,6 +128,7 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -200,13 +202,17 @@ public class TestRouterRpc {
   private String routerFile;
   /** File in the Namenode. */
   private String nnFile;
+  /** Configuration in the Namenode. */
+  private static Configuration namenodeConf;
 
+  static {
+    namenodeConf = new Configuration();
+    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+        true);
+  }
 
   @BeforeClass
   public static void globalSetUp() throws Exception {
-    Configuration namenodeConf = new Configuration();
-    namenodeConf.setBoolean(DFSConfigKeys.HADOOP_CALLER_CONTEXT_ENABLED_KEY,
-        true);
     // It's very easy to become overloaded for some specific dn in this small
     // cluster, which will cause the EC file block allocation failure. To avoid
     // this issue, we disable considerLoad option.
@@ -2068,6 +2074,49 @@ public class TestRouterRpc {
     GenericTestUtils.waitFor(() ->  {
       return datanodes.get(0).getBalancerBandwidth() == newBandwidth;
     }, 100, 60 * 1000);
+  }
+
+  @Test
+  public void testRecordRealClientEnable() {
+    GenericTestUtils.LogCapturer logger =
+        GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+    CallerContext.setCurrent(
+        new CallerContext.Builder(
+        "clientContext,clientIp:2.2.2.2,clientPort:2345").build());
+    try {
+      String filePath = "/test/f2.log";
+      routerProtocol.getBlockLocations(filePath, 0, 100);
+    } catch (Exception e) {
+      // do nothing
+    }
+    assertTrue(logger.getOutput().contains("client=2.2.2.2:2345"));
+  }
+
+  @Test
+  public void testRecordRealClientDisable() throws Exception {
+    GenericTestUtils.LogCapturer logger =
+        GenericTestUtils.LogCapturer.captureLogs(Server.LOG);
+    // set hadoop.caller.context.enabled = false
+    namenodeConf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, false);
+    // restart cluster
+    tearDown();
+    globalSetUp();
+    testSetup();
+    CallerContext.setCurrent(
+        new CallerContext.Builder(
+        "clientContext,clientIp:1.1.1.1,clientPort:1234").build());
+    try {
+      String filePath = "/test/f1.log";
+      routerProtocol.getBlockLocations(filePath, 0, 100);
+    } catch (Exception e) {
+      // do nothing
+    }
+    assertFalse(logger.getOutput().contains("client="));
+
+    // reset hadoop.caller.context.enabled = true
+    namenodeConf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    tearDown();
+    globalSetUp();
   }
 
   @Test

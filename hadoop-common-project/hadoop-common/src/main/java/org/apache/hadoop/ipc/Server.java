@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
 import static org.apache.hadoop.ipc.RpcConstants.AUTHORIZATION_FAILED_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
@@ -1110,6 +1112,10 @@ public abstract class Server {
 
     public void setDeferredError(Throwable t) {
     }
+
+    public CallerContext getCallerContext() {
+      return callerContext;
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -1351,6 +1357,16 @@ public abstract class Server {
 
     @Override
     public String toString() {
+      boolean isCallerContextEnabled = conf.getBoolean(
+          HADOOP_CALLER_CONTEXT_ENABLED_KEY,
+          HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT);
+      CallerContext context = getCallerContext();
+      if (isCallerContextEnabled && context != null && context.isContextValid()) {
+        String cc = context.getContext();
+        return super.toString() + " " + rpcRequest + " from " + connection +
+            ", client=" + CallerContext.getRealClientIp(cc) + ":" +
+            CallerContext.getRealClientPort(cc);
+      }
       return super.toString() + " " + rpcRequest + " from " + connection;
     }
   }
