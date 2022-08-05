@@ -89,6 +89,7 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -141,10 +142,10 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   /**
-   * Returns the comma separated intercepter class names from the configuration.
+   * Returns the comma separated interceptor class names from the configuration.
    *
    * @param conf
-   * @return the intercepter class names as an instance of ArrayList
+   * @return the interceptor class names as an instance of ArrayList
    */
   private List<String> getInterceptorClassNames(Configuration config) {
     String configuredInterceptorClassNames =
@@ -189,9 +190,9 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   /**
-   * Gets the Request intercepter chains for all the users.
+   * Gets the Request interceptor chains for all the users.
    *
-   * @return the request intercepter chains.
+   * @return the request interceptor chains.
    */
   @VisibleForTesting
   protected Map<String, RequestInterceptorChainWrapper> getPipelines() {
@@ -199,10 +200,10 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   /**
-   * This method creates and returns reference of the first intercepter in the
-   * chain of request intercepter instances.
+   * This method creates and returns reference of the first interceptor in the
+   * chain of request interceptor instances.
    *
-   * @return the reference of the first intercepter in the chain
+   * @return the reference of the first interceptor in the chain
    */
   @VisibleForTesting
   protected RESTRequestInterceptor createRequestInterceptorChain() {
@@ -247,7 +248,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   }
 
   /**
-   * Initializes the request intercepter pipeline for the specified user.
+   * Initializes the request interceptor pipeline for the specified user.
    *
    * @param user
    */
@@ -298,9 +299,9 @@ public class RouterWebServices implements RMWebServiceProtocol {
     }
 
     /**
-     * Gets the root request intercepter.
+     * Gets the root request interceptor.
      *
-     * @return the root request intercepter
+     * @return the root request interceptor
      */
     public synchronized RESTRequestInterceptor getRootInterceptor() {
       return rootInterceptor;
@@ -954,6 +955,33 @@ public class RouterWebServices implements RMWebServiceProtocol {
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
     return pipeline.getRootInterceptor().getContainer(req, res, appId,
         appAttemptId, containerId);
+  }
+
+  @PUT
+  @Path(RMWSConsts.SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor()
+        .updateSchedulerConfiguration(mutationInfo, hsr);
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_CONF)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getSchedulerConfiguration(hsr);
   }
 
   @VisibleForTesting

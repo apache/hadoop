@@ -35,6 +35,7 @@
 #include <boost/date_time/posix_time/posix_time_duration.hpp>
 
 #include <system_error>
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 

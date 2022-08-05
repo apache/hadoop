@@ -17,12 +17,13 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
-import static org.junit.Assert.fail;
-
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
@@ -46,12 +47,14 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
     Map<SubClusterIdInfo, Float> amrmWeights = new HashMap<>();
 
+    long now = Time.now();
+
     // simulate 20 active subclusters
     for (int i = 0; i < 20; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo(String.format("sc%02d", i));
-      SubClusterInfo federationSubClusterInfo =
-          SubClusterInfo.newInstance(sc.toId(), null, null, null, null, -1,
-              SubClusterState.SC_RUNNING, -1, generateClusterMetricsInfo(i));
+      SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
+          now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
       getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       float weight = getRand().nextInt(2);
       if (i == 5) {
@@ -67,12 +70,11 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
 
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
-
+    // initialize policy with context
+    setupContext();
   }
 
-  private String generateClusterMetricsInfo(int id) {
+  public String generateClusterMetricsInfo(int id) {
 
     long mem = 1024 * getRand().nextInt(277 * 100 - 1);
     // plant a best cluster
@@ -106,7 +108,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
   }
 
   @Test
-  public void testIfNoSubclustersWithWeightOne() {
+  public void testIfNoSubclustersWithWeightOne() throws Exception {
     setPolicy(new LoadBasedRouterPolicy());
     setPolicyInfo(new WeightedPolicyInfo());
     Map<SubClusterIdInfo, Float> routerWeights = new HashMap<>();
@@ -123,15 +125,13 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     getPolicyInfo().setRouterPolicyWeights(routerWeights);
     getPolicyInfo().setAMRMPolicyWeights(amrmWeights);
 
-    try {
-      FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-          getPolicyInfo(), getActiveSubclusters());
-      ((FederationRouterPolicy) getPolicy())
-          .getHomeSubcluster(getApplicationSubmissionContext(), null);
-      fail();
-    } catch (YarnException ex) {
-      Assert.assertTrue(
-          ex.getMessage().contains("Zero Active Subcluster with weight 1"));
-    }
+
+    ConfigurableFederationPolicy policy = getPolicy();
+    FederationPoliciesTestUtil.initializePolicyContext(policy,
+        getPolicyInfo(), getActiveSubclusters());
+
+    LambdaTestUtils.intercept(YarnException.class, "Zero Active Subcluster with weight 1.",
+        () ->  ((FederationRouterPolicy) policy).
+        getHomeSubcluster(getApplicationSubmissionContext(), null));
   }
 }

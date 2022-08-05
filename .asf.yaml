@@ -22,4 +22,4 @@ notifications:
   commits:      common-commits@hadoop.apache.org
   issues:       common-issues@hadoop.apache.org
   pullrequests: common-issues@hadoop.apache.org
-  jira_options: link label worklog
+  jira_options: comment link label

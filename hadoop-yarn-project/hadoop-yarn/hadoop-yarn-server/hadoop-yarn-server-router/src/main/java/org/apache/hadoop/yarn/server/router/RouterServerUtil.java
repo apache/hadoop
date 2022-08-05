@@ -25,6 +25,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 /**
  * Common utility methods used by the Router server.
  *
@@ -60,4 +62,43 @@ public final class RouterServerUtil {
     }
   }
 
+  /**
+   * Throws an IOException due to an error.
+   *
+   * @param errMsg the error message
+   * @param t the throwable raised in the called class.
+   * @throws IOException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowIOException(String errMsg, Throwable t)
+      throws IOException {
+    if (t != null) {
+      LOG.error(errMsg, t);
+      throw new IOException(errMsg, t);
+    } else {
+      LOG.error(errMsg);
+      throw new IOException(errMsg);
+    }
+  }
+
+  /**
+   * Throws an RunTimeException due to an error.
+   *
+   * @param errMsg the error message
+   * @param t the throwable raised in the called class.
+   * @throws RuntimeException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowRunTimeException(String errMsg, Throwable t)
+      throws RuntimeException {
+    if (t != null) {
+      LOG.error(errMsg, t);
+      throw new RuntimeException(errMsg, t);
+    } else {
+      LOG.error(errMsg);
+      throw new RuntimeException(errMsg);
+    }
+  }
 }

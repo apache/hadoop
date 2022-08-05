@@ -300,7 +300,7 @@ public class RMProxy<T> {
     // YARN-4288: local IOException is also possible.
     exceptionToPolicyMap.put(IOException.class, retryPolicy);
     // Not retry on remote IO exception.
-    return RetryPolicies.retryOtherThanRemoteException(
+    return RetryPolicies.retryOtherThanRemoteAndSaslException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
   }
 }
