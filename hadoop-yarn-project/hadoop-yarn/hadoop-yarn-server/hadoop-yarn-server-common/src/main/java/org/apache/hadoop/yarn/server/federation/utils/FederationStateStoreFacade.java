@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.federation.utils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
@@ -380,10 +381,13 @@ public final class FederationStateStoreFacade {
       throws YarnException {
     try {
       if (isCachingEnabled()) {
-        Map<String, SubClusterId> cacheAppSubCluster =
-            (Map<String, SubClusterId>)
-                cache.get(buildGetApplicationHomeSubClusterRequest(appId.toString()));
-        return cacheAppSubCluster.get(appId);
+        Object value =
+            cache.get(buildGetApplicationHomeSubClusterRequest(appId.toString()));
+        if(value instanceof SubClusterId){
+          return (SubClusterId) value;
+        } else {
+          throw new YarnException("Cannot be converted to a map.");
+        }
       } else {
         GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
@@ -525,11 +529,10 @@ public final class FederationStateStoreFacade {
     return cacheRequest;
   }
 
-  @SuppressWarnings("unchecked")
   private Object buildGetApplicationHomeSubClusterRequest(String appId) {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
         GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, appId);
-    CacheRequest<String, Map<String, SubClusterId>> cacheRequest =
+    CacheRequest<String, SubClusterId> cacheRequest =
         new CacheRequest<>(
             cacheKey,
             input -> {
@@ -543,10 +546,7 @@ public final class FederationStateStoreFacade {
                   response.getApplicationHomeSubCluster();
               SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
 
-              Map<String, SubClusterId> appSubCluster = new HashMap<>();
-              appSubCluster.put(appId, subClusterId);
-
-              return appSubCluster;
+              return subClusterId;
             });
     return cacheRequest;
   }
