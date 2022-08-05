@@ -53,7 +53,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.*;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.OPEN;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.EXISTS;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.LIST;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.DELETE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.MOVE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.MKDIRS;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.TRANSFER;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.SYNC;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.FADVISE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.READ;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.WRITE;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.FLUSH;
+import static org.apache.hadoop.hdfs.server.datanode.FileIoProvider.OPERATION.NATIVE_COPY;
 
 /**
  * This class abstracts out various file IO operations performed by the

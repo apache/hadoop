@@ -25,7 +25,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Time;
 
 import java.io.File;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 
 /**
  * An implementation of RamDiskReplicaTracker that uses an LRU
