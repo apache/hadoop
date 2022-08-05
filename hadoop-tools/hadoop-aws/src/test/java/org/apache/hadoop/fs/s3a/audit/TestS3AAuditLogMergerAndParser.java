@@ -18,16 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Map;
 
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
 
 /**
  * This will implement different tests on S3AAuditLogMergerAndParser class.
@@ -44,7 +48,7 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
    * Splitting this up across lines has a tendency to break things, so
    * be careful making changes.
    */
-  private final String sampleLogEntry =
+  static final String SAMPLE_LOG_ENTRY =
       "183c9826b45486e485693808f38e2c4071004bf5dfd4c3ab210f0a21a4000000"
           + " bucket-london"
           + " [13/May/2021:11:26:06 +0000]"
@@ -76,7 +80,41 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
           + " ECDHE-RSA-AES128-GCM-SHA256"
           + " AuthHeader"
           + " bucket-london.s3.eu-west-2.amazonaws.com"
-          + " TLSv1.2";
+          + " TLSv1.2" + "\n";
+
+  static final String SAMPLE_LOG_ENTRY_1 =
+      "01234567890123456789"
+          + " bucket-london1"
+          + " [13/May/2021:11:26:06 +0000]"
+          + " 109.157.171.174"
+          + " arn:aws:iam::152813717700:user/dev"
+          + " M7ZB7C4RTKXJKTM9"
+          + " REST.PUT.OBJECT"
+          + " fork-0001/test/testParseBrokenCSVFile"
+          + " \"PUT /fork-0001/test/testParseBrokenCSVFile HTTP/1.1\""
+          + " 200"
+          + " -"
+          + " -"
+          + " 794"
+          + " 55"
+          + " 17"
+          + " \"https://audit.example.org/hadoop/1/op_create/"
+          + "e8ede3c7-8506-4a43-8268-fe8fcbb510a4-00000278/"
+          + "?op=op_create"
+          + "&p1=fork-0001/test/testParseBrokenCSVFile"
+          + "&pr=alice"
+          + "&ps=2eac5a04-2153-48db-896a-09bc9a2fd132"
+          + "&id=e8ede3c7-8506-4a43-8268-fe8fcbb510a4-00000278&t0=154"
+          + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156&"
+          + "ts=1620905165700\""
+          + " \"Hadoop 3.4.0-SNAPSHOT, java/1.8.0_282 vendor/AdoptOpenJDK\""
+          + " -"
+          + " TrIqtEYGWAwvu0h1N9WJKyoqM0TyHUaY+ZZBwP2yNf2qQp1Z/0="
+          + " SigV4"
+          + " ECDHE-RSA-AES128-GCM-SHA256"
+          + " AuthHeader"
+          + " bucket-london.s3.eu-west-2.amazonaws.com"
+          + " TLSv1.2" + "\n";
 
   /**
    * A real referrer header entry.
@@ -96,6 +134,13 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
           + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156"
           + "&ts=1620905165700\"";
 
+  /**
+   * Sample directories and files to test.
+   */
+  private File sampleFile;
+  private File sampleDir;
+  private File sampleDestDir;
+
   private final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
       new S3AAuditLogMergerAndParser();
 
@@ -106,7 +151,7 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
   @Test
   public void testParseAuditLog() {
     Map<String, String> parseAuditLogResult =
-        s3AAuditLogMergerAndParser.parseAuditLog(sampleLogEntry);
+        s3AAuditLogMergerAndParser.parseAuditLog(SAMPLE_LOG_ENTRY);
     assertNotNull("the result of parseAuditLogResult should be not null",
         parseAuditLogResult);
     //verifying the bucket from parsed audit log
@@ -130,7 +175,7 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
     Map<String, String> parseAuditLogResultNull =
         s3AAuditLogMergerAndParser.parseAuditLog(null);
     assertTrue("the returned list should be empty for this test",
-        parseAuditLogResultEmpty.isEmpty());
+        parseAuditLogResultNull.isEmpty());
   }
 
   /**
@@ -175,12 +220,20 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
    */
   @Test
   public void testMergeAndParseAuditLogFiles() throws IOException {
-    S3AFileSystem s3AFileSystem = getFileSystem();
-    Path s3LogsPath = new Path("s3a://sravani-data/logs2");
-    Path s3DestPath = new Path("s3a://sravani-data/summary");
+    sampleDir = Files.createTempDirectory("sampleDir").toFile();
+    sampleFile = File.createTempFile("sampleFile", ".txt", sampleDir);
+    try (FileWriter fw = new FileWriter(sampleFile)) {
+      fw.write(SAMPLE_LOG_ENTRY);
+      fw.write(SAMPLE_LOG_ENTRY_1);
+      fw.flush();
+    }
+    sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
+    Path logsPath = new Path(sampleDir.toURI());
+    Path destPath = new Path(sampleDestDir.toURI());
+    FileSystem fileSystem = logsPath.getFileSystem(getConfiguration());
     boolean mergeAndParseResult =
-        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(s3AFileSystem,
-            s3LogsPath, s3DestPath);
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
+            logsPath, destPath);
     assertTrue("the result should be true", mergeAndParseResult);
   }
 }

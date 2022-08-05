@@ -18,20 +18,28 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import java.io.PrintStream;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
+import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_FAIL;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
 
@@ -40,7 +48,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
  * Its functionality is to parse the audit log files
  * and generate avro file.
  */
-public class AuditTool extends S3GuardTool {
+public class AuditTool extends Configured implements Tool, Closeable {
 
   private static final Logger LOG = LoggerFactory.getLogger(AuditTool.class);
 
@@ -50,25 +58,31 @@ public class AuditTool extends S3GuardTool {
   /**
    * Name of this tool: {@value}.
    */
-  public static final String AUDIT = "s3audit";
+  public static final String AUDITTOOL =
+      "org.apache.hadoop.fs.s3a.audit.AuditTool";
 
   /**
    * Purpose of this tool: {@value}.
    */
   public static final String PURPOSE =
-      "Merge, parse audit log files and convert into avro file for better "
+      "\n\nUSAGE:\nMerge, parse audit log files and convert into avro file "
+          + "for "
+          + "better "
           + "visualization";
 
   // Exit codes
   private static final int SUCCESS = EXIT_SUCCESS;
   private static final int FAILURE = EXIT_FAIL;
+  private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
 
   private static final String USAGE =
-      "s3guard " + AUDIT + " DestinationPath" + " SourcePath" + "\n" +
-          "s3guard " + AUDIT + " s3a://BUCKET" + " s3a://BUCKET" + "\n";
+      "bin/hadoop " + "Class" + " DestinationPath" + " SourcePath" + "\n" +
+          "bin/hadoop " + AUDITTOOL + " s3a://BUCKET" + " s3a://BUCKET" + "\n";
 
-  public AuditTool(Configuration conf) {
-    super(conf);
+  private PrintWriter out;
+
+  public AuditTool() {
+    super();
   }
 
   /**
@@ -76,14 +90,12 @@ public class AuditTool extends S3GuardTool {
    *
    * @return the string USAGE
    */
-  @Override
   public String getUsage() {
-    return USAGE;
+    return USAGE + PURPOSE;
   }
 
-  @Override
   public String getName() {
-    return AUDIT;
+    return AUDITTOOL;
   }
 
   /**
@@ -92,53 +104,153 @@ public class AuditTool extends S3GuardTool {
    * parse audit log files.
    *
    * @param args argument list
-   * @param out  output stream
-   * @throws Exception on any failure.
    * @return SUCCESS i.e, '0', which is an exit code
+   * @throws Exception on any failure.
    */
   @Override
-  public int run(String[] args, PrintStream out)
-      throws Exception {
-    List<String> paths = parseArgs(args);
+  public int run(String[] args) throws Exception {
+    List<String> paths = Arrays.asList(args);
     if (paths.isEmpty()) {
       errorln(getUsage());
       throw invalidArgs("No bucket specified");
     }
 
-    // Path of audit log files in s3 bucket
-    Path s3LogsPath = new Path(paths.get(1));
-    // Path of destination directory in s3 bucket
-    Path s3DestPath = new Path(paths.get(0));
+    // Path of audit log files
+    Path logsPath = new Path(paths.get(1));
+    // Path of destination directory
+    Path destPath = new Path(paths.get(0));
 
     // Setting the file system
-    URI fsURI = toUri(String.valueOf(s3LogsPath));
-    S3AFileSystem s3AFileSystem =
-        bindFilesystem(FileSystem.get(fsURI, getConf()));
+    URI fsURI = new URI(logsPath.toString());
+    FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
 
-    FileStatus fileStatus = s3AFileSystem.getFileStatus(s3LogsPath);
+    FileStatus fileStatus = fileSystem.getFileStatus(logsPath);
     if (fileStatus.isFile()) {
-      errorln("Expecting a directory, but " + s3LogsPath.getName() + " is a"
+      errorln("Expecting a directory, but " + logsPath.getName() + " is a"
           + " file which was passed as an argument");
       throw invalidArgs(
-          "Expecting a directory, but " + s3LogsPath.getName() + " is a"
+          "Expecting a directory, but " + logsPath.getName() + " is a"
               + " file which was passed as an argument");
     }
-    FileStatus fileStatus1 = s3AFileSystem.getFileStatus(s3DestPath);
+    FileStatus fileStatus1 = fileSystem.getFileStatus(destPath);
     if (fileStatus1.isFile()) {
-      errorln("Expecting a directory, but " + s3DestPath.getName() + " is a"
+      errorln("Expecting a directory, but " + destPath.getName() + " is a"
           + " file which was passed as an argument");
       throw invalidArgs(
-          "Expecting a directory, but " + s3DestPath.getName() + " is a"
+          "Expecting a directory, but " + destPath.getName() + " is a"
               + " file which was passed as an argument");
     }
 
     // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
     // audit log files and converting into avro file
-    boolean mergeAndParseResult = s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
-        s3AFileSystem, s3LogsPath, s3DestPath);
+    boolean mergeAndParseResult =
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
+            fileSystem, logsPath, destPath);
     if (!mergeAndParseResult) {
       return FAILURE;
     }
     return SUCCESS;
+  }
+
+  protected static void errorln(String x) {
+    System.err.println(x);
+  }
+
+  /**
+   * Build the exception to raise on invalid arguments.
+   *
+   * @param format string format
+   * @param args   optional arguments for the string
+   * @return a new exception to throw
+   */
+  protected static ExitUtil.ExitException invalidArgs(
+      String format, Object... args) {
+    return exitException(INVALID_ARGUMENT, format, args);
+  }
+
+  /**
+   * Build a exception to throw with a formatted message.
+   *
+   * @param exitCode exit code to use
+   * @param format   string format
+   * @param args     optional arguments for the string
+   * @return a new exception to throw
+   */
+  protected static ExitUtil.ExitException exitException(
+      final int exitCode,
+      final String format,
+      final Object... args) {
+    return new ExitUtil.ExitException(exitCode,
+        String.format(format, args));
+  }
+
+  /**
+   * Convert a path to a URI, catching any {@code URISyntaxException}
+   * and converting to an invalid args exception.
+   *
+   * @param s3Path path to convert to a URI
+   * @return a URI of the path
+   * @throws ExitUtil.ExitException INVALID_ARGUMENT if the URI is invalid
+   */
+  protected static URI toUri(String s3Path) {
+    URI uri;
+    try {
+      uri = new URI(s3Path);
+    } catch (URISyntaxException e) {
+      throw invalidArgs("Not a valid fileystem path: %s", s3Path);
+    }
+    return uri;
+  }
+
+  /**
+   * Flush all active output channels, including {@Code System.err},
+   * so as to stay in sync with any JRE log messages.
+   */
+  private void flush() {
+    if (out != null) {
+      out.flush();
+    } else {
+      System.out.flush();
+    }
+    System.err.flush();
+  }
+
+  @Override
+  public void close() throws IOException {
+    flush();
+    if (out != null) {
+      out.close();
+    }
+  }
+
+  /**
+   * Inner entry point, with no logging or system exits.
+   *
+   * @param conf configuration
+   * @param argv argument list
+   * @return an exception
+   * @throws Exception Exception.
+   */
+  public static int exec(Configuration conf, String... argv) throws Exception {
+    try (AuditTool auditTool = new AuditTool()) {
+      return ToolRunner.run(conf, auditTool, argv);
+    }
+  }
+
+  /**
+   * Main entry point.
+   *
+   * @param argv args list
+   */
+  public static void main(String[] argv) {
+    try {
+      ExitUtil.terminate(exec(new Configuration(), argv));
+    } catch (ExitUtil.ExitException e) {
+      LOG.error(e.toString());
+      System.exit(e.status);
+    } catch (Exception e) {
+      LOG.error(e.toString(), e);
+      ExitUtil.halt(-1, e);
+    }
   }
 }

@@ -18,22 +18,41 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.nio.file.Files;
+
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.avro.file.DataFileReader;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 
-import static org.apache.hadoop.fs.s3a.audit.AuditTool.AUDIT;
+import static org.apache.hadoop.fs.s3a.audit.TestS3AAuditLogMergerAndParser.SAMPLE_LOG_ENTRY;
 
 /**
  * This will implement tests on AuditTool class.
  */
-public class TestAuditTool extends AbstractAuditToolTest {
+public class TestAuditTool extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAuditTool.class);
+
+  private final AuditTool auditTool = new AuditTool();
+
+  /**
+   * Sample directories and files to test.
+   */
+  private File sampleFile;
+  private File sampleDir;
+  private File sampleDestDir;
 
   /**
    * Testing run method in AuditTool class by passing source and destination
@@ -41,13 +60,44 @@ public class TestAuditTool extends AbstractAuditToolTest {
    */
   @Test
   public void testRun() throws Exception {
-    Path s3LogsPath = new Path("s3a://sravani-data/logs2");
-    Path s3DestPath = new Path("s3a://sravani-data/summary");
-    run(AUDIT, s3DestPath, s3LogsPath);
-    S3AFileSystem s3AFileSystem =
-        (S3AFileSystem) s3DestPath.getFileSystem(getConfiguration());
-    Path avroFilePath = new Path("s3a://sravani-data/summary/AvroData.avro");
-    assertTrue("Avro file should be present in destination path",
-        s3AFileSystem.exists(avroFilePath));
+    sampleDir = Files.createTempDirectory("sampleDir").toFile();
+    sampleFile = File.createTempFile("sampleFile", ".txt", sampleDir);
+    try (FileWriter fw = new FileWriter(sampleFile)) {
+      fw.write(SAMPLE_LOG_ENTRY);
+      fw.flush();
+    }
+    sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
+    Path logsPath = new Path(sampleDir.toURI());
+    Path destPath = new Path(sampleDestDir.toURI());
+    String[] args = {destPath.toString(), logsPath.toString()};
+    auditTool.run(args);
+    FileSystem fileSystem = destPath.getFileSystem(getConfiguration());
+    RemoteIterator<LocatedFileStatus> listOfDestFiles =
+        fileSystem.listFiles(destPath, true);
+    while (listOfDestFiles.hasNext()) {
+      Path filesPath = listOfDestFiles.next().getPath();
+      if (filesPath.getName().equals("AvroData.avro")) {
+        File avroFile = new File(filesPath.toUri());
+
+        //DeSerializing the objects
+        DatumReader<AvroDataRecord> datumReader =
+            new SpecificDatumReader<AvroDataRecord>(AvroDataRecord.class);
+
+        //Instantiating DataFileReader
+        DataFileReader<AvroDataRecord> dataFileReader =
+            new DataFileReader<AvroDataRecord>(avroFile, datumReader);
+        AvroDataRecord avroDataRecord = null;
+
+        while (dataFileReader.hasNext()) {
+          avroDataRecord = dataFileReader.next(avroDataRecord);
+          //verifying the bucket from generated avro data
+          assertEquals("the expected and actual results should be same",
+              "bucket-london", avroDataRecord.get("bucket").toString());
+          //verifying the remoteip from generated avro data
+          assertEquals("the expected and actual results should be same",
+              "109.157.171.174", avroDataRecord.get("remoteip").toString());
+        }
+      }
+    }
   }
 }

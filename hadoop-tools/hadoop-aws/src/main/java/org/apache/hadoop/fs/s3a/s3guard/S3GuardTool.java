@@ -52,7 +52,6 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
-import org.apache.hadoop.fs.s3a.audit.AuditTool;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -121,8 +120,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + BucketInfo.NAME + " - " + BucketInfo.PURPOSE + "\n" +
       "\t" + MarkerTool.MARKERS + " - " + MarkerTool.PURPOSE + "\n" +
       "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
-      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n" +
-      "\t" + AuditTool.AUDIT + " - " + AuditTool.PURPOSE + "\n";
+      "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n";
 
   private static final String E_UNSUPPORTED = "This command is no longer supported";
 
@@ -956,9 +954,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
       // the select tool is not technically a S3Guard tool, but it's on the CLI
       // because this is the defacto S3 CLI.
       command = new SelectTool(conf);
-      break;
-    case AuditTool.AUDIT:
-      command = new AuditTool(conf);
       break;
     default:
       printHelp();
