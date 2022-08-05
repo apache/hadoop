@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -98,7 +99,16 @@ public abstract class AbstractRouterPolicy extends
 
     // if a reservation exists limit scope to the sub-cluster this
     // reservation is mapped to
-    // TODO: Implemented in YARN-11236
+    if (reservationId != null) {
+      // note this might throw YarnException if the reservation is
+      // unknown. This is to be expected, and should be handled by
+      // policy invoker.
+      SubClusterId resSubCluster = getPolicyContext().getFederationStateStoreFacade().
+          getReservationHomeSubCluster(reservationId);
+
+      return Collections.singletonMap(resSubCluster, activeSubClusters.get(resSubCluster));
+    }
+
     return activeSubClusters;
   }
 
@@ -167,8 +177,7 @@ public abstract class AbstractRouterPolicy extends
     }
 
     // apply filtering based on reservation location and active sub-clusters
-    Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
-        request.getReservationId(), getActiveSubclusters());
+    Map<SubClusterId, SubClusterInfo> filteredSubClusters = getActiveSubclusters();
 
     // pick the chosen subCluster from the active ones
     return chooseSubCluster(request.getQueue(), filteredSubClusters);

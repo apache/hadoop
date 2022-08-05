@@ -137,6 +137,56 @@ message DeleteApplicationHomeSubClusterRequestProto {
 message DeleteApplicationHomeSubClusterResponseProto {
 }
 
+
+// ---- reservations ----
+
+message ReservationHomeSubClusterProto {
+  optional ReservationIdProto reservation_id = 1;
+  optional SubClusterIdProto home_sub_cluster = 2;
+}
+
+message AddReservationHomeSubClusterRequestProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message AddReservationHomeSubClusterResponseProto {
+  optional SubClusterIdProto home_sub_cluster = 1;
+}
+
+message UpdateReservationHomeSubClusterRequestProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message UpdateReservationHomeSubClusterResponseProto {
+}
+
+message GetReservationHomeSubClusterRequestProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
+message GetReservationHomeSubClusterResponseProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message GetReservationsHomeSubClusterRequestProto {
+
+}
+
+message GetReservationsHomeSubClusterResponseProto {
+  repeated ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+
+message DeleteReservationHomeSubClusterRequestProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
+message DeleteReservationHomeSubClusterResponseProto {
+}
+
+
+//----- configurations ---
+
 message SubClusterPolicyConfigurationProto {
   optional string queue = 1;
   optional string type = 2;

@@ -24,7 +24,11 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
@@ -32,10 +36,13 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.when;
 
 /**
  * Base class for router policies tests, tests for null input cases.
@@ -124,6 +131,57 @@ public abstract class BaseRouterPoliciesTest
     LambdaTestUtils.intercept(FederationPolicyException.class,
         "The ReservationSubmissionRequest cannot be null.",
         () -> policy.getReservationHomeSubcluster(null));
+  }
+
+  @Test
+  public void testUnknownReservation() throws Exception {
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    ReservationId reservationId = ReservationId.newInstance(System.currentTimeMillis(), 1);
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId()).thenReturn(reservationId);
+
+    // route an application that uses this app
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+            ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
+            "queue1", Priority.newInstance(1), null, false, false, 1, null, null, false);
+
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+    FederationRouterPolicy policy = (FederationRouterPolicy) getPolicy();
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> policy.getHomeSubcluster(applicationSubmissionContext, new ArrayList<>()));
+  }
+
+  @Test
+  public void testFollowReservation() throws YarnException {
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId())
+        .thenReturn(ReservationId.newInstance(System.currentTimeMillis(), 1));
+
+    // first we invoke a reservation placement
+    SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
+        .getReservationHomeSubcluster(resReq);
+
+    // add this to the store
+    this.getFederationPolicyContext().getFederationStateStoreFacade()
+        .addReservationHomeSubCluster(ReservationHomeSubCluster.newInstance(
+             resReq.getReservationId(), chosen));
+
+    // route an application that uses this app
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+            ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
+            "queue1", Priority.newInstance(1), null, false, false, 1, null,
+            null, false);
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+    SubClusterId chosen2 = ((FederationRouterPolicy) getPolicy())
+            .getHomeSubcluster(applicationSubmissionContext,new ArrayList<>());
+
+    // application follows reservation
+    Assert.assertEquals(chosen, chosen2);
   }
 
 }
