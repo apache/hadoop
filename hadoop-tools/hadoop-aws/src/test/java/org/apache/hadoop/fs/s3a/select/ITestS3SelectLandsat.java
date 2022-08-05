@@ -423,7 +423,6 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
         assertEquals("byte at seek position",
             dataset[(int) seekStream.getPos()], seekStream.read());
       }
-      
       // there's no knowledge of how much data is left, but with Gzip
       // involved there can be a lot. To keep the test duration down,
       // this test, unlike the simpler one, doesn't try to read past the
