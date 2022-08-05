@@ -85,7 +85,7 @@ public final class IOStatisticsContextIntegration {
    *
    * @return if the thread-level IO statistics enabled.
    */
-  public static boolean getIOStatisticsThreadLevelEnabled() {
+  public static boolean isIOStatisticsThreadLevelEnabled() {
     return isThreadIOStatsEnabled;
   }
 
