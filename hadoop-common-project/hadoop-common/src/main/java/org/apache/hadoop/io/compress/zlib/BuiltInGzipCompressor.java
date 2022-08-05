@@ -84,6 +84,10 @@ public class BuiltInGzipCompressor implements Compressor {
       throw new IOException("compress called on finished compressor");
     }
 
+    if (state == BuiltInGzipDecompressor.GzipStateLabel.ENDED) {
+      throw new AlreadyClosedException("compress called on closed compressor");
+    }
+
     int compressedBytesWritten = 0;
 
     // If we are not within uncompressed data yet, output the header.
@@ -103,15 +107,7 @@ public class BuiltInGzipCompressor implements Compressor {
 
     if (state == BuiltInGzipDecompressor.GzipStateLabel.INFLATE_STREAM) {
       // now compress it into b[]
-      int deflated;
-      try {
-        deflated = deflater.deflate(b, off, len);
-      } catch (NullPointerException npe) {
-        if ("Deflater has been closed".equals(npe.getMessage())) {
-          throw new AlreadyClosedException(npe);
-        }
-        throw npe;
-      }
+      int deflated = deflater.deflate(b, off, len);
 
       compressedBytesWritten += deflated;
       off += deflated;
@@ -148,6 +144,8 @@ public class BuiltInGzipCompressor implements Compressor {
   @Override
   public void end() {
     deflater.end();
+
+    state = BuiltInGzipDecompressor.GzipStateLabel.ENDED;
   }
 
   @Override

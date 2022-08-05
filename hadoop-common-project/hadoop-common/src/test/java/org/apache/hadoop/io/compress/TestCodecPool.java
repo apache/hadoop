@@ -211,7 +211,7 @@ public class TestCodecPool {
             gzipCodec.createOutputStream(new ByteArrayOutputStream(), compressor);
     LambdaTestUtils.intercept(
             AlreadyClosedException.class,
-            "Deflater has been closed",
+            "compress called on closed compressor",
             "Compressor from Codec with @DoNotPool should not be " +
                     "useable after returning to CodecPool",
         () -> outputStream.write(1));
@@ -243,7 +243,7 @@ public class TestCodecPool {
     final CompressionInputStream inputStream = gzipCodec.createInputStream(bais, decompressor);
     LambdaTestUtils.intercept(
             AlreadyClosedException.class,
-            "Inflater has been closed",
+            "decompress called on closed decompressor",
             "Decompressor from Codec with @DoNotPool should not be " +
                     "useable after returning to CodecPool",
         () -> inputStream.read());

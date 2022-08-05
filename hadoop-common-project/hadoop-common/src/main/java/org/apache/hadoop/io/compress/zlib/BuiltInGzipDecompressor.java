@@ -110,7 +110,11 @@ public class BuiltInGzipDecompressor implements Decompressor {
      * Immediately after the trailer (and potentially prior to the next gzip
      * member/substream header), without reset() having been called.
      */
-    FINISHED;
+    FINISHED,
+    /**
+     * Immediately after end() has been called.
+     */
+    ENDED;
   }
 
   /**
@@ -187,6 +191,10 @@ public class BuiltInGzipDecompressor implements Decompressor {
   throws IOException {
     int numAvailBytes = 0;
 
+    if (state == GzipStateLabel.ENDED) {
+      throw new AlreadyClosedException("decompress called on closed decompressor");
+    }
+
     if (state != GzipStateLabel.DEFLATE_STREAM) {
       executeHeaderState();
 
@@ -212,11 +220,6 @@ public class BuiltInGzipDecompressor implements Decompressor {
         numAvailBytes = inflater.inflate(b, off, len);
       } catch (DataFormatException dfe) {
         throw new IOException(dfe.getMessage());
-      } catch (NullPointerException npe) {
-        if ("Inflater has been closed".equals(npe.getMessage())) {
-          throw new AlreadyClosedException(npe);
-        }
-        throw npe;
       }
       crc.update(b, off, numAvailBytes);  // CRC-32 is on _uncompressed_ data
       if (inflater.finished()) {
@@ -482,6 +485,8 @@ public class BuiltInGzipDecompressor implements Decompressor {
   @Override
   public synchronized void end() {
     inflater.end();
+
+    state = GzipStateLabel.ENDED;
   }
 
   /**
