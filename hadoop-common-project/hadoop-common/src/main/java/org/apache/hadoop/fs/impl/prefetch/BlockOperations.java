@@ -31,6 +31,8 @@ import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
+
 /**
  * Block level operations performed on a file.
  * This class is meant to be used by {@code BlockManager}.
@@ -161,37 +163,37 @@ public final class BlockOperations {
   }
 
   public Operation getPrefetched(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.GET_PREFETCHED, blockNumber));
   }
 
   public Operation getCached(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.GET_CACHED, blockNumber));
   }
 
   public Operation getRead(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.GET_READ, blockNumber));
   }
 
   public Operation release(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.RELEASE, blockNumber));
   }
 
   public Operation requestPrefetch(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.REQUEST_PREFETCH, blockNumber));
   }
 
   public Operation prefetch(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.PREFETCH, blockNumber));
   }
@@ -205,13 +207,13 @@ public final class BlockOperations {
   }
 
   public Operation requestCaching(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.REQUEST_CACHING, blockNumber));
   }
 
   public Operation addToCache(int blockNumber) {
-    Validate.checkNotNegative(blockNumber, "blockNumber");
+    checkNotNegative(blockNumber, "blockNumber");
 
     return add(new Operation(Kind.CACHE_PUT, blockNumber));
   }
