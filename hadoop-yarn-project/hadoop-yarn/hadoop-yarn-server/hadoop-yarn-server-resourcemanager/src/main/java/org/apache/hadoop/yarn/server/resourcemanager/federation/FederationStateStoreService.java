@@ -121,11 +121,10 @@ public class FederationStateStoreService extends AbstractService
 
     heartbeatInterval = conf.getLong(
         YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS,
-        YarnConfiguration
-            .DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
     if (heartbeatInterval <= 0) {
-      heartbeatInterval = YarnConfiguration
-          .DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
+      heartbeatInterval =
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
     }
     LOG.info("Initialized federation membership service.");
 

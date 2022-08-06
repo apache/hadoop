@@ -123,8 +123,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
   private static void checkReservationId(ReservationId reservationId)
       throws FederationStateStoreInvalidInputException {
     if (reservationId == null) {
-      String message = "Missing ReservationId."
-          + " Please try again by specifying an ReservationId.";
+      String message = "Missing ReservationId. Please try again by specifying an ReservationId.";
       LOG.warn(message);
       throw new FederationStateStoreInvalidInputException(message);
     }
