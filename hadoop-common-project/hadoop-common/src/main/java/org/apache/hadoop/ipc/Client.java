@@ -419,7 +419,8 @@ public class Client implements AutoCloseable {
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
-    private final ConnectionId remoteId;                // connection id
+    // This remoteId needs to be mutable in order to handle updated addresses
+    private ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
     private AuthProtocol authProtocol;
     private int serviceClass;
@@ -645,9 +646,11 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
-        // Update the remote address so that reconnections are with the updated address.  This
-        // avoids thrashing.
-        remoteId.setAddress(currentAddr);
+        // Update the remote address so that reconnections are with the updated address.
+        // This avoids thrashing.  We remove the old connection and then replace the remoteId
+        // because it is an immutable class that is used as a key in the connections map.
+        removeMethod.accept(this);
+        remoteId = ConnectionId.updateAddress(remoteId, currentAddr);
         UserGroupInformation ticket = remoteId.getTicket();
         this.setName("IPC Client (" + socketFactory.hashCode()
             + ") connection to " + server.toString() + " from "
@@ -1720,7 +1723,21 @@ public class Client implements AutoCloseable {
     private final int pingInterval; // how often sends ping to the server in msecs
     private String saslQop; // here for testing
     private final Configuration conf; // used to get the expected kerberos principal name
-    
+
+    /**
+     * Creates a new identifier with an updated address, maintaining all other settings.  This is
+     * used to update the remote address when an address change is detected.
+     *
+     * @param original the identifier that will be replaced
+     * @param address the updated address
+     * @return a replacement identifier
+     * @see Connection#updateAddress()
+     */
+    private static ConnectionId updateAddress(ConnectionId original, InetSocketAddress address) {
+      return new ConnectionId(address, original.protocol, original.ticket, original.rpcTimeout,
+          original.connectionRetryPolicy, original.conf);
+    }
+
     public ConnectionId(InetSocketAddress address, Class<?> protocol,
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
@@ -1755,15 +1772,6 @@ public class Client implements AutoCloseable {
     
     InetSocketAddress getAddress() {
       return address;
-    }
-
-    /**
-     * Used to update the remote address when an address change is detected.
-     *
-     * @param address the new address
-     */
-    private void setAddress(InetSocketAddress address) {
-      this.address = address;
     }
 
     Class<?> getProtocol() {
