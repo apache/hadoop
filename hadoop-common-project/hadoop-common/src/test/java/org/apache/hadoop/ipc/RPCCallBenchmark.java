@@ -67,6 +67,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     private int msgSize = 1024;
     public Class<? extends RpcEngine> rpcEngine =
         ProtobufRpcEngine2.class;
+    private boolean useNetty = CommonConfigurationKeys.IPC_SSL_DEFAULT;
     
     private MyOptions(String args[]) {
       try {
@@ -136,7 +137,12 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
           .withArgName("protobuf")
           .withDescription("engine to use")
           .create('e'));
-      
+      opts.addOption(
+          OptionBuilder.withLongOpt("ioImpl").hasArg(true)
+          .withArgName("nio")
+          .withDescription("io engine may be nio or netty")
+          .create('i'));
+
       opts.addOption(
           OptionBuilder.withLongOpt("help").hasArg(false)
           .withDescription("show this screen")
@@ -186,7 +192,16 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
           throw new ParseException("invalid engine: " + eng);
         }
       }
-      
+      if (line.hasOption('i')) {
+        String ioEngine = line.getOptionValue('i');
+        if ("netty".equals(ioEngine)) {
+          useNetty = true;
+        } else if ("nio".equals(ioEngine)) {
+          useNetty = false;
+        } else {
+          throw new ParseException("invalid ioEngine: " + ioEngine);
+        }
+      }
       String[] remainingArgs = line.getArgs();
       if (remainingArgs.length != 0) {
         throw new ParseException("Extra arguments: " +
@@ -206,7 +221,9 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
 
     @Override
     public String toString() {
-      return "rpcEngine=" + rpcEngine + "\nserverThreads=" + serverThreads
+      return "rpcEngine=" + rpcEngine
+          + "\nioEngine=" + (useNetty ? "netty" : "nio")
+          + "\nserverThreads=" + serverThreads
           + "\nserverReaderThreads=" + serverReaderThreads + "\nclientThreads="
           + clientThreads + "\nhost=" + host + "\nport=" + getPort()
           + "\nsecondsToRun=" + secondsToRun + "\nmsgSize=" + msgSize;
@@ -219,6 +236,11 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
     if (opts.serverThreads <= 0) {
       return null;
     }
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+        opts.useNetty);
+    conf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        opts.useNetty);
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
         opts.serverReaderThreads);
     

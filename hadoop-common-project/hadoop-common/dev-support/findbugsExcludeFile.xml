@@ -355,7 +355,7 @@
        to process initial sasl response token included in the INITIATE
      -->
      <Match>
-       <Class name="org.apache.hadoop.ipc.Server$Connection" />
+       <Class name="org.apache.hadoop.ipc.netty.server.Connection" />
        <Method name="processSaslMessage" />
        <Bug pattern="SF_SWITCH_FALLTHROUGH" />
      </Match>

@@ -44,8 +44,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RetriableException;
-import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.ipc.Server.Connection;
+import org.apache.hadoop.ipc.netty.server.Connection;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -277,11 +276,11 @@ public class SaslRpcServer {
   @InterfaceStability.Evolving
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
-    private Server.Connection connection; 
+    private Connection connection;
     
     public SaslDigestCallbackHandler(
         SecretManager<TokenIdentifier> secretManager,
-        Server.Connection connection) {
+        Connection connection) {
       this.secretManager = secretManager;
       this.connection = connection;
     }

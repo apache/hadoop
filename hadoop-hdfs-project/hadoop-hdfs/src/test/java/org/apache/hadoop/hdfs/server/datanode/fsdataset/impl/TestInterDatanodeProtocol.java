@@ -73,7 +73,7 @@ public class TestInterDatanodeProtocol {
   private static final String ADDRESS = "0.0.0.0";
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-  private static final Configuration conf = new HdfsConfiguration();
+  private static final Configuration testConf = new HdfsConfiguration();
 
 
   private static class TestServer extends Server {
@@ -88,7 +88,7 @@ public class TestInterDatanodeProtocol {
         Class<? extends Writable> paramClass,
         Class<? extends Writable> responseClass)
       throws IOException {
-      super(ADDRESS, 0, paramClass, handlerCount, conf);
+      super(ADDRESS, 0, paramClass, handlerCount, testConf);
       this.sleep = sleep;
       this.responseClass = responseClass;
     }
@@ -154,17 +154,17 @@ public class TestInterDatanodeProtocol {
   private void checkBlockMetaDataInfo(boolean useDnHostname) throws Exception {
     MiniDFSCluster cluster = null;
 
-    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, useDnHostname);
+    testConf.setBoolean(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, useDnHostname);
     if (useDnHostname) {
       // Since the mini cluster only listens on the loopback we have to
       // ensure the hostname used to access DNs maps to the loopback. We
       // do this by telling the DN to advertise localhost as its hostname
       // instead of the default hostname.
-      conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
+      testConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
     }
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf)
+      cluster = new MiniDFSCluster.Builder(testConf)
         .numDataNodes(3)
         .checkDataNodeHostConfig(true)
         .build();
@@ -186,7 +186,7 @@ public class TestInterDatanodeProtocol {
       //connect to a data node
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
       InterDatanodeProtocol idp = DataNodeTestUtils.createInterDatanodeProtocolProxy(
-          datanode, datanodeinfo[0], conf, useDnHostname);
+          datanode, datanodeinfo[0], testConf, useDnHostname);
       
       // Stop the block scanners.
       datanode.getBlockScanner().removeAllVolumeScanners();
@@ -334,7 +334,7 @@ public class TestInterDatanodeProtocol {
     MiniDFSCluster cluster = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(testConf).numDataNodes(3).build();
       cluster.waitActive();
 
       //create a file
@@ -413,7 +413,7 @@ public class TestInterDatanodeProtocol {
 
     try {
       proxy = DataNode.createInterDataNodeProtocolProxy(
-          dInfo, conf, 500, false);
+          dInfo, testConf, 500, false);
       proxy.initReplicaRecovery(new RecoveringBlock(
           new ExtendedBlock("bpid", 1), null, 100));
       fail ("Expected SocketTimeoutException exception, but did not get.");

@@ -22,6 +22,8 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -42,7 +44,10 @@ import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,12 +55,13 @@ import org.slf4j.LoggerFactory;
  * This test provokes partial writes in the server, which is 
  * serving multiple clients.
  */
+@RunWith(Parameterized.class)
 public class TestIPCServerResponder {
 
   public static final Logger LOG =
             LoggerFactory.getLogger(TestIPCServerResponder.class);
 
-  private static Configuration conf = new Configuration();
+  private static Configuration testConf = new Configuration();
 
   private static final Random RANDOM = new Random();
 
@@ -68,10 +74,33 @@ public class TestIPCServerResponder {
       BYTES[i] = (byte) ('a' + (i % 26));
   }
 
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestIPCServerResponder(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
+
+  @Before
+  public void setup() {
+    testConf = new Configuration();
+    testConf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+        useNetty);
+    testConf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        useNetty);
+  }
+
   static Writable call(Client client, Writable param,
       InetSocketAddress address) throws IOException {
     final ConnectionId remoteId = ConnectionId.getConnectionId(address, null,
-        null, 0, null, conf);
+        null, 0, null, testConf);
     return client.call(RpcKind.RPC_BUILTIN, param, remoteId,
         RPC.RPC_SERVICE_CLASS_DEFAULT, null);
   }
@@ -82,7 +111,7 @@ public class TestIPCServerResponder {
 
     public TestServer(final int handlerCount, final boolean sleep) 
                                               throws IOException {
-      super(ADDRESS, 0, BytesWritable.class, handlerCount, conf);
+      super(ADDRESS, 0, BytesWritable.class, handlerCount, testConf);
       // Set the buffer size to half of the maximum parameter/result size 
       // to force the socket to block
       this.setSocketSendBufSize(BYTE_COUNT / 2);
@@ -137,10 +166,10 @@ public class TestIPCServerResponder {
   public void testResponseBuffer() 
       throws IOException, InterruptedException {
     Server.INITIAL_RESP_BUF_SIZE = 1;
-    conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+    testConf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
                 1);
     checkServerResponder(1, true, 1, 1, 5);
-    conf = new Configuration(); // reset configuration
+    testConf = new Configuration(); // reset configuration
   }
 
   @Test
@@ -161,7 +190,7 @@ public class TestIPCServerResponder {
     InetSocketAddress address = NetUtils.getConnectAddress(server);
     Client[] clients = new Client[clientCount];
     for (int i = 0; i < clientCount; i++) {
-      clients[i] = new Client(BytesWritable.class, conf);
+      clients[i] = new Client(BytesWritable.class, testConf);
     }
 
     Caller[] callers = new Caller[callerCount];
@@ -198,7 +227,7 @@ public class TestIPCServerResponder {
     final Writable wait2 = new IntWritable(2);
 
     // use only 1 handler to prove it's freed after every call
-    Server server = new Server(ADDRESS, 0, IntWritable.class, 1, conf){
+    Server server = new Server(ADDRESS, 0, IntWritable.class, 1, testConf){
       @Override
       public Writable call(RPC.RpcKind rpcKind, String protocol,
           Writable waitCount, long receiveTime) throws IOException {
@@ -214,7 +243,7 @@ public class TestIPCServerResponder {
     server.start();
 
     final InetSocketAddress address = NetUtils.getConnectAddress(server);
-    final Client client = new Client(IntWritable.class, conf);
+    final Client client = new Client(IntWritable.class, testConf);
     Call[] waitingCalls = new Call[2];
 
     // calls should return immediately, check the sequence number is

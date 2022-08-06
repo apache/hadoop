@@ -45,6 +45,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -52,6 +54,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -68,7 +71,10 @@ public class TestRpcBase {
       "test.ipc.server.principal";
   protected final static String CLIENT_PRINCIPAL_KEY =
       "test.ipc.client.principal";
-  protected final static String ADDRESS = "0.0.0.0";
+  // use loopback else an active firewall will cause tests to hang.
+  protected final static String ADDRESS =
+      InetAddress.getLoopbackAddress().getHostAddress();
+
   protected final static int PORT = 0;
   protected static InetSocketAddress addr;
   protected static Configuration conf;

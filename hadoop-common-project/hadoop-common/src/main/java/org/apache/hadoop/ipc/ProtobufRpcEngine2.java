@@ -644,7 +644,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
   // htrace in the ipc layer creates the span name based on toString()
   // which uses the rpc header.  in the normal case we want to defer decoding
   // the rpc header until needed by the rpc engine.
-  static class RpcProtobufRequest extends RpcWritable.Buffer {
+  public static class RpcProtobufRequest extends RpcWritable.Buffer {
     private volatile RequestHeaderProto requestHeader;
     private Message payload;
 
@@ -656,7 +656,7 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       this.payload = payload;
     }
 
-    RequestHeaderProto getRequestHeader() throws IOException {
+    public RequestHeaderProto getRequestHeader() throws IOException {
       if (getByteBuffer() != null && requestHeader == null) {
         requestHeader = getValue(RequestHeaderProto.getDefaultInstance());
       }

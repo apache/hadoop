@@ -150,7 +150,7 @@ public class SSLFactory implements ConnectionConfigurator {
     keystoresFactory = ReflectionUtils.newInstance(klass, sslConf);
 
     enabledProtocols = conf.getStrings(SSL_ENABLED_PROTOCOLS_KEY,
-        SSL_ENABLED_PROTOCOLS_DEFAULT);
+        StringUtils.getStrings(SSL_ENABLED_PROTOCOLS_DEFAULT));
     excludeCiphers = Arrays.asList(
         sslConf.getTrimmedStrings(SSL_SERVER_EXCLUDE_CIPHER_LIST));
     if (LOG.isDebugEnabled()) {

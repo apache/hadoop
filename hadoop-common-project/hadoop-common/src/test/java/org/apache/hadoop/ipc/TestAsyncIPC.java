@@ -32,6 +32,8 @@ import org.apache.hadoop.util.concurrent.AsyncGetFuture;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +48,21 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+@RunWith(Parameterized.class)
 public class TestAsyncIPC {
+
+  @Parameterized.Parameters(name="{index}: useNetty={0}")
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{Boolean.FALSE});
+    params.add(new Object[]{Boolean.TRUE});
+    return params;
+  }
+
+  private static boolean useNetty;
+  public TestAsyncIPC(Boolean useNetty) {
+    this.useNetty = useNetty;
+  }
 
   private static Configuration conf;
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncIPC.class);
@@ -60,6 +76,11 @@ public class TestAsyncIPC {
   public void setupConf() {
     conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 10000);
+    conf.setBoolean(CommonConfigurationKeys.IPC_SSL_KEY,
+                    useNetty);
+    conf.setBoolean(
+        CommonConfigurationKeys.IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST,
+        useNetty);
     Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
     // set asynchronous mode for main thread
     Client.setAsynchronousMode(true);
@@ -231,7 +252,8 @@ public class TestAsyncIPC {
   public void testAsyncCall() throws IOException, InterruptedException,
       ExecutionException {
     internalTestAsyncCall(3, false, 2, 5, 100);
-    internalTestAsyncCall(3, true, 2, 5, 10);
+    // use far fewer iterations to prevent excessive test runtime.
+    internalTestAsyncCall(4, true, 2, 3, 4);
   }
 
   @Test(timeout = 60000)
@@ -315,7 +337,6 @@ public class TestAsyncIPC {
   public void internalTestAsyncCallLimit(int handlerCount, boolean handlerSleep,
       int clientCount, int callerCount, int callCount) throws IOException,
       InterruptedException, ExecutionException {
-    Configuration conf = new Configuration();
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_ASYNC_CALLS_MAX_KEY, 100);
     Client.setPingInterval(conf, TestIPC.PING_INTERVAL);
 

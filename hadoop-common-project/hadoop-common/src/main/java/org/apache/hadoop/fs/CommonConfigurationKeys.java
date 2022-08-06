@@ -59,6 +59,35 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "ipc.client.rpc-timeout.ms";
   /** Default value for IPC_CLIENT_RPC_TIMEOUT_KEY. */
   public static final int IPC_CLIENT_RPC_TIMEOUT_DEFAULT = 120000;
+  /** Enable SSL. */
+  public static final String IPC_SSL_KEY =
+      "ipc.ssl.enable";
+  /** Default value for IPC_SSL_KEY */
+  public static final boolean IPC_SSL_DEFAULT = false;
+  /**
+   * Enable the use of SSL self-signed certificates.
+   *
+   * NOTE:
+   *
+   * THIS IS INSECURE AND IS PURELY PRESENT FOR TESTING. THIS SHALL BE DISABLED
+   * IN FUTURE REVISIONS.
+   *
+   * **/
+  public static final String IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST =
+      "test.ipc.ssl.self-signed-cert";
+  /**
+   * Default value for using SSL self-signed certificates
+   *
+   *
+   * NOTE:
+   *
+   * THIS IS INSECURE AND IS PURELY PRESENT FOR TESTING. THIS SHALL BE DISABLED
+   * IN FUTURE REVISIONS. FOR NOW THE DEFAULT IS false AND WILL NEED TO BE
+   * EXPLICITLY ENABLED FOR USE.
+   *
+   **/
+  public static final boolean IPC_SSL_SELF_SIGNED_CERTIFICATE_TEST_DEFAULT =
+      false;
   /** Responses larger than this will be logged */
   public static final String  IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY =
     "ipc.server.max.response.size";
