@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.mapreduce.lib.input;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
-import static org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter.BLOCK_SIZE;
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.compress.bzip2.BZip2Utils;
-import org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter;
+import org.apache.hadoop.io.compress.bzip2.BZip2Utils;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.io.compress.bzip2.BZip2TextFileWriter.BLOCK_SIZE;
+import static org.junit.Assert.assertEquals;
 
 public abstract class BaseTestLineRecordReaderBZip2 {
 
