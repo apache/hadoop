@@ -49,8 +49,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
    *          against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateAddReservationHomeSubClusterRequest(
-      AddReservationHomeSubClusterRequest request)
+  public static void validate(AddReservationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing AddReservationHomeSubCluster Request."
@@ -73,8 +72,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
    *          against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
-  public static void validateGetReservationHomeSubClusterRequest(
-      GetReservationHomeSubClusterRequest request)
+  public static void validate(GetReservationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing GetReservationHomeSubCluster Request."

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 
 /**
  * Base abstract class for {@link FederationRouterPolicy} implementations, that
@@ -103,10 +104,11 @@ public abstract class AbstractRouterPolicy extends
       // note this might throw YarnException if the reservation is
       // unknown. This is to be expected, and should be handled by
       // policy invoker.
-      SubClusterId resSubCluster = getPolicyContext().getFederationStateStoreFacade().
-          getReservationHomeSubCluster(reservationId);
-
-      return Collections.singletonMap(resSubCluster, activeSubClusters.get(resSubCluster));
+      FederationStateStoreFacade stateStoreFacade =
+          getPolicyContext().getFederationStateStoreFacade();
+      SubClusterId resSubCluster = stateStoreFacade.getReservationHomeSubCluster(reservationId);
+      SubClusterInfo subClusterInfo = activeSubClusters.get(resSubCluster);
+      return Collections.singletonMap(resSubCluster, subClusterInfo);
     }
 
     return activeSubClusters;
@@ -139,7 +141,7 @@ public abstract class AbstractRouterPolicy extends
 
     // apply filtering based on reservation location and active sub-clusters
     Map<SubClusterId, SubClusterInfo> filteredSubClusters = prefilterSubClusters(
-            appContext.getReservationID(), getActiveSubclusters());
+        appContext.getReservationID(), getActiveSubclusters());
 
     FederationPolicyUtils.validateSubClusterAvailability(filteredSubClusters.keySet(), blackLists);
 

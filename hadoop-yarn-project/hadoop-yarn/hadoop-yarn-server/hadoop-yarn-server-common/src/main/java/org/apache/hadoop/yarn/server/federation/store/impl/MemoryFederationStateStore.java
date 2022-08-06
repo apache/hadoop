@@ -327,8 +327,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
-    FederationReservationHomeSubClusterStoreInputValidator
-        .validateAddReservationHomeSubClusterRequest(request);
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId =
         request.getReservationHomeSubCluster().getReservationId();
     if (!reservations.containsKey(reservationId)) {
@@ -341,8 +340,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
-    FederationReservationHomeSubClusterStoreInputValidator
-        .validateGetReservationHomeSubClusterRequest(request);
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     if (!reservations.containsKey(reservationId)) {
       throw new YarnException("Reservation " + reservationId + " does not exist");

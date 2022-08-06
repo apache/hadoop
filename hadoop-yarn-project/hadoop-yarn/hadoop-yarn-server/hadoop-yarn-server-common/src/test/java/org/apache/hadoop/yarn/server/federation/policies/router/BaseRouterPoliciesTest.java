@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -178,7 +179,7 @@ public abstract class BaseRouterPoliciesTest
             null, false);
     applicationSubmissionContext.setReservationID(resReq.getReservationId());
     SubClusterId chosen2 = ((FederationRouterPolicy) getPolicy())
-            .getHomeSubcluster(applicationSubmissionContext,new ArrayList<>());
+        .getHomeSubcluster(applicationSubmissionContext, Collections.emptyList());
 
     // application follows reservation
     Assert.assertEquals(chosen, chosen2);
