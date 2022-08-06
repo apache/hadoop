@@ -49,6 +49,11 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -67,6 +72,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -411,5 +418,49 @@ public class MockDefaultRequestInterceptorREST
     }
 
     return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public AppAttemptInfo getAppAttempt(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.contains(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+
+    ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
+        ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
+        "host", 124, "url", "oUrl", "diagnostics",
+        YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
+        newApplicationReport.getCurrentApplicationAttemptId(), 1));
+
+    return new AppAttemptInfo(attempt);
+  }
+
+  @Override
+  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.contains(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    AppAttemptsInfo infos = new AppAttemptsInfo();
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(0));
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(1));
+    return infos;
   }
 }
