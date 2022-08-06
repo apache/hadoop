@@ -1706,9 +1706,9 @@ public class Client implements AutoCloseable {
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving
   public static class ConnectionId {
-    InetSocketAddress address;
-    UserGroupInformation ticket;
-    final Class<?> protocol;
+    private final InetSocketAddress address;
+    private final UserGroupInformation ticket;
+    private final Class<?> protocol;
     private static final int PRIME = 16777619;
     private final int rpcTimeout;
     private final int maxIdleTime; //connections will be culled if it was idle for 
