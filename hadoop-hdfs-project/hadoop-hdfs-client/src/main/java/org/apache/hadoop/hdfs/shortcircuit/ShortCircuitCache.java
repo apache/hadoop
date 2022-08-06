@@ -385,7 +385,7 @@ public class ShortCircuitCache implements Closeable {
     Preconditions.checkArgument(maxNonMmappedEvictableLifespanMs >= 0);
     this.maxNonMmappedEvictableLifespanMs = maxNonMmappedEvictableLifespanMs;
     Preconditions.checkArgument(maxEvictableMmapedSize >= 0,
-    "Invalid argument: " + HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY + 
+    "Invalid argument: " + HdfsClientConfigKeys.Mmap.CACHE_SIZE_KEY +
     " must be greater than zero.");
     this.maxEvictableMmapedSize = maxEvictableMmapedSize;
     Preconditions.checkArgument(maxEvictableMmapedLifespanMs >= 0);
