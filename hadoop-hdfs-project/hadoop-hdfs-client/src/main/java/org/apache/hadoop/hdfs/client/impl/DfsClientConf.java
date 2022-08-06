@@ -212,6 +212,8 @@ public class DfsClientConf {
         DFS_DATA_TRANSFER_CLIENT_TCPNODELAY_DEFAULT);
     socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
         HdfsConstants.READ_TIMEOUT);
+    Preconditions.checkArgument(socketTimeout >= 0, "The value of " +
+        DFS_CLIENT_SOCKET_TIMEOUT_KEY + " can't be negative.");
     socketSendBufferSize = conf.getInt(DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_KEY,
         DFS_CLIENT_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
     /** dfs.write.packet.size is an internal config variable */
