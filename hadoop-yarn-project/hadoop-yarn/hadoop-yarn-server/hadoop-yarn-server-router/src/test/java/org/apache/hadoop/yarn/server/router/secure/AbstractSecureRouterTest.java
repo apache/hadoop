@@ -62,14 +62,14 @@ public class AbstractSecureRouterTest {
 
   public static final String KERBEROS = "kerberos";
 
-  protected static MiniKdc kdc;
-  protected static File keytab_router;
-  protected static File kdcWorkDir;
-  protected static Properties kdcConf;
+  private static MiniKdc kdc;
+  private static File routerKeytab;
+  private static File kdcWorkDir;
+  private static Properties kdcConf;
 
-  protected Router router = null;
+  private Router router = null;
 
-  protected static Configuration conf;
+  private static Configuration conf;
 
   @BeforeClass
   public static void beforeSecureRouterTestClass() throws Exception {
@@ -84,7 +84,7 @@ public class AbstractSecureRouterTest {
         CLIENT_RM_FEDERATION_CLIENT_INTERCEPTOR);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, KERBEROS);
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
-    conf.set(YarnConfiguration.ROUTER_KEYTAB, keytab_router.getAbsolutePath());
+    conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
   }
 
   /**
@@ -105,7 +105,7 @@ public class AbstractSecureRouterTest {
     kdc = new MiniKdc(kdcConf, kdcWorkDir);
     kdc.start();
 
-    keytab_router = createKeytab(ROUTER, "router.keytab");
+    routerKeytab = createKeytab(ROUTER, "router.keytab");
   }
 
   /**
@@ -134,7 +134,7 @@ public class AbstractSecureRouterTest {
    *
    * @throws Exception an error occurred.
    */
-  protected synchronized void startSecureRouter() throws Exception {
+  public synchronized void startSecureRouter() throws Exception {
     Assert.assertNull("Router is already running", router);
     UserGroupInformation.setConfiguration(conf);
     router = new Router();
@@ -166,10 +166,23 @@ public class AbstractSecureRouterTest {
     }
   }
 
+  /**
+   * Stop the entire test service.
+   *
+   * @throws Exception an error occurred.
+   */
   @After
   public void afterSecureRouterTest() throws Exception {
     LOG.info("teardown of router instance.");
     stopSecureRouter();
     teardownKDC();
+  }
+
+  public static MiniKdc getKdc() {
+    return kdc;
+  }
+
+  public Router getRouter() {
+    return router;
   }
 }

@@ -4888,4 +4888,17 @@
       default implementation LocalityAppPlacementAllocator is used.
     </description>
   </property>
+
+  <property>
+    <name>yarn.router.keytab</name>
+    <value>/etc/krb5.keytab</value>
+    <description>The keytab for the router.</description>
+  </property>
+
+  <property>
+    <name>yarn.router.principal</name>
+    <value></value>
+    <description>The Kerberos principal for the resource manager.</description>
+  </property>
+
 </configuration>

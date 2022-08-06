@@ -22,7 +22,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestSecureLogins extends AbstractSecureRouterTest{
+public class TestSecureLogins extends AbstractSecureRouterTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureLogins.class);
 
@@ -35,7 +35,7 @@ public class TestSecureLogins extends AbstractSecureRouterTest{
   @Test
   public void testRouterSecureLogin() throws Exception {
     startSecureRouter();
-    router.stop();
+    getRouter().stop();
   }
 
   public static String getPrincipalAndRealm(String principal) {
@@ -43,6 +43,6 @@ public class TestSecureLogins extends AbstractSecureRouterTest{
   }
 
   protected static String getRealm() {
-    return kdc.getRealm();
+    return getKdc().getRealm();
   }
 }

@@ -4113,8 +4113,6 @@ public class YarnConfiguration extends Configuration {
   /** The Kerberos principal for the timeline server.*/
   public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "principal";
 
-
-
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
