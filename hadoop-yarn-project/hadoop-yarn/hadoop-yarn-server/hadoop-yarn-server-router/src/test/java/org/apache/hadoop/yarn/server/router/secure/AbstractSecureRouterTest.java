@@ -22,16 +22,31 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart;
 import org.apache.hadoop.yarn.server.router.Router;
-import org.junit.After;
+import org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor;
+import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AbstractSecureRouterTest {
 
@@ -71,6 +86,13 @@ public class AbstractSecureRouterTest {
 
   private static Configuration conf;
 
+  private List<SubClusterId> subClusters;
+
+  private final static int NUM_SUBCLUSTER = 4;
+
+  private static ConcurrentHashMap<SubClusterId, MockRM> mockRMs =
+      new ConcurrentHashMap<>();
+
   @BeforeClass
   public static void beforeSecureRouterTestClass() throws Exception {
 
@@ -109,6 +131,24 @@ public class AbstractSecureRouterTest {
   }
 
   /**
+   * Initialize RM in safe mode.
+   *
+   * @throws Exception an error occurred.
+   */
+  public static void setupSecureMockRM() throws Exception {
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+      if (mockRMs.containsKey(sc)) {
+        continue;
+      }
+      MockRM mockRM = new TestRMRestart.TestSecurityMockRM(conf);
+      mockRM.start();
+      mockRM.registerNode("127.0.0.1:1234", 8 * 1024, 4);
+      mockRMs.put(sc, mockRM);
+    }
+  }
+
+  /**
    * Create the keytab for the given principal, includes
    * raw principal and $principal/localhost.
    *
@@ -134,12 +174,50 @@ public class AbstractSecureRouterTest {
    *
    * @throws Exception an error occurred.
    */
-  public synchronized void startSecureRouter() throws Exception {
+  public synchronized void startSecureRouter(Boolean initRM) throws Exception {
     Assert.assertNull("Router is already running", router);
     UserGroupInformation.setConfiguration(conf);
     router = new Router();
     router.init(conf);
     router.start();
+
+    if (initRM) {
+
+      setupSecureMockRM();
+
+      RouterClientRMService rmService = router.getClientRMProxyService();
+      RouterClientRMService.RequestInterceptorChainWrapper wrapper = rmService.getInterceptorChain();
+      FederationClientInterceptor interceptor = (FederationClientInterceptor) wrapper.getRootInterceptor();
+      FederationStateStoreFacade stateStoreFacade = interceptor.getFederationFacade();
+      FederationStateStore stateStore = stateStoreFacade.getStateStore();
+      FederationStateStoreTestUtil stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
+      subClusters = new ArrayList<>();
+
+      for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+        SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+        stateStoreUtil.registerSubCluster(sc);
+        subClusters.add(sc);
+      }
+
+      Map<SubClusterId, ApplicationClientProtocol> clientRMProxies =
+          interceptor.getClientRMProxies();
+      for (Map.Entry<SubClusterId, MockRM> entry : mockRMs.entrySet()) {
+        SubClusterId keySubClusterId = entry.getKey();
+        if (clientRMProxies.containsKey(keySubClusterId)) {
+          continue;
+        }
+        MockRM mockRM = entry.getValue();
+        clientRMProxies.put(keySubClusterId, mockRM.getClientRMService());
+      }
+
+      MockRM firstRM = mockRMs.entrySet().stream().findFirst().get().getValue();
+      RouterRMAdminService routerRMAdminService = router.getRmAdminProxyService();
+      RouterRMAdminService.RequestInterceptorChainWrapper rmAdminChainWrapper =
+          routerRMAdminService.getInterceptorChain();
+      DefaultRMAdminRequestInterceptor rmInterceptor =
+          (DefaultRMAdminRequestInterceptor) rmAdminChainWrapper.getRootInterceptor();
+      rmInterceptor.setRMAdmin(firstRM.getAdminService());
+    }
   }
 
   /**
@@ -171,10 +249,9 @@ public class AbstractSecureRouterTest {
    *
    * @throws Exception an error occurred.
    */
-  @After
-  public void afterSecureRouterTest() throws Exception {
-    LOG.info("teardown of router instance.");
-    stopSecureRouter();
+  @AfterClass
+  public static void afterSecureRouterTest() throws Exception {
+    LOG.info("teardown of kdc instance.");
     teardownKDC();
   }
 

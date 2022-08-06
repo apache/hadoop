@@ -197,4 +197,12 @@ public class Router extends CompositeService {
       System.exit(-1);
     }
   }
+
+  public RouterClientRMService getClientRMProxyService() {
+    return clientRMProxyService;
+  }
+
+  public RouterRMAdminService getRmAdminProxyService() {
+    return rmAdminProxyService;
+  }
 }
