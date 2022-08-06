@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+
+import org.eclipse.jetty.util.log.Log;
+import org.fusesource.leveldbjni.JniDBFactory;
+import org.iq80.leveldb.Options;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,13 +46,10 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelineP
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 
-import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.Options;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.eclipse.jetty.util.log.Log;
-import org.mockito.Mockito;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /** Test class to verify RollingLevelDBTimelineStore. */
 @InterfaceAudience.Private

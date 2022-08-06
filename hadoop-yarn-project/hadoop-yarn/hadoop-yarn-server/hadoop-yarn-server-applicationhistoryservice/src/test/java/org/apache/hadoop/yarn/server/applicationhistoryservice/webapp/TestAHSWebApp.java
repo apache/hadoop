@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import static org.apache.hadoop.yarn.webapp.Params.TITLE;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-
 import java.util.Map;
+
+import com.google.inject.Injector;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -40,10 +40,11 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplication
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 
-import com.google.inject.Injector;
+import static org.apache.hadoop.yarn.webapp.Params.TITLE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
 

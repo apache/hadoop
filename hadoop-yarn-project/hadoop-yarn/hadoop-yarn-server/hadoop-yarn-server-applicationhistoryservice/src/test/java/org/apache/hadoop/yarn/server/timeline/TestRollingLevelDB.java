@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.io.File;
+
+import org.iq80.leveldb.DB;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.iq80.leveldb.DB;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Test class for verification of RollingLevelDB. */
 public class TestRollingLevelDB {

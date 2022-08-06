@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.IOException;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -32,8 +30,11 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestMemoryApplicationHistoryStore extends
     ApplicationHistoryStoreTestUtils {

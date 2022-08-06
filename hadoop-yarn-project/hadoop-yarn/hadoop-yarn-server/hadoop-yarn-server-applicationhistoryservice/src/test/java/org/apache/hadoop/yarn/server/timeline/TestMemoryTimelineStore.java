@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
-import org.apache.hadoop.yarn.server.timeline.TimelineStore;
+import java.io.IOException;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
 

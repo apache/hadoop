@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableComparator;
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.WritableComparator;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable

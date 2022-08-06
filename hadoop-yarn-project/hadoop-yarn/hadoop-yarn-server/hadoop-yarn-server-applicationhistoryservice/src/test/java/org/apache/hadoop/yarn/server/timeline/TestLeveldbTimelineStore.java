@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -31,6 +24,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.fusesource.leveldbjni.JniDBFactory;
+import org.iq80.leveldb.DBException;
+import org.iq80.leveldb.Options;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,13 +50,13 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelineP
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
-import org.fusesource.leveldbjni.JniDBFactory;
-import org.iq80.leveldb.DBException;
-import org.iq80.leveldb.Options;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+
+import static org.apache.hadoop.yarn.server.timeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
