@@ -17,52 +17,56 @@
  */
 package org.apache.hadoop.yarn.server.timeline;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.yarn.server.timeline.GenericObjectMapper;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.WritableComparator;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TestGenericObjectMapper {
 
   @Test
-  public void testEncoding() {
+  void testEncoding() {
     testEncoding(Long.MAX_VALUE);
     testEncoding(Long.MIN_VALUE);
-    testEncoding(0l);
-    testEncoding(128l);
-    testEncoding(256l);
-    testEncoding(512l);
-    testEncoding(-256l);
+    testEncoding(0L);
+    testEncoding(128L);
+    testEncoding(256L);
+    testEncoding(512L);
+    testEncoding(-256L);
   }
 
   private static void testEncoding(long l) {
     byte[] b = GenericObjectMapper.writeReverseOrderedLong(l);
-    assertEquals("error decoding", l,
-        GenericObjectMapper.readReverseOrderedLong(b, 0));
+    assertEquals(l,
+        GenericObjectMapper.readReverseOrderedLong(b, 0),
+        "error decoding");
     byte[] buf = new byte[16];
     System.arraycopy(b, 0, buf, 5, 8);
-    assertEquals("error decoding at offset", l,
-        GenericObjectMapper.readReverseOrderedLong(buf, 5));
+    assertEquals(l,
+        GenericObjectMapper.readReverseOrderedLong(buf, 5),
+        "error decoding at offset");
     if (l > Long.MIN_VALUE) {
       byte[] a = GenericObjectMapper.writeReverseOrderedLong(l-1);
-      assertEquals("error preserving ordering", 1,
-          WritableComparator.compareBytes(a, 0, a.length, b, 0, b.length));
+      assertEquals(1,
+          WritableComparator.compareBytes(a, 0, a.length, b, 0, b.length),
+          "error preserving ordering");
     }
     if (l < Long.MAX_VALUE) {
       byte[] c = GenericObjectMapper.writeReverseOrderedLong(l+1);
-      assertEquals("error preserving ordering", 1,
-          WritableComparator.compareBytes(b, 0, b.length, c, 0, c.length));
+      assertEquals(1,
+          WritableComparator.compareBytes(b, 0, b.length, c, 0, c.length),
+          "error preserving ordering");
     }
   }
 
@@ -71,20 +75,20 @@ public class TestGenericObjectMapper {
   }
 
   @Test
-  public void testValueTypes() throws IOException {
+  void testValueTypes() throws IOException {
     verify(Integer.MAX_VALUE);
     verify(Integer.MIN_VALUE);
     assertEquals(Integer.MAX_VALUE, GenericObjectMapper.read(
         GenericObjectMapper.write((long) Integer.MAX_VALUE)));
     assertEquals(Integer.MIN_VALUE, GenericObjectMapper.read(
         GenericObjectMapper.write((long) Integer.MIN_VALUE)));
-    verify((long)Integer.MAX_VALUE + 1l);
-    verify((long)Integer.MIN_VALUE - 1l);
+    verify((long) Integer.MAX_VALUE + 1L);
+    verify((long) Integer.MIN_VALUE - 1L);
 
     verify(Long.MAX_VALUE);
     verify(Long.MIN_VALUE);
 
-    assertEquals(42, GenericObjectMapper.read(GenericObjectMapper.write(42l)));
+    assertEquals(42, GenericObjectMapper.read(GenericObjectMapper.write(42L)));
     verify(42);
     verify(1.23);
     verify("abc");
@@ -93,9 +97,9 @@ public class TestGenericObjectMapper {
     list.add("123");
     list.add("abc");
     verify(list);
-    Map<String,String> map = new HashMap<String,String>();
-    map.put("k1","v1");
-    map.put("k2","v2");
+    Map<String, String> map = new HashMap<String, String>();
+    map.put("k1", "v1");
+    map.put("k2", "v2");
     verify(map);
   }
 
