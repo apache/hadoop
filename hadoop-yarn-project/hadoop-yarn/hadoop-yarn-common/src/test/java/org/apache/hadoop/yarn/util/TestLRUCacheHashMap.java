@@ -19,9 +19,12 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class to validate the correctness of the {@code LRUCacheHashMap}.
@@ -34,7 +37,7 @@ public class TestLRUCacheHashMap {
    * expected.
    */
   @Test
-  public void testLRUCache()
+  void testLRUCache()
       throws YarnException, IOException, InterruptedException {
 
     int mapSize = 5;
@@ -48,11 +51,11 @@ public class TestLRUCacheHashMap {
     map.put("4", 4);
     map.put("5", 5);
 
-    Assert.assertEquals(mapSize, map.size());
+    assertEquals(mapSize, map.size());
 
     // Check if all the elements in the map are from 1 to 5
     for (int i = 1; i < mapSize; i++) {
-      Assert.assertTrue(map.containsKey(Integer.toString(i)));
+      assertTrue(map.containsKey(Integer.toString(i)));
     }
 
     map.put("6", 6);
@@ -60,14 +63,14 @@ public class TestLRUCacheHashMap {
     map.put("7", 7);
     map.put("8", 8);
 
-    Assert.assertEquals(mapSize, map.size());
+    assertEquals(mapSize, map.size());
 
     // Check if all the elements in the map are from 5 to 8 and the 3
     for (int i = 5; i < mapSize; i++) {
-      Assert.assertTrue(map.containsKey(Integer.toString(i)));
+      assertTrue(map.containsKey(Integer.toString(i)));
     }
 
-    Assert.assertTrue(map.containsKey("3"));
+    assertTrue(map.containsKey("3"));
 
   }
 

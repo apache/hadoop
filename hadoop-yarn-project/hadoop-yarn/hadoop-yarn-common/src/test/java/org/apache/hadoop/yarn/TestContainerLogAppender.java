@@ -18,14 +18,15 @@
 
 package org.apache.hadoop.yarn;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
-import org.junit.Test;
 
 public class TestContainerLogAppender {
 
   @Test
-  public void testAppendInClose() throws Exception {
+  void testAppendInClose() throws Exception {
     final ContainerLogAppender claAppender = new ContainerLogAppender();
     claAppender.setName("testCLA");
     claAppender.setLayout(new PatternLayout("%-5p [%t]: %m%n"));

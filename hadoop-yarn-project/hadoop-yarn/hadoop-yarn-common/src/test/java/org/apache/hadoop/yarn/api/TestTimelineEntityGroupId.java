@@ -18,15 +18,20 @@
 
 package org.apache.hadoop.yarn.api;
 
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntityGroupId;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTimelineEntityGroupId {
 
   @Test
-  public void testTimelineEntityGroupId() {
+  void testTimelineEntityGroupId() {
     ApplicationId appId1 = ApplicationId.newInstance(1234, 1);
     ApplicationId appId2 = ApplicationId.newInstance(1234, 2);
     TimelineEntityGroupId group1 = TimelineEntityGroupId.newInstance(appId1, "1");
@@ -34,19 +39,19 @@ public class TestTimelineEntityGroupId {
     TimelineEntityGroupId group3 = TimelineEntityGroupId.newInstance(appId2, "1");
     TimelineEntityGroupId group4 = TimelineEntityGroupId.newInstance(appId1, "1");
 
-    Assert.assertTrue(group1.equals(group4));
-    Assert.assertFalse(group1.equals(group2));
-    Assert.assertFalse(group1.equals(group3));
+    assertEquals(group1, group4);
+    assertNotEquals(group1, group2);
+    assertNotEquals(group1, group3);
 
-    Assert.assertTrue(group1.compareTo(group4) == 0);
-    Assert.assertTrue(group1.compareTo(group2) < 0);
-    Assert.assertTrue(group1.compareTo(group3) < 0);
+    assertTrue(group1.compareTo(group4) == 0);
+    assertTrue(group1.compareTo(group2) < 0);
+    assertTrue(group1.compareTo(group3) < 0);
 
-    Assert.assertTrue(group1.hashCode() == group4.hashCode());
-    Assert.assertFalse(group1.hashCode() == group2.hashCode());
-    Assert.assertFalse(group1.hashCode() == group3.hashCode());
+    assertTrue(group1.hashCode() == group4.hashCode());
+    assertFalse(group1.hashCode() == group2.hashCode());
+    assertFalse(group1.hashCode() == group3.hashCode());
 
-    Assert.assertEquals("timelineEntityGroupId_1234_1_1", group1.toString());
-    Assert.assertEquals(TimelineEntityGroupId.fromString("timelineEntityGroupId_1234_1_1"), group1);
+    assertEquals("timelineEntityGroupId_1234_1_1", group1.toString());
+    assertEquals(TimelineEntityGroupId.fromString("timelineEntityGroupId_1234_1_1"), group1);
   }
 }

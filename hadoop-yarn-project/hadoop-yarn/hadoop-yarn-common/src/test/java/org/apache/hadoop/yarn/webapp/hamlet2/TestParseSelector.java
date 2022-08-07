@@ -17,41 +17,51 @@
  */
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
-import org.junit.Test;
-
-import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.webapp.WebAppException;
 
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.S_CLASS;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.S_ID;
+import static org.apache.hadoop.yarn.webapp.hamlet2.HamletImpl.parseSelector;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public class TestParseSelector {
 
-  @Test public void testNormal() {
+  @Test
+  void testNormal() {
     String[] res = parseSelector("#id.class");
     assertEquals("id", res[S_ID]);
     assertEquals("class", res[S_CLASS]);
   }
 
-  @Test public void testMultiClass() {
+  @Test
+  void testMultiClass() {
     String[] res = parseSelector("#id.class1.class2");
     assertEquals("id", res[S_ID]);
     assertEquals("class1 class2", res[S_CLASS]);
   }
 
-  @Test public void testMissingId() {
+  @Test
+  void testMissingId() {
     String[] res = parseSelector(".class");
     assertNull(res[S_ID]);
     assertEquals("class", res[S_CLASS]);
   }
 
-  @Test public void testMissingClass() {
+  @Test
+  void testMissingClass() {
     String[] res = parseSelector("#id");
     assertEquals("id", res[S_ID]);
     assertNull(res[S_CLASS]);
   }
 
-  @Test(expected=WebAppException.class) public void testMissingAll() {
-    parseSelector("");
+  @Test
+  void testMissingAll() {
+    assertThrows(WebAppException.class, () -> {
+      parseSelector("");
+    });
   }
 }

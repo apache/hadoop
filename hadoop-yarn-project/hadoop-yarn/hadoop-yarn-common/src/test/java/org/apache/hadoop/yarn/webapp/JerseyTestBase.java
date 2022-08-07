@@ -21,10 +21,10 @@ package org.apache.hadoop.yarn.webapp;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.hadoop.net.ServerSocketUtil;
-
 import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+
+import org.apache.hadoop.net.ServerSocketUtil;
 
 public abstract class JerseyTestBase extends JerseyTest {
   public JerseyTestBase(WebAppDescriptor appDescriptor) {

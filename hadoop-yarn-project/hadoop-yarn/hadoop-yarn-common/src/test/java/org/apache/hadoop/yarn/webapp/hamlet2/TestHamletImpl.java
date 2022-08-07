@@ -18,19 +18,29 @@
 package org.apache.hadoop.yarn.webapp.hamlet2;
 
 import java.io.PrintWriter;
-import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
 
-import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.*;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.CoreAttrs;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.H1;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.LINK;
+import org.apache.hadoop.yarn.webapp.hamlet2.HamletSpec.SCRIPT;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 public class TestHamletImpl {
   /**
    * Test the generic implementation methods
    * @see TestHamlet for Hamlet syntax
    */
-  @Test public void testGeneric() {
+  @Test
+  void testGeneric() {
     PrintWriter out = spy(new PrintWriter(System.out));
     HamletImpl hi = new HamletImpl(out, 0, false);
     hi.
@@ -66,7 +76,8 @@ public class TestHamletImpl {
     verify(out, never()).print("</sub4>");
   }
 
-  @Test public void testSetSelector() {
+  @Test
+  void testSetSelector() {
     CoreAttrs e = mock(CoreAttrs.class);
     HamletImpl.setSelector(e, "#id.class");
 
@@ -81,7 +92,8 @@ public class TestHamletImpl {
     verify(t).__("heading");
   }
 
-  @Test public void testSetLinkHref() {
+  @Test
+  void testSetLinkHref() {
     LINK link = mock(LINK.class);
     HamletImpl.setLinkHref(link, "uri");
     HamletImpl.setLinkHref(link, "style.css");
@@ -93,7 +105,8 @@ public class TestHamletImpl {
     verifyNoMoreInteractions(link);
   }
 
-  @Test public void testSetScriptSrc() {
+  @Test
+  void testSetScriptSrc() {
     SCRIPT script = mock(SCRIPT.class);
     HamletImpl.setScriptSrc(script, "uri");
     HamletImpl.setScriptSrc(script, "script.js");
