@@ -21,71 +21,71 @@ package org.apache.hadoop.yarn.ipc;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.junit.Assert;
+import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRPCUtil {
 
   @Test
-  public void testUnknownExceptionUnwrapping() {
+  void testUnknownExceptionUnwrapping() {
     Class<? extends Throwable> exception = YarnException.class;
     String className = "UnknownException.class";
     verifyRemoteExceptionUnwrapping(exception, className);
   }
 
   @Test
-  public void testRemoteIOExceptionUnwrapping() {
+  void testRemoteIOExceptionUnwrapping() {
     Class<? extends Throwable> exception = IOException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
   }
 
   @Test
-  public void testRemoteIOExceptionDerivativeUnwrapping() {
+  void testRemoteIOExceptionDerivativeUnwrapping() {
     // Test IOException sub-class
     Class<? extends Throwable> exception = FileNotFoundException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
   }
 
   @Test
-  public void testRemoteYarnExceptionUnwrapping() {
+  void testRemoteYarnExceptionUnwrapping() {
     Class<? extends Throwable> exception = YarnException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
 
   }
 
   @Test
-  public void testRemoteYarnExceptionDerivativeUnwrapping() {
+  void testRemoteYarnExceptionDerivativeUnwrapping() {
     Class<? extends Throwable> exception = YarnTestException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
   }
 
   @Test
-  public void testRemoteRuntimeExceptionUnwrapping() {
+  void testRemoteRuntimeExceptionUnwrapping() {
     Class<? extends Throwable> exception = NullPointerException.class;
     verifyRemoteExceptionUnwrapping(exception, exception.getName());
   }
 
   @Test
-  public void testUnexpectedRemoteExceptionUnwrapping() {
+  void testUnexpectedRemoteExceptionUnwrapping() {
     // Non IOException, YarnException thrown by the remote side.
     Class<? extends Throwable> exception = Exception.class;
     verifyRemoteExceptionUnwrapping(RemoteException.class, exception.getName());
   }
-  
+
   @Test
-  public void testRemoteYarnExceptionWithoutStringConstructor() {
+  void testRemoteYarnExceptionWithoutStringConstructor() {
     // Derivatives of YarnException should always define a string constructor.
     Class<? extends Throwable> exception = YarnTestExceptionNoConstructor.class;
     verifyRemoteExceptionUnwrapping(RemoteException.class, exception.getName());
   }
-  
+
   @Test
-  public void testRPCServiceExceptionUnwrapping() {
+  void testRPCServiceExceptionUnwrapping() {
     String message = "ServiceExceptionMessage";
     ServiceException se = new ServiceException(message);
 
@@ -96,12 +96,12 @@ public class TestRPCUtil {
       t = thrown;
     }
 
-    Assert.assertTrue(IOException.class.isInstance(t));
-    Assert.assertTrue(t.getMessage().contains(message));
+    assertTrue(IOException.class.isInstance(t));
+    assertTrue(t.getMessage().contains(message));
   }
 
   @Test
-  public void testRPCIOExceptionUnwrapping() {
+  void testRPCIOExceptionUnwrapping() {
     String message = "DirectIOExceptionMessage";
     IOException ioException = new FileNotFoundException(message);
     ServiceException se = new ServiceException(ioException);
@@ -112,12 +112,12 @@ public class TestRPCUtil {
     } catch (Throwable thrown) {
       t = thrown;
     }
-    Assert.assertTrue(FileNotFoundException.class.isInstance(t));
-    Assert.assertTrue(t.getMessage().contains(message));
+    assertTrue(FileNotFoundException.class.isInstance(t));
+    assertTrue(t.getMessage().contains(message));
   }
 
   @Test
-  public void testRPCRuntimeExceptionUnwrapping() {
+  void testRPCRuntimeExceptionUnwrapping() {
     String message = "RPCRuntimeExceptionUnwrapping";
     RuntimeException re = new NullPointerException(message);
     ServiceException se = new ServiceException(re);
@@ -129,8 +129,8 @@ public class TestRPCUtil {
       t = thrown;
     }
 
-    Assert.assertTrue(NullPointerException.class.isInstance(t));
-    Assert.assertTrue(t.getMessage().contains(message));
+    assertTrue(NullPointerException.class.isInstance(t));
+    assertTrue(t.getMessage().contains(message));
   }
 
   private void verifyRemoteExceptionUnwrapping(
@@ -147,11 +147,10 @@ public class TestRPCUtil {
       t = thrown;
     }
 
-    Assert.assertTrue("Expected exception [" + expectedLocalException
-        + "] but found " + t, expectedLocalException.isInstance(t));
-    Assert.assertTrue(
-        "Expected message [" + message + "] but found " + t.getMessage(), t
-            .getMessage().contains(message));
+    assertTrue(expectedLocalException.isInstance(t), "Expected exception [" + expectedLocalException
+        + "] but found " + t);
+    assertTrue(t.getMessage().contains(message),
+        "Expected message [" + message + "] but found " + t.getMessage());
   }
 
   private static class YarnTestException extends YarnException {

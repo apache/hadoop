@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import static org.junit.Assert.*;
-
 import java.util.stream.Stream;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerSubState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerSubStateProto;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestProtoUtils {
 
   @Test
-  public void testConvertFromOrToProtoFormat() {
+  void testConvertFromOrToProtoFormat() {
     // Check if utility has all enum values
     try {
       Stream.of(ContainerState.values())

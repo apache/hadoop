@@ -18,19 +18,6 @@
 
 package org.apache.hadoop.yarn.logaggregation;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.logaggregation.filecontroller.FakeLogAggregationFileController;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -42,7 +29,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.FakeLogAggregationFileController;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestLogAggregationMetaCollector {
   private static final String TEST_NODE = "TEST_NODE_1";
@@ -133,17 +136,17 @@ public class TestLogAggregationMetaCollector {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fileController = createFileController();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 
   @Test
-  public void testAllNull() throws IOException {
+  void testAllNull() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     request.setAppId(null);
@@ -165,7 +168,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testAllSet() throws IOException {
+  void testAllSet() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     Set<String> fileSizeExpressions = new HashSet<>();
@@ -191,7 +194,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testSingleNodeRequest() throws IOException {
+  void testSingleNodeRequest() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     request.setAppId(null);
@@ -214,7 +217,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testMultipleNodeRegexRequest() throws IOException {
+  void testMultipleNodeRegexRequest() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     request.setAppId(null);
@@ -236,7 +239,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testMultipleFileRegex() throws IOException {
+  void testMultipleFileRegex() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     request.setAppId(null);
@@ -260,7 +263,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testContainerIdExactMatch() throws IOException {
+  void testContainerIdExactMatch() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     request.setAppId(null);
@@ -284,7 +287,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testMultipleFileBetweenSize() throws IOException {
+  void testMultipleFileBetweenSize() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     Set<String> fileSizeExpressions = new HashSet<>();
@@ -311,7 +314,7 @@ public class TestLogAggregationMetaCollector {
   }
 
   @Test
-  public void testInvalidQueryStrings() throws IOException {
+  void testInvalidQueryStrings() throws IOException {
     ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder request =
         new ExtendedLogMetaRequest.ExtendedLogMetaRequestBuilder();
     Set<String> fileSizeExpressions = new HashSet<>();

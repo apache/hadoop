@@ -18,17 +18,11 @@
 
 package org.apache.hadoop.yarn.api.resource;
 
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
-
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.CardinalityConstraint;
@@ -39,8 +33,16 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint.TargetConstraint.
 import org.apache.hadoop.yarn.api.resource.PlacementConstraintTransformations.SingleConstraintTransformer;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraintTransformations.SpecializedConstraintTransformer;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.RACK;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.maxCardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetCardinality;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test class for {@link PlacementConstraintTransformations}.
@@ -48,10 +50,10 @@ import org.junit.Test;
 public class TestPlacementConstraintTransformations {
 
   @Test
-  public void testTargetConstraint() {
+  void testTargetConstraint() {
     AbstractConstraint sConstraintExpr =
         targetIn(NODE, allocationTag("hbase-m"));
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
+    assertTrue(sConstraintExpr instanceof SingleConstraint);
     PlacementConstraint sConstraint =
         PlacementConstraints.build(sConstraintExpr);
 
@@ -61,17 +63,17 @@ public class TestPlacementConstraintTransformations {
     PlacementConstraint tConstraint = specTransformer.transform();
 
     AbstractConstraint tConstraintExpr = tConstraint.getConstraintExpr();
-    Assert.assertTrue(tConstraintExpr instanceof TargetConstraint);
+    assertTrue(tConstraintExpr instanceof TargetConstraint);
 
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
     TargetConstraint target = (TargetConstraint) tConstraintExpr;
 
     // Make sure the expression string is consistent
     // before and after transforming
-    Assert.assertEquals(single.toString(), target.toString());
-    Assert.assertEquals(single.getScope(), target.getScope());
-    Assert.assertEquals(TargetOperator.IN, target.getOp());
-    Assert.assertEquals(single.getTargetExpressions(),
+    assertEquals(single.toString(), target.toString());
+    assertEquals(single.getScope(), target.getScope());
+    assertEquals(TargetOperator.IN, target.getOp());
+    assertEquals(single.getTargetExpressions(),
         target.getTargetExpressions());
 
     // Transform from specialized TargetConstraint to SimpleConstraint
@@ -80,18 +82,18 @@ public class TestPlacementConstraintTransformations {
     sConstraint = singleTransformer.transform();
 
     sConstraintExpr = sConstraint.getConstraintExpr();
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
+    assertTrue(sConstraintExpr instanceof SingleConstraint);
 
     single = (SingleConstraint) sConstraintExpr;
-    Assert.assertEquals(target.getScope(), single.getScope());
-    Assert.assertEquals(1, single.getMinCardinality());
-    Assert.assertEquals(Integer.MAX_VALUE, single.getMaxCardinality());
-    Assert.assertEquals(single.getTargetExpressions(),
+    assertEquals(target.getScope(), single.getScope());
+    assertEquals(1, single.getMinCardinality());
+    assertEquals(Integer.MAX_VALUE, single.getMaxCardinality());
+    assertEquals(single.getTargetExpressions(),
         target.getTargetExpressions());
   }
 
   @Test
-  public void testCardinalityConstraint() {
+  void testCardinalityConstraint() {
     CardinalityConstraint cardinality = new CardinalityConstraint(RACK, 3, 10,
         new HashSet<>(Arrays.asList("hb")));
     PlacementConstraint cConstraint = PlacementConstraints.build(cardinality);
@@ -102,27 +104,27 @@ public class TestPlacementConstraintTransformations {
     PlacementConstraint sConstraint = singleTransformer.transform();
 
     AbstractConstraint sConstraintExpr = sConstraint.getConstraintExpr();
-    Assert.assertTrue(sConstraintExpr instanceof SingleConstraint);
+    assertTrue(sConstraintExpr instanceof SingleConstraint);
 
     SingleConstraint single = (SingleConstraint) sConstraintExpr;
     // Make sure the consistent expression string is consistent
     // before and after transforming
-    Assert.assertEquals(single.toString(), cardinality.toString());
-    Assert.assertEquals(cardinality.getScope(), single.getScope());
-    Assert.assertEquals(cardinality.getMinCardinality(),
+    assertEquals(single.toString(), cardinality.toString());
+    assertEquals(cardinality.getScope(), single.getScope());
+    assertEquals(cardinality.getMinCardinality(),
         single.getMinCardinality());
-    Assert.assertEquals(cardinality.getMaxCardinality(),
+    assertEquals(cardinality.getMaxCardinality(),
         single.getMaxCardinality());
-    Assert.assertEquals(
+    assertEquals(
         new HashSet<>(Arrays.asList(PlacementTargets.allocationTag("hb"))),
         single.getTargetExpressions());
   }
 
   @Test
-  public void testTargetCardinalityConstraint() {
+  void testTargetCardinalityConstraint() {
     AbstractConstraint constraintExpr =
         targetCardinality(RACK, 3, 10, allocationTag("zk"));
-    Assert.assertTrue(constraintExpr instanceof SingleConstraint);
+    assertTrue(constraintExpr instanceof SingleConstraint);
     PlacementConstraint constraint = PlacementConstraints.build(constraintExpr);
 
     // Apply transformation. Should be a no-op.
@@ -131,19 +133,19 @@ public class TestPlacementConstraintTransformations {
     PlacementConstraint newConstraint = specTransformer.transform();
 
     // The constraint expression should be the same.
-    Assert.assertEquals(constraintExpr, newConstraint.getConstraintExpr());
+    assertEquals(constraintExpr, newConstraint.getConstraintExpr());
   }
 
   @Test
-  public void testCompositeConstraint() {
+  void testCompositeConstraint() {
     AbstractConstraint constraintExpr =
         or(targetIn(RACK, allocationTag("spark")), maxCardinality(NODE, 3),
             targetCardinality(RACK, 2, 10, allocationTag("zk")));
-    Assert.assertTrue(constraintExpr instanceof Or);
+    assertTrue(constraintExpr instanceof Or);
     PlacementConstraint constraint = PlacementConstraints.build(constraintExpr);
     Or orExpr = (Or) constraintExpr;
     for (AbstractConstraint child : orExpr.getChildren()) {
-      Assert.assertTrue(child instanceof SingleConstraint);
+      assertTrue(child instanceof SingleConstraint);
     }
 
     // Apply transformation. Should transform target and cardinality constraints
@@ -154,19 +156,19 @@ public class TestPlacementConstraintTransformations {
 
     Or specOrExpr = (Or) specConstraint.getConstraintExpr();
     List<AbstractConstraint> specChildren = specOrExpr.getChildren();
-    Assert.assertEquals(3, specChildren.size());
-    Assert.assertTrue(specChildren.get(0) instanceof TargetConstraint);
-    Assert.assertTrue(specChildren.get(1) instanceof SingleConstraint);
-    Assert.assertTrue(specChildren.get(2) instanceof SingleConstraint);
+    assertEquals(3, specChildren.size());
+    assertTrue(specChildren.get(0) instanceof TargetConstraint);
+    assertTrue(specChildren.get(1) instanceof SingleConstraint);
+    assertTrue(specChildren.get(2) instanceof SingleConstraint);
 
     // Transform from specialized TargetConstraint to SimpleConstraint
     SingleConstraintTransformer singleTransformer =
         new SingleConstraintTransformer(specConstraint);
     PlacementConstraint simConstraint = singleTransformer.transform();
-    Assert.assertTrue(simConstraint.getConstraintExpr() instanceof Or);
+    assertTrue(simConstraint.getConstraintExpr() instanceof Or);
     Or simOrExpr = (Or) specConstraint.getConstraintExpr();
     for (AbstractConstraint child : simOrExpr.getChildren()) {
-      Assert.assertTrue(child instanceof SingleConstraint);
+      assertTrue(child instanceof SingleConstraint);
     }
   }
 
