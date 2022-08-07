@@ -381,11 +381,11 @@ public final class FederationStateStoreFacade {
     try {
       if (isCachingEnabled()) {
         Object value =
-            cache.get(buildGetApplicationHomeSubClusterRequest(appId.toString()));
-        if(value instanceof SubClusterId){
+            cache.get(buildGetApplicationHomeSubClusterRequest(appId));
+        if (value instanceof SubClusterId) {
           return (SubClusterId) value;
         } else {
-          throw new YarnException("Cannot be converted to a map.");
+          throw new YarnException("Cannot be converted to SubClusterId.");
         }
       } else {
         GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
@@ -528,15 +528,13 @@ public final class FederationStateStoreFacade {
     return cacheRequest;
   }
 
-  private Object buildGetApplicationHomeSubClusterRequest(String appId) {
+  private Object buildGetApplicationHomeSubClusterRequest(ApplicationId applicationId) {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, appId);
+        GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, applicationId.toString());
     CacheRequest<String, SubClusterId> cacheRequest =
         new CacheRequest<>(
             cacheKey,
             input -> {
-              ApplicationId applicationId = ApplicationId.fromString(appId);
-
               GetApplicationHomeSubClusterResponse response =
                   stateStore.getApplicationHomeSubCluster(
                       GetApplicationHomeSubClusterRequest.newInstance(applicationId));
@@ -653,7 +651,7 @@ public final class FederationStateStoreFacade {
   }
 
   @VisibleForTesting
-  protected Object getAppHomeSubClusterCacheRequest(String appId) {
-    return buildGetApplicationHomeSubClusterRequest(appId);
+  protected Object getAppHomeSubClusterCacheRequest(ApplicationId applicationId) {
+    return buildGetApplicationHomeSubClusterRequest(applicationId);
   }
 }

@@ -226,7 +226,7 @@ public class TestFederationStateStoreFacade {
 
     if (isCachingEnabled.booleanValue()) {
       Cache<Object, Object> cache = facade.getCache();
-      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId.toString());
+      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId);
       Object subClusterIdByCache = cache.get(cacheKey);
       Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
       Assert.assertEquals(subClusterId1, subClusterIdByCache);
