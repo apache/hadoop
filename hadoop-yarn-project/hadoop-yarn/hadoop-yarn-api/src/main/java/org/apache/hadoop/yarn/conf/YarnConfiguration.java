@@ -4108,10 +4108,14 @@ public class YarnConfiguration extends Configuration {
       TimeUnit.SECONDS.toMillis(30);
 
   /** The Kerberos keytab for the yarn router.*/
-  public static final String ROUTER_KEYTAB = ROUTER_PREFIX + "keytab";
+  public static final String ROUTER_KEYTAB = ROUTER_PREFIX + "keytab.file";
 
-  /** The Kerberos principal for the timeline server.*/
-  public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "principal";
+  /** The Kerberos principal for the yarn router.*/
+  public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn router.*/
+  public static final String ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY = ROUTER_PREFIX +
+      "kerberos.principal.hostname";
 
   ////////////////////////////////
   // CSI Volume configs

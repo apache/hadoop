@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -90,7 +92,7 @@ public class Router extends CompositeService {
 
   protected void doSecureLogin() throws IOException {
     SecurityUtil.login(this.conf, YarnConfiguration.ROUTER_KEYTAB,
-        YarnConfiguration.ROUTER_PRINCIPAL);
+        YarnConfiguration.ROUTER_PRINCIPAL, getHostName(this.conf));
   }
 
   @Override
@@ -198,11 +200,30 @@ public class Router extends CompositeService {
     }
   }
 
+  @VisibleForTesting
   public RouterClientRMService getClientRMProxyService() {
     return clientRMProxyService;
   }
 
+  @VisibleForTesting
   public RouterRMAdminService getRmAdminProxyService() {
     return rmAdminProxyService;
+  }
+
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(YarnConfiguration.ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
   }
 }

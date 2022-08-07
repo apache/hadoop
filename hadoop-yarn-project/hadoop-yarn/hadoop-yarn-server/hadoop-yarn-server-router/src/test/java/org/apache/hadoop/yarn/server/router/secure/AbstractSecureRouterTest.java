@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,10 +47,19 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AbstractSecureRouterTest {
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+
+public abstract class AbstractSecureRouterTest {
+
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractSecureRouterTest.class);
+
+  ////////////////////////////////
+  // Kerberos Constants
+  ////////////////////////////////
 
   public static final String REALM = "EXAMPLE.COM";
-
   public static final String ROUTER = "router";
   public static final String LOCALHOST = "localhost";
   public static final String IP127001 = "127.0.0.1";
@@ -59,52 +67,54 @@ public class AbstractSecureRouterTest {
   public static final String ROUTER_127001 = "router/" + IP127001;
   public static final String ROUTER_REALM = "router@" + REALM;
   public static final String ROUTER_LOCALHOST_REALM = ROUTER_LOCALHOST + "@" + REALM;
-
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractSecureRouterTest.class);
-
-  public static final Configuration CONF;
-
-  static {
-    CONF = new Configuration();
-    CONF.set("hadoop.security.authentication", "kerberos");
-    CONF.setBoolean("hadoop.security.authorization", true);
-  }
-
   public static final String SUN_SECURITY_KRB5_DEBUG = "sun.security.krb5.debug";
-
-  public static final String CLIENT_RM_FEDERATION_CLIENT_INTERCEPTOR =
-      "org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor";
-
   public static final String KERBEROS = "kerberos";
+
+  ////////////////////////////////
+  // BeforeSecureRouterTestClass Init
+  ////////////////////////////////
 
   private static MiniKdc kdc;
   private static File routerKeytab;
   private static File kdcWorkDir;
-  private static Properties kdcConf;
-
-  private Router router = null;
-
   private static Configuration conf;
 
-  private List<SubClusterId> subClusters;
+  ////////////////////////////////
+  // Specific Constant
+  // Like Mem, VCore, ClusterNum
+  ////////////////////////////////
+  private static final int NUM_SUBCLUSTER = 4;
+  private static final int GB = 1024;
+  private static final int NM_MEMORY = 8 * GB;
+  private static final int NM_VCORE = 4;
 
-  private final static int NUM_SUBCLUSTER = 4;
+  ////////////////////////////////
+  // Test use in subclasses
+  ////////////////////////////////
+
+  private Router router = null;
 
   private static ConcurrentHashMap<SubClusterId, MockRM> mockRMs =
       new ConcurrentHashMap<>();
 
   @BeforeClass
   public static void beforeSecureRouterTestClass() throws Exception {
-
     // Sets up the KDC and Principals.
     setupKDCAndPrincipals();
 
     // Init YarnConfiguration
     conf = new YarnConfiguration();
+
+    // Enable Kerberos authentication configuration
+    conf.setBoolean(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, KERBEROS);
+
+    // Router configuration
     conf.set(YarnConfiguration.ROUTER_BIND_HOST, "0.0.0.0");
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
-        CLIENT_RM_FEDERATION_CLIENT_INTERCEPTOR);
-    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, KERBEROS);
+        FederationClientInterceptor.class.getName());
+
+    // Router Kerberos KeyTab configuration
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
     conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
   }
@@ -120,13 +130,12 @@ public class AbstractSecureRouterTest {
     kdcWorkDir = new File(target, "kdc");
     kdcWorkDir.mkdirs();
     if (!kdcWorkDir.mkdirs()) {
-      Assert.assertTrue(kdcWorkDir.isDirectory());
+      assertTrue(kdcWorkDir.isDirectory());
     }
-    kdcConf = MiniKdc.createConf();
+    Properties kdcConf = MiniKdc.createConf();
     kdcConf.setProperty(MiniKdc.DEBUG, "true");
     kdc = new MiniKdc(kdcConf, kdcWorkDir);
     kdc.start();
-
     routerKeytab = createKeytab(ROUTER, "router.keytab");
   }
 
@@ -137,13 +146,13 @@ public class AbstractSecureRouterTest {
    */
   public static void setupSecureMockRM() throws Exception {
     for (int i = 0; i < NUM_SUBCLUSTER; i++) {
-      SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+      SubClusterId sc = SubClusterId.newInstance(i);
       if (mockRMs.containsKey(sc)) {
         continue;
       }
       MockRM mockRM = new TestRMRestart.TestSecurityMockRM(conf);
       mockRM.start();
-      mockRM.registerNode("127.0.0.1:1234", 8 * 1024, 4);
+      mockRM.registerNode("127.0.0.1:1234", NM_MEMORY, NM_VCORE);
       mockRMs.put(sc, mockRM);
     }
   }
@@ -158,9 +167,9 @@ public class AbstractSecureRouterTest {
    * @throws Exception an error occurred.
    */
   public static File createKeytab(String principal, String filename) throws Exception {
-    Assert.assertTrue("empty principal", StringUtils.isNotBlank(principal));
-    Assert.assertTrue("empty host", StringUtils.isNotBlank(filename));
-    Assert.assertNotNull("Null KDC", kdc);
+    assertTrue("empty principal", StringUtils.isNotBlank(principal));
+    assertTrue("empty host", StringUtils.isNotBlank(filename));
+    assertNotNull("null KDC", kdc);
     File keytab = new File(kdcWorkDir, filename);
     kdc.createPrincipal(keytab,
         principal,
@@ -174,50 +183,12 @@ public class AbstractSecureRouterTest {
    *
    * @throws Exception an error occurred.
    */
-  public synchronized void startSecureRouter(Boolean initRM) throws Exception {
-    Assert.assertNull("Router is already running", router);
+  public synchronized void startSecureRouter() {
+    assertNull("Router is already running", router);
     UserGroupInformation.setConfiguration(conf);
     router = new Router();
     router.init(conf);
     router.start();
-
-    if (initRM) {
-
-      setupSecureMockRM();
-
-      RouterClientRMService rmService = router.getClientRMProxyService();
-      RouterClientRMService.RequestInterceptorChainWrapper wrapper = rmService.getInterceptorChain();
-      FederationClientInterceptor interceptor = (FederationClientInterceptor) wrapper.getRootInterceptor();
-      FederationStateStoreFacade stateStoreFacade = interceptor.getFederationFacade();
-      FederationStateStore stateStore = stateStoreFacade.getStateStore();
-      FederationStateStoreTestUtil stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
-      subClusters = new ArrayList<>();
-
-      for (int i = 0; i < NUM_SUBCLUSTER; i++) {
-        SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
-        stateStoreUtil.registerSubCluster(sc);
-        subClusters.add(sc);
-      }
-
-      Map<SubClusterId, ApplicationClientProtocol> clientRMProxies =
-          interceptor.getClientRMProxies();
-      for (Map.Entry<SubClusterId, MockRM> entry : mockRMs.entrySet()) {
-        SubClusterId keySubClusterId = entry.getKey();
-        if (clientRMProxies.containsKey(keySubClusterId)) {
-          continue;
-        }
-        MockRM mockRM = entry.getValue();
-        clientRMProxies.put(keySubClusterId, mockRM.getClientRMService());
-      }
-
-      MockRM firstRM = mockRMs.entrySet().stream().findFirst().get().getValue();
-      RouterRMAdminService routerRMAdminService = router.getRmAdminProxyService();
-      RouterRMAdminService.RequestInterceptorChainWrapper rmAdminChainWrapper =
-          routerRMAdminService.getInterceptorChain();
-      DefaultRMAdminRequestInterceptor rmInterceptor =
-          (DefaultRMAdminRequestInterceptor) rmAdminChainWrapper.getRootInterceptor();
-      rmInterceptor.setRMAdmin(firstRM.getAdminService());
-    }
   }
 
   /**
@@ -262,4 +233,9 @@ public class AbstractSecureRouterTest {
   public Router getRouter() {
     return router;
   }
+
+  public static ConcurrentHashMap<SubClusterId, MockRM> getMockRMs() {
+    return mockRMs;
+  }
+
 }

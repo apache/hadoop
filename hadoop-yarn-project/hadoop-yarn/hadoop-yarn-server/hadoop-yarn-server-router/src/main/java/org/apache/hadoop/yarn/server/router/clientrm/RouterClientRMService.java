@@ -617,6 +617,7 @@ public class RouterClientRMService extends AbstractService
     }
   }
 
+  @VisibleForTesting
   public Map<String, RequestInterceptorChainWrapper> getUserPipelineMap() {
     return userPipelineMap;
   }

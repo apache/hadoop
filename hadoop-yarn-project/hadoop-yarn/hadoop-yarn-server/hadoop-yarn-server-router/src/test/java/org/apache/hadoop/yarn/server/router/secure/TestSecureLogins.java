@@ -17,13 +17,23 @@
  */
 package org.apache.hadoop.yarn.server.router.secure;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResponse;
+import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.server.router.clientrm.FederationClientInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.router.rmadmin.DefaultRMAdminRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.rmadmin.RouterRMAdminService;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 
 public class TestSecureLogins extends AbstractSecureRouterTest {
 
@@ -44,7 +55,7 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
 
   @Test
   public void testRouterSecureLogin() throws Exception {
-    startSecureRouter(false);
+    startSecureRouter();
 
     List<Service> services = this.getRouter().getServices();
     Assert.assertNotNull(services);
@@ -54,31 +65,45 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
   }
 
   @Test
-  public void testRouterClientRMProxyService() throws Exception {
-    startSecureRouter(true);
+  public void testRouterClientRMService() throws Exception {
+    // Start the Router in Secure Mode
+    startSecureRouter();
+
+    // Start RM and RouterClientRMService in Secure mode
+    setupSecureMockRM();
+    initRouterClientRMService();
 
     // Test the simple rpc call of the Router in the Secure environment
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
     GetClusterMetricsRequest metricsRequest = GetClusterMetricsRequest.newInstance();
-    GetClusterMetricsResponse metricsResponse = routerClientRMService.getClusterMetrics(metricsRequest);
+    GetClusterMetricsResponse metricsResponse =
+        routerClientRMService.getClusterMetrics(metricsRequest);
     Assert.assertNotNull(metricsResponse);
     YarnClusterMetrics clusterMetrics = metricsResponse.getClusterMetrics();
     Assert.assertEquals(4, clusterMetrics.getNumNodeManagers());
     Assert.assertEquals(0, clusterMetrics.getNumLostNodeManagers());
 
+    // Stop the Router in Secure Mode
     stopSecureRouter();
   }
 
   @Test
   public void testRouterRMAdminService() throws Exception {
-    startSecureRouter(true);
+    // Start the Router in Secure Mode
+    startSecureRouter();
 
+    // Start RM and RouterClientRMService in Secure mode
+    setupSecureMockRM();
+    initRouterRMAdminService();
+
+    // Test the simple rpc call of the Router in the Secure environment
     RouterRMAdminService routerRMAdminService = this.getRouter().getRmAdminProxyService();
     RefreshNodesRequest refreshNodesRequest = RefreshNodesRequest.newInstance();
     RefreshNodesResponse refreshNodesResponse =
         routerRMAdminService.refreshNodes(refreshNodesRequest);
     Assert.assertNotNull(refreshNodesResponse);
 
+    // Stop the Router in Secure Mode
     stopSecureRouter();
   }
 
@@ -88,5 +113,44 @@ public class TestSecureLogins extends AbstractSecureRouterTest {
 
   protected static String getRealm() {
     return getKdc().getRealm();
+  }
+
+  private void initRouterClientRMService() throws Exception {
+    Router router = this.getRouter();
+    Map<SubClusterId, MockRM> mockRMs = getMockRMs();
+
+    RouterClientRMService rmService = router.getClientRMProxyService();
+    RouterClientRMService.RequestInterceptorChainWrapper wrapper = rmService.getInterceptorChain();
+    FederationClientInterceptor interceptor =
+        (FederationClientInterceptor) wrapper.getRootInterceptor();
+    FederationStateStoreFacade stateStoreFacade = interceptor.getFederationFacade();
+    FederationStateStore stateStore = stateStoreFacade.getStateStore();
+    FederationStateStoreTestUtil stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
+    Map<SubClusterId, ApplicationClientProtocol> clientRMProxies = interceptor.getClientRMProxies();
+
+    if (MapUtils.isNotEmpty(mockRMs)) {
+      for (Map.Entry<SubClusterId, MockRM> entry : mockRMs.entrySet()) {
+        SubClusterId sc = entry.getKey();
+        MockRM mockRM = entry.getValue();
+        stateStoreUtil.registerSubCluster(sc);
+        if (clientRMProxies.containsKey(sc)) {
+          continue;
+        }
+        clientRMProxies.put(sc, mockRM.getClientRMService());
+      }
+    }
+  }
+
+  private void initRouterRMAdminService() throws Exception {
+    Router router = this.getRouter();
+    Map<SubClusterId, MockRM> mockRMs = getMockRMs();
+    SubClusterId sc = SubClusterId.newInstance(0);
+    MockRM mockRM = mockRMs.get(sc);
+    RouterRMAdminService routerRMAdminService = router.getRmAdminProxyService();
+    RouterRMAdminService.RequestInterceptorChainWrapper rmAdminChainWrapper =
+        routerRMAdminService.getInterceptorChain();
+    DefaultRMAdminRequestInterceptor rmInterceptor =
+        (DefaultRMAdminRequestInterceptor) rmAdminChainWrapper.getRootInterceptor();
+    rmInterceptor.setRMAdmin(mockRM.getAdminService());
   }
 }
