@@ -199,10 +199,9 @@ public class Text extends BinaryComparable
           int pos = src.position()-1;
           while (tgt.hasRemaining()) {
             if (!src.hasRemaining()) { // src expired first
-              tgt.reset();
-              src.reset();
-              found = false;
-              break;
+              // the remaining bytes in src will always smaller than tgt,
+              // so we can return -1 directory
+              return -1;
             }
             if (!(tgt.get() == src.get())) {
               tgt.reset();

@@ -238,6 +238,7 @@ public class TestText {
     assertThat(text.find("ac")).isEqualTo(-1);
     assertThat(text.find("\u20ac")).isEqualTo(4);
     assertThat(text.find("\u20ac", 5)).isEqualTo(11);
+    assertThat(text.find("cd\u20acq")).isEqualTo(-1);
   }
 
   @Test
