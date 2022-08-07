@@ -345,18 +345,24 @@ public class MemoryFederationStateStore implements FederationStateStore {
     if (!reservations.containsKey(reservationId)) {
       throw new YarnException("Reservation " + reservationId + " does not exist");
     }
+    SubClusterId subClusterId = reservations.get(reservationId);
     return GetReservationHomeSubClusterResponse.newInstance(
-        ReservationHomeSubCluster.newInstance(reservationId, reservations.get(reservationId)));
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId));
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     List<ReservationHomeSubCluster> result = new ArrayList<>();
-    for (Entry<ReservationId, SubClusterId> e : reservations.entrySet()) {
-      result.add(ReservationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+
+    for (Entry<ReservationId, SubClusterId> entry : reservations.entrySet()) {
+      ReservationId key = entry.getKey();
+      SubClusterId value = entry.getValue();
+      ReservationHomeSubCluster homeSubCluster =
+          ReservationHomeSubCluster.newInstance(key, value);
+      result.add(homeSubCluster);
     }
-    GetReservationsHomeSubClusterResponse.newInstance(result);
+
     return GetReservationsHomeSubClusterResponse.newInstance(result);
   }
 }

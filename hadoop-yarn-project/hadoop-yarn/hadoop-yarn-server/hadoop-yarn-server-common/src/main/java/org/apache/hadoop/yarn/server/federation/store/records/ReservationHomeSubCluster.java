@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -103,15 +105,19 @@ public abstract class ReservationHomeSubCluster {
       return false;
     }
     ReservationHomeSubCluster other = (ReservationHomeSubCluster) obj;
-    if (!this.getReservationId().equals(other.getReservationId())) {
-      return false;
-    }
-    return this.getHomeSubCluster().equals(other.getHomeSubCluster());
+
+    return new EqualsBuilder()
+        .append(this.getReservationId(), other.getReservationId())
+        .append(this.getHomeSubCluster(), other.getHomeSubCluster())
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return getReservationId().hashCode() * 31 + getHomeSubCluster().hashCode();
+    return new HashCodeBuilder().
+        append(this.getReservationId()).
+        append(this.getHomeSubCluster()).
+        toHashCode();
   }
 
   @Override

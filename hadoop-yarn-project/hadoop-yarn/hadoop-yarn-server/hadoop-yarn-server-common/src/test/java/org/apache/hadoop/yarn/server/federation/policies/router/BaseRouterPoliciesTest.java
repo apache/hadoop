@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
@@ -136,16 +138,18 @@ public abstract class BaseRouterPoliciesTest
 
   @Test
   public void testUnknownReservation() throws Exception {
+
+    long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
-    ReservationId reservationId = ReservationId.newInstance(System.currentTimeMillis(), 1);
+    ReservationId reservationId = ReservationId.newInstance(now, 1);
     when(resReq.getQueue()).thenReturn("queue1");
     when(resReq.getReservationId()).thenReturn(reservationId);
 
     // route an application that uses this app
     ApplicationSubmissionContext applicationSubmissionContext =
         ApplicationSubmissionContext.newInstance(
-            ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
-            "queue1", Priority.newInstance(1), null, false, false, 1, null, null, false);
+            ApplicationId.newInstance(now, 1), "app1", "queue1", Priority.newInstance(1),
+                null, false, false, 1, null, null, false);
 
     applicationSubmissionContext.setReservationID(resReq.getReservationId());
     FederationRouterPolicy policy = (FederationRouterPolicy) getPolicy();
@@ -157,29 +161,34 @@ public abstract class BaseRouterPoliciesTest
 
   @Test
   public void testFollowReservation() throws YarnException {
+
+    long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
     when(resReq.getQueue()).thenReturn("queue1");
     when(resReq.getReservationId())
-        .thenReturn(ReservationId.newInstance(System.currentTimeMillis(), 1));
+        .thenReturn(ReservationId.newInstance(now, 1));
+
+    FederationRouterPolicy routerPolicy = (FederationRouterPolicy) getPolicy();
+    FederationStateStoreFacade storeFacade =
+        getFederationPolicyContext().getFederationStateStoreFacade();
 
     // first we invoke a reservation placement
-    SubClusterId chosen = ((FederationRouterPolicy) getPolicy())
-        .getReservationHomeSubcluster(resReq);
+    SubClusterId chosen = routerPolicy.getReservationHomeSubcluster(resReq);
 
     // add this to the store
-    this.getFederationPolicyContext().getFederationStateStoreFacade()
-        .addReservationHomeSubCluster(ReservationHomeSubCluster.newInstance(
-             resReq.getReservationId(), chosen));
+    ReservationHomeSubCluster homeSubCluster =
+        ReservationHomeSubCluster.newInstance(resReq.getReservationId(), chosen);
+    storeFacade.addReservationHomeSubCluster(homeSubCluster);
 
     // route an application that uses this app
     ApplicationSubmissionContext applicationSubmissionContext =
         ApplicationSubmissionContext.newInstance(
-            ApplicationId.newInstance(System.currentTimeMillis(), 1), "app1",
-            "queue1", Priority.newInstance(1), null, false, false, 1, null,
-            null, false);
+            ApplicationId.newInstance(now, 1), "app1", "queue1", Priority.newInstance(1),
+                null, false, false, 1, null, null, false);
+
     applicationSubmissionContext.setReservationID(resReq.getReservationId());
-    SubClusterId chosen2 = ((FederationRouterPolicy) getPolicy())
-        .getHomeSubcluster(applicationSubmissionContext, Collections.emptyList());
+    SubClusterId chosen2 = routerPolicy.getHomeSubcluster(applicationSubmissionContext,
+        Collections.emptyList());
 
     // application follows reservation
     Assert.assertEquals(chosen, chosen2);

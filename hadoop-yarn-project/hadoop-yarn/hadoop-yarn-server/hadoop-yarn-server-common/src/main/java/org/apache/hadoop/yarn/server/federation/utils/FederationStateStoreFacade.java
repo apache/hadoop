@@ -434,9 +434,8 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterId getReservationHomeSubCluster(ReservationId reservationId)
       throws YarnException {
-    GetReservationHomeSubClusterResponse response =
-        stateStore.getReservationHomeSubCluster(
-        GetReservationHomeSubClusterRequest.newInstance(reservationId));
+    GetReservationHomeSubClusterResponse response = stateStore.getReservationHomeSubCluster(
+         GetReservationHomeSubClusterRequest.newInstance(reservationId));
     return response.getReservationHomeSubCluster().getHomeSubCluster();
   }
 
