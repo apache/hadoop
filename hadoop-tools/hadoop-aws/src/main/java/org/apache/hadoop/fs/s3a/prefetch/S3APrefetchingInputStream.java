@@ -81,9 +81,19 @@ public class S3APrefetchingInputStream
 
     long fileSize = s3Attributes.getLen();
     if (fileSize <= context.getPrefetchBlockSize()) {
-      this.inputStream = new S3AInMemoryInputStream(context, s3Attributes, client, streamStatistics);
+      LOG.debug("Creating in memory input stream for {}", context.getPath());
+      this.inputStream = new S3AInMemoryInputStream(
+          context,
+          s3Attributes,
+          client,
+          streamStatistics);
     } else {
-      this.inputStream = new S3ACachingInputStream(context, s3Attributes, client, streamStatistics);
+      LOG.debug("Creating in caching input stream for {}", context.getPath());
+      this.inputStream = new S3ACachingInputStream(
+          context,
+          s3Attributes,
+          client,
+          streamStatistics);
     }
   }
 

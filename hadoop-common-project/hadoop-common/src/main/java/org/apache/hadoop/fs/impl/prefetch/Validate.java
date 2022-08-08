@@ -27,17 +27,18 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * A superset of Validate class in Apache commons lang3.
- *
+ * <p>
  * It provides consistent message strings for frequently encountered checks.
  * That simplifies callers because they have to supply only the name of the argument
  * that failed a check instead of having to supply the entire message.
  */
 public final class Validate {
-  private Validate() {}
+
+  private Validate() {
+  }
 
   /**
    * Validates that the given reference argument is not null.
-   *
    * @param obj the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -47,7 +48,6 @@ public final class Validate {
 
   /**
    * Validates that the given integer argument is not zero or negative.
-   *
    * @param value the argument value to validate
    * @param argName the name of the argument being validated.
    */
@@ -57,7 +57,6 @@ public final class Validate {
 
   /**
    * Validates that the given integer argument is not negative.
-   *
    * @param value the argument value to validate
    * @param argName the name of the argument being validated.
    */
@@ -67,7 +66,6 @@ public final class Validate {
 
   /**
    * Validates that the expression (that checks a required field is present) is true.
-   *
    * @param isPresent indicates whether the given argument is present.
    * @param argName the name of the argument being validated.
    */
@@ -77,7 +75,6 @@ public final class Validate {
 
   /**
    * Validates that the expression (that checks a field is valid) is true.
-   *
    * @param isValid indicates whether the given argument is valid.
    * @param argName the name of the argument being validated.
    */
@@ -87,18 +84,19 @@ public final class Validate {
 
   /**
    * Validates that the expression (that checks a field is valid) is true.
-   *
    * @param isValid indicates whether the given argument is valid.
    * @param argName the name of the argument being validated.
    * @param validValues the list of values that are allowed.
    */
-  public static void checkValid(boolean isValid, String argName, String validValues) {
-    checkArgument(isValid, "'%s' is invalid. Valid values are: %s.", argName, validValues);
+  public static void checkValid(boolean isValid,
+      String argName,
+      String validValues) {
+    checkArgument(isValid, "'%s' is invalid. Valid values are: %s.", argName,
+        validValues);
   }
 
   /**
    * Validates that the given string is not null and has non-zero length.
-   *
    * @param arg the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -112,7 +110,6 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
-   *
    * @param <T> the type of array's elements.
    * @param array the argument reference to validate.
    * @param argName the name of the argument being validated.
@@ -124,7 +121,6 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
-   *
    * @param array the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -135,7 +131,6 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
-   *
    * @param array the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -146,7 +141,6 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
-   *
    * @param array the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -157,7 +151,6 @@ public final class Validate {
 
   /**
    * Validates that the given array is not null and has at least one element.
-   *
    * @param array the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
@@ -168,12 +161,12 @@ public final class Validate {
 
   /**
    * Validates that the given buffer is not null and has non-zero capacity.
-   *
    * @param <T> the type of iterable's elements.
    * @param iter the argument reference to validate.
    * @param argName the name of the argument being validated.
    */
-  public static <T> void checkNotNullAndNotEmpty(Iterable<T> iter, String argName) {
+  public static <T> void checkNotNullAndNotEmpty(Iterable<T> iter,
+      String argName) {
     checkNotNull(iter, argName);
     int minNumElements = iter.iterator().hasNext() ? 1 : 0;
     checkNotEmpty(minNumElements, argName);
@@ -181,7 +174,6 @@ public final class Validate {
 
   /**
    * Validates that the given set is not null and has an exact number of items.
-   *
    * @param <T> the type of collection's elements.
    * @param collection the argument reference to validate.
    * @param numElements the expected number of elements in the collection.
@@ -201,7 +193,6 @@ public final class Validate {
 
   /**
    * Validates that the given two values are equal.
-   *
    * @param value1 the first value to check.
    * @param value1Name the name of the first argument.
    * @param value2 the second value to check.
@@ -223,7 +214,6 @@ public final class Validate {
 
   /**
    * Validates that the first value is an integer multiple of the second value.
-   *
    * @param value1 the first value to check.
    * @param value1Name the name of the first argument.
    * @param value2 the second value to check.
@@ -245,7 +235,6 @@ public final class Validate {
 
   /**
    * Validates that the first value is greater than the second value.
-   *
    * @param value1 the first value to check.
    * @param value1Name the name of the first argument.
    * @param value2 the second value to check.
@@ -267,7 +256,6 @@ public final class Validate {
 
   /**
    * Validates that the first value is greater than or equal to the second value.
-   *
    * @param value1 the first value to check.
    * @param value1Name the name of the first argument.
    * @param value2 the second value to check.
@@ -289,7 +277,6 @@ public final class Validate {
 
   /**
    * Validates that the first value is less than or equal to the second value.
-   *
    * @param value1 the first value to check.
    * @param value1Name the name of the first argument.
    * @param value2 the second value to check.
@@ -311,7 +298,6 @@ public final class Validate {
 
   /**
    * Validates that the given value is within the given range of values.
-   *
    * @param value the value to check.
    * @param valueName the name of the argument.
    * @param minValueInclusive inclusive lower limit for the value.
@@ -333,7 +319,6 @@ public final class Validate {
 
   /**
    * Validates that the given value is within the given range of values.
-   *
    * @param value the value to check.
    * @param valueName the name of the argument.
    * @param minValueInclusive inclusive lower limit for the value.
@@ -355,18 +340,17 @@ public final class Validate {
 
   /**
    * Validates that the given path exists.
-   *
    * @param path the path to check.
    * @param argName the name of the argument being validated.
    */
   public static void checkPathExists(Path path, String argName) {
     checkNotNull(path, argName);
-    checkArgument(Files.exists(path), "Path %s (%s) does not exist.", argName, path);
+    checkArgument(Files.exists(path), "Path %s (%s) does not exist.", argName,
+        path);
   }
 
   /**
    * Validates that the given path exists and is a directory.
-   *
    * @param path the path to check.
    * @param argName the name of the argument being validated.
    */
@@ -381,13 +365,13 @@ public final class Validate {
 
   /**
    * Validates that the given path exists and is a file.
-   *
    * @param path the path to check.
    * @param argName the name of the argument being validated.
    */
   public static void checkPathExistsAsFile(Path path, String argName) {
     checkPathExists(path, argName);
-    checkArgument(Files.isRegularFile(path), "Path %s (%s) must point to a file.", argName, path);
+    checkArgument(Files.isRegularFile(path),
+        "Path %s (%s) must point to a file.", argName, path);
   }
 
 
@@ -398,9 +382,11 @@ public final class Validate {
    * @param args arguments for the error string
    * @throws IllegalStateException if the state is not valid.
    */
-  public static void checkState(boolean expression, String format, Object... args) {
+  public static void checkState(boolean expression,
+      String format,
+      Object... args) {
     if (!expression) {
-        throw new IllegalStateException(String.format(format, args));
+      throw new IllegalStateException(String.format(format, args));
     }
   }
 

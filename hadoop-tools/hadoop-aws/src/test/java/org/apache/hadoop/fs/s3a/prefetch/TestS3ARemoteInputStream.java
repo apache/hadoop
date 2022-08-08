@@ -46,7 +46,8 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
   private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
-  private final S3AInputStream.InputStreamCallbacks client = MockS3ARemoteObject.createClient("bucket");
+  private final S3AInputStream.InputStreamCallbacks client =
+      MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {

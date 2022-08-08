@@ -29,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
@@ -50,10 +49,10 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
     intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-         () -> new BufferData(-1, buffer));
+        () -> new BufferData(-1, buffer));
 
     intercept(IllegalArgumentException.class, "'buffer' must not be null",
-         () -> new BufferData(1, null));
+        () -> new BufferData(1, null));
 
     intercept(IllegalArgumentException.class, "'actionFuture' must not be null",
         () -> data.setPrefetch(null));
@@ -66,7 +65,8 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
     intercept(IllegalStateException.class,
         "Expected buffer state to be 'READY or CACHING' but found",
-        () -> data.throwIfStateIncorrect(BufferData.State.READY, BufferData.State.CACHING));
+        () -> data.throwIfStateIncorrect(BufferData.State.READY,
+            BufferData.State.CACHING));
 
   }
 
@@ -187,6 +187,7 @@ public class TestBufferData extends AbstractHadoopTestBase {
 
   @FunctionalInterface
   public interface StateChanger {
+
     void run(BufferData data) throws Exception;
   }
 

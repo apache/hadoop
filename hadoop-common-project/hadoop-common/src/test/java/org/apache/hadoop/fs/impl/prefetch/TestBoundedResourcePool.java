@@ -27,7 +27,6 @@ import java.util.Set;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
@@ -63,7 +62,7 @@ public class TestBoundedResourcePool extends AbstractHadoopTestBase {
 
     intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-         () -> new BufferPool(0));
+        () -> new BufferPool(0));
 
     intercept(IllegalArgumentException.class, "'item' must not be null",
         () -> pool.release(null));

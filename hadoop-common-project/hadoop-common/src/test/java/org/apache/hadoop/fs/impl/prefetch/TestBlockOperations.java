@@ -24,7 +24,6 @@ import java.lang.reflect.Method;
 import org.junit.Test;
 
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertTrue;
