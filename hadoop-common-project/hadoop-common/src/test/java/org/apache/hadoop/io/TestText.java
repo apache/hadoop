@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
+import java.util.Arrays;
 import java.util.Random;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
@@ -239,6 +240,17 @@ public class TestText {
     assertThat(text.find("\u20ac")).isEqualTo(4);
     assertThat(text.find("\u20ac", 5)).isEqualTo(11);
     assertThat(text.find("cd\u20acq")).isEqualTo(-1);
+  }
+
+  @Test(timeout = 10000)
+  public void testFindWithTimeout() throws Exception {
+    byte[] bytes = new byte[1000000];
+    Arrays.fill(bytes, (byte) 97);
+    String what = new String(bytes);
+    bytes[0] = (byte) 98;
+    Text text = new Text(bytes);
+
+    assertThat(text.find(what)).isEqualTo(-1);
   }
 
   @Test

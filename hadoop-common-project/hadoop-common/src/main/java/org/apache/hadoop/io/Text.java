@@ -200,7 +200,7 @@ public class Text extends BinaryComparable
           while (tgt.hasRemaining()) {
             if (!src.hasRemaining()) { // src expired first
               // the remaining bytes in src will always smaller than tgt,
-              // so we can return -1 directory
+              // so we can return -1 directly
               return -1;
             }
             if (!(tgt.get() == src.get())) {
