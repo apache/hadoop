@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.net;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.naming.NamingException;
 import java.net.InetAddress;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public final class InetAddressUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(InetAddressUtils.class);
