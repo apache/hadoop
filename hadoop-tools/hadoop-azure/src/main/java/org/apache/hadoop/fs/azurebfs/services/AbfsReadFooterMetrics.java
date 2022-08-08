@@ -19,12 +19,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
+import java.util.ArrayList;
 
 public class AbfsReadFooterMetrics {
   private boolean isParquetFile;
   private String sizeReadByFirstRead;
   private String offsetDiffBetweenFirstAndSecondRead;
-  private AtomicLong fileLength;
+  private final AtomicLong fileLength;
   private double avgFileLength;
 
   public AbfsReadFooterMetrics() {
@@ -140,8 +141,8 @@ public class AbfsReadFooterMetrics {
   }
 
   public static String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsList, String readFooterMetric){
-    List<AbfsReadFooterMetrics> isParquetList = new java.util.ArrayList<>();
-    List<AbfsReadFooterMetrics> isNonParquetList = new java.util.ArrayList<>();
+    List<AbfsReadFooterMetrics> isParquetList = new ArrayList<>();
+    List<AbfsReadFooterMetrics> isNonParquetList = new ArrayList<>();
     for (AbfsReadFooterMetrics abfsReadFooterMetrics : readFooterMetricsList) {
       if (abfsReadFooterMetrics.getIsParquetFile()) {
         isParquetList.add(abfsReadFooterMetrics);
