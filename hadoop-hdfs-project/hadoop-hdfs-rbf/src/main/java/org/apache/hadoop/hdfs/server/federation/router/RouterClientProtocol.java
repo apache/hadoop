@@ -935,19 +935,22 @@ public class RouterClientProtocol implements ClientProtocol {
   public HdfsFileStatus getFileInfo(String src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false, false);
-    RemoteMethod method = new RemoteMethod("getFileInfo",
-        new Class<?>[] {String.class}, new RemoteParam());
-
     HdfsFileStatus ret = null;
-    // If it's a directory, we check in all locations
-    if (rpcServer.isPathAll(src)) {
-      ret = getFileInfoAll(locations, method);
-    } else {
-      // Check for file information sequentially
-      ret = rpcClient.invokeSequential(
-          locations, method, HdfsFileStatus.class, null);
+    IOException noLocationException = null;
+    try {
+      final List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, false, false);
+      RemoteMethod method = new RemoteMethod("getFileInfo",
+          new Class<?>[] {String.class}, new RemoteParam());
+
+      // If it's a directory, we check in all locations
+      if (rpcServer.isPathAll(src)) {
+        ret = getFileInfoAll(locations, method);
+      } else {
+        // Check for file information sequentially
+        ret = rpcClient.invokeSequential(locations, method, HdfsFileStatus.class, null);
+      }
+    } catch (NoLocationException | RouterResolveException e) {
+      noLocationException = e;
     }
 
     // If there is no real path, check mount points
@@ -956,7 +959,7 @@ public class RouterClientProtocol implements ClientProtocol {
       if (children != null && !children.isEmpty()) {
         Map<String, Long> dates = getMountPointDates(src);
         long date = 0;
-        if (dates != null && dates.containsKey(src)) {
+        if (dates.containsKey(src)) {
           date = dates.get(src);
         }
         ret = getMountPointStatus(src, children.size(), date);
@@ -964,6 +967,10 @@ public class RouterClientProtocol implements ClientProtocol {
         // The src is a mount point, but there are no files or directories
         ret = getMountPointStatus(src, 0, 0);
       }
+    }
+
+    if (ret == null && noLocationException != null) {
+      throw noLocationException;
     }
 
     return ret;
