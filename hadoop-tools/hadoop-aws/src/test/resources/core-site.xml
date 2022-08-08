@@ -178,6 +178,12 @@
     <value>true</value>
   </property>
 
+  <!-- Enable IOStatisticsContext support for Thread level. -->
+  <property>
+    <name>fs.iostatistics.thread.level.enabled</name>
+    <value>true</value>
+  </property>
+
   <!--
   To run these tests.
 
