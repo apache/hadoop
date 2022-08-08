@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
@@ -53,8 +54,12 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -67,9 +72,14 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static com.amazonaws.services.s3.Headers.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP;
+import static org.apache.hadoop.fs.s3a.Constants.HTTPS;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
@@ -199,6 +209,11 @@ public class DefaultS3ClientFactory extends Configured
 
     S3ClientBuilder s3ClientBuilder = S3Client.builder();
 
+    // build a s3 client with region us-east-2 that can be used to get the region of the bucket as
+    // getBucketLocation does not work with us-east-1.
+    // See https://github.com/aws/aws-sdk-java/issues/1338.
+    S3Client defaultS3Client = S3Client.builder().region(Region.US_EAST_2).build();
+
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
 
@@ -220,6 +235,17 @@ public class DefaultS3ClientFactory extends Configured
 
     s3ClientBuilder.credentialsProvider(
         V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()));
+
+    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
+
+    Region region =
+        getS3Region(conf.getTrimmed(AWS_REGION), defaultS3Client);
+
+    LOG.debug("Using endpoint {}; and region {}", endpoint, region);
+
+    s3ClientBuilder.endpointOverride(endpoint).region(region);
+
+    configureBasicParamsV2(s3ClientBuilder, clientOverrideConfigBuilder, parameters);
 
     return s3ClientBuilder.build();
   }
@@ -332,6 +358,18 @@ public class DefaultS3ClientFactory extends Configured
       builder.withMonitoringListener(parameters.getMonitoringListener());
     }
 
+  }
+
+  private void configureBasicParamsV2(S3ClientBuilder s3ClientBuilder,
+      ClientOverrideConfiguration.Builder overrideConfigBuilder, S3ClientCreationParameters parameters) {
+
+    S3Configuration s3Configuration = S3Configuration.builder()
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .build();
+
+    // TODO: set request handlers, will be done as part of auditor work
+
+    // TODO: Metrics collection, not sure if this can be done with the SDK V2 yet.
   }
 
   /**
@@ -454,5 +492,62 @@ public class DefaultS3ClientFactory extends Configured
     LOG.debug("Region for endpoint {}, URI {} is determined as {}",
         endpoint, epr, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
+  }
+
+  /**
+   * Given a endpoint string, create the endpoint URI.
+   *
+   * @param endpoint possibly null endpoint.
+   * @param conf config to build the URI from.
+   * @return an endpoint uri
+   */
+  private static URI getS3Endpoint(
+     String endpoint, final Configuration conf) {
+
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
+        DEFAULT_SECURE_CONNECTIONS);
+
+    String protocol = secureConnections ?  HTTPS : HTTP;
+
+    if (endpoint == null || endpoint.isEmpty()) {
+      // the default endpoint
+      endpoint = CENTRAL_ENDPOINT;
+    }
+
+    if (!endpoint.contains("://")) {
+      endpoint = String.format("%s://%s", protocol, endpoint);
+    }
+
+    try {
+      return new URI(endpoint);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /**
+   * Get the bucket region.
+   *
+   * @param region AWS S3 Region set in the config. This property may not be set, in which case this
+   *               ask S3 for the region.
+   * @param s3Client A S3 Client with default config, used for getting the region of a bucket.
+   * @return region of the bucket.
+   */
+  private Region getS3Region(String region, S3Client s3Client) {
+
+    if(!StringUtils.isBlank(region)) {
+      return Region.of(region);
+    }
+
+    //No region specified so ask s3 for bucket region
+   GetBucketLocationResponse bucketLocationResponse =
+       s3Client.getBucketLocation(GetBucketLocationRequest.builder().bucket(bucket).build());
+
+    // buckets in eu-east-1 have a location constraint of null
+    if(bucketLocationResponse.locationConstraintAsString() != null) {
+      return Region.of(bucketLocationResponse.locationConstraintAsString());
+    } else {
+      return Region.US_EAST_1;
+    }
   }
 }

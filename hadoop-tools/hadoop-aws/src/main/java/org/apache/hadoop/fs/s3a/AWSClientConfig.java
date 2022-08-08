@@ -90,10 +90,7 @@ public final class AWSClientConfig {
     httpClientBuilder.socketTimeout(Duration.ofSeconds(S3AUtils.intOption(conf, SOCKET_TIMEOUT,
         DEFAULT_SOCKET_TIMEOUT, 0)));
 
-    // The protocol is now HTTPS by default,
-    // and can only be modified by setting an HTTP endpoint on the client builder.
-    //TODO: See where this logic should go now
-    //initProtocolSettings(conf, awsConf);
+    // TODO: Need to set ssl socket factory, as done in  NetworkBinding.bindSSLChannelMode(conf, awsConf);
 
     return httpClientBuilder;
   }
