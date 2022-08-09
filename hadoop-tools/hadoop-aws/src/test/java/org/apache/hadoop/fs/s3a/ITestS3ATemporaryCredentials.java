@@ -80,6 +80,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   public static final String EU_IRELAND = "eu-west-1";
 
+  @SuppressWarnings("deprecation")
   private AWSCredentialProviderList credentials;
 
   @Override
@@ -357,6 +358,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * @return the caught exception.
    * @throws Exception any unexpected exception.
    */
+  @SuppressWarnings("deprecation")
   public <E extends Exception> E expectedSessionRequestFailure(
       final Class<E> clazz,
       final String endpoint,

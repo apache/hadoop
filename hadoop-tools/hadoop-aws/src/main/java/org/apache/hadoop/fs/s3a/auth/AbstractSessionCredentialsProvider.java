@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.s3a.Retries;
  * Base class for session credential support.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 

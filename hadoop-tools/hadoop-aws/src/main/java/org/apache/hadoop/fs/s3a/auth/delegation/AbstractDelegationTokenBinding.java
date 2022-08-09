@@ -205,6 +205,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * authenticating this client with AWS services.
    * @throws IOException any failure.
    */
+  @SuppressWarnings("deprecation")
   public abstract AWSCredentialProviderList deployUnbonded()
       throws IOException;
 
@@ -216,6 +217,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * authenticating this client with AWS services.
    * @throws IOException any failure.
    */
+  @SuppressWarnings("deprecation")
   public abstract AWSCredentialProviderList bindToTokenIdentifier(
       AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException;

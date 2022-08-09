@@ -123,6 +123,7 @@ public class S3ADelegationTokens extends AbstractDTService {
   /**
    * List of cred providers; unset until {@link #bindToDelegationToken(Token)}.
    */
+  @SuppressWarnings("deprecation")
   private Optional<AWSCredentialProviderList> credentialProviders
       = Optional.empty();
 
@@ -468,6 +469,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    * @throws IOException failure to parse the DT
    * @throws IllegalStateException if this instance is not bound to a DT
    */
+  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList getCredentialProviders()
       throws IOException {
     return credentialProviders.orElseThrow(

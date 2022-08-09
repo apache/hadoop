@@ -95,6 +95,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testInstantiationChain() throws Throwable {
     Configuration conf = new Configuration(false);
     conf.set(AWS_CREDENTIALS_PROVIDER,
@@ -114,6 +115,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testDefaultChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration(false);
@@ -138,6 +140,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testConfiguredChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     List<Class<?>> expectedClasses =
@@ -156,6 +159,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testConfiguredChainUsesSharedInstanceProfile() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
     Configuration conf = new Configuration(false);
@@ -172,6 +176,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testFallbackToDefaults() throws Throwable {
     // build up the base provider
     final AWSCredentialProviderList credentials = buildAWSProviderList(
@@ -343,6 +348,7 @@ public class TestS3AAWSCredentialsProvider {
    * @param expectedClasses expected provider classes
    * @param list providers to check
    */
+  @SuppressWarnings("deprecation")
   private static void assertCredentialProviders(
       List<Class<?>> expectedClasses,
       AWSCredentialProviderList list) {
@@ -368,6 +374,7 @@ public class TestS3AAWSCredentialsProvider {
    * @see S3ATestUtils#authenticationContains(Configuration, String).
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testAuthenticationContainsProbes() {
     Configuration conf = new Configuration(false);
     assertFalse("found AssumedRoleCredentialProvider",
@@ -379,6 +386,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testExceptionLogic() throws Throwable {
     AWSCredentialProviderList providers
         = new AWSCredentialProviderList();
@@ -406,6 +414,7 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testRefCounting() throws Throwable {
     AWSCredentialProviderList providers
         = new AWSCredentialProviderList();

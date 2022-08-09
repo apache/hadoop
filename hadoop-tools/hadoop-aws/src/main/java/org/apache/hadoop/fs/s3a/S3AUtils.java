@@ -551,6 +551,7 @@ public final class S3AUtils {
   /**
    * The standard AWS provider list for AWS connections.
    */
+  @SuppressWarnings("deprecation")
   public static final List<Class<?>>
       STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
       Arrays.asList(
@@ -568,6 +569,7 @@ public final class S3AUtils {
    * @throws IOException Problems loading the providers (including reading
    * secrets from credential files).
    */
+  @SuppressWarnings("deprecation")
   public static AWSCredentialProviderList createAWSCredentialProviderSet(
       @Nullable URI binding,
       Configuration conf) throws IOException {

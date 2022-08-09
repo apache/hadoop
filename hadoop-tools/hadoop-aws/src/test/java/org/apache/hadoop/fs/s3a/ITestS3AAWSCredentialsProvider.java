@@ -157,6 +157,7 @@ public class ITestS3AAWSCredentialsProvider {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAnonymousProvider() throws Exception {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER,

@@ -335,6 +335,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean useListV1;
   private MagicCommitIntegration committerIntegration;
 
+  @SuppressWarnings("deprecation")
   private AWSCredentialProviderList credentials;
   private SignerManager signerManager;
 
@@ -837,6 +838,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param dtEnabled are delegation tokens enabled?
    * @throws IOException failure.
    */
+  @SuppressWarnings("deprecation")
   private void bindAWSClient(URI name, boolean dtEnabled) throws IOException {
     Configuration conf = getConf();
     credentials = null;
@@ -4952,6 +4954,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param purpose what is this for? This is initially for logging
    * @return a reference to shared credentials.
    */
+  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList shareCredentials(final String purpose) {
     LOG.debug("Sharing credentials for: {}", purpose);
     return credentials.share();
