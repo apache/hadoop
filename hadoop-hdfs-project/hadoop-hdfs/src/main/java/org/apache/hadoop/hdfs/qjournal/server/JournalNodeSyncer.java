@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +40,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A Journal Sync thread runs through the lifetime of the JN. It periodically
@@ -153,7 +156,8 @@ public class JournalNodeSyncer {
         LOG.warn("Could not add proxy for Journal at addresss " + addr, e);
       }
     }
-    if (otherJNProxies.isEmpty()) {
+    // Check if any of there are any resolvable JournalNodes before starting the sync.
+    if (otherJNProxies.stream().filter(jnp -> !jnp.jnAddr.isUnresolved()).count() == 0) {
       LOG.error("Cannot sync as there is no other JN available for sync.");
       return false;
     }
@@ -310,12 +314,23 @@ public class JournalNodeSyncer {
     return null;
   }
 
-  private List<InetSocketAddress> getJournalAddrList(String uriStr) throws
+  @VisibleForTesting
+  protected List<InetSocketAddress> getJournalAddrList(String uriStr) throws
       URISyntaxException,
       IOException {
     URI uri = new URI(uriStr);
-    return Util.getLoggerAddresses(uri,
-        new HashSet<>(Arrays.asList(jn.getBoundIpcAddress())), conf);
+
+    InetSocketAddress boundIpcAddress = jn.getBoundIpcAddress();
+    Set<InetSocketAddress> excluded = Sets.newHashSet(boundIpcAddress);
+    List<InetSocketAddress> addrList = Util.getLoggerAddresses(uri, excluded, conf);
+
+    // Exclude the current JournalNode instance.  If we are bound to a local address on the same
+    // then exclude any port, then remove it from the list since it likely a wildcard address
+    // (e.g. "0.0.0.0").
+    addrList.removeIf(addr -> !addr.isUnresolved() &&  addr.getAddress().isAnyLocalAddress()
+          && boundIpcAddress.getPort() == addr.getPort());
+
+    return addrList;
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,

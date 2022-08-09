@@ -125,6 +125,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   }
 
   @VisibleForTesting
+  public JournalNodeSyncer getJournalSyncer(String jid) {
+    return journalSyncersById.get(jid);
+  }
+
+  @VisibleForTesting
   public boolean getJournalSyncerStatus(String jid) {
     if (journalSyncersById.get(jid) != null) {
       return journalSyncersById.get(jid).isJournalSyncerStarted();
