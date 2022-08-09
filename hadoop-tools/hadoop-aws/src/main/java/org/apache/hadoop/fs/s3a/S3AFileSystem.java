@@ -133,6 +133,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -294,6 +295,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
+  private static final LogExactlyOnce WARN_ON_DELEGATION_TOKENS =
+      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
+  private static final LogExactlyOnce WARN_ON_GET_S3_CLIENT =
+      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
 
@@ -851,7 +856,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // with it if so.
 
       LOG.debug("Using delegation tokens");
-      LOG.warn(
+      WARN_ON_DELEGATION_TOKENS.warn(
           "The credential provider interface has changed in AWS SDK V2, custom credential "
               + "providers used in delegation tokens binding classes will need to be updated once "
               + "S3A is upgraded to SDK V2");
@@ -1192,7 +1197,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
-    LOG.warn("This method will be removed as part of upgrading S3A to AWS SDK V2");
+    WARN_ON_GET_S3_CLIENT.warn(
+        "getAmazonS3ClientForTesting() will be removed as part of upgrading S3A to AWS SDK V2");
     return s3;
   }
 
