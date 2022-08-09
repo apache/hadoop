@@ -2162,7 +2162,8 @@ public class MiniDFSCluster implements AutoCloseable {
         Exception cause = ExitUtil.getFirstExitException();
         LOG.error("Test resulted in an unexpected exit", cause);
         ExitUtil.resetFirstExitException();
-        throw new AssertionError("Test resulted in an unexpected exit", cause);
+        throw new AssertionError("Test resulted in an unexpected exit: " +
+            cause.toString(), cause);
       }
     }
     if (closeFileSystem) {
