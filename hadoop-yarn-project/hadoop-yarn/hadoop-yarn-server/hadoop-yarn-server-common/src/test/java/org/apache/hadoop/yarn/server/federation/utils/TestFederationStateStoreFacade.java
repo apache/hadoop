@@ -217,8 +217,7 @@ public class TestFederationStateStoreFacade {
 
     ApplicationHomeSubCluster appHomeSubCluster =
         ApplicationHomeSubCluster.newInstance(appId, subClusterId1);
-    SubClusterId subClusterIdAdd =
-        facade.addApplicationHomeSubCluster(appHomeSubCluster);
+    SubClusterId subClusterIdAdd = facade.addApplicationHomeSubCluster(appHomeSubCluster);
 
     SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
     Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);

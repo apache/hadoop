@@ -380,13 +380,9 @@ public final class FederationStateStoreFacade {
       throws YarnException {
     try {
       if (isCachingEnabled()) {
-        Object value =
-            cache.get(buildGetApplicationHomeSubClusterRequest(appId));
-        if (value instanceof SubClusterId) {
-          return (SubClusterId) value;
-        } else {
-          throw new YarnException("Cannot be converted to SubClusterId.");
-        }
+        SubClusterId value = SubClusterId.class.cast(
+            cache.get(buildGetApplicationHomeSubClusterRequest(appId)));
+        return value;
       } else {
         GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
@@ -531,20 +527,19 @@ public final class FederationStateStoreFacade {
   private Object buildGetApplicationHomeSubClusterRequest(ApplicationId applicationId) {
     final String cacheKey = buildCacheKey(getClass().getSimpleName(),
         GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, applicationId.toString());
-    CacheRequest<String, SubClusterId> cacheRequest =
-        new CacheRequest<>(
-            cacheKey,
-            input -> {
-              GetApplicationHomeSubClusterResponse response =
-                  stateStore.getApplicationHomeSubCluster(
-                      GetApplicationHomeSubClusterRequest.newInstance(applicationId));
+    CacheRequest<String, SubClusterId> cacheRequest = new CacheRequest<>(
+        cacheKey,
+        input -> {
+            GetApplicationHomeSubClusterResponse response =
+                stateStore.getApplicationHomeSubCluster(
+                    GetApplicationHomeSubClusterRequest.newInstance(applicationId));
 
-              ApplicationHomeSubCluster applicationHomeSubCluster =
-                  response.getApplicationHomeSubCluster();
-              SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
+            ApplicationHomeSubCluster applicationHomeSubCluster =
+                response.getApplicationHomeSubCluster();
+            SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
 
-              return subClusterId;
-            });
+            return subClusterId;
+         });
     return cacheRequest;
   }
 
