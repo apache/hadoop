@@ -19,11 +19,11 @@ package org.apache.hadoop.fs.s3a;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.io.IOUtils;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 
 /**
  * Test deleteOnExit for S3A.
@@ -59,68 +59,47 @@ public class ITestS3ADeleteOnExit extends AbstractS3ATestBase {
     Path outOfOrderFilePath = path(OUT_OF_ORDER_FILE_PATH_STR);
     Path subDirPath = path(SUBDIR_PATH_STR);
     Path fileUnderSubDirPath = path(FILE_UNDER_SUBDIR_PATH_STR);
+
     // 1. set up the test directory.
     Path dir = path("testDeleteOnExitDir");
     s3aFs.mkdirs(dir);
 
     // 2. Add a nonexisting file to DeleteOnExit set.
     s3aFs.deleteOnExit(nonExistFilePath);
-    ContractTestUtils.assertPathDoesNotExist(s3aFs,
-            "File " + NON_EXIST_FILE_PATH_STR + " should not exist", nonExistFilePath);
+    assertPathDoesNotExist("File " + NON_EXIST_FILE_PATH_STR + " should not exist",
+            nonExistFilePath);
 
     // 3. create a file and then add it to DeleteOnExit set.
-    FSDataOutputStream stream = s3aFs.create(inOrderFilePath, true);
-    byte[] data = ContractTestUtils.dataset(16, 'a', 26);
-    try {
-      stream.write(data);
-    } finally {
-      IOUtils.closeStream(stream);
-    }
-
-    ContractTestUtils.assertPathExists(s3aFs,
-            "File " + INORDER_FILE_PATH_STR + " should exist", inOrderFilePath);
-
+    byte[] data = dataset(16, 'a', 26);
+    createFile(s3aFs, inOrderFilePath, true, data);
+    assertPathExists("File " + INORDER_FILE_PATH_STR + " should exist", inOrderFilePath);
     s3aFs.deleteOnExit(inOrderFilePath);
 
     // 4. add a path to DeleteOnExit set first, then create it.
     s3aFs.deleteOnExit(outOfOrderFilePath);
-    stream = s3aFs.create(outOfOrderFilePath, true);
-    try {
-      stream.write(data);
-    } finally {
-      IOUtils.closeStream(stream);
-    }
-
-    ContractTestUtils.assertPathExists(s3aFs,
-            "File " + OUT_OF_ORDER_FILE_PATH_STR + " should exist", outOfOrderFilePath);
+    createFile(s3aFs, outOfOrderFilePath, true, data);
+    assertPathExists("File " + OUT_OF_ORDER_FILE_PATH_STR + " should exist",
+            outOfOrderFilePath);
 
     // 5. create a subdirectory, a file under it,  and add subdirectory DeleteOnExit set.
     s3aFs.mkdirs(subDirPath);
     s3aFs.deleteOnExit(subDirPath);
-
-    stream = s3aFs.create(fileUnderSubDirPath, true);
-    try {
-      stream.write(data);
-    } finally {
-      IOUtils.closeStream(stream);
-    }
-
-    ContractTestUtils.assertPathExists(s3aFs,
-            "Directory " + SUBDIR_PATH_STR + " should exist", subDirPath);
-    ContractTestUtils.assertPathExists(s3aFs,
-            "File " + FILE_UNDER_SUBDIR_PATH_STR + " should exist", fileUnderSubDirPath);
+    createFile(s3aFs, fileUnderSubDirPath, true, data);
+    assertPathExists("Directory " + SUBDIR_PATH_STR + " should exist", subDirPath);
+    assertPathExists("File " + FILE_UNDER_SUBDIR_PATH_STR + " should exist",
+            fileUnderSubDirPath);
 
     s3aFs.close();
 
     // After s3aFs is closed, make sure that all files/directories in deleteOnExit
     // set are deleted.
-    ContractTestUtils.assertPathDoesNotExist(fs,
-            "File " + NON_EXIST_FILE_PATH_STR + " should not exist", nonExistFilePath);
-    ContractTestUtils.assertPathDoesNotExist(fs,
-            "File " + INORDER_FILE_PATH_STR + " should not exist", inOrderFilePath);
-    ContractTestUtils.assertPathDoesNotExist(fs,
-            "File " + OUT_OF_ORDER_FILE_PATH_STR + " should not exist", outOfOrderFilePath);
-    ContractTestUtils.assertPathDoesNotExist(fs,
-            "Directory " + SUBDIR_PATH_STR + " should not exist", subDirPath);
+    assertPathDoesNotExist("File " + NON_EXIST_FILE_PATH_STR + " should not exist",
+            nonExistFilePath);
+    assertPathDoesNotExist("File " + INORDER_FILE_PATH_STR + " should not exist",
+            inOrderFilePath);
+    assertPathDoesNotExist("File " + OUT_OF_ORDER_FILE_PATH_STR + " should not exist",
+            outOfOrderFilePath);
+    assertPathDoesNotExist("Directory " + SUBDIR_PATH_STR + " should not exist",
+            subDirPath);
   }
 }
