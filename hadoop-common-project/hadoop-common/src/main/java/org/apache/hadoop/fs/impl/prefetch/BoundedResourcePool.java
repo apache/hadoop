@@ -32,13 +32,19 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
  * Avoids creating a new resource if a previously created instance is already available.
  */
 public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
-  // The size of this pool. Fixed at creation time.
+  /**
+   * The size of this pool. Fixed at creation time.
+   */
   private final int size;
 
-  // Items currently available in the pool.
+  /**
+   * Items currently available in the pool.
+   */
   private ArrayBlockingQueue<T> items;
 
-  // Items that have been created so far (regardless of whether they are currently available).
+  /**
+   * Items that have been created so far (regardless of whether they are currently available).
+   */
   private Set<T> createdItems;
 
   /**
@@ -125,14 +131,18 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
     // Do nothing in this class. Allow overriding classes to take any cleanup action.
   }
 
-  // Number of items created so far. Mostly for testing purposes.
+  /**
+   * Number of items created so far. Mostly for testing purposes.
+   */
   public int numCreated() {
     synchronized (createdItems) {
       return createdItems.size();
     }
   }
 
-  // Number of items available to be acquired. Mostly for testing purposes.
+  /**
+   * Number of items available to be acquired. Mostly for testing purposes.
+   */
   public synchronized int numAvailable() {
     return (size - numCreated()) + items.size();
   }

@@ -43,13 +43,13 @@ public class S3ARemoteObjectReader implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ARemoteObjectReader.class);
 
-  // We read from the underlying input stream in blocks of this size.
+  /** We read from the underlying input stream in blocks of this size. */
   private static final int READ_BUFFER_SIZE = 64 * 1024;
 
-  // The S3 file to read.
+  /** The S3 file to read. */
   private final S3ARemoteObject remoteObject;
 
-  // Set to true by close().
+  /** Set to true by close(). */
   private volatile boolean closed;
 
   private final S3AInputStreamStatistics streamStatistics;

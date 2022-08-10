@@ -44,6 +44,9 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNegative;
 public final class BlockOperations {
   private static final Logger LOG = LoggerFactory.getLogger(BlockOperations.class);
 
+  /**
+   * Operation kind.
+   */
   public enum Kind {
     UNKNOWN("??", "unknown", false),
     CANCEL_PREFETCHES("CP", "cancelPrefetches", false),

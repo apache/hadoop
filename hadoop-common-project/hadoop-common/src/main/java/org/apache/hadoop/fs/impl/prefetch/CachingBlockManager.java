@@ -48,33 +48,49 @@ public abstract class CachingBlockManager extends BlockManager {
   private static final Logger LOG = LoggerFactory.getLogger(CachingBlockManager.class);
   private static final int TIMEOUT_MINUTES = 60;
 
-  // Asynchronous tasks are performed in this pool.
+  /**
+   * Asynchronous tasks are performed in this pool.
+   */
   private final ExecutorServiceFuturePool futurePool;
 
-  // Pool of shared ByteBuffer instances.
+  /**
+   * Pool of shared ByteBuffer instances.
+   */
   private BufferPool bufferPool;
 
-  // Size of the in-memory cache in terms of number of blocks.
-  // Total memory consumption is up to bufferPoolSize * blockSize.
+  /**
+   * Size of the in-memory cache in terms of number of blocks.
+   * Total memory consumption is up to bufferPoolSize * blockSize.
+   */
   private final int bufferPoolSize;
 
-  // Local block cache.
+  /**
+   * Local block cache.
+   */
   private BlockCache cache;
 
-  // Error counts. For testing purposes.
+  /**
+   * Error counts. For testing purposes.
+   */
   private final AtomicInteger numCachingErrors;
   private final AtomicInteger numReadErrors;
 
-  // Operations performed by this block manager.
+  /**
+   * Operations performed by this block manager.
+   */
   private final BlockOperations ops;
 
   private boolean closed;
 
-  // If a single caching operation takes more than this time (in seconds),
-  // we disable caching to prevent further perf degradation due to caching.
+  /**
+   * If a single caching operation takes more than this time (in seconds),
+   * we disable caching to prevent further perf degradation due to caching.
+   */
   private static final int SLOW_CACHING_THRESHOLD = 5;
 
-  // Once set to true, any further caching requests will be ignored.
+  /**
+   * Once set to true, any further caching requests will be ignored.
+   */
   private final AtomicBoolean cachingDisabled;
 
   private final PrefetchingStatistics prefetchingStatistics;

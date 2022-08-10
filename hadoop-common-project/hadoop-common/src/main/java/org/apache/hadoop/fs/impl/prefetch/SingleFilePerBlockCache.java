@@ -52,19 +52,25 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
 public class SingleFilePerBlockCache implements BlockCache {
   private static final Logger LOG = LoggerFactory.getLogger(SingleFilePerBlockCache.class);
 
-  // Blocks stored in this cache.
+  /**
+   * Blocks stored in this cache.
+   */
   private final Map<Integer, Entry> blocks = new ConcurrentHashMap<>();
 
-  // Number of times a block was read from this cache.
-  // Used for determining cache utilization factor.
+  /**
+   * Number of times a block was read from this cache.
+   * Used for determining cache utilization factor.
+   */
   private int numGets = 0;
 
   private boolean closed;
 
   private final PrefetchingStatistics prefetchingStatistics;
 
-  // Cache entry.
-  // Each block is stored as a separate file.
+  /**
+   * Cache entry.
+   * Each block is stored as a separate file.
+   */
   private static final class Entry {
     private final int blockNumber;
     private final Path path;

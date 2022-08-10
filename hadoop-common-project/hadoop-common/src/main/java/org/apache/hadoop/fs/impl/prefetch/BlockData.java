@@ -29,29 +29,40 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkWithinRange;
 public final class BlockData {
   // State of each block of data.
   enum State {
-    // Data is not yet ready to be read from this block (still being prefetched).
+
+    /** Data is not yet ready to be read from this block (still being prefetched). */
     NOT_READY,
 
-    // A read of this block has been enqueued in the prefetch queue.
+    
+    /** A read of this block has been enqueued in the prefetch queue.  */
     QUEUED,
 
-    // This block is ready to be read. That is, it has been fully read.
+    /** A read of this block has been enqueued in the prefetch queue. */
     READY,
 
-    // This block has been cached in the local disk cache.
+    
+    /** This block has been cached in the local disk cache. */
     CACHED
   }
 
-  // State of all blocks in a file.
+  /**
+   * State of all blocks in a file.
+   */
   private State[] state;
 
-  // The size of a file.
+  /**
+   * The size of a file.
+   */
   private final long fileSize;
 
-  // The file is divided into blocks of this size.
+  /**
+   * The file is divided into blocks of this size.
+   */
   private final int blockSize;
 
-  // The file has these many blocks.
+  /**
+   * The file has these many blocks.
+   */
   private final int numBlocks;
 
   /**

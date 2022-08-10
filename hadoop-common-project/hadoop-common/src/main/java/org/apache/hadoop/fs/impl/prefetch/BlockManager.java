@@ -34,7 +34,9 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
  */
 public abstract class BlockManager implements Closeable {
 
-  // Information about each block of the underlying file.
+  /**
+   * Information about each block of the underlying file.
+   */
   private final BlockData blockData;
 
   /**

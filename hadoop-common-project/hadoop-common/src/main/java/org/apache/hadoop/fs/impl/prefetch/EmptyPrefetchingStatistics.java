@@ -25,7 +25,10 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTracker;
 
-public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
+ /**
+  * Empty implementation of the prefetching statistics interface.
+  */
+ public final class EmptyPrefetchingStatistics implements PrefetchingStatistics {
 
   private static final EmptyPrefetchingStatistics EMPTY_PREFETCHING_STATISTICS =
       new EmptyPrefetchingStatistics();

@@ -38,19 +38,29 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkWithinRange;
  * The size of a buffer associated with this file is typically the same as block size.
  */
 public final class FilePosition {
-  // Holds block based information about a file.
+  /**
+   * Holds block based information about a file.
+   */
   private BlockData blockData;
 
-  // Information about the buffer in use.
+  /**
+   * Information about the buffer in use.
+   */
   private BufferData data;
 
-  // Provides access to the underlying file.
+  /**
+   * Provides access to the underlying file.
+   */
   private ByteBuffer buffer;
 
-  // Start offset of the buffer relative to the start of a file.
+  /**
+   * Start offset of the buffer relative to the start of a file.
+   */
   private long bufferStartOffset;
 
-  // Offset where reading starts relative to the start of a file.
+  /**
+   * Offset where reading starts relative to the start of a file.
+   */
   private long readStartOffset;
 
   // Read stats after a seek (mostly for debugging use).

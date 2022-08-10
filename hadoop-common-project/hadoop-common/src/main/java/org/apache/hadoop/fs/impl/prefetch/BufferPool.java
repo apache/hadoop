@@ -39,42 +39,57 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Manages a fixed pool of {@code ByteBuffer} instances.
- *
+ * <p>
  * Avoids creating a new buffer if a previously created buffer is already available.
  */
 public class BufferPool implements Closeable {
+
   private static final Logger LOG = LoggerFactory.getLogger(BufferPool.class);
 
-  // Max number of buffers in this pool.
+  /**
+   * Max number of buffers in this pool.
+   */
   private final int size;
 
-  // Size in bytes of each buffer.
+  /**
+   * Size in bytes of each buffer.
+   */
   private final int bufferSize;
 
-  // Invariants for internal state.
-  // -- a buffer is either in this.pool or in this.allocated
-  // -- transition between this.pool <==> this.allocated must be atomic
-  // -- only one buffer allocated for a given blockNumber
+  /*
+   Invariants for internal state.
+   -- a buffer is either in this.pool or in this.allocated
+   -- transition between this.pool <==> this.allocated must be atomic
+   -- only one buffer allocated for a given blockNumber
+  */
 
-  // Underlying bounded resource pool.
+
+  /**
+   * Underlying bounded resource pool.
+   */
   private BoundedResourcePool<ByteBuffer> pool;
 
-  // Allows associating metadata to each buffer in the pool.
+  /**
+   * Allows associating metadata to each buffer in the pool.
+   */
   private Map<BufferData, ByteBuffer> allocated;
 
+  /**
+   * Prefetching stats.
+   */
   private PrefetchingStatistics prefetchingStatistics;
 
   /**
    * Initializes a new instance of the {@code BufferPool} class.
-   *
    * @param size number of buffer in this pool.
    * @param bufferSize size in bytes of each buffer.
    * @param prefetchingStatistics statistics for this stream.
-   *
    * @throws IllegalArgumentException if size is zero or negative.
    * @throws IllegalArgumentException if bufferSize is zero or negative.
    */
-  public BufferPool(int size, int bufferSize, PrefetchingStatistics prefetchingStatistics) {
+  public BufferPool(int size,
+      int bufferSize,
+      PrefetchingStatistics prefetchingStatistics) {
     Validate.checkPositiveInteger(size, "size");
     Validate.checkPositiveInteger(bufferSize, "bufferSize");
 
@@ -83,18 +98,17 @@ public class BufferPool implements Closeable {
     this.allocated = new IdentityHashMap<BufferData, ByteBuffer>();
     this.prefetchingStatistics = requireNonNull(prefetchingStatistics);
     this.pool = new BoundedResourcePool<ByteBuffer>(size) {
-        @Override
-        public ByteBuffer createNew() {
-          ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-          prefetchingStatistics.memoryAllocated(bufferSize);
-          return buffer;
-        }
-      };
+      @Override
+      public ByteBuffer createNew() {
+        ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+        prefetchingStatistics.memoryAllocated(bufferSize);
+        return buffer;
+      }
+    };
   }
 
   /**
    * Gets a list of all blocks in this pool.
-   *
    * @return a list of all blocks in this pool.
    */
   public List<BufferData> getAll() {
@@ -105,7 +119,6 @@ public class BufferPool implements Closeable {
 
   /**
    * Acquires a {@code ByteBuffer}; blocking if necessary until one becomes available.
-   *
    * @param blockNumber the id of the block to acquire.
    * @return the acquired block's {@code BufferData}.
    */
@@ -130,14 +143,14 @@ public class BufferPool implements Closeable {
     if (data != null) {
       return data;
     } else {
-      String message = String.format("Wait failed for acquire(%d)", blockNumber);
+      String message =
+          String.format("Wait failed for acquire(%d)", blockNumber);
       throw new IllegalStateException(message);
     }
   }
 
   /**
    * Acquires a buffer if one is immediately available. Otherwise returns null.
-   *
    * @param blockNumber the id of the block to try acquire.
    * @return the acquired block's {@code BufferData} or null.
    */
@@ -145,7 +158,8 @@ public class BufferPool implements Closeable {
     return acquireHelper(blockNumber, false);
   }
 
-  private synchronized BufferData acquireHelper(int blockNumber, boolean canBlock) {
+  private synchronized BufferData acquireHelper(int blockNumber,
+      boolean canBlock) {
     checkNotNegative(blockNumber, "blockNumber");
 
     releaseDoneBlocks();
@@ -195,7 +209,8 @@ public class BufferPool implements Closeable {
         if (releaseTarget == null) {
           releaseTarget = data;
         } else {
-          if (distance(data, blockNumber) > distance(releaseTarget, blockNumber)) {
+          if (distance(data, blockNumber) > distance(releaseTarget,
+              blockNumber)) {
             releaseTarget = data;
           }
         }
@@ -214,9 +229,7 @@ public class BufferPool implements Closeable {
 
   /**
    * Releases a previously acquired resource.
-   *
    * @param data the {@code BufferData} instance to release.
-   *
    * @throws IllegalArgumentException if data is null.
    * @throws IllegalArgumentException if data cannot be released due to its state.
    */
@@ -268,7 +281,8 @@ public class BufferPool implements Closeable {
     sb.append(pool.toString());
     sb.append("\n");
     List<BufferData> allData = new ArrayList<>(getAll());
-    Collections.sort(allData, (d1, d2) -> d1.getBlockNumber() - d2.getBlockNumber());
+    Collections.sort(allData,
+        (d1, d2) -> d1.getBlockNumber() - d2.getBlockNumber());
     for (BufferData data : allData) {
       sb.append(data.toString());
       sb.append("\n");

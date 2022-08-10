@@ -50,7 +50,9 @@ public class S3APrefetchingInputStream
   private static final Logger LOG = LoggerFactory.getLogger(
       S3APrefetchingInputStream.class);
 
-  // Underlying input stream used for reading S3 file.
+  /**
+   * Underlying input stream used for reading S3 file.
+   */
   private S3ARemoteInputStream inputStream;
 
   /**

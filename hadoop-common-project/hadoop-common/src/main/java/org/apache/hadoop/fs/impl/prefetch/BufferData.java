@@ -42,38 +42,60 @@ public final class BufferData {
   private static final Logger LOG = LoggerFactory.getLogger(BufferData.class);
 
   public enum State {
-    // Unknown / invalid state.
+    /**
+     * Unknown / invalid state.
+     */
     UNKNOWN,
 
-    // Buffer has been acquired but has no data.
+    /**
+     * Buffer has been acquired but has no data.
+     */
     BLANK,
 
-    // This block is being prefetched.
+    /**
+     * This block is being prefetched.
+     */
     PREFETCHING,
 
-    // This block is being added to the local cache.
+    /**
+     * This block is being added to the local cache.
+     */
     CACHING,
 
-    // This block has data and is ready to be read.
+    /**
+     * This block has data and is ready to be read.
+     */
     READY,
 
-    // This block is no longer in-use and should not be used once in this state.
+    /**
+     * This block is no longer in-use and should not be used once in this state.
+     */
     DONE
   }
 
-  // Number of the block associated with this buffer.
+  /**
+   * Number of the block associated with this buffer.
+   */
   private final int blockNumber;
 
-  // The buffer associated with this block.
+  /**
+   * The buffer associated with this block.
+   */
   private ByteBuffer buffer;
 
-  // Current state of this block.
+  /**
+   * Current state of this block.
+   */
   private volatile State state;
 
-  // Future of the action being performed on this block (eg, prefetching or caching).
+  /**
+   * Future of the action being performed on this block (eg, prefetching or caching).
+   */
   private Future<Void> action;
 
-  // Checksum of the buffer contents once in READY state.
+  /**
+   * Checksum of the buffer contents once in READY state.
+   */
   private long checksum = 0;
 
   /**

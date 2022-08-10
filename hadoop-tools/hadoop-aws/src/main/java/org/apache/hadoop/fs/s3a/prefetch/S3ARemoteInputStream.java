@@ -56,37 +56,47 @@ public abstract class S3ARemoteInputStream
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ARemoteInputStream.class);
 
-  // The S3 file read by this instance.
+  /**
+   * The S3 file read by this instance.
+   */
   private S3ARemoteObject remoteObject;
 
-  // Reading of S3 file takes place through this reader.
+  /**
+   * Reading of S3 file takes place through this reader.
+   */
   private S3ARemoteObjectReader reader;
 
-  // Name of this stream. Used only for logging.
+  /**
+   * Name of this stream. Used only for logging.
+   */
   private final String name;
 
-  // Indicates whether the stream has been closed.
+  /**
+   * Indicates whether the stream has been closed.
+   */
   private volatile boolean closed;
 
-  // Current position within the file.
+  /**
+   * Current position within the file.
+   */
   private FilePosition fpos;
 
-  // The target of the most recent seek operation.
+  /** The target of the most recent seek operation. */
   private long seekTargetPos;
 
-  // Information about each block of the mapped S3 file.
+  /** Information about each block of the mapped S3 file. */
   private BlockData blockData;
 
-  // Read-specific operation context.
+  /** Read-specific operation context. */
   private S3AReadOpContext context;
 
-  // Attributes of the S3 object being read.
+  /** Attributes of the S3 object being read. */
   private S3ObjectAttributes s3Attributes;
 
-  // Callbacks used for interacting with the underlying S3 client.
+  /** Callbacks used for interacting with the underlying S3 client. */
   private S3AInputStream.InputStreamCallbacks client;
 
-  // Used for reporting input stream access statistics.
+  /** Used for reporting input stream access statistics. */
   private final S3AInputStreamStatistics streamStatistics;
 
   private S3AInputPolicy inputPolicy;
