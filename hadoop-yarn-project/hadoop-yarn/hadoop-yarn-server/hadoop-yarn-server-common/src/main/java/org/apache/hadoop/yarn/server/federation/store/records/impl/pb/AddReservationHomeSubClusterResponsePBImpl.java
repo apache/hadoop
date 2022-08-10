@@ -76,8 +76,7 @@ public class AddReservationHomeSubClusterResponsePBImpl
 
   @Override
   public SubClusterId getHomeSubCluster() {
-    AddReservationHomeSubClusterResponseProtoOrBuilder p =
-        viaProto ? proto : builder;
+    AddReservationHomeSubClusterResponseProtoOrBuilder p = viaProto ? proto : builder;
 
     if (!p.hasHomeSubCluster()) {
       return null;
@@ -113,5 +112,4 @@ public class AddReservationHomeSubClusterResponsePBImpl
   private SubClusterIdProto convertToProtoFormat(SubClusterId sc) {
     return ((SubClusterIdPBImpl) sc).getProto();
   }
-
 }

@@ -100,8 +100,7 @@ public class GetReservationHomeSubClusterResponsePBImpl
 
   @Override
   public ReservationHomeSubCluster getReservationHomeSubCluster() {
-    GetReservationHomeSubClusterResponseProtoOrBuilder p =
-        viaProto ? proto : builder;
+    GetReservationHomeSubClusterResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasAppSubclusterMap()) {
       return null;
     }
@@ -128,5 +127,4 @@ public class GetReservationHomeSubClusterResponsePBImpl
       ReservationHomeSubCluster sc) {
     return ((ReservationHomeSubClusterPBImpl) sc).getProto();
   }
-
 }

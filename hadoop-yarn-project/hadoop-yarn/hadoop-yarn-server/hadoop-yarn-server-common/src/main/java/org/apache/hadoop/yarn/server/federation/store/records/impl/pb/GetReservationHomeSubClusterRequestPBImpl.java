@@ -106,8 +106,7 @@ public class GetReservationHomeSubClusterRequestPBImpl
 
   @Override
   public ReservationId getReservationId() {
-    GetReservationHomeSubClusterRequestProtoOrBuilder p =
-        viaProto ? proto : builder;
+    GetReservationHomeSubClusterRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (reservationId != null) {
       return reservationId;
     }

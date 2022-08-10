@@ -171,13 +171,11 @@ public class GetReservationsHomeSubClusterResponsePBImpl
     builder.addAllAppSubclusterMap(iterable);
   }
 
-  private ReservationHomeSubCluster convertFromProtoFormat(
-      ReservationHomeSubClusterProto sc) {
+  private ReservationHomeSubCluster convertFromProtoFormat(ReservationHomeSubClusterProto sc) {
     return new ReservationHomeSubClusterPBImpl(sc);
   }
 
-  private ReservationHomeSubClusterProto convertToProtoFormat(
-      ReservationHomeSubCluster sc) {
+  private ReservationHomeSubClusterProto convertToProtoFormat(ReservationHomeSubCluster sc) {
     return ((ReservationHomeSubClusterPBImpl) sc).getProto();
   }
 }
