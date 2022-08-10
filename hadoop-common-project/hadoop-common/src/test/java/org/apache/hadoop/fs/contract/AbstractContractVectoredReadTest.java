@@ -23,9 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
@@ -283,7 +281,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readVectored(fileRanges, allocate);
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
-        interceptFuture(ExecutionException.class,
+        interceptFuture(EOFException.class,
                 "",
                 ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
                 TimeUnit.SECONDS,
