@@ -328,11 +328,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
-    ReservationId reservationId =
-        request.getReservationHomeSubCluster().getReservationId();
+    ReservationHomeSubCluster homeSubCluster = request.getReservationHomeSubCluster();
+    ReservationId reservationId = homeSubCluster.getReservationId();
     if (!reservations.containsKey(reservationId)) {
-      reservations.put(reservationId,
-          request.getReservationHomeSubCluster().getHomeSubCluster());
+      reservations.put(reservationId, homeSubCluster.getHomeSubCluster());
     }
     return AddReservationHomeSubClusterResponse.newInstance(reservations.get(reservationId));
   }
@@ -346,8 +345,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
       throw new YarnException("Reservation " + reservationId + " does not exist");
     }
     SubClusterId subClusterId = reservations.get(reservationId);
-    return GetReservationHomeSubClusterResponse.newInstance(
-        ReservationHomeSubCluster.newInstance(reservationId, subClusterId));
+    ReservationHomeSubCluster homeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    return GetReservationHomeSubClusterResponse.newInstance(homeSubCluster);
   }
 
   @Override
@@ -356,10 +356,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
     List<ReservationHomeSubCluster> result = new ArrayList<>();
 
     for (Entry<ReservationId, SubClusterId> entry : reservations.entrySet()) {
-      ReservationId key = entry.getKey();
-      SubClusterId value = entry.getValue();
+      ReservationId reservationId = entry.getKey();
+      SubClusterId subClusterId = entry.getValue();
       ReservationHomeSubCluster homeSubCluster =
-          ReservationHomeSubCluster.newInstance(key, value);
+          ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
       result.add(homeSubCluster);
     }
 

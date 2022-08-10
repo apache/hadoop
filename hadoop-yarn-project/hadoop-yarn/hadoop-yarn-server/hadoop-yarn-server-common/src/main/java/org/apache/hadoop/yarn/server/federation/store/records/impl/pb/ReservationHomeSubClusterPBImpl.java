@@ -114,17 +114,17 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
       return null;
     }
     this.reservationId = convertFromProtoFormat(p.getReservationId());
-    return reservationId;
+    return this.reservationId;
   }
 
   @Override
-  public void setReservationId(ReservationId reservationId) {
+  public void setReservationId(ReservationId resId) {
     maybeInitBuilder();
-    if (reservationId == null) {
+    if (resId == null) {
       builder.clearReservationId();
       return;
     }
-    this.reservationId = reservationId;
+    this.reservationId = resId;
   }
 
   @Override
@@ -141,12 +141,13 @@ public class ReservationHomeSubClusterPBImpl extends ReservationHomeSubCluster {
   }
 
   @Override
-  public void setHomeSubCluster(SubClusterId homeSubCluster) {
+  public void setHomeSubCluster(SubClusterId subClusterId) {
     maybeInitBuilder();
-    if (homeSubCluster == null) {
+    if (subClusterId == null) {
       builder.clearHomeSubCluster();
+      return;
     }
-    this.homeSubCluster = homeSubCluster;
+    this.homeSubCluster = subClusterId;
   }
 
   private SubClusterId convertFromProtoFormat(SubClusterIdProto subClusterId) {

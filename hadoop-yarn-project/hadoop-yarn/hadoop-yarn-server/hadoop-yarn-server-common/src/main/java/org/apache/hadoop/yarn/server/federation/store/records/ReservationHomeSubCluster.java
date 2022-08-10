@@ -46,8 +46,7 @@ public abstract class ReservationHomeSubCluster {
   @Unstable
   public static ReservationHomeSubCluster newInstance(ReservationId appId,
       SubClusterId homeSubCluster) {
-    ReservationHomeSubCluster appMapping =
-        Records.newRecord(ReservationHomeSubCluster.class);
+    ReservationHomeSubCluster appMapping = Records.newRecord(ReservationHomeSubCluster.class);
     appMapping.setReservationId(appId);
     appMapping.setHomeSubCluster(homeSubCluster);
     return appMapping;
@@ -67,11 +66,11 @@ public abstract class ReservationHomeSubCluster {
    * Set the {@link ReservationId} representing the unique identifier of the
    * Reservation.
    *
-   * @param reservationId the reservation identifier
+   * @param resId the reservation identifier
    */
   @Private
   @Unstable
-  public abstract void setReservationId(ReservationId reservationId);
+  public abstract void setReservationId(ReservationId resId);
 
   /**
    * Get the {@link SubClusterId} representing the unique identifier of the home
@@ -87,11 +86,11 @@ public abstract class ReservationHomeSubCluster {
    * Set the {@link SubClusterId} representing the unique identifier of the home
    * subcluster in which the ReservationMaster of the reservation is running.
    *
-   * @param homeSubCluster the home subcluster identifier
+   * @param subClusterId the home subcluster identifier
    */
   @Private
   @Unstable
-  public abstract void setHomeSubCluster(SubClusterId homeSubCluster);
+  public abstract void setHomeSubCluster(SubClusterId subClusterId);
 
   @Override
   public boolean equals(Object obj) {

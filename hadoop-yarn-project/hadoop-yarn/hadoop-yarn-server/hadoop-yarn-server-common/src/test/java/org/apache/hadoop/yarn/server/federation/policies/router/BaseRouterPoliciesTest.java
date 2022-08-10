@@ -165,8 +165,7 @@ public abstract class BaseRouterPoliciesTest
     long now = Time.now();
     ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
     when(resReq.getQueue()).thenReturn("queue1");
-    when(resReq.getReservationId())
-        .thenReturn(ReservationId.newInstance(now, 1));
+    when(resReq.getReservationId()).thenReturn(ReservationId.newInstance(now, 1));
 
     FederationRouterPolicy routerPolicy = (FederationRouterPolicy) getPolicy();
     FederationStateStoreFacade storeFacade =
