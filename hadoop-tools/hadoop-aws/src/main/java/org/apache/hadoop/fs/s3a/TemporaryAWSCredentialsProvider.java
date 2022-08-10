@@ -28,7 +28,6 @@ import java.net.URI;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
@@ -51,7 +50,7 @@ import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 @InterfaceStability.Stable
 @Deprecated
 public class TemporaryAWSCredentialsProvider extends
-    AbstractSessionCredentialsProvider {
+    org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider {
 
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider";

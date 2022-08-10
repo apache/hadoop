@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -249,7 +248,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
    * @return the retrieved DT. This is only for error reporting.
    * @throws IOException failure.
    */
-  @SuppressWarnings("OptionalGetWithoutIsPresent")
+  @SuppressWarnings({"OptionalGetWithoutIsPresent", "deprecation"})
   protected AbstractS3ATokenIdentifier verifyCredentialPropagation(
       final S3AFileSystem fs,
       final MarshalledCredentials session,
@@ -260,7 +259,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     // for authentication.
     unsetHadoopCredentialProviders(conf);
     conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER,
-        TemporaryAWSCredentialsProvider.NAME);
+        org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
       delegationTokens2.bindToFileSystem(
