@@ -67,6 +67,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -83,6 +84,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preemption.PreemptionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -195,6 +197,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -3025,5 +3029,70 @@ public class TestCapacityScheduler {
     Assert.assertEquals(0, srcQueue.getUsedResources().getMemorySize());
     Assert.assertEquals(0, desQueue.getUsedResources().getMemorySize());
     rm1.close();
+  }
+  @Test
+  public void testRefreshQueueWithOpenPreemption() throws Exception {
+    CapacitySchedulerConfiguration csConf
+            = new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+            new String[] {"a"});
+    csConf.setCapacity("root.a", 100);
+    csConf.setMaximumCapacity("root.a", 100);
+    csConf.setUserLimitFactor("root.a", 100);
+
+    YarnConfiguration conf=new YarnConfiguration(csConf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+            ResourceScheduler.class);
+    RMNodeLabelsManager mgr=new NullRMNodeLabelsManager();
+    mgr.init(conf);
+    MockRM rm1 = new MockRM(csConf);
+    CapacityScheduler scheduler=(CapacityScheduler) rm1.getResourceScheduler();
+    PreemptionManager preemptionManager = scheduler.getPreemptionManager();;
+    rm1.getRMContext().setNodeLabelManager(mgr);
+    rm1.start();
+
+    LeafQueue srcQueue = (LeafQueue) scheduler.getQueue("a");
+
+    Thread schedulerThread = new Thread(()-> {
+      srcQueue.readLock.lock();
+      try {
+        Thread.sleep(1000 * 15);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      preemptionManager.getKillableContainers("a",
+              srcQueue.getDefaultNodeLabelExpression());
+      srcQueue.readLock.unlock();
+    });
+
+    Thread completeThread = new Thread(() ->{
+      try {
+        Thread.sleep(1000 * 5);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      srcQueue.writeLock.lock();
+      srcQueue.writeLock.unlock();
+    });
+
+    Thread refreshQueueThread = new Thread(()->{
+      preemptionManager.getWriteLock().lock();
+      try {
+        Thread.sleep(1000 * 10);
+         srcQueue.readLock.tryLock();
+         srcQueue.readLock.unlock();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      preemptionManager.getWriteLock().unlock();
+    });
+    schedulerThread.start();
+    completeThread.start();
+    refreshQueueThread.start();
+
+    schedulerThread.join();
+    completeThread.join();
+    refreshQueueThread.join();
+
   }
 }
