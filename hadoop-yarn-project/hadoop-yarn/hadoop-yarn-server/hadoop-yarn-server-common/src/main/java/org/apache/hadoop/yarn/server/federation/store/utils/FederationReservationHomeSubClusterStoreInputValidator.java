@@ -45,8 +45,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
    * fast). Check if the provided {@link AddReservationHomeSubClusterRequest}
    * for adding a new reservation is valid or not.
    *
-   * @param request the {@link AddReservationHomeSubClusterRequest} to validate
-   *          against
+   * @param request the {@link AddReservationHomeSubClusterRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
   public static void validate(AddReservationHomeSubClusterRequest request)
@@ -68,8 +67,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
    * fast). Check if the provided {@link GetReservationHomeSubClusterRequest}
    * for querying reservation's information is valid or not.
    *
-   * @param request the {@link GetReservationHomeSubClusterRequest} to validate
-   *          against
+   * @param request the {@link GetReservationHomeSubClusterRequest} to validate against
    * @throws FederationStateStoreInvalidInputException if the request is invalid
    */
   public static void validate(GetReservationHomeSubClusterRequest request)
@@ -88,14 +86,11 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
   /**
    * Validate if the ReservationHomeSubCluster info are present or not.
    *
-   * @param reservationHomeSubCluster the information of the Reservation to be
-   *          verified
-   * @throws FederationStateStoreInvalidInputException if the SubCluster Info
-   *           are invalid
+   * @param reservationHomeSubCluster the information of the Reservation to be verified
+   * @throws FederationStateStoreInvalidInputException if the SubCluster Info are invalid
    */
   private static void checkReservationHomeSubCluster(
       ReservationHomeSubCluster reservationHomeSubCluster)
-
       throws FederationStateStoreInvalidInputException {
     if (reservationHomeSubCluster == null) {
       String message = "Missing ReservationHomeSubCluster Info."
@@ -104,21 +99,20 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
       LOG.warn(message);
       throw new FederationStateStoreInvalidInputException(message);
     }
+
     // validate Reservation Id
     checkReservationId(reservationHomeSubCluster.getReservationId());
 
     // validate subcluster Id
     FederationMembershipStateStoreInputValidator
         .checkSubClusterId(reservationHomeSubCluster.getHomeSubCluster());
-
   }
 
   /**
    * Validate if the Reservation id is present or not.
    *
    * @param reservationId the id of the Reservation to be verified
-   * @throws FederationStateStoreInvalidInputException if the Reservation Id is
-   *           invalid
+   * @throws FederationStateStoreInvalidInputException if the Reservation Id is invalid
    */
   private static void checkReservationId(ReservationId reservationId)
       throws FederationStateStoreInvalidInputException {

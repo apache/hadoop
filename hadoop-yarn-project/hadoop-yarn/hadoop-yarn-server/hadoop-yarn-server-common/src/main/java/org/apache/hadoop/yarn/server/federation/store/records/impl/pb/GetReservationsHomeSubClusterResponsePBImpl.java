@@ -128,11 +128,9 @@ public class GetReservationsHomeSubClusterResponsePBImpl
     if (this.appsHomeSubCluster != null) {
       return;
     }
-    GetReservationsHomeSubClusterResponseProtoOrBuilder p =
-        viaProto ? proto : builder;
-    List<ReservationHomeSubClusterProto> subClusterInfosList =
-        p.getAppSubclusterMapList();
-    appsHomeSubCluster = new ArrayList<ReservationHomeSubCluster>();
+    GetReservationsHomeSubClusterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ReservationHomeSubClusterProto> subClusterInfosList = p.getAppSubclusterMapList();
+    appsHomeSubCluster = new ArrayList<>();
 
     for (ReservationHomeSubClusterProto r : subClusterInfosList) {
       appsHomeSubCluster.add(convertFromProtoFormat(r));
@@ -151,8 +149,7 @@ public class GetReservationsHomeSubClusterResponsePBImpl
           public Iterator<ReservationHomeSubClusterProto> iterator() {
             return new Iterator<ReservationHomeSubClusterProto>() {
 
-              private Iterator<ReservationHomeSubCluster> iter =
-                  appsHomeSubCluster.iterator();
+              private Iterator<ReservationHomeSubCluster> iter = appsHomeSubCluster.iterator();
 
               @Override
               public boolean hasNext() {
@@ -168,11 +165,8 @@ public class GetReservationsHomeSubClusterResponsePBImpl
               public void remove() {
                 throw new UnsupportedOperationException();
               }
-
             };
-
           }
-
         };
     builder.addAllAppSubclusterMap(iterable);
   }
@@ -186,5 +180,4 @@ public class GetReservationsHomeSubClusterResponsePBImpl
       ReservationHomeSubCluster sc) {
     return ((ReservationHomeSubClusterPBImpl) sc).getProto();
   }
-
 }

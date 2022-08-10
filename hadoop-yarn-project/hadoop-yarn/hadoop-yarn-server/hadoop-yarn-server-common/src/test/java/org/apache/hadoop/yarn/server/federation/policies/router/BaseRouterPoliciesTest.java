@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -168,8 +169,8 @@ public abstract class BaseRouterPoliciesTest
     when(resReq.getReservationId()).thenReturn(ReservationId.newInstance(now, 1));
 
     FederationRouterPolicy routerPolicy = (FederationRouterPolicy) getPolicy();
-    FederationStateStoreFacade storeFacade =
-        getFederationPolicyContext().getFederationStateStoreFacade();
+    FederationPolicyInitializationContext fdContext = getFederationPolicyContext();
+    FederationStateStoreFacade storeFacade = fdContext.getFederationStateStoreFacade();
 
     // first we invoke a reservation placement
     SubClusterId chosen = routerPolicy.getReservationHomeSubcluster(resReq);
@@ -186,8 +187,8 @@ public abstract class BaseRouterPoliciesTest
                 null, false, false, 1, null, null, false);
 
     applicationSubmissionContext.setReservationID(resReq.getReservationId());
-    SubClusterId chosen2 = routerPolicy.getHomeSubcluster(applicationSubmissionContext,
-        Collections.emptyList());
+    SubClusterId chosen2 = routerPolicy.getHomeSubcluster(
+        applicationSubmissionContext, Collections.emptyList());
 
     // application follows reservation
     Assert.assertEquals(chosen, chosen2);

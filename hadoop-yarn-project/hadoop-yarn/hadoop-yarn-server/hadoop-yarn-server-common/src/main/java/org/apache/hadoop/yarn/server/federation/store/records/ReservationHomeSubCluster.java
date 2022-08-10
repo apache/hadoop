@@ -44,10 +44,10 @@ public abstract class ReservationHomeSubCluster {
 
   @Private
   @Unstable
-  public static ReservationHomeSubCluster newInstance(ReservationId appId,
+  public static ReservationHomeSubCluster newInstance(ReservationId resId,
       SubClusterId homeSubCluster) {
     ReservationHomeSubCluster appMapping = Records.newRecord(ReservationHomeSubCluster.class);
-    appMapping.setReservationId(appId);
+    appMapping.setReservationId(resId);
     appMapping.setHomeSubCluster(homeSubCluster);
     return appMapping;
   }

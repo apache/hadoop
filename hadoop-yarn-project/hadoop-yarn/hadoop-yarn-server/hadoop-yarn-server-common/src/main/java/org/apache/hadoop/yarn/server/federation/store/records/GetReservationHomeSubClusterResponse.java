@@ -63,8 +63,7 @@ public abstract class GetReservationHomeSubClusterResponse {
    * Set the {@link ReservationHomeSubCluster} representing the mapping of the
    * Reservation to it's home sub-cluster.
    *
-   * @param reservationHomeSubCluster the mapping of the reservation to it's
-   *          home sub-cluster.
+   * @param reservationHomeSubCluster the mapping of the reservation to it's home sub-cluster.
    */
   @Private
   @Unstable
