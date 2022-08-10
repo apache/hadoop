@@ -60,6 +60,7 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
@@ -290,6 +291,7 @@ public abstract class AbstractS3SelectTest extends AbstractS3ATestBase {
             + getFileSystem().getUri(),
         isSelectAvailable(getFileSystem()));
     Configuration conf = getConfiguration();
+    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
     landsatGZ = getLandsatCSVPath(conf);
     landsatFS = (S3AFileSystem) landsatGZ.getFileSystem(conf);
     Assume.assumeTrue("S3 Select is not enabled on " + landsatFS.getUri(),

@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.S3A_BUCKET_PROBE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -49,7 +50,8 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
         requesterPaysBucketName,
         conf,
         ALLOW_REQUESTER_PAYS,
-        S3A_BUCKET_PROBE);
+        S3A_BUCKET_PROBE,
+        AWS_REGION);
 
     return conf;
   }
@@ -62,6 +64,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
     conf.setBoolean(ALLOW_REQUESTER_PAYS, true);
     // Enable bucket exists check, the first failure point people may encounter
     conf.setInt(S3A_BUCKET_PROBE, 2);
+    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
 
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
@@ -95,6 +98,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
 
     Configuration conf = this.createConfiguration();
     conf.setBoolean(ALLOW_REQUESTER_PAYS, false);
+    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
     Path requesterPaysPath = getRequesterPaysPath(conf);
 
     try (FileSystem fs = requesterPaysPath.getFileSystem(conf)) {

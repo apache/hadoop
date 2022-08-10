@@ -103,6 +103,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     Configuration conf = getConf();
     conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
     conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
+    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
     String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
