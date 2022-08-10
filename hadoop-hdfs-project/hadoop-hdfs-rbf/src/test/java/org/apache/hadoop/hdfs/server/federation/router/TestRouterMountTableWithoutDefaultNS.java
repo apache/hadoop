@@ -25,12 +25,14 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RouterResolveException;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +44,6 @@ import java.util.Collections;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Test a router end-to-end including the MountTable without default nameservice.
@@ -89,10 +90,8 @@ public class TestRouterMountTableWithoutDefaultNS {
   public void clearMountTable() throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
-    GetMountTableEntriesRequest req1 =
-        GetMountTableEntriesRequest.newInstance("/");
-    GetMountTableEntriesResponse response =
-        mountTableManager.getMountTableEntries(req1);
+    GetMountTableEntriesRequest req1 = GetMountTableEntriesRequest.newInstance("/");
+    GetMountTableEntriesResponse response = mountTableManager.getMountTableEntries(req1);
     for (MountTable entry : response.getEntries()) {
       RemoveMountTableEntryRequest req2 =
           RemoveMountTableEntryRequest.newInstance(entry.getSourcePath());
@@ -109,10 +108,8 @@ public class TestRouterMountTableWithoutDefaultNS {
   private boolean addMountTable(final MountTable entry) throws IOException {
     RouterClient client = routerContext.getAdminClient();
     MountTableManager mountTableManager = client.getMountTableManager();
-    AddMountTableEntryRequest addRequest =
-        AddMountTableEntryRequest.newInstance(entry);
-    AddMountTableEntryResponse addResponse =
-        mountTableManager.addMountTableEntry(addRequest);
+    AddMountTableEntryRequest addRequest = AddMountTableEntryRequest.newInstance(entry);
+    AddMountTableEntryResponse addResponse = mountTableManager.addMountTableEntry(addRequest);
 
     // Reload the Router cache
     mountTable.loadCache(true);
@@ -140,15 +137,11 @@ public class TestRouterMountTableWithoutDefaultNS {
    * with no location and sub mount points.
    */
   @Test
-  public void testGetFileInfoWithoutSubMountPoint() throws IOException {
+  public void testGetFileInfoWithoutSubMountPoint() throws Exception {
     MountTable addEntry = MountTable.newInstance("/testdir/1",
         Collections.singletonMap("ns0", "/testdir/1"));
     assertTrue(addMountTable(addEntry));
-    try {
-      routerProtocol.getFileInfo("/testdir2");
-      fail();
-    } catch (IOException ioe) {
-      assertTrue(ioe.getMessage().contains("Cannot find locations for /testdir2"));
-    }
+    LambdaTestUtils.intercept(RouterResolveException.class,
+        () -> routerContext.getRouter().getRpcServer().getFileInfo("/testdir2"));
   }
 }

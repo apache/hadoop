@@ -20,11 +20,16 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import java.io.IOException;
 
 /**
- * Exception when no location found.
+ * This exception is thrown when can not get any mount point for the input path.
+ * RBF cannot forward any requests for the path.
  */
 public class NoLocationException extends IOException {
 
   private static final long serialVersionUID = 1L;
+
+  public NoLocationException(String path, String className) {
+    super("Cannot find locations for " + path + " in " + className);
+  }
 
   public NoLocationException(String message) {
     super(message);

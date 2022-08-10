@@ -959,7 +959,7 @@ public class RouterClientProtocol implements ClientProtocol {
       if (children != null && !children.isEmpty()) {
         Map<String, Long> dates = getMountPointDates(src);
         long date = 0;
-        if (dates.containsKey(src)) {
+        if (dates != null && dates.containsKey(src)) {
           date = dates.get(src);
         }
         ret = getMountPointStatus(src, children.size(), date);
@@ -969,6 +969,8 @@ public class RouterClientProtocol implements ClientProtocol {
       }
     }
 
+    // Can't find mount point for path and the path didn't contain any sub monit points,
+    // throw the NoLocationException to client.
     if (ret == null && noLocationException != null) {
       throw noLocationException;
     }
