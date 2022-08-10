@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
@@ -50,6 +51,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 @RunWith(Parameterized.class)
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
@@ -281,7 +283,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readVectored(fileRanges, allocate);
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
-        intercept(ExecutionException.class, (Callable<ByteBuffer>) data::get);
+        interceptFuture(ExecutionException.class,
+                "",
+                ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+                TimeUnit.SECONDS,
+                data);
       }
     }
   }
