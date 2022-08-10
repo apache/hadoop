@@ -3642,7 +3642,7 @@ public class DataNode extends ReconfigurableBase
     try {
       return getDiskBalancer().queryWorkStatus().toJsonString();
     } catch (IOException ex) {
-      LOG.debug("Reading diskbalancer Status failed. ex:{}", ex);
+      LOG.debug("Reading diskbalancer Status failed.", ex);
       return "";
     }
   }
