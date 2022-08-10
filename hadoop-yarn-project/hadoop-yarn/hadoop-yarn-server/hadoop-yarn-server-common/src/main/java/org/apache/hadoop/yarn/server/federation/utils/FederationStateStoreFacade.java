@@ -530,16 +530,17 @@ public final class FederationStateStoreFacade {
     CacheRequest<String, SubClusterId> cacheRequest = new CacheRequest<>(
         cacheKey,
         input -> {
-            GetApplicationHomeSubClusterResponse response =
-                stateStore.getApplicationHomeSubCluster(
-                    GetApplicationHomeSubClusterRequest.newInstance(applicationId));
 
-            ApplicationHomeSubCluster applicationHomeSubCluster =
-                response.getApplicationHomeSubCluster();
-            SubClusterId subClusterId = applicationHomeSubCluster.getHomeSubCluster();
+          GetApplicationHomeSubClusterRequest request =
+              GetApplicationHomeSubClusterRequest.newInstance(applicationId);
+          GetApplicationHomeSubClusterResponse response =
+              stateStore.getApplicationHomeSubCluster(request);
 
-            return subClusterId;
-         });
+          ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+          SubClusterId subClusterId = appHomeSubCluster.getHomeSubCluster();
+
+          return subClusterId;
+        });
     return cacheRequest;
   }
 
