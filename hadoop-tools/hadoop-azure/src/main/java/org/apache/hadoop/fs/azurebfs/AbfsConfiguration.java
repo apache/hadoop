@@ -777,6 +777,13 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
   }
 
+  /**
+   * Enum config to allow user to pick format of x-ms-client-request-id header
+   * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
+   */
+  public TracingHeaderFormat getTracingMetricHeaderFormat() {
+    return getEnum(FS_AZURE_TRACINGMETRICHEADER_FORMAT, TracingHeaderFormat.EMPTY);
+  }
   public AuthType getAuthType(String accountName) {
     return getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
   }

@@ -107,7 +107,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.utils.TracingMetricContext;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -146,6 +146,8 @@ public class AzureBlobFileSystem extends FileSystem
   private boolean sendBackoffMetricsToStore;
   private boolean sendFooterMetricsToStore;
   private TracingHeaderFormat tracingHeaderFormat;
+
+  private TracingHeaderFormat tracingMetricHeaderFormat;
   private Listener listener;
 
   /** Name of blockFactory to be used by AbfsOutputStream. */
@@ -204,6 +206,7 @@ public class AzureBlobFileSystem extends FileSystem
     sendBackoffMetricsToStore = abfsConfiguration.isBackoffMetricCollectionEnabled();
     sendFooterMetricsToStore = abfsConfiguration.isFooterMetricCollectionEnabled();
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
+    tracingMetricHeaderFormat = abfsConfiguration.getTracingMetricHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -683,31 +686,10 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
-    String readFooterMetric = "";
-    List<AbfsReadFooterMetrics> readFooterMetricsList = abfsCounters.getAbfsReadFooterMetrics();
-    if (!readFooterMetricsList.isEmpty()) {
-      readFooterMetric = AbfsReadFooterMetrics.getFooterMetrics(readFooterMetricsList, readFooterMetric);
-    }
-    String metric = abfsCounters.getAbfsBackoffMetrics().toString() + "@" + readFooterMetric;
-    LOG.debug("The metrics collected over this instance are " + metric);
-    TracingHeaderFormat tracingHeaderFormatMetric = null;
-    TracingContext tracingContextMetric = null;
-    if (sendBackoffMetricsToStore && sendFooterMetricsToStore) {
-      tracingHeaderFormatMetric = TracingHeaderFormat.INTERNAL_METRIC_FORMAT;
-      tracingContextMetric = getTracingContext(tracingHeaderFormatMetric,
-          metric);
-    } else if (sendBackoffMetricsToStore) {
-      tracingHeaderFormatMetric
-          = TracingHeaderFormat.INTERNAL_BACKOFF_METRIC_FORMAT;
-      tracingContextMetric = getTracingContext(tracingHeaderFormatMetric,
-          abfsCounters.getAbfsBackoffMetrics().toString());
-    } else if (sendFooterMetricsToStore) {
-      tracingHeaderFormatMetric
-          = TracingHeaderFormat.INTERNAL_FOOTER_METRIC_FORMAT;
-      tracingContextMetric = getTracingContext(tracingHeaderFormatMetric,
-          readFooterMetric);
-    }
-    if (tracingHeaderFormatMetric != null) {
+    TracingMetricContext tracingMetricContext  = new TracingMetricContext(clientCorrelationId,
+        fileSystemId, FSOperationType.GET_ATTR, true, tracingMetricHeaderFormat,
+        listener, abfsCounters);
+    if (!tracingMetricHeaderFormat.toString().equals("")) {
       if (abfsCounters.getAbfsBackoffMetrics().getTotalNumberOfRequests().get() > 0) {
         try {
           Configuration metricConfig = getConf();
@@ -725,7 +707,7 @@ public class AzureBlobFileSystem extends FileSystem
             throw new AssertionError(ex);
           }
           AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
-          metricFs.sendMetric(tracingContextMetric);
+          metricFs.sendMetric(tracingMetricContext);
         } catch (AzureBlobFileSystemException ex) {
           //do nothing
         }
@@ -745,12 +727,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
-  }
-
-  public TracingContext getTracingContext(TracingHeaderFormat tracingHeaderFormatMetric, String metric) {
-    return new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormatMetric,
-        listener, metric);
   }
 
   public void sendMetric(TracingContext tracingContextMetric) throws AzureBlobFileSystemException {

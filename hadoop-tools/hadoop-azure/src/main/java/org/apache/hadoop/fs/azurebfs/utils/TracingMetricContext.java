@@ -7,14 +7,16 @@ import java.util.UUID;
 import java.util.List;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 public class TracingMetricContext extends TracingContext{
-  private AbfsCounters abfsCounters;
+  private final AbfsCounters abfsCounters;
   private String header = EMPTY_STRING;
 
   private final String clientCorrelationID;  // passed over config by client
   private final String fileSystemID;  // GUID for fileSystem instance
   private String clientRequestId = EMPTY_STRING;
+  private Listener listener = null;
   private TracingHeaderFormat tracingHeaderFormat;
 
   public TracingMetricContext(String clientCorrelationID, String fileSystemID,
@@ -26,6 +28,7 @@ public class TracingMetricContext extends TracingContext{
     this.fileSystemID = fileSystemID;
     this.tracingHeaderFormat = tracingHeaderFormat;
     this.abfsCounters = abfsCounters;
+    this.listener = listener;
   }
 
   private String getFooterMetrics(){
@@ -43,8 +46,8 @@ public class TracingMetricContext extends TracingContext{
     switch (tracingHeaderFormat) {
     case INTERNAL_METRIC_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID
-          + ":" + "BO:" + abfsCounters.getAbfsBackoffMetrics().toString() +
-          "FO:" + getFooterMetrics();
+          + ":" + "BO:" + abfsCounters.getAbfsBackoffMetrics().toString()
+          + "FO:" + getFooterMetrics();
       break;
     case INTERNAL_FOOTER_METRIC_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID
@@ -54,6 +57,13 @@ public class TracingMetricContext extends TracingContext{
       header = clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID
           + ":" + "BO:" + abfsCounters.getAbfsBackoffMetrics().toString();
       break;
+    default:
+      header = "";
+      break;
     }
+    if (listener != null) { //for testing
+      listener.callTracingHeaderValidator(header, tracingHeaderFormat);
+    }
+    httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
   }
 }

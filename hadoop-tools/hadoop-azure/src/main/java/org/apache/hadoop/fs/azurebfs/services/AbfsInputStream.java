@@ -113,7 +113,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromRemoteRead; // bytes read remotely; for testing
   private Listener listener;
   private boolean collectMetricsForNextRead = false;
-
+  private long dataLenRequested;
+  private long readReqCount;
+  private boolean collectLenMetrics = false;
   private boolean collectStreamMetrics = false;
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
@@ -247,12 +249,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         this.collectStreamMetrics = true;
         this.collectMetricsForNextRead = true;
         this.offsetOfFirstRead = nextReadPos;
-        this.abfsReadFooterMetrics.setSizeReadByFirstRead(len+"_"+(Math.abs(contentLength - nextReadPos)));
+        this.abfsReadFooterMetrics.setSizeReadByFirstRead(len + "_" + (Math.abs(contentLength - nextReadPos)));
         this.abfsReadFooterMetrics.getFileLength().set(contentLength);
       }
+      if (collectLenMetrics) {
+        dataLenRequested += len;
+        readReqCount += 1;
+      }
       if (!firstRead && collectMetricsForNextRead){
-        this.abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len+"_"+(Math.abs(nextReadPos - offsetOfFirstRead)));
+        this.abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + (Math.abs(nextReadPos - offsetOfFirstRead)));
         this.collectMetricsForNextRead = false;
+        this.collectLenMetrics = true;
       }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
@@ -712,6 +719,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
     if (this.collectStreamMetrics) {
       checkIsParquet(abfsReadFooterMetrics);
+      if (readReqCount > 0) {
+        abfsReadFooterMetrics.setAvgReadLenRequested(
+            (double) dataLenRequested / readReqCount);
+      }
       this.client.getAbfsCounters().getAbfsReadFooterMetrics()
           .add(abfsReadFooterMetrics);
     }

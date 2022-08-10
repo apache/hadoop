@@ -27,6 +27,7 @@ public class AbfsReadFooterMetrics {
   private String offsetDiffBetweenFirstAndSecondRead;
   private final AtomicLong fileLength;
   private double avgFileLength;
+  private double avgReadLenRequested;;
 
   public AbfsReadFooterMetrics() {
     this.fileLength = new AtomicLong();
@@ -69,6 +70,14 @@ public class AbfsReadFooterMetrics {
     this.avgFileLength = avgFileLength;
   }
 
+  public double getAvgReadLenRequested() {
+    return avgReadLenRequested;
+  }
+
+  public void setAvgReadLenRequested(final double avgReadLenRequested) {
+    this.avgReadLenRequested = avgReadLenRequested;
+  }
+
   public static void getParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isParquetList,
       AbfsReadFooterMetrics avgParquetReadFooterMetrics){
     avgParquetReadFooterMetrics.setSizeReadByFirstRead(
@@ -82,6 +91,9 @@ public class AbfsReadFooterMetrics {
     avgParquetReadFooterMetrics.setAvgFileLength(isParquetList.stream()
         .map(AbfsReadFooterMetrics::getFileLength)
         .mapToDouble(AtomicLong::get).average().orElse(0.0));
+    avgParquetReadFooterMetrics.setAvgReadLenRequested(isParquetList.stream().
+        map(AbfsReadFooterMetrics::getAvgReadLenRequested).
+        mapToDouble(Double::doubleValue).average().orElse(0.0));
   }
 
   public static void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
@@ -111,6 +123,9 @@ public class AbfsReadFooterMetrics {
     avgNonParquetReadFooterMetrics.setAvgFileLength(isNonParquetList.stream()
         .map(AbfsReadFooterMetrics::getFileLength)
         .mapToDouble(AtomicLong::get).average().orElse(0.0));
+    avgNonParquetReadFooterMetrics.setAvgReadLenRequested(isNonParquetList.stream().
+            map(AbfsReadFooterMetrics::getAvgReadLenRequested).
+            mapToDouble(Double::doubleValue).average().orElse(0.0));
   }
 
   /*
@@ -136,7 +151,9 @@ public class AbfsReadFooterMetrics {
         + " #SR="
         + avgReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
         + " #FL=" + String.format("%.3f",
-        avgReadFooterMetrics.getAvgFileLength());
+        avgReadFooterMetrics.getAvgFileLength())
+        + " #RL=" + String.format("%.3f",
+        avgReadFooterMetrics.getAvgReadLenRequested());
     return readFooterMetric + " ";
   }
 

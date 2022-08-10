@@ -742,12 +742,22 @@ input is invalid.
 
 #### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
 
-Config `fs.azure.tracingcontext.format` provides an option to select the format
+Config `fs.azure.tracingheader.format` provides an option to select the format
 of IDs included in the `request-id-header`. This config accepts a String value
 corresponding to the following enum options.
   `SINGLE_ID_FORMAT` : clientRequestId
   `ALL_ID_FORMAT` : all IDs (default)
   `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
+
+Config `fs.azure.tracingmetricheader.format` provides an option to select the
+format
+of IDs included in the `request-id-header` for metrics. This config accepts a
+String value
+corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : all IDs + backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : all IDs (default) + backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : all IDs (default) + footer metrics
+`EMPTY` : default
 
 ### <a name="flushconfigoptions"></a> Flush Options
 
@@ -1001,16 +1011,6 @@ the same for as the existing account on which other requests are made.
 
 `fs.azure.metric.account.key`: This is the access key for the storage account
 used for pushing metrics to the store.
-
-`fs.azure.enable.backoff.metric.collection`: This configuration provides an
-option to
-specify whether we want to push the backoff metrics or not.
-By default, this config will be set to false.
-
-`fs.azure.enable.footer.metric.collection`: This configuration provides an
-option to
-specify whether we want to push the footer metrics or not.
-By default, this config will be set to false.
 
 `fs.azure.metric.uri`: This configuration provides the uri in the format of
 containername@accountname.dfs.core.windows.net.

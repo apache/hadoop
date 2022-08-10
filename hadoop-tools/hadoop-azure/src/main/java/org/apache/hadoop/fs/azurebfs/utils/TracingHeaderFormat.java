@@ -32,6 +32,13 @@ public enum TracingHeaderFormat {
   INTERNAL_FOOTER_METRIC_FORMAT,  // <client-correlation-id>:<client-req-id>:<filesystem-id>
   // :<footer-metric-results>
 
-  INTERNAL_METRIC_FORMAT; // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  INTERNAL_METRIC_FORMAT, // <client-correlation-id>:<client-req-id>:<filesystem-id>
   // :<backoff-metric-results>:<footer-metric-results>
+
+  EMPTY;
+
+  @Override
+  public String toString() {
+    return this == EMPTY ? "" : this.name();
+  }
 }
