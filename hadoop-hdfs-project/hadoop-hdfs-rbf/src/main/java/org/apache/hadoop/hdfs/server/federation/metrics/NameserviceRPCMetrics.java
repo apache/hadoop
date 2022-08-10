@@ -38,7 +38,7 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   public final static String NAMESERVICE_RPC_METRICS_PREFIX = "NameserviceActivity-";
 
   private final String nsId;
-  final MetricsRegistry registry;
+  private final MetricsRegistry registry = new MetricsRegistry("NameserviceRPCActivity");
 
   @Metric("Time for the Router to proxy an operation to the Nameservice")
   private MutableRate proxy;
@@ -58,7 +58,7 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
 
   public NameserviceRPCMetrics(Configuration conf, String nsId) {
     this.nsId = NAMESERVICE_RPC_METRICS_PREFIX + nsId;
-    registry = new MetricsRegistry("NameserviceRPCActivity").tag("ns", "Nameservice", nsId);
+    registry.tag("ns", "Nameservice", nsId);
   }
 
   public static NameserviceRPCMetrics create(Configuration conf,

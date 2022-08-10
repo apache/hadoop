@@ -188,7 +188,6 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   public void proxyOpPermitRejected(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpPermitRejected();
-      
     }
     if (nameserviceRPCMetricsMap != null &&
         nameserviceRPCMetricsMap.containsKey(nsId)) {
