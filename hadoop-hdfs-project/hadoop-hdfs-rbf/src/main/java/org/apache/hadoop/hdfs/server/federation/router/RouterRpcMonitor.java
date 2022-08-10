@@ -74,17 +74,17 @@ public interface RouterRpcMonitor {
    * exception.
    */
   void proxyOpFailureCommunicate(String nsId);
-  
+
   /**
    * Rejected to proxy an operation to a Namenode.
    */
-  void ProxyOpPermitRejected(String nsId);
+  void proxyOpPermitRejected(String nsId);
 
   /**
    * Accepted to proxy an operation to a Namenode.
    */
-  void ProxyOpPermitAccepted(String nsId);
-  
+  void proxyOpPermitAccepted(String nsId);
+
   /**
    * Failed to proxy an operation to a Namenode because the client was
    * overloaded.

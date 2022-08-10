@@ -185,7 +185,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void ProxyOpPermitRejected(String nsId) {
+  public void proxyOpPermitRejected(String nsId) {
     if (metrics != null) {
       metrics.incrProxyOpPermitRejected();
       
@@ -197,7 +197,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void ProxyOpPermitAccepted(String nsId) {
+  public void proxyOpPermitAccepted(String nsId) {
     if (nameserviceRPCMetricsMap != null &&
         nameserviceRPCMetricsMap.containsKey(nsId)) {
       nameserviceRPCMetricsMap.get(nsId).incrProxyOpPermitAccepted();

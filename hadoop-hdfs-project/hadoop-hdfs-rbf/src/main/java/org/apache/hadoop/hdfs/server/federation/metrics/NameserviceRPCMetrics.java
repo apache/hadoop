@@ -22,6 +22,7 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
@@ -37,6 +38,7 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   public final static String NAMESERVICE_RPC_METRICS_PREFIX = "NameserviceActivity-";
 
   private final String nsId;
+  final MetricsRegistry registry;
 
   @Metric("Time for the Router to proxy an operation to the Nameservice")
   private MutableRate proxy;
@@ -55,17 +57,18 @@ public class NameserviceRPCMetrics implements NameserviceRPCMBean {
   private MutableCounterLong proxyOpPermitAccepted;
 
   public NameserviceRPCMetrics(Configuration conf, String nsId) {
-    this.nsId = nsId;
+    this.nsId = NAMESERVICE_RPC_METRICS_PREFIX + nsId;
+    registry = new MetricsRegistry("NameserviceRPCActivity").tag("ns", "Nameservice", nsId);
   }
 
   public static NameserviceRPCMetrics create(Configuration conf,
       String nameService) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    String name = NAMESERVICE_RPC_METRICS_PREFIX + (nameService.isEmpty()
-        ? "UndefinedNameService"+ ThreadLocalRandom.current().nextInt()
-        : nameService);
-    return ms.register(name, "HDFS Federation NameService RPC Metrics",
-        new NameserviceRPCMetrics(conf, name));
+    String nsId = (nameService.isEmpty() ?
+        "UndefinedNameService" + ThreadLocalRandom.current().nextInt() :
+        nameService);
+    return ms.register(NAMESERVICE_RPC_METRICS_PREFIX + nsId,
+        "HDFS Federation NameService RPC Metrics", new NameserviceRPCMetrics(conf, nsId));
   }
 
   public void incrProxyOpFailureStandby() {
