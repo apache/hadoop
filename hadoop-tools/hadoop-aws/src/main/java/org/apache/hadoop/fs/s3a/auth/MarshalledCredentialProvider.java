@@ -37,9 +37,13 @@ import static org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding.toAWSCre
  * This is <i>not</i> intended for explicit use in job/app configurations,
  * instead it is returned by Delegation Token Bindings, as needed.
  * The constructor implicitly prevents explicit use.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@Deprecated
 public class MarshalledCredentialProvider extends
     AbstractSessionCredentialsProvider {
 

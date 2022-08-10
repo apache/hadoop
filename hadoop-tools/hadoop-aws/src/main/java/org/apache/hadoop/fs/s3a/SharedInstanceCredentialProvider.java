@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 
 /**
  * This credential provider has jittered between existing and non-existing,
  * but it turns up in documentation enough that it has been restored.
- * It extends {@link IAMInstanceCredentialsProvider} to pick up its
+ * It extends {@link org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider} to pick up its
  * bindings, which are currently to use the
  * {@code EC2ContainerCredentialsProviderWrapper} class for IAM and container
  * authentication.
@@ -41,5 +40,5 @@ import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 @InterfaceStability.Evolving
 @SuppressWarnings("deprecation")
 public final class SharedInstanceCredentialProvider extends
-    IAMInstanceCredentialsProvider {
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider {
 }

@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
@@ -565,7 +564,7 @@ public final class S3AUtils {
           TemporaryAWSCredentialsProvider.class,
           SimpleAWSCredentialsProvider.class,
           EnvironmentVariableCredentialsProvider.class,
-          IAMInstanceCredentialsProvider.class));
+          org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider.class));
 
   /**
    * Create the AWS credentials from the providers, the URI and
@@ -624,6 +623,7 @@ public final class S3AUtils {
    * @return the list of classes, possibly empty
    * @throws IOException on a failure to load the list.
    */
+  @SuppressWarnings("deprecation")
   public static AWSCredentialProviderList buildAWSProviderList(
       @Nullable final URI binding,
       final Configuration conf,

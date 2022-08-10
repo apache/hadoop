@@ -37,7 +37,6 @@ import org.junit.rules.ExpectedException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
@@ -377,12 +376,13 @@ public class TestS3AAWSCredentialsProvider {
   @SuppressWarnings("deprecation")
   public void testAuthenticationContainsProbes() {
     Configuration conf = new Configuration(false);
-    assertFalse("found AssumedRoleCredentialProvider",
-        authenticationContains(conf, AssumedRoleCredentialProvider.NAME));
+    assertFalse("found AssumedRoleCredentialProvider", authenticationContains(conf,
+        org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.NAME));
 
-    conf.set(AWS_CREDENTIALS_PROVIDER, AssumedRoleCredentialProvider.NAME);
-    assertTrue("didn't find AssumedRoleCredentialProvider",
-        authenticationContains(conf, AssumedRoleCredentialProvider.NAME));
+    conf.set(AWS_CREDENTIALS_PROVIDER,
+        org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.NAME);
+    assertTrue("didn't find AssumedRoleCredentialProvider", authenticationContains(conf,
+        org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider.NAME));
   }
 
   @Test

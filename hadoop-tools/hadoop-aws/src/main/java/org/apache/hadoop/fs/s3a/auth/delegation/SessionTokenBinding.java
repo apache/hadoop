@@ -35,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -108,7 +107,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    * The auth chain for the parent options.
    */
   @SuppressWarnings("deprecation")
-  private AWSCredentialProviderList parentAuthChain;
+  private org.apache.hadoop.fs.s3a.AWSCredentialProviderList parentAuthChain;
 
   /**
    * Has a log message about forwarding credentials been printed yet?
@@ -191,7 +190,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    */
   @Override
   @SuppressWarnings("deprecation")
-  public AWSCredentialProviderList deployUnbonded()
+  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList deployUnbonded()
       throws IOException {
     requireServiceStarted();
     return parentAuthChain;
@@ -215,7 +214,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    */
   @Override
   @SuppressWarnings("deprecation")
-  public AWSCredentialProviderList bindToTokenIdentifier(
+  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {
     final SessionTokenIdentifier identifier = convertTokenIdentifier(
@@ -225,7 +224,7 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
     MarshalledCredentials marshalledCredentials
         = identifier.getMarshalledCredentials();
     setExpirationDateTime(marshalledCredentials.getExpirationDateTime());
-    return new AWSCredentialProviderList(
+    return new org.apache.hadoop.fs.s3a.AWSCredentialProviderList(
         "Session Token Binding",
         new MarshalledCredentialProvider(
             SESSION_TOKEN,

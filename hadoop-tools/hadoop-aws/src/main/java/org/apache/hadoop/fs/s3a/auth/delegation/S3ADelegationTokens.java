@@ -124,7 +124,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    * List of cred providers; unset until {@link #bindToDelegationToken(Token)}.
    */
   @SuppressWarnings("deprecation")
-  private Optional<AWSCredentialProviderList> credentialProviders
+  private Optional<org.apache.hadoop.fs.s3a.AWSCredentialProviderList> credentialProviders
       = Optional.empty();
 
   /**

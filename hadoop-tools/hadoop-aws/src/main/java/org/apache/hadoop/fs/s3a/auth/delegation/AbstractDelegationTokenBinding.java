@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
@@ -206,7 +205,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @throws IOException any failure.
    */
   @SuppressWarnings("deprecation")
-  public abstract AWSCredentialProviderList deployUnbonded()
+  public abstract org.apache.hadoop.fs.s3a.AWSCredentialProviderList deployUnbonded()
       throws IOException;
 
   /**
@@ -218,7 +217,7 @@ public abstract class AbstractDelegationTokenBinding extends AbstractDTService {
    * @throws IOException any failure.
    */
   @SuppressWarnings("deprecation")
-  public abstract AWSCredentialProviderList bindToTokenIdentifier(
+  public abstract org.apache.hadoop.fs.s3a.AWSCredentialProviderList bindToTokenIdentifier(
       AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException;
 

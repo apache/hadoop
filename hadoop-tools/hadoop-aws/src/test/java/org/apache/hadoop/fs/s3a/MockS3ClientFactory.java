@@ -31,6 +31,7 @@ import com.amazonaws.services.s3.model.Region;
  * An {@link S3ClientFactory} that returns Mockito mocks of the {@link AmazonS3}
  * interface suitable for unit testing.
  */
+@SuppressWarnings("deprecation")
 public class MockS3ClientFactory implements S3ClientFactory {
 
   @Override
