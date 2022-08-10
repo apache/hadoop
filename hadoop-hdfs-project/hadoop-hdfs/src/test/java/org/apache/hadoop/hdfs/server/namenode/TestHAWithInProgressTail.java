@@ -24,30 +24,17 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
-import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
-import org.apache.hadoop.hdfs.qjournal.client.DirectExecutorService;
-import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournaledEditsResponseProto;
+import org.apache.hadoop.hdfs.qjournal.client.SpyQJournalUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerFaultInjector;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter.getFileInfo;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.eq;
 
 public class TestHAWithInProgressTail {
   private MiniQJMHACluster qjmhaCluster;
@@ -111,21 +98,6 @@ public class TestHAWithInProgressTail {
     waitForFileInfo(nn1, p + 0, p + 1, p + 14);
   }
 
-  private QuorumJournalManager createSpyingQJM(Configuration conf)
-      throws IOException {
-    AsyncLogger.Factory spyFactory = (conf1, nsInfo, journalId, nameServiceId, addr) -> {
-      AsyncLogger logger = new IPCLoggerChannel(conf1, nsInfo, journalId,
-          nameServiceId, addr) {
-        protected ExecutorService createSingleThreadExecutor() {
-          return new DirectExecutorService();
-        }
-      };
-      return Mockito.spy(logger);
-    };
-    return new QuorumJournalManager(conf, jnCluster.getQuorumJournalURI("ns1"),
-        nn1.getNamesystem().getNamespaceInfo(), "ns1", spyFactory);
-  }
-
   private void spyOnJASjournal() throws IOException {
     JournalSet.JournalAndStream jas = nn1.getNamesystem().getEditLogTailer()
         .getEditLog().getJournalSet().getAllJournalStreams().get(0);
@@ -134,33 +106,16 @@ public class TestHAWithInProgressTail {
     oldManager.close();
 
     // Create a SpyingQJM
-    QuorumJournalManager manager = createSpyingQJM(nn1.getConf());
+    QuorumJournalManager manager = SpyQJournalUtil.createSpyingQJM(nn1.getConf(),
+        jnCluster.getQuorumJournalURI("ns1"),
+        nn1.getNamesystem().getNamespaceInfo(), "ns1");
     manager.recoverUnfinalizedSegments();
     jas.setJournalForTests(manager);
 
-    List<AsyncLogger> spies = manager.getLoggerSetForTests().getLoggersForTests();
-
-    // Mock JN0 return an empty response.
-    GetJournaledEditsResponseProto responseProto = GetJournaledEditsResponseProto
-        .newBuilder().setTxnCount(0).build();
-    ListenableFuture<GetJournaledEditsResponseProto> ret = Futures.immediateFuture(responseProto);
-    Mockito.doReturn(ret).when(spies.get(0))
-        .getJournaledEdits(eq(1L), eq(QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT));
-
-    // Mock JN1 return a slow correct response.
-    ListeningExecutorService service = MoreExecutors.listeningDecorator(
-        Executors.newSingleThreadExecutor());
-    Mockito.doAnswer(invocation -> service.submit(() -> {
-      Thread.sleep(3000);
-      ListenableFuture<?> future = null;
-      try {
-        future = (ListenableFuture<?>) invocation.callRealMethod();
-      } catch (Throwable e) {
-        fail("getJournaledEdits failed " + e.getMessage());
-      }
-      return future.get();
-    })).when(spies.get(1))
-        .getJournaledEdits(1, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    // First JournalNode with an empty response.
+    SpyQJournalUtil.mockOneJNReturnEmptyResponse(manager, 1L, 0);
+    // Second JournalNode with a slow response.
+    SpyQJournalUtil.mockOneJNWithSlowResponse(manager, 1L, 3000, 1);
   }
 
   /**

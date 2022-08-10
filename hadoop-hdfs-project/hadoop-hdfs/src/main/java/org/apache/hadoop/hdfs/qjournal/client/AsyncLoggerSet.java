@@ -46,7 +46,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
  * calls to the underlying loggers and constructing corresponding
  * {@link QuorumCall} instances.
  */
-public class AsyncLoggerSet {
+class AsyncLoggerSet {
   static final Logger LOG = LoggerFactory.getLogger(AsyncLoggerSet.class);
 
   private final List<AsyncLogger> loggers;
@@ -195,7 +195,7 @@ public class AsyncLoggerSet {
    * set up spies
    */
   @VisibleForTesting
-  public List<AsyncLogger> getLoggersForTests() {
+  List<AsyncLogger> getLoggersForTests() {
     return loggers;
   }
   
