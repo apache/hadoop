@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
@@ -35,6 +34,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
@@ -47,6 +47,14 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -65,6 +73,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -84,7 +96,7 @@ public class MockDefaultRequestInterceptorREST
   // This property allows us to write tests for specific scenario as YARN RM
   // down e.g. network issue, failover.
   private boolean isRunning = true;
-  private HashSet<ApplicationId> applicationMap = new HashSet<>();
+  private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
 
   private void validateRunning() throws ConnectException {
@@ -114,7 +126,22 @@ public class MockDefaultRequestInterceptorREST
 
     ApplicationId appId = ApplicationId.fromString(newApp.getApplicationId());
     LOG.info("Application submitted: " + appId);
-    applicationMap.add(appId);
+
+    // Initialize appReport
+    ApplicationReport appReport = ApplicationReport.newInstance(
+        appId, ApplicationAttemptId.newInstance(appId, 1), null, newApp.getQueue(), null, null, 0,
+        null, YarnApplicationState.ACCEPTED, "", null, 0, 0, null, null, null, 0, null, null, null,
+        false, Priority.newInstance(newApp.getPriority()), null, null);
+
+    // Initialize appTimeoutsMap
+    HashMap<ApplicationTimeoutType, ApplicationTimeout> appTimeoutsMap = new HashMap<>();
+    ApplicationTimeoutType timeoutType = ApplicationTimeoutType.LIFETIME;
+    ApplicationTimeout appTimeOut =
+        ApplicationTimeout.newInstance(ApplicationTimeoutType.LIFETIME, "UNLIMITED", 10);
+    appTimeoutsMap.put(timeoutType, appTimeOut);
+    appReport.setApplicationTimeouts(appTimeoutsMap);
+
+    applicationMap.put(appId, appReport);
     return Response.status(Status.ACCEPTED).header(HttpHeaders.LOCATION, "")
         .entity(getSubClusterId()).build();
   }
@@ -127,7 +154,7 @@ public class MockDefaultRequestInterceptorREST
     }
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
-    if (!applicationMap.contains(applicationId)) {
+    if (!applicationMap.containsKey(applicationId)) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
@@ -162,7 +189,7 @@ public class MockDefaultRequestInterceptorREST
     validateRunning();
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
-    if (!applicationMap.remove(applicationId)) {
+    if (applicationMap.remove(applicationId) == null) {
       throw new ApplicationNotFoundException(
           "Trying to kill an absent application: " + appId);
     }
@@ -235,7 +262,7 @@ public class MockDefaultRequestInterceptorREST
     }
 
     ApplicationId applicationId = ApplicationId.fromString(appId);
-    if (!applicationMap.contains(applicationId)) {
+    if (!applicationMap.containsKey(applicationId)) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
@@ -362,5 +389,194 @@ public class MockDefaultRequestInterceptorREST
     } else {
       return null;
     }
+  }
+
+  @Override
+  public ContainerInfo getContainer(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId, String containerId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ContainerId newContainerId = ContainerId.newContainerId(
+        ApplicationAttemptId.fromString(appAttemptId), Integer.valueOf(containerId));
+
+    Resource allocatedResource = Resource.newInstance(1024, 2);
+
+    int subClusterId = Integer.valueOf(getSubClusterId().getId());
+    NodeId assignedNode = NodeId.newInstance("Node", subClusterId);
+    Priority priority = Priority.newInstance(subClusterId);
+    long creationTime = subClusterId;
+    long finishTime = subClusterId;
+    String diagnosticInfo = "Diagnostic " + subClusterId;
+    String logUrl = "Log " + subClusterId;
+    int containerExitStatus = subClusterId;
+    ContainerState containerState = ContainerState.COMPLETE;
+    String nodeHttpAddress = "HttpAddress " + subClusterId;
+
+    ContainerReport containerReport = ContainerReport.newInstance(
+        newContainerId, allocatedResource, assignedNode, priority,
+        creationTime, finishTime, diagnosticInfo, logUrl,
+        containerExitStatus, containerState, nodeHttpAddress);
+
+    return new ContainerInfo(containerReport);
+  }
+
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (!EnumUtils.isValidEnum(SignalContainerCommand.class, command.toUpperCase())) {
+      String errMsg = "Invalid command: " + command.toUpperCase() + ", valid commands are: "
+          + Arrays.asList(SignalContainerCommand.values());
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public AppAttemptInfo getAppAttempt(HttpServletRequest req, HttpServletResponse res,
+      String appId, String appAttemptId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+
+    ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
+        ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
+        "host", 124, "url", "oUrl", "diagnostics",
+        YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
+        newApplicationReport.getCurrentApplicationAttemptId(), 1));
+
+    return new AppAttemptInfo(attempt);
+  }
+
+  @Override
+  public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    AppAttemptsInfo infos = new AppAttemptsInfo();
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(0));
+    infos.add(TestRouterWebServiceUtil.generateAppAttemptInfo(1));
+    return infos;
+  }
+
+  @Override
+  public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr,
+      String appId, String type) throws AuthorizationException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Map<ApplicationTimeoutType, ApplicationTimeout> timeouts = appReport.getApplicationTimeouts();
+    ApplicationTimeoutType paramType = ApplicationTimeoutType.valueOf(type);
+
+    if (paramType == null) {
+      throw new NotFoundException("application timeout type not found");
+    }
+
+    if (!timeouts.containsKey(paramType)) {
+      throw new NotFoundException("timeout with id: " + appId + " not found");
+    }
+
+    ApplicationTimeout applicationTimeout = timeouts.get(paramType);
+
+    AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
+    timeoutInfo.setExpiryTime(applicationTimeout.getExpiryTime());
+    timeoutInfo.setTimeoutType(applicationTimeout.getTimeoutType());
+    timeoutInfo.setRemainingTime(applicationTimeout.getRemainingTime());
+
+    return timeoutInfo;
+  }
+
+  @Override
+  public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Map<ApplicationTimeoutType, ApplicationTimeout> timeouts = appReport.getApplicationTimeouts();
+
+    AppTimeoutsInfo timeoutsInfo = new AppTimeoutsInfo();
+
+    for (ApplicationTimeout timeout : timeouts.values()) {
+      AppTimeoutInfo timeoutInfo = new AppTimeoutInfo();
+      timeoutInfo.setExpiryTime(timeout.getExpiryTime());
+      timeoutInfo.setTimeoutType(timeout.getTimeoutType());
+      timeoutInfo.setRemainingTime(timeout.getRemainingTime());
+      timeoutsInfo.add(timeoutInfo);
+    }
+
+    return timeoutsInfo;
+  }
+
+  @Override
+  public Response updateApplicationTimeout(AppTimeoutInfo appTimeout, HttpServletRequest hsr,
+      String appId) throws AuthorizationException,
+      YarnException, InterruptedException, IOException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Map<ApplicationTimeoutType, ApplicationTimeout> timeouts = appReport.getApplicationTimeouts();
+
+    ApplicationTimeoutType paramTimeoutType = appTimeout.getTimeoutType();
+    if (!timeouts.containsKey(paramTimeoutType)) {
+      throw new NotFoundException("TimeOutType with id: " + appId + " not found");
+    }
+
+    ApplicationTimeout applicationTimeout = timeouts.get(paramTimeoutType);
+    applicationTimeout.setTimeoutType(appTimeout.getTimeoutType());
+    applicationTimeout.setExpiryTime(appTimeout.getExpireTime());
+    applicationTimeout.setRemainingTime(appTimeout.getRemainingTimeInSec());
+
+    AppTimeoutInfo result = new AppTimeoutInfo(applicationTimeout);
+
+    return Response.status(Status.OK).entity(result).build();
   }
 }

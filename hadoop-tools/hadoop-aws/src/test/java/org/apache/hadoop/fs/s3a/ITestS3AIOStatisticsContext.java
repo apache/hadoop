@@ -153,6 +153,8 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
    * @return thread context
    */
   private static IOStatisticsContext getAndResetThreadStatisticsContext() {
+    assertTrue("thread-level IOStatistics should be enabled by default",
+        IOStatisticsContext.enabled());
     IOStatisticsContext context =
         IOStatisticsContext.getCurrentIOStatisticsContext();
     context.reset();

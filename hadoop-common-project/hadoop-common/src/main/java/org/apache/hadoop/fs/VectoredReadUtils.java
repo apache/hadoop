@@ -210,6 +210,7 @@ public final class VectoredReadUtils {
       if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
         throw new UnsupportedOperationException("Overlapping ranges are not supported");
       }
+      prev = sortedRanges[i];
     }
     return Arrays.asList(sortedRanges);
   }
