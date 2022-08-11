@@ -86,6 +86,7 @@ public class FederationStateStoreService extends AbstractService
   private FederationStateStore stateStoreClient = null;
   private SubClusterId subClusterId;
   private long heartbeatInterval;
+  private long heartbeatInitialDelay;
   private RMContext rmContext;
 
   public FederationStateStoreService(RMContext rmContext) {
@@ -119,6 +120,14 @@ public class FederationStateStoreService extends AbstractService
     if (heartbeatInterval <= 0) {
       heartbeatInterval =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
+    }
+
+    heartbeatInitialDelay = conf.getLong(
+        YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS);
+    if (heartbeatInitialDelay <= 0) {
+      heartbeatInitialDelay =
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS;
     }
     LOG.info("Initialized federation membership service.");
 
@@ -196,7 +205,7 @@ public class FederationStateStoreService extends AbstractService
     scheduledExecutorService =
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
-        heartbeatInterval, heartbeatInterval, TimeUnit.SECONDS);
+        heartbeatInitialDelay, heartbeatInterval, TimeUnit.SECONDS);
     LOG.info("Started federation membership heartbeat with interval: {}",
         heartbeatInterval);
   }

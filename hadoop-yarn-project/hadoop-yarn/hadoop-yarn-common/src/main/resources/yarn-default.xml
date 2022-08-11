@@ -3626,6 +3626,13 @@
   </property>
   <property>
     <description>
+      Initial delay for federation state-store heartbeat service.
+    </description>
+    <name>yarn.federation.state-store.heartbeat.initial-delay-secs</name>
+    <value>30</value>
+  </property>
+  <property>
+    <description>
       Machine list file to be loaded by the FederationSubCluster Resolver
     </description>
     <name>yarn.federation.machine-list</name>
