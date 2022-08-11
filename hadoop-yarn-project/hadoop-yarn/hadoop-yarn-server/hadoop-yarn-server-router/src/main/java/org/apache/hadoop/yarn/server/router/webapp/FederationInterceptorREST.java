@@ -1269,14 +1269,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-              subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       return interceptor.getAppPriority(hsr, appId);
     } catch (IllegalArgumentException e) {
       RouterServerUtil.logAndThrowRunTimeException(e,
-              "Unable to get the getAppPriority appId: %s.", appId);
+          "Unable to get the getAppPriority appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppTimeout Failed.", e);
+      RouterServerUtil.logAndThrowRunTimeException("getAppPriority Failed.", e);
     }
+
     return null;
   }
 
@@ -1296,14 +1297,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-              subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       return interceptor.updateApplicationPriority(targetPriority, hsr, appId);
     } catch (IllegalArgumentException e) {
       RouterServerUtil.logAndThrowRunTimeException(e,
-              "Unable to get the updateApplicationPriority appId: %s.", appId);
+          "Unable to get the updateApplicationPriority appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppTimeout Failed.", e);
+      RouterServerUtil.logAndThrowRunTimeException("updateApplicationPriority Failed.", e);
     }
+
     return null;
   }
 
