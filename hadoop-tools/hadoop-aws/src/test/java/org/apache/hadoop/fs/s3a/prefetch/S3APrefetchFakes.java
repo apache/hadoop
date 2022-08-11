@@ -75,12 +75,17 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStat
  */
 public final class S3APrefetchFakes {
 
-  private S3APrefetchFakes() {}
+  private S3APrefetchFakes() {
+  }
 
   public static final String E_TAG = "eTag";
+
   public static final String OWNER = "owner";
+
   public static final String VERSION_ID = "v1";
+
   public static final long MODIFICATION_TIME = 0L;
+
   public static final ChangeDetectionPolicy CHANGE_POLICY =
       ChangeDetectionPolicy.createPolicy(
           ChangeDetectionPolicy.Mode.None,
@@ -125,7 +130,8 @@ public final class S3APrefetchFakes {
     FileSystem.Statistics statistics = new FileSystem.Statistics("s3a");
     S3AStatisticsContext statisticsContext = new EmptyS3AStatisticsContext();
     RetryPolicy retryPolicy =
-        RetryPolicies.retryUpToMaximumCountWithFixedSleep(3, 10, TimeUnit.MILLISECONDS);
+        RetryPolicies.retryUpToMaximumCountWithFixedSleep(3, 10,
+            TimeUnit.MILLISECONDS);
 
     return new S3AReadOpContext(
         path,
@@ -172,18 +178,18 @@ public final class S3APrefetchFakes {
       String key) {
 
     S3Object object = new S3Object() {
-        @Override
-        public S3ObjectInputStream getObjectContent() {
-          return createS3ObjectInputStream(new byte[8]);
-        }
+      @Override
+      public S3ObjectInputStream getObjectContent() {
+        return createS3ObjectInputStream(new byte[8]);
+      }
 
-        @Override
-        public ObjectMetadata getObjectMetadata() {
-          ObjectMetadata metadata = new ObjectMetadata();
-          metadata.setHeader("ETag", E_TAG);
-          return metadata;
-        }
-      };
+      @Override
+      public ObjectMetadata getObjectMetadata() {
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setHeader("ETag", E_TAG);
+        return metadata;
+      }
+    };
 
     return new S3AInputStream.InputStreamCallbacks() {
       @Override
@@ -220,7 +226,8 @@ public final class S3APrefetchFakes {
     org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
 
     S3AFileStatus fileStatus = createFileStatus(key, fileSize);
-    S3ObjectAttributes s3ObjectAttributes = createObjectAttributes(bucket, key, fileSize);
+    S3ObjectAttributes s3ObjectAttributes =
+        createObjectAttributes(bucket, key, fileSize);
     S3AReadOpContext s3AReadOpContext = createReadContext(
         futurePool,
         key,
@@ -228,14 +235,17 @@ public final class S3APrefetchFakes {
         prefetchBlockSize,
         prefetchBlockCount);
 
-    S3AInputStream.InputStreamCallbacks callbacks = createInputStreamCallbacks(bucket, key);
+    S3AInputStream.InputStreamCallbacks callbacks =
+        createInputStreamCallbacks(bucket, key);
     S3AInputStreamStatistics stats =
         s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
 
     if (clazz == FakeS3AInMemoryInputStream.class) {
-      return new FakeS3AInMemoryInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
+      return new FakeS3AInMemoryInputStream(s3AReadOpContext,
+          s3ObjectAttributes, callbacks, stats);
     } else if (clazz == FakeS3ACachingInputStream.class) {
-      return new FakeS3ACachingInputStream(s3AReadOpContext, s3ObjectAttributes, callbacks, stats);
+      return new FakeS3ACachingInputStream(s3AReadOpContext, s3ObjectAttributes,
+          callbacks, stats);
     }
 
     throw new RuntimeException("Unsupported class: " + clazz);
@@ -248,7 +258,8 @@ public final class S3APrefetchFakes {
       int fileSize) {
 
     return (FakeS3AInMemoryInputStream) createInputStream(
-        FakeS3AInMemoryInputStream.class, futurePool, bucket, key, fileSize, 1, 1);
+        FakeS3AInMemoryInputStream.class, futurePool, bucket, key, fileSize, 1,
+        1);
   }
 
   public static FakeS3ACachingInputStream createS3CachingInputStream(
@@ -271,6 +282,7 @@ public final class S3APrefetchFakes {
 
   public static class FakeS3AInMemoryInputStream
       extends S3AInMemoryInputStream {
+
     public FakeS3AInMemoryInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
@@ -282,13 +294,17 @@ public final class S3APrefetchFakes {
     @Override
     protected S3ARemoteObject getS3File() {
       randomDelay(200);
-      return new MockS3ARemoteObject((int) this.getS3ObjectAttributes().getLen(), false);
+      return new MockS3ARemoteObject(
+          (int) this.getS3ObjectAttributes().getLen(), false);
     }
   }
 
   public static class FakeS3FilePerBlockCache extends SingleFilePerBlockCache {
+
     private final Map<Path, byte[]> files;
+
     private final int readDelay;
+
     private final int writeDelay;
 
     public FakeS3FilePerBlockCache(int readDelay, int writeDelay) {
@@ -342,6 +358,7 @@ public final class S3APrefetchFakes {
 
   public static class FakeS3ACachingBlockManager
       extends S3ACachingBlockManager {
+
     public FakeS3ACachingBlockManager(
         ExecutorServiceFuturePool futurePool,
         S3ARemoteObjectReader reader,
@@ -352,7 +369,8 @@ public final class S3APrefetchFakes {
     }
 
     @Override
-    public int read(ByteBuffer buffer, long offset, int size) throws IOException {
+    public int read(ByteBuffer buffer, long offset, int size)
+        throws IOException {
       randomDelay(100);
       return this.getReader().read(buffer, offset, size);
     }
@@ -366,6 +384,7 @@ public final class S3APrefetchFakes {
   }
 
   public static class FakeS3ACachingInputStream extends S3ACachingInputStream {
+
     public FakeS3ACachingInputStream(
         S3AReadOpContext context,
         S3ObjectAttributes s3Attributes,
@@ -377,7 +396,8 @@ public final class S3APrefetchFakes {
     @Override
     protected S3ARemoteObject getS3File() {
       randomDelay(200);
-      return new MockS3ARemoteObject((int) this.getS3ObjectAttributes().getLen(), false);
+      return new MockS3ARemoteObject(
+          (int) this.getS3ObjectAttributes().getLen(), false);
     }
 
     @Override
@@ -386,7 +406,8 @@ public final class S3APrefetchFakes {
         S3ARemoteObjectReader reader,
         BlockData blockData,
         int bufferPoolSize) {
-      return new FakeS3ACachingBlockManager(futurePool, reader, blockData, bufferPoolSize);
+      return new FakeS3ACachingBlockManager(futurePool, reader, blockData,
+          bufferPoolSize);
     }
   }
 }

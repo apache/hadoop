@@ -31,8 +31,11 @@ import static org.junit.Assert.assertEquals;
 public class TestS3ARemoteObjectReader extends AbstractHadoopTestBase {
 
   private static final int FILE_SIZE = 9;
+
   private static final int BUFFER_SIZE = 2;
-  private final S3ARemoteObject remoteObject = new MockS3ARemoteObject(FILE_SIZE, false);
+
+  private final S3ARemoteObject remoteObject =
+      new MockS3ARemoteObject(FILE_SIZE, false);
 
   @Test
   public void testArgChecks() throws Exception {
@@ -87,7 +90,8 @@ public class TestS3ARemoteObjectReader extends AbstractHadoopTestBase {
     int numBlocks = 0;
     ByteBuffer buffer;
     S3ARemoteObjectReader reader =
-        new S3ARemoteObjectReader(new MockS3ARemoteObject(FILE_SIZE, testWithRetry));
+        new S3ARemoteObjectReader(
+            new MockS3ARemoteObject(FILE_SIZE, testWithRetry));
     int remainingSize = FILE_SIZE - (int) startOffset;
     for (int bufferSize = 0; bufferSize <= FILE_SIZE + 1; bufferSize++) {
       buffer = ByteBuffer.allocate(bufferSize);
@@ -99,7 +103,7 @@ public class TestS3ARemoteObjectReader extends AbstractHadoopTestBase {
         assertEquals(expectedNumBytesRead, numBytesRead);
 
         byte[] bytes = buffer.array();
-        for (int i = 0; i< expectedNumBytesRead; i++) {
+        for (int i = 0; i < expectedNumBytesRead; i++) {
           assertEquals(startOffset + i, bytes[i]);
         }
       }

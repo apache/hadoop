@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
  * entirely in memory.
  */
 public class S3AInMemoryInputStream extends S3ARemoteInputStream {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       S3AInMemoryInputStream.class);
 
@@ -64,7 +65,8 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
     super(context, s3Attributes, client, streamStatistics);
     int fileSize = (int) s3Attributes.getLen();
     this.buffer = ByteBuffer.allocate(fileSize);
-    LOG.debug("Created in-memory input stream for {} (size = {})", this.getName(), fileSize);
+    LOG.debug("Created in-memory input stream for {} (size = {})",
+        getName(), fileSize);
   }
 
   /**
@@ -76,24 +78,25 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
    */
   @Override
   protected boolean ensureCurrentBuffer() throws IOException {
-    if (this.isClosed()) {
+    if (isClosed()) {
       return false;
     }
 
-    if (this.getBlockData().getFileSize() == 0) {
+    if (getBlockData().getFileSize() == 0) {
       return false;
     }
 
-    if (!this.getFilePosition().isValid()) {
-      this.buffer.clear();
-      int numBytesRead = this.getReader().read(buffer, 0, this.buffer.capacity());
+    if (!getFilePosition().isValid()) {
+      buffer.clear();
+      int numBytesRead =
+          getReader().read(buffer, 0, buffer.capacity());
       if (numBytesRead <= 0) {
         return false;
       }
       BufferData data = new BufferData(0, buffer);
-      this.getFilePosition().setData(data, 0, this.getSeekTargetPos());
+      getFilePosition().setData(data, 0, getSeekTargetPos());
     }
 
-    return this.getFilePosition().buffer().hasRemaining();
+    return getFilePosition().buffer().hasRemaining();
   }
 }

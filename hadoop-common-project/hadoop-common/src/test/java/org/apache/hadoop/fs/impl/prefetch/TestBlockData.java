@@ -72,7 +72,8 @@ public class TestBlockData extends AbstractHadoopTestBase {
     testComputedFieldsHelper(10, 3);
   }
 
-  private void testComputedFieldsHelper(long fileSize, int blockSize) throws Exception {
+  private void testComputedFieldsHelper(long fileSize, int blockSize)
+      throws Exception {
     BlockData bd = new BlockData(fileSize, blockSize);
 
     if (fileSize == 0) {

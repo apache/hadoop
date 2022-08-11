@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
  * Provides access to S3 file one block at a time.
  */
 public class S3ACachingBlockManager extends CachingBlockManager {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ACachingBlockManager.class);
 
@@ -81,7 +82,8 @@ public class S3ACachingBlockManager extends CachingBlockManager {
    * @return number of bytes read.
    */
   @Override
-  public int read(ByteBuffer buffer, long startOffset, int size) throws IOException {
+  public int read(ByteBuffer buffer, long startOffset, int size)
+      throws IOException {
     return this.reader.read(buffer, startOffset, size);
   }
 

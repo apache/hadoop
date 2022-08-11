@@ -46,7 +46,9 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
  * Encapsulates low level interactions with S3 object on AWS.
  */
 public class S3ARemoteObject {
-  private static final Logger LOG = LoggerFactory.getLogger(S3ARemoteObject.class);
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(S3ARemoteObject.class);
 
   /**
    * Read-specific operation context.
@@ -132,7 +134,7 @@ public class S3ARemoteObject {
    * @return an instance of {@code Invoker} for interacting with S3 API.
    */
   public Invoker getReadInvoker() {
-    return this.context.getReadInvoker();
+    return context.getReadInvoker();
   }
 
   /**
@@ -141,7 +143,7 @@ public class S3ARemoteObject {
    * @return an instance of {@code S3AInputStreamStatistics} used for reporting access metrics.
    */
   public S3AInputStreamStatistics getStatistics() {
-    return this.streamStatistics;
+    return streamStatistics;
   }
 
   /**
@@ -150,7 +152,7 @@ public class S3ARemoteObject {
    * @return the path of this file.
    */
   public String getPath() {
-    return getPath(this.s3Attributes);
+    return getPath(s3Attributes);
   }
 
   /**
@@ -160,7 +162,8 @@ public class S3ARemoteObject {
    * @return the path corresponding to the given s3Attributes.
    */
   public static String getPath(S3ObjectAttributes s3Attributes) {
-    return String.format("s3a://%s/%s", s3Attributes.getBucket(), s3Attributes.getKey());
+    return String.format("s3a://%s/%s", s3Attributes.getBucket(),
+        s3Attributes.getKey());
   }
 
   /**
@@ -170,7 +173,7 @@ public class S3ARemoteObject {
    * @return the size of this file.
    */
   public long size() {
-    return this.s3Attributes.getLen();
+    return s3Attributes.getLen();
   }
 
   /**
@@ -191,9 +194,10 @@ public class S3ARemoteObject {
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
     streamStatistics.streamOpened();
-    final GetObjectRequest request = client.newGetRequest(this.s3Attributes.getKey())
-        .withRange(offset, offset + size - 1);
-    this.changeTracker.maybeApplyConstraint(request);
+    final GetObjectRequest request =
+        client.newGetRequest(s3Attributes.getKey())
+            .withRange(offset, offset + size - 1);
+    changeTracker.maybeApplyConstraint(request);
 
     String operation = String.format(
         "%s %s at %d", S3AInputStream.OPERATION_OPEN, uri, offset);
@@ -202,7 +206,7 @@ public class S3ARemoteObject {
 
     try {
       object = Invoker.once(operation, uri, () -> client.getObject(request));
-    } catch(IOException e) {
+    } catch (IOException e) {
       tracker.failed();
       throw e;
     } finally {
@@ -211,8 +215,8 @@ public class S3ARemoteObject {
 
     changeTracker.processResponse(object, operation, offset);
     InputStream stream = object.getObjectContent();
-    synchronized (this.s3Objects) {
-      this.s3Objects.put(stream, object);
+    synchronized (s3Objects) {
+      s3Objects.put(stream, object);
     }
 
     return stream;
@@ -220,22 +224,24 @@ public class S3ARemoteObject {
 
   void close(InputStream inputStream, int numRemainingBytes) {
     S3Object obj;
-    synchronized (this.s3Objects) {
-      obj = this.s3Objects.get(inputStream);
+    synchronized (s3Objects) {
+      obj = s3Objects.get(inputStream);
       if (obj == null) {
         throw new IllegalArgumentException("inputStream not found");
       }
-      this.s3Objects.remove(inputStream);
+      s3Objects.remove(inputStream);
     }
 
-    if (numRemainingBytes <= this.context.getAsyncDrainThreshold()) {
+    if (numRemainingBytes <= context.getAsyncDrainThreshold()) {
       // don't bother with async io.
       drain(false, "close() operation", numRemainingBytes, obj, inputStream);
     } else {
       LOG.debug("initiating asynchronous drain of {} bytes", numRemainingBytes);
       // schedule an async drain/abort with references to the fields so they
       // can be reused
-      client.submit(() -> drain(false, "close() operation", numRemainingBytes, obj, inputStream));
+      client.submit(
+          () -> drain(false, "close() operation", numRemainingBytes, obj,
+              inputStream));
     }
   }
 
@@ -259,8 +265,10 @@ public class S3ARemoteObject {
       final InputStream inputStream) {
 
     try {
-      return invokeTrackingDuration(streamStatistics.initiateInnerStreamClose(shouldAbort),
-          () -> drainOrAbortHttpStream(shouldAbort, reason, remaining, requestObject, inputStream));
+      return invokeTrackingDuration(
+          streamStatistics.initiateInnerStreamClose(shouldAbort),
+          () -> drainOrAbortHttpStream(shouldAbort, reason, remaining,
+              requestObject, inputStream));
     } catch (IOException e) {
       // this is only here because invokeTrackingDuration() has it in its
       // signature
@@ -303,7 +311,8 @@ public class S3ARemoteObject {
         LOG.debug("Drained stream of {} bytes", drained);
       } catch (Exception e) {
         // exception escalates to an abort
-        LOG.debug("When closing {} stream for {}, will abort the stream", uri, reason, e);
+        LOG.debug("When closing {} stream for {}, will abort the stream", uri,
+            reason, e);
         shouldAbort = true;
       }
     }
@@ -311,7 +320,8 @@ public class S3ARemoteObject {
     cleanupWithLogger(LOG, requestObject);
     streamStatistics.streamClose(shouldAbort, remaining);
 
-    LOG.debug("Stream {} {}: {}; remaining={}", uri, (shouldAbort ? "aborted" : "closed"), reason,
+    LOG.debug("Stream {} {}: {}; remaining={}", uri,
+        (shouldAbort ? "aborted" : "closed"), reason,
         remaining);
     return shouldAbort;
   }

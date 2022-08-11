@@ -20,6 +20,7 @@
  * High performance s3 input stream which reads in
  * blocks and can cache blocks in the local filesystem.
  */
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 package org.apache.hadoop.fs.s3a.prefetch;

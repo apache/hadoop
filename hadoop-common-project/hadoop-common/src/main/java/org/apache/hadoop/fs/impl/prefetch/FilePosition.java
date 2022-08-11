@@ -38,6 +38,7 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkWithinRange;
  * The size of a buffer associated with this file is typically the same as block size.
  */
 public final class FilePosition {
+
   /**
    * Holds block based information about a file.
    */
@@ -65,7 +66,9 @@ public final class FilePosition {
 
   // Read stats after a seek (mostly for debugging use).
   private int numSingleByteReads;
+
   private int numBytesRead;
+
   private int numBufferReads;
 
   /**
@@ -103,7 +106,9 @@ public final class FilePosition {
    * @throws IllegalArgumentException if readOffset is negative.
    * @throws IllegalArgumentException if readOffset is outside the range [startOffset, buffer end].
    */
-  public void setData(BufferData bufferData, long startOffset, long readOffset) {
+  public void setData(BufferData bufferData,
+      long startOffset,
+      long readOffset) {
     checkNotNull(bufferData, "bufferData");
     checkNotNegative(startOffset, "startOffset");
     checkNotNegative(readOffset, "readOffset");

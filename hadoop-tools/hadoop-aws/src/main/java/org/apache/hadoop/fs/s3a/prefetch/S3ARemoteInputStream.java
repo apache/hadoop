@@ -100,7 +100,9 @@ public abstract class S3ARemoteInputStream
   private final S3AInputStreamStatistics streamStatistics;
 
   private S3AInputPolicy inputPolicy;
+
   private final ChangeTracker changeTracker;
+
   private final IOStatistics ioStatistics;
 
   /**
@@ -141,8 +143,8 @@ public abstract class S3ARemoteInputStream
 
     this.blockData = new BlockData(fileSize, bufferSize);
     this.fpos = new FilePosition(fileSize, bufferSize);
-    this.remoteObject = this.getS3File();
-    this.reader = new S3ARemoteObjectReader(this.remoteObject);
+    this.remoteObject = getS3File();
+    this.reader = new S3ARemoteObjectReader(remoteObject);
 
     this.seekTargetPos = 0;
   }
@@ -154,7 +156,7 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public IOStatistics getIOStatistics() {
-    return this.ioStatistics;
+    return ioStatistics;
   }
 
   /**
@@ -165,7 +167,7 @@ public abstract class S3ARemoteInputStream
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public S3AInputStreamStatistics getS3AStreamStatistics() {
-    return this.streamStatistics;
+    return streamStatistics;
   }
 
   /**
@@ -199,7 +201,7 @@ public abstract class S3ARemoteInputStream
    * @param inputPolicy new input policy.
    */
   private void setInputPolicy(S3AInputPolicy inputPolicy) {
-    this.inputPolicy = inputPolicy;
+    inputPolicy = inputPolicy;
     streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
@@ -208,13 +210,13 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public int available() throws IOException {
-    this.throwIfClosed();
+    throwIfClosed();
 
     if (!ensureCurrentBuffer()) {
       return 0;
     }
 
-    return this.fpos.buffer().remaining();
+    return fpos.buffer().remaining();
   }
 
   /**
@@ -224,12 +226,12 @@ public abstract class S3ARemoteInputStream
    * @throws IOException if there is an IO error during this operation.
    */
   public long getPos() throws IOException {
-    this.throwIfClosed();
+    throwIfClosed();
 
-    if (this.fpos.isValid()) {
-      return this.fpos.absolute();
+    if (fpos.isValid()) {
+      return fpos.absolute();
     } else {
-      return this.seekTargetPos;
+      return seekTargetPos;
     }
   }
 
@@ -242,12 +244,12 @@ public abstract class S3ARemoteInputStream
    * @throws IllegalArgumentException if pos is outside of the range [0, file size].
    */
   public void seek(long pos) throws IOException {
-    this.throwIfClosed();
-    this.throwIfInvalidSeek(pos);
+    throwIfClosed();
+    throwIfInvalidSeek(pos);
 
-    if (!this.fpos.setAbsolute(pos)) {
-      this.fpos.invalidate();
-      this.seekTargetPos = pos;
+    if (!fpos.setAbsolute(pos)) {
+      fpos.invalidate();
+      seekTargetPos = pos;
     }
   }
 
@@ -263,9 +265,10 @@ public abstract class S3ARemoteInputStream
 
   @Override
   public int read() throws IOException {
-    this.throwIfClosed();
+    throwIfClosed();
 
-    if (this.remoteObject.size() == 0 || this.seekTargetPos >= this.remoteObject.size()) {
+    if (remoteObject.size() == 0
+        || seekTargetPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -273,9 +276,9 @@ public abstract class S3ARemoteInputStream
       return -1;
     }
 
-    this.incrementBytesRead(1);
+    incrementBytesRead(1);
 
-    return this.fpos.buffer().get() & 0xff;
+    return fpos.buffer().get() & 0xff;
   }
 
   /**
@@ -289,7 +292,7 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public int read(byte[] buffer) throws IOException {
-    return this.read(buffer, 0, buffer.length);
+    return read(buffer, 0, buffer.length);
   }
 
   /**
@@ -305,13 +308,14 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public int read(byte[] buffer, int offset, int len) throws IOException {
-    this.throwIfClosed();
+    throwIfClosed();
 
     if (len == 0) {
       return 0;
     }
 
-    if (this.remoteObject.size() == 0 || this.seekTargetPos >= this.remoteObject.size()) {
+    if (remoteObject.size() == 0
+        || seekTargetPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -327,10 +331,10 @@ public abstract class S3ARemoteInputStream
         break;
       }
 
-      ByteBuffer buf = this.fpos.buffer();
+      ByteBuffer buf = fpos.buffer();
       int bytesToRead = Math.min(numBytesRemaining, buf.remaining());
       buf.get(buffer, offset, bytesToRead);
-      this.incrementBytesRead(bytesToRead);
+      incrementBytesRead(bytesToRead);
       offset += bytesToRead;
       numBytesRemaining -= bytesToRead;
       numBytesRead += bytesToRead;
@@ -340,70 +344,70 @@ public abstract class S3ARemoteInputStream
   }
 
   protected S3ARemoteObject getFile() {
-    return this.remoteObject;
+    return remoteObject;
   }
 
   protected S3ARemoteObjectReader getReader() {
-    return this.reader;
+    return reader;
   }
 
   protected S3ObjectAttributes getS3ObjectAttributes() {
-    return this.s3Attributes;
+    return s3Attributes;
   }
 
   protected FilePosition getFilePosition() {
-    return this.fpos;
+    return fpos;
   }
 
   protected String getName() {
-    return this.name;
+    return name;
   }
 
   protected boolean isClosed() {
-    return this.closed;
+    return closed;
   }
 
   protected long getSeekTargetPos() {
-    return this.seekTargetPos;
+    return seekTargetPos;
   }
 
   protected void setSeekTargetPos(long pos) {
-    this.seekTargetPos = pos;
+    seekTargetPos = pos;
   }
 
   protected BlockData getBlockData() {
-    return this.blockData;
+    return blockData;
   }
 
   protected S3AReadOpContext getContext() {
-    return this.context;
+    return context;
   }
 
   private void incrementBytesRead(int bytesRead) {
     if (bytesRead > 0) {
-      this.streamStatistics.bytesRead(bytesRead);
-      if (this.getContext().getStats() != null) {
-        this.getContext().getStats().incrementBytesRead(bytesRead);
+      streamStatistics.bytesRead(bytesRead);
+      if (getContext().getStats() != null) {
+        getContext().getStats().incrementBytesRead(bytesRead);
       }
-      this.fpos.incrementBytesRead(bytesRead);
+      fpos.incrementBytesRead(bytesRead);
     }
   }
 
   protected S3ARemoteObject getS3File() {
     return new S3ARemoteObject(
-        this.context,
-        this.s3Attributes,
-        this.client,
-        this.streamStatistics,
-        this.changeTracker
+        context,
+        s3Attributes,
+        client,
+        streamStatistics,
+        changeTracker
     );
   }
 
   protected String getOffsetStr(long offset) {
     int blockNumber = -1;
 
-    if (this.blockData.isValidOffset(offset)) {
-      blockNumber = this.blockData.getBlockNumber(offset);
+    if (blockData.isValidOffset(offset)) {
+      blockNumber = blockData.getBlockNumber(offset);
     }
 
     return String.format("%d:%d", blockNumber, offset);
@@ -416,22 +420,22 @@ public abstract class S3ARemoteInputStream
    */
   @Override
   public void close() throws IOException {
-    if (this.closed) {
+    if (closed) {
       return;
     }
-    this.closed = true;
+    closed = true;
 
-    this.blockData = null;
-    this.reader.close();
-    this.reader = null;
-    this.remoteObject = null;
-    this.fpos.invalidate();
+    blockData = null;
+    reader.close();
+    reader = null;
+    remoteObject = null;
+    fpos.invalidate();
     try {
-      this.client.close();
+      client.close();
     } finally {
-      this.streamStatistics.close();
+      streamStatistics.close();
     }
-    this.client = null;
+    client = null;
   }
 
   @Override
@@ -440,8 +444,9 @@ public abstract class S3ARemoteInputStream
   }
 
   protected void throwIfClosed() throws IOException {
-    if (this.closed) {
-      throw new IOException(this.name + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
+    if (closed) {
+      throw new IOException(
+          name + ": " + FSExceptionMessages.STREAM_IS_CLOSED);
     }
   }
 

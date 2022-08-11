@@ -26,6 +26,7 @@ import static org.apache.hadoop.fs.impl.prefetch.Validate.checkPositiveInteger;
  * Provides retry related functionality.
  */
 public class Retryer {
+
   /* Maximum amount of delay (in ms) before retry fails. */
   private int maxDelay;
 

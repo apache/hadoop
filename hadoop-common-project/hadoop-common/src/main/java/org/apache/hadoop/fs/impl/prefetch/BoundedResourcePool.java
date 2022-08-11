@@ -133,6 +133,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
 
   /**
    * Number of items created so far. Mostly for testing purposes.
+   * @return the count.
    */
   public int numCreated() {
     synchronized (createdItems) {
@@ -142,6 +143,7 @@ public abstract class BoundedResourcePool<T> extends ResourcePool<T> {
 
   /**
    * Number of items available to be acquired. Mostly for testing purposes.
+   * @return the number available.
    */
   public synchronized int numAvailable() {
     return (size - numCreated()) + items.size();

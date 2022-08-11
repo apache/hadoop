@@ -32,6 +32,7 @@ import static org.junit.Assert.assertSame;
 public class TestBufferPool extends AbstractHadoopTestBase {
 
   private static final int POOL_SIZE = 2;
+
   private static final int BUFFER_SIZE = 10;
 
   private final PrefetchingStatistics statistics =
@@ -46,30 +47,30 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
     intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-         () -> new BufferPool(0, 10, statistics));
+        () -> new BufferPool(0, 10, statistics));
 
     intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-         () -> new BufferPool(-1, 10, statistics));
+        () -> new BufferPool(-1, 10, statistics));
 
     intercept(IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-         () -> new BufferPool(10, 0, statistics));
+        () -> new BufferPool(10, 0, statistics));
 
     intercept(IllegalArgumentException.class,
         "'bufferSize' must be a positive integer",
-         () -> new BufferPool(1, -10, statistics));
+        () -> new BufferPool(1, -10, statistics));
 
     intercept(NullPointerException.class,
-         () -> new BufferPool(1, 10, null));
+        () -> new BufferPool(1, 10, null));
 
     intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-         () -> pool.acquire(-1));
+        () -> pool.acquire(-1));
 
     intercept(IllegalArgumentException.class,
         "'blockNumber' must not be negative",
-         () -> pool.tryAcquire(-1));
+        () -> pool.tryAcquire(-1));
 
     intercept(NullPointerException.class, "data",
         () -> pool.release((BufferData) null));
@@ -122,7 +123,8 @@ public class TestBufferPool extends AbstractHadoopTestBase {
     testReleaseHelper(BufferData.State.READY, false);
   }
 
-  private void testReleaseHelper(BufferData.State stateBeforeRelease, boolean expectThrow)
+  private void testReleaseHelper(BufferData.State stateBeforeRelease,
+      boolean expectThrow)
       throws Exception {
 
     BufferPool pool = new BufferPool(POOL_SIZE, BUFFER_SIZE, statistics);

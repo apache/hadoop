@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 public class S3APrefetchingInputStream
     extends FSInputStream
     implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       S3APrefetchingInputStream.class);
 
@@ -75,8 +76,10 @@ public class S3APrefetchingInputStream
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
-    Validate.checkNotNullAndNotEmpty(s3Attributes.getBucket(), "s3Attributes.getBucket()");
-    Validate.checkNotNullAndNotEmpty(s3Attributes.getKey(), "s3Attributes.getKey()");
+    Validate.checkNotNullAndNotEmpty(s3Attributes.getBucket(),
+        "s3Attributes.getBucket()");
+    Validate.checkNotNullAndNotEmpty(s3Attributes.getKey(),
+        "s3Attributes.getKey()");
     Validate.checkNotNegative(s3Attributes.getLen(), "s3Attributes.getLen()");
     Validate.checkNotNull(client, "client");
     Validate.checkNotNull(streamStatistics, "streamStatistics");
@@ -107,8 +110,8 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized int available() throws IOException {
-    this.throwIfClosed();
-    return this.inputStream.available();
+    throwIfClosed();
+    return inputStream.available();
   }
 
   /**
@@ -119,7 +122,7 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized long getPos() throws IOException {
-    return this.isClosed() ? 0 : this.inputStream.getPos();
+    return isClosed() ? 0 : inputStream.getPos();
   }
 
   /**
@@ -130,8 +133,8 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized int read() throws IOException {
-    this.throwIfClosed();
-    return this.inputStream.read();
+    throwIfClosed();
+    return inputStream.read();
   }
 
   /**
@@ -146,9 +149,10 @@ public class S3APrefetchingInputStream
    * @throws IOException if there is an IO error during this operation.
    */
   @Override
-  public synchronized int read(byte[] buffer, int offset, int len) throws IOException {
-    this.throwIfClosed();
-    return this.inputStream.read(buffer, offset, len);
+  public synchronized int read(byte[] buffer, int offset, int len)
+      throws IOException {
+    throwIfClosed();
+    return inputStream.read(buffer, offset, len);
   }
 
   /**
@@ -158,9 +162,9 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized void close() throws IOException {
-    if (this.inputStream != null) {
-      this.inputStream.close();
-      this.inputStream = null;
+    if (inputStream != null) {
+      inputStream.close();
+      inputStream = null;
       super.close();
     }
   }
@@ -173,8 +177,8 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized void seek(long pos) throws IOException {
-    this.throwIfClosed();
-    this.inputStream.seek(pos);
+    throwIfClosed();
+    inputStream.seek(pos);
   }
 
   /**
@@ -184,8 +188,8 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized void setReadahead(Long readahead) {
-    if (!this.isClosed()) {
-      this.inputStream.setReadahead(readahead);
+    if (!isClosed()) {
+      inputStream.setReadahead(readahead);
     }
   }
 
@@ -197,8 +201,8 @@ public class S3APrefetchingInputStream
    */
   @Override
   public boolean hasCapability(String capability) {
-    if (!this.isClosed()) {
-      return this.inputStream.hasCapability(capability);
+    if (!isClosed()) {
+      return inputStream.hasCapability(capability);
     }
 
     return false;
@@ -212,10 +216,10 @@ public class S3APrefetchingInputStream
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public S3AInputStreamStatistics getS3AStreamStatistics() {
-    if (this.isClosed()) {
+    if (isClosed()) {
       return null;
     }
-    return this.inputStream.getS3AStreamStatistics();
+    return inputStream.getS3AStreamStatistics();
   }
 
   /**
@@ -225,18 +229,18 @@ public class S3APrefetchingInputStream
    */
   @Override
   public IOStatistics getIOStatistics() {
-    if (this.isClosed()) {
+    if (isClosed()) {
       return null;
     }
-    return this.inputStream.getIOStatistics();
+    return inputStream.getIOStatistics();
   }
 
   protected boolean isClosed() {
-    return this.inputStream == null;
+    return inputStream == null;
   }
 
   protected void throwIfClosed() throws IOException {
-    if (this.isClosed()) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
   }
@@ -245,7 +249,7 @@ public class S3APrefetchingInputStream
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    this.throwIfClosed();
+    throwIfClosed();
     return false;
   }
 

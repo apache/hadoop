@@ -42,6 +42,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTra
  * current block is issued.
  */
 public class S3ACachingInputStream extends S3ARemoteInputStream {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ACachingInputStream.class);
 
@@ -79,7 +80,8 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
         this.getBlockData(),
         bufferPoolSize);
     int fileSize = (int) s3Attributes.getLen();
-    LOG.debug("Created caching input stream for {} (size = {})", this.getName(), fileSize);
+    LOG.debug("Created caching input stream for {} (size = {})", this.getName(),
+        fileSize);
   }
 
   /**
@@ -91,18 +93,18 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
    */
   @Override
   public void seek(long pos) throws IOException {
-    this.throwIfClosed();
-    this.throwIfInvalidSeek(pos);
+    throwIfClosed();
+    throwIfInvalidSeek(pos);
 
     // The call to setAbsolute() returns true if the target position is valid and
     // within the current block. Therefore, no additional work is needed when we get back true.
-    if (!this.getFilePosition().setAbsolute(pos)) {
+    if (!getFilePosition().setAbsolute(pos)) {
       LOG.info("seek({})", getOffsetStr(pos));
       // We could be here in two cases:
       // -- the target position is invalid:
       //    We ignore this case here as the next read will return an error.
       // -- it is valid but outside of the current block.
-      if (this.getFilePosition().isValid()) {
+      if (getFilePosition().isValid()) {
         // There are two cases to consider:
         // -- the seek was issued after this buffer was fully read.
         //    In this case, it is very unlikely that this buffer will be needed again;
@@ -110,15 +112,15 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
         // -- if we are jumping out of the buffer before reading it completely then
         //    we will likely need this buffer again (as observed empirically for Parquet)
         //    therefore we issue an async request to cache this buffer.
-        if (!this.getFilePosition().bufferFullyRead()) {
-          this.blockManager.requestCaching(this.getFilePosition().data());
+        if (!getFilePosition().bufferFullyRead()) {
+          blockManager.requestCaching(getFilePosition().data());
         } else {
-          this.blockManager.release(this.getFilePosition().data());
+          blockManager.release(getFilePosition().data());
         }
-        this.getFilePosition().invalidate();
-        this.blockManager.cancelPrefetches();
+        getFilePosition().invalidate();
+        blockManager.cancelPrefetches();
       }
-      this.setSeekTargetPos(pos);
+      setSeekTargetPos(pos);
     }
   }
 
@@ -126,74 +128,77 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
   public void close() throws IOException {
     // Close the BlockManager first, cancelling active prefetches,
     // deleting cached files and freeing memory used by buffer pool.
-    this.blockManager.close();
+    blockManager.close();
     super.close();
-    LOG.info("closed: {}", this.getName());
+    LOG.info("closed: {}", getName());
   }
 
   @Override
   protected boolean ensureCurrentBuffer() throws IOException {
-    if (this.isClosed()) {
+    if (isClosed()) {
       return false;
     }
 
-    if (this.getFilePosition().isValid() && this.getFilePosition().buffer().hasRemaining()) {
+    if (getFilePosition().isValid() && getFilePosition()
+        .buffer()
+        .hasRemaining()) {
       return true;
     }
 
     long readPos;
     int prefetchCount;
 
-    if (this.getFilePosition().isValid()) {
+    if (getFilePosition().isValid()) {
       // A sequential read results in a prefetch.
-      readPos = this.getFilePosition().absolute();
-      prefetchCount = this.numBlocksToPrefetch;
+      readPos = getFilePosition().absolute();
+      prefetchCount = numBlocksToPrefetch;
     } else {
       // A seek invalidates the current position.
       // We prefetch only 1 block immediately after a seek operation.
-      readPos = this.getSeekTargetPos();
+      readPos = getSeekTargetPos();
       prefetchCount = 1;
     }
 
-    if (!this.getBlockData().isValidOffset(readPos)) {
+    if (!getBlockData().isValidOffset(readPos)) {
       return false;
     }
 
-    if (this.getFilePosition().isValid()) {
-      if (this.getFilePosition().bufferFullyRead()) {
-        this.blockManager.release(this.getFilePosition().data());
+    if (getFilePosition().isValid()) {
+      if (getFilePosition().bufferFullyRead()) {
+        blockManager.release(getFilePosition().data());
       } else {
-        this.blockManager.requestCaching(this.getFilePosition().data());
+        blockManager.requestCaching(getFilePosition().data());
       }
     }
 
-    int toBlockNumber = this.getBlockData().getBlockNumber(readPos);
-    long startOffset = this.getBlockData().getStartOffset(toBlockNumber);
+    int toBlockNumber = getBlockData().getBlockNumber(readPos);
+    long startOffset = getBlockData().getStartOffset(toBlockNumber);
 
     for (int i = 1; i <= prefetchCount; i++) {
       int b = toBlockNumber + i;
-      if (b < this.getBlockData().getNumBlocks()) {
-        this.blockManager.requestPrefetch(b);
+      if (b < getBlockData().getNumBlocks()) {
+        blockManager.requestPrefetch(b);
       }
     }
 
     BufferData data = invokeTrackingDuration(
-        this.getS3AStreamStatistics().trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
-        () -> this.blockManager.get(toBlockNumber));
+        getS3AStreamStatistics()
+            .trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
+        () -> blockManager.get(toBlockNumber));
 
-    this.getFilePosition().setData(data, startOffset, readPos);
+    getFilePosition().setData(data, startOffset, readPos);
     return true;
   }
 
   @Override
   public String toString() {
-    if (this.isClosed()) {
+    if (isClosed()) {
       return "closed";
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("fpos = (%s)%n", this.getFilePosition()));
-    sb.append(this.blockManager.toString());
+    sb.append(String.format("fpos = (%s)%n", getFilePosition()));
+    sb.append(blockManager.toString());
     return sb.toString();
   }
 
@@ -202,7 +207,8 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       S3ARemoteObjectReader reader,
       BlockData blockData,
       int bufferPoolSize) {
-    return new S3ACachingBlockManager(futurePool, reader, blockData, bufferPoolSize,
-        this.getS3AStreamStatistics());
+    return new S3ACachingBlockManager(futurePool, reader, blockData,
+        bufferPoolSize,
+        getS3AStreamStatistics());
   }
 }

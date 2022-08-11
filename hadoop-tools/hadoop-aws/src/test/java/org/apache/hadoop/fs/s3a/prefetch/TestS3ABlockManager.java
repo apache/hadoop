@@ -34,6 +34,7 @@ import static org.junit.Assert.assertEquals;
 public class TestS3ABlockManager extends AbstractHadoopTestBase {
 
   static final int FILE_SIZE = 12;
+
   static final int BLOCK_SIZE = 3;
 
   @Test

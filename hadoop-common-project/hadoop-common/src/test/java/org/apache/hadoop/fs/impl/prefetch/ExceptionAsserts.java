@@ -24,7 +24,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public final class ExceptionAsserts {
-  private ExceptionAsserts() {}
+
+  private ExceptionAsserts() {
+  }
 
 
   /**

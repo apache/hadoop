@@ -37,12 +37,18 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 
 public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
+
   static final int FILE_SIZE = 15;
+
   static final int BLOCK_SIZE = 2;
+
   static final int POOL_SIZE = 3;
 
   private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
-  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+
+  private final ExecutorServiceFuturePool futurePool =
+      new ExecutorServiceFuturePool(threadPool);
+
   private final S3AInputStreamStatistics streamStatistics =
       new EmptyS3AStatisticsContext().newInputStreamStatistics();
 
@@ -55,35 +61,42 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
     // Should not throw.
     S3ACachingBlockManager blockManager =
-        new S3ACachingBlockManager(futurePool, reader, blockData, POOL_SIZE, streamStatistics);
+        new S3ACachingBlockManager(futurePool, reader, blockData, POOL_SIZE,
+            streamStatistics);
 
     // Verify it throws correctly.
     intercept(
         NullPointerException.class,
-        () -> new S3ACachingBlockManager(null, reader, blockData, POOL_SIZE, streamStatistics));
+        () -> new S3ACachingBlockManager(null, reader, blockData, POOL_SIZE,
+            streamStatistics));
 
     intercept(
         IllegalArgumentException.class,
         "'reader' must not be null",
-        () -> new S3ACachingBlockManager(futurePool, null, blockData, POOL_SIZE, streamStatistics));
+        () -> new S3ACachingBlockManager(futurePool, null, blockData, POOL_SIZE,
+            streamStatistics));
 
     intercept(
         IllegalArgumentException.class,
         "'blockData' must not be null",
-        () -> new S3ACachingBlockManager(futurePool, reader, null, POOL_SIZE, streamStatistics));
+        () -> new S3ACachingBlockManager(futurePool, reader, null, POOL_SIZE,
+            streamStatistics));
 
     intercept(
         IllegalArgumentException.class,
         "'bufferPoolSize' must be a positive integer",
-        () -> new S3ACachingBlockManager(futurePool, reader, blockData, 0, streamStatistics));
+        () -> new S3ACachingBlockManager(futurePool, reader, blockData, 0,
+            streamStatistics));
 
     intercept(
         IllegalArgumentException.class,
         "'bufferPoolSize' must be a positive integer",
-        () -> new S3ACachingBlockManager(futurePool, reader, blockData, -1, streamStatistics));
+        () -> new S3ACachingBlockManager(futurePool, reader, blockData, -1,
+            streamStatistics));
 
     intercept(NullPointerException.class,
-        () -> new S3ACachingBlockManager(futurePool, reader, blockData, POOL_SIZE, null));
+        () -> new S3ACachingBlockManager(futurePool, reader, blockData,
+            POOL_SIZE, null));
 
     intercept(
         IllegalArgumentException.class,
@@ -109,8 +122,10 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   /**
    * Extends S3ACachingBlockManager so that we can inject asynchronous failures.
    */
-  static class TestABlockManager extends S3ACachingBlockManager {
-    TestABlockManager(
+  private static final class BlockManagerForTesting
+      extends S3ACachingBlockManager {
+
+    BlockManagerForTesting(
         ExecutorServiceFuturePool futurePool,
         S3ARemoteObjectReader reader,
         BlockData blockData,
@@ -124,7 +139,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     private boolean forceNextReadToFail;
 
     @Override
-    public int read(ByteBuffer buffer, long offset, int size) throws IOException {
+    public int read(ByteBuffer buffer, long offset, int size)
+        throws IOException {
       if (forceNextReadToFail) {
         forceNextReadToFail = false;
         throw new RuntimeException("foo");
@@ -138,7 +154,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     private boolean forceNextCachePutToFail;
 
     @Override
-    protected void cachePut(int blockNumber, ByteBuffer buffer) throws IOException {
+    protected void cachePut(int blockNumber, ByteBuffer buffer)
+        throws IOException {
       if (forceNextCachePutToFail) {
         forceNextCachePutToFail = false;
         throw new RuntimeException("bar");
@@ -163,8 +180,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   private void testGetHelper(boolean forceReadFailure) throws Exception {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, true);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    TestABlockManager blockManager =
-        new TestABlockManager(futurePool, reader, blockData, POOL_SIZE, streamStatistics);
+    BlockManagerForTesting blockManager =
+        new BlockManagerForTesting(futurePool, reader, blockData, POOL_SIZE,
+            streamStatistics);
 
     for (int b = 0; b < blockData.getNumBlocks(); b++) {
       // We simulate caching failure for all even numbered blocks.
@@ -210,8 +228,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       throws IOException, InterruptedException {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    TestABlockManager blockManager =
-        new TestABlockManager(futurePool, reader, blockData, POOL_SIZE, streamStatistics);
+    BlockManagerForTesting blockManager =
+        new BlockManagerForTesting(futurePool, reader, blockData, POOL_SIZE,
+            streamStatistics);
     assertInitialState(blockManager);
 
     int expectedNumErrors = 0;
@@ -239,11 +258,13 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
   // @Ignore
   @Test
-  public void testCachingOfPrefetched() throws IOException, InterruptedException {
+  public void testCachingOfPrefetched()
+      throws IOException, InterruptedException {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
     S3ACachingBlockManager blockManager =
-        new S3ACachingBlockManager(futurePool, reader, blockData, POOL_SIZE, streamStatistics);
+        new S3ACachingBlockManager(futurePool, reader, blockData, POOL_SIZE,
+            streamStatistics);
     assertInitialState(blockManager);
 
     for (int b = 0; b < blockData.getNumBlocks(); b++) {
@@ -265,7 +286,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
   // @Ignore
   @Test
-  public void testCachingFailureOfGet() throws IOException, InterruptedException {
+  public void testCachingFailureOfGet()
+      throws IOException, InterruptedException {
     testCachingOfGetHelper(true);
   }
 
@@ -273,8 +295,9 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       throws IOException, InterruptedException {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File);
-    TestABlockManager blockManager =
-        new TestABlockManager(futurePool, reader, blockData, POOL_SIZE, streamStatistics);
+    BlockManagerForTesting blockManager =
+        new BlockManagerForTesting(futurePool, reader, blockData, POOL_SIZE,
+            streamStatistics);
     assertInitialState(blockManager);
 
     int expectedNumErrors = 0;
@@ -309,7 +332,7 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   private void waitForCaching(
       S3ACachingBlockManager blockManager,
       int expectedCount)
-        throws InterruptedException {
+      throws InterruptedException {
     // Wait for async cache operation to be over.
     int numTrys = 0;
     int count;
@@ -320,7 +343,8 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       if (numTrys > 600) {
         String message = String.format(
             "waitForCaching: expected: %d, actual: %d, read errors: %d, caching errors: %d",
-            expectedCount, count, blockManager.numReadErrors(), blockManager.numCachingErrors());
+            expectedCount, count, blockManager.numReadErrors(),
+            blockManager.numCachingErrors());
         throw new IllegalStateException(message);
       }
     }

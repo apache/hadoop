@@ -47,37 +47,37 @@ public class TestFilePosition extends AbstractHadoopTestBase {
     // Verify it throws correctly.
 
     intercept(IllegalArgumentException.class, "'fileSize' must not be negative",
-         () -> new FilePosition(-1, 2));
+        () -> new FilePosition(-1, 2));
 
     intercept(IllegalArgumentException.class,
         "'blockSize' must be a positive integer",
-         () -> new FilePosition(1, 0));
+        () -> new FilePosition(1, 0));
 
     intercept(IllegalArgumentException.class,
         "'blockSize' must be a positive integer",
-         () -> new FilePosition(1, -1));
+        () -> new FilePosition(1, -1));
 
     FilePosition pos = new FilePosition(10, 3);
 
     // Verify that we cannot obtain buffer properties without setting buffer.
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.buffer());
+        () -> pos.buffer());
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.absolute());
+        () -> pos.absolute());
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.isWithinCurrentBuffer(2));
+        () -> pos.isWithinCurrentBuffer(2));
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.blockNumber());
+        () -> pos.blockNumber());
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.isLastBlock());
+        () -> pos.isLastBlock());
 
     intercept(IllegalStateException.class, "'buffer' must not be null",
-         () -> pos.bufferFullyRead());
+        () -> pos.bufferFullyRead());
 
     // Verify that we cannot set invalid buffer parameters.
 

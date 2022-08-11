@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
  * state transitions in a synchronized fashion.
  */
 public final class BufferData {
+
   private static final Logger LOG = LoggerFactory.getLogger(BufferData.class);
 
   public enum State {
@@ -232,7 +233,6 @@ public final class BufferData {
   /**
    * Updates the current state to the specified value.
    * Asserts that the current state is as expected.
-   *
    * @param newState the state to transition to.
    * @param expectedCurrentState the collection of states from which
    *        transition to {@code newState} is allowed.
@@ -240,7 +240,8 @@ public final class BufferData {
    * @throws IllegalArgumentException if newState is null.
    * @throws IllegalArgumentException if expectedCurrentState is null.
    */
-  public synchronized void updateState(State newState, State... expectedCurrentState) {
+  public synchronized void updateState(State newState,
+      State... expectedCurrentState) {
     Validate.checkNotNull(newState, "newState");
     Validate.checkNotNull(expectedCurrentState, "expectedCurrentState");
 
@@ -268,7 +269,8 @@ public final class BufferData {
     }
 
     String message = String.format(
-        "Expected buffer state to be '%s' but found: %s", String.join(" or ", statesStr), this);
+        "Expected buffer state to be '%s' but found: %s",
+        String.join(" or ", statesStr), this);
     throw new IllegalStateException(message);
   }
 

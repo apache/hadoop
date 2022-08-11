@@ -36,6 +36,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
  * A mock s3 file with some fault injection.
  */
 class MockS3ARemoteObject extends S3ARemoteObject {
+
   private byte[] contents;
 
   // If true, throws IOException on open request just once.
@@ -43,6 +44,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
   private boolean throwExceptionOnOpen;
 
   private static final String BUCKET = "bucket";
+
   private static final String KEY = "key";
 
   MockS3ARemoteObject(int size) {
@@ -54,7 +56,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
         S3APrefetchFakes.createReadContext(null, KEY, size, 1, 1),
         S3APrefetchFakes.createObjectAttributes(BUCKET, KEY, size),
         S3APrefetchFakes.createInputStreamCallbacks(BUCKET, KEY),
-        new EmptyS3AStatisticsContext().EMPTY_INPUT_STREAM_STATISTICS,
+        EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS,
         S3APrefetchFakes.createChangeTracker(BUCKET, KEY, size)
     );
 
@@ -70,8 +72,8 @@ class MockS3ARemoteObject extends S3ARemoteObject {
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
-    if (this.throwExceptionOnOpen) {
-      this.throwExceptionOnOpen = false;
+    if (throwExceptionOnOpen) {
+      throwExceptionOnOpen = false;
       throw new IOException("Throwing because throwExceptionOnOpen is true ");
     }
     int bufSize = (int) Math.min(size, size() - offset);

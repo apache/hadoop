@@ -78,11 +78,13 @@ public class TestBlockOperations extends AbstractHadoopTestBase {
     verifySummaryNoArg("close", "CX");
   }
 
-  private void verifySummary(String methodName, String shortName) throws Exception {
+  private void verifySummary(String methodName, String shortName)
+      throws Exception {
     int blockNumber = 42;
     BlockOperations ops = new BlockOperations();
     Method method = ops.getClass().getDeclaredMethod(methodName, int.class);
-    BlockOperations.Operation op = (BlockOperations.Operation) method.invoke(ops, blockNumber);
+    BlockOperations.Operation op =
+        (BlockOperations.Operation) method.invoke(ops, blockNumber);
     ops.end(op);
     String summary = ops.getSummary(false);
     String opSummary = String.format("%s(%d)", shortName, blockNumber);
@@ -90,10 +92,12 @@ public class TestBlockOperations extends AbstractHadoopTestBase {
     assertTrue(summary.startsWith(expectedSummary));
   }
 
-  private void verifySummaryNoArg(String methodName, String shortName) throws Exception {
+  private void verifySummaryNoArg(String methodName, String shortName)
+      throws Exception {
     BlockOperations ops = new BlockOperations();
     Method method = ops.getClass().getDeclaredMethod(methodName);
-    BlockOperations.Operation op = (BlockOperations.Operation) method.invoke(ops);
+    BlockOperations.Operation op =
+        (BlockOperations.Operation) method.invoke(ops);
     ops.end(op);
     String summary = ops.getSummary(false);
     String expectedSummary = String.format("%s;E%s;", shortName, shortName);

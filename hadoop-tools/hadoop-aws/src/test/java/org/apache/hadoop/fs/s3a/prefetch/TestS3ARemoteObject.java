@@ -34,18 +34,25 @@ import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 public class TestS3ARemoteObject extends AbstractHadoopTestBase {
+
   private final ExecutorService threadPool = Executors.newFixedThreadPool(1);
-  private final ExecutorServiceFuturePool futurePool = new ExecutorServiceFuturePool(threadPool);
+
+  private final ExecutorServiceFuturePool futurePool =
+      new ExecutorServiceFuturePool(threadPool);
+
   private final S3AInputStream.InputStreamCallbacks client =
       MockS3ARemoteObject.createClient("bucket");
 
   @Test
   public void testArgChecks() throws Exception {
-    S3AReadOpContext readContext = S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
-    S3ObjectAttributes attrs = S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
+    S3AReadOpContext readContext =
+        S3APrefetchFakes.createReadContext(futurePool, "key", 10, 10, 1);
+    S3ObjectAttributes attrs =
+        S3APrefetchFakes.createObjectAttributes("bucket", "key", 10);
     S3AInputStreamStatistics stats =
         readContext.getS3AStatisticsContext().newInputStreamStatistics();
-    ChangeTracker changeTracker = S3APrefetchFakes.createChangeTracker("bucket", "key", 10);
+    ChangeTracker changeTracker =
+        S3APrefetchFakes.createChangeTracker("bucket", "key", 10);
 
     // Should not throw.
     new S3ARemoteObject(readContext, attrs, client, stats, changeTracker);
@@ -58,17 +65,20 @@ public class TestS3ARemoteObject extends AbstractHadoopTestBase {
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'s3Attributes' must not be null",
-        () -> new S3ARemoteObject(readContext, null, client, stats, changeTracker));
+        () -> new S3ARemoteObject(readContext, null, client, stats,
+            changeTracker));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'client' must not be null",
-        () -> new S3ARemoteObject(readContext, attrs, null, stats, changeTracker));
+        () -> new S3ARemoteObject(readContext, attrs, null, stats,
+            changeTracker));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,
         "'streamStatistics' must not be null",
-        () -> new S3ARemoteObject(readContext, attrs, client, null, changeTracker));
+        () -> new S3ARemoteObject(readContext, attrs, client, null,
+            changeTracker));
 
     ExceptionAsserts.assertThrows(
         IllegalArgumentException.class,

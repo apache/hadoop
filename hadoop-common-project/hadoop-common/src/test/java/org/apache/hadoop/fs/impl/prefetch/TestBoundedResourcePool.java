@@ -38,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 public class TestBoundedResourcePool extends AbstractHadoopTestBase {
 
   static class BufferPool extends BoundedResourcePool<ByteBuffer> {
+
     BufferPool(int size) {
       super(size);
     }
@@ -58,7 +59,7 @@ public class TestBoundedResourcePool extends AbstractHadoopTestBase {
 
     intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",
-         () -> new BufferPool(-1));
+        () -> new BufferPool(-1));
 
     intercept(IllegalArgumentException.class,
         "'size' must be a positive integer",

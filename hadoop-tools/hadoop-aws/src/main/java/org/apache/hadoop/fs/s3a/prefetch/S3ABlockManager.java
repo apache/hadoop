@@ -66,12 +66,13 @@ public class S3ABlockManager extends BlockManager {
    * @return number of bytes read.
    */
   @Override
-  public int read(ByteBuffer buffer, long startOffset, int size) throws IOException {
-    return this.reader.read(buffer, startOffset, size);
+  public int read(ByteBuffer buffer, long startOffset, int size)
+      throws IOException {
+    return reader.read(buffer, startOffset, size);
   }
 
   @Override
   public void close() {
-    this.reader.close();
+    reader.close();
   }
 }

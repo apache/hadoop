@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
  * Provides functionality to read S3 file one block at a time.
  */
 public class S3ARemoteObjectReader implements Closeable {
+
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ARemoteObjectReader.class);
 
@@ -106,25 +107,28 @@ public class S3ARemoteObjectReader implements Closeable {
     this.streamStatistics.readOperationStarted(offset, size);
     Invoker invoker = this.remoteObject.getReadInvoker();
 
-    int invokerResponse = invoker.retry("read", this.remoteObject.getPath(), true,
-        trackDurationOfOperation(streamStatistics, STREAM_READ_REMOTE_BLOCK_READ, () -> {
-          try {
-            this.readOneBlock(buffer, offset, size);
-          } catch (EOFException e) {
-            // the base implementation swallows EOFs.
-            return -1;
-          } catch (SocketTimeoutException e) {
-            throw e;
-          } catch (IOException e) {
-            this.remoteObject.getStatistics().readException();
-            throw e;
-          }
-          return 0;
-        }));
+    int invokerResponse =
+        invoker.retry("read", this.remoteObject.getPath(), true,
+            trackDurationOfOperation(streamStatistics,
+                STREAM_READ_REMOTE_BLOCK_READ, () -> {
+                  try {
+                    this.readOneBlock(buffer, offset, size);
+                  } catch (EOFException e) {
+                    // the base implementation swallows EOFs.
+                    return -1;
+                  } catch (SocketTimeoutException e) {
+                    throw e;
+                  } catch (IOException e) {
+                    this.remoteObject.getStatistics().readException();
+                    throw e;
+                  }
+                  return 0;
+                }));
 
     int numBytesRead = buffer.position();
     buffer.limit(numBytesRead);
-    this.remoteObject.getStatistics().readOperationCompleted(size, numBytesRead);
+    this.remoteObject.getStatistics()
+        .readOperationCompleted(size, numBytesRead);
 
     if (invokerResponse < 0) {
       return invokerResponse;
@@ -133,7 +137,8 @@ public class S3ARemoteObjectReader implements Closeable {
     }
   }
 
-  private void readOneBlock(ByteBuffer buffer, long offset, int size) throws IOException {
+  private void readOneBlock(ByteBuffer buffer, long offset, int size)
+      throws IOException {
     int readSize = Math.min(size, buffer.remaining());
     if (readSize == 0) {
       return;
