@@ -609,4 +609,10 @@ public final class FederationStateStoreFacade {
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
   }
+
+
+  @VisibleForTesting
+  public FederationStateStore getStateStore() {
+    return stateStore;
+  }
 }

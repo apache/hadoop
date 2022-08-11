@@ -43,6 +43,14 @@ public abstract class SubClusterId implements Comparable<SubClusterId> {
     return id;
   }
 
+  @Private
+  @Unstable
+  public static SubClusterId newInstance(Integer subClusterId) {
+    SubClusterId id = Records.newRecord(SubClusterId.class);
+    id.setId(String.valueOf(subClusterId));
+    return id;
+  }
+
   /**
    * Get the string identifier of the <em>subcluster</em> which is unique across
    * the federated cluster. The identifier is static, i.e. preserved across

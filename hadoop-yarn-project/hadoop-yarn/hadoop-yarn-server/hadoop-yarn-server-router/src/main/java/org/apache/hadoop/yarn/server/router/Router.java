@@ -19,12 +19,15 @@
 package org.apache.hadoop.yarn.server.router;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -88,7 +91,8 @@ public class Router extends CompositeService {
   }
 
   protected void doSecureLogin() throws IOException {
-    // TODO YARN-6539 Create SecureLogin inside Router
+    SecurityUtil.login(this.conf, YarnConfiguration.ROUTER_KEYTAB,
+        YarnConfiguration.ROUTER_PRINCIPAL, getHostName(this.conf));
   }
 
   @Override
@@ -194,5 +198,32 @@ public class Router extends CompositeService {
       LOG.error("Error starting Router", t);
       System.exit(-1);
     }
+  }
+
+  @VisibleForTesting
+  public RouterClientRMService getClientRMProxyService() {
+    return clientRMProxyService;
+  }
+
+  @VisibleForTesting
+  public RouterRMAdminService getRmAdminProxyService() {
+    return rmAdminProxyService;
+  }
+
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(YarnConfiguration.ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
   }
 }

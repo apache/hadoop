@@ -258,6 +258,16 @@ Optional:
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
 
+Security:
+
+Kerberos supported in federation.
+
+| Property | Example | Description |
+|:---- |:---- |
+| `yarn.router.keytab.file` |  | The keytab file used by router to login as its service principal. The principal name is configured with 'yarn.router.kerberos.principal'.|
+| `yarn.router.kerberos.principal` | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in setup. |
+| `yarn.router.kerberos.principal.hostname` |  | Optional. The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
+
 ###ON NMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each NodeManager.
