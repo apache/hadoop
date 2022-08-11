@@ -40,7 +40,6 @@ import java.util.List;
 import java.nio.file.AccessDeniedException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -152,8 +151,6 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
     describe("Delete the landsat CSV file and expect it to fail");
     Path csvPath = maybeGetCsvPath();
-    Configuration conf = getConfiguration();
-    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
     S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
         getConfiguration());
     // create a span, expect it to be activated.
@@ -175,8 +172,6 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   public void testSingleObjectDeleteNoPermissionsTranslated() throws Throwable {
     describe("Delete the landsat CSV file and expect it to fail");
     Path csvPath = maybeGetCsvPath();
-    Configuration conf = getConfiguration();
-    conf.set(AWS_REGION, LANDSAT_BUCKET_REGION);
     S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
         getConfiguration());
     AccessDeniedException aex = intercept(AccessDeniedException.class,

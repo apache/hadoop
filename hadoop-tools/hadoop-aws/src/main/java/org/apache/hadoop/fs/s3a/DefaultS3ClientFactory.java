@@ -212,7 +212,7 @@ public class DefaultS3ClientFactory extends Configured
     // build a s3 client with region us-east-2 that can be used to get the region of the bucket as
     // getBucketLocation does not work with us-east-1.
     // See https://github.com/aws/aws-sdk-java/issues/1338.
-    S3Client defaultS3Client = S3Client.builder().region(Region.US_EAST_2).build();
+    S3Client defaultS3Client = S3Client.builder().region(Region.US_WEST_2).build();
 
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
