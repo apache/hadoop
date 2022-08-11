@@ -858,6 +858,16 @@ public class TestIPC {
         assertThat(remoteId.getAddress().getHostName()).isEqualTo(unresolvedAddr.getHostName());
         assertThat(remoteId.hashCode()).isEqualTo(expected);
 
+        // Test: Call should succeed without having to re-resolve
+        InetSocketAddress expectedSocketAddress = remoteId.getAddress();
+        param = new LongWritable(RANDOM.nextLong());
+        client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
+            RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+
+        // Verify: The same instance of the InetSocketAddress has been used to make the second
+        // call
+        assertThat(remoteId.getAddress()).isSameAs(expectedSocketAddress);
+
         // Verify: The hashCode is protected against updates to the host name
         String hostName = InetAddress.getLocalHost().getHostName();
         InetSocketAddress mismatchedHostName = NetUtils.createSocketAddr(
