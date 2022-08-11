@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.audit.S3AAuditConstants;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.s3a.Constants.CANNED_ACL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -64,15 +65,17 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
   @Test
   public void testCreatedObjectsHaveACLs() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    Path dir = methodPath();
-    fs.mkdirs(dir);
-    assertObjectHasLoggingGrant(dir, false);
-    Path path = new Path(dir, "1");
-    ContractTestUtils.touch(fs, path);
-    assertObjectHasLoggingGrant(path, true);
-    Path path2 = new Path(dir, "2");
-    fs.rename(path, path2);
-    assertObjectHasLoggingGrant(path2, true);
+    try (AuditSpan span = span()) {
+      Path dir = methodPath();
+      fs.mkdirs(dir);
+      assertObjectHasLoggingGrant(dir, false);
+      Path path = new Path(dir, "1");
+      ContractTestUtils.touch(fs, path);
+      assertObjectHasLoggingGrant(path, true);
+      Path path2 = new Path(dir, "2");
+      fs.rename(path, path2);
+      assertObjectHasLoggingGrant(path2, true);
+    }
   }
 
   /**
