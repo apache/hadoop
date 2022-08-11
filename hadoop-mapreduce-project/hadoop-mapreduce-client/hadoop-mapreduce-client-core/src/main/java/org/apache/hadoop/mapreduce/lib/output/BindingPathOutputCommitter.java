@@ -65,7 +65,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class BindingPathOutputCommitter extends PathOutputCommitter
-  implements IOStatisticsSource, StreamCapabilities {
+    implements IOStatisticsSource, StreamCapabilities {
 
   /**
    * The classname for use in configurations.
