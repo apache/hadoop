@@ -17,7 +17,7 @@
 This document explains the upcoming work for upgrading S3A to AWS SDK V2.
 This work is tracked in [HADOOP-18073](https://issues.apache.org/jira/browse/HADOOP-18073).
 
-## Why do we want to upgrade?
+## Why the upgrade?
 
 - Moving to SDK V2 will provide performance benefits.
 For example, the [transfer manager for SDKV2](https://aws.amazon.com/blogs/developer/introducing-amazon-s3-transfer-manager-in-the-aws-sdk-for-java-2-x/)
