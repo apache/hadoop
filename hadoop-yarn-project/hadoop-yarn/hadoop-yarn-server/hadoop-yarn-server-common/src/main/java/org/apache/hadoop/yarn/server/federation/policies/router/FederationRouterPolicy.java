@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import java.util.List;
 
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationPolicy;
@@ -49,4 +50,16 @@ public interface FederationRouterPolicy extends ConfigurableFederationPolicy {
   SubClusterId getHomeSubcluster(
       ApplicationSubmissionContext appSubmissionContext,
       List<SubClusterId> blackListSubClusters) throws YarnException;
+
+  /**
+   * Determines the sub-cluster where a ReservationSubmissionRequest should be
+   * sent to.
+   *
+   * @param request the original request
+   * @return a mapping of sub-clusters and the requests
+   *
+   * @throws YarnException if the policy fails to choose a sub-cluster
+   */
+  SubClusterId getReservationHomeSubcluster(
+      ReservationSubmissionRequest request) throws YarnException;
 }

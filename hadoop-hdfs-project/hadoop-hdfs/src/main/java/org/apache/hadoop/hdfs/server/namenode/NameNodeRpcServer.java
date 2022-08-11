@@ -810,10 +810,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
-    if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.create: file "
-          +src+" for "+clientName+" at "+clientMachine);
-    }
+    stateChangeLog.debug("*DIR* NameNode.create: file {} for {} at {}.",
+        src, clientName, clientMachine);
     if (!checkPathLength(src)) {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -845,10 +843,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       EnumSetWritable<CreateFlag> flag) throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
-    if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.append: file "
-          +src+" for "+clientName+" at "+clientMachine);
-    }
+    stateChangeLog.debug("*DIR* NameNode.append: file {} for {} at {}.",
+        src, clientName, clientMachine);
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntryWithPayload cacheEntry = getCacheEntryWithPayload(null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -894,8 +890,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, " +
-            "policyName: {}", src, policyName);
+    stateChangeLog.debug("*DIR* NameNode.setStoragePolicy for path: {}, policyName: {}",
+        src, policyName);
     namesystem.setStoragePolicy(src, policyName);
   }
 
@@ -949,13 +945,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       ) throws IOException {
     checkNNStartup();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("getAdditionalDatanode: src=" + src
-          + ", fileId=" + fileId
-          + ", blk=" + blk
-          + ", existings=" + Arrays.asList(existings)
-          + ", excludes=" + Arrays.asList(excludes)
-          + ", numAdditionalNodes=" + numAdditionalNodes
-          + ", clientName=" + clientName);
+      LOG.debug("getAdditionalDatanode: src={}, fileId={}, blk={}, existings={}, excludes={}"
+          + ", numAdditionalNodes={}, clientName={}", src, fileId, blk, Arrays.asList(existings),
+          Arrays.asList(excludes), numAdditionalNodes, clientName);
     }
 
     metrics.incrGetAdditionalDatanodeOps();
@@ -1053,9 +1045,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean rename(String src, String dst) throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
-    }
+    stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1081,8 +1071,10 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     checkNNStartup();
-    stateChangeLog.debug("*DIR* NameNode.concat: src path {} to" +
-        " target path {}", Arrays.toString(src), trg);
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.concat: src path {} to target path {}",
+          Arrays.toString(src), trg);
+    }
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = getCacheEntry();
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -1102,9 +1094,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void rename2(String src, String dst, Options.Rename... options)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
-    }
+    stateChangeLog.debug("*DIR* NameNode.rename: {} to {}.", src, dst);
     if (!checkPathLength(dst)) {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1128,8 +1118,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
     checkNNStartup();
-    stateChangeLog
-        .debug("*DIR* NameNode.truncate: " + src + " to " + newLength);
+    stateChangeLog.debug("*DIR* NameNode.truncate: {} to {}", src, newLength);
     String clientMachine = getClientMachine();
     try {
       return namesystem.truncate(
@@ -1142,10 +1131,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean delete(String src, boolean recursive) throws IOException {
     checkNNStartup();
-    if (stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
-          + ", recursive=" + recursive);
-    }
+    stateChangeLog.debug("*DIR* Namenode.delete: src={}, recursive={}.", src, recursive);
     namesystem.checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = getCacheEntry();
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -1178,9 +1164,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
     checkNNStartup();
-    if(stateChangeLog.isDebugEnabled()) {
-      stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
-    }
+    stateChangeLog.debug("*DIR* NameNode.mkdirs: {}.", src);
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
@@ -1649,10 +1633,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         final BlockReportContext context) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
-    if(blockStateChangeLog.isDebugEnabled()) {
-      blockStateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-           + "from " + nodeReg + ", reports.length=" + reports.length);
-    }
+    blockStateChangeLog.debug("*BLOCK* NameNode.blockReport: from {}, reports.length={}.",
+        nodeReg, reports.length);
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
     try {
@@ -1695,10 +1677,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, List<Long> blockIds) throws IOException {
     checkNNStartup();
     verifyRequest(nodeReg);
-    if (blockStateChangeLog.isDebugEnabled()) {
-      blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
-           + "from " + nodeReg + " " + blockIds.size() + " blocks");
-    }
+    blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: from {} {} blocks",
+        nodeReg, blockIds.size());
     namesystem.getCacheManager().processCacheReport(nodeReg, blockIds);
     return null;
   }
@@ -1710,11 +1690,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     verifyRequest(nodeReg);
     metrics.incrBlockReceivedAndDeletedOps();
-    if(blockStateChangeLog.isDebugEnabled()) {
-      blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
-          +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
-          +" blocks.");
-    }
+    blockStateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: from {} {} blocks.",
+        nodeReg, receivedAndDeletedBlocks.length);
     final BlockManager bm = namesystem.getBlockManager();
     for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
       bm.enqueueBlockOp(new Runnable() {
@@ -1842,9 +1819,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // GetUserMappingsProtocol
   public String[] getGroupsForUser(String user) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting groups for user " + user);
-    }
+    LOG.debug("Getting groups for user {}", user);
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
 
@@ -2022,9 +1997,9 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkNNStartup();
-    LOG.debug("*DIR* NameNode.renameSnapshot: Snapshot Path {}, " +
-        "snapshotOldName {}, snapshotNewName {}", snapshotRoot,
-        snapshotOldName, snapshotNewName);
+    LOG.debug(
+        "*DIR* NameNode.renameSnapshot: Snapshot Path {},snapshotOldName {}, snapshotNewName {}",
+        snapshotRoot, snapshotOldName, snapshotNewName);
     if (snapshotNewName == null || snapshotNewName.isEmpty()) {
       throw new IOException("The new snapshot name is null or empty.");
     }
@@ -2318,8 +2293,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     try {
       if (ecPolicyName == null) {
         ecPolicyName = defaultECPolicyName;
-        LOG.debug("No policy name is specified, " +
-            "set the default policy name instead");
+        LOG.debug("No policy name is specified, set the default policy name instead");
       }
       LOG.debug("Set erasure coding policy {} on {}", ecPolicyName, src);
       namesystem.setErasureCodingPolicy(src, ecPolicyName, cacheEntry != null);
