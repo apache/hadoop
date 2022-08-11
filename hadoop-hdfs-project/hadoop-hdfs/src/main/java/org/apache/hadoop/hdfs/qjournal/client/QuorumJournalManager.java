@@ -134,6 +134,7 @@ public class QuorumJournalManager implements JournalManager {
 
   }
 
+
   QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo, String nameServiceId,
       AsyncLogger.Factory loggerFactory) throws IOException {

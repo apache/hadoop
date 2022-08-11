@@ -37,7 +37,10 @@ import static org.mockito.ArgumentMatchers.eq;
 /**
  * One Util class to mock QJuournals for some UTs not in this package.
  */
-public class SpyQJournalUtil {
+public final class SpyQJournalUtil {
+
+  private SpyQJournalUtil() {
+  }
 
   /**
    * Mock a QuorumJournalManager with input uri, nsInfo and namServiceId.
@@ -90,15 +93,15 @@ public class SpyQJournalUtil {
     ListeningExecutorService service = MoreExecutors.listeningDecorator(
         Executors.newSingleThreadExecutor());
     Mockito.doAnswer(invocation -> service.submit(() -> {
-          Thread.sleep(sleepTime);
-          ListenableFuture<?> future = null;
-          try {
-            future = (ListenableFuture<?>) invocation.callRealMethod();
-          } catch (Throwable e) {
-            fail("getJournaledEdits failed " + e.getMessage());
-          }
-          return future.get();
-        })).when(spies.get(journalIndex))
+      Thread.sleep(sleepTime);
+      ListenableFuture<?> future = null;
+      try {
+        future = (ListenableFuture<?>) invocation.callRealMethod();
+      } catch (Throwable e) {
+        fail("getJournaledEdits failed " + e.getMessage());
+      }
+      return future.get();
+    })).when(spies.get(journalIndex))
         .getJournaledEdits(startTxid, QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
   }
 }
