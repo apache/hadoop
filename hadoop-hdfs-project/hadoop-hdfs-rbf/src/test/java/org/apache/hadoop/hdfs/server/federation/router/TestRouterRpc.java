@@ -1558,9 +1558,9 @@ public class TestRouterRpc {
 
     try {
       FsPermission permission = new FsPermission("777");
+      RouterRpcServer rpcServer = router.getRouter().getRpcServer();
       LambdaTestUtils.intercept(NoLocationException.class,
-          () -> router.getRouter().getRpcServer()
-              .mkdirs("/mnt/folder0/folder1", permission, true));
+          () -> rpcServer.mkdirs("/mnt/folder0/folder1", permission, true));
     } finally {
       activeNamenodeResolver.clearDisableNamespaces();
     }

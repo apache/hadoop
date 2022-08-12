@@ -1765,7 +1765,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         }
       }
       if (locs.isEmpty()) {
-        throw new NoLocationException(path, this.subclusterResolver.getClass().getSimpleName());
+        throw new NoLocationException(path, this.subclusterResolver.getClass());
       }
       return locs;
     } catch (IOException ioe) {
