@@ -18,11 +18,12 @@
 #ifndef BLOCK_READER_H_
 #define BLOCK_READER_H_
 
+#include "datatransfer.pb.h"
+
 #include "hdfspp/status.h"
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
 #include "common/new_delete.h"
-#include "datatransfer.pb.h"
 #include "connection/datanodeconnection.h"
 
 #include <memory>

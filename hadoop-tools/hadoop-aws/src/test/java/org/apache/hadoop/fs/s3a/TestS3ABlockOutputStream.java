@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +68,11 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
             .withProgress(progressable)
             .withPutTracker(putTracker)
             .withWriteOperations(oHelper)
-            .withPutOptions(PutObjectOptions.keepingDirs());
+            .withPutOptions(PutObjectOptions.keepingDirs())
+            .withIOStatisticsAggregator(
+                IOStatisticsContext.getCurrentIOStatisticsContext()
+                    .getAggregator());
+
     return builder;
   }
 

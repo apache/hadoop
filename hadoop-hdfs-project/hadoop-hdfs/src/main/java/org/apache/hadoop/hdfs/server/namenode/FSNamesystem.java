@@ -112,6 +112,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerFaultInjector;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -1389,6 +1390,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         editLog.initJournalsForWrite();
         // May need to recover
         editLog.recoverUnclosedStreams();
+
+        BlockManagerFaultInjector.getInstance().mockJNStreams();
         
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
@@ -1407,8 +1410,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("NameNode metadata after re-processing " +
-              "replication and invalidation queues during failover:\n" +
+          LOG.debug("NameNode metadata after re-processing {}"
+              + "replication and invalidation queues during failover:\n",
               metaSaveAsString());
         }
 
@@ -2675,8 +2678,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     for (CryptoProtocolVersion c : supportedVersions) {
       if (c.equals(CryptoProtocolVersion.UNKNOWN)) {
-        LOG.debug("Ignoring unknown CryptoProtocolVersion provided by " +
-            "client: {}", c.getUnknownValue());
+        LOG.debug("Ignoring unknown CryptoProtocolVersion provided by client: {}",
+            c.getUnknownValue());
         continue;
       }
       if (c.equals(required)) {
@@ -2987,8 +2990,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       requireEffectiveLayoutVersionForFeature(Feature.APPEND_NEW_BLOCK);
     }
 
-    NameNode.stateChangeLog.debug(
-        "DIR* NameSystem.appendFile: src={}, holder={}, clientMachine={}",
+    NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: src={}, holder={}, clientMachine={}",
         srcArg, holder, clientMachine);
     try {
       boolean skipSync = false;
@@ -3045,8 +3047,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeInfo[] excludedNodes, String[] favoredNodes,
       EnumSet<AddBlockFlag> flags) throws IOException {
     final String operationName = "getAdditionalBlock";
-    NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {}  inodeId {}" +
-        " for {}", src, fileId, clientName);
+    NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {}  inodeId {} for {}",
+        src, fileId, clientName);
 
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     FSDirWriteFileOp.ValidateAddBlockResult r;
@@ -3148,8 +3150,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
-    NameNode.stateChangeLog.debug(
-        "BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
+    NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(null);
@@ -3158,8 +3159,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
       FSDirWriteFileOp.abandonBlock(dir, pc, b, fileId, src, holder);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} is " +
-          "removed from pendingCreates", b);
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.abandonBlock: {} is removed from pendingCreates", b);
     } finally {
       writeUnlock("abandonBlock");
     }
@@ -4016,9 +4017,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if ((!iFile.isUnderConstruction() || storedBlock.isComplete()) &&
           iFile.getLastBlock().isComplete()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unexpected block (={}) since the file (={}) is not "
-                + "under construction", oldBlock, iFile.getLocalName());
+          LOG.debug("Unexpected block (={}) since the file (={}) is not under construction",
+              oldBlock, iFile.getLocalName());
         }
+
         return;
       }
 
@@ -4478,8 +4480,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert hasWriteLock();
     // file is closed
     getEditLog().logCloseFile(path, file);
-    NameNode.stateChangeLog.debug("closeFile: {} with {} blocks is persisted" +
-        " to the file system", path, file.getBlocks().length);
+    NameNode.stateChangeLog.debug("closeFile: {} with {} blocks is persisted to the file system",
+        path, file.getBlocks().length);
   }
 
   /**
@@ -6107,9 +6109,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (cookieTab[0] == null) {
         cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("there are no corrupt file blocks.");
-      }
+      LOG.debug("there are no corrupt file blocks.");
       return corruptFiles;
     }
 

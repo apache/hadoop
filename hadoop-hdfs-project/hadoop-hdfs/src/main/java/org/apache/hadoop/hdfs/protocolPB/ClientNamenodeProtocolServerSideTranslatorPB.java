@@ -818,7 +818,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public RenewLeaseResponseProto renewLease(RpcController controller,
       RenewLeaseRequestProto req) throws ServiceException {
     try {
-      server.renewLease(req.getClientName());
+      server.renewLease(req.getClientName(), req.getNamespacesList());
       return VOID_RENEWLEASE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

@@ -25,11 +25,15 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.security.auth.login.AppConfigurationEntry;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 import org.junit.After;
@@ -153,5 +157,52 @@ public class TestZKCuratorManager {
     txn.commit();
     assertFalse(curator.exists(node2));
     assertTrue(Arrays.equals(setData, curator.getData(node1)));
+  }
+
+  @Test
+  public void testJaasConfiguration() throws Exception {
+    // Validate that HadoopZooKeeperFactory will set ZKConfig with given principals
+    ZKCuratorManager.HadoopZookeeperFactory factory1 =
+        new ZKCuratorManager.HadoopZookeeperFactory("foo1", "bar1", "bar1.keytab");
+    ZooKeeper zk1 = factory1.newZooKeeper("connString", 1000, null, false);
+    validateJaasConfiguration(ZKCuratorManager.HadoopZookeeperFactory.JAAS_CLIENT_ENTRY,
+        "bar1", "bar1.keytab", zk1);
+
+    // Validate that a new HadoopZooKeeperFactory will use the new principals
+    ZKCuratorManager.HadoopZookeeperFactory factory2 =
+        new ZKCuratorManager.HadoopZookeeperFactory("foo2", "bar2", "bar2.keytab");
+    ZooKeeper zk2 = factory2.newZooKeeper("connString", 1000, null, false);
+    validateJaasConfiguration(ZKCuratorManager.HadoopZookeeperFactory.JAAS_CLIENT_ENTRY,
+        "bar2", "bar2.keytab", zk2);
+
+    try {
+      // Setting global configuration
+      String testClientConfig = "TestClientConfig";
+      JaasConfiguration jconf = new JaasConfiguration(testClientConfig, "test", "test.keytab");
+      javax.security.auth.login.Configuration.setConfiguration(jconf);
+      System.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY, testClientConfig);
+
+      // Validate that a new HadoopZooKeeperFactory will use the global principals
+      ZKCuratorManager.HadoopZookeeperFactory factory3 =
+          new ZKCuratorManager.HadoopZookeeperFactory("foo3", "bar3", "bar3.keytab");
+      ZooKeeper zk3 = factory3.newZooKeeper("connString", 1000, null, false);
+      validateJaasConfiguration(testClientConfig, "test", "test.keytab", zk3);
+    } finally {
+      // Remove global configuration
+      System.clearProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY);
+    }
+  }
+
+  private void validateJaasConfiguration(String clientConfig, String principal, String keytab,
+      ZooKeeper zk) {
+    assertEquals("Validate that expected clientConfig is set in ZK config", clientConfig,
+        zk.getClientConfig().getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY));
+
+    AppConfigurationEntry[] entries = javax.security.auth.login.Configuration.getConfiguration()
+        .getAppConfigurationEntry(clientConfig);
+    assertEquals("Validate that expected principal is set in Jaas config", principal,
+        entries[0].getOptions().get("principal"));
+    assertEquals("Validate that expected keytab is set in Jaas config", keytab,
+        entries[0].getOptions().get("keyTab"));
   }
 }

@@ -150,8 +150,8 @@ public class MapTask extends Task {
    * @param <V>
    */
   class TrackedRecordReader<K, V> 
-      implements RecordReader<K,V> {
-    private RecordReader<K,V> rawIn;
+      implements RecordReader<K, V> {
+    private RecordReader<K, V> rawIn;
     private Counters.Counter fileInputByteCounter;
     private Counters.Counter inputRecordCounter;
     private TaskReporter reporter;
@@ -240,7 +240,7 @@ public class MapTask extends Task {
    * This class skips the records based on the failed ranges from previous 
    * attempts.
    */
-  class SkippingRecordReader<K, V> extends TrackedRecordReader<K,V> {
+  class SkippingRecordReader<K, V> extends TrackedRecordReader<K, V> {
     private SkipRangeIterator skipIt;
     private SequenceFile.Writer skipWriter;
     private boolean toWriteSkipRecs;
@@ -930,7 +930,7 @@ public class MapTask extends Task {
     // spill accounting
     private int maxRec;
     private int softLimit;
-    boolean spillInProgress;;
+    boolean spillInProgress;
     int bufferRemaining;
     volatile Throwable sortSpillException = null;
 

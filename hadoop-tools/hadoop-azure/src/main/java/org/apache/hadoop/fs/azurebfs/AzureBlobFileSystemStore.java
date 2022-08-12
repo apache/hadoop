@@ -62,7 +62,6 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Listenable
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -97,6 +96,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
@@ -132,6 +132,8 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
@@ -919,18 +921,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("rename", "renamePath")) {
-        final Pair<AbfsRestOperation, Boolean> pair =
+        final AbfsClientRenameResult abfsClientRenameResult =
             client.renamePath(sourceRelativePath, destinationRelativePath,
-                continuation, tracingContext, sourceEtag);
+                continuation, tracingContext, sourceEtag, false);
 
-        AbfsRestOperation op = pair.getLeft();
+        AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
         countAggregate++;
         shouldContinue = continuation != null && !continuation.isEmpty();
         // update the recovery flag.
-        recovered |= pair.getRight();
+        recovered |= abfsClientRenameResult.isRenameRecovered();
+        populateRenameRecoveryStatistics(abfsClientRenameResult);
         if (!shouldContinue) {
           perfInfo.registerAggregates(startAggregate, countAggregate);
         }
@@ -1905,7 +1908,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   }
 
   @VisibleForTesting
-  AbfsClient getClient() {
+  public AbfsClient getClient() {
     return this.client;
   }
 
@@ -1972,5 +1975,20 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
     }
     return etag;
+  }
+
+  /**
+   * Increment rename recovery based counters in IOStatistics.
+   *
+   * @param abfsClientRenameResult Result of an ABFS rename operation.
+   */
+  private void populateRenameRecoveryStatistics(
+      AbfsClientRenameResult abfsClientRenameResult) {
+    if (abfsClientRenameResult.isRenameRecovered()) {
+      abfsCounters.incrementCounter(RENAME_RECOVERY, 1);
+    }
+    if (abfsClientRenameResult.isIncompleteMetadataState()) {
+      abfsCounters.incrementCounter(METADATA_INCOMPLETE_RENAME_FAILURES, 1);
+    }
   }
 }

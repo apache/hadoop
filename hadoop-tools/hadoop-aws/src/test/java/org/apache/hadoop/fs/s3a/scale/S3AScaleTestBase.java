@@ -19,18 +19,13 @@
 package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.InputStream;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupGaugeStatistic;
@@ -152,34 +147,6 @@ public class S3AScaleTestBase extends AbstractS3ATestBase {
   @Override
   protected int getTestTimeoutMillis() {
     return getTestTimeoutSeconds() * 1000;
-  }
-
-  /**
-   * Get the input stream statistics of an input stream.
-   * Raises an exception if the inner stream is not an S3A input stream
-   * @param in wrapper
-   * @return the statistics for the inner stream
-   */
-  protected S3AInputStreamStatistics getInputStreamStatistics(
-      FSDataInputStream in) {
-    return getS3AInputStream(in).getS3AStreamStatistics();
-  }
-
-  /**
-   * Get the inner stream of an input stream.
-   * Raises an exception if the inner stream is not an S3A input stream
-   * @param in wrapper
-   * @return the inner stream
-   * @throws AssertionError if the inner stream is of the wrong type
-   */
-  protected S3AInputStream getS3AInputStream(
-      FSDataInputStream in) {
-    InputStream inner = in.getWrappedStream();
-    if (inner instanceof S3AInputStream) {
-      return (S3AInputStream) inner;
-    } else {
-      throw new AssertionError("Not an S3AInputStream: " + inner);
-    }
   }
 
   /**

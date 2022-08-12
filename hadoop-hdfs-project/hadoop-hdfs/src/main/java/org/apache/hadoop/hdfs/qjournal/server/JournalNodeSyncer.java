@@ -39,7 +39,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +50,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -273,7 +273,7 @@ public class JournalNodeSyncer {
       }
 
       if (uriStr == null || uriStr.isEmpty()) {
-        HashSet<String> sharedEditsUri = Sets.newHashSet();
+        HashSet<String> sharedEditsUri = new HashSet<>();
         if (nameServiceId != null) {
           Collection<String> nnIds = DFSUtilClient.getNameNodeIds(
               conf, nameServiceId);
@@ -315,7 +315,7 @@ public class JournalNodeSyncer {
       IOException {
     URI uri = new URI(uriStr);
     return Util.getLoggerAddresses(uri,
-        Sets.newHashSet(jn.getBoundIpcAddress()), conf);
+        new HashSet<>(Arrays.asList(jn.getBoundIpcAddress())), conf);
   }
 
   private void getMissingLogSegments(List<RemoteEditLog> thisJournalEditLogs,

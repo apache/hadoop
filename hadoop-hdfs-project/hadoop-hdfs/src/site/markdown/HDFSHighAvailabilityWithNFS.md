@@ -192,8 +192,8 @@ The order in which you set these configurations is unimportant, but the values y
     terminated, before transitioning another NameNode to the Active state. In
     order to do this, you must configure at least one **fencing method.** These are
     configured as a carriage-return-separated list, which will be attempted in order
-    until one indicates that fencing has succeeded. There are two methods which
-    ship with Hadoop: *shell* and *sshfence*. For information on implementing
+    until one indicates that fencing has succeeded. There are three methods which
+    ship with Hadoop: *shell*, *sshfence* and *powershell*. For information on implementing
     your own custom fencing method, see the *org.apache.hadoop.ha.NodeFencer* class.
 
     - - -
@@ -283,7 +283,27 @@ The order in which you set these configurations is unimportant, but the values y
     a subshell to kill its parent in some number of seconds).
 
     - - -
-  
+
+    **powershell** - use PowerShell to remotely connect to a machine and kill
+    the required process
+
+    The *powershell* fencing method uses PowerShell command. It may be
+    configured like so:
+
+            <property>
+              <name>dfs.ha.fencing.methods</name>
+              <value>powershell(NameNode)</value>
+            </property>
+
+    The argument passed to this fencer should be a unique string in the "CommandLine"
+    attribute for the "java.exe" process. For example, the full path for the Namenode:
+    "org.apache.hadoop.hdfs.server.namenode.NameNode".
+    The administrator can also shorten the name to "Namenode" if it's unique.
+
+    **Note:** This only works in Windows.
+
+    - - -
+
 *   **fs.defaultFS** - the default path prefix used by the Hadoop FS client when none is given
 
     Optionally, you may now configure the default path for Hadoop clients to use

@@ -91,7 +91,7 @@ public abstract class BaseRouterRMAdminTest {
     String mockPassThroughInterceptorClass =
         PassThroughRMAdminRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
+    // Create a request interceptor pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     this.conf.set(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,

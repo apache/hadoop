@@ -96,6 +96,20 @@ public interface S3AInputStreamStatistics extends AutoCloseable,
    */
   void readOperationCompleted(int requested, int actual);
 
+  /**
+   * A vectored read operation has started..
+   * @param numIncomingRanges number of input ranges.
+   * @param numCombinedRanges number of combined ranges.
+   */
+  void readVectoredOperationStarted(int numIncomingRanges,
+                                    int numCombinedRanges);
+
+  /**
+   * Number of bytes discarded during vectored read.
+   * @param discarded discarded bytes during vectored read.
+   */
+  void readVectoredBytesDiscarded(int discarded);
+
   @Override
   void close();
 

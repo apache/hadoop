@@ -61,7 +61,7 @@ public class YarnServiceClient {
     try {
       asc = new ApiServiceClient(conf);
     } catch (Exception e) {
-      LOG.error("Error initialize YARN Service Client: {}", e);
+      LOG.error("Error initialize YARN Service Client.", e);
     }
   }
 
