@@ -362,7 +362,7 @@ public class AbfsRestOperation {
       hostname = httpOperation.getHost();
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      abfsBackoffMetrics.getNumberOfRequestsFailed().getAndIncrement();
+      abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
