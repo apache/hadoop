@@ -112,7 +112,8 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB).withReadFooterMetrics(new AbfsReadFooterMetrics()),
+        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB).
+            withReadFooterMetrics(new AbfsReadFooterMetrics()),
         "eTag",
         getTestTracingContext(null, false));
 
