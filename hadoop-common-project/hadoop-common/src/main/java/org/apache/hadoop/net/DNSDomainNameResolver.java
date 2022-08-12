@@ -51,7 +51,7 @@ public class DNSDomainNameResolver implements DomainNameResolver {
     // Protect against the Java behaviour of returning the IP address as a string from a cache
     // instead of performing a reverse lookup.
     if (host.equals(address.getHostAddress())) {
-      LOG.debug("IP address returned for FQDN detected");
+      LOG.debug("IP address returned for FQDN detected: {}", address.getHostAddress());
       try {
         return DNS.reverseDns(address, null);
       } catch (NamingException lookupFailure) {
