@@ -111,12 +111,14 @@ IF OBJECT_ID ( '[sp_getApplicationsHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationsHomeSubCluster]
+    @homeSubCluster VARCHAR(256)
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
         SELECT [applicationId], [homeSubCluster], [createTime]
         FROM [dbo].[applicationsHomeSubCluster]
+        WHERE @homeSubCluster = '' or [homeSubCluster] = @homeSubCluster
     END TRY
 
     BEGIN CATCH

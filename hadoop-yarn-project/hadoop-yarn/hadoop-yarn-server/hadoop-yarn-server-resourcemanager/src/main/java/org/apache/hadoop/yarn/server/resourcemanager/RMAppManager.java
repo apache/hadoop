@@ -28,9 +28,11 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreRemoveAppHomeSubClusterEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -359,6 +361,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + " from memory: ");
       rmContext.getRMApps().remove(removeId);
       this.applicationACLsManager.removeApplication(removeId);
+      // Remove application from federation state store
+      if (HAUtil.isFederationEnabled(conf)) {
+        rmContext.getFederationStateStoreService().getEventHandler().handle(
+            new FederationStateStoreRemoveAppHomeSubClusterEvent(removeId));
+      }
     }
   }
 

@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterIdProto;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
 /**
  * Protocol buffer based implementation of
@@ -37,6 +40,7 @@ public class GetApplicationsHomeSubClusterRequestPBImpl
       GetApplicationsHomeSubClusterRequestProto.getDefaultInstance();
   private GetApplicationsHomeSubClusterRequestProto.Builder builder = null;
   private boolean viaProto = false;
+  private SubClusterId subClusterId = null;
 
   public GetApplicationsHomeSubClusterRequestPBImpl() {
     builder = GetApplicationsHomeSubClusterRequestProto.newBuilder();
@@ -49,9 +53,32 @@ public class GetApplicationsHomeSubClusterRequestPBImpl
   }
 
   public GetApplicationsHomeSubClusterRequestProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  private void mergeLocalToProto() {
+    if (viaProto) {
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
+
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = GetApplicationsHomeSubClusterRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  private void mergeLocalToBuilder() {
+    if (this.subClusterId != null) {
+      builder.setSubClusterId(convertToProtoFormat(this.subClusterId));
+    }
   }
 
   @Override
@@ -73,6 +100,40 @@ public class GetApplicationsHomeSubClusterRequestPBImpl
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  @Override
+  public SubClusterId getSubClusterId() {
+    GetApplicationsHomeSubClusterRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
+    if (subClusterId != null) {
+      return subClusterId;
+    }
+    if (!p.hasSubClusterId()) {
+      return null;
+    }
+    this.subClusterId = convertFromProtoFormat(p.getSubClusterId());
+
+    return this.subClusterId;
+  }
+
+  @Override
+  public void setSubClusterId(SubClusterId subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    this.subClusterId = subClusterId;
+  }
+
+  private SubClusterId convertFromProtoFormat(
+      SubClusterIdProto subClusterIdProto) {
+    return new SubClusterIdPBImpl(subClusterIdProto);
+  }
+
+  private SubClusterIdProto convertToProtoFormat(SubClusterId appId) {
+    return ((SubClusterIdPBImpl) appId).getProto();
   }
 
 }

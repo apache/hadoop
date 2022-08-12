@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreEventType;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -917,6 +919,8 @@ public class ResourceManager extends CompositeService
         }
         federationStateStoreService = createFederationStateStoreService();
         addIfService(federationStateStoreService);
+        rmContext.getActiveServiceContext()
+            .setFederationStateStoreService(federationStateStoreService);
         LOG.info("Initialized Federation membership.");
       }
 
@@ -1009,6 +1013,11 @@ public class ResourceManager extends CompositeService
           rmContext.setEpoch(epoch);
           LOG.info("Epoch set for Federation: " + epoch);
         }
+      }
+      if (HAUtil.isFederationEnabled(conf)) {
+        federationStateStoreService.getEventHandler().handle(
+            new FederationStateStoreEvent(
+                FederationStateStoreEventType.CHECK_APPS_HOME_SUBCLUSTER));
       }
 
       super.serviceStart();
