@@ -79,9 +79,6 @@ public class TracingMetricContext extends TracingContext{
       header = "";
       break;
     }
-    if (listener != null) { //for testing
-      listener.callTracingHeaderValidator(header, tracingHeaderFormat);
-    }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
   }
 }
