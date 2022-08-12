@@ -1,3 +1,19 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
 package org.apache.hadoop.hdfs.qjournal.server;
 
 import org.apache.hadoop.conf.Configuration;
@@ -21,29 +37,29 @@ import static org.mockito.Mockito.when;
 
 public class TestGetJournalEditServlet {
 
-  private final static Configuration conf = new HdfsConfiguration();
+  private final static Configuration CONF = new HdfsConfiguration();
 
-  private final static GetJournalEditServlet servlet = new GetJournalEditServlet();
+  private final static GetJournalEditServlet SERVLET = new GetJournalEditServlet();
 
   @BeforeClass
   public static void setUp() throws ServletException {
     LogManager.getLogger(GetJournalEditServlet.class).setLevel(Level.DEBUG);
 
     // Configure Hadoop
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
-    conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
+    CONF.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
+    CONF.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1/$2@$0]([nsdj]n/.*@REALM\\.TLD)s/.*/hdfs/\nDEFAULT");
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, "nn/_HOST@REALM.TLD");
+    CONF.set(DFSConfigKeys.DFS_NAMESERVICES, "ns");
+    CONF.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, "nn/_HOST@REALM.TLD");
 
     // Configure Kerberos UGI
-    UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation.setConfiguration(CONF);
     UserGroupInformation.setLoginUser(UserGroupInformation.createRemoteUser(
         "jn/somehost@REALM.TLD"));
 
     // Initialize the servlet
     ServletConfig config = mock(ServletConfig.class);
-    servlet.init(config);
+    SERVLET.init(config);
   }
 
   /**
@@ -55,7 +71,7 @@ public class TestGetJournalEditServlet {
   public void testWithoutUser() throws IOException {
     // Test: Make a request without specifying a user
     HttpServletRequest request = mock(HttpServletRequest.class);
-    boolean isValid = servlet.isValidRequestor(request, conf);
+    boolean isValid = SERVLET.isValidRequestor(request, CONF);
 
     // Verify: The request is invalid
     assertThat(isValid).isFalse();
@@ -71,7 +87,7 @@ public class TestGetJournalEditServlet {
     // Test: Make a request from a namenode
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getParameter(UserParam.NAME)).thenReturn("nn/localhost@REALM.TLD");
-    boolean isValid = servlet.isValidRequestor(request, conf);
+    boolean isValid = SERVLET.isValidRequestor(request, CONF);
 
     assertThat(isValid).isTrue();
   }
@@ -86,7 +102,7 @@ public class TestGetJournalEditServlet {
     // Test: Make a request from a namenode
     HttpServletRequest request = mock(HttpServletRequest.class);
     when(request.getParameter(UserParam.NAME)).thenReturn("jn/localhost@REALM.TLD");
-    boolean isValid = servlet.isValidRequestor(request, conf);
+    boolean isValid = SERVLET.isValidRequestor(request, CONF);
 
     assertThat(isValid).isTrue();
   }
