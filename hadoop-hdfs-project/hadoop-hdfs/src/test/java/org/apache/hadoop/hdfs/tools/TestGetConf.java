@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -487,6 +488,7 @@ public class TestGetConf {
    * Test handling of unresolvable journal node hosts.  They are still configured assuming that
    * they will be resolvable in the future.
   */
+  @Test(expected = UnknownHostException.class, timeout = 10000)
   public void testUnknownJournalNodeHost()
       throws URISyntaxException, IOException {
     String journalsBaseUri = "qjournal://jn1:8020;jn2:8020;jn3:8020";
