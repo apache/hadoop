@@ -21,24 +21,30 @@ import org.junit.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assume.assumeFalse;
 
 
-public class TestInetAddressUtils {
+public class TestDNSDomainNameResolver {
+
+  static DNSDomainNameResolver DNR = new DNSDomainNameResolver();
 
   @Test
-  public void testGetCanonicalHostName() throws UnknownHostException {
+  public void testGetHostNameByIP() throws UnknownHostException {
     InetAddress localhost = InetAddress.getLocalHost();
-    InetAddress unresolved = InetAddress.getByAddress(localhost.getHostAddress(),
-        localhost.getAddress());
+    assumeFalse("IP lookup support required",
+        Objects.equals(localhost.getCanonicalHostName(), localhost.getHostAddress()));
 
     // Precondition: host name and canonical host name for unresolved returns an IP address.
+    InetAddress unresolved = InetAddress.getByAddress(localhost.getHostAddress(),
+        localhost.getAddress());
     assertEquals(localhost.getHostAddress(), unresolved.getHostName());
 
     // Test: Get the canonical name despite InetAddress caching
-    String canonicalHostName = InetAddressUtils.getCanonicalHostName(unresolved);
+    String canonicalHostName = DNR.getHostnameByIP(unresolved);
 
     // Verify: The canonical host name doesn't match the host address but does match the localhost.
     assertNotEquals(localhost.getHostAddress(), canonicalHostName);
