@@ -1731,7 +1731,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       final PathLocation location =
           this.subclusterResolver.getDestinationForPath(path);
       if (location == null) {
-        throw new NoLocationException(path, this.subclusterResolver.getClass().getSimpleName());
+        throw new NoLocationException(path, this.subclusterResolver.getClass());
       }
 
       // We may block some write operations

@@ -27,11 +27,7 @@ public class NoLocationException extends IOException {
 
   private static final long serialVersionUID = 1L;
 
-  public NoLocationException(String path, String className) {
-    super("Cannot find locations for " + path + " in " + className);
-  }
-
-  public NoLocationException(String message) {
-    super(message);
+  public NoLocationException(String path, Class<?> t) {
+    super("Cannot find locations for " + path + " in " + t.getSimpleName());
   }
 }
