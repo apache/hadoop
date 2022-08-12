@@ -155,11 +155,11 @@ public class AbfsBackoffMetrics {
     5.IT :- Number of IOPS throttled requests
     6.OT :- Number of Other throttled requests
     7.NFR :- Number of requests which failed due to network errors
-    7.%RT :- Percentage of requests that are throttled
-    8.TRNR :- Total number of requests which succeeded without retrying
-    9.TRF :- Total number of requests which failed
-    10.TR :- Total number of requests which were made
-    11.MRC :- Max retry count across all requests
+    8.%RT :- Percentage of requests that are throttled
+    9.TRNR :- Total number of requests which succeeded without retrying
+    10.TRF :- Total number of requests which failed
+    11.TR :- Total number of requests which were made
+    12.MRC :- Max retry count across all requests
      */
   @Override
   public String toString() {

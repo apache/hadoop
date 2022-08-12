@@ -143,10 +143,7 @@ public class AzureBlobFileSystem extends FileSystem
   private AbfsDelegationTokenManager delegationTokenManager;
   private AbfsCounters abfsCounters;
   private String clientCorrelationId;
-  private boolean sendBackoffMetricsToStore;
-  private boolean sendFooterMetricsToStore;
   private TracingHeaderFormat tracingHeaderFormat;
-
   private TracingHeaderFormat tracingMetricHeaderFormat;
   private Listener listener;
 
@@ -203,8 +200,6 @@ public class AzureBlobFileSystem extends FileSystem
         .getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
-    sendBackoffMetricsToStore = abfsConfiguration.isBackoffMetricCollectionEnabled();
-    sendFooterMetricsToStore = abfsConfiguration.isFooterMetricCollectionEnabled();
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     tracingMetricHeaderFormat = abfsConfiguration.getTracingMetricHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
