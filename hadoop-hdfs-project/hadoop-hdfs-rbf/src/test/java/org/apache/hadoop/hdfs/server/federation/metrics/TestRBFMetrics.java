@@ -28,12 +28,21 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.MalformedObjectNameException;
 
 import org.apache.commons.collections.ListUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.NamenodeHeartbeatRequest;
+import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
+
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
 import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
@@ -283,15 +292,7 @@ public class TestRBFMetrics extends TestMetricsBase {
 
     // Determine aggregates
     long numBlocks = 0;
-    long numLive = 0;
-    long numDead = 0;
     long numStale = 0;
-    long numDecom = 0;
-    long numDecomLive = 0;
-    long numDecomDead = 0;
-    long numInMaintenanceLive = 0;
-    long numInMaintenanceDead = 0;
-    long numEnteringMaintenance = 0;
     int numCorruptsFilesCount = 0;
     long scheduledReplicationBlocks = 0;
     long numberOfMissingBlocksWithReplicationFactorOne = 0;
@@ -302,15 +303,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     for (MembershipState mock : getActiveMemberships()) {
       MembershipStats stats = mock.getStats();
       numBlocks += stats.getNumOfBlocks();
-      numLive += stats.getNumOfActiveDatanodes();
-      numDead += stats.getNumOfDeadDatanodes();
       numStale += stats.getNumOfStaleDatanodes();
-      numDecom += stats.getNumOfDecommissioningDatanodes();
-      numDecomLive += stats.getNumOfDecomActiveDatanodes();
-      numDecomDead += stats.getNumOfDecomDeadDatanodes();
-      numInMaintenanceLive += stats.getNumOfInMaintenanceLiveDataNodes();
-      numInMaintenanceDead += stats.getNumOfInMaintenanceLiveDataNodes();
-      numEnteringMaintenance += stats.getNumOfEnteringMaintenanceDataNodes();
       numCorruptsFilesCount += stats.getCorruptFilesCount();
       scheduledReplicationBlocks += stats.getScheduledReplicationBlocks();
       numberOfMissingBlocksWithReplicationFactorOne +=
@@ -323,16 +316,7 @@ public class TestRBFMetrics extends TestMetricsBase {
     }
 
     assertEquals(numBlocks, bean.getNumBlocks());
-    assertEquals(numLive, bean.getNumLiveNodes());
-    assertEquals(numDead, bean.getNumDeadNodes());
     assertEquals(numStale, bean.getNumStaleNodes());
-    assertEquals(numDecom, bean.getNumDecommissioningNodes());
-    assertEquals(numDecomLive, bean.getNumDecomLiveNodes());
-    assertEquals(numDecomDead, bean.getNumDecomDeadNodes());
-    assertEquals(numInMaintenanceLive, bean.getNumInMaintenanceLiveDataNodes());
-    assertEquals(numInMaintenanceDead, bean.getNumInMaintenanceDeadDataNodes());
-    assertEquals(numEnteringMaintenance,
-        bean.getNumEnteringMaintenanceDataNodes());
     assertEquals(numFiles, bean.getNumFiles());
     assertEquals(getActiveMemberships().size() + getStandbyMemberships().size(),
         bean.getNumNamenodes());
@@ -386,5 +370,57 @@ public class TestRBFMetrics extends TestMetricsBase {
     // not equal since overflow happened.
     assertNotEquals(availableCapacity,
         BigInteger.valueOf(bean.getRemainingCapacity()));
+  }
+
+  @Test
+  public void testDatanodeNumMetrics()
+      throws Exception {
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .http()
+        .stateStore()
+        .rpc()
+        .build();
+    MiniRouterDFSCluster cluster = new MiniRouterDFSCluster(false, 1);
+    cluster.setNumDatanodesPerNameservice(0);
+    cluster.addNamenodeOverrides(routerConf);
+    cluster.startCluster();
+    routerConf.setTimeDuration(
+        RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 10000, TimeUnit.SECONDS);
+    cluster.addRouterOverrides(routerConf);
+    cluster.startRouters();
+    Router router = cluster.getRandomRouter().getRouter();
+    // Register and verify all NNs with all routers
+    cluster.registerNamenodes();
+    cluster.waitNamenodeRegistration();
+    RouterRpcServer rpcServer = router.getRpcServer();
+    RBFMetrics rbfMetrics = router.getMetrics();
+    // Create mock dn
+    DatanodeInfo[] dNInfo = new DatanodeInfo[4];
+    DatanodeInfo datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+    datanodeInfo.setDecommissioned();
+    dNInfo[0] = datanodeInfo;
+    datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+    datanodeInfo.setInMaintenance();
+    dNInfo[1] = datanodeInfo;
+    datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+    datanodeInfo.startMaintenance();
+    dNInfo[2] = datanodeInfo;
+    datanodeInfo = new DatanodeInfo.DatanodeInfoBuilder().build();
+    datanodeInfo.startDecommission();
+    dNInfo[3] = datanodeInfo;
+
+    rpcServer.getDnCache().put(HdfsConstants.DatanodeReportType.LIVE, dNInfo);
+    rpcServer.getDnCache().put(HdfsConstants.DatanodeReportType.DEAD, dNInfo);
+    assertEquals(4, rbfMetrics.getNumDeadNodes());
+    assertEquals(4, rbfMetrics.getNumLiveNodes());
+    assertEquals(1, rbfMetrics.getNumDecomDeadNodes());
+    // ENTERING_MAINTENANCE or IN_MAINTENANCE
+    assertEquals(2, rbfMetrics.getNumInMaintenanceDeadDataNodes());
+    assertEquals(1, rbfMetrics.getNumDecomLiveNodes());
+    // ENTERING_MAINTENANCE or IN_MAINTENANCE
+    assertEquals(2, rbfMetrics.getNumInMaintenanceLiveDataNodes());
+
+    assertEquals(2, rbfMetrics.getNumEnteringMaintenanceDataNodes());
   }
 }
