@@ -132,7 +132,7 @@
 
 <property>
   <name>hadoop.security.resolver.impl</name>
-  <value></value>
+  <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
   <description>
     The resolver implementation used to resolve FQDN for Kerberos
   </description>
