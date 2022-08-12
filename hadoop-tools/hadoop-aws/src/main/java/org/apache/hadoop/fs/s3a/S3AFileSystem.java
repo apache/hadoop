@@ -997,18 +997,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String storageClassConf = getConf()
         .getTrimmed(STORAGE_CLASS, "")
         .toUpperCase(Locale.US);
-    StorageClass storageClass;
-    try {
-      storageClass = StorageClass.fromValue(storageClassConf);
-    } catch (IllegalArgumentException e) {
-      if (storageClassConf.length() == 0) {
-        LOG.info("Unknown storage class property {}: {}; falling back to default storage class",
-            STORAGE_CLASS, storageClassConf);
-      } else {
+    StorageClass storageClass = null;
+    if (!storageClassConf.isEmpty()) {
+      try {
+        storageClass = StorageClass.fromValue(storageClassConf);
+      } catch (IllegalArgumentException e) {
         LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
             STORAGE_CLASS, storageClassConf);
       }
-      storageClass = null;
+    } else {
+      LOG.info("Empty storage class property {}; falling back to default storage class",
+          STORAGE_CLASS);
     }
 
     return RequestFactoryImpl.builder()
