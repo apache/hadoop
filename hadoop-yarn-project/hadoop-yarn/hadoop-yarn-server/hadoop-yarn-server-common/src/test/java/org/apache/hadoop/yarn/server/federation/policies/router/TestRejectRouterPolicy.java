@@ -57,4 +57,10 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
             false, false, 0, Resources.none(), null, false, null, null);
     localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
   }
+
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testFollowReservation() throws YarnException {
+    super.testFollowReservation();
+  }
 }
