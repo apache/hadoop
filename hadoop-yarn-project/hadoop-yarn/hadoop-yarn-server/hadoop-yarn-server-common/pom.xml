@@ -260,6 +260,20 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>org/apache/hadoop/yarn/federation/proto/YarnServerFederationProtos.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/CollectorNodemanagerProtocol.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/DistributedSchedulingAMProtocol.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/ResourceTracker.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/SCMUploaderProtocol.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/YarnServerCommonProtos.java</exclude>
+            <exclude>org/apache/hadoop/yarn/proto/YarnServerCommonServiceProtos.java</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
