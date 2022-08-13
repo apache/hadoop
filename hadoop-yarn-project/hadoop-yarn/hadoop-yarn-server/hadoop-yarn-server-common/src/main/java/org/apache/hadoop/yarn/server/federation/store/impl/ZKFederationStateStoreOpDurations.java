@@ -54,25 +54,25 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
   private MutableRate registerSubClusterCall;
 
   @Metric("Duration for a deregister subCluster call")
-  private MutableRate deregisterSubCluster;
+  private MutableRate deregisterSubClusterCall;
 
   @Metric("Duration for a subCluster Heartbeat call")
-  private MutableRate subClusterHeartbeat;
+  private MutableRate subClusterHeartbeatCall;
 
   @Metric("Duration for a get SubCluster call")
-  private MutableRate getSubCluster;
+  private MutableRate getSubClusterCall;
 
   @Metric("Duration for a get SubClusters call")
-  private MutableRate getSubClusters;
+  private MutableRate getSubClustersCall;
 
   @Metric("Duration for a get PolicyConfiguration call")
-  private MutableRate getPolicyConfiguration;
+  private MutableRate getPolicyConfigurationCall;
 
   @Metric("Duration for a set PolicyConfiguration call")
-  private MutableRate setPolicyConfiguration;
+  private MutableRate setPolicyConfigurationCall;
 
   @Metric("Duration for a get PolicyConfigurations call")
-  private MutableRate getPoliciesConfigurations;
+  private MutableRate getPoliciesConfigurationsCall;
 
   protected static final MetricsInfo RECORD_INFO =
       info("ZKFederationStateStoreOpDurations", "Durations of ZKFederationStateStore calls");
@@ -126,30 +126,30 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
   }
 
   public void addDeregisterSubClusterCallDuration(long value) {
-    deregisterSubCluster.add(value);
+    deregisterSubClusterCall.add(value);
   }
 
   public void addSubClusterHeartbeatCallDuration(long value) {
-    subClusterHeartbeat.add(value);
+    subClusterHeartbeatCall.add(value);
   }
 
   public void addGetSubClusterCallDuration(long value) {
-    getSubCluster.add(value);
+    getSubClusterCall.add(value);
   }
 
   public void addGetSubClustersCallDuration(long value) {
-    getSubClusters.add(value);
+    getSubClustersCall.add(value);
   }
 
   public void addGetPolicyConfigurationDuration(long value) {
-    getPolicyConfiguration.add(value);
+    getPolicyConfigurationCall.add(value);
   }
 
   public void addSetPolicyConfigurationDuration(long value) {
-    setPolicyConfiguration.add(value);
+    setPolicyConfigurationCall.add(value);
   }
 
   public void addGetPoliciesConfigurationsDuration(long value) {
-    getPoliciesConfigurations.add(value);
+    getPoliciesConfigurationsCall.add(value);
   }
 }

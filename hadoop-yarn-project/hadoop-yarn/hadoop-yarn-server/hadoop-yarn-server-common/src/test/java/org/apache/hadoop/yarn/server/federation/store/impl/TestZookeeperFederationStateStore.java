@@ -103,6 +103,14 @@ public class TestZookeeperFederationStateStore
     zkStateStoreOpDurations.addGetAppHomeSubClusterCallDuration(anyDuration);
     zkStateStoreOpDurations.addGetAppsHomeSubClusterCallDuration(anyDuration);
     zkStateStoreOpDurations.addDeleteAppHomeSubClusterCallDuration(anyDuration);
+    zkStateStoreOpDurations.addRegisterSubClusterCallDuration(anyDuration);
+    zkStateStoreOpDurations.addDeregisterSubClusterCallDuration(anyDuration);
+    zkStateStoreOpDurations.addSubClusterHeartbeatCallDuration(anyDuration);
+    zkStateStoreOpDurations.addGetSubClusterCallDuration(anyDuration);
+    zkStateStoreOpDurations.addGetSubClustersCallDuration(anyDuration);
+    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(anyDuration);
+    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(anyDuration);
+    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(anyDuration);
 
     zkStateStoreOpDurations.getMetrics(collector, true);
     assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());
@@ -117,6 +125,14 @@ public class TestZookeeperFederationStateStore
     MetricsRecords.assertMetric(record, "GetAppHomeSubClusterCallAvgTime",  expectAvgTime);
     MetricsRecords.assertMetric(record, "GetAppsHomeSubClusterCallAvgTime",  expectAvgTime);
     MetricsRecords.assertMetric(record, "DeleteAppHomeSubClusterCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "RegisterSubClusterCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "DeregisterSubClusterCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "SubClusterHeartbeatCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetSubClusterCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetSubClustersCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetPolicyConfigurationCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "SetPolicyConfigurationCallAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsCallAvgTime",  expectAvgTime);
 
     long expectOps = 1;
     MetricsRecords.assertMetric(record, "AddAppHomeSubClusterCallNumOps",  expectOps);
@@ -124,5 +140,13 @@ public class TestZookeeperFederationStateStore
     MetricsRecords.assertMetric(record, "GetAppHomeSubClusterCallNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "GetAppsHomeSubClusterCallNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "DeleteAppHomeSubClusterCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "RegisterSubClusterCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "DeregisterSubClusterCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "SubClusterHeartbeatCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetSubClusterCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetSubClustersCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetPolicyConfigurationCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "SetPolicyConfigurationCallNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsCallNumOps",  expectOps);
   }
 }
