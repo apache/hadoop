@@ -21,7 +21,7 @@ package org.apache.hadoop.io.compress;
 import java.io.IOException;
 
 /**
- * An exception class for when a closed compressor/decopressor is being used
+ * An exception class for when a closed compressor/decopressor is being used.
  * {@link org.apache.hadoop.io.compress.Compressor}
  * {@link org.apache.hadoop.io.compress.Decompressor}
  */
