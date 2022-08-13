@@ -339,47 +339,43 @@ public class TestWebAppProxyServlet {
     AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
 
     try {
-    //set AHS_ENBALED = false to simulate getting the app report from RM
-    configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
-        false);
-    ApplicationId app = ApplicationId.newInstance(0, 0);
-    appReportFetcher.answer = 6;
-    URL url = new URL("http://localhost:" + proxyPort +
-        "/proxy/" + app.toString());
-    HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
-    proxyConn.connect();
-    try {
-      proxyConn.getResponseCode();
-    } catch (ConnectException e) {
-      // Connection Exception is expected as we have set
-      // appReportFetcher.answer = 6, which does not set anything for
-      // original tracking url field in the app report.
-    }
-    String appAddressInRm =
-        WebAppUtils.getResolvedRMWebAppURLWithScheme(configuration) +
-        "/cluster" + "/app/" + app.toString();
-    assertTrue("Webapp proxy servlet should have redirected to RM",
-        proxyConn.getURL().toString().equals(appAddressInRm));
+      //set AHS_ENBALED = false to simulate getting the app report from RM
+      configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, false);
+      ApplicationId app = ApplicationId.newInstance(0, 0);
+      appReportFetcher.answer = 6;
+      URL url = new URL("http://localhost:" + proxyPort + "/proxy/" + app.toString());
+      HttpURLConnection proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.connect();
+      try {
+        proxyConn.getResponseCode();
+      } catch (ConnectException e) {
+        // Connection Exception is expected as we have set
+        // appReportFetcher.answer = 6, which does not set anything for
+        // original tracking url field in the app report.
+      }
+      String appAddressInRm = WebAppUtils.getResolvedRMWebAppURLWithScheme(configuration) +
+          "/cluster" + "/app/" + app.toString();
+      assertTrue("Webapp proxy servlet should have redirected to RM",
+          proxyConn.getURL().toString().equals(appAddressInRm));
 
-    //set AHS_ENBALED = true to simulate getting the app report from AHS
-    configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
-    proxy.proxy.appReportFetcher.setAhsAppPageUrlBase(configuration);
-    proxyConn = (HttpURLConnection) url.openConnection();
-    proxyConn.connect();
-    try {
-      proxyConn.getResponseCode();
-    } catch (ConnectException e) {
-      // Connection Exception is expected as we have set
-      // appReportFetcher.answer = 6, which does not set anything for
-      // original tracking url field in the app report.
-    }
-    String appAddressInAhs = WebAppUtils.getHttpSchemePrefix(configuration) +
-        WebAppUtils.getAHSWebAppURLWithoutScheme(configuration) +
-        "/applicationhistory" + "/app/" + app.toString();
+      //set AHS_ENBALED = true to simulate getting the app report from AHS
+      configuration.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
+      proxy.proxy.appReportFetcher.setAhsAppPageUrlBase(configuration);
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.connect();
+      try {
+        proxyConn.getResponseCode();
+      } catch (ConnectException e) {
+        // Connection Exception is expected as we have set
+        // appReportFetcher.answer = 6, which does not set anything for
+        // original tracking url field in the app report.
+      }
+      String appAddressInAhs = WebAppUtils.getHttpSchemePrefix(configuration) +
+          WebAppUtils.getAHSWebAppURLWithoutScheme(configuration) +
+          "/applicationhistory" + "/app/" + app.toString();
       assertEquals("Webapp proxy servlet should have redirected to AHS", appAddressInAhs,
           proxyConn.getURL().toString());
-    }
-    finally {
+    } finally {
       proxy.close();
     }
   }
