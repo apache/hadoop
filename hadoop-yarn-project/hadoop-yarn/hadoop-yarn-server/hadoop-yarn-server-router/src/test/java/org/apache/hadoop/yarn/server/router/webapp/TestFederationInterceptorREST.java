@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -56,10 +57,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Times;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -716,5 +722,137 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ContainerInfo containerInfo = interceptor.getContainer(null, null,
         appId.toString(), appAttemptId.toString(), "0");
     Assert.assertNotNull(containerInfo);
+  }
+
+  @Test
+  public void testGetAppAttempts()
+      throws IOException, InterruptedException, YarnException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
+    Assert.assertNotNull(appAttemptsInfo);
+
+    ArrayList<AppAttemptInfo> attemptLists = appAttemptsInfo.getAttempts();
+    Assert.assertNotNull(appAttemptsInfo);
+    Assert.assertEquals(2, attemptLists.size());
+
+    AppAttemptInfo attemptInfo1 = attemptLists.get(0);
+    Assert.assertNotNull(attemptInfo1);
+    Assert.assertEquals(0, attemptInfo1.getAttemptId());
+    Assert.assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
+    Assert.assertEquals("LogLink_0", attemptInfo1.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo1.getFinishedTime());
+
+    AppAttemptInfo attemptInfo2 = attemptLists.get(1);
+    Assert.assertNotNull(attemptInfo2);
+    Assert.assertEquals(0, attemptInfo2.getAttemptId());
+    Assert.assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());
+    Assert.assertEquals("LogLink_1", attemptInfo2.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo2.getFinishedTime());
+  }
+
+  @Test
+  public void testGetAppAttempt()
+      throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+
+    org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
+
+    Assert.assertNotNull(appAttemptInfo);
+    Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
+    Assert.assertEquals("url", appAttemptInfo.getTrackingUrl());
+    Assert.assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
+    Assert.assertEquals(124, appAttemptInfo.getRpcPort());
+    Assert.assertEquals("host", appAttemptInfo.getHost());
+  }
+
+  @Test
+  public void testGetAppTimeout() throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    ApplicationTimeoutType appTimeoutType = ApplicationTimeoutType.LIFETIME;
+    AppTimeoutInfo appTimeoutInfo =
+        interceptor.getAppTimeout(null, appId.toString(), appTimeoutType.toString());
+    Assert.assertNotNull(appTimeoutInfo);
+    Assert.assertEquals(10, appTimeoutInfo.getRemainingTimeInSec());
+    Assert.assertEquals("UNLIMITED", appTimeoutInfo.getExpireTime());
+    Assert.assertEquals(appTimeoutType, appTimeoutInfo.getTimeoutType());
+  }
+
+  @Test
+  public void testGetAppTimeouts() throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(null, appId.toString());
+    Assert.assertNotNull(appTimeoutsInfo);
+
+    List<AppTimeoutInfo> timeouts = appTimeoutsInfo.getAppTimeouts();
+    Assert.assertNotNull(timeouts);
+    Assert.assertEquals(1, timeouts.size());
+
+    AppTimeoutInfo resultAppTimeout = timeouts.get(0);
+    Assert.assertNotNull(resultAppTimeout);
+    Assert.assertEquals(10, resultAppTimeout.getRemainingTimeInSec());
+    Assert.assertEquals("UNLIMITED", resultAppTimeout.getExpireTime());
+    Assert.assertEquals(ApplicationTimeoutType.LIFETIME, resultAppTimeout.getTimeoutType());
+  }
+
+  @Test
+  public void testUpdateApplicationTimeout() throws IOException, InterruptedException,
+      YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    long newLifetime = 10L;
+    // update 10L seconds more to timeout
+    String timeout = Times.formatISO8601(Time.now() + newLifetime * 1000);
+    AppTimeoutInfo paramAppTimeOut = new AppTimeoutInfo();
+    paramAppTimeOut.setExpiryTime(timeout);
+    // RemainingTime = Math.max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0))
+    paramAppTimeOut.setRemainingTime(newLifetime);
+    paramAppTimeOut.setTimeoutType(ApplicationTimeoutType.LIFETIME);
+
+    Response response =
+        interceptor.updateApplicationTimeout(paramAppTimeOut, null, appId.toString());
+    Assert.assertNotNull(response);
+    AppTimeoutInfo entity = (AppTimeoutInfo) response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertEquals(paramAppTimeOut.getExpireTime(), entity.getExpireTime());
+    Assert.assertEquals(paramAppTimeOut.getTimeoutType(), entity.getTimeoutType());
+    Assert.assertEquals(paramAppTimeOut.getRemainingTimeInSec(), entity.getRemainingTimeInSec());
   }
 }

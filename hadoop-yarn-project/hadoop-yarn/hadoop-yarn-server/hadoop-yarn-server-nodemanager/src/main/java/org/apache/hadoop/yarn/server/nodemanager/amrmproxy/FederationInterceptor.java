@@ -459,8 +459,13 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       // Get the running containers from home RM, note that we will also get the
       // AM container itself from here. We don't need it, but no harm to put the
       // map as well.
-      UserGroupInformation appSubmitter = UserGroupInformation
-          .createRemoteUser(getApplicationContext().getUser());
+      UserGroupInformation appSubmitter;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        appSubmitter = UserGroupInformation.createProxyUser(getApplicationContext().getUser(),
+            UserGroupInformation.getLoginUser());
+      } else {
+        appSubmitter = UserGroupInformation.createRemoteUser(getApplicationContext().getUser());
+      }
       ApplicationClientProtocol rmClient =
           createHomeRMProxy(getApplicationContext(),
               ApplicationClientProtocol.class, appSubmitter);

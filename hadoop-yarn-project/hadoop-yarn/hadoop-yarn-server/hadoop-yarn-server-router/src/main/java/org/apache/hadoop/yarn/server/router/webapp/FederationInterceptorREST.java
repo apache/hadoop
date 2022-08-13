@@ -34,6 +34,7 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -179,19 +180,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.logAndThrowException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
     }
-    List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
-
-    FederationPolicyUtils.validateSubClusterAvailability(
-        list, blackListSubClusters);
-
+    Collection<SubClusterId> keySet = activeSubclusters.keySet();
+    FederationPolicyUtils.validateSubClusterAvailability(keySet, blackListSubClusters);
     if (blackListSubClusters != null) {
-
-      // Remove from the active SubClusters from StateStore the blacklisted ones
-      for (SubClusterId scId : blackListSubClusters) {
-        list.remove(scId);
-      }
+      keySet.removeAll(blackListSubClusters);
     }
 
+    List<SubClusterId> list = keySet.stream().collect(Collectors.toList());
     return list.get(rand.nextInt(list.size()));
   }
 
@@ -1347,25 +1342,97 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr, String appId,
       String type) throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    if (type == null || type.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the type is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppTimeout(hsr, appId, type);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the getAppTimeout appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppTimeout Failed.", e);
+    }
+    return null;
   }
 
   @Override
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppTimeouts(hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the getAppTimeouts appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppTimeouts Failed.", e);
+    }
+    return null;
   }
 
   @Override
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    if (appTimeout == null) {
+      throw new IllegalArgumentException("Parameter error, the appTimeout is null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the updateApplicationTimeout appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("updateApplicationTimeout Failed.", e);
+    }
+    return null;
   }
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppAttempts(hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the AppAttempt appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppAttempts Failed.", e);
+    }
+    return null;
   }
 
   @Override
@@ -1377,7 +1444,28 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+    if (appAttemptId == null || appAttemptId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppAttempt(req, res, appId, appAttemptId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the AppAttempt appId: %s, appAttemptId: %s.", appId, appAttemptId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
@@ -1428,13 +1516,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      ApplicationId applicationId = ApplicationId.fromString(appId);
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
-
-      if (subClusterInfo == null) {
-        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = " +
-            applicationId, null);
-      }
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
 
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
@@ -1488,12 +1570,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ContainerId containerIdObj = ContainerId.fromString(containerId);
       ApplicationId applicationId = containerIdObj.getApplicationAttemptId().getApplicationId();
 
-      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId);
-
-      if (subClusterInfo == null) {
-        RouterServerUtil.logAndThrowRunTimeException("Unable to get subCluster by applicationId = " +
-            applicationId, null);
-      }
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(applicationId.toString());
 
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
@@ -1561,24 +1638,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   /**
    * get the HomeSubCluster according to ApplicationId.
    *
-   * @param applicationId applicationId
+   * @param appId applicationId
    * @return HomeSubCluster
    * @throws YarnException on failure
    */
-  private SubClusterInfo getHomeSubClusterInfoByAppId(ApplicationId applicationId) throws YarnException {
+  private SubClusterInfo getHomeSubClusterInfoByAppId(String appId)
+      throws YarnException {
     SubClusterInfo subClusterInfo = null;
-    SubClusterId subClusterId = null;
     try {
-      subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
       if (subClusterId == null) {
-        RouterServerUtil.logAndThrowException("Can't get HomeSubCluster by applicationId "
-            + applicationId, null);
+        RouterServerUtil.logAndThrowException(null,
+            "Can't get HomeSubCluster by applicationId %s", applicationId);
       }
       subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      return subClusterInfo;
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowException("Get HomeSubClusterInfo by applicationId "
-          + applicationId + " failed.", e);
+      RouterServerUtil.logAndThrowException(e,
+          "Get HomeSubClusterInfo by applicationId %s failed.", appId);
     }
-    return subClusterInfo;
+    throw new YarnException("Unable to get subCluster by applicationId = " + appId);
   }
 }

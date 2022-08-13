@@ -650,4 +650,9 @@ public final class FederationStateStoreFacade {
   protected Object getAppHomeSubClusterCacheRequest(ApplicationId applicationId) {
     return buildGetApplicationHomeSubClusterRequest(applicationId);
   }
+
+  @VisibleForTesting
+  public FederationStateStore getStateStore() {
+    return stateStore;
+  }
 }

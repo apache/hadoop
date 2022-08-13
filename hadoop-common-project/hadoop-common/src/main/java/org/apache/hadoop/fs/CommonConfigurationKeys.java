@@ -480,13 +480,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    * Thread-level IOStats Support.
    * {@value}
    */
-  public static final String THREAD_LEVEL_IOSTATISTICS_ENABLED =
-      "fs.thread.level.iostatistics.enabled";
+  public static final String IOSTATISTICS_THREAD_LEVEL_ENABLED =
+      "fs.iostatistics.thread.level.enabled";
 
   /**
    * Default value for Thread-level IOStats Support is true.
    */
-  public static final boolean THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT =
+  public static final boolean IOSTATISTICS_THREAD_LEVEL_ENABLED_DEFAULT =
       true;
 
 }

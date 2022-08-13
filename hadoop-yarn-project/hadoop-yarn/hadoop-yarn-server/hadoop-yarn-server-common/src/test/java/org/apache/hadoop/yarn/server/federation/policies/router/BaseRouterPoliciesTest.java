@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.BaseFederationPoliciesTest;
@@ -115,4 +116,14 @@ public abstract class BaseRouterPoliciesTest
       }
     }
   }
+
+  @Test
+  public void testNullReservationContext() throws Exception {
+    FederationRouterPolicy policy = ((FederationRouterPolicy) getPolicy());
+
+    LambdaTestUtils.intercept(FederationPolicyException.class,
+        "The ReservationSubmissionRequest cannot be null.",
+        () -> policy.getReservationHomeSubcluster(null));
+  }
+
 }

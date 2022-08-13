@@ -262,9 +262,7 @@ public class EditLogTailer {
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
     this.nnLookup = Iterators.cycle(nns);
-
-    LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
-        " sleepTime=" + sleepTimeMs);
+    LOG.debug("logRollPeriodMs={} sleepTime={}.", logRollPeriodMs, sleepTimeMs);
   }
 
   public void start() {
@@ -285,7 +283,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  FSEditLog getEditLog() {
+  public FSEditLog getEditLog() {
     return editLog;
   }
   
@@ -313,7 +311,7 @@ public class EditLogTailer {
                 startTime - lastLoadTimeMs);
             // It is already under the name system lock and the checkpointer
             // thread is already stopped. No need to acquire any other lock.
-            editsTailed = doTailEdits();
+            editsTailed = doTailEdits(false);
           } catch (InterruptedException e) {
             throw new IOException(e);
           } finally {
@@ -328,6 +326,10 @@ public class EditLogTailer {
   
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
+    return doTailEdits(true);
+  }
+
+  private long doTailEdits(boolean onlyDurableTxns) throws IOException, InterruptedException {
     Collection<EditLogInputStream> streams;
     FSImage image = namesystem.getFSImage();
 
@@ -336,7 +338,7 @@ public class EditLogTailer {
     long startTime = timer.monotonicNow();
     try {
       streams = editLog.selectInputStreams(lastTxnId + 1, 0,
-          null, inProgressOk, true);
+          null, inProgressOk, onlyDurableTxns);
     } catch (IOException ioe) {
       // This is acceptable. If we try to tail edits in the middle of an edits
       // log roll, i.e. the last one has been finalized but the new inprogress
@@ -360,9 +362,7 @@ public class EditLogTailer {
             currentLastTxnId, lastTxnId);
         return 0;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("edit streams to load from: " + streams.size());
-      }
+      LOG.debug("edit streams to load from: {}.", streams.size());
       
       // Once we have streams to load, errors encountered are legitimate cause
       // for concern, so we don't catch them here. Simple errors reading from
@@ -375,10 +375,7 @@ public class EditLogTailer {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
       } finally {
-        if (editsLoaded > 0 || LOG.isDebugEnabled()) {
-          LOG.debug(String.format("Loaded %d edits starting from txid %d ",
-              editsLoaded, lastTxnId));
-        }
+        LOG.debug("Loaded {} edits starting from txid {}.", editsLoaded, lastTxnId);
         NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
 
