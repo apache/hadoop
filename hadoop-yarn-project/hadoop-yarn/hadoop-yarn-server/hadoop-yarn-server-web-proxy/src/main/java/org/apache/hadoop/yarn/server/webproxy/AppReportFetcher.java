@@ -78,10 +78,10 @@ public abstract class AppReportFetcher {
 
   protected ApplicationHistoryProtocol getAHSProxy(Configuration configuration)
       throws IOException {
-    return AHSProxy.createAHSProxy(configuration, ApplicationHistoryProtocol.class,
-        configuration.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
-            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT));
+    InetSocketAddress addr = configuration.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT)
+    return AHSProxy.createAHSProxy(configuration, ApplicationHistoryProtocol.class, addr);
   }
 
   /**
