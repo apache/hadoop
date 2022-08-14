@@ -43,7 +43,7 @@ public class RouterDelegationTokenSecretManager
   private FederationStateStoreFacade federationFacade;
 
   /**
-   * Create a secret manager.
+   * Create a Router Secret manager.
    *
    * @param delegationKeyUpdateInterval        the number of milliseconds for rolling
    *                                           new secret keys.
@@ -59,7 +59,6 @@ public class RouterDelegationTokenSecretManager
                                             long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
-    federationFacade = FederationStateStoreFacade.getInstance();
   }
 
   @Override
@@ -71,6 +70,11 @@ public class RouterDelegationTokenSecretManager
     return !running && e.getCause() instanceof InterruptedException;
   }
 
+  /**
+   * The Router Supports Store the new master key.
+   *
+   * @param newKey DelegationKey
+   */
   @Override
   protected void storeNewMasterKey(DelegationKey newKey) {
     try {
@@ -83,18 +87,30 @@ public class RouterDelegationTokenSecretManager
     }
   }
 
+  /**
+   * The Router Supports Remove the master key.
+   *
+   * @param delegationKey DelegationKey
+   */
   @Override
-  protected void removeStoredMasterKey(DelegationKey key) {
+  protected void removeStoredMasterKey(DelegationKey delegationKey) {
     try {
-      federationFacade.removeStoredMasterKey(key);
+      federationFacade.removeStoredMasterKey(delegationKey);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
-        LOG.error("Error in removing master key with KeyID: {}.", key.getKeyId());
+        LOG.error("Error in removing master key with KeyID: {}.", delegationKey.getKeyId());
         ExitUtil.terminate(1, e);
       }
     }
   }
 
+  /**
+   * The Router Supports Store new Token.
+   *
+   * @param identifier Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
   @Override
   protected void storeNewToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws IOException {
@@ -109,8 +125,16 @@ public class RouterDelegationTokenSecretManager
     }
   }
 
+  /**
+   * The Router Supports Update Token.
+   *
+   * @param id Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
   @Override
-  protected void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) {
+  protected void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate)
+      throws IOException {
     try {
       federationFacade.updateStoredToken(id, renewDate);
     } catch (Exception e) {
@@ -122,6 +146,12 @@ public class RouterDelegationTokenSecretManager
     }
   }
 
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param identifier Delegation Token
+   * @throws IOException IO exception occurred.
+   */
   @Override
   protected void removeStoredToken(RMDelegationTokenIdentifier
       identifier) throws IOException {

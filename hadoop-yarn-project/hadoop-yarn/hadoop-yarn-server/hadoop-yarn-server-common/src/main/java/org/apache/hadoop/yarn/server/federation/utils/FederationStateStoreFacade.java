@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -446,27 +447,50 @@ public final class FederationStateStoreFacade {
     stateStore.removeStoredMasterKey(keyRequest);
   }
 
-  public void storeNewToken(RMDelegationTokenIdentifier id,
+  /**
+   * The Router Supports Store new Token.
+   *
+   * @param identifier Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws Exception {
-    LOG.info("storing RMDelegation token with sequence number: {}.", id.getSequenceNumber());
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, renewDate);
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
     RouterStoreNewTokenRequest request = RouterStoreNewTokenRequest.newInstance(storeToken);
     stateStore.storeNewToken(request);
   }
 
-  public void updateStoredToken(RMDelegationTokenIdentifier id,
+  /**
+   * The Router Supports Update Token.
+   *
+   * @param identifier Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws Exception {
-    LOG.info("updating RMDelegation token with sequence number: {}.", id.getSequenceNumber());
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, renewDate);
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
     RouterUpdateStoredTokenRequest request =
         RouterUpdateStoredTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }
 
-  public void removeStoredToken(RMDelegationTokenIdentifier id)
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param identifier Delegation Token
+   * @throws IOException IO exception occurred.
+   */
+  public void removeStoredToken(RMDelegationTokenIdentifier identifier)
       throws Exception{
-    LOG.info("removing RMDelegation token with sequence number: {}", id.getSequenceNumber());
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, 0L);
+    LOG.info("removing RMDelegation token with sequence number: {}",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
     RouterRemoveStoredTokenRequest  request =
         RouterRemoveStoredTokenRequest.newInstance(storeToken);
     stateStore.removeStoredToken(request);

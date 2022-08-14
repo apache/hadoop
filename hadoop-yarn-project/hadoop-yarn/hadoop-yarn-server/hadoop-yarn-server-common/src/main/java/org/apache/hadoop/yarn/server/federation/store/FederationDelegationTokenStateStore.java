@@ -29,20 +29,83 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStored
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 
+/**
+ * FederationDelegationTokenStateStore maintains the state of all
+ * <em>DelegationToken</em> that have been submitted to the federated cluster.
+ *
+ * <p>
+ * It mainly includes the following operations:
+ * </p>
+ *
+ * <ul>
+ * <li>
+ * storeNewMasterKey <br>
+ * Store the new MasterKey
+ * </li>
+ *
+ * <li>
+ * removeStoredMasterKey <br>
+ * Remove MasterKey
+ * </li>
+ *
+ * <li>
+ * storeNewToken <br>
+ * Store New delegationToken.
+ * </li>
+ *
+ * updateStoredToken
+ * removeStoredToken
+ * </ul>
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface FederationDelegationTokenStateStore {
 
+  /**
+   * The Router Supports Store the new master key.
+   *
+   * @param request DelegationKey.
+   * @return StoreNewMasterKeyResponse.
+   * @throws Exception exception occurred.
+   */
   StoreNewMasterKeyResponse storeNewMasterKey(StoreNewMasterKeyRequest request) throws Exception;
 
+  /**
+   * The Router Supports Remove the master key.
+   *
+   * @param request DelegationKey.
+   * @return RemoveStoredMasterKeyResponse.
+   * @throws Exception exception occurred.
+   */
   RemoveStoredMasterKeyResponse removeStoredMasterKey(RemoveStoredMasterKeyRequest request)
       throws Exception;
 
+  /**
+   * The Router Supports Store new Token.
+   *
+   * @param request DelegationKey.
+   * @return RouterStoreNewTokenResponse.
+   * @throws Exception exception occurred.
+   */
   RouterStoreNewTokenResponse storeNewToken(RouterStoreNewTokenRequest request) throws Exception;
 
+  /**
+   * The Router Supports Update Token.
+   *
+   * @param request DelegationKey.
+   * @return RouterUpdateStoredTokenResponse.
+   * @throws Exception exception occurred.
+   */
   RouterUpdateStoredTokenResponse updateStoredToken(RouterUpdateStoredTokenRequest request)
       throws Exception;
 
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param request DelegationKey.
+   * @return RouterRemoveStoredTokenResponse.
+   * @throws Exception exception occurred.
+   */
   RouterRemoveStoredTokenResponse removeStoredToken(RouterRemoveStoredTokenRequest request)
       throws Exception;
 }
