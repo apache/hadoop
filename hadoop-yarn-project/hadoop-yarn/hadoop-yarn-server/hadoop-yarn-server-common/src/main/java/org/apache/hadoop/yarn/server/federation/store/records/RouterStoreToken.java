@@ -62,9 +62,9 @@ public abstract class RouterStoreToken {
   public RMDelegationTokenIdentifier getTokenIdentifier() throws IOException {
     ByteArrayInputStream in =
         new ByteArrayInputStream(builder.getTokenIdentifier().toByteArray());
-    RMDelegationTokenIdentifier identifer = new RMDelegationTokenIdentifier();
-    identifer.readFields(new DataInputStream(in));
-    return identifer;
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier();
+    identifier.readFields(new DataInputStream(in));
+    return identifier;
   }
 
   public Long getRenewDate() {

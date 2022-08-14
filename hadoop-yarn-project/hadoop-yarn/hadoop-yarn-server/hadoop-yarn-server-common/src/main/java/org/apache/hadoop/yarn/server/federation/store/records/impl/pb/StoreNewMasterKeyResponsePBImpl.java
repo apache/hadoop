@@ -18,34 +18,35 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.thirdparty.protobuf.TextFormat;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
 
 @Private
 @Unstable
-public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
+public class StoreNewMasterKeyResponsePBImpl extends StoreNewMasterKeyResponse {
 
-  private StoreNewMasterKeyRequestProto proto = StoreNewMasterKeyRequestProto.getDefaultInstance();
+  private StoreNewMasterKeyResponseProto proto =
+      StoreNewMasterKeyResponseProto.getDefaultInstance();
 
-  private StoreNewMasterKeyRequestProto.Builder builder = null;
+  private StoreNewMasterKeyResponseProto.Builder builder = null;
+
   private boolean viaProto = false;
 
   private RouterMasterKey routerMasterKey = null;
 
-  public StoreNewMasterKeyRequestPBImpl() {
-    builder = StoreNewMasterKeyRequestProto.newBuilder();
+  public StoreNewMasterKeyResponsePBImpl() {
+    builder = StoreNewMasterKeyResponseProto.newBuilder();
   }
 
-  public StoreNewMasterKeyRequestPBImpl(StoreNewMasterKeyRequestProto proto) {
-    this.proto = proto;
+  public StoreNewMasterKeyResponsePBImpl(StoreNewMasterKeyResponseProto responseProto) {
+    this.proto = responseProto;
     viaProto = true;
   }
 
-  public StoreNewMasterKeyRequestProto getProto() {
+  public StoreNewMasterKeyResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -63,16 +64,14 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = StoreNewMasterKeyRequestProto.newBuilder(proto);
+      builder = StoreNewMasterKeyResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
 
   private void mergeLocalToBuilder() {
-    RouterMasterKeyPBImpl masterKeyRequest =
-        (RouterMasterKeyPBImpl) this.routerMasterKey;
-    RouterMasterKeyProto routerMasterKeyProto = builder.getRouterMasterKey();
-    if (this.routerMasterKey != null && !masterKeyRequest.getProto().equals(routerMasterKeyProto)) {
+    if (this.routerMasterKey != null && !((RouterMasterKeyPBImpl) this.routerMasterKey).
+        getProto().equals(builder.getRouterMasterKey())) {
       builder.setRouterMasterKey(convertToProtoFormat(this.routerMasterKey));
     }
   }
@@ -93,14 +92,14 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
     return false;
   }
 
-  @Override
-  public String toString() {
-    return TextFormat.shortDebugString(getProto());
+  private RouterMasterKeyProto convertToProtoFormat(
+      RouterMasterKey masterKey) {
+    return ((RouterMasterKeyPBImpl) masterKey).getProto();
   }
 
   @Override
   public RouterMasterKey getRouterMasterKey() {
-    StoreNewMasterKeyRequestProtoOrBuilder p = viaProto ? proto : builder;
+    StoreNewMasterKeyResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerMasterKey != null) {
       return this.routerMasterKey;
     }
@@ -116,15 +115,12 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
     maybeInitBuilder();
     if (masterKey == null) {
       builder.clearRouterMasterKey();
+      return;
     }
     this.routerMasterKey = masterKey;
   }
 
-  private RouterMasterKey convertFromProtoFormat(RouterMasterKeyProto masterKeyProto) {
-    return new RouterMasterKeyPBImpl(masterKeyProto);
-  }
-
-  private RouterMasterKeyProto convertToProtoFormat(RouterMasterKey masterKey) {
-    return ((RouterMasterKeyPBImpl) masterKey).getProto();
+  private RouterMasterKey convertFromProtoFormat(RouterMasterKeyProto masterKey) {
+    return new RouterMasterKeyPBImpl(masterKey);
   }
 }

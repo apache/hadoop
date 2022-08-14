@@ -19,33 +19,33 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RemoveStoredMasterKeyRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RemoveStoredMasterKeyRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyRequestProtoOrBuilder;
 
 @Private
 @Unstable
-public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
+public class RemoveStoredMasterKeyRequestPBImpl extends RemoveStoredMasterKeyRequest {
 
-  private StoreNewMasterKeyRequestProto proto = StoreNewMasterKeyRequestProto.getDefaultInstance();
+  private RemoveStoredMasterKeyRequestProto proto = RemoveStoredMasterKeyRequestProto.getDefaultInstance();
 
-  private StoreNewMasterKeyRequestProto.Builder builder = null;
+  private RemoveStoredMasterKeyRequestProto.Builder builder = null;
   private boolean viaProto = false;
 
   private RouterMasterKey routerMasterKey = null;
 
-  public StoreNewMasterKeyRequestPBImpl() {
-    builder = StoreNewMasterKeyRequestProto.newBuilder();
+  public RemoveStoredMasterKeyRequestPBImpl() {
+    builder = RemoveStoredMasterKeyRequestProto.newBuilder();
   }
 
-  public StoreNewMasterKeyRequestPBImpl(StoreNewMasterKeyRequestProto proto) {
+  public RemoveStoredMasterKeyRequestPBImpl(RemoveStoredMasterKeyRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public StoreNewMasterKeyRequestProto getProto() {
+  public RemoveStoredMasterKeyRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -63,7 +63,7 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = StoreNewMasterKeyRequestProto.newBuilder(proto);
+      builder = RemoveStoredMasterKeyRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -100,7 +100,7 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
 
   @Override
   public RouterMasterKey getRouterMasterKey() {
-    StoreNewMasterKeyRequestProtoOrBuilder p = viaProto ? proto : builder;
+    RemoveStoredMasterKeyRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerMasterKey != null) {
       return this.routerMasterKey;
     }
@@ -116,6 +116,7 @@ public class StoreNewMasterKeyRequestPBImpl extends StoreNewMasterKeyRequest {
     maybeInitBuilder();
     if (masterKey == null) {
       builder.clearRouterMasterKey();
+      return;
     }
     this.routerMasterKey = masterKey;
   }
