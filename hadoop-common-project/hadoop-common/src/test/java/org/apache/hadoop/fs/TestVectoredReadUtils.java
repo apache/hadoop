@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
 
@@ -229,6 +231,36 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertTrue("merged output ranges are disjoint",
             VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
 
+  }
+
+  @Test
+  public void testValidateOverlappingRanges()  throws Exception {
+    List<FileRange> input = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(200, 100),
+            FileRange.createFileRange(250, 100)
+    );
+
+    intercept(UnsupportedOperationException.class,
+        () -> validateNonOverlappingAndReturnSortedRanges(input));
+
+    List<FileRange> input1 = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(500, 100),
+            FileRange.createFileRange(1000, 100),
+            FileRange.createFileRange(1000, 100)
+    );
+
+    intercept(UnsupportedOperationException.class,
+        () -> validateNonOverlappingAndReturnSortedRanges(input1));
+
+    List<FileRange> input2 = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(200, 100),
+            FileRange.createFileRange(300, 100)
+    );
+    // consecutive ranges should pass.
+    validateNonOverlappingAndReturnSortedRanges(input2);
   }
 
   @Test
