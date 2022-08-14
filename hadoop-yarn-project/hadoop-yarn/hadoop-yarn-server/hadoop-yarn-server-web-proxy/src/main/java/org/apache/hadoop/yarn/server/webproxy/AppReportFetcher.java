@@ -80,7 +80,7 @@ public abstract class AppReportFetcher {
       throws IOException {
     InetSocketAddress addr = configuration.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
-        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT)
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
     return AHSProxy.createAHSProxy(configuration, ApplicationHistoryProtocol.class, addr);
   }
 
