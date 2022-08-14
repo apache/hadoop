@@ -20,9 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.numaAwarenessEnabled;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -57,9 +55,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
@@ -140,10 +135,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     lfs.setPermission(script, ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
   }
 
-  private NumaResourceAllocator numaResourceAllocator;
   @Override
   public void init(Context nmContext) throws IOException {
-    numaResourceAllocator = new NumaResourceAllocator(nmContext);
+    // nothing to do or verify here
   }
 
   @Override
@@ -215,11 +209,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     return localizer;
   }
 
-  private volatile Container container;
   @Override
   public int launchContainer(ContainerStartContext ctx)
       throws IOException, ConfigurationException {
-    container = ctx.getContainer();
+    Container container = ctx.getContainer();
     Path nmPrivateContainerScriptPath = ctx.getNmPrivateContainerScriptPath();
     Path nmPrivateTokensPath = ctx.getNmPrivateTokensPath();
     Path nmPrivateKeystorePath = ctx.getNmPrivateKeystorePath();
@@ -389,9 +382,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String[] command = getRunCommand(wrapperScriptPath,
         containerIdStr, user, pidFile, this.getConf(), resource);
 
-    if(numaAwarenessEnabled(this.getConf())) {
-      addNumaCommands(command, container);
-    }
     LOG.info("launchContainer: {}", Arrays.toString(command));
     return new ShellCommandExecutor(
         command,
@@ -399,26 +389,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         environment,
         0L,
         false);
-  }
-
-
-  private void addNumaCommands(String[] commands, Container container){
-    try {
-      NumaResourceAllocation numaAllocation = numaResourceAllocator.allocateNumaNodes(container);
-      if(numaAllocation != null){
-        String[] numaCommand = new String[3];
-        numaCommand[0] = this.getConf().get(YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
-                YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);;
-        numaCommand[1] = "--interleave=" + String.join(",", numaAllocation.getMemNodes());
-        numaCommand[2] = "--cpunodebind=" + String.join(",", numaAllocation.getCpuNodes());
-        ArrayUtils.add(commands, numaCommand);
-      }
-    } catch (ResourceHandlerException e){
-      LOG.warn("Exception assigning numa :- ",  e);
-    }
-
-
-
   }
 
   /**
