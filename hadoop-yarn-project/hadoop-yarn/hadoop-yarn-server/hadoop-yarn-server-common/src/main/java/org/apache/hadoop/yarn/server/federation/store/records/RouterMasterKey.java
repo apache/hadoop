@@ -120,7 +120,8 @@ public abstract class RouterMasterKey {
       return false;
     } else {
       RouterMasterKey r = (RouterMasterKey) right;
-      return getKeyId() == r.getKeyId() && getExpiryDate() == r.getExpiryDate() &&
+      return getKeyId().intValue() == r.getKeyId().intValue() &&
+          getExpiryDate().longValue() == r.getExpiryDate().longValue() &&
           Arrays.equals(getKeyBytes().array(), r.getKeyBytes().array());
     }
   }

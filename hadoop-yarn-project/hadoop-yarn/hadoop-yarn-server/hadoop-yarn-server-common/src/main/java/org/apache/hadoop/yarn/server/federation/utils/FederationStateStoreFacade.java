@@ -422,6 +422,7 @@ public final class FederationStateStoreFacade {
    * The Router supports saving the master key.
    *
    * @param newKey DelegationKey
+   * @throws Exception An error occurred
    */
   public void storeNewMasterKey(DelegationKey newKey) throws Exception {
     LOG.info("Storing master key with keyID {}.", newKey.getKeyId());

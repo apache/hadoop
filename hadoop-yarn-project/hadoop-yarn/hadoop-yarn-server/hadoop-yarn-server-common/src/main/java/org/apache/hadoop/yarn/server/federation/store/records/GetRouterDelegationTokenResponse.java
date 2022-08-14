@@ -23,17 +23,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.util.Records;
 
-
-/**
- * Response to a {@link GetDelegationTokenRequest} request
- * from the client. The response contains the token that 
- * can be used by the containers to talk to  ClientRMService.
- *
- */
 @Public
 @Stable
 public abstract class GetRouterDelegationTokenResponse {
