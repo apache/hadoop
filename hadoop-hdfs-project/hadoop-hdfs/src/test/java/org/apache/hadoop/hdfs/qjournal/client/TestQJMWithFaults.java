@@ -29,6 +29,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -191,8 +192,7 @@ public class TestQJMWithFaults {
   }
   
   /**
-   * Expect an unresolved address if a hostname can't be resolved, but allowing the QJM to be
-   * configured.
+   * Expect {@link UnknownHostException} if a hostname can't be resolved.
    */
   @Test
   public void testUnresolvableHostName() throws Exception {
