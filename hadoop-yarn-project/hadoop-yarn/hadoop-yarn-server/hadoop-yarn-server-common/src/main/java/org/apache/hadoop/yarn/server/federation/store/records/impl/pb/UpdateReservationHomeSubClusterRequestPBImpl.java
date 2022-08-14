@@ -110,13 +110,13 @@ public class UpdateReservationHomeSubClusterRequestPBImpl
 
   @Override
   public void setReservationHomeSubCluster(
-      ReservationHomeSubCluster ReservationInfo) {
+      ReservationHomeSubCluster reservationInfo) {
     maybeInitBuilder();
-    if (ReservationInfo == null) {
+    if (reservationInfo == null) {
       builder.clearAppSubclusterMap();
       return;
     }
-    builder.setAppSubclusterMap(convertToProtoFormat(ReservationInfo));
+    builder.setAppSubclusterMap(convertToProtoFormat(reservationInfo));
   }
 
   private ReservationHomeSubCluster convertFromProtoFormat(
@@ -128,5 +128,4 @@ public class UpdateReservationHomeSubClusterRequestPBImpl
       ReservationHomeSubCluster sc) {
     return ((ReservationHomeSubClusterPBImpl) sc).getProto();
   }
-
 }

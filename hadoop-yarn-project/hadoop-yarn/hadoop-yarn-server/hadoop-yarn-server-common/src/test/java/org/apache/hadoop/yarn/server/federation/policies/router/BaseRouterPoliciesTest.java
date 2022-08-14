@@ -214,7 +214,6 @@ public abstract class BaseRouterPoliciesTest
 
     // get all activeSubClusters
     Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
-    activeSubClusters.remove(chosen);
 
     // Update ReservationHomeSubCluster
     List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
@@ -230,8 +229,8 @@ public abstract class BaseRouterPoliciesTest
                  null, false, false, 1, null, null, false);
 
     applicationSubmissionContext.setReservationID(resReq.getReservationId());
-    SubClusterId chosen3 = ((FederationRouterPolicy) getPolicy())
-        .getHomeSubcluster(applicationSubmissionContext,new ArrayList<>());
+    SubClusterId chosen3 = routerPolicy.getHomeSubcluster(
+        applicationSubmissionContext, new ArrayList<>());
 
     Assert.assertEquals(chosen2, chosen3);
   }
