@@ -60,7 +60,7 @@ public class DefaultAppReportFetcher extends AppReportFetcher {
    * @param applicationsManager what to use to get the RM reports.
    */
   public DefaultAppReportFetcher(Configuration conf,
-                                 ApplicationClientProtocol applicationsManager) {
+      ApplicationClientProtocol applicationsManager) {
     super(conf);
     this.rmAppPageUrlBase =
         StringHelper.pjoin(WebAppUtils.getResolvedRMWebAppURLWithScheme(conf), "cluster", "app");

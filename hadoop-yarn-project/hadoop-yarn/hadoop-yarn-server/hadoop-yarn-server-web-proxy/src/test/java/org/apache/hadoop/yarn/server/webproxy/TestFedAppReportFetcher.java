@@ -166,5 +166,4 @@ public class TestFedAppReportFetcher {
       return history;
     }
   }
-
 }

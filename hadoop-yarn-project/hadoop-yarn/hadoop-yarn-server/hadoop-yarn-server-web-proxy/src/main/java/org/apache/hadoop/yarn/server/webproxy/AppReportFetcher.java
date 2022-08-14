@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
