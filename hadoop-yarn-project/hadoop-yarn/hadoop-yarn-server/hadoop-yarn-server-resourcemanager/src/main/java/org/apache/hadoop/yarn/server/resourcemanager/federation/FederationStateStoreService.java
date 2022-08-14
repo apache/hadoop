@@ -72,6 +72,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyR
 import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -348,5 +352,17 @@ public class FederationStateStoreService extends AbstractService
   public RouterStoreNewTokenResponse storeNewToken(
       RouterStoreNewTokenRequest request) throws Exception {
     return stateStoreClient.storeNewToken(request);
+  }
+
+  @Override
+  public RouterUpdateStoredTokenResponse updateStoredToken(
+      RouterUpdateStoredTokenRequest request) throws Exception {
+    return stateStoreClient.updateStoredToken(request);
+  }
+
+  @Override
+  public RouterRemoveStoredTokenResponse removeStoredToken(
+      RouterRemoveStoredTokenRequest request) throws Exception {
+    return stateStoreClient.removeStoredToken(request);
   }
 }

@@ -23,13 +23,11 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecret
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * A Router specific delegation token secret manager.
@@ -76,12 +74,7 @@ public class RouterDelegationTokenSecretManager
   @Override
   protected void storeNewMasterKey(DelegationKey newKey) {
     try {
-      LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
-      ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
-      RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
-          keyBytes, newKey.getExpiryDate());
-      StoreNewMasterKeyRequest keyRequest = StoreNewMasterKeyRequest.newInstance(masterKey);
-      federationFacade.getStateStore().storeNewMasterKey(keyRequest);
+      federationFacade.storeNewMasterKey(newKey);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in storing master key with KeyID: {}.", newKey.getKeyId());
@@ -93,12 +86,7 @@ public class RouterDelegationTokenSecretManager
   @Override
   protected void removeStoredMasterKey(DelegationKey key) {
     try {
-      LOG.info("removing master key with keyID {}.", key.getKeyId());
-      ByteBuffer keyBytes = ByteBuffer.wrap(key.getEncodedKey());
-      RouterMasterKey masterKey = RouterMasterKey.newInstance(key.getKeyId(),
-          keyBytes, key.getExpiryDate());
-      RemoveStoredMasterKeyRequest keyRequest = RemoveStoredMasterKeyRequest.newInstance(masterKey);
-      federationFacade.getStateStore().removeStoredMasterKey(keyRequest);
+      federationFacade.removeStoredMasterKey(key);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in removing master key with KeyID: {}.", key.getKeyId());
@@ -111,11 +99,7 @@ public class RouterDelegationTokenSecretManager
   protected void storeNewToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws IOException {
     try {
-      LOG.info("storing RMDelegation token with sequence number: {}.",
-          identifier.getSequenceNumber());
-      RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-      RouterStoreNewTokenRequest request = RouterStoreNewTokenRequest.newInstance(storeToken);
-      federationFacade.getStateStore().storeNewToken(request);
+      federationFacade.storeNewToken(identifier, renewDate);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in storing RMDelegationToken with sequence number: {}.",
@@ -128,9 +112,7 @@ public class RouterDelegationTokenSecretManager
   @Override
   protected void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) {
     try {
-      LOG.info("updating RMDelegation token with sequence number: {}.",
-          id.getSequenceNumber());
-        // rm.getRMContext().getStateStore().updateRMDelegationToken(id, renewDate);
+      federationFacade.updateStoredToken(id, renewDate);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in updating persisted RMDelegationToken with sequence number: {}.",
@@ -144,9 +126,7 @@ public class RouterDelegationTokenSecretManager
   protected void removeStoredToken(RMDelegationTokenIdentifier
       identifier) throws IOException {
     try {
-      LOG.info("removing RMDelegation token with sequence number: {}",
-          identifier.getSequenceNumber());
-       // rm.getRMContext().getStateStore().removeRMDelegationToken(ident);
+      federationFacade.removeStoredToken(identifier);
     } catch (Exception e) {
       if (!shouldIgnoreException(e)) {
         LOG.error("Error in removing RMDelegationToken with sequence number: {}",

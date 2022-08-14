@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,28 +52,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -390,16 +371,6 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router supports saving the master key
-   *
-   * @param newKey DelegationKey
-   */
-  public void storeNewMasterKey(DelegationKey newKey) {
-    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
-
-  }
-
-  /**
    * Get the singleton instance of SubClusterResolver.
    *
    * @return SubClusterResolver instance
@@ -444,6 +415,61 @@ public final class FederationStateStoreFacade {
     GetReservationHomeSubClusterResponse response = stateStore.getReservationHomeSubCluster(
          GetReservationHomeSubClusterRequest.newInstance(reservationId));
     return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * The Router supports saving the master key.
+   *
+   * @param newKey DelegationKey
+   */
+  public void storeNewMasterKey(DelegationKey newKey) throws Exception {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    StoreNewMasterKeyRequest keyRequest = StoreNewMasterKeyRequest.newInstance(masterKey);
+    stateStore.storeNewMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router supports remove the master key.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   */
+  public void removeStoredMasterKey(DelegationKey newKey) throws Exception {
+    LOG.info("Removing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RemoveStoredMasterKeyRequest keyRequest = RemoveStoredMasterKeyRequest.newInstance(masterKey);
+    stateStore.removeStoredMasterKey(keyRequest);
+  }
+
+  public void storeNewToken(RMDelegationTokenIdentifier id,
+      long renewDate) throws Exception {
+    LOG.info("storing RMDelegation token with sequence number: {}.", id.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, renewDate);
+    RouterStoreNewTokenRequest request = RouterStoreNewTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  public void updateStoredToken(RMDelegationTokenIdentifier id,
+      long renewDate) throws Exception {
+    LOG.info("updating RMDelegation token with sequence number: {}.", id.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, renewDate);
+    RouterUpdateStoredTokenRequest request =
+        RouterUpdateStoredTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  public void removeStoredToken(RMDelegationTokenIdentifier id)
+      throws Exception{
+    LOG.info("removing RMDelegation token with sequence number: {}", id.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(id, 0L);
+    RouterRemoveStoredTokenRequest  request =
+        RouterRemoveStoredTokenRequest.newInstance(storeToken);
+    stateStore.removeStoredToken(request);
   }
 
   /**

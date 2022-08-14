@@ -86,6 +86,10 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
@@ -435,6 +439,26 @@ public class MemoryFederationStateStore implements FederationStateStore {
     Long renewDate = storeToken.getRenewDate();
     storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, false);
     return RouterStoreNewTokenResponse.newInstance(storeToken);
+  }
+
+  @Override
+  public RouterUpdateStoredTokenResponse updateStoredToken(
+      RouterUpdateStoredTokenRequest request) throws Exception {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier = storeToken.getTokenIdentifier();
+    Long renewDate = storeToken.getRenewDate();
+    storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, true);
+    return RouterUpdateStoredTokenResponse.newInstance(storeToken);
+  }
+
+  @Override
+  public RouterRemoveStoredTokenResponse removeStoredToken(
+      RouterRemoveStoredTokenRequest request) throws Exception {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier = storeToken.getTokenIdentifier();
+    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    rmDTState.remove(tokenIdentifier);
+    return RouterRemoveStoredTokenResponse.newInstance(storeToken);
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,

@@ -84,6 +84,10 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -1049,6 +1053,18 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public RouterStoreNewTokenResponse storeNewToken(
       RouterStoreNewTokenRequest request) throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterUpdateStoredTokenResponse updateStoredToken(
+      RouterUpdateStoredTokenRequest request) throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRemoveStoredTokenResponse removeStoredToken(
+      RouterRemoveStoredTokenRequest request) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 }
