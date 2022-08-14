@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
@@ -66,6 +68,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -121,10 +125,11 @@ public class FederationStateStoreService extends AbstractService
 
     heartbeatInterval = conf.getLong(
         YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+        YarnConfiguration
+            .DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
     if (heartbeatInterval <= 0) {
-      heartbeatInterval =
-          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
+      heartbeatInterval = YarnConfiguration
+          .DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
     }
     LOG.info("Initialized federation membership service.");
 
@@ -324,5 +329,17 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.getReservationsHomeSubCluster(request);
+  }
+
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
+    return stateStoreClient.updateReservationHomeSubCluster(request);
+  }
+
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
+    return stateStoreClient.deleteReservationHomeSubCluster(request);
   }
 }

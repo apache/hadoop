@@ -194,4 +194,77 @@ public abstract class BaseRouterPoliciesTest
     Assert.assertEquals(chosen, chosen2);
   }
 
+  @Test
+  public void testUpdateReservation() throws YarnException {
+    long now = Time.now();
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId()).thenReturn(ReservationId.newInstance(now, 1));
+
+    // first we invoke a reservation placement
+    FederationRouterPolicy routerPolicy = (FederationRouterPolicy) getPolicy();
+    SubClusterId chosen = routerPolicy.getReservationHomeSubcluster(resReq);
+
+    // add this to the store
+    FederationStateStoreFacade facade =
+        getFederationPolicyContext().getFederationStateStoreFacade();
+    ReservationHomeSubCluster subCluster =
+        ReservationHomeSubCluster.newInstance(resReq.getReservationId(), chosen);
+    facade.addReservationHomeSubCluster(subCluster);
+
+    // get all activeSubClusters
+    Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
+    activeSubClusters.remove(chosen);
+
+    // Update ReservationHomeSubCluster
+    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
+    SubClusterId chosen2 = subClusterIds.get(this.getRand().nextInt(subClusterIds.size()));
+    ReservationHomeSubCluster subCluster2 =
+        ReservationHomeSubCluster.newInstance(resReq.getReservationId(), chosen2);
+    facade.updateReservationHomeSubCluster(subCluster2);
+
+    // route an application that uses this app
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+            ApplicationId.newInstance(now, 1), "app1", "queue1", Priority.newInstance(1),
+                 null, false, false, 1, null, null, false);
+
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+    SubClusterId chosen3 = ((FederationRouterPolicy) getPolicy())
+        .getHomeSubcluster(applicationSubmissionContext,new ArrayList<>());
+
+    Assert.assertEquals(chosen2, chosen3);
+  }
+
+  @Test
+  public void testDeleteReservation() throws Exception {
+    long now = Time.now();
+    ReservationSubmissionRequest resReq = getReservationSubmissionRequest();
+    when(resReq.getQueue()).thenReturn("queue1");
+    when(resReq.getReservationId()).thenReturn(ReservationId.newInstance(now, 1));
+
+    // first we invoke a reservation placement
+    FederationRouterPolicy routerPolicy = (FederationRouterPolicy) getPolicy();
+    SubClusterId chosen = routerPolicy.getReservationHomeSubcluster(resReq);
+
+    // add this to the store
+    FederationStateStoreFacade facade =
+        getFederationPolicyContext().getFederationStateStoreFacade();
+    ReservationHomeSubCluster subCluster =
+        ReservationHomeSubCluster.newInstance(resReq.getReservationId(), chosen);
+    facade.addReservationHomeSubCluster(subCluster);
+
+    // delete this to the store
+    facade.deleteReservationHomeSubCluster(resReq.getReservationId());
+
+    ApplicationSubmissionContext applicationSubmissionContext =
+        ApplicationSubmissionContext.newInstance(
+            ApplicationId.newInstance(now, 1), "app1", "queue1", Priority.newInstance(1),
+                null, false, false, 1, null, null, false);
+    applicationSubmissionContext.setReservationID(resReq.getReservationId());
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + resReq.getReservationId() + " does not exist",
+        () -> routerPolicy.getHomeSubcluster(applicationSubmissionContext, new ArrayList<>()));
+  }
 }

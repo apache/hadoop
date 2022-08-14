@@ -72,6 +72,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -436,6 +438,34 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * Updates the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param appHomeSubCluster the mapping of the reservation to it's home
+   *          sub-cluster
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void updateReservationHomeSubCluster(ReservationHomeSubCluster appHomeSubCluster)
+      throws YarnException {
+    UpdateReservationHomeSubClusterRequest request =
+        UpdateReservationHomeSubClusterRequest.newInstance(appHomeSubCluster);
+    stateStore.updateReservationHomeSubCluster(request);
+  }
+
+  /**
+   * Delete the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param reservationId the identifier of the reservation
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void deleteReservationHomeSubCluster(ReservationId reservationId) throws YarnException {
+    DeleteReservationHomeSubClusterRequest request =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+    stateStore.deleteReservationHomeSubCluster(request);
+  }
+
+  /**
    * Helper method to create instances of Object using the class name defined in
    * the configuration object. The instances creates {@link RetryProxy} using
    * the specific {@link RetryPolicy}.
@@ -644,7 +674,6 @@ public final class FederationStateStoreFacade {
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
   }
-
 
   @VisibleForTesting
   public FederationStateStore getStateStore() {
