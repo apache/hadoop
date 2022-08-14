@@ -66,6 +66,12 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -324,5 +330,23 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     return stateStoreClient.getReservationsHomeSubCluster(request);
+  }
+
+  @Override
+  public StoreNewMasterKeyResponse storeNewMasterKey(
+      StoreNewMasterKeyRequest request) throws Exception {
+    return stateStoreClient.storeNewMasterKey(request);
+  }
+
+  @Override
+  public RemoveStoredMasterKeyResponse removeStoredMasterKey(
+      RemoveStoredMasterKeyRequest request) throws Exception {
+    return stateStoreClient.removeStoredMasterKey(request);
+  }
+
+  @Override
+  public RouterStoreNewTokenResponse storeNewToken(
+      RouterStoreNewTokenRequest request) throws Exception {
+    return stateStoreClient.storeNewToken(request);
   }
 }

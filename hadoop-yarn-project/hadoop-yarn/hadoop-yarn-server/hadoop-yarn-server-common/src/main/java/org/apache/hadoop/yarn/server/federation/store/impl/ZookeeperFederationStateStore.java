@@ -79,6 +79,12 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
@@ -660,6 +666,24 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public StoreNewMasterKeyResponse storeNewMasterKey(
+      StoreNewMasterKeyRequest request) throws Exception{
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RemoveStoredMasterKeyResponse removeStoredMasterKey(
+      RemoveStoredMasterKeyRequest request) throws Exception {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterStoreNewTokenResponse storeNewToken(
+      RouterStoreNewTokenRequest request) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 }

@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -386,6 +387,16 @@ public final class FederationStateStoreFacade {
         stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
     return response.getApplicationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * The Router supports saving the master key
+   *
+   * @param newKey DelegationKey
+   */
+  public void storeNewMasterKey(DelegationKey newKey) {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+
   }
 
   /**
