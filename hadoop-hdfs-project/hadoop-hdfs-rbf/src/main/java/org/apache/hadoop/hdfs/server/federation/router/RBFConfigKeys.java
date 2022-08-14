@@ -135,6 +135,12 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "connection.clean.ms";
   public static final long DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.multiple.socket";
+  public static final boolean DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_DEFAULT = false;
+  public static final String DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY =
+      FEDERATION_ROUTER_PREFIX + "max.concurrency.per.connection";
+  public static final int DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_DEFAULT = 1;
 
   // HDFS Router RPC client
   public static final String DFS_ROUTER_CLIENT_THREADS_SIZE =
@@ -315,6 +321,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_ROUTER_PREFIX + "dn-report.cache-expire";
   public static final long DN_REPORT_CACHE_EXPIRE_MS_DEFAULT =
       TimeUnit.SECONDS.toMillis(10);
+  public static final String DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY =
+      FEDERATION_ROUTER_PREFIX + "enable.get.dn.usage";
+  public static final boolean DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT = true;
 
   // HDFS Router-based federation quota
   public static final String DFS_ROUTER_QUOTA_ENABLE =

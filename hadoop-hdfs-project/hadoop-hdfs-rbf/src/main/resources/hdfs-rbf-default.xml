@@ -135,6 +135,33 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.enable.multiple.socket</name>
+    <value>false</value>
+    <description>
+      If enable multiple downstream socket or not. If true, ConnectionPool
+      will use a new socket when creating a new connection for the same user,
+      and RouterRPCClient will get a better throughput. It's best used with
+      dfs.federation.router.max.concurrency.per.connection together to get
+      a better throughput with fewer sockets. Such as enable
+      dfs.federation.router.enable.multiple.socket and
+      set dfs.federation.router.max.concurrency.per.connection = 20.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.max.concurrency.per.connection</name>
+    <value>1</value>
+    <description>
+      The maximum number of requests that a connection can handle concurrently.
+      When the number of requests being processed by a socket is less than this value,
+      new request will be processed by this socket. When enable
+      dfs.federation.router.enable.multiple.socket, it's best
+      set this value greater than 1, such as 20, to avoid frequent
+      creation and idle sockets in the case of a NS with jitter requests.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.pool.clean.ms</name>
     <value>60000</value>
     <description>
@@ -165,6 +192,16 @@
     <value>10s</value>
     <description>
       Expiration time in seconds for datanodereport.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.enable.get.dn.usage</name>
+    <value>true</value>
+    <description>
+      If true, the getNodeUsage method in RBFMetrics will return an up-to-date
+      result collecting from downstream nameservices. But it will take a long
+      time and take up thread resources. If false, it will return a mock result with all 0.
     </description>
   </property>
 
