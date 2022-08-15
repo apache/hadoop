@@ -53,9 +53,4 @@ public class BlockManagerFaultInjector {
   @VisibleForTesting
   public void mockAnException() {
   }
-
-  @VisibleForTesting
-  public void mockJNStreams() throws IOException {
-
-  }
 }
