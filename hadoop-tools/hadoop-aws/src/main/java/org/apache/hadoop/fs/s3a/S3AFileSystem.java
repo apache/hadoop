@@ -1006,7 +1006,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             STORAGE_CLASS, storageClassConf);
       }
     } else {
-      LOG.info("Empty storage class property {}; falling back to default storage class",
+      LOG.debug("Unset storage class property {}; falling back to default storage class",
           STORAGE_CLASS);
     }
 
