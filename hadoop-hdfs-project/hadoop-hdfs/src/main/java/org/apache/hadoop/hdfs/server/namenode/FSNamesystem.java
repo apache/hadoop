@@ -112,7 +112,6 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerFaultInjector;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -1390,8 +1389,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         editLog.initJournalsForWrite();
         // May need to recover
         editLog.recoverUnclosedStreams();
-
-        BlockManagerFaultInjector.getInstance().mockJNStreams();
         
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
