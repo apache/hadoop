@@ -423,6 +423,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.health.monitor.timeout</name>
+    <value>30s</value>
+    <description>
+      Time out for Router to obtain HAServiceStatus from NameNode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.heartbeat-state.interval</name>
     <value>5s</value>
     <description>
