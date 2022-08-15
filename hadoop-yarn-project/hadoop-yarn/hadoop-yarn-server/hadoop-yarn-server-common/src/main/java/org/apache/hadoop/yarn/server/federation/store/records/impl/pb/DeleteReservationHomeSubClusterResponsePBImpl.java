@@ -32,7 +32,6 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 @Unstable
 public class DeleteReservationHomeSubClusterResponsePBImpl
     extends DeleteReservationHomeSubClusterResponse {
-
   private DeleteReservationHomeSubClusterResponseProto proto =
       DeleteReservationHomeSubClusterResponseProto.getDefaultInstance();
   private DeleteReservationHomeSubClusterResponseProto.Builder builder = null;
@@ -74,5 +73,4 @@ public class DeleteReservationHomeSubClusterResponsePBImpl
   public String toString() {
     return TextFormat.shortDebugString(getProto());
   }
-
 }

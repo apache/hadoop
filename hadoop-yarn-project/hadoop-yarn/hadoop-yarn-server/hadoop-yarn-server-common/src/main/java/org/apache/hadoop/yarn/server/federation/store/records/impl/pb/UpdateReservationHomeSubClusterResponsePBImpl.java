@@ -74,5 +74,4 @@ public class UpdateReservationHomeSubClusterResponsePBImpl
   public String toString() {
     return TextFormat.shortDebugString(getProto());
   }
-
 }

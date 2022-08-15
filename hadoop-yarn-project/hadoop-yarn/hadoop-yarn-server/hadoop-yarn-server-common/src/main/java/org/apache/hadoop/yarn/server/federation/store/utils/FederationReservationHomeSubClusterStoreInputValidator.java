@@ -137,9 +137,8 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
   public static void validate(UpdateReservationHomeSubClusterRequest request)
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
-      String message = "Missing UpdateReservationHomeSubCluster Request."
-              + " Please try again by specifying"
-              + " an ReservationHomeSubCluster information.";
+      String message = "Missing UpdateReservationHomeSubCluster Request." +
+          " Please try again by specifying an ReservationHomeSubCluster information.";
       LOG.warn(message);
       throw new FederationStateStoreInvalidInputException(message);
     }
@@ -161,8 +160,7 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
       throws FederationStateStoreInvalidInputException {
     if (request == null) {
       String message = "Missing DeleteReservationHomeSubCluster Request." +
-          " Please try again by specifying" +
-          " an ReservationHomeSubCluster information.";
+          " Please try again by specifying an ReservationHomeSubCluster information.";
       LOG.warn(message);
       throw new FederationStateStoreInvalidInputException(message);
     }
