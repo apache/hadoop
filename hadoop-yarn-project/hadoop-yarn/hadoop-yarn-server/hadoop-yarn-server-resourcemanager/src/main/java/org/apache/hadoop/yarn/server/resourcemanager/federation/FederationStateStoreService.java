@@ -117,17 +117,23 @@ public class FederationStateStoreService extends AbstractService
     heartbeatInterval = conf.getLong(
         YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+
     if (heartbeatInterval <= 0) {
       heartbeatInterval =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
     }
 
-    heartbeatInitialDelay = conf.getLong(
-        YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS);
+    heartbeatInitialDelay = conf.getTimeDuration(
+        YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+        TimeUnit.SECONDS);
+
     if (heartbeatInitialDelay <= 0) {
+      LOG.warn("{} configured value is wrong, must be at <= 0; using default value of {}",
+          YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY);
       heartbeatInitialDelay =
-          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY_SECS;
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY;
     }
     LOG.info("Initialized federation membership service.");
 
@@ -206,8 +212,8 @@ public class FederationStateStoreService extends AbstractService
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
         heartbeatInitialDelay, heartbeatInterval, TimeUnit.SECONDS);
-    LOG.info("Started federation membership heartbeat with interval: {}",
-        heartbeatInterval);
+    LOG.info("Started federation membership heartbeat with interval: {} and initial delay: {}",
+        heartbeatInterval, heartbeatInitialDelay);
   }
 
   @VisibleForTesting
