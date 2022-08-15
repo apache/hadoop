@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Preconditions;
@@ -156,7 +157,12 @@ public final class CommitContext implements Closeable {
     this.commitOperations = commitOperations;
     this.jobContext = jobContext;
     this.conf = jobContext.getConfiguration();
-    this.jobId = jobContext.getJobID().toString();
+    JobID contextJobID = jobContext.getJobID();
+    // either the job ID or make one up as it will be
+    // used for the filename of any reports.
+    this.jobId = contextJobID != null
+        ? contextJobID.toString()
+        : ("job-without-id-at-" + System.currentTimeMillis());
     this.collectIOStatistics = conf.getBoolean(
         S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS,
         S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS_DEFAULT);

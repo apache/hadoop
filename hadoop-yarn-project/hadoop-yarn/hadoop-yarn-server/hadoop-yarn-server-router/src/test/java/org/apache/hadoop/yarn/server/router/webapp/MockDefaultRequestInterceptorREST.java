@@ -76,6 +76,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -578,5 +579,46 @@ public class MockDefaultRequestInterceptorREST
     AppTimeoutInfo result = new AppTimeoutInfo(applicationTimeout);
 
     return Response.status(Status.OK).entity(result).build();
+  }
+
+  @Override
+  public Response updateApplicationPriority(AppPriority targetPriority, HttpServletRequest hsr,
+      String appId) throws YarnException, InterruptedException, IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (targetPriority == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Priority newPriority = Priority.newInstance(targetPriority.getPriority());
+    appReport.setPriority(newPriority);
+
+    return Response.status(Status.OK).entity(targetPriority).build();
+  }
+
+  @Override
+  public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Priority priority = appReport.getPriority();
+
+    return new AppPriority(priority.getPriority());
   }
 }
