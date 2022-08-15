@@ -31,7 +31,10 @@ import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,10 +42,15 @@ import org.junit.Test;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestMRMultipleOutputs extends HadoopTestCase {
 
@@ -60,6 +68,19 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   public void testWithCounters() throws Exception {
     _testMultipleOutputs(true);
     _testMOWithJavaSerialization(true);
+  }
+
+  @Test(expected = IOException.class)
+  public void testParallelClose() throws IOException, InterruptedException {
+    RecordWriter writer = mock(RecordWriter.class);
+    Map<String, RecordWriter> recordWriters = mock(Map.class);
+    when(recordWriters.values()).thenReturn(Arrays.asList(new RecordWriter[] {writer, writer}));
+    TaskInputOutputContext taskInputOutputContext = mock(TaskInputOutputContext.class);
+    when(taskInputOutputContext.getConfiguration()).thenReturn(createJobConf());
+    doThrow(new IOException("test IO exception")).when(writer).close(taskInputOutputContext);
+    MultipleOutputs mos = new MultipleOutputs(taskInputOutputContext);
+    mos.setRecordWriters(recordWriters);
+    mos.close();
   }
 
   private static String localPathRoot = 
@@ -85,7 +106,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     fs.delete(ROOT_DIR, true);
     super.tearDown();
   }
-  
+
   protected void _testMOWithJavaSerialization(boolean withCounters) throws Exception {
     String input = "a\nb\nc\nd\ne\nc\nd\ne";
 

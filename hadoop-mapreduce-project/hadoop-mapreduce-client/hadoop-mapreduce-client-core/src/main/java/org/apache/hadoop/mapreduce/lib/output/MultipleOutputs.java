@@ -19,11 +19,9 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.Reducer.Context;
-import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -32,7 +30,13 @@ import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The MultipleOutputs class simplifies writing output data 
@@ -184,14 +188,12 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
 
   private static final String MULTIPLE_OUTPUTS = "mapreduce.multipleoutputs";
 
-  private static final String MO_PREFIX = 
-    "mapreduce.multipleoutputs.namedOutput.";
+  private static final String MO_PREFIX = "mapreduce.multipleoutputs.namedOutput.";
 
   private static final String FORMAT = ".format";
   private static final String KEY = ".key";
   private static final String VALUE = ".value";
-  private static final String COUNTERS_ENABLED = 
-    "mapreduce.multipleoutputs.counters";
+  private static final String COUNTERS_ENABLED = "mapreduce.multipleoutputs.counters";
 
   /**
    * Counters group used by the counters of MultipleOutputs.
@@ -207,6 +209,8 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   private TaskAttemptContext jobOutputFormatContext;
 
+  private static final Logger LOG = LoggerFactory.getLogger(org.apache.hadoop.mapred.lib.MultipleOutputs.class);
+
   /**
    * Checks if a named output name is valid token.
    *
@@ -215,8 +219,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   private static void checkTokenName(String namedOutput) {
     if (namedOutput == null || namedOutput.length() == 0) {
-      throw new IllegalArgumentException(
-        "Name cannot be NULL or emtpy");
+      throw new IllegalArgumentException("Name cannot be NULL or emtpy");
     }
     for (char ch : namedOutput.toCharArray()) {
       if ((ch >= 'A') && (ch <= 'Z')) {
@@ -228,15 +231,15 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
       if ((ch >= '0') && (ch <= '9')) {
         continue;
       }
-      throw new IllegalArgumentException(
-        "Name cannot be have a '" + ch + "' char");
+      throw new IllegalArgumentException("Name cannot be have a '" + ch + "' char");
     }
   }
 
   /**
    * Checks if output name is valid.
-   *
+   * <p>
    * name cannot be the name used for the default output
+   *
    * @param outputPath base output Name
    * @throws IllegalArgumentException if the output name is not valid.
    */
@@ -245,32 +248,28 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
       throw new IllegalArgumentException("output name cannot be 'part'");
     }
   }
-  
+
   /**
    * Checks if a named output name is valid.
    *
    * @param namedOutput named output Name
    * @throws IllegalArgumentException if the output name is not valid.
    */
-  private static void checkNamedOutputName(JobContext job,
-      String namedOutput, boolean alreadyDefined) {
+  private static void checkNamedOutputName(JobContext job, String namedOutput, boolean alreadyDefined) {
     checkTokenName(namedOutput);
     checkBaseOutputPath(namedOutput);
     List<String> definedChannels = getNamedOutputsList(job);
     if (alreadyDefined && definedChannels.contains(namedOutput)) {
-      throw new IllegalArgumentException("Named output '" + namedOutput +
-        "' already alreadyDefined");
+      throw new IllegalArgumentException("Named output '" + namedOutput + "' already alreadyDefined");
     } else if (!alreadyDefined && !definedChannels.contains(namedOutput)) {
-      throw new IllegalArgumentException("Named output '" + namedOutput +
-        "' not defined");
+      throw new IllegalArgumentException("Named output '" + namedOutput + "' not defined");
     }
   }
 
   // Returns list of channel names.
   private static List<String> getNamedOutputsList(JobContext job) {
     List<String> names = new ArrayList<String>();
-    StringTokenizer st = new StringTokenizer(
-      job.getConfiguration().get(MULTIPLE_OUTPUTS, ""), " ");
+    StringTokenizer st = new StringTokenizer(job.getConfiguration().get(MULTIPLE_OUTPUTS, ""), " ");
     while (st.hasMoreTokens()) {
       names.add(st.nextToken());
     }
@@ -279,25 +278,20 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
 
   // Returns the named output OutputFormat.
   @SuppressWarnings("unchecked")
-  private static Class<? extends OutputFormat<?, ?>> getNamedOutputFormatClass(
-    JobContext job, String namedOutput) {
-    return (Class<? extends OutputFormat<?, ?>>)
-      job.getConfiguration().getClass(MO_PREFIX + namedOutput + FORMAT, null,
-      OutputFormat.class);
+  private static Class<? extends OutputFormat<?, ?>> getNamedOutputFormatClass(JobContext job,
+      String namedOutput) {
+    return (Class<? extends OutputFormat<?, ?>>) job.getConfiguration()
+        .getClass(MO_PREFIX + namedOutput + FORMAT, null, OutputFormat.class);
   }
 
   // Returns the key class for a named output.
-  private static Class<?> getNamedOutputKeyClass(JobContext job,
-                                                String namedOutput) {
-    return job.getConfiguration().getClass(MO_PREFIX + namedOutput + KEY, null,
-      Object.class);
+  private static Class<?> getNamedOutputKeyClass(JobContext job, String namedOutput) {
+    return job.getConfiguration().getClass(MO_PREFIX + namedOutput + KEY, null, Object.class);
   }
 
   // Returns the value class for a named output.
-  private static Class<?> getNamedOutputValueClass(
-      JobContext job, String namedOutput) {
-    return job.getConfiguration().getClass(MO_PREFIX + namedOutput + VALUE,
-      null, Object.class);
+  private static Class<?> getNamedOutputValueClass(JobContext job, String namedOutput) {
+    return job.getConfiguration().getClass(MO_PREFIX + namedOutput + VALUE, null, Object.class);
   }
 
   /**
@@ -313,27 +307,24 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   @SuppressWarnings("unchecked")
   public static void addNamedOutput(Job job, String namedOutput,
-      Class<? extends OutputFormat> outputFormatClass,
-      Class<?> keyClass, Class<?> valueClass) {
+      Class<? extends OutputFormat> outputFormatClass, Class<?> keyClass, Class<?> valueClass) {
     checkNamedOutputName(job, namedOutput, true);
     Configuration conf = job.getConfiguration();
-    conf.set(MULTIPLE_OUTPUTS,
-      conf.get(MULTIPLE_OUTPUTS, "") + " " + namedOutput);
-    conf.setClass(MO_PREFIX + namedOutput + FORMAT, outputFormatClass,
-      OutputFormat.class);
+    conf.set(MULTIPLE_OUTPUTS, conf.get(MULTIPLE_OUTPUTS, "") + " " + namedOutput);
+    conf.setClass(MO_PREFIX + namedOutput + FORMAT, outputFormatClass, OutputFormat.class);
     conf.setClass(MO_PREFIX + namedOutput + KEY, keyClass, Object.class);
     conf.setClass(MO_PREFIX + namedOutput + VALUE, valueClass, Object.class);
   }
 
   /**
    * Enables or disables counters for the named outputs.
-   * 
+   * <p>
    * The counters group is the {@link MultipleOutputs} class name.
    * The names of the counters are the same as the named outputs. These
    * counters count the number records written to each output name.
    * By default these counters are disabled.
    *
-   * @param job    job  to enable counters
+   * @param job     job  to enable counters
    * @param enabled indicates if the counters will be enabled or not.
    */
   public static void setCountersEnabled(Job job, boolean enabled) {
@@ -344,7 +335,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    * Returns if the counters for the named outputs are enabled or not.
    * By default these counters are disabled.
    *
-   * @param job    the job 
+   * @param job the job
    * @return TRUE if the counters are enabled, FALSE if they are disabled.
    */
   public static boolean getCountersEnabled(JobContext job) {
@@ -352,7 +343,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
   }
 
   /**
-   * Wraps RecordWriter to increment counters. 
+   * Wraps RecordWriter to increment counters.
    */
   @SuppressWarnings("unchecked")
   private static class RecordWriterWithCounter extends RecordWriter {
@@ -360,22 +351,19 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     private String counterName;
     private TaskInputOutputContext context;
 
-    public RecordWriterWithCounter(RecordWriter writer, String counterName,
-                                   TaskInputOutputContext context) {
+    public RecordWriterWithCounter(RecordWriter writer, String counterName, TaskInputOutputContext context) {
       this.writer = writer;
       this.counterName = counterName;
       this.context = context;
     }
 
     @SuppressWarnings({"unchecked"})
-    public void write(Object key, Object value) 
-        throws IOException, InterruptedException {
+    public void write(Object key, Object value) throws IOException, InterruptedException {
       context.getCounter(COUNTERS_GROUP, counterName).increment(1);
       writer.write(key, value);
     }
 
-    public void close(TaskAttemptContext context) 
-        throws IOException, InterruptedException {
+    public void close(TaskAttemptContext context) throws IOException, InterruptedException {
       writer.close(context);
     }
   }
@@ -386,28 +374,31 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
   private Set<String> namedOutputs;
   private Map<String, RecordWriter<?, ?>> recordWriters;
   private boolean countersEnabled;
-  
+
+  @VisibleForTesting
+  public void setRecordWriters(Map<String, RecordWriter<?, ?>>recordWriters) {
+    this.recordWriters = recordWriters;
+  }
+
   /**
    * Creates and initializes multiple outputs support,
    * it should be instantiated in the Mapper/Reducer setup method.
    *
    * @param context the TaskInputOutputContext object
    */
-  public MultipleOutputs(
-      TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context) {
+  public MultipleOutputs(TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context) {
     this.context = context;
-    namedOutputs = Collections.unmodifiableSet(
-      new HashSet<String>(MultipleOutputs.getNamedOutputsList(context)));
+    namedOutputs = Collections.unmodifiableSet(new HashSet<String>(MultipleOutputs.getNamedOutputsList(context)));
     recordWriters = new HashMap<String, RecordWriter<?, ?>>();
     countersEnabled = getCountersEnabled(context);
   }
 
   /**
    * Write key and value to the namedOutput.
-   *
+   * <p>
    * Output path is a unique file generated for the namedOutput.
    * For example, {namedOutput}-(m|r)-{part-number}
-   * 
+   *
    * @param namedOutput the named output name
    * @param key         the key
    * @param value       the value
@@ -420,25 +411,24 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
 
   /**
    * Write key and value to baseOutputPath using the namedOutput.
-   * 
+   *
    * @param namedOutput    the named output name
    * @param key            the key
    * @param value          the value
    * @param baseOutputPath base-output path to write the record to.
-   * Note: Framework will generate unique filename for the baseOutputPath
-   * <b>Warning</b>: when the baseOutputPath is a path that resolves
-   * outside of the final job output directory, the directory is created
-   * immediately and then persists through subsequent task retries, breaking
-   * the concept of output committing.
+   *                       Note: Framework will generate unique filename for the baseOutputPath
+   *                       <b>Warning</b>: when the baseOutputPath is a path that resolves
+   *                       outside of the final job output directory, the directory is created
+   *                       immediately and then persists through subsequent task retries, breaking
+   *                       the concept of output committing.
    */
   @SuppressWarnings("unchecked")
-  public <K, V> void write(String namedOutput, K key, V value,
-      String baseOutputPath) throws IOException, InterruptedException {
+  public <K, V> void write(String namedOutput, K key, V value, String baseOutputPath)
+      throws IOException, InterruptedException {
     checkNamedOutputName(context, namedOutput, false);
     checkBaseOutputPath(baseOutputPath);
     if (!namedOutputs.contains(namedOutput)) {
-      throw new IllegalArgumentException("Undefined named output '" +
-        namedOutput + "'");
+      throw new IllegalArgumentException("Undefined named output '" + namedOutput + "'");
     }
     TaskAttemptContext taskContext = getContext(namedOutput);
     getRecordWriter(taskContext, baseOutputPath).write(key, value);
@@ -446,28 +436,25 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
 
   /**
    * Write key value to an output file name.
-   * 
-   * Gets the record writer from job's output format.  
+   * <p>
+   * Gets the record writer from job's output format.
    * Job's output format should be a FileOutputFormat.
-   * 
-   * @param key       the key
-   * @param value     the value
+   *
+   * @param key            the key
+   * @param value          the value
    * @param baseOutputPath base-output path to write the record to.
-   * Note: Framework will generate unique filename for the baseOutputPath
-   * <b>Warning</b>: when the baseOutputPath is a path that resolves
-   * outside of the final job output directory, the directory is created
-   * immediately and then persists through subsequent task retries, breaking
-   * the concept of output committing.
+   *                       Note: Framework will generate unique filename for the baseOutputPath
+   *                       <b>Warning</b>: when the baseOutputPath is a path that resolves
+   *                       outside of the final job output directory, the directory is created
+   *                       immediately and then persists through subsequent task retries, breaking
+   *                       the concept of output committing.
    */
   @SuppressWarnings("unchecked")
-  public void write(KEYOUT key, VALUEOUT value, String baseOutputPath) 
-      throws IOException, InterruptedException {
+  public void write(KEYOUT key, VALUEOUT value, String baseOutputPath) throws IOException, InterruptedException {
     checkBaseOutputPath(baseOutputPath);
     if (jobOutputFormatContext == null) {
-      jobOutputFormatContext = 
-        new TaskAttemptContextImpl(context.getConfiguration(), 
-                                   context.getTaskAttemptID(),
-                                   new WrappedStatusReporter(context));
+      jobOutputFormatContext =
+          new TaskAttemptContextImpl(context.getConfiguration(), context.getTaskAttemptID(), new WrappedStatusReporter(context));
     }
     getRecordWriter(jobOutputFormatContext, baseOutputPath).write(key, value);
   }
@@ -475,55 +462,52 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
   // by being synchronized MultipleOutputTask can be use with a
   // MultithreadedMapper.
   @SuppressWarnings("unchecked")
-  private synchronized RecordWriter getRecordWriter(
-      TaskAttemptContext taskContext, String baseFileName) 
+  private synchronized RecordWriter getRecordWriter(TaskAttemptContext taskContext, String baseFileName)
       throws IOException, InterruptedException {
-    
+
     // look for record-writer in the cache
     RecordWriter writer = recordWriters.get(baseFileName);
-    
+
     // If not in cache, create a new one
     if (writer == null) {
       // get the record writer from context output format
       FileOutputFormat.setOutputName(taskContext, baseFileName);
       try {
-        writer = ((OutputFormat) ReflectionUtils.newInstance(
-          taskContext.getOutputFormatClass(), taskContext.getConfiguration()))
-          .getRecordWriter(taskContext);
+        writer = ((OutputFormat) ReflectionUtils.newInstance(taskContext.getOutputFormatClass(),
+            taskContext.getConfiguration())).getRecordWriter(taskContext);
       } catch (ClassNotFoundException e) {
         throw new IOException(e);
       }
- 
+
       // if counters are enabled, wrap the writer with context 
       // to increment counters 
       if (countersEnabled) {
         writer = new RecordWriterWithCounter(writer, baseFileName, context);
       }
-      
+
       // add the record-writer to the cache
       recordWriters.put(baseFileName, writer);
     }
     return writer;
   }
 
-   // Create a taskAttemptContext for the named output with 
-   // output format and output key/value types put in the context
+  // Create a taskAttemptContext for the named output with
+  // output format and output key/value types put in the context
   private TaskAttemptContext getContext(String nameOutput) throws IOException {
-      
+
     TaskAttemptContext taskContext = taskContexts.get(nameOutput);
-    
+
     if (taskContext != null) {
-        return taskContext;
+      return taskContext;
     }
-    
+
     // The following trick leverages the instantiation of a record writer via
     // the job thus supporting arbitrary output formats.
     Job job = Job.getInstance(context.getConfiguration());
     job.setOutputFormatClass(getNamedOutputFormatClass(context, nameOutput));
     job.setOutputKeyClass(getNamedOutputKeyClass(context, nameOutput));
     job.setOutputValueClass(getNamedOutputValueClass(context, nameOutput));
-    taskContext = new TaskAttemptContextImpl(job.getConfiguration(), context
-        .getTaskAttemptID(), new WrappedStatusReporter(context));
+    taskContext = new TaskAttemptContextImpl(job.getConfiguration(), context.getTaskAttemptID(), new WrappedStatusReporter(context));
 
     taskContexts.put(nameOutput, taskContext);
 
@@ -557,7 +541,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     public float getProgress() {
       return context.getProgress();
     }
-    
+
     @Override
     public void setStatus(String status) {
       context.setStatus(status);
@@ -566,27 +550,31 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
 
   /**
    * Closes all the opened outputs.
-   * 
+   * <p>
    * This should be called from cleanup method of map/reduce task.
    * If overridden subclasses must invoke <code>super.close()</code> at the
    * end of their <code>close()</code>
-   * 
    */
   @SuppressWarnings("unchecked")
   public void close() throws IOException, InterruptedException {
-    int nThreads = 10;
-    AtomicReference<IOException> ioException = new AtomicReference<>();
-    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+    Configuration conf = context.getConfiguration();
+    int nThreads = conf.getInt(MRConfig.MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT,
+        MRConfig.DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT);
+    AtomicBoolean encounteredException = new AtomicBoolean(false);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("MultipleOutputs-close")
+        .setUncaughtExceptionHandler(
+            ((t, e) -> LOG.error("Thread " + t + " failed unexpectedly", e))).build();
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads, threadFactory);
 
-    List<Callable<Object>> callableList = new ArrayList<>();
+    List<Callable<Object>> callableList = new ArrayList<>(recordWriters.size());
 
     for (RecordWriter writer : recordWriters.values()) {
       callableList.add(() -> {
         try {
           writer.close(context);
-          throw new IOException();
         } catch (IOException e) {
-          ioException.set(e);
+          LOG.error("Error while closing MultipleOutput file", e);
+          encounteredException.set(true);
         }
         return null;
       });
@@ -594,13 +582,16 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     try {
       executorService.invokeAll(callableList);
     } catch (InterruptedException e) {
+      LOG.warn("Closing is Interrupted");
       Thread.currentThread().interrupt();
     } finally {
       executorService.shutdown();
+      executorService.awaitTermination(50, TimeUnit.SECONDS);
     }
 
-    if (ioException.get() != null) {
-      throw new IOException(ioException.get());
+    if (encounteredException.get()) {
+      throw new IOException(
+          "One or more threads encountered IOException during close. See prior errors.");
     }
   }
 }

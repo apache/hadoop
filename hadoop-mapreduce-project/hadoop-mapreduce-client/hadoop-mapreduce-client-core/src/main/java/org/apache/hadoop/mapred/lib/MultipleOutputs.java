@@ -30,10 +30,17 @@ import java.util.StringTokenizer;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
@@ -41,6 +48,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -149,6 +157,7 @@ public class MultipleOutputs {
    * Counters group used by the counters of MultipleOutputs.
    */
   private static final String COUNTERS_GROUP = MultipleOutputs.class.getName();
+  private static final Logger LOG = LoggerFactory.getLogger(MultipleOutputs.class);
 
   /**
    * Checks if a named output is alreadyDefined or not.
@@ -398,6 +407,11 @@ public class MultipleOutputs {
   private Map<String, RecordWriter> recordWriters;
   private boolean countersEnabled;
 
+  @VisibleForTesting
+  public void setRecordWriters(Map<String, RecordWriter> recordWriters) {
+    this.recordWriters = recordWriters;
+  }
+
   /**
    * Creates and initializes multiple named outputs support, it should be
    * instantiated in the Mapper/Reducer configure method.
@@ -544,20 +558,24 @@ public class MultipleOutputs {
    * @throws java.io.IOException thrown if any of the MultipleOutput files
    *                             could not be closed properly.
    */
-  public void close() throws IOException {
-    int nThreads = 10;
-    AtomicReference<IOException> ioException = new AtomicReference<>();
-    ExecutorService executorService = Executors.newFixedThreadPool(nThreads);
+  public void close() throws IOException, InterruptedException {
+    int nThreads = conf.getInt(MRConfig.MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT,
+        MRConfig.DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT);
+    AtomicBoolean encounteredException = new AtomicBoolean(false);
+    ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("MultipleOutputs-close")
+        .setUncaughtExceptionHandler(
+            ((t, e) -> LOG.error("Thread " + t + " failed unexpectedly", e))).build();
+    ExecutorService executorService = Executors.newFixedThreadPool(nThreads, threadFactory);
 
-    List<Callable<Object>> callableList = new ArrayList<>();
+    List<Callable<Object>> callableList = new ArrayList<>(recordWriters.size());
 
     for (RecordWriter writer : recordWriters.values()) {
       callableList.add(() -> {
         try {
           writer.close(null);
-          throw new IOException();
         } catch (IOException e) {
-          ioException.set(e);
+          LOG.error("Error while closing MultipleOutput file", e);
+          encounteredException.set(true);
         }
         return null;
       });
@@ -565,13 +583,16 @@ public class MultipleOutputs {
     try {
       executorService.invokeAll(callableList);
     } catch (InterruptedException e) {
+      LOG.warn("Closing is Interrupted");
       Thread.currentThread().interrupt();
     } finally {
       executorService.shutdown();
+      executorService.awaitTermination(50, TimeUnit.SECONDS);
     }
 
-    if (ioException.get() != null) {
-      throw new IOException(ioException.get());
+    if (encounteredException.get()) {
+      throw new IOException(
+          "One or more threads encountered IOException during close. See prior errors.");
     }
   }
 
