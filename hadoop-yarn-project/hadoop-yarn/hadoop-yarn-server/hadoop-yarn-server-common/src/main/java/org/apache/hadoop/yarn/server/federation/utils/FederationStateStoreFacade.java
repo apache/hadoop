@@ -610,6 +610,7 @@ public final class FederationStateStoreFacade {
     TResult invoke(T input) throws Exception;
   }
 
+
   @VisibleForTesting
   public FederationStateStore getStateStore() {
     return stateStore;
