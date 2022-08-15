@@ -26,7 +26,6 @@ package hadoop.yarn;
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
 import "yarn_security_token.proto";
-import "RpcHeader.proto";
 
 message SubClusterIdProto {
   optional string id = 1;
@@ -245,5 +244,25 @@ message RouterStoreTokenProto {
 }
 
 message RouterStoreNewTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterStoreNewTokenResponseProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterUpdateStoredTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterUpdateStoredTokenResponseProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterRemoveStoredTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterRemoveStoredTokenResponseProto {
   optional RouterStoreTokenProto router_store_token = 1;
 }

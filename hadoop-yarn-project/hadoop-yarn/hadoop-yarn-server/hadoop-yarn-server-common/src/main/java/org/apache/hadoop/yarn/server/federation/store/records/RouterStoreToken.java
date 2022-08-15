@@ -17,32 +17,19 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.IOException;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public abstract class RouterStoreToken {
-  private RouterStoreTokenProto.Builder builder = RouterStoreTokenProto.newBuilder();
 
-  public RouterStoreToken() {}
-
-  public RouterStoreToken(YARNDelegationTokenIdentifier identifier, Long renewdate) {
-    builder.setTokenIdentifier(identifier.getProto());
-    builder.setRenewDate(renewdate);
-  }
-
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static RouterStoreToken newInstance(YARNDelegationTokenIdentifier identifier,
       Long renewdate) {
     RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
@@ -51,31 +38,19 @@ public abstract class RouterStoreToken {
     return storeToken;
   }
 
-  public void readFields(DataInput in) throws IOException {
-    builder.mergeFrom((DataInputStream) in);
-  }
+  @Private
+  @Unstable
+  public abstract YARNDelegationTokenIdentifier getTokenIdentifier() throws IOException;
 
-  public byte[] toByteArray() throws IOException {
-    return builder.build().toByteArray();
-  }
+  @Private
+  @Unstable
+  public abstract void setIdentifier(YARNDelegationTokenIdentifier identifier);
 
-  public RMDelegationTokenIdentifier getTokenIdentifier() throws IOException {
-    ByteArrayInputStream in =
-        new ByteArrayInputStream(builder.getTokenIdentifier().toByteArray());
-    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier();
-    identifier.readFields(new DataInputStream(in));
-    return identifier;
-  }
+  @Private
+  @Unstable
+  public abstract Long getRenewDate();
 
-  public Long getRenewDate() {
-    return builder.getRenewDate();
-  }
-
-  public void setIdentifier(YARNDelegationTokenIdentifier identifier) {
-    builder.setTokenIdentifier(identifier.getProto());
-  }
-
-  public void setRenewDate(Long renewDate) {
-    builder.setRenewDate(renewDate);
-  }
+  @Private
+  @Unstable
+  public abstract void setRenewDate(Long renewDate);
 }

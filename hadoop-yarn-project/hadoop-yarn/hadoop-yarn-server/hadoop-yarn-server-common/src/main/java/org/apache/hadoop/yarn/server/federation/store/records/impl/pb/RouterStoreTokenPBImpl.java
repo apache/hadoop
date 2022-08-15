@@ -44,6 +44,9 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
 
   private boolean viaProto = false;
 
+  private YARNDelegationTokenIdentifier rMDelegationTokenIdentifier = null;
+  private Long renewDate;
+
   public RouterStoreTokenPBImpl() {
     builder = RouterStoreTokenProto.newBuilder();
   }
@@ -54,9 +57,29 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
   }
 
   public RouterStoreTokenProto getProto() {
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
+  }
+
+  private void mergeLocalToProto() {
+    if (viaProto) {
+      maybeInitBuilder();
+    }
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
+
+  private void mergeLocalToBuilder() {
+    if (this.rMDelegationTokenIdentifier != null
+            && !(this.rMDelegationTokenIdentifier.getProto().equals(builder.getTokenIdentifier()))) {
+      builder.setTokenIdentifier(convertToProtoFormat(this.rMDelegationTokenIdentifier));
+    }
+    if (this.renewDate != null) {
+      builder.setRenewDate(this.renewDate);
+    }
   }
 
   private void maybeInitBuilder() {
@@ -87,19 +110,33 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
   }
 
   @Override
-  public RMDelegationTokenIdentifier getTokenIdentifier() throws IOException {
+  public YARNDelegationTokenIdentifier getTokenIdentifier() throws IOException {
     RouterStoreTokenProtoOrBuilder p = viaProto ? proto : builder;
+    if (rMDelegationTokenIdentifier != null) {
+      return rMDelegationTokenIdentifier;
+    }
+    if(!p.hasTokenIdentifier()){
+      return null;
+    }
     YARNDelegationTokenIdentifierProto identifierProto = p.getTokenIdentifier();
     ByteArrayInputStream in = new ByteArrayInputStream(identifierProto.toByteArray());
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier();
     identifier.readFields(new DataInputStream(in));
+    this.rMDelegationTokenIdentifier = identifier;
     return identifier;
   }
 
   @Override
   public Long getRenewDate() {
     RouterStoreTokenProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getRenewDate();
+    if (this.renewDate != null) {
+      return this.renewDate;
+    }
+    if (!p.hasRenewDate()) {
+      return null;
+    }
+    this.renewDate = p.getRenewDate();
+    return this.renewDate;
   }
 
   @Override
@@ -109,7 +146,8 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
       builder.clearTokenIdentifier();
       return;
     }
-    builder.setTokenIdentifier(identifier.getProto());
+    this.rMDelegationTokenIdentifier = identifier;
+    this.builder.setTokenIdentifier(identifier.getProto());
   }
 
   @Override
@@ -119,6 +157,12 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
       builder.clearRenewDate();
       return;
     }
-    builder.setRenewDate(renewDate);
+    this.renewDate = renewDate;
+    this.builder.setRenewDate(renewDate);
+  }
+
+  private YARNDelegationTokenIdentifierProto convertToProtoFormat(
+      YARNDelegationTokenIdentifier rMDelegationTokenIdentifier) {
+    return rMDelegationTokenIdentifier.getProto();
   }
 }

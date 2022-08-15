@@ -435,7 +435,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public RouterStoreNewTokenResponse storeNewToken(
       RouterStoreNewTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Long renewDate = storeToken.getRenewDate();
     storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, false);
     return RouterStoreNewTokenResponse.newInstance(storeToken);
@@ -445,7 +445,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public RouterUpdateStoredTokenResponse updateStoredToken(
       RouterUpdateStoredTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Long renewDate = storeToken.getRenewDate();
     storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, true);
     return RouterUpdateStoredTokenResponse.newInstance(storeToken);
@@ -455,7 +455,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public RouterRemoveStoredTokenResponse removeStoredToken(
       RouterRemoveStoredTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
     rmDTState.remove(tokenIdentifier);
     return RouterRemoveStoredTokenResponse.newInstance(storeToken);
