@@ -196,6 +196,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.enable.get.dn.usage</name>
+    <value>true</value>
+    <description>
+      If true, the getNodeUsage method in RBFMetrics will return an up-to-date
+      result collecting from downstream nameservices. But it will take a long
+      time and take up thread resources. If false, it will return a mock result with all 0.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.metrics.class</name>
     <value>org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor</value>
     <description>
@@ -409,6 +419,14 @@
     <value>5000</value>
     <description>
       How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.health.monitor.timeout</name>
+    <value>30s</value>
+    <description>
+      Time out for Router to obtain HAServiceStatus from NameNode.
     </description>
   </property>
 
