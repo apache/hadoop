@@ -81,6 +81,11 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-services-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-applications-catalog-webapp</artifactId>
+      <type>war</type>
+    </dependency>
   </dependencies>
 
   <build>
@@ -141,13 +146,6 @@
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-assemblies</artifactId>
                 <version>${project.version}</version>
-              </dependency>
-              <!-- Add dependencies for parallel builds -->
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-yarn-applications-catalog-webapp</artifactId>
-                <version>${project.version}</version>
-                <type>war</type>
               </dependency>
             </dependencies>
             <configuration>
