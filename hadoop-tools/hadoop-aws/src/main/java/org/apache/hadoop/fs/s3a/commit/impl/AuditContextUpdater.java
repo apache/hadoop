@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
@@ -50,17 +49,12 @@ public final class AuditContextUpdater {
    * @param jobContext job/task context.
    */
   public AuditContextUpdater(final JobContext jobContext) {
-    JobID contextJobID = jobContext.getJobID();
-    this.jobId = contextJobID != null
-            ? contextJobID.toString()
-            : null;
+    this.jobId = jobContext.getJobID().toString();
 
     if (jobContext instanceof TaskAttemptContext) {
       // it's a task, extract info for auditing
       final TaskAttemptID tid = ((TaskAttemptContext) jobContext).getTaskAttemptID();
-      this.taskAttemptId = tid != null
-          ? tid.toString()
-          : null;
+      this.taskAttemptId = tid.toString();
     } else {
       this.taskAttemptId = null;
     }
@@ -76,11 +70,7 @@ public final class AuditContextUpdater {
    */
   public void updateCurrentAuditContext() {
     final CommonAuditContext auditCtx = currentAuditContext();
-    if (jobId != null) {
-      auditCtx.put(AuditConstants.PARAM_JOB_ID, jobId);
-    } else {
-      currentAuditContext().remove(AuditConstants.PARAM_JOB_ID);
-    }
+    auditCtx.put(AuditConstants.PARAM_JOB_ID, jobId);
     if (taskAttemptId != null) {
       auditCtx.put(AuditConstants.PARAM_TASK_ATTEMPT_ID, taskAttemptId);
     } else {
