@@ -75,20 +75,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHom
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
@@ -674,32 +668,29 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public StoreNewMasterKeyResponse storeNewMasterKey(
-      StoreNewMasterKeyRequest request) throws Exception{
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws Exception{
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RemoveStoredMasterKeyResponse removeStoredMasterKey(
-      RemoveStoredMasterKeyRequest request) throws Exception {
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterStoreNewTokenResponse storeNewToken(
-      RouterStoreNewTokenRequest request) throws Exception {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterUpdateStoredTokenResponse updateStoredToken(
-      RouterUpdateStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterRemoveStoredTokenResponse removeStoredToken(
-      RouterRemoveStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws Exception {
     throw new NotImplementedException("Code is not implemented");
   }
 }

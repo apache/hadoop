@@ -73,10 +73,13 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.rMDelegationTokenIdentifier != null
-            && !(this.rMDelegationTokenIdentifier.getProto().equals(builder.getTokenIdentifier()))) {
-      builder.setTokenIdentifier(convertToProtoFormat(this.rMDelegationTokenIdentifier));
+    if (this.rMDelegationTokenIdentifier != null) {
+      YARNDelegationTokenIdentifierProto idProto = this.rMDelegationTokenIdentifier.getProto();
+      if (!idProto.equals(builder.getTokenIdentifier())) {
+        builder.setTokenIdentifier(convertToProtoFormat(this.rMDelegationTokenIdentifier));
+      }
     }
+
     if (this.renewDate != null) {
       builder.setRenewDate(this.renewDate);
     }
@@ -162,7 +165,7 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
   }
 
   private YARNDelegationTokenIdentifierProto convertToProtoFormat(
-      YARNDelegationTokenIdentifier rMDelegationTokenIdentifier) {
-    return rMDelegationTokenIdentifier.getProto();
+      YARNDelegationTokenIdentifier delegationTokenIdentifier) {
+    return delegationTokenIdentifier.getProto();
   }
 }

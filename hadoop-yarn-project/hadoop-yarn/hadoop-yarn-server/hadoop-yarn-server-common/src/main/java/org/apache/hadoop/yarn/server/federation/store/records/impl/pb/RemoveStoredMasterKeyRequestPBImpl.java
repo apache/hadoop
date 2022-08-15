@@ -29,11 +29,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 @Unstable
 public class RemoveStoredMasterKeyRequestPBImpl extends RemoveStoredMasterKeyRequest {
 
-  private RemoveStoredMasterKeyRequestProto proto = RemoveStoredMasterKeyRequestProto.getDefaultInstance();
-
+  private RemoveStoredMasterKeyRequestProto proto =
+      RemoveStoredMasterKeyRequestProto.getDefaultInstance();
   private RemoveStoredMasterKeyRequestProto.Builder builder = null;
   private boolean viaProto = false;
-
   private RouterMasterKey routerMasterKey = null;
 
   public RemoveStoredMasterKeyRequestPBImpl() {

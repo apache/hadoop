@@ -26,7 +26,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 
 public class RouterStoreNewTokenRequestPBImpl extends RouterStoreNewTokenRequest {
 
-  private RouterStoreNewTokenRequestProto proto = RouterStoreNewTokenRequestProto.getDefaultInstance();
+  private RouterStoreNewTokenRequestProto proto =
+      RouterStoreNewTokenRequestProto.getDefaultInstance();
   private RouterStoreNewTokenRequestProto.Builder builder = null;
   private boolean viaProto = false;
   private RouterStoreToken routerStoreToken = null;
@@ -58,15 +59,19 @@ public class RouterStoreNewTokenRequestPBImpl extends RouterStoreNewTokenRequest
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-     builder = RouterStoreNewTokenRequestProto.newBuilder(proto);
+      builder = RouterStoreNewTokenRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
 
   private void mergeLocalToBuilder() {
-    if (this.routerStoreToken != null &&
-        !((RouterStoreTokenPBImpl) this.routerStoreToken).getProto().equals(builder.getRouterStoreToken())) {
+    if (this.routerStoreToken != null) {
+      RouterStoreTokenPBImpl routerStoreTokenPBImpl =
+          (RouterStoreTokenPBImpl) this.routerStoreToken;
+      RouterStoreTokenProto storeTokenProto = routerStoreTokenPBImpl.getProto();
+      if (!storeTokenProto.equals(builder.getRouterStoreToken())) {
         builder.setRouterStoreToken(convertToProtoFormat(this.routerStoreToken));
+      }
     }
   }
 
@@ -74,10 +79,10 @@ public class RouterStoreNewTokenRequestPBImpl extends RouterStoreNewTokenRequest
   public RouterStoreToken getRouterStoreToken() {
     RouterStoreNewTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerStoreToken != null) {
-        return this.routerStoreToken;
+      return this.routerStoreToken;
     }
     if (!p.hasRouterStoreToken()) {
-        return null;
+      return null;
     }
     this.routerStoreToken = convertFromProtoFormat(p.getRouterStoreToken());
     return this.routerStoreToken;
@@ -87,7 +92,7 @@ public class RouterStoreNewTokenRequestPBImpl extends RouterStoreNewTokenRequest
   public void setRouterStoreToken(RouterStoreToken storeToken) {
     maybeInitBuilder();
     if (storeToken == null) {
-        builder.clearRouterStoreToken();
+      builder.clearRouterStoreToken();
     }
     this.routerStoreToken = storeToken;
     this.builder.setRouterStoreToken(convertToProtoFormat(storeToken));
@@ -101,10 +106,10 @@ public class RouterStoreNewTokenRequestPBImpl extends RouterStoreNewTokenRequest
   @Override
   public boolean equals(Object other) {
     if (other == null) {
-        return false;
+      return false;
     }
     if (other.getClass().isAssignableFrom(this.getClass())) {
-        return this.getProto().equals(this.getClass().cast(other).getProto());
+      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
   }

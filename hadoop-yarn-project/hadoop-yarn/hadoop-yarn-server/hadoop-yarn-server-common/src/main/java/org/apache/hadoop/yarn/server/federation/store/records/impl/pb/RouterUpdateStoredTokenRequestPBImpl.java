@@ -26,7 +26,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStored
 
 public class RouterUpdateStoredTokenRequestPBImpl extends RouterUpdateStoredTokenRequest {
 
-  private RouterUpdateStoredTokenRequestProto proto = RouterUpdateStoredTokenRequestProto.getDefaultInstance();
+  private RouterUpdateStoredTokenRequestProto proto =
+      RouterUpdateStoredTokenRequestProto.getDefaultInstance();
   private RouterUpdateStoredTokenRequestProto.Builder builder = null;
   private boolean viaProto = false;
   private RouterStoreToken routerStoreToken = null;
@@ -64,9 +65,13 @@ public class RouterUpdateStoredTokenRequestPBImpl extends RouterUpdateStoredToke
   }
 
   private void mergeLocalToBuilder() {
-    if (this.routerStoreToken != null &&
-            !((RouterStoreTokenPBImpl) this.routerStoreToken).getProto().equals(builder.getRouterStoreToken())) {
-      builder.setRouterStoreToken(convertToProtoFormat(this.routerStoreToken));
+    if (this.routerStoreToken != null) {
+      RouterStoreTokenPBImpl routerStoreTokenPBImpl =
+              (RouterStoreTokenPBImpl) this.routerStoreToken;
+      RouterStoreTokenProto storeTokenProto = routerStoreTokenPBImpl.getProto();
+      if (!storeTokenProto.equals(builder.getRouterStoreToken())) {
+        builder.setRouterStoreToken(convertToProtoFormat(this.routerStoreToken));
+      }
     }
   }
 

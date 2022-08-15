@@ -266,3 +266,11 @@ message RouterRemoveStoredTokenRequestProto {
 message RouterRemoveStoredTokenResponseProto {
   optional RouterStoreTokenProto router_store_token = 1;
 }
+
+message RouterRMTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterRMTokenResponseProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}

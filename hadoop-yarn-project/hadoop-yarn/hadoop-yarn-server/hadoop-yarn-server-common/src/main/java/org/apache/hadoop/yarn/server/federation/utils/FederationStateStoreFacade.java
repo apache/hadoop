@@ -53,7 +53,32 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -429,7 +454,7 @@ public final class FederationStateStoreFacade {
     ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
     RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
         keyBytes, newKey.getExpiryDate());
-    StoreNewMasterKeyRequest keyRequest = StoreNewMasterKeyRequest.newInstance(masterKey);
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
     stateStore.storeNewMasterKey(keyRequest);
   }
 
@@ -444,7 +469,7 @@ public final class FederationStateStoreFacade {
     ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
     RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
         keyBytes, newKey.getExpiryDate());
-    RemoveStoredMasterKeyRequest keyRequest = RemoveStoredMasterKeyRequest.newInstance(masterKey);
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
     stateStore.removeStoredMasterKey(keyRequest);
   }
 
@@ -460,7 +485,7 @@ public final class FederationStateStoreFacade {
     LOG.info("storing RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterStoreNewTokenRequest request = RouterStoreNewTokenRequest.newInstance(storeToken);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.storeNewToken(request);
   }
 
@@ -476,8 +501,7 @@ public final class FederationStateStoreFacade {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterUpdateStoredTokenRequest request =
-        RouterUpdateStoredTokenRequest.newInstance(storeToken);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }
 
@@ -492,8 +516,7 @@ public final class FederationStateStoreFacade {
     LOG.info("removing RMDelegation token with sequence number: {}",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
-    RouterRemoveStoredTokenRequest  request =
-        RouterRemoveStoredTokenRequest.newInstance(storeToken);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.removeStoredToken(request);
   }
 

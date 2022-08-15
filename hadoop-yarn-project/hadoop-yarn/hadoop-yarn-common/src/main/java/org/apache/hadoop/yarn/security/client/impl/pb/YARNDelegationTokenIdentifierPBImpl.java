@@ -179,7 +179,7 @@ public class YARNDelegationTokenIdentifierPBImpl extends YARNDelegationTokenIden
 
   @Override
   public Text getKind() {
-      return null;
+    return null;
   }
 
   @Override
@@ -191,7 +191,6 @@ public class YARNDelegationTokenIdentifierPBImpl extends YARNDelegationTokenIden
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
-
   }
 
   @Override

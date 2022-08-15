@@ -15,7 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Public
-package org.apache.hadoop.yarn.security.client.impl.pb;
-import org.apache.hadoop.classification.InterfaceAudience;
+package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.util.Records;
+
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public abstract class RouterRMTokenResponse {
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static RouterRMTokenResponse newInstance(RouterStoreToken routerStoreToken) {
+    RouterRMTokenResponse request = Records.newRecord(RouterRMTokenResponse.class);
+    request.setRouterStoreToken(routerStoreToken);
+    return request;
+  }
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public abstract RouterStoreToken getRouterStoreToken();
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public abstract void setRouterStoreToken(RouterStoreToken routerStoreToken);
+}

@@ -71,12 +71,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
@@ -86,10 +84,6 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
@@ -387,8 +381,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public StoreNewMasterKeyResponse storeNewMasterKey(
-      StoreNewMasterKeyRequest request) throws Exception {
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws Exception {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
@@ -409,12 +403,12 @@ public class MemoryFederationStateStore implements FederationStateStore {
     LOG.info("Store Router-RMDT master key with key id: {}. Currently rmDTMasterKeyState size: {}",
         delegationKey.getKeyId(), rmDTMasterKeyState.size());
 
-    return StoreNewMasterKeyResponse.newInstance(masterKey);
+    return RouterMasterKeyResponse.newInstance(masterKey);
   }
 
   @Override
-  public RemoveStoredMasterKeyResponse removeStoredMasterKey(
-      RemoveStoredMasterKeyRequest request) throws Exception {
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws Exception {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
@@ -428,37 +422,37 @@ public class MemoryFederationStateStore implements FederationStateStore {
     Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
     rmDTMasterKeyState.remove(delegationKey);
 
-    return RemoveStoredMasterKeyResponse.newInstance(masterKey);
+    return RouterMasterKeyResponse.newInstance(masterKey);
   }
 
   @Override
-  public RouterStoreNewTokenResponse storeNewToken(
-      RouterStoreNewTokenRequest request) throws Exception {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Long renewDate = storeToken.getRenewDate();
     storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, false);
-    return RouterStoreNewTokenResponse.newInstance(storeToken);
+    return RouterRMTokenResponse.newInstance(storeToken);
   }
 
   @Override
-  public RouterUpdateStoredTokenResponse updateStoredToken(
-      RouterUpdateStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Long renewDate = storeToken.getRenewDate();
     storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, true);
-    return RouterUpdateStoredTokenResponse.newInstance(storeToken);
+    return RouterRMTokenResponse.newInstance(storeToken);
   }
 
   @Override
-  public RouterRemoveStoredTokenResponse removeStoredToken(
-      RouterRemoveStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws Exception {
     RouterStoreToken storeToken = request.getRouterStoreToken();
-    RMDelegationTokenIdentifier tokenIdentifier = (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
     Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
     rmDTState.remove(tokenIdentifier);
-    return RouterRemoveStoredTokenResponse.newInstance(storeToken);
+    return RouterRMTokenResponse.newInstance(storeToken);
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,

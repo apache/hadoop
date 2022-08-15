@@ -18,16 +18,10 @@ package org.apache.hadoop.yarn.server.federation.store;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 
 /**
  * FederationDelegationTokenStateStore maintains the state of all
@@ -68,7 +62,7 @@ public interface FederationDelegationTokenStateStore {
    * @return StoreNewMasterKeyResponse.
    * @throws Exception exception occurred.
    */
-  StoreNewMasterKeyResponse storeNewMasterKey(StoreNewMasterKeyRequest request) throws Exception;
+  RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request) throws Exception;
 
   /**
    * The Router Supports Remove the master key.
@@ -77,35 +71,34 @@ public interface FederationDelegationTokenStateStore {
    * @return RemoveStoredMasterKeyResponse.
    * @throws Exception exception occurred.
    */
-  RemoveStoredMasterKeyResponse removeStoredMasterKey(RemoveStoredMasterKeyRequest request)
-      throws Exception;
+  RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request) throws Exception;
 
   /**
    * The Router Supports Store new Token.
    *
    * @param request DelegationKey.
-   * @return RouterStoreNewTokenResponse.
+   * @return RouterRMTokenResponse.
    * @throws Exception exception occurred.
    */
-  RouterStoreNewTokenResponse storeNewToken(RouterStoreNewTokenRequest request) throws Exception;
+  RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception;
 
   /**
    * The Router Supports Update Token.
    *
    * @param request DelegationKey.
-   * @return RouterUpdateStoredTokenResponse.
+   * @return RouterRMTokenResponse.
    * @throws Exception exception occurred.
    */
-  RouterUpdateStoredTokenResponse updateStoredToken(RouterUpdateStoredTokenRequest request)
+  RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws Exception;
 
   /**
    * The Router Supports Remove Token.
    *
    * @param request DelegationKey.
-   * @return RouterRemoveStoredTokenResponse.
+   * @return RouterRMTokenResponse.
    * @throws Exception exception occurred.
    */
-  RouterRemoveStoredTokenResponse removeStoredToken(RouterRemoveStoredTokenRequest request)
+  RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws Exception;
 }
