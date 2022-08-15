@@ -951,6 +951,9 @@ class DataXceiver extends Receiver implements Runnable {
       IOUtils.closeStream(mirrorIn);
       IOUtils.closeStream(replyOut);
       IOUtils.closeSocket(mirrorSock);
+      if (blockReceiver != null) {
+        blockReceiver.releaseAnyRemainingReservedSpace();
+      }
       IOUtils.closeStream(blockReceiver);
       setCurrentBlockReceiver(null);
     }

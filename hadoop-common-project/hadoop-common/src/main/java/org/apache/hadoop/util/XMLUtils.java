@@ -39,8 +39,10 @@ public class XMLUtils {
    * @param styleSheet the style-sheet
    * @param xml input xml data
    * @param out output
-   * @throws TransformerConfigurationException
-   * @throws TransformerException
+   * @throws TransformerConfigurationException synopsis signals a problem
+   *         creating a transformer object.
+   * @throws TransformerException this is used for throwing processor
+   *          exceptions before the processing has started.
    */
   public static void transform(
                                InputStream styleSheet, InputStream xml, Writer out

@@ -31,6 +31,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public @interface TokenInfo {
-  /** The type of TokenSelector to be used */
+  /**
+   * The type of TokenSelector to be used.
+   *
+   * @return TokenSelector
+   */
   Class<? extends TokenSelector<? extends TokenIdentifier>> value();
 }

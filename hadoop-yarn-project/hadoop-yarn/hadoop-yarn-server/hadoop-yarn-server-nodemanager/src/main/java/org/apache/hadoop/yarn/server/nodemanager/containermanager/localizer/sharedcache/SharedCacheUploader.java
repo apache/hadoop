@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyReques
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
 
 import org.apache.hadoop.classification.VisibleForTesting;

@@ -3887,4 +3887,15 @@ public class DistributedFileSystem extends FileSystem
       throws IOException {
     return new FileSystemMultipartUploaderBuilder(this, basePath);
   }
+
+  /**
+   * Retrieve stats for slow running datanodes.
+   *
+   * @return An array of slow datanode info.
+   * @throws IOException If an I/O error occurs.
+   */
+  public DatanodeInfo[] getSlowDatanodeStats() throws IOException {
+    return dfs.slowDatanodeReport();
+  }
+
 }

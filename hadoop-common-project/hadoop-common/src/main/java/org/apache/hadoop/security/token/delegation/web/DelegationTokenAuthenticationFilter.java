@@ -125,6 +125,7 @@ public class DelegationTokenAuthenticationFilter
    * Set AUTH_TYPE property to the name of the corresponding authentication
    * handler class based on the input properties.
    * @param props input properties.
+   * @throws ServletException servlet exception.
    */
   protected void setAuthHandlerClass(Properties props)
       throws ServletException {

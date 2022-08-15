@@ -20,7 +20,7 @@
 #    it by add -DLIBHDFSPP_DIR=... to your cmake invocation
 set(LIBHDFSPP_DIR CACHE STRING ${CMAKE_INSTALL_PREFIX})
 
-include_directories( ${LIBHDFSPP_DIR}/include )
+include_directories( ${LIBHDFSPP_DIR}/include ../../lib )
 link_directories( ${LIBHDFSPP_DIR}/lib )
 
 add_executable(cat_c cat.c)

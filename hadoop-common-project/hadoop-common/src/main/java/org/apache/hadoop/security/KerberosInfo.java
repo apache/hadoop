@@ -31,7 +31,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public @interface KerberosInfo {
-  /** Key for getting server's Kerberos principal name from Configuration */
+  /**
+   * Key for getting server's Kerberos principal name from Configuration.
+   * @return serverPrincipal.
+   */
   String serverPrincipal();
   String clientPrincipal() default "";
 }

@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import static org.apache.hadoop.hdfs.server.namenode.FileJournalManager
     .getLogFile;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Lists;
@@ -106,6 +108,8 @@ public class TestJournalNodeSync {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
         .getCurrentDir();
+    assertThat(jCluster.getJournalNode(0).getRpcServer().getRpcServer().getRpcMetrics()
+        .getTotalRequests()).isGreaterThan(20);
 
     // Generate some edit logs and delete one.
     long firstTxId = generateEditLog();

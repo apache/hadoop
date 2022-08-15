@@ -94,7 +94,7 @@ public class ProxyUsers {
    *
    * @param user ugi of the effective or proxy user which contains a real user
    * @param remoteAddress the ip address of client
-   * @throws AuthorizationException
+   * @throws AuthorizationException Authorization Exception.
    */
   public static void authorize(UserGroupInformation user, 
       String remoteAddress) throws AuthorizationException {
@@ -106,7 +106,7 @@ public class ProxyUsers {
    *
    * @param user ugi of the effective or proxy user which contains a real user
    * @param remoteAddress the inet address of client
-   * @throws AuthorizationException
+   * @throws AuthorizationException Authorization Exception.
    */
   public static void authorize(UserGroupInformation user,
       InetAddress remoteAddress) throws AuthorizationException {
@@ -125,10 +125,10 @@ public class ProxyUsers {
 
   /**
    * This function is kept to provide backward compatibility.
-   * @param user
-   * @param remoteAddress
-   * @param conf
-   * @throws AuthorizationException
+   * @param user user.
+   * @param remoteAddress remote address.
+   * @param conf configuration.
+   * @throws AuthorizationException Authorization Exception.
    * @deprecated use {@link #authorize(UserGroupInformation, String)} instead.
    */
   @Deprecated

@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.*;
 import org.apache.hadoop.yarn.server.metrics.AppAttemptMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.lib.DocumentStoreVendor;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineAggregationTrack;
@@ -149,6 +150,11 @@ public class DocumentStoreTimelineWriterImpl extends AbstractService
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineDomain domain) throws IOException {
     return null;
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING, "");
   }
 
   private void appendSubAppUserIfExists(TimelineCollectorContext context,

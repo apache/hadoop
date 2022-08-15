@@ -549,7 +549,7 @@ Conflict management is left to the execution engine itself.
 | `fs.s3a.buffer.dir` | Local filesystem directory for data being written and/or staged. | `${env.LOCAL_DIRS:-${hadoop.tmp.dir}}/s3a` |
 | `fs.s3a.committer.magic.enabled` | Enable "magic committer" support in the filesystem. | `true` |
 | `fs.s3a.committer.abort.pending.uploads` | list and abort all pending uploads under the destination path when the job is committed or aborted. | `true` |
-| `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files. | 8 |
+| `fs.s3a.committer.threads` | Number of threads in committers for parallel operations on files.| -4 |
 | `fs.s3a.committer.generate.uuid` | Generate a Job UUID if none is passed down from Spark | `false` |
 | `fs.s3a.committer.require.uuid` |Require the Job UUID to be passed down from Spark | `false` |
 
@@ -587,10 +587,15 @@ Conflict management is left to the execution engine itself.
 
 <property>
   <name>fs.s3a.committer.threads</name>
-  <value>8</value>
+  <value>-4</value>
   <description>
     Number of threads in committers for parallel operations on files
-    (upload, commit, abort, delete...)
+    (upload, commit, abort, delete...).
+    Two thread pools this size are created, one for the outer
+    task-level parallelism, and one for parallel execution
+    within tasks (POSTs to commit individual uploads)
+    If the value is negative, it is inverted and then multiplied
+    by the number of cores in the CPU.
   </description>
 </property>
 

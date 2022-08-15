@@ -259,7 +259,7 @@ public class BloomMapFile {
      * probability of false positives.
      * @param key key to check
      * @return  false iff key doesn't exist, true if key probably exists.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     public boolean probablyHasKey(WritableComparable key) throws IOException {
       if (bloomFilter == null) {

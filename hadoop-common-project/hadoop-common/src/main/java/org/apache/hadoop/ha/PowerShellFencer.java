@@ -34,6 +34,10 @@ import org.slf4j.LoggerFactory;
  * Fencer method that uses PowerShell to remotely connect to a machine and kill
  * the required process. This only works in Windows.
  *
+ * Fencing method uses PowerShell command. It should be specified
+ * in the fencing configuration like:<br>
+ * <code>powershell(NameNode)</code>
+ *
  * The argument passed to this fencer should be a unique string in the
  * "CommandLine" attribute for the "java.exe" process. For example, the full
  * path for the Namenode: "org.apache.hadoop.hdfs.server.namenode.NameNode".

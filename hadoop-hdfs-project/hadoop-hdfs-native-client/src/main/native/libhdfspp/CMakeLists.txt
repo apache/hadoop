@@ -52,31 +52,20 @@ find_package(Threads)
 
 include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
+include(FetchContent)
 
-# Download and build gtest
-configure_file(CMakeLists-gtest.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
-
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+# Install googletest
+# As per the approach documented in the GoogleTest repo -
+# https://github.com/google/googletest/blob/e649993a402d96afe25fbf3413749adf0f2947f6/googletest/README.md#incorporating-into-an-existing-cmake-project
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/703bd9caab50b139428cea1aaff9974ebee5742e.zip
+)
+# The commit SHA 703bd9caab50b139428cea1aaff9974ebee5742e in the URL above corresponds to the
+# tag release-1.10.0 in the googletest repository.
+# For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
+FetchContent_MakeAvailable(googletest)
 
 # Check if thread_local is supported
 unset (THREAD_LOCAL_SUPPORTED CACHE)
@@ -285,7 +274,8 @@ endif()
 
 set(LIBHDFSPP_VERSION "0.1.0")
 set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:x_platform_obj> $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj> $<TARGET_OBJECTS:uriparser2_obj>)
-if (HADOOP_BUILD)
+# HDFS-16464: We don't support building Hadoop DLL for Windows yet.
+if (HADOOP_BUILD AND NOT MSVC)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   hadoop_target_link_dual_libraries(hdfspp
     ${LIB_DL}
@@ -296,20 +286,19 @@ if (HADOOP_BUILD)
   )
   set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
   hadoop_dual_output_directory(hdfspp ${OUT_DIR})
-else (HADOOP_BUILD)
+else (HADOOP_BUILD AND NOT MSVC)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
-  target_link_libraries(hdfspp_static
+  target_link_libraries(hdfspp_static PUBLIC
     ${LIB_DL}
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    )
+    ${CMAKE_THREAD_LIBS_INIT})
   if(BUILD_SHARED_HDFSPP)
     add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
     set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
   endif(BUILD_SHARED_HDFSPP)
-endif (HADOOP_BUILD)
+endif (HADOOP_BUILD AND NOT MSVC)
 
 # Set up make install targets
 # Can be installed to a particular location via "make DESTDIR=... install"

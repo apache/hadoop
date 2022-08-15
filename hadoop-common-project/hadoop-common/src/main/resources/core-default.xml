@@ -2930,7 +2930,7 @@ The switch to turn S3A auditing on or off.
   <value></value>
   <description>
     List of fencing methods to use for service fencing. May contain
-    builtin methods (eg shell and sshfence) or user-defined method.
+    builtin methods (eg shell, sshfence and powershell) or user-defined method.
   </description>
 </property>
 

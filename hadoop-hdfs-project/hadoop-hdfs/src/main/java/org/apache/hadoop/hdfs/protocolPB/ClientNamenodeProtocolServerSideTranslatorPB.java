@@ -156,6 +156,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuo
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaUsageResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSlowDatanodeReportRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSlowDatanodeReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingRequestProto;
@@ -816,7 +818,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public RenewLeaseResponseProto renewLease(RpcController controller,
       RenewLeaseRequestProto req) throws ServiceException {
     try {
-      server.renewLease(req.getClientName());
+      server.renewLease(req.getClientName(), req.getNamespacesList());
       return VOID_RENEWLEASE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -2054,6 +2056,20 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
           HAServiceStateResponseProto.newBuilder();
       builder.setState(retState);
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public GetSlowDatanodeReportResponseProto getSlowDatanodeReport(RpcController controller,
+      GetSlowDatanodeReportRequestProto request) throws ServiceException {
+    try {
+      List<? extends DatanodeInfoProto> result =
+          PBHelperClient.convert(server.getSlowDatanodeReport());
+      return GetSlowDatanodeReportResponseProto.newBuilder()
+          .addAllDatanodeInfoProto(result)
+          .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

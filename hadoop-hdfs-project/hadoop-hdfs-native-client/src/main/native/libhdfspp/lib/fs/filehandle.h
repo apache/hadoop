@@ -18,16 +18,18 @@
 #ifndef LIBHDFSPP_LIB_FS_FILEHANDLE_H_
 #define LIBHDFSPP_LIB_FS_FILEHANDLE_H_
 
+#include "reader/readergroup.h"
+
 #include "hdfspp/ioservice.h"
 #include "common/async_stream.h"
 #include "common/cancel_tracker.h"
 #include "common/libhdfs_events_impl.h"
 #include "common/new_delete.h"
 #include "reader/fileinfo.h"
-#include "reader/readergroup.h"
 
 #include "bad_datanode_tracker.h"
 #include "ClientNamenodeProtocol.pb.h"
+#include "x-platform/types.h"
 
 #include <memory>
 #include <mutex>

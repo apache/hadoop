@@ -6254,6 +6254,15 @@
   </property>
 
   <property>
+    <name>dfs.journalnode.handler.count</name>
+    <value>5</value>
+    <description>
+      The number of JournalNode RPC server threads that listen to
+      requests from clients.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.namenode.lease-hard-limit-sec</name>
     <value>1200</value>
     <description>
@@ -6418,6 +6427,23 @@
       If this is true, after shut down datanode lock Manager will print all leak
       thread that not release by lock Manager. Only used for test or trace dead lock
       problem. In produce default set false, because it's have little performance loss.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.fsck.connect.timeout</name>
+    <value>60000ms</value>
+    <description>
+      The amount of time the fsck client will wait to connect to the namenode
+      before timing out.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.fsck.read.timeout</name>
+    <value>60000ms</value>
+    <description>
+      The amount of time the fsck client will wait to read from the namenode
+      before timing out. If the namenode does not report progress more
+      frequently than this time, the client will give up waiting.
     </description>
   </property>
 </configuration>

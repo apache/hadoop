@@ -556,7 +556,7 @@ public class TestStateStoreDriverBase {
   }
 
   /**
-   * Get the type of a field.
+   * Get the type of field.
    *
    * @param fieldName
    * @return Field type
@@ -601,7 +601,7 @@ public class TestStateStoreDriverBase {
   }
 
   /**
-   * Expands a data object from the store into an record object. Default store
+   * Expands a data object from the store into a record object. Default store
    * data type is a String. Override if additional serialization is required.
    *
    * @param data Object containing the serialized data. Only string is

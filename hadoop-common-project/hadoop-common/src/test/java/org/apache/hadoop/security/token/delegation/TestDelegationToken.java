@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -636,6 +637,23 @@ public class TestDelegationToken {
   }
 
   @Test
+  public void testMultipleDelegationTokenSecretManagerMetrics() {
+    TestDelegationTokenSecretManager dtSecretManager1 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager1.getMetrics());
+
+    TestDelegationTokenSecretManager dtSecretManager2 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager2.getMetrics());
+
+    DefaultMetricsSystem.instance().init("test");
+
+    TestDelegationTokenSecretManager dtSecretManager3 =
+        new TestDelegationTokenSecretManager(0, 0, 0, 0);
+    assertNotNull(dtSecretManager3.getMetrics());
+  }
+
+  @Test
   public void testDelegationTokenSecretManagerMetrics() throws Exception {
     TestDelegationTokenSecretManager dtSecretManager =
         new TestDelegationTokenSecretManager(24*60*60*1000,
@@ -645,13 +663,13 @@ public class TestDelegationToken {
 
       final Token<TestDelegationTokenIdentifier> token = callAndValidateMetrics(
           dtSecretManager, dtSecretManager.getMetrics().getStoreToken(), "storeToken",
-          () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"), 1);
+          () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"));
 
       callAndValidateMetrics(dtSecretManager, dtSecretManager.getMetrics().getUpdateToken(),
-          "updateToken", () -> dtSecretManager.renewToken(token, "JobTracker"), 1);
+          "updateToken", () -> dtSecretManager.renewToken(token, "JobTracker"));
 
       callAndValidateMetrics(dtSecretManager, dtSecretManager.getMetrics().getRemoveToken(),
-          "removeToken", () -> dtSecretManager.cancelToken(token, "JobTracker"), 1);
+          "removeToken", () -> dtSecretManager.cancelToken(token, "JobTracker"));
     } finally {
       dtSecretManager.stopThreads();
     }
@@ -671,14 +689,14 @@ public class TestDelegationToken {
 
       dtSecretManager.setThrowError(true);
 
-      callAndValidateFailureMetrics(dtSecretManager, "storeToken", 1, 1, false,
+      callAndValidateFailureMetrics(dtSecretManager, "storeToken", false,
           errorSleepMillis,
           () -> generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker"));
 
-      callAndValidateFailureMetrics(dtSecretManager, "updateToken", 1, 2, true,
+      callAndValidateFailureMetrics(dtSecretManager, "updateToken", true,
           errorSleepMillis, () -> dtSecretManager.renewToken(token, "JobTracker"));
 
-      callAndValidateFailureMetrics(dtSecretManager, "removeToken", 1, 3, true,
+      callAndValidateFailureMetrics(dtSecretManager, "removeToken", true,
           errorSleepMillis, () -> dtSecretManager.cancelToken(token, "JobTracker"));
     } finally {
       dtSecretManager.stopThreads();
@@ -686,33 +704,33 @@ public class TestDelegationToken {
   }
 
   private <T> T callAndValidateMetrics(TestDelegationTokenSecretManager dtSecretManager,
-      MutableRate metric, String statName,  Callable<T> callable, int expectedCount)
+      MutableRate metric, String statName,  Callable<T> callable)
       throws Exception {
     MeanStatistic stat = IOStatisticAssertions.lookupMeanStatistic(
         dtSecretManager.getMetrics().getIoStatistics(), statName + ".mean");
-    assertEquals(expectedCount - 1, metric.lastStat().numSamples());
-    assertEquals(expectedCount - 1, stat.getSamples());
+    long metricBefore = metric.lastStat().numSamples();
+    long statBefore = stat.getSamples();
     T returnedObject = callable.call();
-    assertEquals(expectedCount, metric.lastStat().numSamples());
-    assertEquals(expectedCount, stat.getSamples());
+    assertEquals(metricBefore + 1, metric.lastStat().numSamples());
+    assertEquals(statBefore + 1, stat.getSamples());
     return returnedObject;
   }
 
   private <T> void callAndValidateFailureMetrics(TestDelegationTokenSecretManager dtSecretManager,
-      String statName, int expectedStatCount, int expectedMetricCount, boolean expectError,
-      int errorSleepMillis, Callable<T> callable) throws Exception {
+      String statName, boolean expectError, int errorSleepMillis, Callable<T> callable)
+      throws Exception {
     MutableCounterLong counter = dtSecretManager.getMetrics().getTokenFailure();
     MeanStatistic failureStat = IOStatisticAssertions.lookupMeanStatistic(
         dtSecretManager.getMetrics().getIoStatistics(), statName + ".failures.mean");
-    assertEquals(expectedMetricCount - 1, counter.value());
-    assertEquals(expectedStatCount - 1, failureStat.getSamples());
+    long counterBefore = counter.value();
+    long statBefore = failureStat.getSamples();
     if (expectError) {
       LambdaTestUtils.intercept(IOException.class, callable);
     } else {
       callable.call();
     }
-    assertEquals(expectedMetricCount, counter.value());
-    assertEquals(expectedStatCount, failureStat.getSamples());
+    assertEquals(counterBefore + 1, counter.value());
+    assertEquals(statBefore + 1, failureStat.getSamples());
     assertTrue(failureStat.getSum() >= errorSleepMillis);
   }
 }

@@ -104,7 +104,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
 
 /**
- * This class is responsible for handling all of the Admin calls to the HDFS
+ * This class is responsible for handling all the Admin calls to the HDFS
  * router. It is created, started, and stopped by {@link Router}.
  */
 public class RouterAdminServer extends AbstractService

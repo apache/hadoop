@@ -61,6 +61,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.SocketFactory;
 import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -112,7 +113,12 @@ public class Client implements AutoCloseable {
     return (AsyncGet<T, IOException>) ASYNC_RPC_RESPONSE.get();
   }
 
-  /** Set call id and retry count for the next call. */
+  /**
+   * Set call id and retry count for the next call.
+   * @param cid input cid.
+   * @param rc input rc.
+   * @param externalHandler input externalHandler.
+   */
   public static void setCallIdAndRetryCount(int cid, int rc,
                                             Object externalHandler) {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
@@ -1349,8 +1355,14 @@ public class Client implements AutoCloseable {
     }
   }
 
-  /** Construct an IPC client whose values are of the given {@link Writable}
-   * class. */
+  /**
+   * Construct an IPC client whose values are of the given {@link Writable}
+   * class.
+   *
+   * @param valueClass input valueClass.
+   * @param conf input configuration.
+   * @param factory input factory.
+   */
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
@@ -1372,9 +1384,9 @@ public class Client implements AutoCloseable {
   }
 
   /**
-   * Construct an IPC client with the default SocketFactory
-   * @param valueClass
-   * @param conf
+   * Construct an IPC client with the default SocketFactory.
+   * @param valueClass input valueClass.
+   * @param conf input Configuration.
    */
   public Client(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
@@ -1432,7 +1444,7 @@ public class Client implements AutoCloseable {
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
    *
-   * @param rpcKind
+   * @param rpcKind - input rpcKind.
    * @param rpcRequest -  contains serialized method and method parameters
    * @param remoteId - the target rpc server
    * @param fallbackToSimpleAuth - set to true or false during this method to
@@ -1440,6 +1452,7 @@ public class Client implements AutoCloseable {
    * @return the rpc response
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, AtomicBoolean fallbackToSimpleAuth)
@@ -1608,7 +1621,8 @@ public class Client implements AutoCloseable {
       }
 
       if (call.error != null) {
-        if (call.error instanceof RemoteException) {
+        if (call.error instanceof RemoteException ||
+            call.error instanceof SaslException) {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
@@ -1704,7 +1718,7 @@ public class Client implements AutoCloseable {
     private String saslQop; // here for testing
     private final Configuration conf; // used to get the expected kerberos principal name
     
-    ConnectionId(InetSocketAddress address, Class<?> protocol, 
+    public ConnectionId(InetSocketAddress address, Class<?> protocol,
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
       this.protocol = protocol;
@@ -1748,7 +1762,7 @@ public class Client implements AutoCloseable {
       return ticket;
     }
     
-    private int getRpcTimeout() {
+    int getRpcTimeout() {
       return rpcTimeout;
     }
     
@@ -1760,7 +1774,7 @@ public class Client implements AutoCloseable {
       return maxRetriesOnSasl;
     }
 
-    /** max connection retries on socket time outs */
+    /** @return max connection retries on socket time outs */
     public int getMaxRetriesOnSocketTimeouts() {
       return maxRetriesOnSocketTimeouts;
     }
@@ -1781,6 +1795,10 @@ public class Client implements AutoCloseable {
     
     int getPingInterval() {
       return pingInterval;
+    }
+
+    RetryPolicy getRetryPolicy() {
+      return connectionRetryPolicy;
     }
     
     @VisibleForTesting

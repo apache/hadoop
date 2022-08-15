@@ -175,6 +175,19 @@ template <class T> std::unique_ptr<T> PassPermissionsAndAPath() {
   return hdfs_tool;
 }
 
+template <class T> std::unique_ptr<T> PassInvalidPermissionsAndAPath() {
+  constexpr auto argc = 3;
+  static std::string exe("hdfs_tool_name");
+  static std::string arg1("123456789123456789123456789");
+  static std::string arg2("g/h/i");
+
+  static char *argv[] = {exe.data(), arg1.data(), arg2.data()};
+
+  auto hdfs_tool = std::make_unique<T>(argc, argv);
+  hdfs_tool->SetExpectations(PassInvalidPermissionsAndAPath<T>, {arg1, arg2});
+  return hdfs_tool;
+}
+
 template <class T> std::unique_ptr<T> PassRecursivePermissionsAndAPath() {
   constexpr auto argc = 4;
   static std::string exe("hdfs_tool_name");

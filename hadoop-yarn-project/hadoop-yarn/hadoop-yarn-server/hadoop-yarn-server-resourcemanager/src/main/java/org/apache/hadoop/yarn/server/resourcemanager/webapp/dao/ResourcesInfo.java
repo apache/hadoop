@@ -43,7 +43,7 @@ public class ResourcesInfo {
     if (resourceUsage == null) {
       return;
     }
-    for (String partitionName : resourceUsage.getNodePartitionsSet()) {
+    for (String partitionName : resourceUsage.getExistingNodeLabels()) {
       resourceUsagesByPartition.add(new PartitionResourcesInfo(partitionName,
           new ResourceInfo(resourceUsage.getUsed(partitionName)),
           new ResourceInfo(resourceUsage.getReserved(partitionName)),

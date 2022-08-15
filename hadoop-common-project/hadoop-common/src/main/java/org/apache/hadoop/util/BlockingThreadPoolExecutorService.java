@@ -117,6 +117,7 @@ public final class BlockingThreadPoolExecutorService
    * @param keepAliveTime time until threads are cleaned up in {@code unit}
    * @param unit time unit
    * @param prefixName prefix of name for threads
+   * @return BlockingThreadPoolExecutorService.
    */
   public static BlockingThreadPoolExecutorService newInstance(
       int activeTasks,

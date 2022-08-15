@@ -50,7 +50,7 @@ public interface FederationMBean {
 
   /**
    * Get the latest state of all routers.
-   * @return JSON with all of the known routers or null if failure.
+   * @return JSON with all the known routers or null if failure.
    */
   String getRouters();
 

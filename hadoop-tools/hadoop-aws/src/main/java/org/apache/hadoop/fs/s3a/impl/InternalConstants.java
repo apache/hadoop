@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -160,4 +162,12 @@ public final class InternalConstants {
    * will go through the AccessPoint.
    */
   public static final String ARN_BUCKET_OPTION = "fs.s3a.bucket.%s.accesspoint.arn";
+
+  /**
+   * The known keys used in a createFile call.
+   */
+  public static final Set<String> CREATE_FILE_KEYS =
+      Collections.unmodifiableSet(
+          new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
+
 }

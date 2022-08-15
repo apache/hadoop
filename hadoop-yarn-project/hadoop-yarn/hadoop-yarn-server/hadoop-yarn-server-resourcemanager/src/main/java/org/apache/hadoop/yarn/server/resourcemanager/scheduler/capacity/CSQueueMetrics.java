@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
@@ -240,6 +241,10 @@ public class CSQueueMetrics extends QueueMetrics {
 
       // Register with the MetricsSystems
       if (ms != null) {
+        MetricsSource source = ms.getSource(sourceName(queueName).toString());
+        if (source != null) {
+          ms.unregisterSource(sourceName(queueName).toString());
+        }
         metrics =
             ms.register(sourceName(queueName).toString(), "Metrics for queue: "
                 + queueName, metrics);
@@ -260,7 +265,7 @@ public class CSQueueMetrics extends QueueMetrics {
       metrics =
         new CSQueueMetrics(metricsSystem, queueName, null, false, conf);
       users.put(userName, metrics);
-      metricsSystem.register(
+      registerMetrics(
           sourceName(queueName).append(",user=").append(userName).toString(),
           "Metrics for user '" + userName + "' in queue '" + queueName + "'",
           ((CSQueueMetrics) metrics.tag(QUEUE_INFO, queueName)).tag(USER_INFO,

@@ -511,7 +511,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
    */
   @Test
   public void testSnapshotPathResolution() throws Exception {
-    // Create a mount entry with non isPathAll order, so as to call
+    // Create a mount entry with non isPathAll order, to call
     // invokeSequential.
     Map<String, String> destMap = new HashMap<>();
     destMap.put("ns0", "/tmp_ns0");

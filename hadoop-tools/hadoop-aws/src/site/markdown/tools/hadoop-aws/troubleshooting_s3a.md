@@ -561,24 +561,41 @@ Error Code: 403 Forbidden; Request ID: myshortreqid; S3 Extended Request ID: myl
 
 To enable requester pays, set `fs.s3a.requester.pays.enabled` property to `true`.
 
+### <a name="access_denied_archive_storage_class"></a>`AccessDeniedException` "InvalidObjectState" when trying to read files
+
+```
+java.nio.file.AccessDeniedException: file1: copyFile(file1, file2) on file1: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=:InvalidObjectState
+
+Caused by: com.amazonaws.services.s3.model.AmazonS3Exception: Operation is not valid for the source object's storage class (Service: Amazon S3; Status Code: 403; Error Code: InvalidObjectState; Request ID: SK9EMPC1YRX75VZR; S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=; Proxy: null), S3 Extended Request ID: /nhUfdwJ+y5DLz6B4YR2FdA0FnQWwhDAkSCakn42zs2JssK3qWTrfwdNDiy6bOyXHOvJY0VAlHw=
+```
+
+This happens when you're trying to read or copy files that have archive storage class such as
+Glacier.
+
+If you want to access the file with S3A after writes, do not set `fs.s3a.create.storage.class` to `glacier` or `deep_archive`.
+
 ### <a name="no_region_session_credentials"></a> "Unable to find a region via the region provider chain." when using session credentials.
 
-Region must be provided when requesting session credentials, or an exception will be thrown with the message:
+Region must be provided when requesting session credentials, or an exception will be thrown with the
+message:
+
 ```
 com.amazonaws.SdkClientException: Unable to find a region via the region provider
 chain. Must provide an explicit region in the builder or setup environment to supply a region.
 ```
-In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid
-S3 sts endpoint and region like the following:
+
+In this case you have to set the `fs.s3a.assumed.role.sts.endpoint` property to a valid S3 sts
+endpoint and region like the following:
 
 ```xml
+
 <property>
     <name>fs.s3a.assumed.role.sts.endpoint</name>
     <value>${sts.endpoint}</value>
 </property>
 <property>
-    <name>fs.s3a.assumed.role.sts.endpoint.region</name>
-    <value>${sts.region}</value>
+<name>fs.s3a.assumed.role.sts.endpoint.region</name>
+<value>${sts.region}</value>
 </property>
 ```
 

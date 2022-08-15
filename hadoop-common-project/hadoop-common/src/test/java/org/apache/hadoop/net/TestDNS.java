@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.net;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;

@@ -405,6 +405,39 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict mapreduce imports to committer code</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.impl.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.magic.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.staging.*</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.mapreduce.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 

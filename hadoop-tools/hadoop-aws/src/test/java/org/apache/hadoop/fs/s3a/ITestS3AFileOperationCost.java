@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-
-import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
@@ -368,67 +366,6 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     intercept(IllegalArgumentException.class, "", () ->
             fs.s3GetFileStatus(new Path("/something"), "/something",
                 StatusProbeEnum.HEAD_ONLY, true));
-  }
-  @Test
-  public void testCreateCost() throws Throwable {
-    describe("Test file creation cost");
-    Path testFile = methodPath();
-    // when overwrite is false, the path is checked for existence.
-    create(testFile, false,
-        CREATE_FILE_NO_OVERWRITE);
-    // but when true: only the directory checks take place.
-    create(testFile, true, CREATE_FILE_OVERWRITE);
-  }
-
-  @Test
-  public void testCreateCostFileExists() throws Throwable {
-    describe("Test cost of create file failing with existing file");
-    Path testFile = file(methodPath());
-
-    // now there is a file there, an attempt with overwrite == false will
-    // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        FILE_STATUS_FILE_PROBE,
-        () -> file(testFile, false));
-  }
-
-  @Test
-  public void testCreateCostDirExists() throws Throwable {
-    describe("Test cost of create file failing with existing dir");
-    Path testFile = dir(methodPath());
-
-    // now there is a file there, an attempt with overwrite == false will
-    // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        GET_FILE_STATUS_ON_DIR_MARKER,
-        () -> file(testFile, false));
-  }
-
-  /**
-   * Use the builder API.
-   * This always looks for a parent unless the caller says otherwise.
-   */
-  @Test
-  public void testCreateBuilder() throws Throwable {
-    describe("Test builder file creation cost");
-    Path testFile = methodPath();
-    dir(testFile.getParent());
-
-    // builder defaults to looking for parent existence (non-recursive)
-    buildFile(testFile, false,  false,
-        GET_FILE_STATUS_FNFE                // destination file
-            .plus(FILE_STATUS_DIR_PROBE));  // parent dir
-    // recursive = false and overwrite=true:
-    // only make sure the dest path isn't a directory.
-    buildFile(testFile, true, true,
-        FILE_STATUS_DIR_PROBE);
-
-    // now there is a file there, an attempt with overwrite == false will
-    // fail on the first HEAD.
-    interceptOperation(FileAlreadyExistsException.class, "",
-        GET_FILE_STATUS_ON_FILE,
-        () -> buildFile(testFile, false, true,
-            GET_FILE_STATUS_ON_FILE));
   }
 
   @Test

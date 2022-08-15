@@ -189,6 +189,8 @@ public enum CreateFlag {
   /**
    * Validate the CreateFlag for the append operation. The flag must contain
    * APPEND, and cannot contain OVERWRITE.
+   *
+   * @param flag enum set flag.
    */
   public static void validateForAppend(EnumSet<CreateFlag> flag) {
     validate(flag);

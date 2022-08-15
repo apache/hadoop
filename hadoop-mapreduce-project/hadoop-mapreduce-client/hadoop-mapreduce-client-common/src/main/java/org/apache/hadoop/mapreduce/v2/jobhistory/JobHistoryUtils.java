@@ -91,9 +91,6 @@ public class JobHistoryUtils {
   public static final FsPermission HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS = 
     FsPermission.createImmutable((short) 01777);
 
-  public static final FsPermission HISTORY_INTERMEDIATE_FILE_PERMISSIONS = 
-    FsPermission.createImmutable((short) 0770); // rwx------
-  
   /**
    * Suffix for configuration files.
    */
@@ -206,7 +203,7 @@ public class JobHistoryUtils {
 
   /**
    * Gets the configured directory permissions for the user directories in the
-   * directory of the intermediate done history files. The user and the group
+   * Gets the configured permissions for the user directories and files in the
    * both need full permissions, this is enforced by this method.
    * @param conf The configuration object
    * @return FsPermission of the user directories

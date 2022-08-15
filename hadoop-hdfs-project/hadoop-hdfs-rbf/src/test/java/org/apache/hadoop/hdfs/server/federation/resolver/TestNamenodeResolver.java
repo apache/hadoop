@@ -297,7 +297,7 @@ public class TestNamenodeResolver {
     String rpcAddr = namenode.getRpcAddress();
     InetSocketAddress inetAddr = getInetSocketAddress(rpcAddr);
 
-    // If the namenode state changes and it serves request,
+    // If the namenode state changes, and it serves request,
     // RouterRpcClient calls updateActiveNamenode to update the state to active,
     // Check whether correct updated state is returned post update.
     namenodeResolver.updateActiveNamenode(NAMESERVICES[0], inetAddr);

@@ -61,6 +61,7 @@ public interface SplittableCompressionCodec extends CompressionCodec {
    * Create a stream as dictated by the readMode.  This method is used when
    * the codecs wants the ability to work with the underlying stream positions.
    *
+   * @param decompressor decompressor.
    * @param seekableIn  The seekable input stream (seeks in compressed data)
    * @param start The start offset into the compressed stream. May be changed
    *              by the underlying codec.
@@ -69,6 +70,7 @@ public interface SplittableCompressionCodec extends CompressionCodec {
    * @param readMode Controls whether stream position is reported continuously
    *                 from the compressed stream only only at block boundaries.
    * @return  a stream to read uncompressed bytes from
+   * @throws IOException raised on errors performing I/O.
    */
   SplitCompressionInputStream createInputStream(InputStream seekableIn,
       Decompressor decompressor, long start, long end, READ_MODE readMode)

@@ -23,8 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-import com.amazonaws.services.s3.model.PartETag;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -33,12 +33,15 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.auth.ProgressCounter;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
@@ -52,11 +55,13 @@ import org.apache.hadoop.util.Lists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.apache.hadoop.fs.s3a.commit.CommitOperations.extractMagicFileLength;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
+import static org.apache.hadoop.fs.s3a.commit.CommitterTestHelper.assertIsMagicStream;
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the low-level binding of the S3A FS to the magic commit mechanism,
@@ -69,6 +74,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
   private static final byte[] DATASET = dataset(1000, 'a', 32);
   private static final String S3A_FACTORY_KEY = String.format(
       COMMITTER_FACTORY_SCHEME_PATTERN, "s3a");
+  private static final String JOB_ID = UUID.randomUUID().toString();
+
   private ProgressCounter progress;
 
   @Override
@@ -94,11 +101,13 @@ public class ITestCommitOperations extends AbstractCommitITest {
     MagicCommitIntegration integration
         = new MagicCommitIntegration(fs, true);
     String filename = "notdelayed.txt";
-    Path destFile = methodPath(filename);
+    Path destFile = methodSubPath(filename);
     String origKey = fs.pathToKey(destFile);
-    PutTracker tracker = integration.createTracker(destFile, origKey);
-    assertFalse("wrong type: " + tracker + " for " + destFile,
-        tracker instanceof MagicCommitTracker);
+    PutTracker tracker = integration.createTracker(destFile, origKey,
+        EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS);
+    Assertions.assertThat(tracker)
+        .describedAs("Tracker for %s", destFile)
+        .isNotInstanceOf(MagicCommitTracker.class);
   }
 
   /**
@@ -111,36 +120,45 @@ public class ITestCommitOperations extends AbstractCommitITest {
     MagicCommitIntegration integration
         = new MagicCommitIntegration(fs, true);
     String filename = "delayed.txt";
-    Path destFile = methodPath(filename);
+    Path destFile = methodSubPath(filename);
     String origKey = fs.pathToKey(destFile);
     Path pendingPath = makeMagic(destFile);
     verifyIsMagicCommitPath(fs, pendingPath);
     String pendingPathKey = fs.pathToKey(pendingPath);
-    assertTrue("wrong path of " + pendingPathKey,
-        pendingPathKey.endsWith(filename));
+    Assertions.assertThat(pendingPathKey)
+        .describedAs("pending path")
+        .endsWith(filename);
     final List<String> elements = splitPathToElements(pendingPath);
-    assertEquals("splitPathToElements()", filename, lastElement(elements));
+    Assertions.assertThat(lastElement(elements))
+        .describedAs("splitPathToElements(%s)", pendingPath)
+        .isEqualTo(filename);
     List<String> finalDestination = finalDestination(elements);
-    assertEquals("finalDestination()",
-        filename,
-        lastElement(finalDestination));
-    final String destKey = elementsToKey(finalDestination);
-    assertEquals("destination key", origKey, destKey);
+    Assertions.assertThat(lastElement(finalDestination))
+        .describedAs("finalDestination(%s)", pendingPath)
+        .isEqualTo(filename);
+    Assertions.assertThat(elementsToKey(finalDestination))
+        .describedAs("destination key")
+        .isEqualTo(origKey);
 
     PutTracker tracker = integration.createTracker(pendingPath,
-        pendingPathKey);
-    assertTrue("wrong type: " + tracker + " for " + pendingPathKey,
-        tracker instanceof MagicCommitTracker);
-    assertEquals("tracker destination key", origKey, tracker.getDestKey());
+        pendingPathKey, EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS);
+    Assertions.assertThat(tracker)
+        .describedAs("Tracker for %s", pendingPathKey)
+        .isInstanceOf(MagicCommitTracker.class);
+    Assertions.assertThat(tracker.getDestKey())
+        .describedAs("tracker destination key")
+        .isEqualTo(origKey);
 
-    Path pendingSuffixedPath = new Path(pendingPath,
-        "part-0000" + PENDING_SUFFIX);
-    assertFalse("still a delayed complete path " + pendingSuffixedPath,
-        fs.isMagicCommitPath(pendingSuffixedPath));
-    Path pendingSet = new Path(pendingPath,
-        "part-0000" + PENDINGSET_SUFFIX);
-    assertFalse("still a delayed complete path " + pendingSet,
-        fs.isMagicCommitPath(pendingSet));
+    assertNotDelayedWrite(new Path(pendingPath,
+        "part-0000" + PENDING_SUFFIX));
+    assertNotDelayedWrite(new Path(pendingPath,
+        "part-0000" + PENDINGSET_SUFFIX));
+  }
+
+  private void assertNotDelayedWrite(Path pendingSuffixedPath) {
+    Assertions.assertThat(getFileSystem().isMagicCommitPath(pendingSuffixedPath))
+        .describedAs("Expected %s to not be magic/delayed write", pendingSuffixedPath)
+        .isFalse();
   }
 
   @Test
@@ -148,7 +166,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     describe("create then abort an empty file; throttled");
     S3AFileSystem fs = getFileSystem();
     String filename = "empty-abort.txt";
-    Path destFile = methodPath(filename);
+    Path destFile = methodSubPath(filename);
     Path pendingFilePath = makeMagic(destFile);
     touch(fs, pendingFilePath);
 
@@ -160,13 +178,22 @@ public class ITestCommitOperations extends AbstractCommitITest {
     // abort,; rethrow on failure
 
     LOG.info("Abort call");
-    actions.abortAllSinglePendingCommits(pendingDataPath.getParent(), true)
-        .maybeRethrow();
+    Path parent = pendingDataPath.getParent();
+    try (CommitContext commitContext =
+             actions.createCommitContextForTesting(parent, JOB_ID, 0)) {
+      actions.abortAllSinglePendingCommits(parent, commitContext, true)
+          .maybeRethrow();
+    }
 
     assertPathDoesNotExist("pending file not deleted", pendingDataPath);
     assertPathDoesNotExist("dest file was created", destFile);
   }
 
+  /**
+   * Create a new commit operations instance for the test FS.
+   * @return commit operations.
+   * @throws IOException IO failure.
+   */
   private CommitOperations newCommitOperations()
       throws IOException {
     return new CommitOperations(getFileSystem());
@@ -198,10 +225,16 @@ public class ITestCommitOperations extends AbstractCommitITest {
   @Test
   public void testAbortNonexistentDir() throws Throwable {
     describe("Attempt to abort a directory that does not exist");
-    Path destFile = methodPath("testAbortNonexistentPath");
-    newCommitOperations()
-        .abortAllSinglePendingCommits(destFile, true)
-        .maybeRethrow();
+    Path destFile = methodSubPath("testAbortNonexistentPath");
+    final CommitOperations operations = newCommitOperations();
+    try (CommitContext commitContext
+             = operations.createCommitContextForTesting(destFile, JOB_ID, 0)) {
+      final CommitOperations.MaybeIOE outcome = operations
+          .abortAllSinglePendingCommits(destFile, commitContext, true);
+      outcome.maybeRethrow();
+      Assertions.assertThat(outcome)
+          .isEqualTo(CommitOperations.MaybeIOE.NONE);
+    }
   }
 
   @Test
@@ -244,7 +277,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     describe("Test creating file with a __base marker and verify that it ends" +
         " up in where expected");
     S3AFileSystem fs = getFileSystem();
-    Path destDir = methodPath("testBaseRelativePath");
+    Path destDir = methodSubPath("testBaseRelativePath");
     fs.delete(destDir, true);
     Path pendingBaseDir = new Path(destDir, MAGIC + "/child/" + BASE);
     String child = "subdir/child.txt";
@@ -270,14 +303,17 @@ public class ITestCommitOperations extends AbstractCommitITest {
     fs.delete(destDir, true);
     Path magicDest = makeMagic(destFile);
     Path magicDir = magicDest.getParent();
-    fs.mkdirs(magicDir);
+    fs.mkdirs(magicDest);
 
     // use the builder API to verify it works exactly the
     // same.
-    try (FSDataOutputStream stream = fs.createFile(magicDest)
-        .overwrite(true)
-        .recursive()
-        .build()) {
+    FSDataOutputStreamBuilder builder = fs.createFile(magicDest)
+        .overwrite(true);
+    builder.recursive();
+    // this has a broken return type; not sure why
+    builder.must(FS_S3A_CREATE_PERFORMANCE, true);
+
+    try (FSDataOutputStream stream = builder.build()) {
       assertIsMagicStream(stream);
       stream.write(DATASET);
     }
@@ -286,9 +322,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     fs.rename(magicDest, magic2);
 
     // the renamed file has no header
-    Assertions.assertThat(extractMagicFileLength(fs, magic2))
-        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + magic2)
-        .isEmpty();
+    getTestHelper().assertFileLacksMarkerHeader(magic2);
     // abort the upload, which is driven by the .pending files
     // there must be 1 deleted file; during test debugging with aborted
     // runs there may be more.
@@ -296,17 +330,6 @@ public class ITestCommitOperations extends AbstractCommitITest {
         .abortPendingUploadsUnderPath(destDir))
         .describedAs("Aborting all pending uploads under %s", destDir)
         .isGreaterThanOrEqualTo(1);
-  }
-
-  /**
-   * Assert that an output stream is magic.
-   * @param stream stream to probe.
-   */
-  protected void assertIsMagicStream(final FSDataOutputStream stream) {
-    Assertions.assertThat(stream.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT))
-        .describedAs("Stream capability %s in stream %s",
-            STREAM_CAPABILITY_MAGIC_OUTPUT, stream)
-        .isTrue();
   }
 
   /**
@@ -318,39 +341,27 @@ public class ITestCommitOperations extends AbstractCommitITest {
   private void createCommitAndVerify(String filename, byte[] data)
       throws Exception {
     S3AFileSystem fs = getFileSystem();
-    Path destFile = methodPath(filename);
+    Path destFile = methodSubPath(filename);
     fs.delete(destFile.getParent(), true);
     Path magicDest = makeMagic(destFile);
     assertPathDoesNotExist("Magic file should not exist", magicDest);
     long dataSize = data != null ? data.length : 0;
-    try(FSDataOutputStream stream = fs.create(magicDest, true)) {
+    try (FSDataOutputStream stream = fs.create(magicDest, true)) {
       assertIsMagicStream(stream);
       if (dataSize > 0) {
         stream.write(data);
       }
-      stream.close();
     }
-    FileStatus status = fs.getFileStatus(magicDest);
-    assertEquals("Magic marker file is not zero bytes: " + status,
-        0, 0);
-    Assertions.assertThat(extractMagicFileLength(fs,
-        magicDest))
-        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + magicDest)
-        .isNotEmpty()
-        .hasValue(dataSize);
+    getTestHelper().assertIsMarkerFile(magicDest, dataSize);
     commit(filename, destFile);
     verifyFileContents(fs, destFile, data);
     // the destination file doesn't have the attribute
-    Assertions.assertThat(extractMagicFileLength(fs,
-        destFile))
-        .describedAs("XAttribute " + XA_MAGIC_MARKER + " of " + destFile)
-        .isEmpty();
+    getTestHelper().assertFileLacksMarkerHeader(destFile);
   }
 
   /**
    * Commit the file, with before and after checks on the dest and magic
    * values.
-   * Failures can be set; they'll be reset after the commit.
    * @param filename filename of file
    * @param destFile destination path of file
    * @throws Exception any failure of the operation
@@ -371,20 +382,21 @@ public class ITestCommitOperations extends AbstractCommitITest {
       Path destFile)
       throws IOException {
 
+    final CommitOperations actions = newCommitOperations();
     validateIntermediateAndFinalPaths(magicFile, destFile);
     SinglePendingCommit commit = SinglePendingCommit.load(getFileSystem(),
-        validatePendingCommitData(filename, magicFile));
+        validatePendingCommitData(filename, magicFile),
+        null,
+        SinglePendingCommit.serializer());
 
-    commitOrFail(destFile, commit, newCommitOperations());
-
-    verifyCommitExists(commit);
+    commitOrFail(destFile, commit, actions);
   }
 
   private void commitOrFail(final Path destFile,
       final SinglePendingCommit commit, final CommitOperations actions)
       throws IOException {
-    try (CommitOperations.CommitContext commitContext
-             = actions.initiateCommitOperation(destFile)) {
+    try (CommitContext commitContext
+             = actions.createCommitContextForTesting(destFile, JOB_ID, 0)) {
       commitContext.commitOrFail(commit);
     }
   }
@@ -399,26 +411,6 @@ public class ITestCommitOperations extends AbstractCommitITest {
       Path destFile)
       throws IOException {
     assertPathDoesNotExist("dest file was created", destFile);
-  }
-
-  /**
-   * Verify that the path at the end of a commit exists.
-   * This does not validate the size.
-   * @param commit commit to verify
-   * @throws FileNotFoundException dest doesn't exist
-   * @throws ValidationFailure commit arg is invalid
-   * @throws IOException invalid commit, IO failure
-   */
-  private void verifyCommitExists(SinglePendingCommit commit)
-      throws FileNotFoundException, ValidationFailure, IOException {
-    commit.validate();
-    // this will force an existence check
-    Path path = getFileSystem().keyToQualifiedPath(commit.getDestinationKey());
-    FileStatus status = getFileSystem().getFileStatus(path);
-    LOG.debug("Destination entry: {}", status);
-    if (!status.isFile()) {
-      throw new PathCommitException(path, "Not a file: " + status);
-    }
   }
 
   /**
@@ -443,14 +435,19 @@ public class ITestCommitOperations extends AbstractCommitITest {
     SinglePendingCommit persisted = SinglePendingCommit.serializer()
         .load(fs, pendingDataPath);
     persisted.validate();
-    assertTrue("created timestamp wrong in " + persisted,
-        persisted.getCreated() > 0);
-    assertTrue("saved timestamp wrong in " + persisted,
-        persisted.getSaved() > 0);
+    Assertions.assertThat(persisted.getCreated())
+        .describedAs("Created timestamp in %s", persisted)
+        .isGreaterThan(0);
+    Assertions.assertThat(persisted.getSaved())
+        .describedAs("saved timestamp in %s", persisted)
+        .isGreaterThan(0);
     List<String> etags = persisted.getEtags();
-    assertEquals("etag list " + persisted, 1, etags.size());
-    List<PartETag> partList = CommitOperations.toPartEtags(etags);
-    assertEquals("part list " + persisted, 1, partList.size());
+    Assertions.assertThat(etags)
+        .describedAs("Etag list")
+        .hasSize(1);
+    Assertions.assertThat(CommitOperations.toPartEtags(etags))
+        .describedAs("Etags to parts")
+        .hasSize(1);
     return pendingDataPath;
   }
 
@@ -460,24 +457,16 @@ public class ITestCommitOperations extends AbstractCommitITest {
    * @return new path
    * @throws IOException failure to create/parse the path.
    */
-  private Path methodPath(String filename) throws IOException {
+  private Path methodSubPath(String filename) throws IOException {
     return new Path(methodPath(), filename);
-  }
-
-  /**
-   * Get a unique path for a method.
-   * @return a path
-   * @throws IOException
-   */
-  protected Path methodPath() throws IOException {
-    return path(getMethodName());
   }
 
   @Test
   public void testUploadEmptyFile() throws Throwable {
+    describe("Upload a zero byte file to a magic path");
     File tempFile = File.createTempFile("commit", ".txt");
     CommitOperations actions = newCommitOperations();
-    Path dest = methodPath("testUploadEmptyFile");
+    Path dest = methodSubPath("testUploadEmptyFile");
     S3AFileSystem fs = getFileSystem();
     fs.delete(dest, false);
 
@@ -492,11 +481,14 @@ public class ITestCommitOperations extends AbstractCommitITest {
 
     commitOrFail(dest, pendingCommit, actions);
 
-    FileStatus status = verifyPathExists(fs,
-        "uploaded file commit", dest);
     progress.assertCount("Progress counter should be 1.",
         1);
-    assertEquals("File length in " + status, 0, status.getLen());
+    FileStatus status = verifyPathExists(fs,
+        "uploaded file commit", dest);
+    Assertions.assertThat(status.getLen())
+        .describedAs("Committed File file %s: %s", dest, status)
+        .isEqualTo(0);
+    getTestHelper().assertFileLacksMarkerHeader(dest);
   }
 
   @Test
@@ -505,7 +497,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     String text = "hello, world";
     FileUtils.write(tempFile, text, "UTF-8");
     CommitOperations actions = newCommitOperations();
-    Path dest = methodPath("testUploadSmallFile");
+    Path dest = methodSubPath("testUploadSmallFile");
     S3AFileSystem fs = getFileSystem();
     fs.delete(dest, true);
 
@@ -523,51 +515,57 @@ public class ITestCommitOperations extends AbstractCommitITest {
     commitOrFail(dest, pendingCommit, actions);
 
     String s = readUTF8(fs, dest, -1);
-    assertEquals(text, s);
+    Assertions.assertThat(s)
+        .describedAs("contents of committed file %s", dest)
+        .isEqualTo(text);
     progress.assertCount("Progress counter should be 1.",
         1);
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testUploadMissingFile() throws Throwable {
     File tempFile = File.createTempFile("commit", ".txt");
     tempFile.delete();
     CommitOperations actions = newCommitOperations();
-    Path dest = methodPath("testUploadMissingile");
-
-    actions.uploadFileToPendingCommit(tempFile, dest, null,
-        DEFAULT_MULTIPART_SIZE, progress);
-    progress.assertCount("Progress counter should be 1.",
-        1);
+    Path dest = methodSubPath("testUploadMissingFile");
+    intercept(FileNotFoundException.class, () ->
+        actions.uploadFileToPendingCommit(tempFile, dest, null,
+            DEFAULT_MULTIPART_SIZE, progress));
+    progress.assertCount("Progress counter should be 0.",
+        0);
   }
 
   @Test
   public void testRevertCommit() throws Throwable {
-    Path destFile = methodPath("part-0000");
+    describe("Revert a commit; the destination file will be deleted");
+    Path destFile = methodSubPath("part-0000");
     S3AFileSystem fs = getFileSystem();
     touch(fs, destFile);
-    CommitOperations actions = newCommitOperations();
     SinglePendingCommit commit = new SinglePendingCommit();
+    CommitOperations actions = newCommitOperations();
     commit.setDestinationKey(fs.pathToKey(destFile));
-
-    actions.revertCommit(commit);
-
-    assertPathExists("parent of reverted commit", destFile.getParent());
+    newCommitOperations().revertCommit(commit);
+    assertPathDoesNotExist("should have been reverted", destFile);
   }
 
   @Test
   public void testRevertMissingCommit() throws Throwable {
-    Path destFile = methodPath("part-0000");
+    Path destFile = methodSubPath("part-0000");
     S3AFileSystem fs = getFileSystem();
     fs.delete(destFile, false);
-    CommitOperations actions = newCommitOperations();
     SinglePendingCommit commit = new SinglePendingCommit();
     commit.setDestinationKey(fs.pathToKey(destFile));
+    newCommitOperations().revertCommit(commit);
+    assertPathDoesNotExist("should have been reverted", destFile);
+  }
 
-    actions.revertCommit(commit);
-
-    assertPathExists("parent of reverted (nonexistent) commit",
-        destFile.getParent());
+  @Test
+  public void testFailuresInAbortListing() throws Throwable {
+    Path path = path("testFailuresInAbort");
+    getFileSystem().mkdirs(path);
+    LOG.info("Aborting");
+    newCommitOperations().abortPendingUploadsUnderPath(path);
+    LOG.info("Abort completed");
   }
 
   /**
@@ -578,16 +576,16 @@ public class ITestCommitOperations extends AbstractCommitITest {
   @Test
   public void testWriteNormalStream() throws Throwable {
     S3AFileSystem fs = getFileSystem();
-    assumeMagicCommitEnabled(fs);
     Path destFile = path("normal");
     try (FSDataOutputStream out = fs.create(destFile, true)) {
       out.writeChars("data");
       assertFalse("stream has magic output: " + out,
           out.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
-      out.close();
     }
     FileStatus status = fs.getFileStatus(destFile);
-    assertTrue("Empty marker file: " + status, status.getLen() > 0);
+    Assertions.assertThat(status.getLen())
+        .describedAs("Normal file %s: %s", destFile, status)
+        .isGreaterThan(0);
   }
 
   /**
@@ -598,7 +596,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     describe("verify bulk commit");
     File localFile = File.createTempFile("commit", ".txt");
     CommitOperations actions = newCommitOperations();
-    Path destDir = methodPath("out");
+    Path destDir = methodSubPath("out");
     S3AFileSystem fs = getFileSystem();
     fs.delete(destDir, false);
 
@@ -612,7 +610,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
         destFile3);
     List<SinglePendingCommit> commits = new ArrayList<>(3);
 
-    for (Path destination : destinations) {
+    for (Path destination: destinations) {
       SinglePendingCommit commit1 =
           actions.uploadFileToPendingCommit(localFile,
               destination, null,
@@ -624,8 +622,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     assertPathDoesNotExist("destination dir", destDir);
     assertPathDoesNotExist("subdirectory", subdir);
     LOG.info("Initiating commit operations");
-    try (CommitOperations.CommitContext commitContext
-             = actions.initiateCommitOperation(destDir)) {
+    try (CommitContext commitContext
+             = actions.createCommitContextForTesting(destDir, JOB_ID, 0)) {
       LOG.info("Commit #1");
       commitContext.commitOrFail(commits.get(0));
       final String firstCommitContextString = commitContext.toString();

@@ -77,6 +77,16 @@ public class ProtobufRpcEngine implements RpcEngine {
     return ASYNC_RETURN_MESSAGE.get();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+      ConnectionId connId, Configuration conf, SocketFactory factory)
+      throws IOException {
+    final Invoker invoker = new Invoker(protocol, connId, conf, factory);
+    return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
+        protocol.getClassLoader(), new Class[] {protocol}, invoker), false);
+  }
+
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int rpcTimeout) throws IOException {
@@ -144,6 +154,10 @@ public class ProtobufRpcEngine implements RpcEngine {
     
     /**
      * This constructor takes a connectionId, instead of creating a new one.
+     * @param protocol input protocol.
+     * @param connId input connId.
+     * @param conf input Configuration.
+     * @param factory input factory.
      */
     protected Invoker(Class<?> protocol, Client.ConnectionId connId,
         Configuration conf, SocketFactory factory) {
@@ -423,6 +437,10 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param portRangeConfig A config parameter that can be used to restrict
      * the range of ports used when port is 0 (an ephemeral port)
      * @param alignmentContext provides server state info on client responses
+     * @param secretManager input secretManager.
+     * @param queueSizePerHandler input queueSizePerHandler.
+     * @param numReaders input numReaders.
+     * @throws IOException raised on errors performing I/O.
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,

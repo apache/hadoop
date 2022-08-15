@@ -63,12 +63,7 @@ public class RouterHeartbeatService extends PeriodicService {
    * Trigger the update of the Router state asynchronously.
    */
   protected void updateStateAsync() {
-    Thread thread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        updateStateStore();
-      }
-    }, "Router Heartbeat Async");
+    Thread thread = new Thread(this::updateStateStore, "Router Heartbeat Async");
     thread.setDaemon(true);
     thread.start();
   }

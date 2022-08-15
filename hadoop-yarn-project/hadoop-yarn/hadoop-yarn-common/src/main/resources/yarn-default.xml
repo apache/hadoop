@@ -4888,4 +4888,37 @@
       default implementation LocalityAppPlacementAllocator is used.
     </description>
   </property>
+
+  <property>
+    <name>yarn.router.keytab.file</name>
+    <value></value>
+    <description>
+       The keytab file used by router to login as its
+       service principal. The principal name is configured with
+       dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Router service principal. This is typically set to
+      router/_HOST@REALM.TLD. Each Router will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both Router setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
 </configuration>

@@ -54,6 +54,8 @@ public class ServiceStateModel {
   /**
    * Create the service state model in the {@link Service.STATE#NOTINITED}
    * state.
+   *
+   * @param name input name.
    */
   public ServiceStateModel(String name) {
     this(name, Service.STATE.NOTINITED);
@@ -62,6 +64,7 @@ public class ServiceStateModel {
   /**
    * Create a service state model instance in the chosen state
    * @param state the starting state
+   * @param name input name.
    */
   public ServiceStateModel(String name, Service.STATE state) {
     this.state = state;

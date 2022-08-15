@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
-import com.squareup.okhttp.MediaType;
+import okhttp3.MediaType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 

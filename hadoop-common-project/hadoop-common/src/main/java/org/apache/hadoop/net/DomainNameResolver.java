@@ -30,9 +30,10 @@ public interface DomainNameResolver {
    * Takes one domain name and returns its IP addresses based on the actual
    * service discovery methods.
    *
-   * @param domainName
+   * @param domainName input domainName.
    * @return all IP addresses
-   * @throws UnknownHostException
+   * @throws UnknownHostException indicate that the IP address of a
+   * host could not be determined.
    */
   InetAddress[] getAllByDomainName(String domainName)
       throws UnknownHostException;
@@ -40,7 +41,7 @@ public interface DomainNameResolver {
   /**
    * Reverse lookup an IP address and get the fully qualified domain name(fqdn).
    *
-   * @param address
+   * @param address input address.
    * @return fully qualified domain name
    */
   String getHostnameByIP(InetAddress address);
@@ -52,10 +53,12 @@ public interface DomainNameResolver {
    * This function is necessary in secure environment since Kerberos uses fqdn
    * in the service principal instead of IP.
    *
-   * @param domainName
+   * @param domainName input domainName.
+   * @param useFQDN input useFQDN.
    * @return all fully qualified domain names belonging to the IPs resolved from
    * the input domainName
-   * @throws UnknownHostException
+   * @throws UnknownHostException indicate that the IP address of a
+   * host could not be determined.
    */
    String[] getAllResolvedHostnameByDomainName(
        String domainName, boolean useFQDN) throws UnknownHostException;

@@ -43,6 +43,7 @@ public class Trash extends Configured {
   /** 
    * Construct a trash can accessor.
    * @param conf a Configuration
+   * @throws IOException raised on errors performing I/O.
    */
   public Trash(Configuration conf) throws IOException {
     this(FileSystem.get(conf), conf);
@@ -52,6 +53,7 @@ public class Trash extends Configured {
    * Construct a trash can accessor for the FileSystem provided.
    * @param fs the FileSystem
    * @param conf a Configuration
+   * @throws IOException raised on errors performing I/O.
    */
   public Trash(FileSystem fs, Configuration conf) throws IOException {
     super(conf);
@@ -97,47 +99,74 @@ public class Trash extends Configured {
   }
   
   /**
-   * Returns whether the trash is enabled for this filesystem
+   * Returns whether the trash is enabled for this filesystem.
+   *
+   * @return return if isEnabled true,not false.
    */
   public boolean isEnabled() {
     return trashPolicy.isEnabled();
   }
 
   /** Move a file or directory to the current trash directory.
+   *
+   * @param path the path.
    * @return false if the item is already in the trash or trash is disabled
+   * @throws IOException raised on errors performing I/O.
    */ 
   public boolean moveToTrash(Path path) throws IOException {
     return trashPolicy.moveToTrash(path);
   }
 
-  /** Create a trash checkpoint. */
+  /**
+   * Create a trash checkpoint.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void checkpoint() throws IOException {
     trashPolicy.createCheckpoint();
   }
 
-  /** Delete old checkpoint(s). */
+  /**
+   * Delete old checkpoint(s).
+   * @throws IOException raised on errors performing I/O.
+   */
   public void expunge() throws IOException {
     trashPolicy.deleteCheckpoint();
   }
 
-  /** Delete all trash immediately. */
+  /**
+   * Delete all trash immediately.
+   * @throws IOException raised on errors performing I/O.
+   */
   public void expungeImmediately() throws IOException {
     trashPolicy.createCheckpoint();
     trashPolicy.deleteCheckpointsImmediately();
   }
 
-  /** get the current working directory */
+  /**
+   * get the current working directory.
+   *
+   * @throws IOException on raised on errors performing I/O.
+   * @return Trash Dir.
+   */
   Path getCurrentTrashDir() throws IOException {
     return trashPolicy.getCurrentTrashDir();
   }
 
-  /** get the configured trash policy */
+  /**
+   * get the configured trash policy.
+   *
+   * @return TrashPolicy.
+   */
   TrashPolicy getTrashPolicy() {
     return trashPolicy;
   }
 
-  /** Return a {@link Runnable} that periodically empties the trash of all
+  /**
+   * Return a {@link Runnable} that periodically empties the trash of all
    * users, intended to be run by the superuser.
+   *
+   * @throws IOException on raised on errors performing I/O.
+   * @return Runnable.
    */
   public Runnable getEmptier() throws IOException {
     return trashPolicy.getEmptier();
