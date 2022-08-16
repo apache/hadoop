@@ -234,7 +234,7 @@ Certain HDFS operations, i.e., `hflush`, `hsync`, `concat`, `setReplication`, `t
 are not supported on erasure coded files due to substantial technical
 challenges.
 
-* `append()` and `truncate()` on an erasure coded file will throw `IOException`.
+* `append()` and `truncate()` on an erasure coded file will throw `IOException`. However, with `NEW_BLOCK` flag enabled, append to a closed striped file is supported.
 * `concat()` will throw `IOException` if files are mixed with different erasure
 coding policies or with replicated files.
 * `setReplication()` is no-op on erasure coded files.
