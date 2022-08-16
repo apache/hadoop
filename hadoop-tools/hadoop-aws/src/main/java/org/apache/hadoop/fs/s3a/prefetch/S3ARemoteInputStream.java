@@ -201,7 +201,7 @@ public abstract class S3ARemoteInputStream
    * @param inputPolicy new input policy.
    */
   private void setInputPolicy(S3AInputPolicy inputPolicy) {
-    inputPolicy = inputPolicy;
+    this.inputPolicy = inputPolicy;
     streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
 
