@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -72,6 +75,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -444,6 +454,116 @@ public final class FederationStateStoreFacade {
     GetReservationHomeSubClusterResponse response = stateStore.getReservationHomeSubCluster(
          GetReservationHomeSubClusterRequest.newInstance(reservationId));
     return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * The Router supports saving the master key.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   */
+  public RouterMasterKeyResponse storeNewMasterKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    return stateStore.storeNewMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router supports remove the master key.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   */
+  public void removeStoredMasterKey(DelegationKey newKey) throws YarnException, IOException {
+    LOG.info("Removing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    stateStore.removeStoredMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router supports obtaining MasterKey based on KeyId.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   */
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    return stateStore.getMasterKeyByDelegationKey(keyRequest);
+  }
+
+  /**
+   * The Router Supports Store new Token.
+   *
+   * @param identifier Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      long renewDate) throws YarnException, IOException {
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  /**
+   * The Router Supports Update Token.
+   *
+   * @param identifier Delegation Token
+   * @param renewDate renewDate
+   * @throws IOException IO exception occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      long renewDate) throws YarnException, IOException {
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param identifier Delegation Token
+   * @throws IOException IO exception occurred.
+   */
+  public void removeStoredToken(RMDelegationTokenIdentifier identifier)
+      throws YarnException, IOException{
+    LOG.info("removing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.removeStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param identifier Delegation Token
+   * @return RouterRMTokenResponse.
+   * @throws YarnException exception occurred.
+   */
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RMDelegationTokenIdentifier identifier)
+      throws YarnException, IOException {
+    LOG.info("get RouterStoreToken token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    return stateStore.getTokenByRouterStoreToken(request);
   }
 
   /**

@@ -25,6 +25,7 @@ package hadoop.yarn;
 
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
+import "yarn_security_token.proto";
 
 message SubClusterIdProto {
   optional string id = 1;
@@ -213,4 +214,31 @@ message GetSubClusterPoliciesConfigurationsRequestProto {
 
 message GetSubClusterPoliciesConfigurationsResponseProto {
   repeated SubClusterPolicyConfigurationProto policies_configurations = 1;
- }
+}
+
+message RouterMasterKeyProto {
+  optional int32 key_id = 1;
+  optional bytes key_bytes = 2;
+  optional uint64 expiry_date = 3;
+}
+
+message RouterMasterKeyRequestProto {
+  optional RouterMasterKeyProto router_master_key = 1;
+}
+
+message RouterMasterKeyResponseProto {
+  optional RouterMasterKeyProto router_master_key = 1;
+}
+
+message RouterStoreTokenProto {
+  optional YARNDelegationTokenIdentifierProto token_identifier = 1;
+  optional int64 renew_date = 2;
+}
+
+message RouterRMTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterRMTokenResponseProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}

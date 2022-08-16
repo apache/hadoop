@@ -75,6 +75,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHom
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -660,6 +664,48 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException{
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 }
