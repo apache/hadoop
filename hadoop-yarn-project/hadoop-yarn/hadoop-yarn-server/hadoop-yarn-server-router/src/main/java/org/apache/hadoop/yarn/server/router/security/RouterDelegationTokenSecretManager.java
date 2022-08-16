@@ -22,12 +22,22 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A Router specific delegation token secret manager.
@@ -59,6 +69,7 @@ public class RouterDelegationTokenSecretManager
                                             long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+    this.federationFacade = FederationStateStoreFacade.getInstance();
   }
 
   @Override
@@ -76,7 +87,7 @@ public class RouterDelegationTokenSecretManager
    * @param newKey DelegationKey
    */
   @Override
-  protected void storeNewMasterKey(DelegationKey newKey) {
+  public void storeNewMasterKey(DelegationKey newKey) {
     try {
       federationFacade.storeNewMasterKey(newKey);
     } catch (Exception e) {
@@ -93,7 +104,7 @@ public class RouterDelegationTokenSecretManager
    * @param delegationKey DelegationKey
    */
   @Override
-  protected void removeStoredMasterKey(DelegationKey delegationKey) {
+  public void removeStoredMasterKey(DelegationKey delegationKey) {
     try {
       federationFacade.removeStoredMasterKey(delegationKey);
     } catch (Exception e) {
@@ -112,7 +123,7 @@ public class RouterDelegationTokenSecretManager
    * @throws IOException IO exception occurred.
    */
   @Override
-  protected void storeNewToken(RMDelegationTokenIdentifier identifier,
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws IOException {
     try {
       federationFacade.storeNewToken(identifier, renewDate);
@@ -133,8 +144,7 @@ public class RouterDelegationTokenSecretManager
    * @throws IOException IO exception occurred.
    */
   @Override
-  protected void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate)
-      throws IOException {
+  public void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) throws IOException {
     try {
       federationFacade.updateStoredToken(id, renewDate);
     } catch (Exception e) {
@@ -153,8 +163,7 @@ public class RouterDelegationTokenSecretManager
    * @throws IOException IO exception occurred.
    */
   @Override
-  protected void removeStoredToken(RMDelegationTokenIdentifier
-      identifier) throws IOException {
+  public void removeStoredToken(RMDelegationTokenIdentifier identifier) throws IOException {
     try {
       federationFacade.removeStoredToken(identifier);
     } catch (Exception e) {
@@ -166,9 +175,74 @@ public class RouterDelegationTokenSecretManager
     }
   }
 
+  /**
+   * The Router supports obtaining MasterKey based on KeyId.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   * @return DelegationKey
+   */
+  public DelegationKey getMasterKeyByDelegationKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    try {
+      RouterMasterKeyResponse response = federationFacade.getMasterKeyByDelegationKey(newKey);
+      RouterMasterKey masterKey = response.getRouterMasterKey();
+      ByteBuffer keyByteBuf = masterKey.getKeyBytes();
+      byte[] keyBytes = new byte[keyByteBuf.remaining()];
+      keyByteBuf.get(keyBytes);
+      DelegationKey delegationKey =
+          new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+      return delegationKey;
+    } catch (Exception ex) {
+      throw new YarnException(ex);
+    }
+  }
+
+  /**
+   * The Router supports obtaining MasterKey based on KeyId.
+   *
+   * @param identifier RMDelegationTokenIdentifier
+   * @return RMDelegationTokenIdentifier.
+   * @throws YarnException exception occurred.
+   */
+  public RMDelegationTokenIdentifier getTokenByRouterStoreToken(
+      RMDelegationTokenIdentifier identifier) throws YarnException, IOException {
+    try {
+      RouterRMTokenResponse response = federationFacade.getTokenByRouterStoreToken(identifier);
+      YARNDelegationTokenIdentifier responseIdentifier =
+          response.getRouterStoreToken().getTokenIdentifier();
+      return (RMDelegationTokenIdentifier) responseIdentifier;
+    } catch (Exception ex) {
+      throw new YarnException(ex);
+    }
+  }
+
   @InterfaceAudience.Private
   @VisibleForTesting
   public int getLatestDTSequenceNumber() {
     return delegationTokenSequenceNumber;
+  }
+
+  public void setFederationFacade(FederationStateStoreFacade federationFacade) {
+    this.federationFacade = federationFacade;
+  }
+
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  public synchronized Set<DelegationKey> getAllMasterKeys() {
+    HashSet<DelegationKey> keySet = new HashSet<>();
+    keySet.addAll(allKeys.values());
+    return keySet;
+  }
+
+  @InterfaceAudience.Private
+  @VisibleForTesting
+  public synchronized Map<RMDelegationTokenIdentifier, Long> getAllTokens() {
+    Map<RMDelegationTokenIdentifier, Long> allTokens = new HashMap<>();
+    for (Map.Entry<RMDelegationTokenIdentifier,
+         DelegationTokenInformation> entry : currentTokens.entrySet()) {
+      allTokens.put(entry.getKey(), entry.getValue().getRenewDate());
+    }
+    return allTokens;
   }
 }

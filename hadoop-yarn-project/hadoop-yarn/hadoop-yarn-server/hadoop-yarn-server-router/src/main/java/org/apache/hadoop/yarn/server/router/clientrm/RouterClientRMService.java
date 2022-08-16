@@ -169,6 +169,7 @@ public class RouterClientRMService extends AbstractService
 
     // Initialize RouterRMDelegationTokenSecretManager.
     routerDTSecretManager = createRouterRMDelegationTokenSecretManager(conf);
+    routerDTSecretManager.startThreads();
 
     this.server = rpc.getServer(ApplicationClientProtocol.class, this,
         listenerEndpoint, serverConf, routerDTSecretManager, numWorkerThreads);
@@ -592,5 +593,10 @@ public class RouterClientRMService extends AbstractService
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, 3600000);
+  }
+
+  @VisibleForTesting
+  public RouterDelegationTokenSecretManager getRouterDTSecretManager() {
+    return routerDTSecretManager;
   }
 }

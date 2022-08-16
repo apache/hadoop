@@ -79,6 +79,17 @@ public interface FederationDelegationTokenStateStore {
       throws YarnException, IOException;
 
   /**
+   * The Router supports obtaining MasterKey based on KeyId.
+   *
+   * @param request
+   * @return
+   * @throws YarnException
+   * @throws IOException
+   */
+  RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException;
+
+  /**
    * The Router Supports Store new Token.
    *
    * @param request DelegationKey.
@@ -106,5 +117,15 @@ public interface FederationDelegationTokenStateStore {
    * @throws YarnException exception occurred.
    */
   RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException;
+
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param request DelegationKey.
+   * @return RouterRMTokenResponse.
+   * @throws YarnException exception occurred.
+   */
+  RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException;
 }

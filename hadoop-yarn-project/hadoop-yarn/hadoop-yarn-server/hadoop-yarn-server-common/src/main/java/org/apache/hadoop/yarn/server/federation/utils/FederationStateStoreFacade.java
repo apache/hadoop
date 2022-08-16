@@ -75,10 +75,12 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -449,13 +451,14 @@ public final class FederationStateStoreFacade {
    * @param newKey DelegationKey
    * @throws Exception An error occurred
    */
-  public void storeNewMasterKey(DelegationKey newKey) throws YarnException, IOException {
+  public RouterMasterKeyResponse storeNewMasterKey(DelegationKey newKey)
+      throws YarnException, IOException {
     LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
     ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
     RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
         keyBytes, newKey.getExpiryDate());
     RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
-    stateStore.storeNewMasterKey(keyRequest);
+    return stateStore.storeNewMasterKey(keyRequest);
   }
 
   /**
@@ -471,6 +474,22 @@ public final class FederationStateStoreFacade {
         keyBytes, newKey.getExpiryDate());
     RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
     stateStore.removeStoredMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router supports obtaining MasterKey based on KeyId.
+   *
+   * @param newKey DelegationKey
+   * @throws Exception An error occurred
+   */
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    return stateStore.getMasterKeyByDelegationKey(keyRequest);
   }
 
   /**
@@ -513,11 +532,27 @@ public final class FederationStateStoreFacade {
    */
   public void removeStoredToken(RMDelegationTokenIdentifier identifier)
       throws YarnException, IOException{
-    LOG.info("removing RMDelegation token with sequence number: {}",
+    LOG.info("removing RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.removeStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Remove Token.
+   *
+   * @param identifier Delegation Token
+   * @return RouterRMTokenResponse.
+   * @throws YarnException exception occurred.
+   */
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RMDelegationTokenIdentifier identifier)
+      throws YarnException, IOException {
+    LOG.info("get RouterStoreToken token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    return stateStore.getTokenByRouterStoreToken(request);
   }
 
   /**
