@@ -129,7 +129,7 @@ public class FederationStateStoreService extends AbstractService
         TimeUnit.SECONDS);
 
     if (heartbeatInitialDelay <= 0) {
-      LOG.warn("{} configured value is wrong, must be at <= 0; using default value of {}",
+      LOG.warn("{} configured value is wrong, must be > 0; using default value of {}",
           YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY);
       heartbeatInitialDelay =
