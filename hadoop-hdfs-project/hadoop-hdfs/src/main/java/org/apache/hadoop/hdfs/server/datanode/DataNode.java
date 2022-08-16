@@ -3628,7 +3628,10 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getVolumeInfo() {
-    Preconditions.checkNotNull(data, "Storage not yet initialized");
+    if (data == null) {
+      LOG.debug("Storage not yet initialized.");
+      return "";
+    }
     return JSON.toString(data.getVolumeInfoMap());
   }
   
@@ -3642,7 +3645,7 @@ public class DataNode extends ReconfigurableBase
     try {
       return getDiskBalancer().queryWorkStatus().toJsonString();
     } catch (IOException ex) {
-      LOG.debug("Reading diskbalancer Status failed. ex:{}", ex);
+      LOG.debug("Reading diskbalancer Status failed.", ex);
       return "";
     }
   }

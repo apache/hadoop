@@ -215,6 +215,39 @@ public class TestFileChecksum {
     }
   }
 
+  /**
+   * Test the corner case of the COMPOSITE_CRC.
+   * For Stripe File, last block size in the file is (int)(blockSize * 0.5),
+   *    but the last block size in the check length is (int)(blockSize * 0.6).
+   * For Replicate File, the last block size in the file is (int)(blockSize * 0.5),
+   *    but the last block size in the check length is ((dataBlocks - 1) * blockSize
+   *    + (int) (blockSize * 0.6))
+   */
+  @Test(timeout = 90000)
+  public void testStripedAndReplicatedFileChecksum2() throws Exception {
+    final int lastBlockSize = (int) (blockSize * 0.5);
+    final int fullStripeLength = dataBlocks * blockSize;
+    final int testFileSize = fullStripeLength + lastBlockSize;
+    prepareTestFiles(testFileSize, new String[] {stripedFile1, replicatedFile});
+
+    final int specialLength = (dataBlocks - 1) * blockSize
+        + (int) (blockSize * 0.6);
+
+    Assert.assertTrue(specialLength % blockSize > lastBlockSize);
+    Assert.assertTrue(specialLength % fullStripeLength > lastBlockSize);
+
+    FileChecksum stripedFileChecksum = getFileChecksum(stripedFile1,
+        specialLength, false);
+    FileChecksum replicatedFileChecksum = getFileChecksum(replicatedFile,
+        specialLength, false);
+
+    if (checksumCombineMode.equals(ChecksumCombineMode.COMPOSITE_CRC.name())) {
+      Assert.assertEquals(replicatedFileChecksum, stripedFileChecksum);
+    } else {
+      Assert.assertNotEquals(replicatedFileChecksum, stripedFileChecksum);
+    }
+  }
+
   @Test(timeout = 90000)
   public void testDifferentBlockSizeReplicatedFileChecksum() throws Exception {
     byte[] fileData = StripedFileTestUtil.generateBytes(fileSize);

@@ -149,12 +149,10 @@ public class STSClientFactory {
    * @param tokenService STS instance
    * @param invoker invoker to use
    * @return an STS client bonded to that interface.
-   * @throws IOException on any failure
    */
   public static STSClient createClientConnection(
       final AWSSecurityTokenService tokenService,
-      final Invoker invoker)
-      throws IOException {
+      final Invoker invoker) {
     return new STSClient(tokenService, invoker);
   }
 
@@ -175,12 +173,9 @@ public class STSClientFactory {
 
     @Override
     public void close() throws IOException {
-      try {
-        tokenService.shutdown();
-      } catch (UnsupportedOperationException ignored) {
-        // ignore this, as it is what the STS client currently
-        // does.
-      }
+      // Since we are not using AbstractAWSSecurityTokenService, we
+      // don't need to worry about catching UnsupportedOperationException.
+      tokenService.shutdown();
     }
 
     /**

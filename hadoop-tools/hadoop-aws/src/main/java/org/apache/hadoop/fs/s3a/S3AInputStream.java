@@ -37,6 +37,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -53,9 +54,9 @@ import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
@@ -187,6 +188,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private long asyncDrainThreshold;
 
+  /** Aggregator used to aggregate per thread IOStatistics. */
+  private final IOStatisticsAggregator threadIOStatistics;
+
   /**
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
@@ -225,6 +229,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
+    this.threadIOStatistics = requireNonNull(ctx.getIOStatisticsAggregator());
   }
 
   /**
@@ -600,7 +605,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         stopVectoredIOOperations.set(true);
         // close or abort the stream; blocking
         awaitFuture(closeStream("close() operation", false, true));
-        LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
         // end the client+audit span.
         client.close();
         // this is actually a no-op
@@ -608,8 +612,21 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       } finally {
         // merge the statistics back into the FS statistics.
         streamStatistics.close();
+        // Collect ThreadLevel IOStats
+        mergeThreadIOStatistics(streamStatistics.getIOStatistics());
       }
     }
+  }
+
+  /**
+   * Merging the current thread's IOStatistics with the current IOStatistics
+   * context.
+   *
+   * @param streamIOStats Stream statistics to be merged into thread
+   *                      statistics aggregator.
+   */
+  private void mergeThreadIOStatistics(IOStatistics streamIOStats) {
+    threadIOStatistics.aggregate(streamIOStats);
   }
 
   /**
@@ -946,7 +963,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
-
     LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
@@ -961,6 +977,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), sortedRanges.size());
       for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
@@ -970,6 +987,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(sortedRanges,
               1, minSeekForVectorReads(),
               maxReadSizeForVectorReads());
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), combinedFileRanges.size());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
@@ -1071,6 +1089,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
       drainBytes += readCount;
     }
+    streamStatistics.readVectoredBytesDiscarded(drainBytes);
     LOG.debug("{} bytes drained from stream ", drainBytes);
   }
 
@@ -1151,6 +1170,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
     }
+    // update io stats.
+    incrementBytesRead(length);
   }
 
   /**
@@ -1331,6 +1352,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public boolean hasCapability(String capability) {
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
+    case StreamCapabilities.IOSTATISTICS_CONTEXT:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.VECTOREDIO:

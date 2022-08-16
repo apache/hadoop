@@ -803,6 +803,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong readOperations;
     private final AtomicLong readFullyOperations;
     private final AtomicLong seekOperations;
+    private final AtomicLong readVectoredOperations;
+    private final AtomicLong bytesDiscardedInVectoredIO;
+    private final AtomicLong readVectoredIncomingRanges;
+    private final AtomicLong readVectoredCombinedRanges;
 
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
@@ -836,6 +840,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
+              StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES,
+              StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES,
+              StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+              StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
           .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
           .withDurationTracking(ACTION_HTTP_GET_REQUEST,
@@ -872,6 +880,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE);
       readOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_OPERATIONS);
+      readVectoredOperations = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS);
+      bytesDiscardedInVectoredIO =  st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED);
+      readVectoredIncomingRanges = st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES);
+      readVectoredCombinedRanges = st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES);
       readFullyOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS);
       seekOperations = st.getCounterReference(
@@ -1015,6 +1031,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       if (requested > actual) {
         readsIncomplete.incrementAndGet();
       }
+    }
+
+    @Override
+    public void readVectoredOperationStarted(int numIncomingRanges,
+                                             int numCombinedRanges) {
+      readVectoredIncomingRanges.addAndGet(numIncomingRanges);
+      readVectoredCombinedRanges.addAndGet(numCombinedRanges);
+      readVectoredOperations.incrementAndGet();
+    }
+
+    @Override
+    public void readVectoredBytesDiscarded(int discarded) {
+      bytesDiscardedInVectoredIO.addAndGet(discarded);
     }
 
     /**

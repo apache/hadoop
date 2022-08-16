@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.11.901
+com.amazonaws:aws-java-sdk-bundle:1.12.262
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -309,7 +309,7 @@ org.apache.commons:commons-configuration2:2.1.1
 org.apache.commons:commons-csv:1.0
 org.apache.commons:commons-digester:1.8.1
 org.apache.commons:commons-lang3:3.12.0
-org.apache.commons:commons-math3:3.1.1
+org.apache.commons:commons-math3:3.6.1
 org.apache.commons:commons-text:1.4
 org.apache.commons:commons-validator:1.6
 org.apache.curator:curator-client:5.2.0

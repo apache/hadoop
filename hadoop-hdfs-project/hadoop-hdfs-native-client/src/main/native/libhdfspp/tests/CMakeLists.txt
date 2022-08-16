@@ -24,8 +24,11 @@ set (LIBHDFS_TESTS_DIR ../../libhdfs-tests)
 set (LIBHDFSPP_SRC_DIR ..)
 set (LIBHDFSPP_LIB_DIR ${LIBHDFSPP_SRC_DIR}/lib)
 set (LIBHDFSPP_BINDING_C ${LIBHDFSPP_LIB_DIR}/bindings/c)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
+
+if (NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
+endif (NOT MSVC)
 
 include_directories(
     ${GENERATED_JAVAH}

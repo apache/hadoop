@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -49,9 +52,12 @@ import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
+import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
+import org.apache.hadoop.yarn.api.records.NodeAttribute;
+import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -467,6 +473,57 @@ public final class RouterYarnClientUtils {
     }
     profileResponse.setResource(resource);
     return profileResponse;
+  }
+
+  /**
+   * Merges a list of GetAttributesToNodesResponse.
+   *
+   * @param responses a list of GetAttributesToNodesResponse to merge.
+   * @return the merged GetAttributesToNodesResponse.
+   */
+  public static GetAttributesToNodesResponse mergeAttributesToNodesResponse(
+      Collection<GetAttributesToNodesResponse> responses) {
+    Map<NodeAttributeKey, List<NodeToAttributeValue>> nodeAttributeMap = new HashMap<>();
+    for (GetAttributesToNodesResponse response : responses) {
+      if (response != null && response.getAttributesToNodes() != null) {
+        nodeAttributeMap.putAll(response.getAttributesToNodes());
+      }
+    }
+    return GetAttributesToNodesResponse.newInstance(nodeAttributeMap);
+  }
+
+  /**
+   * Merges a list of GetClusterNodeAttributesResponse.
+   *
+   * @param responses a list of GetClusterNodeAttributesResponse to merge.
+   * @return the merged GetClusterNodeAttributesResponse.
+   */
+  public static GetClusterNodeAttributesResponse mergeClusterNodeAttributesResponse(
+      Collection<GetClusterNodeAttributesResponse> responses) {
+    Set<NodeAttributeInfo> nodeAttributeInfo = new HashSet<>();
+    for (GetClusterNodeAttributesResponse response : responses) {
+      if (response != null && response.getNodeAttributes() != null) {
+        nodeAttributeInfo.addAll(response.getNodeAttributes());
+      }
+    }
+    return GetClusterNodeAttributesResponse.newInstance(nodeAttributeInfo);
+  }
+
+  /**
+   * Merges a list of GetNodesToAttributesResponse.
+   *
+   * @param responses a list of GetNodesToAttributesResponse to merge.
+   * @return the merged GetNodesToAttributesResponse.
+   */
+  public static GetNodesToAttributesResponse mergeNodesToAttributesResponse(
+      Collection<GetNodesToAttributesResponse> responses) {
+    Map<String, Set<NodeAttribute>> attributesMap = new HashMap<>();
+    for (GetNodesToAttributesResponse response : responses) {
+      if (response != null && response.getNodeToAttributes() != null) {
+        attributesMap.putAll(response.getNodeToAttributes());
+      }
+    }
+    return GetNodesToAttributesResponse.newInstance(attributesMap);
   }
 }
 

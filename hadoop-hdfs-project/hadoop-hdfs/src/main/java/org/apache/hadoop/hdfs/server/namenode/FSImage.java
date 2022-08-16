@@ -649,7 +649,7 @@ public class FSImage implements Closeable {
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
     target.clear();
-    LOG.debug("Reloading namespace from " + file);
+    LOG.debug("Reloading namespace from {}.", file);
     loadFSImage(file, target, null, false);
   }
 
@@ -728,7 +728,7 @@ public class FSImage implements Closeable {
     }
  
     for (EditLogInputStream l : editStreams) {
-      LOG.debug("Planning to load edit log stream: " + l);
+      LOG.debug("Planning to load edit log stream: {}.", l);
     }
     if (!editStreams.iterator().hasNext()) {
       LOG.info("No edit log streams selected.");
@@ -892,8 +892,10 @@ public class FSImage implements Closeable {
       FSNamesystem target, long maxTxnsToRead,
       StartupOption startOpt, MetaRecoveryContext recovery)
       throws IOException {
-    LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
-    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("About to load edits:\n  {}.", Joiner.on("\n  ").join(editStreams));
+    }
+
     long prevLastAppliedTxId = lastAppliedTxId;
     long remainingReadTxns = maxTxnsToRead;
     try {    
@@ -1348,10 +1350,10 @@ public class FSImage implements Closeable {
     final File fromFile = NNStorage.getStorageFile(sd, fromNnf, txid);
     final File toFile = NNStorage.getStorageFile(sd, toNnf, txid);
     // renameTo fails on Windows if the destination file already exists.
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("renaming  " + fromFile.getAbsolutePath() 
-                + " to " + toFile.getAbsolutePath());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("renaming  {} to {}", fromFile.getAbsoluteFile(), toFile.getAbsolutePath());
     }
+
     if (!fromFile.renameTo(toFile)) {
       if (!toFile.delete() || !fromFile.renameTo(toFile)) {
         throw new IOException("renaming  " + fromFile.getAbsolutePath() + " to "  + 

@@ -32,12 +32,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -131,6 +133,7 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
@@ -384,6 +387,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
+
+  /**
+   * A cache of files that should be deleted when the FileSystem is closed
+   * or the JVM is exited.
+   */
+  private final Set<Path> deleteOnExit = new TreeSet<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -996,13 +1005,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String storageClassConf = getConf()
         .getTrimmed(STORAGE_CLASS, "")
         .toUpperCase(Locale.US);
-    StorageClass storageClass;
-    try {
-      storageClass = StorageClass.fromValue(storageClassConf);
-    } catch (IllegalArgumentException e) {
-      LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
-          STORAGE_CLASS, storageClassConf);
-      storageClass = null;
+    StorageClass storageClass = null;
+    if (!storageClassConf.isEmpty()) {
+      try {
+        storageClass = StorageClass.fromValue(storageClassConf);
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+            STORAGE_CLASS, storageClassConf);
+      }
+    } else {
+      LOG.debug("Unset storage class property {}; falling back to default storage class",
+          STORAGE_CLASS);
     }
 
     return RequestFactoryImpl.builder()
@@ -1576,7 +1589,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statistics,
         statisticsContext,
         fileStatus,
-        vectoredIOContext)
+        vectoredIOContext,
+        IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -1743,7 +1757,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS,
                 DOWNGRADE_SYNCABLE_EXCEPTIONS_DEFAULT))
         .withCSEEnabled(isCSEEnabled)
-        .withPutOptions(putOptions);
+        .withPutOptions(putOptions)
+        .withIOStatisticsAggregator(
+            IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator());
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);
@@ -3060,6 +3076,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   public boolean delete(Path f, boolean recursive) throws IOException {
     checkNotClosed();
+    return deleteWithoutCloseCheck(f, recursive);
+  }
+
+  /**
+   * Same as delete(), except that it does not check if fs is closed.
+   *
+   * @param f the path to delete.
+   * @param recursive if path is a directory and set to
+   * true, the directory is deleted else throws an exception. In
+   * case of a file the recursive can be set to either true or false.
+   * @return true if the path existed and then was deleted; false if there
+   * was no path in the first place, or the corner cases of root path deletion
+   * have surfaced.
+   * @throws IOException due to inability to delete a directory or file.
+   */
+
+  @VisibleForTesting
+  protected boolean deleteWithoutCloseCheck(Path f, boolean recursive) throws IOException {
     final Path path = qualify(f);
     // span covers delete, getFileStatus, fake directory operations.
     try (AuditSpan span = createSpan(INVOCATION_DELETE.getSymbol(),
@@ -3798,6 +3832,61 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new InterruptedIOException("Interrupted in PUT to "
               + keyToQualifiedPath(key))
           .initCause(e);
+    }
+  }
+
+  /**
+   * This override bypasses checking for existence.
+   *
+   * @param f the path to delete; this may be unqualified.
+   * @return true, always.   * @param f the path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException IO failure
+   */
+  @Override
+  public boolean deleteOnExit(Path f) throws IOException {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      deleteOnExit.add(qualifedPath);
+    }
+    return true;
+  }
+
+  /**
+   * Cancel the scheduled deletion of the path when the FileSystem is closed.
+   * @param f the path to cancel deletion
+   * @return true if the path was found in the delete-on-exit list.
+   */
+  @Override
+  public boolean cancelDeleteOnExit(Path f) {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(qualifedPath);
+    }
+  }
+
+  /**
+   * Delete all paths that were marked as delete-on-exit. This recursively
+   * deletes all files and directories in the specified paths. It does not
+   * check if file exists and filesystem is closed.
+   *
+   * The time to process this operation is {@code O(paths)}, with the actual
+   * time dependent on the time for existence and deletion operations to
+   * complete, successfully or not.
+   */
+  @Override
+  protected void processDeleteOnExit() {
+    synchronized (deleteOnExit) {
+      for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
+        Path path = iter.next();
+        try {
+          deleteWithoutCloseCheck(path, true);
+        } catch (IOException e) {
+          LOG.info("Ignoring failure to deleteOnExit for path {}", path);
+          LOG.debug("The exception for deleteOnExit is {}", e);
+        }
+        iter.remove();
+      }
     }
   }
 
