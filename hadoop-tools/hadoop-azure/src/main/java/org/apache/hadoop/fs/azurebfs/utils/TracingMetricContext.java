@@ -34,7 +34,6 @@ public class TracingMetricContext extends TracingContext{
   private final String clientCorrelationID;  // passed over config by client
   private final String fileSystemID;  // GUID for fileSystem instance
   private String clientRequestId = EMPTY_STRING;
-  private Listener listener = null;
   private TracingHeaderFormat tracingHeaderFormat;
 
   public TracingMetricContext(String clientCorrelationID, String fileSystemID,
@@ -46,7 +45,6 @@ public class TracingMetricContext extends TracingContext{
     this.fileSystemID = fileSystemID;
     this.tracingHeaderFormat = tracingHeaderFormat;
     this.abfsCounters = abfsCounters;
-    this.listener = listener;
   }
 
   private String getFooterMetrics(){
