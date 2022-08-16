@@ -200,7 +200,8 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    * Counters group used by the counters of MultipleOutputs.
    */
   private static final String COUNTERS_GROUP = MultipleOutputs.class.getName();
-  private static final Logger LOG = LoggerFactory.getLogger(org.apache.hadoop.mapred.lib.MultipleOutputs.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(org.apache.hadoop.mapred.lib.MultipleOutputs.class);
 
   /**
    * Cache for the taskContexts
@@ -353,6 +354,10 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
    */
   public static boolean getCountersEnabled(JobContext job) {
     return job.getConfiguration().getBoolean(COUNTERS_ENABLED, false);
+  }
+
+  public void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
+    this.recordWriters = recordWriters;
   }
 
   /**
