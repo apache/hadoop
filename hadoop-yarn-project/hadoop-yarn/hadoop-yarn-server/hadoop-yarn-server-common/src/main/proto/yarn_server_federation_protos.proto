@@ -222,49 +222,17 @@ message RouterMasterKeyProto {
   optional uint64 expiry_date = 3;
 }
 
-message StoreNewMasterKeyRequestProto {
+message RouterMasterKeyRequestProto {
   optional RouterMasterKeyProto router_master_key = 1;
 }
 
-message StoreNewMasterKeyResponseProto {
-  optional RouterMasterKeyProto router_master_key = 1;
-}
-
-message RemoveStoredMasterKeyRequestProto {
-  optional RouterMasterKeyProto router_master_key = 1;
-}
-
-message RemoveStoredMasterKeyResponseProto {
+message RouterMasterKeyResponseProto {
   optional RouterMasterKeyProto router_master_key = 1;
 }
 
 message RouterStoreTokenProto {
   optional YARNDelegationTokenIdentifierProto token_identifier = 1;
   optional int64 renew_date = 2;
-}
-
-message RouterStoreNewTokenRequestProto {
-  optional RouterStoreTokenProto router_store_token = 1;
-}
-
-message RouterStoreNewTokenResponseProto {
-  optional RouterStoreTokenProto router_store_token = 1;
-}
-
-message RouterUpdateStoredTokenRequestProto {
-  optional RouterStoreTokenProto router_store_token = 1;
-}
-
-message RouterUpdateStoredTokenResponseProto {
-  optional RouterStoreTokenProto router_store_token = 1;
-}
-
-message RouterRemoveStoredTokenRequestProto {
-  optional RouterStoreTokenProto router_store_token = 1;
-}
-
-message RouterRemoveStoredTokenResponseProto {
-  optional RouterStoreTokenProto router_store_token = 1;
 }
 
 message RouterRMTokenRequestProto {

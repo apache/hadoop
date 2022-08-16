@@ -3,31 +3,31 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreNewTokenResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreNewTokenResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 
 @Private
 @Unstable
-public class RouterStoreNewTokenResponsePBImpl extends RouterStoreNewTokenResponse {
+public class RouterRMTokenResponsePBImpl extends RouterRMTokenResponse {
 
-  private RouterStoreNewTokenResponseProto proto = RouterStoreNewTokenResponseProto.getDefaultInstance();
-  private RouterStoreNewTokenResponseProto.Builder builder = null;
+  private RouterRMTokenResponseProto proto = RouterRMTokenResponseProto.getDefaultInstance();
+  private RouterRMTokenResponseProto.Builder builder = null;
   private boolean viaProto = false;
   private RouterStoreToken routerStoreToken = null;
 
-  public RouterStoreNewTokenResponsePBImpl() {
-    builder = RouterStoreNewTokenResponseProto.newBuilder();
+  public RouterRMTokenResponsePBImpl() {
+    builder = RouterRMTokenResponseProto.newBuilder();
   }
 
-  public RouterStoreNewTokenResponsePBImpl(RouterStoreNewTokenResponseProto requestProto) {
+  public RouterRMTokenResponsePBImpl(RouterRMTokenResponseProto requestProto) {
     this.proto = requestProto;
     viaProto = true;
   }
 
-  public RouterStoreNewTokenResponseProto getProto() {
+  public RouterRMTokenResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -45,7 +45,7 @@ public class RouterStoreNewTokenResponsePBImpl extends RouterStoreNewTokenRespon
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = RouterStoreNewTokenResponseProto.newBuilder(proto);
+      builder = RouterRMTokenResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -59,7 +59,7 @@ public class RouterStoreNewTokenResponsePBImpl extends RouterStoreNewTokenRespon
 
   @Override
   public RouterStoreToken getRouterStoreToken() {
-    RouterStoreNewTokenResponseProtoOrBuilder p = viaProto ? proto : builder;
+    RouterRMTokenResponseProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerStoreToken != null) {
       return this.routerStoreToken;
     }

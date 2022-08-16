@@ -18,30 +18,29 @@
 package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRemoveStoredTokenRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRemoveStoredTokenRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 
-public class RouterRemoveStoredTokenRequestPBImpl extends RouterStoreNewTokenRequest {
+public class RouterRMTokenRequestPBImpl extends RouterRMTokenRequest {
 
-  private RouterRemoveStoredTokenRequestProto proto =
-      RouterRemoveStoredTokenRequestProto.getDefaultInstance();
-  private RouterRemoveStoredTokenRequestProto.Builder builder = null;
+  private RouterRMTokenRequestProto proto = RouterRMTokenRequestProto.getDefaultInstance();
+  private RouterRMTokenRequestProto.Builder builder = null;
   private boolean viaProto = false;
   private RouterStoreToken routerStoreToken = null;
 
-  public RouterRemoveStoredTokenRequestPBImpl() {
-    builder = RouterRemoveStoredTokenRequestProto.newBuilder();
+  public RouterRMTokenRequestPBImpl() {
+    builder = RouterRMTokenRequestProto.newBuilder();
   }
 
-  public RouterRemoveStoredTokenRequestPBImpl(RouterRemoveStoredTokenRequestProto requestProto) {
+  public RouterRMTokenRequestPBImpl(RouterRMTokenRequestProto requestProto) {
     this.proto = requestProto;
     viaProto = true;
   }
 
-  public RouterRemoveStoredTokenRequestProto getProto() {
+  public RouterRMTokenRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -59,7 +58,7 @@ public class RouterRemoveStoredTokenRequestPBImpl extends RouterStoreNewTokenReq
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = RouterRemoveStoredTokenRequestProto.newBuilder(proto);
+      builder = RouterRMTokenRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -77,7 +76,7 @@ public class RouterRemoveStoredTokenRequestPBImpl extends RouterStoreNewTokenReq
 
   @Override
   public RouterStoreToken getRouterStoreToken() {
-    RouterRemoveStoredTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
+    RouterRMTokenRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerStoreToken != null) {
       return this.routerStoreToken;
     }

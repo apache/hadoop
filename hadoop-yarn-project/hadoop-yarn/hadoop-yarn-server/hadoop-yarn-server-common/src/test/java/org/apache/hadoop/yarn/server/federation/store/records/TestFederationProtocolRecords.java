@@ -48,17 +48,12 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterRegisterResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterResponseProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.StoreNewMasterKeyResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RemoveStoredMasterKeyRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RemoveStoredMasterKeyResponseProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreNewTokenRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreNewTokenResponseProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterUpdateStoredTokenRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterUpdateStoredTokenResponseProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRemoveStoredTokenRequestProto;
-import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRemoveStoredTokenResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyResponseProto;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterResponsePBImpl;
@@ -89,17 +84,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubCluster
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.StoreNewMasterKeyRequestPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.StoreNewMasterKeyResponsePBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RemoveStoredMasterKeyRequestPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RemoveStoredMasterKeyResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterStoreTokenPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterStoreNewTokenRequestPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterStoreNewTokenResponsePBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterUpdateStoredTokenRequestPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterUpdateStoredTokenResponsePBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRemoveStoredTokenRequestPBImpl;
-import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRemoveStoredTokenResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyResponsePBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -297,68 +286,27 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   }
 
   @Test
-  public void testStoreNewMasterKeyRequest() throws Exception {
-    validatePBImplRecord(StoreNewMasterKeyRequestPBImpl.class,
-        StoreNewMasterKeyRequestProto.class);
-  }
-
-  @Test
-  public void testStoreNewMasterKeyResponse() throws Exception {
-    validatePBImplRecord(StoreNewMasterKeyResponsePBImpl.class,
-        StoreNewMasterKeyResponseProto.class);
-  }
-
-  @Test
-  public void testRemoveStoredMasterKeyRequest() throws Exception {
-    validatePBImplRecord(RemoveStoredMasterKeyRequestPBImpl.class,
-        RemoveStoredMasterKeyRequestProto.class);
-  }
-
-  @Test
-  public void testRemoveStoredMasterKeyResponse() throws Exception {
-    validatePBImplRecord(RemoveStoredMasterKeyResponsePBImpl.class,
-        RemoveStoredMasterKeyResponseProto.class);
-  }
-
-  @Test
   public void testRouterStoreToken() throws Exception {
-    validatePBImplRecord(RouterStoreTokenPBImpl.class,
-        YarnServerFederationProtos.RouterStoreTokenProto.class);
+    validatePBImplRecord(RouterStoreTokenPBImpl.class, RouterStoreTokenProto.class);
   }
 
   @Test
-  public void testRouterStoreNewTokenRequest() throws Exception {
-    validatePBImplRecord(RouterStoreNewTokenRequestPBImpl.class,
-        RouterStoreNewTokenRequestProto.class);
+  public void testRouterRMTokenRequest() throws Exception {
+    validatePBImplRecord(RouterRMTokenRequestPBImpl.class, RouterRMTokenRequestProto.class);
   }
 
   @Test
-  public void testRouterStoreNewTokenResponse() throws Exception {
-    validatePBImplRecord(RouterStoreNewTokenResponsePBImpl.class,
-        RouterStoreNewTokenResponseProto.class);
+  public void testRouterRMTokenResponse() throws Exception {
+    validatePBImplRecord(RouterRMTokenResponsePBImpl.class, RouterRMTokenResponseProto.class);
   }
 
   @Test
-  public void testRouterUpdateStoredTokenRequest() throws Exception {
-    validatePBImplRecord(RouterUpdateStoredTokenRequestPBImpl.class,
-        RouterUpdateStoredTokenRequestProto.class);
+  public void testRouterMasterKeyRequest() throws Exception {
+    validatePBImplRecord(RouterMasterKeyRequestPBImpl.class, RouterMasterKeyRequestProto.class);
   }
 
   @Test
-  public void testRouterUpdateStoredTokenResponse() throws Exception {
-    validatePBImplRecord(RouterUpdateStoredTokenResponsePBImpl.class,
-        RouterUpdateStoredTokenResponseProto.class);
-  }
-
-  @Test
-  public void testRouterRemoveStoredTokenRequest() throws Exception {
-    validatePBImplRecord(RouterRemoveStoredTokenRequestPBImpl.class,
-        RouterRemoveStoredTokenRequestProto.class);
-  }
-
-  @Test
-  public void testRouterRemoveStoredTokenResponse() throws Exception {
-    validatePBImplRecord(RouterRemoveStoredTokenResponsePBImpl.class,
-        RouterRemoveStoredTokenResponseProto.class);
+  public void testRouterMasterKeyResponse() throws Exception {
+    validatePBImplRecord(RouterMasterKeyResponsePBImpl.class, RouterMasterKeyResponseProto.class);
   }
 }

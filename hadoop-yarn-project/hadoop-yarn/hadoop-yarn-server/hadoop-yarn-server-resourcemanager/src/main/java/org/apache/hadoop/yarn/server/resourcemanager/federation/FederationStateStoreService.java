@@ -66,16 +66,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RemoveStoredMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.StoreNewMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreNewTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterUpdateStoredTokenResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRemoveStoredTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -337,32 +331,29 @@ public class FederationStateStoreService extends AbstractService
   }
 
   @Override
-  public StoreNewMasterKeyResponse storeNewMasterKey(
-      StoreNewMasterKeyRequest request) throws Exception {
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws Exception {
     return stateStoreClient.storeNewMasterKey(request);
   }
 
   @Override
-  public RemoveStoredMasterKeyResponse removeStoredMasterKey(
-      RemoveStoredMasterKeyRequest request) throws Exception {
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws Exception {
     return stateStoreClient.removeStoredMasterKey(request);
   }
 
   @Override
-  public RouterStoreNewTokenResponse storeNewToken(
-      RouterStoreNewTokenRequest request) throws Exception {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception {
     return stateStoreClient.storeNewToken(request);
   }
 
   @Override
-  public RouterUpdateStoredTokenResponse updateStoredToken(
-      RouterUpdateStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws Exception {
     return stateStoreClient.updateStoredToken(request);
   }
 
   @Override
-  public RouterRemoveStoredTokenResponse removeStoredToken(
-      RouterRemoveStoredTokenRequest request) throws Exception {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws Exception {
     return stateStoreClient.removeStoredToken(request);
   }
 }
