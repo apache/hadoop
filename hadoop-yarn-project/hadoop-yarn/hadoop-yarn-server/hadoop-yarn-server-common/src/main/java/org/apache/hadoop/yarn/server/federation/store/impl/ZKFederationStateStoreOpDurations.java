@@ -36,43 +36,43 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 public final class ZKFederationStateStoreOpDurations implements MetricsSource {
 
   @Metric("Duration for a add application homeSubcluster call")
-  private MutableRate addAppHomeSubClusterCall;
+  private MutableRate addAppHomeSubCluster;
 
   @Metric("Duration for a update application homeSubcluster call")
-  private MutableRate updateAppHomeSubClusterCall;
+  private MutableRate updateAppHomeSubCluster;
 
   @Metric("Duration for a get application homeSubcluster call")
-  private MutableRate getAppHomeSubClusterCall;
+  private MutableRate getAppHomeSubCluster;
 
   @Metric("Duration for a get applications homeSubcluster call")
-  private MutableRate getAppsHomeSubClusterCall;
+  private MutableRate getAppsHomeSubCluster;
 
   @Metric("Duration for a delete applications homeSubcluster call")
-  private MutableRate deleteAppHomeSubClusterCall;
+  private MutableRate deleteAppHomeSubCluster;
 
   @Metric("Duration for a register subCluster call")
-  private MutableRate registerSubClusterCall;
+  private MutableRate registerSubCluster;
 
   @Metric("Duration for a deregister subCluster call")
-  private MutableRate deregisterSubClusterCall;
+  private MutableRate deregisterSubCluster;
 
   @Metric("Duration for a subCluster Heartbeat call")
-  private MutableRate subClusterHeartbeatCall;
+  private MutableRate subClusterHeartbeat;
 
   @Metric("Duration for a get SubCluster call")
-  private MutableRate getSubClusterCall;
+  private MutableRate getSubCluster;
 
   @Metric("Duration for a get SubClusters call")
-  private MutableRate getSubClustersCall;
+  private MutableRate getSubClusters;
 
   @Metric("Duration for a get PolicyConfiguration call")
-  private MutableRate getPolicyConfigurationCall;
+  private MutableRate getPolicyConfiguration;
 
   @Metric("Duration for a set PolicyConfiguration call")
-  private MutableRate setPolicyConfigurationCall;
+  private MutableRate setPolicyConfiguration;
 
   @Metric("Duration for a get PolicyConfigurations call")
-  private MutableRate getPoliciesConfigurationsCall;
+  private MutableRate getPoliciesConfigurations;
 
   protected static final MetricsInfo RECORD_INFO =
       info("ZKFederationStateStoreOpDurations", "Durations of ZKFederationStateStore calls");
@@ -101,55 +101,55 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
-  public void addAppHomeSubClusterCallDuration(long value) {
-    addAppHomeSubClusterCall.add(value);
+  public void addAppHomeSubClusterDuration(long value) {
+    addAppHomeSubCluster.add(value);
   }
 
-  public void addUpdateAppHomeSubClusterCallDuration(long value) {
-    updateAppHomeSubClusterCall.add(value);
+  public void addUpdateAppHomeSubClusterDuration(long value) {
+    updateAppHomeSubCluster.add(value);
   }
 
-  public void addGetAppHomeSubClusterCallDuration(long value) {
-    getAppHomeSubClusterCall.add(value);
+  public void addGetAppHomeSubClusterDuration(long value) {
+    getAppHomeSubCluster.add(value);
   }
 
-  public void addGetAppsHomeSubClusterCallDuration(long value) {
-    getAppsHomeSubClusterCall.add(value);
+  public void addGetAppsHomeSubClusterDuration(long value) {
+    getAppsHomeSubCluster.add(value);
   }
 
-  public void addDeleteAppHomeSubClusterCallDuration(long value) {
-    deleteAppHomeSubClusterCall.add(value);
+  public void addDeleteAppHomeSubClusterDuration(long value) {
+    deleteAppHomeSubCluster.add(value);
   }
 
-  public void addRegisterSubClusterCallDuration(long value) {
-    registerSubClusterCall.add(value);
+  public void addRegisterSubClusterDuration(long value) {
+    registerSubCluster.add(value);
   }
 
-  public void addDeregisterSubClusterCallDuration(long value) {
-    deregisterSubClusterCall.add(value);
+  public void addDeregisterSubClusterDuration(long value) {
+    deregisterSubCluster.add(value);
   }
 
-  public void addSubClusterHeartbeatCallDuration(long value) {
-    subClusterHeartbeatCall.add(value);
+  public void addSubClusterHeartbeatDuration(long value) {
+    subClusterHeartbeat.add(value);
   }
 
-  public void addGetSubClusterCallDuration(long value) {
-    getSubClusterCall.add(value);
+  public void addGetSubClusterDuration(long value) {
+    getSubCluster.add(value);
   }
 
-  public void addGetSubClustersCallDuration(long value) {
-    getSubClustersCall.add(value);
+  public void addGetSubClustersDuration(long value) {
+    getSubClusters.add(value);
   }
 
   public void addGetPolicyConfigurationDuration(long value) {
-    getPolicyConfigurationCall.add(value);
+    getPolicyConfiguration.add(value);
   }
 
   public void addSetPolicyConfigurationDuration(long value) {
-    setPolicyConfigurationCall.add(value);
+    setPolicyConfiguration.add(value);
   }
 
   public void addGetPoliciesConfigurationsDuration(long value) {
-    getPoliciesConfigurationsCall.add(value);
+    getPoliciesConfigurations.add(value);
   }
 }

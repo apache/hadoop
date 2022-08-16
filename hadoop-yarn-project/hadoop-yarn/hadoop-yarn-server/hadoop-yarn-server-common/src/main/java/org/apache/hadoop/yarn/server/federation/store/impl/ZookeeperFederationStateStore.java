@@ -107,16 +107,20 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ZookeeperFederationStateStore.class);
+          LoggerFactory.getLogger(ZookeeperFederationStateStore.class);
 
   private final static String ROOT_ZNODE_NAME_MEMBERSHIP = "memberships";
   private final static String ROOT_ZNODE_NAME_APPLICATION = "applications";
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
 
-  /** Interface to Zookeeper. */
+  /**
+   * Interface to Zookeeper.
+   */
   private ZKCuratorManager zkManager;
 
-  /** Directory to store the state store data. */
+  /**
+   * Directory to store the state store data.
+   */
   private String baseZNode;
 
   private String appsZNode;
@@ -127,15 +131,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @VisibleForTesting
   private ZKFederationStateStoreOpDurations opDurations =
-      ZKFederationStateStoreOpDurations.getInstance();
+          ZKFederationStateStoreOpDurations.getInstance();
 
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("Initializing ZooKeeper connection");
 
     baseZNode = conf.get(
-        YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
+            YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
+            YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start();
@@ -169,7 +173,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
-      AddApplicationHomeSubClusterRequest request) throws YarnException {
+          AddApplicationHomeSubClusterRequest request) throws YarnException {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
@@ -193,15 +197,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
-    opDurations.addAppHomeSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addAppHomeSubClusterDuration(clock.getTime() - start);
     return AddApplicationHomeSubClusterResponse.newInstance(homeSubCluster);
   }
 
   @Override
   public UpdateApplicationHomeSubClusterResponse
-      updateApplicationHomeSubCluster(
+  updateApplicationHomeSubCluster(
           UpdateApplicationHomeSubClusterRequest request)
-              throws YarnException {
+          throws YarnException {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
@@ -213,16 +217,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     SubClusterId newSubClusterId =
-        request.getApplicationHomeSubCluster().getHomeSubCluster();
+            request.getApplicationHomeSubCluster().getHomeSubCluster();
     putApp(appId, newSubClusterId, true);
 
-    opDurations.addUpdateAppHomeSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addUpdateAppHomeSubClusterDuration(clock.getTime() - start);
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
 
   @Override
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
-      GetApplicationHomeSubClusterRequest request) throws YarnException {
+          GetApplicationHomeSubClusterRequest request) throws YarnException {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
@@ -232,14 +236,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Application " + appId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetAppHomeSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addGetAppHomeSubClusterDuration(clock.getTime() - start);
     return GetApplicationHomeSubClusterResponse.newInstance(
-        ApplicationHomeSubCluster.newInstance(appId, homeSubCluster));
+            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster));
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
-      GetApplicationsHomeSubClusterRequest request) throws YarnException {
+          GetApplicationsHomeSubClusterRequest request) throws YarnException {
     long start = clock.getTime();
     List<ApplicationHomeSubCluster> result = new ArrayList<>();
 
@@ -248,22 +252,22 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         ApplicationId appId = ApplicationId.fromString(child);
         SubClusterId homeSubCluster = getApp(appId);
         ApplicationHomeSubCluster app =
-            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
+                ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
         result.add(app);
       }
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetAppsHomeSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addGetAppsHomeSubClusterDuration(clock.getTime() - start);
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
   }
 
   @Override
   public DeleteApplicationHomeSubClusterResponse
-      deleteApplicationHomeSubCluster(
+  deleteApplicationHomeSubCluster(
           DeleteApplicationHomeSubClusterRequest request)
-              throws YarnException {
+          throws YarnException {
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
@@ -287,13 +291,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addDeleteAppHomeSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addDeleteAppHomeSubClusterDuration(clock.getTime() - start);
     return DeleteApplicationHomeSubClusterResponse.newInstance();
   }
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
-      SubClusterRegisterRequest request) throws YarnException {
+          SubClusterRegisterRequest request) throws YarnException {
     long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
@@ -309,13 +313,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot register subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addRegisterSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addRegisterSubClusterDuration(clock.getTime() - start);
     return SubClusterRegisterResponse.newInstance();
   }
 
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
-      SubClusterDeregisterRequest request) throws YarnException {
+          SubClusterDeregisterRequest request) throws YarnException {
     long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
@@ -330,13 +334,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       subClusterInfo.setState(state);
       putSubclusterInfo(subClusterId, subClusterInfo, true);
     }
-    opDurations.addDeregisterSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addDeregisterSubClusterDuration(clock.getTime() - start);
     return SubClusterDeregisterResponse.newInstance();
   }
 
   @Override
   public SubClusterHeartbeatResponse subClusterHeartbeat(
-      SubClusterHeartbeatRequest request) throws YarnException {
+          SubClusterHeartbeatRequest request) throws YarnException {
     long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
@@ -344,7 +348,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     SubClusterInfo subClusterInfo = getSubclusterInfo(subClusterId);
     if (subClusterInfo == null) {
       String errMsg = "SubCluster " + subClusterId
-          + " does not exist; cannot heartbeat";
+              + " does not exist; cannot heartbeat";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
@@ -354,13 +358,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     subClusterInfo.setCapability(request.getCapability());
 
     putSubclusterInfo(subClusterId, subClusterInfo, true);
-    opDurations.addSubClusterHeartbeatCallDuration(clock.getTime() - start);
+    opDurations.addSubClusterHeartbeatDuration(clock.getTime() - start);
     return SubClusterHeartbeatResponse.newInstance();
   }
 
   @Override
   public GetSubClusterInfoResponse getSubCluster(
-      GetSubClusterInfoRequest request) throws YarnException {
+          GetSubClusterInfoRequest request) throws YarnException {
     long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
@@ -375,13 +379,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetSubClusterCallDuration(clock.getTime() - start);
+    opDurations.addGetSubClusterDuration(clock.getTime() - start);
     return GetSubClusterInfoResponse.newInstance(subClusterInfo);
   }
 
   @Override
   public GetSubClustersInfoResponse getSubClusters(
-      GetSubClustersInfoRequest request) throws YarnException {
+          GetSubClustersInfoRequest request) throws YarnException {
     long start = clock.getTime();
     List<SubClusterInfo> result = new ArrayList<>();
 
@@ -390,7 +394,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         SubClusterId subClusterId = SubClusterId.newInstance(child);
         SubClusterInfo info = getSubclusterInfo(subClusterId);
         if (!request.getFilterInactiveSubClusters() ||
-            info.getState().isActive()) {
+                info.getState().isActive()) {
           result.add(info);
         }
       }
@@ -398,14 +402,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subclusters: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetSubClustersCallDuration(clock.getTime() - start);
+    opDurations.addGetSubClustersDuration(clock.getTime() - start);
     return GetSubClustersInfoResponse.newInstance(result);
   }
 
 
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
-      GetSubClusterPolicyConfigurationRequest request) throws YarnException {
+          GetSubClusterPolicyConfigurationRequest request) throws YarnException {
     long start = clock.getTime();
     FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
@@ -423,16 +427,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
     opDurations.addGetPolicyConfigurationDuration(clock.getTime() - start);
     return GetSubClusterPolicyConfigurationResponse
-        .newInstance(policy);
+            .newInstance(policy);
   }
 
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
-      SetSubClusterPolicyConfigurationRequest request) throws YarnException {
+          SetSubClusterPolicyConfigurationRequest request) throws YarnException {
     long start = clock.getTime();
     FederationPolicyStoreInputValidator.validate(request);
     SubClusterPolicyConfiguration policy =
-        request.getPolicyConfiguration();
+            request.getPolicyConfiguration();
     try {
       String queue = policy.getQueue();
       putPolicy(queue, policy, true);
@@ -446,7 +450,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
-      GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+          GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
     long start = clock.getTime();
     List<SubClusterPolicyConfiguration> result = new ArrayList<>();
 
@@ -479,6 +483,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Get the subcluster for an application.
+   *
    * @param appId Application identifier.
    * @return Subcluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
@@ -491,7 +496,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     if (data != null) {
       try {
         subClusterId = new SubClusterIdPBImpl(
-            SubClusterIdProto.parseFrom(data));
+                SubClusterIdProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse application at " + appZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -502,28 +507,30 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put an application.
-   * @param appId Application identifier.
+   *
+   * @param appId        Application identifier.
    * @param subClusterId Subcluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
    */
   private void putApp(final ApplicationId appId,
-      final SubClusterId subClusterId, boolean update)
+                      final SubClusterId subClusterId, boolean update)
           throws YarnException {
     String appZNode = getNodePath(appsZNode, appId.toString());
     SubClusterIdProto proto =
-        ((SubClusterIdPBImpl)subClusterId).getProto();
+            ((SubClusterIdPBImpl) subClusterId).getProto();
     byte[] data = proto.toByteArray();
     put(appZNode, data, update);
   }
 
   /**
    * Get the current information for a subcluster from Zookeeper.
+   *
    * @param subclusterId Subcluster identifier.
    * @return Subcluster information or null if it doesn't exist.
    * @throws Exception If it cannot contact ZooKeeper.
    */
   private SubClusterInfo getSubclusterInfo(final SubClusterId subclusterId)
-      throws YarnException {
+          throws YarnException {
     String memberZNode = getNodePath(membershipZNode, subclusterId.toString());
 
     SubClusterInfo policy = null;
@@ -531,7 +538,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     if (data != null) {
       try {
         policy = new SubClusterInfoPBImpl(
-            SubClusterInfoProto.parseFrom(data));
+                SubClusterInfoProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse subcluster info at " + memberZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -542,28 +549,30 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put the subcluster information in Zookeeper.
-   * @param subclusterId Subcluster identifier.
+   *
+   * @param subclusterId   Subcluster identifier.
    * @param subClusterInfo Subcluster information.
    * @throws Exception If it cannot contact ZooKeeper.
    */
   private void putSubclusterInfo(final SubClusterId subclusterId,
-      final SubClusterInfo subClusterInfo, final boolean update)
+                                 final SubClusterInfo subClusterInfo, final boolean update)
           throws YarnException {
     String memberZNode = getNodePath(membershipZNode, subclusterId.toString());
     SubClusterInfoProto proto =
-        ((SubClusterInfoPBImpl)subClusterInfo).getProto();
+            ((SubClusterInfoPBImpl) subClusterInfo).getProto();
     byte[] data = proto.toByteArray();
     put(memberZNode, data, update);
   }
 
   /**
    * Get the queue policy from Zookeeper.
+   *
    * @param queue Name of the queue.
    * @return Subcluster policy configuration.
    * @throws YarnException If it cannot contact ZooKeeper.
    */
   private SubClusterPolicyConfiguration getPolicy(final String queue)
-      throws YarnException {
+          throws YarnException {
     String policyZNode = getNodePath(policiesZNode, queue);
 
     SubClusterPolicyConfiguration policy = null;
@@ -571,7 +580,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     if (data != null) {
       try {
         policy = new SubClusterPolicyConfigurationPBImpl(
-            SubClusterPolicyConfigurationProto.parseFrom(data));
+                SubClusterPolicyConfigurationProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse policy at " + policyZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -582,23 +591,25 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put the subcluster information in Zookeeper.
-   * @param queue Name of the queue.
+   *
+   * @param queue  Name of the queue.
    * @param policy Subcluster policy configuration.
    * @throws YarnException If it cannot contact ZooKeeper.
    */
   private void putPolicy(final String queue,
-      final SubClusterPolicyConfiguration policy, boolean update)
+                         final SubClusterPolicyConfiguration policy, boolean update)
           throws YarnException {
     String policyZNode = getNodePath(policiesZNode, queue);
 
     SubClusterPolicyConfigurationProto proto =
-        ((SubClusterPolicyConfigurationPBImpl)policy).getProto();
+            ((SubClusterPolicyConfigurationPBImpl) policy).getProto();
     byte[] data = proto.toByteArray();
     put(policyZNode, data, update);
   }
 
   /**
    * Get data from a znode in Zookeeper.
+   *
    * @param znode Path of the znode.
    * @return Data in the znode.
    * @throws YarnException If it cannot contact ZooKeeper.
@@ -621,7 +632,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       data = zkManager.getData(znode);
     } catch (Exception e) {
       String errMsg = "Cannot get data from znode " + znode
-          + ": " + e.getMessage();
+              + ": " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     return data;
@@ -629,12 +640,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put data into a znode in Zookeeper.
+   *
    * @param znode Path of the znode.
-   * @param data Data to write.
+   * @param data  Data to write.
    * @throws YarnException If it cannot contact ZooKeeper.
    */
   private void put(String znode, byte[] data, boolean update)
-      throws YarnException {
+          throws YarnException {
     // Create the znode
     boolean created = false;
     try {
@@ -656,13 +668,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.setData(znode, data, -1);
     } catch (Exception e) {
       String errMsg = "Cannot write data into znode " + znode
-          + ": " + e.getMessage();
+              + ": " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
   }
 
   /**
    * Get the current time.
+   *
    * @return Current time in milliseconds.
    */
   private static long getCurrentTime() {
@@ -673,21 +686,22 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public ZKFederationStateStoreOpDurations getOpDurations() {
     return opDurations;
+  }
 
   @Override
-  public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
+  public AddReservationHomeSubClusterResponse addReservationHomeSubCluster (
       AddReservationHomeSubClusterRequest request) throws YarnException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
+  public GetReservationHomeSubClusterResponse getReservationHomeSubCluster (
       GetReservationHomeSubClusterRequest request) throws YarnException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
+  public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster (
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     throw new NotImplementedException("Code is not implemented");
   }
