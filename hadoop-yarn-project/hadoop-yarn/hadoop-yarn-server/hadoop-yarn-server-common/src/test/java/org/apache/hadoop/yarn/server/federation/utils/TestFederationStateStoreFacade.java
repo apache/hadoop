@@ -18,21 +18,18 @@
 package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -206,4 +203,34 @@ public class TestFederationStateStoreFacade {
     Assert.assertEquals(subClusterId1, result);
   }
 
+  @Test
+  public void testStoreNewMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    HashSet<DelegationKey> keySet = new HashSet<DelegationKey>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    MemoryFederationStateStore federationStateStore = (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState = federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @Test
+  public void testStoreNewToken() throws YarnException, IOException {
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1111;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = new Long(System.currentTimeMillis());
+    facade.storeNewToken(dtId1, renewDate1);
+
+    Map<RMDelegationTokenIdentifier, Long> token1 = new HashMap<RMDelegationTokenIdentifier, Long>();
+    token1.put(dtId1, renewDate1);
+
+    MemoryFederationStateStore federationStateStore = (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState = federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(token1, secretManagerState.getTokenState());
+  }
 }

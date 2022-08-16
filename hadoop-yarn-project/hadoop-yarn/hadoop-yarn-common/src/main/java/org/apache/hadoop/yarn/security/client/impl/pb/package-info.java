@@ -18,4 +18,3 @@
 @InterfaceAudience.Public
 package org.apache.hadoop.yarn.security.client.impl.pb;
 import org.apache.hadoop.classification.InterfaceAudience;
-

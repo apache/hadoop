@@ -16,5 +16,4 @@
  * limitations under the License.
  */
 
-/** Router WebApp package. **/
 package org.apache.hadoop.yarn.server.router.security;

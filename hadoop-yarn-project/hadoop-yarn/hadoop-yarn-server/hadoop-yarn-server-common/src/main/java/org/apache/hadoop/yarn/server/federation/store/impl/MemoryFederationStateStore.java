@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -382,7 +383,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
-      throws Exception {
+      throws YarnException, IOException {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
@@ -408,7 +409,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
-      throws Exception {
+      throws YarnException, IOException {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
@@ -426,7 +427,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
@@ -436,7 +437,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
@@ -446,7 +447,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
@@ -456,7 +457,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
-      Long renewDate, boolean isUpdate) throws Exception {
+      Long renewDate, boolean isUpdate) throws IOException {
     Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
     if (rmDTState.containsKey(rmDTIdentifier)) {
       LOG.info("Error storing info for RMDelegationToken: {}.", rmDTIdentifier);
@@ -469,4 +470,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     LOG.info("Store RM-RMDT with sequence number {}.", rmDTIdentifier.getSequenceNumber());
   }
 
+  @VisibleForTesting
+  public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
+    return routerRMSecretManagerState;
+  }
 }

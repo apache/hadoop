@@ -18,10 +18,13 @@ package org.apache.hadoop.yarn.server.federation.store;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+
+import java.io.IOException;
 
 /**
  * FederationDelegationTokenStateStore maintains the state of all
@@ -60,45 +63,48 @@ public interface FederationDelegationTokenStateStore {
    *
    * @param request DelegationKey.
    * @return StoreNewMasterKeyResponse.
-   * @throws Exception exception occurred.
+   * @throws YarnException exception occurred.
    */
-  RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request) throws Exception;
+  RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException;
 
   /**
    * The Router Supports Remove the master key.
    *
    * @param request DelegationKey.
    * @return RemoveStoredMasterKeyResponse.
-   * @throws Exception exception occurred.
+   * @throws YarnException exception occurred.
    */
-  RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request) throws Exception;
+  RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException;
 
   /**
    * The Router Supports Store new Token.
    *
    * @param request DelegationKey.
    * @return RouterRMTokenResponse.
-   * @throws Exception exception occurred.
+   * @throws YarnException exception occurred.
    */
-  RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception;
+  RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException;
 
   /**
    * The Router Supports Update Token.
    *
    * @param request DelegationKey.
    * @return RouterRMTokenResponse.
-   * @throws Exception exception occurred.
+   * @throws YarnException exception occurred.
    */
   RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
-      throws Exception;
+      throws YarnException, IOException;
 
   /**
    * The Router Supports Remove Token.
    *
    * @param request DelegationKey.
    * @return RouterRMTokenResponse.
-   * @throws Exception exception occurred.
+   * @throws YarnException exception occurred.
    */
   RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
-      throws Exception;
+      throws YarnException, IOException;
 }

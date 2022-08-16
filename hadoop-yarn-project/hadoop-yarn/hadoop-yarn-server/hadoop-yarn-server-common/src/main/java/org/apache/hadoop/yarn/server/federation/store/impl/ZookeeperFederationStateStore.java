@@ -669,28 +669,31 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
-      throws Exception{
+      throws YarnException, IOException{
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
-      throws Exception {
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
-  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws Exception {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 }

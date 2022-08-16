@@ -449,7 +449,7 @@ public final class FederationStateStoreFacade {
    * @param newKey DelegationKey
    * @throws Exception An error occurred
    */
-  public void storeNewMasterKey(DelegationKey newKey) throws Exception {
+  public void storeNewMasterKey(DelegationKey newKey) throws YarnException, IOException {
     LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
     ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
     RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
@@ -464,7 +464,7 @@ public final class FederationStateStoreFacade {
    * @param newKey DelegationKey
    * @throws Exception An error occurred
    */
-  public void removeStoredMasterKey(DelegationKey newKey) throws Exception {
+  public void removeStoredMasterKey(DelegationKey newKey) throws YarnException, IOException {
     LOG.info("Removing master key with keyID {}.", newKey.getKeyId());
     ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
     RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
@@ -481,7 +481,7 @@ public final class FederationStateStoreFacade {
    * @throws IOException IO exception occurred.
    */
   public void storeNewToken(RMDelegationTokenIdentifier identifier,
-      long renewDate) throws Exception {
+      long renewDate) throws YarnException, IOException {
     LOG.info("storing RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
@@ -497,7 +497,7 @@ public final class FederationStateStoreFacade {
    * @throws IOException IO exception occurred.
    */
   public void updateStoredToken(RMDelegationTokenIdentifier identifier,
-      long renewDate) throws Exception {
+      long renewDate) throws YarnException, IOException {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
@@ -512,7 +512,7 @@ public final class FederationStateStoreFacade {
    * @throws IOException IO exception occurred.
    */
   public void removeStoredToken(RMDelegationTokenIdentifier identifier)
-      throws Exception{
+      throws YarnException, IOException{
     LOG.info("removing RMDelegation token with sequence number: {}",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
@@ -729,7 +729,6 @@ public final class FederationStateStoreFacade {
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
   }
-
 
   @VisibleForTesting
   public FederationStateStore getStateStore() {
