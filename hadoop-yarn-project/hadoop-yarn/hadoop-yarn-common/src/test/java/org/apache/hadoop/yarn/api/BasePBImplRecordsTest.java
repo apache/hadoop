@@ -23,7 +23,6 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
-import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 

@@ -71,7 +71,7 @@ public class RouterMasterKeyRequestPBImpl extends RouterMasterKeyRequest {
     RouterMasterKeyPBImpl masterKeyRequest = (RouterMasterKeyPBImpl) this.routerMasterKey;
     RouterMasterKeyProto routerMasterKeyProto = builder.getRouterMasterKey();
     if (this.routerMasterKey != null && !masterKeyRequest.getProto().equals(routerMasterKeyProto)) {
-        builder.setRouterMasterKey(convertToProtoFormat(this.routerMasterKey));
+      builder.setRouterMasterKey(convertToProtoFormat(this.routerMasterKey));
     }
   }
 
@@ -79,10 +79,10 @@ public class RouterMasterKeyRequestPBImpl extends RouterMasterKeyRequest {
   public RouterMasterKey getRouterMasterKey() {
     RouterMasterKeyRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.routerMasterKey != null) {
-        return this.routerMasterKey;
+      return this.routerMasterKey;
     }
     if (!p.hasRouterMasterKey()) {
-        return null;
+      return null;
     }
     this.routerMasterKey = convertFromProtoFormat(p.getRouterMasterKey());
     return this.routerMasterKey;

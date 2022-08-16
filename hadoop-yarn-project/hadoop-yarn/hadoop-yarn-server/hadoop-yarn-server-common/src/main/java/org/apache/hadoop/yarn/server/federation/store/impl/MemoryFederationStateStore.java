@@ -448,7 +448,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request) throws YarnException, IOException {
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
@@ -458,7 +459,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request) throws YarnException, IOException {
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
@@ -470,7 +472,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request) throws YarnException, IOException {
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
     RouterStoreToken storeToken = request.getRouterStoreToken();
     RMDelegationTokenIdentifier tokenIdentifier =
         (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();

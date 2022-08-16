@@ -51,9 +51,13 @@ public class RouterRMTokenResponsePBImpl extends RouterRMTokenResponse {
   }
 
   private void mergeLocalToBuilder() {
-    if (this.routerStoreToken != null &&
-            !((RouterStoreTokenPBImpl) this.routerStoreToken).getProto().equals(builder.getRouterStoreToken())) {
-      builder.setRouterStoreToken(convertToProtoFormat(this.routerStoreToken));
+    if (this.routerStoreToken != null) {
+      RouterStoreTokenPBImpl routerStoreTokenPBImpl =
+          (RouterStoreTokenPBImpl) this.routerStoreToken;
+      RouterStoreTokenProto storeTokenProto = routerStoreTokenPBImpl.getProto();
+      if (!storeTokenProto.equals(builder.getRouterStoreToken())) {
+        builder.setRouterStoreToken(convertToProtoFormat(this.routerStoreToken));
+      }
     }
   }
 

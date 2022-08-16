@@ -30,12 +30,12 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouterTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestRouterDelegationTokenSecretManager.class);
+  private static final Logger LOG =
+       LoggerFactory.getLogger(TestRouterDelegationTokenSecretManager.class);
 
   @Test
   public void testRouterStoreNewMasterKey() throws Exception {
@@ -46,7 +46,8 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Store NewMasterKey
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager = routerClientRMService.getRouterDTSecretManager();
+    RouterDelegationTokenSecretManager secretManager =
+        routerClientRMService.getRouterDTSecretManager();
     DelegationKey storeKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     secretManager.storeNewMasterKey(storeKey);
 
@@ -72,7 +73,8 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Store NewMasterKey
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager = routerClientRMService.getRouterDTSecretManager();
+    RouterDelegationTokenSecretManager secretManager =
+        routerClientRMService.getRouterDTSecretManager();
     DelegationKey storeKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     secretManager.storeNewMasterKey(storeKey);
 
@@ -83,7 +85,7 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
     DelegationKey paramKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     LambdaTestUtils.intercept(YarnException.class,
         "GetMasterKey with keyID: " + storeKey.getKeyId() + " does not exist.",
-         () -> secretManager.getMasterKeyByDelegationKey(paramKey));
+            () -> secretManager.getMasterKeyByDelegationKey(paramKey));
 
     stopSecureRouter();
   }
@@ -97,7 +99,8 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Store new rm-token
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager = routerClientRMService.getRouterDTSecretManager();
+    RouterDelegationTokenSecretManager secretManager =
+        routerClientRMService.getRouterDTSecretManager();
     RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     int sequenceNumber = 1;
@@ -131,7 +134,8 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Store new rm-token
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager = routerClientRMService.getRouterDTSecretManager();
+    RouterDelegationTokenSecretManager secretManager =
+        routerClientRMService.getRouterDTSecretManager();
     RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     int sequenceNumber = 1;
@@ -171,7 +175,8 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Store new rm-token
     RouterClientRMService routerClientRMService = this.getRouter().getClientRMProxyService();
-    RouterDelegationTokenSecretManager secretManager = routerClientRMService.getRouterDTSecretManager();
+    RouterDelegationTokenSecretManager secretManager =
+        routerClientRMService.getRouterDTSecretManager();
     RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     int sequenceNumber = 1;

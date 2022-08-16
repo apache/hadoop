@@ -247,8 +247,10 @@ public class TestFederationStateStoreFacade {
     keySet.add(key);
     facade.storeNewMasterKey(key);
 
-    MemoryFederationStateStore federationStateStore = (MemoryFederationStateStore) facade.getStateStore();
-    RouterRMDTSecretManagerState secretManagerState = federationStateStore.getRouterRMSecretManagerState();
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
   }
 
@@ -264,8 +266,10 @@ public class TestFederationStateStoreFacade {
     facade.removeStoredMasterKey(key);
     keySet.clear();
 
-    MemoryFederationStateStore federationStateStore = (MemoryFederationStateStore) facade.getStateStore();
-    RouterRMDTSecretManagerState secretManagerState = federationStateStore.getRouterRMSecretManagerState();
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
   }
 
@@ -279,12 +283,14 @@ public class TestFederationStateStoreFacade {
     Long renewDate1 = Time.now();
     facade.storeNewToken(dtId1, renewDate1);
 
-    Map<RMDelegationTokenIdentifier, Long> token1 = new HashMap<RMDelegationTokenIdentifier, Long>();
+    Map<RMDelegationTokenIdentifier, Long> token1 =
+         new HashMap<RMDelegationTokenIdentifier, Long>();
     token1.put(dtId1, renewDate1);
 
-    MemoryFederationStateStore stateStore = (MemoryFederationStateStore) facade.getStateStore();
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState storeSecretManagerState =
-        stateStore.getRouterRMSecretManagerState();
+        federationStateStore.getRouterRMSecretManagerState();
     Assert.assertEquals(token1, storeSecretManagerState.getTokenState());
   }
 
@@ -298,14 +304,16 @@ public class TestFederationStateStoreFacade {
     Long renewDate1 = Time.now();
     facade.storeNewToken(dtId1, renewDate1);
 
-    Map<RMDelegationTokenIdentifier, Long> token1 = new HashMap<RMDelegationTokenIdentifier, Long>();
+    Map<RMDelegationTokenIdentifier, Long> token1 =
+         new HashMap<RMDelegationTokenIdentifier, Long>();
     token1.put(dtId1, renewDate1);
 
     renewDate1 = Time.now();
     facade.updateStoredToken(dtId1, renewDate1);
     token1.put(dtId1, renewDate1);
 
-    MemoryFederationStateStore stateStore = (MemoryFederationStateStore) facade.getStateStore();
+    MemoryFederationStateStore stateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState updateSecretManagerState =
         stateStore.getRouterRMSecretManagerState();
     Assert.assertEquals(token1, updateSecretManagerState.getTokenState());
@@ -322,14 +330,16 @@ public class TestFederationStateStoreFacade {
     Long renewDate1 = Time.now();
     facade.storeNewToken(dtId1, renewDate1);
 
-    Map<RMDelegationTokenIdentifier, Long> token1 = new HashMap<RMDelegationTokenIdentifier, Long>();
+    Map<RMDelegationTokenIdentifier, Long> token1 =
+         new HashMap<RMDelegationTokenIdentifier, Long>();
     token1.put(dtId1, renewDate1);
 
     // remove rm-token
     facade.removeStoredToken(dtId1);
     token1.clear();
 
-    MemoryFederationStateStore stateStore = (MemoryFederationStateStore) facade.getStateStore();
+    MemoryFederationStateStore stateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState deleteSecretManagerState =
         stateStore.getRouterRMSecretManagerState();
 

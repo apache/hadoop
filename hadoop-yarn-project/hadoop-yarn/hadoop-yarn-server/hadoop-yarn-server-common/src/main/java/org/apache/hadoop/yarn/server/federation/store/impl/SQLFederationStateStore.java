@@ -1053,25 +1053,25 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
-     throws YarnException, IOException {
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
-     throws YarnException, IOException {
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
-     throws YarnException, IOException {
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
-     throws YarnException, IOException {
+      throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
 }
