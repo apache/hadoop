@@ -194,7 +194,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
 
     opDurations.addAppHomeSubClusterDuration(clock.getTime() - start);
-    return AddApplicationHomeSubClusterResponse.newInstance(homeSubCluster);
+
+    return AddApplicationHomeSubClusterResponse
+        .newInstance(homeSubCluster);
   }
 
   @Override
@@ -233,8 +235,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     opDurations.addGetAppHomeSubClusterDuration(clock.getTime() - start);
-    return GetApplicationHomeSubClusterResponse.newInstance(
-        ApplicationHomeSubCluster.newInstance(appId, homeSubCluster));
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubCluster);
   }
 
   @Override
@@ -558,7 +559,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Get the queue policy from Zookeeper.
-   *
    * @param queue Name of the queue.
    * @return Subcluster policy configuration.
    * @throws YarnException If it cannot contact ZooKeeper.
