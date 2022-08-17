@@ -1079,6 +1079,14 @@
 
   <property>
     <description>
+      RM delegation token remove-scan interval in ms
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>3600000</value>
+  </property>
+
+  <property>
+    <description>
     RM DelegationTokenRenewer thread timeout
     </description>
     <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>

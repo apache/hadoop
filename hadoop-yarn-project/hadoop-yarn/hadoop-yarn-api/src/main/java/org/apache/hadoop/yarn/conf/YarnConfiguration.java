@@ -793,6 +793,10 @@ public class YarnConfiguration extends Configuration {
      RM_PREFIX + "delegation.token.max-lifetime";
   public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
+  public static final String RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY =
+      RM_PREFIX + "delegation.token.remove-scan-interval";
+  public static final long RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT =
+      60*60*1000; // 1 hour
 
   public static final String RM_DELEGATION_TOKEN_MAX_CONF_SIZE =
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
