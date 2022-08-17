@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -98,19 +99,22 @@ public class TestZookeeperFederationStateStore
     MetricsCollectorImpl collector = new MetricsCollectorImpl();
 
     long anyDuration = 10;
-    zkStateStoreOpDurations.addAppHomeSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addUpdateAppHomeSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addGetAppHomeSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addGetAppsHomeSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addDeleteAppHomeSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addRegisterSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addDeregisterSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addSubClusterHeartbeatDuration(anyDuration);
-    zkStateStoreOpDurations.addGetSubClusterDuration(anyDuration);
-    zkStateStoreOpDurations.addGetSubClustersDuration(anyDuration);
-    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(anyDuration);
-    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(anyDuration);
-    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(anyDuration);
+    long start = Time.now();
+    long end = start + anyDuration;
+
+    zkStateStoreOpDurations.addAppHomeSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addUpdateAppHomeSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addGetAppHomeSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addGetAppsHomeSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addDeleteAppHomeSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addRegisterSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addDeregisterSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addSubClusterHeartbeatDuration(end, start);
+    zkStateStoreOpDurations.addGetSubClusterDuration(end, start);
+    zkStateStoreOpDurations.addGetSubClustersDuration(end, start);
+    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(end, start);
+    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(end, start);
+    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(end, start);
 
     zkStateStoreOpDurations.getMetrics(collector, true);
     assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());

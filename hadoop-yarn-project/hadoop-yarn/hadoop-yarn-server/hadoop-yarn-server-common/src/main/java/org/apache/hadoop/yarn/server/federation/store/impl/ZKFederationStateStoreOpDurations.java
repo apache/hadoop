@@ -101,55 +101,55 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
-  public void addAppHomeSubClusterDuration(long value) {
-    addAppHomeSubCluster.add(value);
+  public void addAppHomeSubClusterDuration(long endTime, long startTime) {
+    addAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addUpdateAppHomeSubClusterDuration(long value) {
-    updateAppHomeSubCluster.add(value);
+  public void addUpdateAppHomeSubClusterDuration(long endTime, long startTime) {
+    updateAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addGetAppHomeSubClusterDuration(long value) {
-    getAppHomeSubCluster.add(value);
+  public void addGetAppHomeSubClusterDuration(long endTime, long startTime) {
+    getAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addGetAppsHomeSubClusterDuration(long value) {
-    getAppsHomeSubCluster.add(value);
+  public void addGetAppsHomeSubClusterDuration(long endTime, long startTime) {
+    getAppsHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addDeleteAppHomeSubClusterDuration(long value) {
-    deleteAppHomeSubCluster.add(value);
+  public void addDeleteAppHomeSubClusterDuration(long endTime, long startTime) {
+    deleteAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addRegisterSubClusterDuration(long value) {
-    registerSubCluster.add(value);
+  public void addRegisterSubClusterDuration(long endTime, long startTime) {
+    registerSubCluster.add(endTime - startTime);
   }
 
-  public void addDeregisterSubClusterDuration(long value) {
-    deregisterSubCluster.add(value);
+  public void addDeregisterSubClusterDuration(long endTime, long startTime) {
+    deregisterSubCluster.add(endTime - startTime);
   }
 
-  public void addSubClusterHeartbeatDuration(long value) {
-    subClusterHeartbeat.add(value);
+  public void addSubClusterHeartbeatDuration(long endTime, long startTime) {
+    subClusterHeartbeat.add(endTime - startTime);
   }
 
-  public void addGetSubClusterDuration(long value) {
-    getSubCluster.add(value);
+  public void addGetSubClusterDuration(long endTime, long startTime) {
+    getSubCluster.add(endTime - startTime);
   }
 
-  public void addGetSubClustersDuration(long value) {
-    getSubClusters.add(value);
+  public void addGetSubClustersDuration(long endTime, long startTime) {
+    getSubClusters.add(endTime - startTime);
   }
 
-  public void addGetPolicyConfigurationDuration(long value) {
-    getPolicyConfiguration.add(value);
+  public void addGetPolicyConfigurationDuration(long endTime, long startTime) {
+    getPolicyConfiguration.add(endTime - startTime);
   }
 
-  public void addSetPolicyConfigurationDuration(long value) {
-    setPolicyConfiguration.add(value);
+  public void addSetPolicyConfigurationDuration(long endTime, long startTime) {
+    setPolicyConfiguration.add(endTime - startTime);
   }
 
-  public void addGetPoliciesConfigurationsDuration(long value) {
-    getPoliciesConfigurations.add(value);
+  public void addGetPoliciesConfigurationsDuration(long endTime, long startTime) {
+    getPoliciesConfigurations.add(endTime - startTime);
   }
 }

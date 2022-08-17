@@ -192,9 +192,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot check app home subcluster for " + appId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
-    opDurations.addAppHomeSubClusterDuration(clock.getTime() - start);
-
+    long end = clock.getTime();
+    opDurations.addAppHomeSubClusterDuration(end, start);
     return AddApplicationHomeSubClusterResponse
         .newInstance(homeSubCluster);
   }
@@ -218,7 +217,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         request.getApplicationHomeSubCluster().getHomeSubCluster();
     putApp(appId, newSubClusterId, true);
 
-    opDurations.addUpdateAppHomeSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addUpdateAppHomeSubClusterDuration(end, start);
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
 
@@ -234,7 +234,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Application " + appId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetAppHomeSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetAppHomeSubClusterDuration(end, start);
     return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubCluster);
   }
 
@@ -256,7 +257,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetAppsHomeSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetAppsHomeSubClusterDuration(end, start);
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
   }
 
@@ -288,7 +290,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addDeleteAppHomeSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addDeleteAppHomeSubClusterDuration(end, start);
     return DeleteApplicationHomeSubClusterResponse.newInstance();
   }
 
@@ -310,7 +313,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot register subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addRegisterSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addRegisterSubClusterDuration(end, start);
     return SubClusterRegisterResponse.newInstance();
   }
 
@@ -331,7 +335,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       subClusterInfo.setState(state);
       putSubclusterInfo(subClusterId, subClusterInfo, true);
     }
-    opDurations.addDeregisterSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addDeregisterSubClusterDuration(end, start);
     return SubClusterDeregisterResponse.newInstance();
   }
 
@@ -355,7 +360,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     subClusterInfo.setCapability(request.getCapability());
 
     putSubclusterInfo(subClusterId, subClusterInfo, true);
-    opDurations.addSubClusterHeartbeatDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addSubClusterHeartbeatDuration(clock.getTime(), start);
     return SubClusterHeartbeatResponse.newInstance();
   }
 
@@ -376,7 +382,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetSubClusterDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetSubClusterDuration(end, start);
     return GetSubClusterInfoResponse.newInstance(subClusterInfo);
   }
 
@@ -399,7 +406,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subclusters: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetSubClustersDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetSubClustersDuration(end, start);
     return GetSubClustersInfoResponse.newInstance(result);
   }
 
@@ -422,7 +430,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       LOG.warn("Policy for queue: {} does not exist.", queue);
       return null;
     }
-    opDurations.addGetPolicyConfigurationDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetPolicyConfigurationDuration(end, start);
     return GetSubClusterPolicyConfigurationResponse
         .newInstance(policy);
   }
@@ -441,7 +450,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot set policy: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addSetPolicyConfigurationDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addSetPolicyConfigurationDuration(end, start);
     return SetSubClusterPolicyConfigurationResponse.newInstance();
   }
 
@@ -464,7 +474,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get policies: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    opDurations.addGetPoliciesConfigurationsDuration(clock.getTime() - start);
+    long end = clock.getTime();
+    opDurations.addGetPoliciesConfigurationsDuration(end, start);
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
   }
 
