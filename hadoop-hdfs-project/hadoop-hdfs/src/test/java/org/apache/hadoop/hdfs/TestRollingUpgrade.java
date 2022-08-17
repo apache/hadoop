@@ -307,9 +307,7 @@ public class TestRollingUpgrade {
   public void testRollback() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try (MiniDFSCluster cluster  = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
       cluster.waitActive();
 
       final Path foo = new Path("/foo");
@@ -349,8 +347,6 @@ public class TestRollingUpgrade {
 
       startRollingUpgrade(foo, bar, file, data, cluster);
       rollbackRollingUpgrade(foo, bar, file, data, cluster);
-    } finally {
-      if(cluster != null) cluster.shutdown();
     }
   }
 
@@ -558,9 +554,7 @@ public class TestRollingUpgrade {
   @Test (timeout = 300000)
   public void testQueryAfterRestart() throws IOException, InterruptedException {
     final Configuration conf = new Configuration();
-    MiniDFSCluster cluster = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
 
@@ -574,10 +568,6 @@ public class TestRollingUpgrade {
 
       cluster.restartNameNodes();
       dfs.rollingUpgrade(RollingUpgradeAction.QUERY);
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 
