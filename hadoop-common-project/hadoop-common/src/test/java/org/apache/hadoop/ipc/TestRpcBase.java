@@ -189,7 +189,8 @@ public class TestRpcBase {
           0,
           connId,
           clientConf,
-          NetUtils.getDefaultSocketFactory(clientConf)).getProxy();
+          NetUtils.getDefaultSocketFactory(clientConf),
+          null).getProxy();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
