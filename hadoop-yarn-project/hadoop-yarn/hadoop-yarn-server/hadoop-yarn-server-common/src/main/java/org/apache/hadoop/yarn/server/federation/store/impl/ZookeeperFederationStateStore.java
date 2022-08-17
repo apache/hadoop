@@ -502,7 +502,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put an application.
-   * @param appId pplication identifier.
+   * @param appId Application identifier.
    * @param subClusterId Subcluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
    */
@@ -583,7 +583,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put the subcluster information in Zookeeper.
-   *
    * @param queue  Name of the queue.
    * @param policy Subcluster policy configuration.
    * @throws YarnException If it cannot contact ZooKeeper.
@@ -594,14 +593,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     String policyZNode = getNodePath(policiesZNode, queue);
 
     SubClusterPolicyConfigurationProto proto =
-        ((SubClusterPolicyConfigurationPBImpl) policy).getProto();
+        ((SubClusterPolicyConfigurationPBImpl)policy).getProto();
     byte[] data = proto.toByteArray();
     put(policyZNode, data, update);
   }
 
   /**
    * Get data from a znode in Zookeeper.
-   *
    * @param znode Path of the znode.
    * @return Data in the znode.
    * @throws YarnException If it cannot contact ZooKeeper.
@@ -634,7 +632,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * Put data into a znode in Zookeeper.
    *
    * @param znode Path of the znode.
-   * @param data  Data to write.
+   * @param data Data to write.
    * @throws YarnException If it cannot contact ZooKeeper.
    */
   private void put(String znode, byte[] data, boolean update)
@@ -667,7 +665,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Get the current time.
-   *
    * @return Current time in milliseconds.
    */
   private static long getCurrentTime() {
