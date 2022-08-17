@@ -30,40 +30,19 @@ import java.io.IOException;
  * FederationDelegationTokenStateStore maintains the state of all
  * <em>DelegationToken</em> that have been submitted to the federated cluster.
  *
- * <p>
- * It mainly includes the following operations:
- * </p>
- *
- * <ul>
- * <li>
- * storeNewMasterKey <br>
- * Store the new MasterKey
- * </li>
- *
- * <li>
- * removeStoredMasterKey <br>
- * Remove MasterKey
- * </li>
- *
- * <li>
- * storeNewToken <br>
- * Store New delegationToken.
- * </li>
- *
- * updateStoredToken
- * removeStoredToken
- * </ul>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public interface FederationDelegationTokenStateStore {
 
   /**
-   * The Router Supports Store the new master key.
+   * The Router Supports Store the New Master Key.
+   * During this Process, Facade will call the specific StateStore to store the MasterKey.
    *
-   * @param request DelegationKey.
-   * @return StoreNewMasterKeyResponse.
-   * @throws YarnException exception occurred.
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey
+   * @return routerMasterKeyResponse
+   * @throws YarnException An internal conversion error occurred when store the Token
+   * @throws IOException An IO Error occurred
    */
   RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException;

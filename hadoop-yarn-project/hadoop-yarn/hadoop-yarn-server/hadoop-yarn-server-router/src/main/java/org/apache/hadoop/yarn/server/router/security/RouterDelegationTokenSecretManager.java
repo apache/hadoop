@@ -63,10 +63,8 @@ public class RouterDelegationTokenSecretManager
    *                                           in milliseconds
    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
    */
-  public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval,
-                                            long delegationTokenMaxLifetime,
-                                            long delegationTokenRenewInterval,
-                                            long delegationTokenRemoverScanInterval) {
+  public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval, long delegationTokenMaxLifetime,
+      long delegationTokenRenewInterval, long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
     this.federationFacade = FederationStateStoreFacade.getInstance();
@@ -82,7 +80,8 @@ public class RouterDelegationTokenSecretManager
   }
 
   /**
-   * The Router Supports Store the new master key.
+   * The Router Supports Store the New Master Key.
+   * During this Process, Facade will call the specific StateStore to store the MasterKey.
    *
    * @param newKey DelegationKey
    */
@@ -100,6 +99,7 @@ public class RouterDelegationTokenSecretManager
 
   /**
    * The Router Supports Remove the master key.
+   * During this Process, Facade will call the specific StateStore to remove the MasterKey.
    *
    * @param delegationKey DelegationKey
    */
@@ -118,7 +118,7 @@ public class RouterDelegationTokenSecretManager
   /**
    * The Router Supports Store new Token.
    *
-   * @param identifier Delegation Token
+   * @param identifier RMDelegationToken
    * @param renewDate renewDate
    * @throws IOException IO exception occurred.
    */
@@ -139,9 +139,9 @@ public class RouterDelegationTokenSecretManager
   /**
    * The Router Supports Update Token.
    *
-   * @param id Delegation Token
+   * @param id RMDelegationToken
    * @param renewDate renewDate
-   * @throws IOException IO exception occurred.
+   * @throws IOException IO exception occurred
    */
   @Override
   public void updateStoredToken(RMDelegationTokenIdentifier id, long renewDate) throws IOException {
@@ -176,16 +176,18 @@ public class RouterDelegationTokenSecretManager
   }
 
   /**
-   * The Router supports obtaining MasterKey based on KeyId.
+   * The Router supports obtaining the DelegationKey stored in the Router StateStote
+   * according to the DelegationKey.
    *
-   * @param newKey DelegationKey
-   * @throws Exception An error occurred
-   * @return DelegationKey
+   * @param key Param DelegationKey
+   * @return Delegation Token
+   * @throws YarnException An internal conversion error occurred when getting the Token
+   * @throws IOException IO exception occurred
    */
-  public DelegationKey getMasterKeyByDelegationKey(DelegationKey newKey)
+  public DelegationKey getMasterKeyByDelegationKey(DelegationKey key)
       throws YarnException, IOException {
     try {
-      RouterMasterKeyResponse response = federationFacade.getMasterKeyByDelegationKey(newKey);
+      RouterMasterKeyResponse response = federationFacade.getMasterKeyByDelegationKey(key);
       RouterMasterKey masterKey = response.getRouterMasterKey();
       ByteBuffer keyByteBuf = masterKey.getKeyBytes();
       byte[] keyBytes = new byte[keyByteBuf.remaining()];
@@ -193,17 +195,20 @@ public class RouterDelegationTokenSecretManager
       DelegationKey delegationKey =
           new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
       return delegationKey;
-    } catch (Exception ex) {
+    } catch (IOException ex) {
+      throw new IOException(ex);
+    } catch (YarnException ex) {
       throw new YarnException(ex);
     }
   }
 
   /**
-   * The Router supports obtaining MasterKey based on KeyId.
+   * Get RMDelegationTokenIdentifier according to RouterStoreToken.
    *
    * @param identifier RMDelegationTokenIdentifier
-   * @return RMDelegationTokenIdentifier.
-   * @throws YarnException exception occurred.
+   * @return RMDelegationTokenIdentifier
+   * @throws YarnException An internal conversion error occurred when getting the Token
+   * @throws IOException IO exception occurred
    */
   public RMDelegationTokenIdentifier getTokenByRouterStoreToken(
       RMDelegationTokenIdentifier identifier) throws YarnException, IOException {
@@ -217,14 +222,14 @@ public class RouterDelegationTokenSecretManager
     }
   }
 
+  public void setFederationFacade(FederationStateStoreFacade federationFacade) {
+    this.federationFacade = federationFacade;
+  }
+
   @InterfaceAudience.Private
   @VisibleForTesting
   public int getLatestDTSequenceNumber() {
     return delegationTokenSequenceNumber;
-  }
-
-  public void setFederationFacade(FederationStateStoreFacade federationFacade) {
-    this.federationFacade = federationFacade;
   }
 
   @InterfaceAudience.Private
