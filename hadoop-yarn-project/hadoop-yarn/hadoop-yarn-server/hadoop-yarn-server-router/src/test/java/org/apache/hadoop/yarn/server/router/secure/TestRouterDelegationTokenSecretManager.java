@@ -85,7 +85,7 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
     DelegationKey paramKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     LambdaTestUtils.intercept(YarnException.class,
         "GetMasterKey with keyID: " + storeKey.getKeyId() + " does not exist.",
-            () -> secretManager.getMasterKeyByDelegationKey(paramKey));
+        () -> secretManager.getMasterKeyByDelegationKey(paramKey));
 
     stopSecureRouter();
   }

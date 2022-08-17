@@ -462,6 +462,7 @@ public final class FederationStateStoreFacade {
    * @param newKey Key used for generating and verifying delegation tokens
    * @throws YarnException if the call to the state store is unsuccessful
    * @throws IOException An IO Error occurred
+   * @return RouterMasterKeyResponse
    */
   public RouterMasterKeyResponse storeNewMasterKey(DelegationKey newKey)
       throws YarnException, IOException {
@@ -495,6 +496,7 @@ public final class FederationStateStoreFacade {
    * @param newKey Key used for generating and verifying delegation tokens
    * @throws YarnException if the call to the state store is unsuccessful
    * @throws IOException An IO Error occurred
+   * @return RouterMasterKeyResponse
    */
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
       throws YarnException, IOException {

@@ -63,8 +63,9 @@ public class RouterDelegationTokenSecretManager
    *                                           in milliseconds
    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
    */
-  public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval, long delegationTokenMaxLifetime,
-      long delegationTokenRenewInterval, long delegationTokenRemoverScanInterval) {
+  public RouterDelegationTokenSecretManager(long delegationKeyUpdateInterval,
+      long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
+      long delegationTokenRemoverScanInterval) {
     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
     this.federationFacade = FederationStateStoreFacade.getInstance();

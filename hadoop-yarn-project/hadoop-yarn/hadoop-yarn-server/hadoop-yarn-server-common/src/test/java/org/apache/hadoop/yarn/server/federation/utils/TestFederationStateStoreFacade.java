@@ -312,10 +312,10 @@ public class TestFederationStateStoreFacade {
     facade.updateStoredToken(dtId1, renewDate1);
     token1.put(dtId1, renewDate1);
 
-    MemoryFederationStateStore stateStore =
+    MemoryFederationStateStore federationStateStore =
         (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState updateSecretManagerState =
-        stateStore.getRouterRMSecretManagerState();
+        federationStateStore.getRouterRMSecretManagerState();
     Assert.assertEquals(token1, updateSecretManagerState.getTokenState());
     Assert.assertEquals(sequenceNumber, updateSecretManagerState.getDTSequenceNumber());
   }
@@ -338,10 +338,10 @@ public class TestFederationStateStoreFacade {
     facade.removeStoredToken(dtId1);
     token1.clear();
 
-    MemoryFederationStateStore stateStore =
+    MemoryFederationStateStore federationStateStore =
         (MemoryFederationStateStore) facade.getStateStore();
     RouterRMDTSecretManagerState deleteSecretManagerState =
-        stateStore.getRouterRMSecretManagerState();
+        federationStateStore.getRouterRMSecretManagerState();
 
     Assert.assertEquals(token1, deleteSecretManagerState.getTokenState());
     Assert.assertEquals(sequenceNumber, deleteSecretManagerState.getDTSequenceNumber());

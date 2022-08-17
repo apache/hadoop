@@ -92,6 +92,7 @@ public class RouterRMTokenRequestPBImpl extends RouterRMTokenRequest {
     maybeInitBuilder();
     if (storeToken == null) {
       builder.clearRouterStoreToken();
+      return;
     }
     this.routerStoreToken = storeToken;
     this.builder.setRouterStoreToken(convertToProtoFormat(storeToken));
