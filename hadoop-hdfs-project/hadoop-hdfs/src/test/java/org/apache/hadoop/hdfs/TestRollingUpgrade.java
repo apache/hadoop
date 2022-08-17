@@ -522,9 +522,7 @@ public class TestRollingUpgrade {
 
   private void testQuery(int nnCount) throws Exception{
     final Configuration conf = new Configuration();
-    MiniQJMHACluster cluster = null;
-    try {
-      cluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build();
+    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build()) {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
 
@@ -554,10 +552,6 @@ public class TestRollingUpgrade {
       // The NN should have a copy of the fsimage in case of rollbacks.
       Assert.assertTrue(dfsCluster.getNamesystem(0).getFSImage()
               .hasRollbackFSImage());
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 
@@ -648,11 +642,10 @@ public class TestRollingUpgrade {
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
 
-    MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
 
-    try {
-      cluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build();
+    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount)
+        .build()) {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
 
@@ -674,10 +667,6 @@ public class TestRollingUpgrade {
         verifyNNCheckpoint(dfsCluster, txid, i);
       }
 
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
     }
   }
 
