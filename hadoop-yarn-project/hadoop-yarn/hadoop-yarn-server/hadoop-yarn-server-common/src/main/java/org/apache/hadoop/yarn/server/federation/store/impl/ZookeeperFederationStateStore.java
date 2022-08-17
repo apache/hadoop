@@ -201,7 +201,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public UpdateApplicationHomeSubClusterResponse
       updateApplicationHomeSubCluster(
           UpdateApplicationHomeSubClusterRequest request)
-               throws YarnException {
+              throws YarnException {
 
     long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
@@ -344,7 +344,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     SubClusterInfo subClusterInfo = getSubclusterInfo(subClusterId);
     if (subClusterInfo == null) {
       String errMsg = "SubCluster " + subClusterId
-              + " does not exist; cannot heartbeat";
+          + " does not exist; cannot heartbeat";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
@@ -479,7 +479,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Get the subcluster for an application.
-   *
    * @param appId Application identifier.
    * @return Subcluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
@@ -503,8 +502,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put an application.
-   *
-   * @param appId        Application identifier.
+   * @param appId pplication identifier.
    * @param subClusterId Subcluster identifier.
    * @throws Exception If it cannot contact ZooKeeper.
    */
@@ -513,14 +511,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
           throws YarnException {
     String appZNode = getNodePath(appsZNode, appId.toString());
     SubClusterIdProto proto =
-        ((SubClusterIdPBImpl) subClusterId).getProto();
+        ((SubClusterIdPBImpl)subClusterId).getProto();
     byte[] data = proto.toByteArray();
     put(appZNode, data, update);
   }
 
   /**
    * Get the current information for a subcluster from Zookeeper.
-   *
    * @param subclusterId Subcluster identifier.
    * @return Subcluster information or null if it doesn't exist.
    * @throws Exception If it cannot contact ZooKeeper.
@@ -534,7 +531,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     if (data != null) {
       try {
         policy = new SubClusterInfoPBImpl(
-             SubClusterInfoProto.parseFrom(data));
+            SubClusterInfoProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse subcluster info at " + memberZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -545,7 +542,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put the subcluster information in Zookeeper.
-   * @param subclusterId   Subcluster identifier.
+   * @param subclusterId Subcluster identifier.
    * @param subClusterInfo Subcluster information.
    * @throws Exception If it cannot contact ZooKeeper.
    */
@@ -554,7 +551,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
           throws YarnException {
     String memberZNode = getNodePath(membershipZNode, subclusterId.toString());
     SubClusterInfoProto proto =
-            ((SubClusterInfoPBImpl) subClusterInfo).getProto();
+        ((SubClusterInfoPBImpl)subClusterInfo).getProto();
     byte[] data = proto.toByteArray();
     put(memberZNode, data, update);
   }
@@ -575,7 +572,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     if (data != null) {
       try {
         policy = new SubClusterPolicyConfigurationPBImpl(
-                SubClusterPolicyConfigurationProto.parseFrom(data));
+            SubClusterPolicyConfigurationProto.parseFrom(data));
       } catch (InvalidProtocolBufferException e) {
         String errMsg = "Cannot parse policy at " + policyZNode;
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -597,7 +594,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     String policyZNode = getNodePath(policiesZNode, queue);
 
     SubClusterPolicyConfigurationProto proto =
-            ((SubClusterPolicyConfigurationPBImpl) policy).getProto();
+        ((SubClusterPolicyConfigurationPBImpl) policy).getProto();
     byte[] data = proto.toByteArray();
     put(policyZNode, data, update);
   }
@@ -627,7 +624,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       data = zkManager.getData(znode);
     } catch (Exception e) {
       String errMsg = "Cannot get data from znode " + znode
-              + ": " + e.getMessage();
+          + ": " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     return data;
@@ -663,7 +660,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.setData(znode, data, -1);
     } catch (Exception e) {
       String errMsg = "Cannot write data into znode " + znode
-              + ": " + e.getMessage();
+          + ": " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
   }
