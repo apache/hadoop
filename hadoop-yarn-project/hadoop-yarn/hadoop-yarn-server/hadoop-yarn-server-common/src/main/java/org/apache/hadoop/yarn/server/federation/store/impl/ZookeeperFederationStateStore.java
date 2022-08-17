@@ -107,20 +107,16 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
   private static final Logger LOG =
-          LoggerFactory.getLogger(ZookeeperFederationStateStore.class);
+      LoggerFactory.getLogger(ZookeeperFederationStateStore.class);
 
   private final static String ROOT_ZNODE_NAME_MEMBERSHIP = "memberships";
   private final static String ROOT_ZNODE_NAME_APPLICATION = "applications";
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
 
-  /**
-   * Interface to Zookeeper.
-   */
+  /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
 
-  /**
-   * Directory to store the state store data.
-   */
+  /** Directory to store the state store data.*/
   private String baseZNode;
 
   private String appsZNode;
@@ -131,15 +127,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @VisibleForTesting
   private ZKFederationStateStoreOpDurations opDurations =
-          ZKFederationStateStoreOpDurations.getInstance();
+      ZKFederationStateStoreOpDurations.getInstance();
 
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("Initializing ZooKeeper connection");
 
     baseZNode = conf.get(
-            YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
-            YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
+        YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start();
@@ -217,7 +213,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     SubClusterId newSubClusterId =
-            request.getApplicationHomeSubCluster().getHomeSubCluster();
+         request.getApplicationHomeSubCluster().getHomeSubCluster();
     putApp(appId, newSubClusterId, true);
 
     opDurations.addUpdateAppHomeSubClusterDuration(clock.getTime() - start);
