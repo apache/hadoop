@@ -457,8 +457,7 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router Supports Store New Token.
-   * Returns the RouterMasterKey{@link RouterMasterKey} for the delegation key.
+   * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
    * @param newKey Key used for generating and verifying delegation tokens
    * @throws YarnException if the call to the state store is unsuccessful
@@ -475,10 +474,11 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router supports remove the master key.
+   * The Router Supports Remove MasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
-   * @param newKey DelegationKey
-   * @throws Exception An error occurred
+   * @param newKey Key used for generating and verifying delegation tokens
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public void removeStoredMasterKey(DelegationKey newKey) throws YarnException, IOException {
     LOG.info("Removing master key with keyID {}.", newKey.getKeyId());
@@ -490,10 +490,11 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router supports obtaining MasterKey based on KeyId.
+   * The Router Supports GetMasterKeyByDelegationKey.
    *
-   * @param newKey DelegationKey
-   * @throws Exception An error occurred
+   * @param newKey Key used for generating and verifying delegation tokens
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
       throws YarnException, IOException {
@@ -506,11 +507,12 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router Supports Store new Token.
+   * The Router Supports Store RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
-   * @param identifier Delegation Token
+   * @param identifier delegation tokens from the RM
    * @param renewDate renewDate
-   * @throws IOException IO exception occurred.
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public void storeNewToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws YarnException, IOException {
@@ -522,11 +524,12 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router Supports Update Token.
+   * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
-   * @param identifier Delegation Token
+   * @param identifier delegation tokens from the RM
    * @param renewDate renewDate
-   * @throws IOException IO exception occurred.
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public void updateStoredToken(RMDelegationTokenIdentifier identifier,
       long renewDate) throws YarnException, IOException {
@@ -538,10 +541,11 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router Supports Remove Token.
+   * The Router Supports Remove RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
-   * @param identifier Delegation Token
-   * @throws IOException IO exception occurred.
+   * @param identifier delegation tokens from the RM
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public void removeStoredToken(RMDelegationTokenIdentifier identifier)
       throws YarnException, IOException{
@@ -553,11 +557,12 @@ public final class FederationStateStoreFacade {
   }
 
   /**
-   * The Router Supports Remove Token.
+   * The Router Supports GetTokenByRouterStoreToken{@link RMDelegationTokenIdentifier}.
    *
-   * @param identifier Delegation Token
-   * @return RouterRMTokenResponse.
-   * @throws YarnException exception occurred.
+   * @param identifier delegation tokens from the RM
+   * @return RouterStoreToken
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
    */
   public RouterRMTokenResponse getTokenByRouterStoreToken(RMDelegationTokenIdentifier identifier)
       throws YarnException, IOException {
