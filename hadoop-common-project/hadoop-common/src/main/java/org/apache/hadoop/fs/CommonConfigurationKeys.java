@@ -489,4 +489,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final boolean IOSTATISTICS_THREAD_LEVEL_ENABLED_DEFAULT =
       true;
 
+  public static final String HADOOP_SECURITY_RESOLVER_IMPL =
+      "hadoop.security.resolver.impl";
+
 }
