@@ -33,6 +33,8 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.openmbean.CompositeDataSupport;
 
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -80,13 +82,37 @@ public class TestRollingUpgrade {
     }
   }
 
+  @Rule
+  public TemporaryFolder folder= new TemporaryFolder();
+
+  /**
+   * Create a default HDFS configuration which has test-specific data directories.  This is
+   * intended to protect against interactions between test runs that might corrupt results.  Each
+   * test run's data is automatically cleaned-up by JUnit.
+   *
+   * @return a default configuration with test-specific data directories
+   */
+  public Configuration getHdfsConfiguration() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+
+    // Override the file system locations with test-specific temporary folders
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        folder.newFolder("dfs/name").toString());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+        folder.newFolder("dfs/namesecondary").toString());
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+        folder.newFolder("dfs/data").toString());
+
+    return conf;
+  }
+
   /**
    * Test DFSAdmin Upgrade Command.
    */
   @Test
   public void testDFSAdminRollingUpgradeCommands() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
       cluster.waitActive();
 
@@ -168,7 +194,7 @@ public class TestRollingUpgrade {
     LOG.info("nn1Dir=" + nn1Dir);
     LOG.info("nn2Dir=" + nn2Dir);
 
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniJournalCluster mjc = new MiniJournalCluster.Builder(conf).build()) {
       mjc.waitActive();
       setConf(conf, nn1Dir, mjc);
@@ -306,7 +332,7 @@ public class TestRollingUpgrade {
   @Test
   public void testRollback() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniDFSCluster cluster  = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
       cluster.waitActive();
 
@@ -400,7 +426,7 @@ public class TestRollingUpgrade {
   @Test
   public void testDFSAdminDatanodeUpgradeControlCommands() throws Exception {
     // start a cluster
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()){
       cluster.waitActive();
       final DFSAdmin dfsadmin = new DFSAdmin(conf);
@@ -451,7 +477,7 @@ public class TestRollingUpgrade {
 
   private void testFinalize(int nnCount, boolean skipImageDeltaCheck)
       throws Exception {
-    final Configuration conf = new HdfsConfiguration();
+    final Configuration conf = getHdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
     final Path bar = new Path("/bar");
@@ -517,7 +543,7 @@ public class TestRollingUpgrade {
   }
 
   private void testQuery(int nnCount) throws Exception{
-    final Configuration conf = new Configuration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build()) {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
@@ -553,7 +579,7 @@ public class TestRollingUpgrade {
 
   @Test (timeout = 300000)
   public void testQueryAfterRestart() throws IOException, InterruptedException {
-    final Configuration conf = new Configuration();
+    final Configuration conf = getHdfsConfiguration();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
@@ -583,7 +609,7 @@ public class TestRollingUpgrade {
 
   @Test(timeout = 60000)
   public void testRollBackImage() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = getHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 10);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 2);
@@ -628,7 +654,7 @@ public class TestRollingUpgrade {
   }
 
   public void testCheckpoint(int nnCount) throws IOException, InterruptedException {
-    final Configuration conf = new Configuration();
+    final Configuration conf = getHdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
 
@@ -705,7 +731,7 @@ public class TestRollingUpgrade {
     SecondaryNameNode snn = null;
 
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = getHdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
