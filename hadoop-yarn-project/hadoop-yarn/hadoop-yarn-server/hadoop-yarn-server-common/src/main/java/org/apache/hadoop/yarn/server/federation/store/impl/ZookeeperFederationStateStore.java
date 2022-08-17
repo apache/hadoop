@@ -583,7 +583,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put the subcluster information in Zookeeper.
-   * @param queue  Name of the queue.
+   * @param queue Name of the queue.
    * @param policy Subcluster policy configuration.
    * @throws YarnException If it cannot contact ZooKeeper.
    */
@@ -630,7 +630,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /**
    * Put data into a znode in Zookeeper.
-   *
    * @param znode Path of the znode.
    * @param data Data to write.
    * @throws YarnException If it cannot contact ZooKeeper.
