@@ -81,7 +81,7 @@ public class ITestS3ARequesterPays extends AbstractS3ATestBase {
       inputStream.readByte();
 
       if (conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT)) {
-        // For S3PrefetchingInputStream, verify a call was made
+        // For S3APrefetchingInputStream, verify a call was made
         IOStatisticAssertions.assertThatStatisticCounter(inputStream.getIOStatistics(),
             StreamStatisticNames.STREAM_READ_OPENED).isEqualTo(1);
       } else {

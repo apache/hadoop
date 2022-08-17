@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.statistics;
 
-import org.apache.hadoop.fs.common.PrefetchingStatistics;
+import org.apache.hadoop.fs.impl.prefetch.PrefetchingStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
