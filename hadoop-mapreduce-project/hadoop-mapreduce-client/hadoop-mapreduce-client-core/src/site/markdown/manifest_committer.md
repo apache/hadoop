@@ -317,7 +317,7 @@ None of the S3A committers support this. Condition (1) is not met by
 the staging committers, while (2) is not met by S3 itself.
 
 To use the manifest committer with dynamic partition overwrites, the
-spark version must contain 
+spark version must contain
 [SPARK-40034](https://issues.apache.org/jira/browse/SPARK-40034)
 _PathOutputCommitters to work with dynamic partition overwrite_.
 
@@ -338,8 +338,6 @@ It means that _dynamic partitioning should not be used on Azure Storage
 for SQL queries/Spark DataSet operations where many thousands of files are created.
 The fact that these will suffer from performance problems before
 throttling scale issues surface, should be considered a warning.
-
-
 
 # <a name="SUCCESS"></a> Job Summaries in `_SUCCESS` files
 
@@ -673,7 +671,7 @@ For this to work, a number of conditions must be met:
 * All jobs/tasks must create files with unique filenames.
 * All jobs must create output with the same directory partition structure.
 * The job/queries MUST NOT be using Spark Dynamic Partitioning "INSERT OVERWRITE TABLE"; data may be lost.
-  This holds for *all* committers, not just the manifest committer.  
+  This holds for *all* committers, not just the manifest committer.
 * Remember to delete the `_temporary` directory later!
 
 This has *NOT BEEN TESTED*
