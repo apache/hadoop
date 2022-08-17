@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -899,5 +900,53 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppPriority appPriority = interceptor.getAppPriority(null, appId.toString());
     Assert.assertNotNull(appPriority);
     Assert.assertEquals(priority, appPriority.getPriority());
+  }
+
+  @Test
+  public void testUpdateAppQueue() throws IOException, InterruptedException,
+      YarnException {
+
+    String oldQueue = "oldQueue";
+    String newQueue = "newQueue";
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setQueue(oldQueue);
+
+    // Submit the application
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Set New Queue for application
+    Response response = interceptor.updateAppQueue(new AppQueue(newQueue),
+        null, appId.toString());
+
+    Assert.assertNotNull(response);
+    AppQueue appQueue = (AppQueue) response.getEntity();
+    Assert.assertEquals(newQueue, appQueue.getQueue());
+
+    // Get AppQueue by application
+    AppQueue queue = interceptor.getAppQueue(null, appId.toString());
+    Assert.assertNotNull(queue);
+    Assert.assertEquals(newQueue, queue.getQueue());
+  }
+
+  @Test
+  public void testGetAppQueue() throws IOException, InterruptedException, YarnException {
+    String queueName = "queueName";
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setQueue(queueName);
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Get Queue by application
+    AppQueue queue = interceptor.getAppQueue(null, appId.toString());
+    Assert.assertNotNull(queue);
+    Assert.assertEquals(queueName, queue.getQueue());
   }
 }
