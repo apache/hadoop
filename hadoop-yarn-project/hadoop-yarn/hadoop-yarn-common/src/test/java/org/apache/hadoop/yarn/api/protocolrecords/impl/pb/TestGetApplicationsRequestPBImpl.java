@@ -21,9 +21,12 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.junit.Test;
 import org.junit.runner.RunWith;
