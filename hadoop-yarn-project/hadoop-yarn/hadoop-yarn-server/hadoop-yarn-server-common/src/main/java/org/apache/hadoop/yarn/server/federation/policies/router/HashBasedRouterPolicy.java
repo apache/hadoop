@@ -22,11 +22,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -50,53 +48,12 @@ public class HashBasedRouterPolicy extends AbstractRouterPolicy {
     setPolicyContext(federationPolicyContext);
   }
 
-  /**
-   * Simply picks from alphabetically-sorted active subclusters based on the
-   * hash of quey name. Jobs of the same queue will all be routed to the same
-   * sub-cluster, as far as the number of active sub-cluster and their names
-   * remain the same.
-   *
-   * @param appSubmissionContext the {@link ApplicationSubmissionContext} that
-   *          has to be routed to an appropriate subCluster for execution.
-   *
-   * @param blackListSubClusters the list of subClusters as identified by
-   *          {@link SubClusterId} to blackList from the selection of the home
-   *          subCluster.
-   *
-   * @return a hash-based chosen {@link SubClusterId} that will be the "home"
-   *         for this application.
-   *
-   * @throws YarnException if there are no active subclusters.
-   */
   @Override
-  public SubClusterId getHomeSubcluster(
-      ApplicationSubmissionContext appSubmissionContext,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
-
-    // throws if no active subclusters available
-    Map<SubClusterId, SubClusterInfo> activeSubclusters =
-        getActiveSubclusters();
-
-    FederationPolicyUtils.validateSubClusterAvailability(
-        new ArrayList<SubClusterId>(activeSubclusters.keySet()),
-        blackListSubClusters);
-
-    if (blackListSubClusters != null) {
-
-      // Remove from the active SubClusters from StateStore the blacklisted ones
-      for (SubClusterId scId : blackListSubClusters) {
-        activeSubclusters.remove(scId);
-      }
-    }
-
-    validate(appSubmissionContext);
-
-    int chosenPosition = Math.abs(
-        appSubmissionContext.getQueue().hashCode() % activeSubclusters.size());
-
-    List<SubClusterId> list = new ArrayList<>(activeSubclusters.keySet());
+  protected SubClusterId chooseSubCluster(String queue,
+      Map<SubClusterId, SubClusterInfo> preSelectSubclusters) throws YarnException {
+    int chosenPosition = Math.abs(queue.hashCode() % preSelectSubclusters.size());
+    List<SubClusterId> list = new ArrayList<>(preSelectSubclusters.keySet());
     Collections.sort(list);
     return list.get(chosenPosition);
   }
-
 }
