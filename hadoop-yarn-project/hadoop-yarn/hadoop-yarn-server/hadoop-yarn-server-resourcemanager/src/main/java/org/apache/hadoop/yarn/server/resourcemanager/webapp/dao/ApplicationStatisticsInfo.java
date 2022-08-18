@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -33,6 +34,10 @@ public class ApplicationStatisticsInfo {
   public ApplicationStatisticsInfo() {
   } // JAXB needs this
 
+  public ApplicationStatisticsInfo(Collection<StatisticsItemInfo> items) {
+    statItem.addAll(items);
+  }
+
   public void add(StatisticsItemInfo statItem) {
     this.statItem.add(statItem);
   }
@@ -40,5 +45,4 @@ public class ApplicationStatisticsInfo {
   public ArrayList<StatisticsItemInfo> getStatItems() {
     return statItem;
   }
-
 }

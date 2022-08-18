@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -31,6 +32,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.junit.Assert;
 import org.junit.Test;
@@ -591,5 +594,91 @@ public class TestRouterWebServiceUtil {
     when(appAttemptInfo.getFinishedTime()).thenReturn(1659621705L);
     when(appAttemptInfo.getLogsLink()).thenReturn("LogLink_" + attemptId);
     return appAttemptInfo;
+  }
+
+  @Test
+  public void testMergeApplicationStatisticsInfo() {
+    ApplicationStatisticsInfo infoA = new ApplicationStatisticsInfo();
+    ApplicationStatisticsInfo infoB = new ApplicationStatisticsInfo();
+
+    StatisticsItemInfo item1 =
+        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
+    StatisticsItemInfo item2 =
+        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 20);
+
+    infoA.add(item1);
+    infoB.add(item2);
+
+    List<ApplicationStatisticsInfo> lists = new ArrayList<>();
+    lists.add(infoA);
+    lists.add(infoB);
+
+    ApplicationStatisticsInfo mergeInfo =
+        RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
+
+    Assert.assertEquals(1, mergeInfo.getStatItems().size());
+    Assert.assertEquals(item1.getCount() + item2.getCount(),
+        mergeInfo.getStatItems().get(0).getCount());
+    Assert.assertEquals(item1.getType(),
+        mergeInfo.getStatItems().get(0).getType());
+    Assert.assertEquals(item1.getState(),
+        mergeInfo.getStatItems().get(0).getState());
+  }
+
+  @Test
+  public void testMergeDiffApplicationStatisticsInfo() {
+    ApplicationStatisticsInfo infoA = new ApplicationStatisticsInfo();
+    StatisticsItemInfo item1 =
+        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
+    StatisticsItemInfo item2 =
+        new StatisticsItemInfo(YarnApplicationState.NEW_SAVING, "test1", 20);
+    infoA.add(item1);
+    infoA.add(item2);
+
+    ApplicationStatisticsInfo infoB = new ApplicationStatisticsInfo();
+    StatisticsItemInfo item3 =
+        new StatisticsItemInfo(YarnApplicationState.NEW_SAVING, "test1", 30);
+    StatisticsItemInfo item4 =
+        new StatisticsItemInfo(YarnApplicationState.FINISHED, "test3", 40);
+    infoB.add(item3);
+    infoB.add(item4);
+
+    List<ApplicationStatisticsInfo> lists = new ArrayList<>();
+    lists.add(infoA);
+    lists.add(infoB);
+
+    ApplicationStatisticsInfo mergeInfo =
+        RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
+
+    Assert.assertEquals(3, mergeInfo.getStatItems().size());
+    ArrayList<StatisticsItemInfo> mergeInfoStatItems = mergeInfo.getStatItems();
+
+    StatisticsItemInfo item1Result = null ;
+    StatisticsItemInfo item2Result = null;
+    StatisticsItemInfo item3Result = null;
+
+    for (StatisticsItemInfo item : mergeInfoStatItems) {
+      // ACCEPTED
+      if (item.getState() == YarnApplicationState.ACCEPTED) {
+        item1Result = item;
+      }
+
+      // NEW_SAVING
+      if (item.getState() == YarnApplicationState.NEW_SAVING) {
+        item2Result = item;
+      }
+
+      // FINISHED
+      if (item.getState() == YarnApplicationState.FINISHED) {
+        item3Result = item;
+      }
+    }
+
+    Assert.assertEquals(item1.getType(), item1Result.getType());
+    Assert.assertEquals(item1.getCount(), item1Result.getCount());
+    Assert.assertEquals(item2.getType(), item2Result.getType());
+    Assert.assertEquals((item2.getCount() + item3.getCount()), item2Result.getCount());
+    Assert.assertEquals(item4.getType(), item3Result.getType());
+    Assert.assertEquals(item4.getCount(), item3Result.getCount());
   }
 }
