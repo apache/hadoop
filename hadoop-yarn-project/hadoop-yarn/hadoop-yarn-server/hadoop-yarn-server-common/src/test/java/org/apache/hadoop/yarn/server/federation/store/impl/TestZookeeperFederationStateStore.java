@@ -102,19 +102,19 @@ public class TestZookeeperFederationStateStore
     long start = Time.now();
     long end = start + anyDuration;
 
-    zkStateStoreOpDurations.addAppHomeSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addUpdateAppHomeSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addGetAppHomeSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addGetAppsHomeSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addDeleteAppHomeSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addRegisterSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addDeregisterSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addSubClusterHeartbeatDuration(end, start);
-    zkStateStoreOpDurations.addGetSubClusterDuration(end, start);
-    zkStateStoreOpDurations.addGetSubClustersDuration(end, start);
-    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(end, start);
-    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(end, start);
-    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(end, start);
+    zkStateStoreOpDurations.addAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addUpdateAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetAppsHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addDeleteAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addRegisterSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addDeregisterSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addSubClusterHeartbeatDuration(start, end);
+    zkStateStoreOpDurations.addGetSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetSubClustersDuration(start, end);
+    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(start, end);
+    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(start, end);
+    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(start, end);
 
     zkStateStoreOpDurations.getMetrics(collector, true);
     assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());
