@@ -18,12 +18,8 @@
 
 package org.apache.hadoop.yarn.nodelabels;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -120,7 +116,7 @@ public class NodeLabelTestBase {
 
   @SuppressWarnings("unchecked")
   public static <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
+    Set<E> set = new HashSet<>(Arrays.asList(elements));
     return set;
   }
   

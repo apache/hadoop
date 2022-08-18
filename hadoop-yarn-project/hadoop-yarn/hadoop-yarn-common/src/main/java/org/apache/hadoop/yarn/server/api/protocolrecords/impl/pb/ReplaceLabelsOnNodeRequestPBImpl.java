@@ -18,12 +18,8 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -62,7 +58,7 @@ public class ReplaceLabelsOnNodeRequestPBImpl extends
 
     for (NodeIdToLabelsProto c : list) {
       this.nodeIdToLabels.put(new NodeIdPBImpl(c.getNodeId()),
-          Sets.newHashSet(c.getNodeLabelsList()));
+              new HashSet<>(c.getNodeLabelsList()));
     }
   }
 
