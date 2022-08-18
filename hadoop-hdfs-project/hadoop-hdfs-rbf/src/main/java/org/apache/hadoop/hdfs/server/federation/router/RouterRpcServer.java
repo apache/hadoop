@@ -581,7 +581,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param op Category of the operation to check.
    * @param supported If the operation is supported or not. If not, it will
    *                  throw an UnsupportedOperationException.
-   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   * @throws StandbyException If the Router is in safe mode and cannot serve
    *                           client requests.
    * @throws UnsupportedOperationException If the operation is not supported.
    */
@@ -604,7 +604,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * UNCHECKED. This function should be called by all ClientProtocol functions.
    *
    * @param op Category of the operation to check.
-   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   * @throws StandbyException If the Router is in safe mode and cannot serve
    *                           client requests.
    */
   void checkOperation(OperationCategory op)

@@ -80,4 +80,14 @@ public interface IOStatisticsContext extends IOStatisticsSource {
     IOStatisticsContextIntegration.setThreadIOStatisticsContext(
         statisticsContext);
   }
+
+  /**
+   * Static probe to check if the thread-level IO statistics enabled.
+   *
+   * @return if the thread-level IO statistics enabled.
+   */
+  static boolean enabled() {
+    return IOStatisticsContextIntegration.isIOStatisticsThreadLevelEnabled();
+  }
+
 }
