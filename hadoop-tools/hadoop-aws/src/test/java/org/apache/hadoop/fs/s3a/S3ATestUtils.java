@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
@@ -1461,16 +1462,24 @@ public final class S3ATestUtils {
     }
   }
 
-
   /**
    * Get the input stream statistics of an input stream.
    * Raises an exception if the inner stream is not an S3A input stream
+   * or prefetching input stream
    * @param in wrapper
    * @return the statistics for the inner stream
    */
   public static S3AInputStreamStatistics getInputStreamStatistics(
-          FSDataInputStream in) {
-    return getS3AInputStream(in).getS3AStreamStatistics();
+      FSDataInputStream in) {
+
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return ((S3AInputStream) inner).getS3AStreamStatistics();
+    } else if (inner instanceof S3APrefetchingInputStream) {
+      return ((S3APrefetchingInputStream) inner).getS3AStreamStatistics();
+    } else {
+      throw new AssertionError("Not an S3AInputStream or S3APrefetchingInputStream: " + inner);
+    }
   }
 
   /**

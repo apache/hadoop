@@ -221,6 +221,41 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     }
 
+    @Override
+    public DurationTracker prefetchOperationStarted() {
+      return stubDurationTracker();
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+
+    }
+
+    @Override
+    public void blockAddedToFileCache() {
+
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
+
+    }
+
+    @Override
+    public void executorAcquired(Duration timeInQueue) {
+
+    }
+
+    @Override
+    public void memoryAllocated(int size) {
+
+    }
+
+    @Override
+    public void memoryFreed(int size) {
+
+    }
+
     /**
      * Return an IO statistics instance.
      * @return an empty IO statistics instance.
@@ -354,6 +389,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public DurationTracker initiateInnerStreamClose(final boolean abort) {
       return stubDurationTracker();
     }
+
   }
 
   /**

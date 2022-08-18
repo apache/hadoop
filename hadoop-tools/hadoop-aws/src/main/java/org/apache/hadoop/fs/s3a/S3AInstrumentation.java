@@ -887,11 +887,19 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
               StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
-          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
+          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
+              STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
+              STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
+              STREAM_READ_ACTIVE_MEMORY_IN_USE.getSymbol()
+              )
           .withDurationTracking(ACTION_HTTP_GET_REQUEST,
+              ACTION_EXECUTOR_ACQUIRED,
               StoreStatisticNames.ACTION_FILE_OPENED,
               StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
-              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED)
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+              StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
+              StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
+              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -958,6 +966,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private long increment(String name, long value) {
       return incCounter(name, value);
+    }
+
+    /**
+     * Increment the Statistic gauge and the local IOStatistics
+     * equivalent.
+     * @param statistic statistic
+     * @param v value.
+     * @return local IOStatistic value
+     */
+    private long incAllGauges(Statistic statistic, long v) {
+      incrementGauge(statistic, v);
+      return incGauge(statistic.getSymbol(), v);
     }
 
     /**
@@ -1086,6 +1106,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     @Override
     public void readVectoredBytesDiscarded(int discarded) {
       bytesDiscardedInVectoredIO.addAndGet(discarded);
+    }
+
+    @Override
+    public void executorAcquired(Duration timeInQueue) {
+      // update the duration fields in the IOStatistics.
+      localIOStatistics().addTimedOperation(ACTION_EXECUTOR_ACQUIRED, timeInQueue);
     }
 
     /**
@@ -1351,6 +1377,37 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return trackDuration(abort
           ? StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED
           : StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED);
+    }
+
+    @Override
+    public DurationTracker prefetchOperationStarted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, 1);
+      return trackDuration(StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS);
+    }
+
+    @Override
+    public void blockAddedToFileCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, 1);
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, -1);
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
+    }
+
+    @Override
+    public void memoryAllocated(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, size);
+    }
+
+    @Override
+    public void memoryFreed(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, -size);
     }
   }
 
