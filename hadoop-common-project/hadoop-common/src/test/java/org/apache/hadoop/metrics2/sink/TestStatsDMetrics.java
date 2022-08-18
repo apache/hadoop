@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.metrics2.impl;
+package org.apache.hadoop.metrics2.sink;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -31,12 +31,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.apache.hadoop.metrics2.sink.StatsDSink;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.sink.StatsDSink.StatsD;
 import org.junit.Test;
 
@@ -62,15 +61,14 @@ public class TestStatsDMetrics {
     metrics.add(makeMetric("foo1", 1.25, MetricType.COUNTER));
     metrics.add(makeMetric("foo2", 2.25, MetricType.GAUGE));
     final MetricsRecord record =
-        new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
+        new TestMetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
     try (DatagramSocket sock = new DatagramSocket()) {
       sock.setReceiveBufferSize(8192);
       final StatsDSink.StatsD mockStatsD =
           new StatsD(sock.getLocalAddress().getHostName(),
               sock.getLocalPort());
-      FieldUtils.getField(StatsDSink.class, "statsd", true).
-           set(sink, mockStatsD);
+      sink.setStatsd(mockStatsD);
       final DatagramPacket p = new DatagramPacket(new byte[8192], 8192);
       sink.putMetrics(record);
       sock.receive(p);
@@ -98,15 +96,14 @@ public class TestStatsDMetrics {
     metrics.add(makeMetric("foo1", 1, MetricType.COUNTER));
     metrics.add(makeMetric("foo2", 2, MetricType.GAUGE));
     MetricsRecord record =
-        new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
+        new TestMetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
     try (DatagramSocket sock = new DatagramSocket()) {
       sock.setReceiveBufferSize(8192);
       final StatsDSink.StatsD mockStatsD =
           new StatsD(sock.getLocalAddress().getHostName(),
               sock.getLocalPort());
-      FieldUtils.getField(StatsDSink.class, "statsd", true).
-           set(sink, mockStatsD);
+      sink.setStatsd(mockStatsD);
       final DatagramPacket p = new DatagramPacket(new byte[8192], 8192);
       sink.putMetrics(record);
       sock.receive(p);

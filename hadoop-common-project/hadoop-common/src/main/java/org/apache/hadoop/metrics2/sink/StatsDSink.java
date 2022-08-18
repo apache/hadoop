@@ -215,4 +215,7 @@ public class StatsDSink implements MetricsSink, Closeable {
 
   }
 
+  void setStatsd(StatsD statsd) {
+    this.statsd = statsd;
+  }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.metrics2.sink;
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -202,11 +203,8 @@ public class GraphiteSink implements MetricsSink, Closeable {
     }
   }
 
-  public Graphite getGraphite() {
-    return graphite;
-  }
-
-  public void setGraphite(Graphite graphite) {
+  @VisibleForTesting
+  void setGraphite(Graphite graphite) {
     this.graphite = graphite;
   }
 }
