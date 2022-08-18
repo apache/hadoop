@@ -382,6 +382,18 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_UNBUFFERED,
       "Total count of input stream unbuffering operations",
       TYPE_COUNTER),
+  STREAM_READ_BLOCKS_IN_FILE_CACHE(
+      StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE,
+      "Gauge of blocks in disk cache",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_PREFETCH_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS,
+      "Gauge of active prefetches",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_MEMORY_IN_USE(
+      StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE,
+      "Gauge of active memory in use",
+      TYPE_GAUGE),
 
   /* Stream Write statistics */
 

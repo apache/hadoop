@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
@@ -74,6 +75,15 @@ public class S3AReadOpContext extends S3AOpContext {
   /** Thread-level IOStatistics aggregator. **/
   private final IOStatisticsAggregator ioStatisticsAggregator;
 
+  // S3 reads are prefetched asynchronously using this future pool.
+  private ExecutorServiceFuturePool futurePool;
+
+  // Size in bytes of a single prefetch block.
+  private final int prefetchBlockSize;
+
+  // Size of prefetch queue (in number of blocks).
+  private final int prefetchBlockCount;
+
   /**
    * Instantiate.
    * @param path path of read
@@ -83,6 +93,9 @@ public class S3AReadOpContext extends S3AOpContext {
    * @param dstFileStatus target file status
    * @param vectoredIOContext context for vectored read operation.
    * @param ioStatisticsAggregator IOStatistics aggregator for each thread.
+   * @param futurePool the ExecutorServiceFuturePool instance used by async prefetches.
+   * @param prefetchBlockSize the size (in number of bytes) of each prefetched block.
+   * @param prefetchBlockCount maximum number of prefetched blocks.
    */
   public S3AReadOpContext(
       final Path path,
@@ -91,12 +104,23 @@ public class S3AReadOpContext extends S3AOpContext {
       S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus,
       VectoredIOContext vectoredIOContext,
-      IOStatisticsAggregator ioStatisticsAggregator) {
+      IOStatisticsAggregator ioStatisticsAggregator,
+      ExecutorServiceFuturePool futurePool,
+      int prefetchBlockSize,
+      int prefetchBlockCount) {
+
     super(invoker, stats, instrumentation,
         dstFileStatus);
     this.path = requireNonNull(path);
     this.vectoredIOContext = requireNonNull(vectoredIOContext, "vectoredIOContext");
     this.ioStatisticsAggregator = ioStatisticsAggregator;
+    this.futurePool = futurePool;
+    Preconditions.checkArgument(
+        prefetchBlockSize > 0, "invalid prefetchBlockSize %d", prefetchBlockSize);
+    this.prefetchBlockSize = prefetchBlockSize;
+    Preconditions.checkArgument(
+        prefetchBlockCount > 0, "invalid prefetchBlockCount %d", prefetchBlockCount);
+    this.prefetchBlockCount = prefetchBlockCount;
   }
 
   /**
@@ -230,6 +254,33 @@ public class S3AReadOpContext extends S3AOpContext {
    */
   public IOStatisticsAggregator getIOStatisticsAggregator() {
     return ioStatisticsAggregator;
+  }
+
+  /**
+   * Gets the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
+   *
+   * @return the {@code ExecutorServiceFuturePool} used for asynchronous prefetches.
+   */
+  public ExecutorServiceFuturePool getFuturePool() {
+    return this.futurePool;
+  }
+
+  /**
+   * Gets the size in bytes of a single prefetch block.
+   *
+   * @return the size in bytes of a single prefetch block.
+   */
+  public int getPrefetchBlockSize() {
+    return this.prefetchBlockSize;
+  }
+
+  /**
+   * Gets the size of prefetch queue (in number of blocks).
+   *
+   * @return the size of prefetch queue (in number of blocks).
+   */
+  public int getPrefetchBlockCount() {
+    return this.prefetchBlockCount;
   }
 
   @Override
