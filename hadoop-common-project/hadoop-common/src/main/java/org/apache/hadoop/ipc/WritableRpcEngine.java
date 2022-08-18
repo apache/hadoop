@@ -323,7 +323,7 @@ public class WritableRpcEngine implements RpcEngine {
       Client.ConnectionId connId, Configuration conf, SocketFactory factory)
       throws IOException {
     return getProxy(protocol, clientVersion, connId.getAddress(),
-        connId.ticket, conf, factory, connId.getRpcTimeout(),
+        connId.getTicket(), conf, factory, connId.getRpcTimeout(),
         connId.getRetryPolicy(), null, null);
   }
 
