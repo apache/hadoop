@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.metrics2.impl;
+package org.apache.hadoop.metrics2.sink;
 
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.apache.hadoop.metrics2.sink.GraphiteSink;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -65,7 +65,8 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<>();
     metrics.add(makeMetric("foo1", 1.25));
     metrics.add(makeMetric("foo2", 2.25));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
+    MetricsRecord record =
+        new TestMetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
 
     ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
@@ -96,7 +97,8 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<>();
     metrics.add(makeMetric("foo1", 1));
     metrics.add(makeMetric("foo2", 2));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
+    MetricsRecord record =
+        new TestMetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
 
     ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
@@ -133,8 +135,10 @@ public class TestGraphiteMetrics {
     List<MetricsTag> tags = Collections.emptyList();
     Set<AbstractMetric> metrics = new HashSet<>();
     metrics.add(makeMetric("foo1", 1));
-    MetricsRecord record1 = new MetricsRecordImpl(MsInfo.Context, 1000000000000L, tags, metrics);
-    MetricsRecord record2 = new MetricsRecordImpl(MsInfo.Context, 1000000001000L, tags, metrics);
+    MetricsRecord record1 =
+        new TestMetricsRecordImpl(MsInfo.Context, 1000000000000L, tags, metrics);
+    MetricsRecord record2 =
+        new TestMetricsRecordImpl(MsInfo.Context, 1000000001000L, tags, metrics);
 
     sink.putMetrics(record1);
     sink.putMetrics(record2);
@@ -164,7 +168,8 @@ public class TestGraphiteMetrics {
     Set<AbstractMetric> metrics = new HashSet<>();
     metrics.add(makeMetric("foo1", 1.25));
     metrics.add(makeMetric("foo2", 2.25));
-    MetricsRecord record = new MetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
+    MetricsRecord record =
+        new TestMetricsRecordImpl(MsInfo.Context, 10000, tags, metrics);
 
     final GraphiteSink.Graphite mockGraphite = makeGraphite();
     sink.setGraphite(mockGraphite);
