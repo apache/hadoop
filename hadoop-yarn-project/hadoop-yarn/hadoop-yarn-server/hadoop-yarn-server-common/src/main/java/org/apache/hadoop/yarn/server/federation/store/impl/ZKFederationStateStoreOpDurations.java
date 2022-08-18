@@ -101,55 +101,55 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
-  public void addAppHomeSubClusterDuration(long endTime, long startTime) {
+  public void addAppHomeSubClusterDuration(long startTime, long endTime) {
     addAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addUpdateAppHomeSubClusterDuration(long endTime, long startTime) {
+  public void addUpdateAppHomeSubClusterDuration(long startTime, long endTime) {
     updateAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addGetAppHomeSubClusterDuration(long endTime, long startTime) {
+  public void addGetAppHomeSubClusterDuration(long startTime, long endTime) {
     getAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addGetAppsHomeSubClusterDuration(long endTime, long startTime) {
+  public void addGetAppsHomeSubClusterDuration(long startTime, long endTime) {
     getAppsHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addDeleteAppHomeSubClusterDuration(long endTime, long startTime) {
+  public void addDeleteAppHomeSubClusterDuration(long startTime, long endTime) {
     deleteAppHomeSubCluster.add(endTime - startTime);
   }
 
-  public void addRegisterSubClusterDuration(long endTime, long startTime) {
+  public void addRegisterSubClusterDuration(long startTime, long endTime) {
     registerSubCluster.add(endTime - startTime);
   }
 
-  public void addDeregisterSubClusterDuration(long endTime, long startTime) {
+  public void addDeregisterSubClusterDuration(long startTime, long endTime) {
     deregisterSubCluster.add(endTime - startTime);
   }
 
-  public void addSubClusterHeartbeatDuration(long endTime, long startTime) {
+  public void addSubClusterHeartbeatDuration(long startTime, long endTime) {
     subClusterHeartbeat.add(endTime - startTime);
   }
 
-  public void addGetSubClusterDuration(long endTime, long startTime) {
+  public void addGetSubClusterDuration(long startTime, long endTime) {
     getSubCluster.add(endTime - startTime);
   }
 
-  public void addGetSubClustersDuration(long endTime, long startTime) {
+  public void addGetSubClustersDuration(long startTime, long endTime) {
     getSubClusters.add(endTime - startTime);
   }
 
-  public void addGetPolicyConfigurationDuration(long endTime, long startTime) {
+  public void addGetPolicyConfigurationDuration(long startTime, long endTime) {
     getPolicyConfiguration.add(endTime - startTime);
   }
 
-  public void addSetPolicyConfigurationDuration(long endTime, long startTime) {
+  public void addSetPolicyConfigurationDuration(long startTime, long endTime) {
     setPolicyConfiguration.add(endTime - startTime);
   }
 
-  public void addGetPoliciesConfigurationsDuration(long endTime, long startTime) {
+  public void addGetPoliciesConfigurationsDuration(long startTime, long endTime) {
     getPoliciesConfigurations.add(endTime - startTime);
   }
 }

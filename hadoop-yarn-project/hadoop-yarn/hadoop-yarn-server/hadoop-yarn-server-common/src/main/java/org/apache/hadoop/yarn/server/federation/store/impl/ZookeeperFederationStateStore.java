@@ -193,7 +193,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addAppHomeSubClusterDuration(end, start);
+    opDurations.addAppHomeSubClusterDuration(start, end);
     return AddApplicationHomeSubClusterResponse
         .newInstance(homeSubCluster);
   }
@@ -218,7 +218,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     putApp(appId, newSubClusterId, true);
 
     long end = clock.getTime();
-    opDurations.addUpdateAppHomeSubClusterDuration(end, start);
+    opDurations.addUpdateAppHomeSubClusterDuration(start, end);
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
 
@@ -235,7 +235,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addGetAppHomeSubClusterDuration(end, start);
+    opDurations.addGetAppHomeSubClusterDuration(start, end);
     return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubCluster);
   }
 
@@ -258,7 +258,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addGetAppsHomeSubClusterDuration(end, start);
+    opDurations.addGetAppsHomeSubClusterDuration(start, end);
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
   }
 
@@ -291,7 +291,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addDeleteAppHomeSubClusterDuration(end, start);
+    opDurations.addDeleteAppHomeSubClusterDuration(start, end);
     return DeleteApplicationHomeSubClusterResponse.newInstance();
   }
 
@@ -314,7 +314,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addRegisterSubClusterDuration(end, start);
+    opDurations.addRegisterSubClusterDuration(start, end);
     return SubClusterRegisterResponse.newInstance();
   }
 
@@ -336,7 +336,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       putSubclusterInfo(subClusterId, subClusterInfo, true);
     }
     long end = clock.getTime();
-    opDurations.addDeregisterSubClusterDuration(end, start);
+    opDurations.addDeregisterSubClusterDuration(start, end);
     return SubClusterDeregisterResponse.newInstance();
   }
 
@@ -361,7 +361,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     putSubclusterInfo(subClusterId, subClusterInfo, true);
     long end = clock.getTime();
-    opDurations.addSubClusterHeartbeatDuration(clock.getTime(), start);
+    opDurations.addSubClusterHeartbeatDuration(start, end);
     return SubClusterHeartbeatResponse.newInstance();
   }
 
@@ -383,7 +383,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addGetSubClusterDuration(end, start);
+    opDurations.addGetSubClusterDuration(start, end);
     return GetSubClusterInfoResponse.newInstance(subClusterInfo);
   }
 
@@ -407,7 +407,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addGetSubClustersDuration(end, start);
+    opDurations.addGetSubClustersDuration(start, end);
     return GetSubClustersInfoResponse.newInstance(result);
   }
 
@@ -431,7 +431,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       return null;
     }
     long end = clock.getTime();
-    opDurations.addGetPolicyConfigurationDuration(end, start);
+    opDurations.addGetPolicyConfigurationDuration(start, end);
     return GetSubClusterPolicyConfigurationResponse
         .newInstance(policy);
   }
@@ -451,7 +451,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addSetPolicyConfigurationDuration(end, start);
+    opDurations.addSetPolicyConfigurationDuration(start, end);
     return SetSubClusterPolicyConfigurationResponse.newInstance();
   }
 
@@ -475,7 +475,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
     long end = clock.getTime();
-    opDurations.addGetPoliciesConfigurationsDuration(end, start);
+    opDurations.addGetPoliciesConfigurationsDuration(start, end);
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
   }
 
