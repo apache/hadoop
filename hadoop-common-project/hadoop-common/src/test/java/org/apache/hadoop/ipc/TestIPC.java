@@ -860,7 +860,6 @@ public class TestIPC {
   // goal is to jam a handler with a connection, fill the callq with
   // connections, in turn jamming the readers - then flood the server and
   // ensure that the listener blocks when the reader connection queues fill
-  @SuppressWarnings("unchecked")
   private void checkBlocking(int readers, int readerQ, int callQ) throws Exception {
     int handlers = 1; // makes it easier
     

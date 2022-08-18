@@ -1217,7 +1217,6 @@ public class TestRPC extends TestRpcBase {
         .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true);
     server = setupTestServer(builder);
 
-    @SuppressWarnings("unchecked")
     CallQueueManager<Call> spy = spy(server.getCallQueue());
     server.setCallQueue(spy);
 
@@ -1279,7 +1278,6 @@ public class TestRPC extends TestRpcBase {
     final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
     Server server = setupDecayRpcSchedulerandTestServer(ns + ".");
 
-    @SuppressWarnings("unchecked")
     CallQueueManager<Call> spy = spy(server.getCallQueue());
     server.setCallQueue(spy);
 

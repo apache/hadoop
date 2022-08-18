@@ -18,6 +18,7 @@
 package org.apache.hadoop.portmap;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -209,7 +210,7 @@ final class RpcProgramPortmap extends IdleStateHandler {
     ctx.channel().close();
   }
 
-  public ConcurrentHashMap<String, PortmapMapping> getMap() {
+  public Map<String, PortmapMapping> getMap() {
     return map;
   }
 }

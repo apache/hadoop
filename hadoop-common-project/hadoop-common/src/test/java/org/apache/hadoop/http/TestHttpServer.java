@@ -662,7 +662,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServer2 server = createServer(host, port);
     try {
       // not bound, ephemeral should return requested port (0 for ephemeral)
-      List<?> listeners = server.getListeners();
+      List<ServerConnector> listeners = server.getListeners();
       ServerConnector listener = (ServerConnector)listeners.get(0);
 
       assertEquals(port, listener.getPort());
@@ -738,7 +738,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_KEY, backlogSize);
     HttpServer2 srv = createServer("test", conf);
-    List<?> listeners = srv.getListeners();
+    List<ServerConnector> listeners = srv.getListeners();
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(backlogSize, listener.getAcceptQueueSize());
   }
