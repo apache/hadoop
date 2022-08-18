@@ -25,6 +25,7 @@ import java.util.Optional;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
@@ -115,10 +116,10 @@ public class FullCredentialsTokenBinding extends
    */
   @Override
   @SuppressWarnings("deprecation")
-  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList deployUnbonded() throws IOException {
+  public AWSCredentialProviderList deployUnbonded() throws IOException {
     requireServiceStarted();
     loadAWSCredentials();
-    return new org.apache.hadoop.fs.s3a.AWSCredentialProviderList(
+    return new AWSCredentialProviderList(
         "Full Credentials Token Binding",
         new MarshalledCredentialProvider(
             FULL_TOKEN,
@@ -156,13 +157,13 @@ public class FullCredentialsTokenBinding extends
 
   @Override
   @SuppressWarnings("deprecation")
-  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList bindToTokenIdentifier(
+  public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {
     FullCredentialsTokenIdentifier tokenIdentifier =
         convertTokenIdentifier(retrievedIdentifier,
             FullCredentialsTokenIdentifier.class);
-    return new org.apache.hadoop.fs.s3a.AWSCredentialProviderList(
+    return new AWSCredentialProviderList(
         "Full Credentials Token Binding",
         new MarshalledCredentialProvider(
             FULL_TOKEN,

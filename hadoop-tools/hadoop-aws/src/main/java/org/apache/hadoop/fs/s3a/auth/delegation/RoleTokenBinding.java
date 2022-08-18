@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -97,7 +98,7 @@ public class RoleTokenBinding extends SessionTokenBinding {
    */
   @Override
   @SuppressWarnings("deprecation")
-  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList bindToTokenIdentifier(
+  public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {
     RoleTokenIdentifier tokenIdentifier =
@@ -107,7 +108,7 @@ public class RoleTokenBinding extends SessionTokenBinding {
     MarshalledCredentials marshalledCredentials
         = tokenIdentifier.getMarshalledCredentials();
     setExpirationDateTime(marshalledCredentials.getExpirationDateTime());
-    return new org.apache.hadoop.fs.s3a.AWSCredentialProviderList(
+    return new AWSCredentialProviderList(
         "Role Token Binding",
         new MarshalledCredentialProvider(
             COMPONENT,

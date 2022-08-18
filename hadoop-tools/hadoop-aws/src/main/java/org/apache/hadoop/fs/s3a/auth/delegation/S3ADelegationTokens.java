@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.DelegationTokenStatistics;
@@ -123,7 +124,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    * List of cred providers; unset until {@link #bindToDelegationToken(Token)}.
    */
   @SuppressWarnings("deprecation")
-  private Optional<org.apache.hadoop.fs.s3a.AWSCredentialProviderList> credentialProviders
+  private Optional<AWSCredentialProviderList> credentialProviders
       = Optional.empty();
 
   /**
@@ -469,7 +470,7 @@ public class S3ADelegationTokens extends AbstractDTService {
    * @throws IllegalStateException if this instance is not bound to a DT
    */
   @SuppressWarnings("deprecation")
-  public org.apache.hadoop.fs.s3a.AWSCredentialProviderList getCredentialProviders()
+  public AWSCredentialProviderList getCredentialProviders()
       throws IOException {
     return credentialProviders.orElseThrow(
         () -> new DelegationTokenIOException("Not yet bonded"));

@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
+import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -256,8 +257,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "not valid");
     conf.set(SECRET_KEY, "not secret");
     expectFileSystemCreateFailure(conf,

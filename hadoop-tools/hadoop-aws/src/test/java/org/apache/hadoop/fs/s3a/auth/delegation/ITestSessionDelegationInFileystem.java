@@ -38,11 +38,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.DefaultS3ClientFactory;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
@@ -271,7 +273,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         (Token<AbstractS3ATokenIdentifier>) retrieved);
     assertTrue("bind to existing DT failed",
         delegationTokens.isBoundToDT());
-    org.apache.hadoop.fs.s3a.AWSCredentialProviderList providerList = requireNonNull(
+    AWSCredentialProviderList providerList = requireNonNull(
         delegationTokens.getCredentialProviders(), "providers");
 
     providerList.getCredentials();
@@ -578,7 +580,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
   @SuppressWarnings("deprecation")
   protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
       throws Exception {
-    org.apache.hadoop.fs.s3a.AWSCredentialProviderList testingCreds
+    AWSCredentialProviderList testingCreds
         = delegatedFS.shareCredentials("testing");
 
     URI landsat = new URI(DEFAULT_CSVTEST_FILE);
@@ -586,8 +588,8 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
         = new DefaultS3ClientFactory();
     factory.setConf(new Configuration(delegatedFS.getConf()));
     String host = landsat.getHost();
-    org.apache.hadoop.fs.s3a.S3ClientFactory.S3ClientCreationParameters parameters = null;
-    parameters = new org.apache.hadoop.fs.s3a.S3ClientFactory.S3ClientCreationParameters()
+    S3ClientFactory.S3ClientCreationParameters parameters = null;
+    parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
         .withPathUri(new URI("s3a://localhost/"))
         .withEndpoint(DEFAULT_ENDPOINT)

@@ -41,11 +41,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3ARetryPolicy;
+import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -84,7 +86,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
 
   private final String arn;
 
-  private final org.apache.hadoop.fs.s3a.AWSCredentialProviderList credentialsToSTS;
+  private final AWSCredentialProviderList credentialsToSTS;
 
   private final Invoker invoker;
 
@@ -110,7 +112,7 @@ public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     credentialsToSTS = buildAWSProviderList(fsUri, conf,
         ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         Arrays.asList(
-            org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider.class,
+            SimpleAWSCredentialsProvider.class,
             EnvironmentVariableCredentialsProvider.class),
         Sets.newHashSet(this.getClass()));
     LOG.debug("Credentials to obtain role credentials: {}", credentialsToSTS);

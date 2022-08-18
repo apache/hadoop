@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -258,8 +259,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     // clear any credential paths to ensure they don't get picked up and used
     // for authentication.
     unsetHadoopCredentialProviders(conf);
-    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER,
-        org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider.NAME);
+    conf.set(DELEGATION_TOKEN_CREDENTIALS_PROVIDER, TemporaryAWSCredentialsProvider.NAME);
     session.setSecretsInConfiguration(conf);
     try(S3ADelegationTokens delegationTokens2 = new S3ADelegationTokens()) {
       delegationTokens2.bindToFileSystem(
