@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouterTest {
@@ -83,7 +84,7 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
 
     // Get DelegationKey
     DelegationKey paramKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
-    LambdaTestUtils.intercept(YarnException.class,
+    LambdaTestUtils.intercept(IOException.class,
         "GetMasterKey with keyID: " + storeKey.getKeyId() + " does not exist.",
         () -> secretManager.getMasterKeyByDelegationKey(paramKey));
 
