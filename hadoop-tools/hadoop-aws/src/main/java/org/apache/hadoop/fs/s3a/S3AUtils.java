@@ -31,7 +31,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -87,7 +87,6 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SDK_V2_UPGRADE_LOG_NAME;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -142,11 +141,6 @@ public final class S3AUtils {
       = "Data read has a different length than the expected";
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
-
-  public static final Logger SDK_V2_UPGRADE_LOG = LoggerFactory.getLogger(SDK_V2_UPGRADE_LOG_NAME);
-
-  private static final LogExactlyOnce WARN_OF_DIRECTLY_REFERENCED_CREDENTIAL_PROVIDER =
-      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
   /**
    * Error message when the AWS provider list built up contains a forbidden
@@ -648,9 +642,7 @@ public final class S3AUtils {
     for (Class<?> aClass : awsClasses) {
 
       if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
-        WARN_OF_DIRECTLY_REFERENCED_CREDENTIAL_PROVIDER.warn(
-            "Directly referencing AWS SDK V1 credential provider {}. AWS SDK V1 credential "
-                + "providers will be removed once S3A is upgraded to SDK V2", aClass.getName());
+        V2Migration.v1ProviderReferenced(aClass.getName());
       }
 
       if (forbidden.contains(aClass)) {

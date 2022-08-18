@@ -65,7 +65,7 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 @Deprecated
-public class AWSCredentialProviderList implements AWSCredentialsProvider,
+public final class AWSCredentialProviderList implements AWSCredentialsProvider,
     AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(

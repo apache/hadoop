@@ -127,6 +127,7 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -137,7 +138,6 @@ import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.AuditEntryPoint;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
@@ -312,10 +312,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
-  private static final LogExactlyOnce WARN_ON_DELEGATION_TOKENS =
-      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
-  private static final LogExactlyOnce WARN_ON_GET_S3_CLIENT =
-      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
   private LocalDirAllocator directoryAllocator;
   private CannedAccessControlList cannedACL;
 
@@ -896,10 +892,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // with it if so.
 
       LOG.debug("Using delegation tokens");
-      WARN_ON_DELEGATION_TOKENS.warn(
-          "The credential provider interface has changed in AWS SDK V2, custom credential "
-              + "providers used in delegation tokens binding classes will need to be updated once "
-              + "S3A is upgraded to SDK V2");
+      V2Migration.v1DelegationTokenCredentialProvidersUsed();
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
       tokens.bindToFileSystem(getCanonicalUri(),
@@ -1241,8 +1234,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
-    WARN_ON_GET_S3_CLIENT.warn(
-        "getAmazonS3ClientForTesting() will be removed as part of upgrading S3A to AWS SDK V2");
+    V2Migration.v1S3ClientRequested();
     return s3;
   }
 

@@ -29,12 +29,11 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
-import static org.apache.hadoop.fs.s3a.S3AUtils.SDK_V2_UPGRADE_LOG;
 
 /**
  * Class to handle custom signers.
@@ -43,9 +42,6 @@ public class SignerManager implements Closeable {
 
   private static final Logger LOG = LoggerFactory
       .getLogger(SignerManager.class);
-
-  private static final LogExactlyOnce WARN_OF_CUSTOM_SIGNER =
-      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
   private final List<AwsSignerInitializer> initializers = new LinkedList<>();
 
@@ -75,9 +71,7 @@ public class SignerManager implements Closeable {
       return;
     }
 
-    WARN_OF_CUSTOM_SIGNER.warn(
-        "The signer interface has changed in AWS SDK V2, custom signers will need to be updated "
-            + "once S3A is upgraded to SDK V2");
+    V2Migration.v1CustomSignerUsed();
 
     for (String customSigner : customSigners) {
       String[] parts = customSigner.split(":");
