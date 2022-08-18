@@ -164,10 +164,12 @@ public class ITestS3AAWSCredentialsProvider {
     Path testFile = getCSVTestPath(conf);
     try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf)) {
       assertNotNull("S3AFileSystem instance must not be null", fs);
-      assertTrue(fs instanceof S3AFileSystem);
+      assertTrue("FileSystem must be the instance of S3AFileSystem", fs instanceof S3AFileSystem);
       FileStatus stat = fs.getFileStatus(testFile);
       assertNotNull("FileStatus with qualified path must not be null", stat);
-      assertEquals(testFile, stat.getPath());
+      assertEquals(
+          "The qualified path returned by getFileStatus should be same as the original file",
+          testFile, stat.getPath());
     }
   }
 
