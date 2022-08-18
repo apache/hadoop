@@ -23,6 +23,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,6 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Artifact.TypeEnum;
 import org.apache.hadoop.yarn.service.api.records.Component;
@@ -530,8 +530,8 @@ public class TestApiServer {
     Container liveContainer = serviceStatus.getComponents().iterator().next()
         .getContainers().iterator().next();
     liveContainer.setState(ContainerState.NEEDS_UPGRADE);
-    mockServerClient.setExpectedInstances(Sets.newHashSet(
-        liveContainer.getComponentInstanceName()));
+    mockServerClient.setExpectedInstances(new HashSet<>(Collections.singleton(
+        liveContainer.getComponentInstanceName())));
 
     final Response actual = apiServer.updateComponentInstance(request,
         goodService.getName(), comp.getName(),

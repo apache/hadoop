@@ -622,7 +622,7 @@ public class ServiceApiUtil {
   public static List<Container> validateAndResolveCompsUpgrade(
       Service liveService, Collection<String> compNames) throws YarnException {
     Preconditions.checkNotNull(compNames);
-    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    HashSet<String> requestedComps = new HashSet<>(compNames);
     List<Container> containerNeedUpgrade = new ArrayList<>();
     for (Component liveComp : liveService.getComponents()) {
       if (requestedComps.contains(liveComp.getName())) {
@@ -648,7 +648,7 @@ public class ServiceApiUtil {
   public static List<Container> validateAndResolveCompsStable(
       Service liveService, Collection<String> compNames) throws YarnException {
     Preconditions.checkNotNull(compNames);
-    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    HashSet<String> requestedComps = new HashSet<>(compNames);
     List<Container> containerNeedUpgrade = new ArrayList<>();
     for (Component liveComp : liveService.getComponents()) {
       if (requestedComps.contains(liveComp.getName())) {
