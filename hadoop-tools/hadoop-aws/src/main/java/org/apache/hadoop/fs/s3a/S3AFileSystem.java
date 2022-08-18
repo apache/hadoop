@@ -32,12 +32,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -79,6 +81,7 @@ import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 
+import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,6 +127,7 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
@@ -290,6 +294,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private TransferManager transfers;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
+
+  // S3 reads are prefetched asynchronously using this future pool.
+  private ExecutorServiceFuturePool futurePool;
+
+  // If true, the prefetching input stream is used for reads.
+  private boolean prefetchEnabled;
+
+  // Size in bytes of a single prefetch block.
+  private int prefetchBlockSize;
+
+  // Size of prefetch queue (in number of blocks).
+  private int prefetchBlockCount;
+
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
@@ -391,6 +408,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
+
+  /**
+   * A cache of files that should be deleted when the FileSystem is closed
+   * or the JVM is exited.
+   */
+  private final Set<Path> deleteOnExit = new TreeSet<>();
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -494,6 +517,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       //check but do not store the block size
       longBytesOption(conf, FS_S3A_BLOCK_SIZE, DEFAULT_BLOCKSIZE, 1);
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
+
+      this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
+      this.prefetchBlockSize = intOption(
+          conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, PREFETCH_BLOCK_DEFAULT_SIZE);
+      this.prefetchBlockCount =
+          intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
 
       initThreadPools(conf);
 
@@ -600,11 +629,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      if (this.futurePool != null) {
+        this.futurePool = null;
+      }
       throw translateException("initializing ", new Path(name), e);
     } catch (IOException | RuntimeException e) {
       // other exceptions: stop the services.
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      if (this.futurePool != null) {
+        this.futurePool = null;
+      }
       throw e;
     }
   }
@@ -725,9 +760,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
     long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
         DEFAULT_KEEPALIVE_TIME, 0);
+    int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
+
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
         maxThreads,
-        maxThreads + totalTasks,
+        maxThreads + totalTasks + numPrefetchThreads,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -739,6 +776,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
+    if (this.prefetchEnabled) {
+      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
+    }
   }
 
   /**
@@ -1008,13 +1048,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String storageClassConf = getConf()
         .getTrimmed(STORAGE_CLASS, "")
         .toUpperCase(Locale.US);
-    StorageClass storageClass;
-    try {
-      storageClass = StorageClass.fromValue(storageClassConf);
-    } catch (IllegalArgumentException e) {
-      LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
-          STORAGE_CLASS, storageClassConf);
-      storageClass = null;
+    StorageClass storageClass = null;
+    if (!storageClassConf.isEmpty()) {
+      try {
+        storageClass = StorageClass.fromValue(storageClassConf);
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+            STORAGE_CLASS, storageClassConf);
+      }
+    } else {
+      LOG.debug("Unset storage class property {}; falling back to default storage class",
+          STORAGE_CLASS);
     }
 
     return RequestFactoryImpl.builder()
@@ -1499,13 +1543,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         auditSpan);
     fileInformation.applyOptions(readContext);
     LOG.debug("Opening '{}'", readContext);
-    return new FSDataInputStream(
-            new S3AInputStream(
-                  readContext.build(),
-                  createObjectAttributes(path, fileStatus),
-                  createInputStreamCallbacks(auditSpan),
+
+    if (this.prefetchEnabled) {
+      return new FSDataInputStream(
+          new S3APrefetchingInputStream(
+              readContext.build(),
+              createObjectAttributes(path, fileStatus),
+              createInputStreamCallbacks(auditSpan),
+              inputStreamStats));
+    } else {
+      return new FSDataInputStream(
+          new S3AInputStream(
+              readContext.build(),
+              createObjectAttributes(path, fileStatus),
+              createInputStreamCallbacks(auditSpan),
                   inputStreamStats,
                   unboundedThreadPool));
+    }
   }
 
   /**
@@ -1591,7 +1645,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         statisticsContext,
         fileStatus,
         vectoredIOContext,
-        IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
+        IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator(),
+        futurePool,
+        prefetchBlockSize,
+        prefetchBlockCount)
         .withAuditSpan(auditSpan);
     openFileHelper.applyDefaultOptions(roc);
     return roc.build();
@@ -3077,6 +3134,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @AuditEntryPoint
   public boolean delete(Path f, boolean recursive) throws IOException {
     checkNotClosed();
+    return deleteWithoutCloseCheck(f, recursive);
+  }
+
+  /**
+   * Same as delete(), except that it does not check if fs is closed.
+   *
+   * @param f the path to delete.
+   * @param recursive if path is a directory and set to
+   * true, the directory is deleted else throws an exception. In
+   * case of a file the recursive can be set to either true or false.
+   * @return true if the path existed and then was deleted; false if there
+   * was no path in the first place, or the corner cases of root path deletion
+   * have surfaced.
+   * @throws IOException due to inability to delete a directory or file.
+   */
+
+  @VisibleForTesting
+  protected boolean deleteWithoutCloseCheck(Path f, boolean recursive) throws IOException {
     final Path path = qualify(f);
     // span covers delete, getFileStatus, fake directory operations.
     try (AuditSpan span = createSpan(INVOCATION_DELETE.getSymbol(),
@@ -3689,12 +3764,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   protected CopyFromLocalOperation.CopyFromLocalOperationCallbacks
-  createCopyFromLocalCallbacks() throws IOException {
+      createCopyFromLocalCallbacks() throws IOException {
     LocalFileSystem local = getLocal(getConf());
     return new CopyFromLocalCallbacksImpl(local);
   }
 
-  protected class CopyFromLocalCallbacksImpl implements
+  protected final class CopyFromLocalCallbacksImpl implements
       CopyFromLocalOperation.CopyFromLocalOperationCallbacks {
     private final LocalFileSystem local;
 
@@ -3815,6 +3890,61 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new InterruptedIOException("Interrupted in PUT to "
               + keyToQualifiedPath(key))
           .initCause(e);
+    }
+  }
+
+  /**
+   * This override bypasses checking for existence.
+   *
+   * @param f the path to delete; this may be unqualified.
+   * @return true, always.   * @param f the path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException IO failure
+   */
+  @Override
+  public boolean deleteOnExit(Path f) throws IOException {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      deleteOnExit.add(qualifedPath);
+    }
+    return true;
+  }
+
+  /**
+   * Cancel the scheduled deletion of the path when the FileSystem is closed.
+   * @param f the path to cancel deletion
+   * @return true if the path was found in the delete-on-exit list.
+   */
+  @Override
+  public boolean cancelDeleteOnExit(Path f) {
+    Path qualifedPath = makeQualified(f);
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(qualifedPath);
+    }
+  }
+
+  /**
+   * Delete all paths that were marked as delete-on-exit. This recursively
+   * deletes all files and directories in the specified paths. It does not
+   * check if file exists and filesystem is closed.
+   *
+   * The time to process this operation is {@code O(paths)}, with the actual
+   * time dependent on the time for existence and deletion operations to
+   * complete, successfully or not.
+   */
+  @Override
+  protected void processDeleteOnExit() {
+    synchronized (deleteOnExit) {
+      for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
+        Path path = iter.next();
+        try {
+          deleteWithoutCloseCheck(path, true);
+        } catch (IOException e) {
+          LOG.info("Ignoring failure to deleteOnExit for path {}", path);
+          LOG.debug("The exception for deleteOnExit is {}", e);
+        }
+        iter.remove();
+      }
     }
   }
 

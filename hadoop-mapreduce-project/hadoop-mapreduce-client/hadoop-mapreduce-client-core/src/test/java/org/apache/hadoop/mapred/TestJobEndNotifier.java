@@ -139,7 +139,7 @@ public class TestJobEndNotifier {
         baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobEndNotifier.localRunnerNotification(jobConf, jobStatus);
 
-    // No need to wait for the notification to go thru since calls are
+    // No need to wait for the notification to go through since calls are
     // synchronous
 
     // Validate params

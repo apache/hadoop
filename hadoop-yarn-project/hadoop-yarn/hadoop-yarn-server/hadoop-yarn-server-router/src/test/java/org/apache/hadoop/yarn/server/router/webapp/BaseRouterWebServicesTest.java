@@ -395,4 +395,16 @@ public abstract class BaseRouterWebServicesTest {
     when(request.getRemoteUser()).thenReturn(user);
     return request;
   }
+
+  protected Response updateSchedulerConfiguration(String user)
+      throws IOException, InterruptedException {
+    return routerWebService.updateSchedulerConfiguration(null,
+        createHttpServletRequest(user));
+  }
+
+  protected Response getSchedulerConfiguration(String user)
+      throws IOException, InterruptedException {
+    return routerWebService.
+        getSchedulerConfiguration(createHttpServletRequest(user));
+  }
 }

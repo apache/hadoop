@@ -53,7 +53,13 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   private AtomicInteger runningIndex = new AtomicInteger(0);
   private MockResourceManagerFacade mockRm;
 
+  private boolean isClientRPC = false;
+
   public TestableFederationInterceptor() {
+  }
+
+  public TestableFederationInterceptor(MockResourceManagerFacade homeRM) {
+    mockRm = homeRM;
   }
 
   public TestableFederationInterceptor(MockResourceManagerFacade homeRM,
@@ -79,6 +85,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   @Override
   protected <T> T createHomeRMProxy(AMRMProxyApplicationContext appContext,
       Class<T> protocol, UserGroupInformation user) {
+    if (isClientRPC) {
+      return super.createHomeRMProxy(appContext, protocol, user);
+    }
     synchronized (this) {
       if (mockRm == null) {
         mockRm = new MockResourceManagerFacade(
@@ -272,5 +281,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
       } catch (Exception e) {
       }
     }
+  }
+
+  public void setClientRPC(boolean clientRPC) {
+    this.isClientRPC = clientRPC;
   }
 }
