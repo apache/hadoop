@@ -37,15 +37,14 @@ class TestMetricsRecordImpl extends TestAbstractMetricsRecord {
   private final Iterable<AbstractMetric> metrics;
 
   /**
-   * Construct a metrics record
+   * Construct a metrics record.
    * @param info  {@link MetricsInfo} of the record
    * @param timestamp of the record
    * @param tags  of the record
    * @param metrics of the record
    */
-  public TestMetricsRecordImpl(MetricsInfo info, long timestamp,
-                               List<MetricsTag> tags,
-                               Iterable<AbstractMetric> metrics) {
+  TestMetricsRecordImpl(MetricsInfo info, long timestamp, List<MetricsTag> tags,
+      Iterable<AbstractMetric> metrics) {
     this.timestamp = checkArg(timestamp, timestamp > 0, "timestamp");
     this.info = checkNotNull(info, "info");
     this.tags = checkNotNull(tags, "tags");
