@@ -156,8 +156,10 @@ public class JournalNodeSyncer {
         LOG.warn("Could not add proxy for Journal at addresss " + addr, e);
       }
     }
-    // Check if any of there are any resolvable JournalNodes before starting the sync.
-    if (otherJNProxies.stream().filter(jnp -> !jnp.jnAddr.isUnresolved()).count() == 0) {
+    // Check if there are any other JournalNodes before starting the sync.  Although some proxies
+    // may be unresolved now, the act of attempting to sync will instigate resolution when the
+    // servers become available.
+    if (otherJNProxies.isEmpty()) {
       LOG.error("Cannot sync as there is no other JN available for sync.");
       return false;
     }
@@ -324,9 +326,10 @@ public class JournalNodeSyncer {
     Set<InetSocketAddress> excluded = Sets.newHashSet(boundIpcAddress);
     List<InetSocketAddress> addrList = Util.getLoggerAddresses(uri, excluded, conf);
 
-    // Exclude the current JournalNode instance.  If we are bound to a local address on the same
-    // then exclude any port, then remove it from the list since it likely a wildcard address
-    // (e.g. "0.0.0.0").
+    // Exclude the current JournalNode instance (a local address and the same port).  If the address
+    // is bound to a local address on the same port, then remove it to handle scenarios where a
+    // wildcard address (e.g. "0.0.0.0") is used.   We can't simply exclude all local addresses
+    // since we may be running multiple servers on the same host.
     addrList.removeIf(addr -> !addr.isUnresolved() &&  addr.getAddress().isAnyLocalAddress()
           && boundIpcAddress.getPort() == addr.getPort());
 
