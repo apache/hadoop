@@ -378,6 +378,7 @@ public final class S3AUtils {
     } else {
       String name = innerCause.getClass().getName();
       if (name.endsWith(".ConnectTimeoutException")
+          || name.endsWith(".ConnectionPoolTimeoutException")
           || name.endsWith("$ConnectTimeoutException")) {
         // TCP connection http timeout from the shaded or unshaded filenames
         // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException

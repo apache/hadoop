@@ -1606,8 +1606,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       CompletableFuture<T> result = new CompletableFuture<>();
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result, () -> {
+            LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
             try (AuditSpan span = auditSpan.activate()) {
               return operation.apply();
+            } finally {
+              LOG.debug("Completed submitted operation in {}", auditSpan.getSpanId());
             }
           }));
       return result;
