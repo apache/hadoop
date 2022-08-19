@@ -121,7 +121,6 @@ public class TestRenameStageFailure extends AbstractManifestCommitterTest {
 
   @Test
   public void testResilienceAsExpected() throws Throwable {
-    Assume.assumeTrue(etagsPreserved);
     Assertions.assertThat(isResilientCommit())
         .describedAs("resilient commit support")
         .isEqualTo(requireRenameResilience());

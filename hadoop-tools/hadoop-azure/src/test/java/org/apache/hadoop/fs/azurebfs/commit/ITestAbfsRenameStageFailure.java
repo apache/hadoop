@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
@@ -41,6 +42,12 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
     binding = new ABFSContractTestBinding();
   }
 
+  protected boolean isNamespaceEnabled() {
+    FileSystem fs = getFileSystem();
+    String namespaceEnabled = fs.getConf().get("fs.azure.test.namespace.enabled");
+    return namespaceEnabled.equals("true");
+  }
+
   @Override
   public void setup() throws Exception {
     binding.setup();
@@ -59,7 +66,11 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
 
   @Override
   protected boolean requireRenameResilience() {
-    return true;
+    if (isNamespaceEnabled()) {
+      return true;
+    }
+
+    return false;
   }
 
   @Override
