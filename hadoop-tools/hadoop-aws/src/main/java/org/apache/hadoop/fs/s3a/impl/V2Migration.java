@@ -27,6 +27,8 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SDK_V2_UPGRADE_LOG
 
 public final class V2Migration {
 
+  private V2Migration() { }
+
   public static final Logger SDK_V2_UPGRADE_LOG = LoggerFactory.getLogger(SDK_V2_UPGRADE_LOG_NAME);
 
   private static final LogExactlyOnce WARN_ON_DELEGATION_TOKENS =

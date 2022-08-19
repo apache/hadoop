@@ -273,8 +273,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "notvalid");
     conf.set(SECRET_KEY, "notsecret");
     expectFileSystemCreateFailure(conf,
