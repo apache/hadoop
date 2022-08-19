@@ -614,14 +614,16 @@ public class TestRouterWebServiceUtil {
 
     ApplicationStatisticsInfo mergeInfo =
         RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
+    ArrayList<StatisticsItemInfo> statItem = mergeInfo.getStatItems();
 
-    Assert.assertEquals(1, mergeInfo.getStatItems().size());
-    Assert.assertEquals(item1.getCount() + item2.getCount(),
-        mergeInfo.getStatItems().get(0).getCount());
-    Assert.assertEquals(item1.getType(),
-        mergeInfo.getStatItems().get(0).getType());
-    Assert.assertEquals(item1.getState(),
-        mergeInfo.getStatItems().get(0).getState());
+    Assert.assertNotNull(statItem);
+    Assert.assertEquals(1, statItem.size());
+
+    StatisticsItemInfo first = statItem.get(0);
+
+    Assert.assertEquals(item1.getCount() + item2.getCount(), first.getCount());
+    Assert.assertEquals(item1.getType(), first.getType());
+    Assert.assertEquals(item1.getState(), first.getState());
   }
 
   @Test

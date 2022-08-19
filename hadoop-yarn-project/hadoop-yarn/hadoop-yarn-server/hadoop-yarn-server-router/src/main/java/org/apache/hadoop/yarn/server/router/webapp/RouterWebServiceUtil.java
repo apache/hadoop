@@ -551,11 +551,13 @@ public final class RouterWebServiceUtil {
     appStatistics.stream().forEach(appStatistic -> {
       List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
       for (StatisticsItemInfo statisticsItemInfo : statisticsItemInfos) {
+
         String statisticsItemKey =
             statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
-        StatisticsItemInfo statisticsItemValue =
-            statisticsItemMap.getOrDefault(statisticsItemKey, null);
-        if (statisticsItemValue != null) {
+
+        StatisticsItemInfo statisticsItemValue;
+        if(statisticsItemMap.containsKey(statisticsItemKey)) {
+          statisticsItemValue = statisticsItemMap.get(statisticsItemKey);
           long statisticsItemValueCount = statisticsItemValue.getCount();
           long statisticsItemInfoCount = statisticsItemInfo.getCount();
           long newCount = statisticsItemValueCount + statisticsItemInfoCount;
@@ -563,6 +565,7 @@ public final class RouterWebServiceUtil {
         } else {
           statisticsItemValue = new StatisticsItemInfo(statisticsItemInfo);
         }
+
         statisticsItemMap.put(statisticsItemKey, statisticsItemValue);
       }
     });

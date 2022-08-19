@@ -1146,8 +1146,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return interceptor.getAppActivities(hsrCopy, appId, time, requestPriorities,
           allocationRequestIds, groupBy, limit, actions, summarize);
     } catch (IllegalArgumentException e) {
-      RouterServerUtil.logAndThrowRunTimeException(e,
-          "Unable to get subCluster by appId: %s.", appId);
+      RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get subCluster by appId: %s.",
+          appId);
     } catch (YarnException e) {
       RouterServerUtil.logAndThrowRunTimeException("getAppActivities Failed.", e);
     }

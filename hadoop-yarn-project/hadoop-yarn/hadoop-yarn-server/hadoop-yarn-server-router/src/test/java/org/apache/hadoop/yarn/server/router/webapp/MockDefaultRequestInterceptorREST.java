@@ -704,11 +704,10 @@ public class MockDefaultRequestInterceptorREST
 
     Map<String, StatisticsItemInfo> itemInfoMap = new HashMap<>();
 
-    for (HashMap.Entry<ApplicationId, ApplicationReport> item : applicationMap.entrySet()) {
+    for (ApplicationReport appReport : applicationMap.values()) {
 
-      ApplicationReport applicationReport = item.getValue();
-      YarnApplicationState appState = applicationReport.getYarnApplicationState();
-      String appType = applicationReport.getApplicationType();
+      YarnApplicationState appState = appReport.getYarnApplicationState();
+      String appType = appReport.getApplicationType();
 
       if (stateQueries.contains(appState.name()) && typeQueries.contains(appType)) {
         String itemInfoMapKey = appState.toString() + "_" + appType;
@@ -723,9 +722,7 @@ public class MockDefaultRequestInterceptorREST
       }
     }
 
-    ArrayList<StatisticsItemInfo> itemInfos = new ArrayList<>(itemInfoMap.values());
-
-    return new ApplicationStatisticsInfo(itemInfos);
+    return new ApplicationStatisticsInfo(itemInfoMap.values());
   }
 
   @Override
@@ -742,8 +739,7 @@ public class MockDefaultRequestInterceptorREST
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
-    SchedulerNode schedulerNode =
-        TestUtils.getMockNode("host0", "rack", 1, 10240);
+    SchedulerNode schedulerNode = TestUtils.getMockNode("host0", "rack", 1, 10240);
 
     RMContext rmContext = Mockito.mock(RMContext.class);
     Mockito.when(rmContext.getYarnConfiguration()).thenReturn(this.getConf());
