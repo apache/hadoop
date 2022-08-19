@@ -3628,7 +3628,10 @@ public class DataNode extends ReconfigurableBase
    */
   @Override // DataNodeMXBean
   public String getVolumeInfo() {
-    Preconditions.checkNotNull(data, "Storage not yet initialized");
+    if (data == null) {
+      LOG.debug("Storage not yet initialized.");
+      return "";
+    }
     return JSON.toString(data.getVolumeInfoMap());
   }
   
