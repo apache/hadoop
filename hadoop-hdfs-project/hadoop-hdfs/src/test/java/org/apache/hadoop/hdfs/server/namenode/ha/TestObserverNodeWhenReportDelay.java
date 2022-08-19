@@ -104,9 +104,9 @@ public class TestObserverNodeWhenReportDelay {
   public void testReadWriteWhenReportDelay() throws Exception {
     // 1 Disable block report to observer.
     for (DataNode dn : dfsCluster.getDataNodes()) {
-      Configuration conf = new Configuration(dn.getConf());
-      conf.set("dfs.ha.namenodes.ns1", "nn0,nn1");
-      dn.refreshNamenodes(conf);
+      Configuration overrideConf = new Configuration(dn.getConf());
+      overrideConf.set("dfs.ha.namenodes.ns1", "nn0,nn1");
+      dn.refreshNamenodes(overrideConf);
     }
 
     // 2 Create File
