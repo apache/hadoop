@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -93,6 +94,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.StringUtils;
+import org.assertj.core.api.Condition;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -812,6 +814,81 @@ public class TestIPC {
           });
     } finally {
       client.stop();
+    }
+  }
+
+  /**
+   * The {@link ConnectionId#hashCode} has to be stable despite updates that occur as the the
+   * address evolves over time.  The {@link ConnectionId} is used as a primary key in maps, so
+   * its hashCode can't change.
+   *
+   * @throws IOException if there is a client or server failure
+   */
+  @Test
+  public void testStableHashCode() throws IOException {
+    Server server = new TestServer(5, false);
+    try {
+      server.start();
+
+      // Leave host unresolved to start. Use "localhost" as opposed
+      // to local IP from NetUtils.getConnectAddress(server) to force
+      // resolution later
+      InetSocketAddress unresolvedAddr = InetSocketAddress.createUnresolved(
+          "localhost", NetUtils.getConnectAddress(server).getPort());
+
+      // Setup: Create a ConnectionID using an unresolved address, and get it's hashCode to serve
+      // as a point of comparison.
+      int rpcTimeout = MIN_SLEEP_TIME * 2;
+      final ConnectionId remoteId = getConnectionId(unresolvedAddr, rpcTimeout, conf);
+      int expected = remoteId.hashCode();
+
+      // Start client
+      Client.setConnectTimeout(conf, 100);
+      Client client = new Client(LongWritable.class, conf);
+      try {
+        // Test: Call should re-resolve host and succeed
+        LongWritable param = new LongWritable(RANDOM.nextLong());
+        client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
+            RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+        int actual = remoteId.hashCode();
+
+        // Verify: The hashCode should match, although the InetAddress is different since it has
+        // now been resolved
+        assertThat(remoteId.getAddress()).isNotEqualTo(unresolvedAddr);
+        assertThat(remoteId.getAddress().getHostName()).isEqualTo(unresolvedAddr.getHostName());
+        assertThat(remoteId.hashCode()).isEqualTo(expected);
+
+        // Test: Call should succeed without having to re-resolve
+        InetSocketAddress expectedSocketAddress = remoteId.getAddress();
+        param = new LongWritable(RANDOM.nextLong());
+        client.call(RPC.RpcKind.RPC_BUILTIN, param, remoteId,
+            RPC.RPC_SERVICE_CLASS_DEFAULT, null);
+
+        // Verify: The same instance of the InetSocketAddress has been used to make the second
+        // call
+        assertThat(remoteId.getAddress()).isSameAs(expectedSocketAddress);
+
+        // Verify: The hashCode is protected against updates to the host name
+        String hostName = InetAddress.getLocalHost().getHostName();
+        InetSocketAddress mismatchedHostName = NetUtils.createSocketAddr(
+            InetAddress.getLocalHost().getHostName(),
+            remoteId.getAddress().getPort());
+        assertThatExceptionOfType(IllegalArgumentException.class)
+            .isThrownBy(() -> remoteId.setAddress(mismatchedHostName))
+            .withMessageStartingWith("Hostname must match");
+
+        // Verify: The hashCode is protected against updates to the port
+        InetSocketAddress mismatchedPort = NetUtils.createSocketAddr(
+            remoteId.getAddress().getHostName(),
+            remoteId.getAddress().getPort() + 1);
+        assertThatExceptionOfType(IllegalArgumentException.class)
+            .isThrownBy(() -> remoteId.setAddress(mismatchedPort))
+            .withMessageStartingWith("Port must match");
+      } finally {
+        client.stop();
+      }
+    } finally {
+      server.stop();
     }
   }
 

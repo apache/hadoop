@@ -82,6 +82,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -573,6 +575,34 @@ public final class FederationStateStoreFacade {
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     return stateStore.getTokenByRouterStoreToken(request);
+   }
+   
+  /**
+   * Updates the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param appHomeSubCluster the mapping of the reservation to it's home
+   *          sub-cluster
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void updateReservationHomeSubCluster(ReservationHomeSubCluster appHomeSubCluster)
+      throws YarnException {
+    UpdateReservationHomeSubClusterRequest request =
+        UpdateReservationHomeSubClusterRequest.newInstance(appHomeSubCluster);
+    stateStore.updateReservationHomeSubCluster(request);
+  }
+
+  /**
+   * Delete the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param reservationId the identifier of the reservation
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void deleteReservationHomeSubCluster(ReservationId reservationId) throws YarnException {
+    DeleteReservationHomeSubClusterRequest request =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+    stateStore.deleteReservationHomeSubCluster(request);
   }
 
   /**

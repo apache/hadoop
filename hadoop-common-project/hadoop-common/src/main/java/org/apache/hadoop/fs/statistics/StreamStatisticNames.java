@@ -415,6 +415,46 @@ public final class StreamStatisticNames {
   public static final String BLOCKS_RELEASED
       = "blocks_released";
 
+  /**
+   * Total number of prefetching operations executed.
+   */
+  public static final String STREAM_READ_PREFETCH_OPERATIONS
+      = "stream_read_prefetch_operations";
+
+  /**
+   * Total number of block in disk cache.
+   */
+  public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE
+      = "stream_read_blocks_in_cache";
+
+  /**
+   * Total number of active prefetch operations.
+   */
+  public static final String STREAM_READ_ACTIVE_PREFETCH_OPERATIONS
+      = "stream_read_active_prefetch_operations";
+
+  /**
+   * Total bytes of memory in use by this input stream.
+   */
+  public static final String STREAM_READ_ACTIVE_MEMORY_IN_USE
+      = "stream_read_active_memory_in_use";
+
+  /**
+   * count/duration of reading a remote block.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_REMOTE_BLOCK_READ
+      = "stream_read_block_read";
+
+  /**
+   * count/duration of acquiring a buffer and reading to it.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_ACQUIRE_AND_READ
+      = "stream_read_block_acquire_read";
+
   private StreamStatisticNames() {
   }
 

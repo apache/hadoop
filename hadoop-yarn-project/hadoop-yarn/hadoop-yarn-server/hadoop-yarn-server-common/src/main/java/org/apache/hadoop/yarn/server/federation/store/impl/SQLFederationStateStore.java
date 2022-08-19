@@ -75,6 +75,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -1036,6 +1040,12 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented"); 
+  }    
+  
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
     throw new NotImplementedException("Code is not implemented");
   }
 
@@ -1072,6 +1082,12 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+  
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
     throw new NotImplementedException("Code is not implemented");
   }
 }

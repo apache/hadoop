@@ -80,6 +80,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
@@ -515,5 +519,32 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
     return routerRMSecretManagerState;
+  }
+  
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationHomeSubCluster().getReservationId();
+
+    if (!reservations.containsKey(reservationId)) {
+      throw new YarnException("Reservation " + reservationId + " does not exist.");
+    }
+
+    SubClusterId subClusterId = request.getReservationHomeSubCluster().getHomeSubCluster();
+    reservations.put(reservationId, subClusterId);
+    return UpdateReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationId();
+    if (!reservations.containsKey(reservationId)) {
+      throw new YarnException("Reservation " + reservationId + " does not exist");
+    }
+    reservations.remove(reservationId);
+    return DeleteReservationHomeSubClusterResponse.newInstance();
   }
 }
