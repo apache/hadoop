@@ -676,12 +676,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       LOG.debug("initiating asynchronous drain of {} bytes", remaining);
       // schedule an async drain/abort with references to the fields so they
       // can be reused
+      S3Object s3Object = object;
+      S3ObjectInputStream stream = wrappedStream;
       operation = client.submit(
-          () -> drain(uri, streamStatistics, false, reason, remaining, object, wrappedStream));
-
-      // HADOOP-18410. if this line is present the draining will execute.
-      // comment it out and the http stream is not returned.
-      //operation.join();
+          () -> drain(uri, streamStatistics, false, reason, remaining, s3Object,
+              stream));
     }
 
     // either the stream is closed in the blocking call or the async call is
@@ -815,7 +814,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
     }
     if (shouldAbort) {
-      // Abort, rather than just close, the underlying stream.  Otherwise, the
+      // Abort, rather than just close, the underlying stream. Otherwise, the
       // remaining object payload is read from S3 while closing the stream.
       LOG.debug("Aborting stream {}", uri);
       try {
