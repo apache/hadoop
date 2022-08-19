@@ -199,6 +199,8 @@ function run_ci() {
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
 
+  YETUS_ARGS+=("--hadolint-ignore-file=Dockerfile_windows_10")
+
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
 
