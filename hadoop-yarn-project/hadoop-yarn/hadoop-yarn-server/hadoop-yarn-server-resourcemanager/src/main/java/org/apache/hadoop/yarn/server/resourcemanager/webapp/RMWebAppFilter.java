@@ -25,6 +25,8 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
@@ -38,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -67,9 +68,9 @@ public class RMWebAppFilter extends GuiceContainer {
   private static final long serialVersionUID = 1L;
 
   // define a set of URIs which do not need to do redirection
-  private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
+  private static final Set<String> NON_REDIRECTED_URIS = new HashSet<>(Arrays.asList(
       "/conf", "/stacks", "/logLevel", "/logs", IsActiveServlet.PATH_SPEC,
-      "/jmx", "/prom");
+      "/jmx", "/prom"));
   private String path;
   private boolean ahsEnabled;
   private String ahsPageURLPrefix;

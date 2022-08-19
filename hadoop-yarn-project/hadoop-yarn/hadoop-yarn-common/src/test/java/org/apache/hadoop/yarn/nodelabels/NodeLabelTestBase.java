@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.nodelabels;
 import java.util.*;
 import java.util.Map.Entry;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.junit.Assert;

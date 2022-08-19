@@ -20,12 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -39,7 +34,6 @@ import javax.ws.rs.core.Response.Status;
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -401,7 +395,7 @@ public class MockDefaultRequestInterceptorREST
     }
     NodeLabel labelCpu = NodeLabel.newInstance("cpu", false);
     NodeLabel labelGpu = NodeLabel.newInstance("gpu", false);
-    return new NodeLabelsInfo(Sets.newHashSet(labelCpu, labelGpu));
+    return new NodeLabelsInfo(new HashSet<>(Arrays.asList(labelCpu, labelGpu)));
   }
 
   @Override
@@ -413,7 +407,7 @@ public class MockDefaultRequestInterceptorREST
     if (StringUtils.equalsIgnoreCase(nodeId, "node1")) {
       NodeLabel labelCpu = NodeLabel.newInstance("x", false);
       NodeLabel labelGpu = NodeLabel.newInstance("y", false);
-      return new NodeLabelsInfo(Sets.newHashSet(labelCpu, labelGpu));
+      return new NodeLabelsInfo(new HashSet<>(Arrays.asList(labelCpu, labelGpu)));
     } else {
       return null;
     }

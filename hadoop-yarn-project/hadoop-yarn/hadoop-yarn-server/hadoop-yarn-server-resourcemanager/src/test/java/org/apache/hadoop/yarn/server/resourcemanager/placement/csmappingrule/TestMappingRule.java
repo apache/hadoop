@@ -21,10 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.junit.Test;
+
+import java.util.Collections;
+import java.util.HashSet;
 
 public class TestMappingRule {
   VariableContext setupVariables(
@@ -109,7 +111,7 @@ public class TestMappingRule {
   public void testLegacyEvaluation() {
     VariableContext matching = setupVariables(
         "bob", "developer", "users", "MR");
-    matching.putExtraDataset("groups", Sets.newHashSet("developer"));
+    matching.putExtraDataset("groups", new HashSet<>(Collections.singletonList("developer")));
     VariableContext mismatching = setupVariables(
         "joe", "tester", "admins", "Spark");
 

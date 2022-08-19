@@ -23,7 +23,6 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.util.*;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.junit.Test;
 import org.junit.runner.RunWith;

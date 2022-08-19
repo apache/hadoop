@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.nodelabels.store.op;
 
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.hadoop.yarn.server.api.protocolrecords

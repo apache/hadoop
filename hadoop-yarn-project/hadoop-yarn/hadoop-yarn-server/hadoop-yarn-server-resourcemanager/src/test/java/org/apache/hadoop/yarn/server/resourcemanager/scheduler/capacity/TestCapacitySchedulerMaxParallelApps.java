@@ -22,11 +22,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -196,9 +193,9 @@ public class TestCapacitySchedulerMaxParallelApps {
     rootQueue = getRootQueue();
     defaultQueue = getDefaultQueue();
     Set<ApplicationAttemptId> nonRunnables =
-        Sets.newHashSet(
+            new HashSet<>(Arrays.asList(
             attempt3.getAppAttemptId(),
-            attempt4.getAppAttemptId());
+            attempt4.getAppAttemptId()));
     verifyRunnableAppsInParent(rootQueue, 2);
     verifyRunnableAppsInLeaf(defaultQueue, 2, nonRunnables);
     verifyRunningAndAcceptedApps(2, 2);

@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -206,7 +205,7 @@ public class TestPlacementConstraintManagerService {
     // if the source tag in the request is not mapped to any existing
     // registered constraint, we should get an empty AND constraint.
     constraint = pcm.getMultilevelConstraint(appId1,
-        Sets.newHashSet("not_exist_tag"), null);
+            new HashSet<>(Arrays.asList("not_exist_tag")), null);
     Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND()
@@ -225,7 +224,7 @@ public class TestPlacementConstraintManagerService {
     // GC = tag1->c1
     pcm.addGlobalConstraint(sourceTag1, c1, true);
     constraint = pcm.getMultilevelConstraint(appId1,
-        Sets.newHashSet(sourceTag1), null);
+        new HashSet<>(sourceTag1), null);
     Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1)
@@ -253,7 +252,7 @@ public class TestPlacementConstraintManagerService {
     pcm.addGlobalConstraint(sourceTag1, c2, true);
     pcm.registerApplication(appId1, constraintMap1);
     constraint = pcm.getMultilevelConstraint(appId1,
-        Sets.newHashSet(sourceTag1), c1);
+        new HashSet<>(sourceTag1), c1);
     Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1, c2)

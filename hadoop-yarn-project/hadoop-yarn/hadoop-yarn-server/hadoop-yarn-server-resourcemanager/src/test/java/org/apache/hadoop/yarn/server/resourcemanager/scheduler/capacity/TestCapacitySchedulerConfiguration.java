@@ -18,10 +18,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
@@ -138,8 +140,8 @@ public class TestCapacitySchedulerConfiguration {
 
   @Test
   public void testSpecifiedSubmitACLForRoot() {
-    Set<String> expectedUsers = Sets.newHashSet(USER1);
-    Set<String> expectedGroups = Sets.newHashSet(GROUP1);
+    Set<String> expectedUsers = new HashSet<>(Collections.singleton(USER1));
+    Set<String> expectedGroups = new HashSet<>(Collections.singleton(GROUP1));
     testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, ONE_USER_ONE_GROUP_ACL, expectedUsers,
         expectedGroups);
   }
@@ -151,8 +153,8 @@ public class TestCapacitySchedulerConfiguration {
 
   @Test
   public void testSpecifiedSubmitACLTwoUsersTwoGroupsForRoot() {
-    Set<String> expectedUsers = Sets.newHashSet(USER1, USER2);
-    Set<String> expectedGroups = Sets.newHashSet(GROUP1, GROUP2);
+    Set<String> expectedUsers = new HashSet<>(Arrays.asList(USER1, USER2));
+    Set<String> expectedGroups = new HashSet<>(Arrays.asList(GROUP1, GROUP2));
     testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, TWO_USERS_TWO_GROUPS_ACL, expectedUsers,
         expectedGroups);
   }

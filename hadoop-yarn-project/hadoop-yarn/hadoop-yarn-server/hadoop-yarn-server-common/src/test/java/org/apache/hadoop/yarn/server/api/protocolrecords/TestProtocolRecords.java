@@ -20,18 +20,13 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -181,10 +176,10 @@ public class TestProtocolRecords {
     record.setNodeStatus(nodeStatus);
 
     Set<NodeAttribute> attributeSet =
-        Sets.newHashSet(NodeAttribute.newInstance("attributeA",
+        new HashSet<>(Arrays.asList(NodeAttribute.newInstance("attributeA",
                 NodeAttributeType.STRING, "valueA"),
             NodeAttribute.newInstance("attributeB",
-                NodeAttributeType.STRING, "valueB"));
+                NodeAttributeType.STRING, "valueB")));
     record.setNodeAttributes(attributeSet);
 
     NodeHeartbeatRequestPBImpl pb = new

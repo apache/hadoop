@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -74,7 +74,7 @@ public class TestWorkPreservingRMRestartForNodeLabel {
   
   @SuppressWarnings("unchecked")
   private <E> Set<E> toSet(E... elements) {
-    Set<E> set = Sets.newHashSet(elements);
+    Set<E> set = new HashSet<>(Arrays.asList(elements));
     return set;
   }
   

@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.api;
 
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 
