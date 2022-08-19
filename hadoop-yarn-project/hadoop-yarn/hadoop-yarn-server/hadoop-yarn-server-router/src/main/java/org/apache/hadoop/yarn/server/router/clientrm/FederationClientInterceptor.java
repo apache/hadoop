@@ -116,6 +116,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRespo
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -124,6 +125,7 @@ import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -888,13 +890,120 @@ public class FederationClientInterceptor
   @Override
   public GetNewReservationResponse getNewReservation(
       GetNewReservationRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (request == null) {
+      routerMetrics.incrGetNewReservationFailedRetrieved();
+      String errMsg = "Missing getNewReservation request.";
+      RouterServerUtil.logAndThrowException(errMsg, null);
+    }
+
+    long startTime = clock.getTime();
+    Map<SubClusterId, SubClusterInfo> subClustersActive =
+        federationFacade.getSubClusters(true);
+
+    for (int i = 0; i < numSubmitRetries; ++i) {
+      SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
+      LOG.info("getNewReservation try #{} on SubCluster {}.", i, subClusterId);
+      ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+      GetNewReservationResponse response = null;
+      try {
+        response = clientRMProxy.getNewReservation(request);
+      } catch (Exception e) {
+        LOG.warn("Unable to create a new Reservation in SubCluster {}.", subClusterId.getId(), e);
+        subClustersActive.remove(subClusterId);
+      }
+
+      if (response != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+        return response;
+      }
+    }
+
+    routerMetrics.incrGetNewReservationFailedRetrieved();
+    String errMsg = "Failed to create a new reservation.";
+    throw new YarnException(errMsg);
   }
 
   @Override
   public ReservationSubmissionResponse submitReservation(
       ReservationSubmissionRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (request == null || request.getReservationId() == null
+            || request.getReservationDefinition() == null || request.getQueue() == null) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing submitReservation request or reservationId " +
+               "or reservation definition or queue.", null);
+    }
+
+    ReservationSubmissionResponse response = null;
+    long startTime = clock.getTime();
+    ReservationId reservationId = request.getReservationId();
+
+    for (int i = 0; i < numSubmitRetries; ++i) {
+
+      SubClusterId subClusterId = policyFacade.getReservationHomeSubCluster(request);
+
+      LOG.info("submitReservation reservationId {} try #{} on SubCluster {}.",
+           reservationId, i, subClusterId);
+
+      ReservationHomeSubCluster reservationHomeSubCluster =
+          ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+
+      if (i == 0) {
+        try {
+          // persist the mapping of reservationId and the subClusterId which has
+          // been selected as its home
+          subClusterId = federationFacade.addReservationHomeSubCluster(reservationHomeSubCluster);
+        } catch (YarnException e) {
+          routerMetrics.incrSubmitReservationFailedRetrieved();
+          String message =
+              String.format("Unable to insert the ReservationId %s into the FederationStateStore.",
+                  reservationId);
+          RouterServerUtil.logAndThrowException(message, e);
+        }
+      } else {
+        try {
+          // update the mapping of reservationId and the home subClusterId to
+          // the new subClusterId we have selected
+          federationFacade.updateReservationHomeSubCluster(reservationHomeSubCluster);
+        } catch (YarnException e) {
+          String message =
+              String.format("Unable to update the ReservationId %s into the FederationStateStore.",
+                  reservationId);
+          SubClusterId subClusterIdInStateStore =
+              federationFacade.getReservationHomeSubCluster(reservationId);
+          if (subClusterId == subClusterIdInStateStore) {
+            LOG.info("Reservation {} already submitted on SubCluster {}.",
+                reservationId, subClusterId);
+          } else {
+            routerMetrics.incrSubmitReservationFailedRetrieved();
+            RouterServerUtil.logAndThrowException(message, e);
+          }
+        }
+      }
+
+      try {
+        ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+        response = clientRMProxy.submitReservation(request);
+      } catch (Exception e) {
+        LOG.warn("Unable to submit the reservation {} to SubCluster {} error = {}.",
+            reservationId, subClusterId.getId(), e);
+      }
+
+      if (response != null) {
+        LOG.info("Reservation {} submitted on {}.", request.getReservationId(), subClusterId);
+        long stopTime = clock.getTime();
+        routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+        return response;
+      }
+    }
+
+    routerMetrics.incrSubmitReservationFailedRetrieved();
+    String msg = String.format("Reservation %s failed to be submitted.",
+        request.getReservationId());
+    throw new YarnException(msg);
   }
 
   @Override
@@ -925,13 +1034,61 @@ public class FederationClientInterceptor
   @Override
   public ReservationUpdateResponse updateReservation(
       ReservationUpdateRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (request == null || request.getReservationId() == null
+            || request.getReservationDefinition() == null) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing updateReservation request or reservationId or reservation definition.", null);
+    }
+
+    long startTime = clock.getTime();
+    ReservationId reservationId = request.getReservationId();
+    SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
+
+    ApplicationClientProtocol client;
+    ReservationUpdateResponse response = null;
+    try {
+      client = getClientRMProxyForSubCluster(subClusterId);
+      response = client.updateReservation(request);
+    } catch (Exception ex) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Unable to reservation update due to exception.", ex);
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededUpdateReservationRetrieved(stopTime - startTime);
+    return response;
   }
 
   @Override
   public ReservationDeleteResponse deleteReservation(
       ReservationDeleteRequest request) throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    if (request == null || request.getReservationId() == null) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteReservation request or reservationId.", null);
+    }
+
+    long startTime = clock.getTime();
+    ReservationId reservationId = request.getReservationId();
+    SubClusterId subClusterId = getReservationHomeSubCluster(reservationId);
+
+    ApplicationClientProtocol client;
+    ReservationDeleteResponse response = null;
+    try {
+      client = getClientRMProxyForSubCluster(subClusterId);
+      response = client.deleteReservation(request);
+      federationFacade.deleteReservationHomeSubCluster(reservationId);
+    } catch (Exception ex) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Unable to reservation delete due to exception.", ex);
+    }
+
+    long stopTime = clock.getTime();
+    routerMetrics.succeededDeleteReservationRetrieved(stopTime - startTime);
+    return response;
   }
 
   private <R> Collection<R> invokeAppClientProtocolMethod(
@@ -1582,7 +1739,7 @@ public class FederationClientInterceptor
           getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
       if(LOG.isDebugEnabled()){
-        LOG.debug("can't find applicationId = {} in home sub cluster, " +
+        LOG.debug("Can't find applicationId = {} in home sub cluster, " +
              " try foreach sub clusters.", applicationId);
       }
     }
@@ -1621,6 +1778,35 @@ public class FederationClientInterceptor
 
     String errorMsg =
         String.format("Can't Found applicationId = %s in any sub clusters", applicationId);
+    throw new YarnException(errorMsg);
+  }
+
+  protected SubClusterId getReservationHomeSubCluster(ReservationId reservationId)
+      throws YarnException {
+
+    if (reservationId == null) {
+      LOG.error("ReservationId is Null, Can't find in SubCluster.");
+      return null;
+    }
+
+    SubClusterId resultSubClusterId = null;
+
+    // try looking for applicationId in Home SubCluster
+    try {
+      resultSubClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
+    } catch (YarnException ex) {
+      if(LOG.isDebugEnabled()){
+        LOG.debug("Can't find reservationId = {} in home sub cluster, " +
+                " try foreach sub clusters.", reservationId);
+      }
+    }
+
+    if (resultSubClusterId != null) {
+      return resultSubClusterId;
+    }
+
+    String errorMsg =
+        String.format("Can't Found reservationId = %s in any sub clusters", reservationId);
     throw new YarnException(errorMsg);
   }
 

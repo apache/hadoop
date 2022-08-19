@@ -88,6 +88,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesReques
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1253,5 +1255,24 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     NodeAttribute gpu = NodeAttribute.newInstance(NodeAttribute.PREFIX_CENTRALIZED, "GPU",
         NodeAttributeType.STRING, "nvida");
     Assert.assertTrue(nodeAttributeMap.get("0-host1").contains(gpu));
+  }
+
+  @Test
+  public void testGetNewReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : Get NewReservation request.");
+
+    // null request
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getNewReservation request.", () -> interceptor.getNewReservation(null));
+
+    // normal request
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    ReservationId reservationId = response.getReservationId();
+    Assert.assertNotNull(reservationId);
+    Assert.assertTrue(reservationId.toString().contains("reservation"));
+    Assert.assertEquals(reservationId.getClusterTimestamp(), ResourceManager.getClusterTimeStamp());
   }
 }
