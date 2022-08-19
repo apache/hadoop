@@ -153,20 +153,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCreateCredentialProviderWithExternalId() throws IOException {
-    describe("Create the credential provider");
-
-    Configuration conf = createValidRoleConfWithExternalId();
-    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "anExternalId");
-    try (AssumedRoleCredentialProvider provider
-                 = new AssumedRoleCredentialProvider(uri, conf)) {
-      LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
-    }
-  }
-
-  @Test
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -196,12 +182,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     return conf;
   }
 
-  protected Configuration createValidRoleConfWithExternalId() throws JsonProcessingException {
-    Configuration conf = createValidRoleConf();
-    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "someId");
-    return conf;
-  }
-
   @Test
   public void testAssumedInvalidRole() throws Throwable {
     Configuration conf = new Configuration();
@@ -209,6 +189,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     interceptClosing(AWSSecurityTokenServiceException.class,
         "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
+  }
+
+  @Test
+  public void testAssumedRoleBadExternalId() throws Throwable {
+    describe("Attempt to create the FS with an invalid external id");
+    Configuration conf = createAssumedRoleConfig();
+    conf.set(ASSUMED_ROLE_EXTERNAL_ID, "invalid_external_id!");
+    expectFileSystemCreateFailure(conf, AWSBadRequestException.class, "");
   }
 
   @Test
