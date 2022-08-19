@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.statistics;
 
+import org.apache.hadoop.fs.impl.prefetch.PrefetchingStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 
 /**
@@ -26,7 +27,7 @@ import org.apache.hadoop.fs.statistics.DurationTracker;
  * It also contains getters for tests.
  */
 public interface S3AInputStreamStatistics extends AutoCloseable,
-    S3AStatisticInterface {
+    S3AStatisticInterface, PrefetchingStatistics {
 
   /**
    * Seek backwards, incrementing the seek and backward seek counters.
