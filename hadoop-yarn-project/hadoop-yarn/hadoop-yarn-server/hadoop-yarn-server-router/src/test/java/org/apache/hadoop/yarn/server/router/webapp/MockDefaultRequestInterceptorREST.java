@@ -755,13 +755,13 @@ public class MockDefaultRequestInterceptorREST
     Mockito.doReturn(rmApps).when(rmContext).getRMApps();
 
     FiCaSchedulerNode node = (FiCaSchedulerNode) schedulerNode;
-    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(applicationId,0);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(applicationId, 0);
     RMApp mockApp = Mockito.mock(RMApp.class);
     Mockito.doReturn(appAttemptId.getApplicationId()).when(mockApp).getApplicationId();
     Mockito.doReturn(FinalApplicationStatus.UNDEFINED).when(mockApp).getFinalApplicationStatus();
     rmApps.put(appAttemptId.getApplicationId(), mockApp);
     FiCaSchedulerApp app = new FiCaSchedulerApp(appAttemptId, "user", mockQueue,
-    mock(ActiveUsersManager.class), rmContext);
+        mock(ActiveUsersManager.class), rmContext);
 
     ActivitiesManager newActivitiesManager = new ActivitiesManager(rmContext);
     newActivitiesManager.turnOnAppActivitiesRecording(app.getApplicationId(), 3);
@@ -772,7 +772,8 @@ public class MockDefaultRequestInterceptorREST
           SystemClock.getInstance().getTime(), app);
       ActivitiesLogger.APP.recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
           new SchedulerRequestKey(Priority.newInstance(0), 0, null),
-          ActivityDiagnosticConstant.NODE_IS_BLACKLISTED, ActivityState.REJECTED, ActivityLevel.NODE);
+          ActivityDiagnosticConstant.NODE_IS_BLACKLISTED, ActivityState.REJECTED,
+          ActivityLevel.NODE);
       ActivitiesLogger.APP.finishSkippedAppAllocationRecording(newActivitiesManager,
           app.getApplicationId(), ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
     }

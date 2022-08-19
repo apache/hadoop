@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -653,7 +652,7 @@ public class TestRouterWebServiceUtil {
     Assert.assertEquals(3, mergeInfo.getStatItems().size());
     ArrayList<StatisticsItemInfo> mergeInfoStatItems = mergeInfo.getStatItems();
 
-    StatisticsItemInfo item1Result = null ;
+    StatisticsItemInfo item1Result = null;
     StatisticsItemInfo item2Result = null;
     StatisticsItemInfo item3Result = null;
 

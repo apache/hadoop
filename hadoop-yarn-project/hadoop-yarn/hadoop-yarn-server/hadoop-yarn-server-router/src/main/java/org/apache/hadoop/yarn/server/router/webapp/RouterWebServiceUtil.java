@@ -546,12 +546,13 @@ public final class RouterWebServiceUtil {
   public static ApplicationStatisticsInfo mergeApplicationStatisticsInfo(
       Collection<ApplicationStatisticsInfo> appStatistics) {
     ApplicationStatisticsInfo result = new ApplicationStatisticsInfo();
-    HashMap<String, StatisticsItemInfo> statisticsItemMap = new HashMap();
+    Map<String, StatisticsItemInfo> statisticsItemMap = new HashMap<>();
 
     appStatistics.stream().forEach(appStatistic -> {
-        List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
+      List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
       for (StatisticsItemInfo statisticsItemInfo : statisticsItemInfos) {
-        String statisticsItemKey = statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
+        String statisticsItemKey =
+            statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
         StatisticsItemInfo statisticsItemValue =
             statisticsItemMap.getOrDefault(statisticsItemKey, null);
         if (statisticsItemValue != null) {

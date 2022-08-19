@@ -1130,7 +1130,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<String> allocationRequestIds, String groupBy, String limit,
       Set<String> actions, boolean summarize) {
 
-    // Only verify the app_id, because the specific subCluster needs to be found according to the app_id,
+    // Only verify the app_id,
+    // because the specific subCluster needs to be found according to the app_id,
     // and other verifications are directly handed over to the corresponding subCluster RM
     if (appId == null || appId.isEmpty()) {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
