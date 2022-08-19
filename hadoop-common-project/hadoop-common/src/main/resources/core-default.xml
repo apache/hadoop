@@ -131,6 +131,14 @@
 </property>
 
 <property>
+  <name>hadoop.security.resolver.impl</name>
+  <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+  <description>
+    The resolver implementation used to resolve FQDN for Kerberos
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.dns.log-slow-lookups.enabled</name>
   <value>false</value>
   <description>
