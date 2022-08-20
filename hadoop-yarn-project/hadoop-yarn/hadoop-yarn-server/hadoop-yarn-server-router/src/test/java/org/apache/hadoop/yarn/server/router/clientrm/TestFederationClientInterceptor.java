@@ -94,6 +94,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1309,8 +1311,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
-    ReservationSubmissionRequest rSubmissionRequest =
-        createReservationSubmissionRequest(reservationId);
+    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "target", reservationId);
 
     ReservationSubmissionResponse submissionResponse =
         interceptor.submitReservation(rSubmissionRequest);
@@ -1386,10 +1389,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // First Submit Reservation
     ReservationId reservationId = response.getReservationId();
-    ReservationSubmissionRequest submissionRequest =
-        createReservationSubmissionRequest(reservationId);
+    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "target", reservationId);
     ReservationSubmissionResponse submissionResponse =
-        interceptor.submitReservation(submissionRequest);
+        interceptor.submitReservation(rSubmissionRequest);
     Assert.assertNotNull(submissionResponse);
 
     SubClusterId subClusterId1 = stateStoreUtil.queryReservationHomeSC(reservationId);
@@ -1398,28 +1402,66 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // First Retry
     ReservationSubmissionResponse submissionResponse1 =
-        interceptor.submitReservation(submissionRequest);
+        interceptor.submitReservation(rSubmissionRequest);
     Assert.assertNotNull(submissionResponse1);
     SubClusterId subClusterId2 = stateStoreUtil.queryReservationHomeSC(reservationId);
     Assert.assertNotNull(subClusterId2);
     Assert.assertEquals(subClusterId1, subClusterId2);
   }
 
-  private ReservationSubmissionRequest createReservationSubmissionRequest(ReservationId reservationId) {
+  @Test
+  public void testUpdateReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : UpdateReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.target",true);
+    }
+
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "target", reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    // Update Reservation
+    ReservationDefinition rDefinition2 = createReservationDefinition(reservationId, 2048, 1);
+    ReservationUpdateRequest updateRequest =
+        ReservationUpdateRequest.newInstance(rDefinition2, reservationId);
+    ReservationUpdateResponse updateResponse =
+        interceptor.updateReservation(updateRequest);
+    Assert.assertNotNull(updateResponse);
+
+    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId);
+  }
+
+  private ReservationDefinition createReservationDefinition(
+    ReservationId reservationId, int memory, int core) {
     // get reservationId
     long defaultDuration = 600000;
     long arrival = Time.now();
     long deadline = arrival + (int)(defaultDuration * 1.1);
 
     ReservationRequest rRequest = ReservationRequest.newInstance(
-        Resource.newInstance(1024, 1), 1, 1, defaultDuration);
+        Resource.newInstance(memory, core), 1, 1, defaultDuration);
     ReservationRequest[] rRequests = new ReservationRequest[] { rRequest };
 
     ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
         ReservationRequestInterpreter.R_ALL, "u1");
-    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
-        rDefinition, "target", reservationId);
-    return rSubmissionRequest;
+
+    return rDefinition;
   }
 
   /**
