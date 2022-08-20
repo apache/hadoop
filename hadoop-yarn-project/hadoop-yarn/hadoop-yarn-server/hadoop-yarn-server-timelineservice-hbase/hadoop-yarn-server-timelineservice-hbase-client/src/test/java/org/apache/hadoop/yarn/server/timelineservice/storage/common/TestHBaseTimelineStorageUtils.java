@@ -77,7 +77,8 @@ public class TestHBaseTimelineStorageUtils {
         hbaseConfigPath);
     Configuration hbaseConfFromLocal =
         HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
-    assertEquals("test", hbaseConfFromLocal.get("input"), "Failed to read hbase config from Local FileSystem");
+    assertEquals("test", hbaseConfFromLocal.get("input"),
+        "Failed to read hbase config from Local FileSystem");
   }
 
   @Test
@@ -98,7 +99,8 @@ public class TestHBaseTimelineStorageUtils {
           path.toString());
       Configuration hbaseConfFromHdfs =
           HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
-      assertEquals("test", hbaseConfFromHdfs.get("input"), "Failed to read hbase config from Hdfs FileSystem");
+      assertEquals("test", hbaseConfFromHdfs.get("input"),
+          "Failed to read hbase config from Hdfs FileSystem");
     } finally {
       if (hdfsCluster != null) {
         hdfsCluster.shutdown();
