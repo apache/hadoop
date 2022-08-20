@@ -1307,12 +1307,110 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       reservationSystem.synchronizePlan("root.target",true);
     }
 
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationSubmissionRequest rSubmissionRequest =
+        createReservationSubmissionRequest(reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId);
+    Assert.assertTrue(subClusters.contains(subClusterId));
+  }
+
+  @Test
+  public void testSubmitReservationEmptyRequest() throws Exception {
+    LOG.info("Test FederationClientInterceptor : SubmitReservation request empty.");
+
+    // null request1
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitReservation request or reservationId or reservation definition or queue.",
+        () -> interceptor.submitReservation(null));
+
+    // null request2
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitReservation request or reservationId or reservation definition or queue.",
+        () -> interceptor.submitReservation(
+        ReservationSubmissionRequest.newInstance(null,null,null)));
+
+    // null request3
+    ReservationSubmissionRequest request3 =
+        ReservationSubmissionRequest.newInstance(null,"q1",null);
+    LambdaTestUtils.intercept(YarnException.class,
+       "Missing submitReservation request or reservationId or reservation definition or queue.",
+        () -> interceptor.submitReservation(request3));
+
+    // null request4
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    ReservationSubmissionRequest request4 =
+        ReservationSubmissionRequest.newInstance(null,null, reservationId);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitReservation request or reservationId or reservation definition or queue.",
+        () -> interceptor.submitReservation(request4));
+
+    // null request5
+    long defaultDuration = 600000;
+    long arrival = Time.now();
+    long deadline = arrival + (int)(defaultDuration * 1.1);
+
+    ReservationRequest rRequest = ReservationRequest.newInstance(
+        Resource.newInstance(1024, 1), 1, 1, defaultDuration);
+    ReservationRequest[] rRequests = new ReservationRequest[] { rRequest };
+    ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
+        ReservationRequestInterpreter.R_ALL, "u1");
+    ReservationSubmissionRequest request5 =
+        ReservationSubmissionRequest.newInstance(rDefinition,null, reservationId);
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing submitReservation request or reservationId or reservation definition or queue.",
+        () -> interceptor.submitReservation(request5));
+  }
+
+  @Test
+  public void testSubmitReservationMultipleSubmission() throws Exception {
+    LOG.info("Test FederationClientInterceptor: Submit Reservation - Multiple");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.target",true);
+    }
+
+    // First Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationSubmissionRequest submissionRequest =
+        createReservationSubmissionRequest(reservationId);
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(submissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    SubClusterId subClusterId1 = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId1);
+    Assert.assertTrue(subClusters.contains(subClusterId1));
+
+    // First Retry
+    ReservationSubmissionResponse submissionResponse1 =
+        interceptor.submitReservation(submissionRequest);
+    Assert.assertNotNull(submissionResponse1);
+    SubClusterId subClusterId2 = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId2);
+    Assert.assertEquals(subClusterId1, subClusterId2);
+  }
+
+  private ReservationSubmissionRequest createReservationSubmissionRequest(ReservationId reservationId) {
     // get reservationId
     long defaultDuration = 600000;
     long arrival = Time.now();
     long deadline = arrival + (int)(defaultDuration * 1.1);
 
-    ReservationId reservationId = response.getReservationId();
     ReservationRequest rRequest = ReservationRequest.newInstance(
         Resource.newInstance(1024, 1), 1, 1, defaultDuration);
     ReservationRequest[] rRequests = new ReservationRequest[] { rRequest };
@@ -1321,13 +1419,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         ReservationRequestInterpreter.R_ALL, "u1");
     ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
         rDefinition, "target", reservationId);
-
-    ReservationSubmissionResponse submissionResponse = interceptor.submitReservation(rSubmissionRequest);
-    Assert.assertNotNull(submissionResponse);
-
-    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
-    Assert.assertNotNull(subClusterId);
-    Assert.assertTrue(subClusters.contains(subClusterId));
+    return rSubmissionRequest;
   }
 
   /**
