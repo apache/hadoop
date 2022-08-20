@@ -17,8 +17,6 @@
  */
 
 package org.apache.hadoop.yarn.server.timelineservice.storage;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +26,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -41,13 +42,13 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperatio
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollectorContext;
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFileSystemTimelineWriterImpl {
-  @Rule
-  public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @TempDir
+  public File tmpFolder;
 
   /**
    * Unit test for PoC YARN 3264.
@@ -55,7 +56,7 @@ public class TestFileSystemTimelineWriterImpl {
    * @throws Exception
    */
   @Test
-  public void testWriteEntityToFile() throws Exception {
+  void testWriteEntityToFile() throws Exception {
     TimelineEntities te = new TimelineEntities();
     TimelineEntity entity = new TimelineEntity();
     String id = "hello";
@@ -89,7 +90,7 @@ public class TestFileSystemTimelineWriterImpl {
     try {
       fsi = new FileSystemTimelineWriterImpl();
       Configuration conf = new YarnConfiguration();
-      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
           outputRoot);
       fsi.init(conf);
@@ -107,14 +108,14 @@ public class TestFileSystemTimelineWriterImpl {
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = new Path(fileName);
       FileSystem fs = FileSystem.get(conf);
-      assertTrue("Specified path(" + fileName + ") should exist: ",
-              fs.exists(path));
+      assertTrue(fs.exists(path),
+          "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue("Specified path should be a file",
-              !fileStatus.isDirectory());
+      assertTrue(!fileStatus.isDirectory(),
+          "Specified path should be a file");
       List<String> data = readFromFile(fs, path);
       // ensure there's only one entity + 1 new line
-      assertTrue("data size is:" + data.size(), data.size() == 2);
+      assertTrue(data.size() == 2, "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -127,14 +128,14 @@ public class TestFileSystemTimelineWriterImpl {
           File.separator + type2 + File.separator + id2 +
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path2 = new Path(fileName2);
-      assertTrue("Specified path(" + fileName + ") should exist: ",
-              fs.exists(path2));
+      assertTrue(fs.exists(path2),
+          "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus2 = fs.getFileStatus(path2);
-      assertTrue("Specified path should be a file",
-              !fileStatus2.isDirectory());
+      assertTrue(!fileStatus2.isDirectory(),
+          "Specified path should be a file");
       List<String> data2 = readFromFile(fs, path2);
       // ensure there's only one entity + 1 new line
-      assertTrue("data size is:" + data2.size(), data2.size() == 2);
+      assertTrue(data2.size() == 2, "data size is:" + data2.size());
       String metricToString = data2.get(0);
       // confirm the contents same as what was written
       assertEquals(metricToString,
@@ -147,7 +148,7 @@ public class TestFileSystemTimelineWriterImpl {
   }
 
   @Test
-  public void testWriteMultipleEntities() throws Exception {
+  void testWriteMultipleEntities() throws Exception {
     String id = "appId";
     String type = "app";
 
@@ -169,7 +170,7 @@ public class TestFileSystemTimelineWriterImpl {
     try {
       fsi = new FileSystemTimelineWriterImpl();
       Configuration conf = new YarnConfiguration();
-      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
           outputRoot);
       fsi.init(conf);
@@ -191,13 +192,13 @@ public class TestFileSystemTimelineWriterImpl {
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = new Path(fileName);
       FileSystem fs = FileSystem.get(conf);
-      assertTrue("Specified path(" + fileName + ") should exist: ",
-          fs.exists(path));
+      assertTrue(fs.exists(path),
+          "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue("Specified path should be a file",
-          !fileStatus.isDirectory());
+      assertTrue(!fileStatus.isDirectory(),
+          "Specified path should be a file");
       List<String> data = readFromFile(fs, path);
-      assertTrue("data size is:" + data.size(), data.size() == 3);
+      assertTrue(data.size() == 3, "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -215,7 +216,7 @@ public class TestFileSystemTimelineWriterImpl {
   }
 
   @Test
-  public void testWriteEntitiesWithEmptyFlowName() throws Exception {
+  void testWriteEntitiesWithEmptyFlowName() throws Exception {
     String id = "appId";
     String type = "app";
 
@@ -230,7 +231,7 @@ public class TestFileSystemTimelineWriterImpl {
     try {
       fsi = new FileSystemTimelineWriterImpl();
       Configuration conf = new YarnConfiguration();
-      String outputRoot = tmpFolder.newFolder().getAbsolutePath();
+      String outputRoot = tmpFolder.getAbsolutePath();
       conf.set(FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_DIR_ROOT,
           outputRoot);
       fsi.init(conf);
@@ -248,13 +249,13 @@ public class TestFileSystemTimelineWriterImpl {
           FileSystemTimelineWriterImpl.TIMELINE_SERVICE_STORAGE_EXTENSION;
       Path path = new Path(fileName);
       FileSystem fs = FileSystem.get(conf);
-      assertTrue("Specified path(" + fileName + ") should exist: ",
-          fs.exists(path));
+      assertTrue(fs.exists(path),
+          "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue("Specified path should be a file",
-          !fileStatus.isDirectory());
+      assertTrue(!fileStatus.isDirectory(),
+          "Specified path should be a file");
       List<String> data = readFromFile(fs, path);
-      assertTrue("data size is:" + data.size(), data.size() == 2);
+      assertTrue(data.size() == 2, "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -277,5 +278,14 @@ public class TestFileSystemTimelineWriterImpl {
       data.add(line);
     }
     return data;
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }
