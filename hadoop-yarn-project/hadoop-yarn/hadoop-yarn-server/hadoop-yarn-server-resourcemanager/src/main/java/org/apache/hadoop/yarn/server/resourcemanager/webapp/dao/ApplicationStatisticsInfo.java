@@ -45,4 +45,5 @@ public class ApplicationStatisticsInfo {
   public ArrayList<StatisticsItemInfo> getStatItems() {
     return statItem;
   }
+
 }
