@@ -64,8 +64,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
 import org.junit.Assert;
@@ -149,6 +151,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
+    // Open AppsInfo Cache
+    conf.setBoolean(YarnConfiguration.ROUTER_APPSINFO_ENABLED, true);
+    conf.setInt(YarnConfiguration.ROUTER_APPSINFO_CACHED_COUNT, 10);
 
     return conf;
   }
@@ -948,5 +954,27 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppQueue queue = interceptor.getAppQueue(null, appId.toString());
     Assert.assertNotNull(queue);
     Assert.assertEquals(queueName, queue.getQueue());
+  }
+
+  @Test
+  public void testGetAppsInfoCache() throws IOException, InterruptedException, YarnException {
+
+    AppsInfo responseGet = interceptor.getApps(
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+    Assert.assertNotNull(responseGet);
+
+    RouterAppInfoCacheKey cacheKey = RouterAppInfoCacheKey.newInstance(
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+
+    LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appsInfoCache =
+        interceptor.getAppInfosCaches();
+    Assert.assertNotNull(appsInfoCache);
+    Assert.assertTrue(!appsInfoCache.isEmpty());
+    Assert.assertEquals(1, appsInfoCache.size());
+    Assert.assertTrue(appsInfoCache.containsKey(cacheKey));
+
+    AppsInfo cacheResult = appsInfoCache.get(cacheKey);
+    Assert.assertNotNull(cacheResult);
+    Assert.assertEquals(responseGet, cacheResult);
   }
 }
