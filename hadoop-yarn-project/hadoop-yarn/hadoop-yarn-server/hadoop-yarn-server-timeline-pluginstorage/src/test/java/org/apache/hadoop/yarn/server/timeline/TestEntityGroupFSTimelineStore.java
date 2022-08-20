@@ -117,14 +117,6 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
   private EntityGroupFSTimelineStore store;
   private TimelineEntity entityNew;
 
-  @Test
-  void getTestInfo(TestInfo testInfo) { // Automatically injected
-    System.out.println(testInfo.getDisplayName());
-    System.out.println(testInfo.getTestMethod());
-    System.out.println(testInfo.getTestClass());
-    System.out.println(testInfo.getTags());
-  }
-
   private File rootDir;
   private File testJar;
 
@@ -178,7 +170,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     }
 
     store = new EntityGroupFSTimelineStore();
-    if (testInfo.getDisplayName().contains("Plugin")) {
+    if (testInfo.getTestMethod().get().getName().contains("Plugin")) {
       rootDir = GenericTestUtils.getTestDir(getClass()
           .getSimpleName());
       if (!rootDir.exists()) {
