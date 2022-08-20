@@ -2203,14 +2203,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               }
             }
           }
-        } else if (haEnabled && haContext != null &&
-            haContext.getState().getServiceState() == OBSERVER) {
-          for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
-            if (b.getLocations() == null || b.getLocations().length == 0) {
-              throw new ObserverRetryOnActiveException("Zero blocklocations "
-                  + "for " + srcArg);
-            }
-          }
+        } else if (isObserver()) {
+          checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
       } finally {
         readUnlock(operationName, getLockReportInfoSupplier(srcArg));
@@ -3471,15 +3465,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && haEnabled && haContext != null &&
-        haContext.getState().getServiceState() == OBSERVER &&
-        stat instanceof HdfsLocatedFileStatus) {
+    if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
       LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
-      for (LocatedBlock b : lbs.getLocatedBlocks()) {
-        if (b.getLocations() == null || b.getLocations().length == 0) {
-          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
-        }
-      }
+      checkBlockLocationsWhenObserver(lbs, src);
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4186,17 +4174,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, src);
       throw e;
     }
-    if (needLocation && haEnabled && haContext != null &&
-        haContext.getState().getServiceState() == OBSERVER) {
-      for(HdfsFileStatus fs : dl.getPartialListing()) {
+    if (needLocation && isObserver()) {
+      for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
-          LocatedBlocks bs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-          for (LocatedBlock b : bs.getLocatedBlocks()) {
-            if (b.getLocations() == null || b.getLocations().length == 0) {
-              throw new ObserverRetryOnActiveException(
-                  "Zero blocklocations for " + fs.toString());
-            }
-          }
+          LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
+          checkBlockLocationsWhenObserver(lbs, fs.toString());
         }
       }
     }
@@ -9043,6 +9025,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNodeLayoutVersion.Feature.ERASURE_CODING,
         getEffectiveLayoutVersion())) {
       throw new UnsupportedActionException(operationName + " not supported.");
+    }
+  }
+
+  private boolean isObserver() {
+    return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
+  }
+
+  private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
+      throws ObserverRetryOnActiveException {
+    for (LocatedBlock b : blocks.getLocatedBlocks()) {
+      if (b.getLocations() == null || b.getLocations().length == 0) {
+        throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+      }
     }
   }
 }
