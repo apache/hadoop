@@ -53,13 +53,13 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.default.capacity</name>
-    <value>90</value>
+    <value>60</value>
     <description>Default queue target capacity.</description>
   </property>
 
   <property>
     <name>yarn.scheduler.capacity.root.target.capacity</name>
-    <value>10</value>
+    <value>40</value>
     <description>target queue capacity.</description>
   </property>
 
@@ -129,6 +129,15 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.decided.reservable</name>
+    <value>true</value>
+    <description>
+      indicates to the ReservationSystem that the queue’s resources
+      is available for users to reserve.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.target.reservable</name>
     <value>true</value>
     <description>
       indicates to the ReservationSystem that the queue’s resources

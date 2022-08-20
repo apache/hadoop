@@ -989,7 +989,7 @@ public class FederationClientInterceptor
         response = clientRMProxy.submitReservation(request);
       } catch (Exception e) {
         LOG.warn("Unable to submit the reservation {} to SubCluster {} error = {}.",
-            reservationId, subClusterId.getId(), e);
+            reservationId, subClusterId.getId(), e.getMessage(), e);
       }
 
       if (response != null) {

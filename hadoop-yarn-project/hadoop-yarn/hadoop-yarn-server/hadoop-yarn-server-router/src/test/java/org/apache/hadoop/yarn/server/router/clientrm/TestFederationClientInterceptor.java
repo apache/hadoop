@@ -29,8 +29,10 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Arrays;
 
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
@@ -90,6 +92,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -109,6 +113,10 @@ import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -119,6 +127,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUt
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -205,6 +214,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
+    conf.setInt("yarn.scheduler.minimum-allocation-mb", 512);
+    conf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
+    conf.setInt("yarn.scheduler.maximum-allocation-mb", 102400);
+    conf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
+
     return conf;
   }
 
@@ -1274,5 +1289,64 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(reservationId);
     Assert.assertTrue(reservationId.toString().contains("reservation"));
     Assert.assertEquals(reservationId.getClusterTimestamp(), ResourceManager.getClusterTimeStamp());
+  }
+
+  @Test
+  public void testSubmitReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : SubmitReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.target",true);
+    }
+
+    // get reservationId
+    long defaultDuration = 600000;
+    long arrival = Time.now();
+    long deadline = arrival + (int)(defaultDuration * 1.1);
+
+    ReservationId reservationId = response.getReservationId();
+    ReservationRequest rRequest = ReservationRequest.newInstance(
+        Resource.newInstance(1024, 1), 1, 1, defaultDuration);
+    ReservationRequest[] rRequests = new ReservationRequest[] { rRequest };
+
+    ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
+        ReservationRequestInterpreter.R_ALL, "u1");
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "target", reservationId);
+
+    ReservationSubmissionResponse submissionResponse = interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    SubClusterId subClusterId = stateStoreUtil.queryReservationHomeSC(reservationId);
+    Assert.assertNotNull(subClusterId);
+    Assert.assertTrue(subClusters.contains(subClusterId));
+  }
+
+  /**
+   * This method is used to create a ReservationDefinition.
+   *
+   * @param arrival Job arrival time
+   * @param deadline Job deadline
+   * @param reservationRequests reservationRequest Array
+   * @param rType Enumeration of various types of
+   *              dependencies among multiple ReservationRequest
+   * @param username username
+   * @return ReservationDefinition
+   */
+  private ReservationDefinition createReservationDefinition(long arrival,
+      long deadline, ReservationRequest[] reservationRequests,
+      ReservationRequestInterpreter rType, String username) {
+    ReservationRequests requests = ReservationRequests
+        .newInstance(Arrays.asList(reservationRequests), rType);
+    return ReservationDefinition.newInstance(arrival, deadline,
+        requests, username, "0", Priority.UNDEFINED);
   }
 }
