@@ -96,6 +96,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1311,7 +1313,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
-    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
     ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
         rDefinition, "target", reservationId);
 
@@ -1389,7 +1391,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // First Submit Reservation
     ReservationId reservationId = response.getReservationId();
-    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
     ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
         rDefinition, "target", reservationId);
     ReservationSubmissionResponse submissionResponse =
@@ -1427,7 +1429,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
-    ReservationDefinition rDefinition = createReservationDefinition(reservationId, 1024, 1);
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
     ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
         rDefinition, "target", reservationId);
 
@@ -1436,7 +1438,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(submissionResponse);
 
     // Update Reservation
-    ReservationDefinition rDefinition2 = createReservationDefinition(reservationId, 2048, 1);
+    ReservationDefinition rDefinition2 = createReservationDefinition(2048, 1);
     ReservationUpdateRequest updateRequest =
         ReservationUpdateRequest.newInstance(rDefinition2, reservationId);
     ReservationUpdateResponse updateResponse =
@@ -1447,8 +1449,44 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(subClusterId);
   }
 
-  private ReservationDefinition createReservationDefinition(
-    ReservationId reservationId, int memory, int core) {
+  @Test
+  public void testDeleteReservation() throws Exception {
+    LOG.info("Test FederationClientInterceptor : DeleteReservation request.");
+
+    // get new reservationId
+    GetNewReservationRequest request = GetNewReservationRequest.newInstance();
+    GetNewReservationResponse response = interceptor.getNewReservation(request);
+    Assert.assertNotNull(response);
+
+    // allow plan follower to synchronize, manually trigger an assignment
+    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
+    for (MockRM mockRM : mockRMs.values()) {
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan("root.target",true);
+    }
+
+    // Submit Reservation
+    ReservationId reservationId = response.getReservationId();
+    ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
+    ReservationSubmissionRequest rSubmissionRequest = ReservationSubmissionRequest.newInstance(
+        rDefinition, "target", reservationId);
+
+    ReservationSubmissionResponse submissionResponse =
+        interceptor.submitReservation(rSubmissionRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    // Delete Reservation
+    ReservationDeleteRequest deleteRequest = ReservationDeleteRequest.newInstance(reservationId);
+    ReservationDeleteResponse deleteResponse = interceptor.deleteReservation(deleteRequest);
+    Assert.assertNotNull(submissionResponse);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStoreUtil.queryReservationHomeSC(reservationId));
+  }
+
+
+  private ReservationDefinition createReservationDefinition(int memory, int core) {
     // get reservationId
     long defaultDuration = 600000;
     long arrival = Time.now();
