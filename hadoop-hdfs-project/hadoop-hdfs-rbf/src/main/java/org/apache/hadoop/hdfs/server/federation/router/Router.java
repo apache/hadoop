@@ -682,7 +682,7 @@ public class Router extends CompositeService implements
   /**
    * Get the state store interface for the router heartbeats.
    *
-   * @return FederationRouterStateStore state store API handle.
+   * @return RouterStore state store API handle.
    */
   public RouterStore getRouterStateManager() {
     if (this.routerStateManager == null && this.stateStore != null) {
