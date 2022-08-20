@@ -20,7 +20,12 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;

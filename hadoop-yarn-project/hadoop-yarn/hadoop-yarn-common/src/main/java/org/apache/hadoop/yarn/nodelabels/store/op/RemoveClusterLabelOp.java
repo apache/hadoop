@@ -46,7 +46,7 @@ public class RemoveClusterLabelOp
       throws IOException {
     ((RemoveFromClusterNodeLabelsRequestPBImpl)
         RemoveFromClusterNodeLabelsRequest
-        .newInstance(new HashSet<>(IteratorUtils.toList(labels.iterator())))).getProto()
+        .newInstance(new HashSet<String>(IteratorUtils.toList(labels.iterator())))).getProto()
         .writeDelimitedTo(os);
   }
 

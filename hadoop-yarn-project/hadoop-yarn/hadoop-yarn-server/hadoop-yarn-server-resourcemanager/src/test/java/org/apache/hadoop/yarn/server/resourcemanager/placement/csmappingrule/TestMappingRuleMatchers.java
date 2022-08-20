@@ -22,7 +22,11 @@ import junit.framework.TestCase;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.HashSet;
 
 public class TestMappingRuleMatchers extends TestCase {
 

@@ -27,7 +27,11 @@ import org.w3c.dom.NodeList;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+
 
 import static junit.framework.TestCase.assertTrue;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase.toXml;

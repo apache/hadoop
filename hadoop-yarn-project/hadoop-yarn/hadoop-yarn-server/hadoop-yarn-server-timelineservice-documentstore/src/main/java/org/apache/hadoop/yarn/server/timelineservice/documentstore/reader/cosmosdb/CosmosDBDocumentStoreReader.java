@@ -127,7 +127,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
         .subscribeOn(schedulerForBlockingWork)
         .toBlocking()
         .single().iterator();
-    return new HashSet<>(IteratorUtils.toList(itr));
+    return new HashSet<String>(IteratorUtils.toList(itr));
   }
 
   @Override

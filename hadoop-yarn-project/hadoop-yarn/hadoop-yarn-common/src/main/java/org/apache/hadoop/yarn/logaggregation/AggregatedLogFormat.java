@@ -364,7 +364,7 @@ public class AggregatedLogFormat {
       Iterable<File> mask = Iterables.filter(candidates, (input) ->
           !alreadyUploadedLogFiles
               .contains(getLogFileMetaData(input)));
-      return new HashSet<>(IteratorUtils.toList(mask.iterator()));
+      return new HashSet<File>(IteratorUtils.toList(mask.iterator()));
     }
 
     private void filterFiles(String pattern, Set<File> candidates,
