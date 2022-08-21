@@ -185,7 +185,7 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   /**
-   * Creates a new {@link S3Client}
+   * Creates a new {@link S3Client}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object
@@ -249,7 +249,12 @@ public class DefaultS3ClientFactory extends Configured
 
     s3ClientBuilder.endpointOverride(endpoint).region(region);
 
-    configureBasicParamsV2(s3ClientBuilder, clientOverrideConfigBuilder, parameters);
+    s3ClientBuilder.serviceConfiguration(
+        S3Configuration.builder().pathStyleAccessEnabled(parameters.isPathStyleAccess()).build());
+
+    // TODO: Some configuration done in configureBasicParams is not done yet.
+    //  Request handlers will be added during auditor work. Need to verify how metrics collection
+    //  can be done, as SDK V2 only seems to have a metrics publisher.
 
     return s3ClientBuilder.build();
   }
@@ -362,18 +367,6 @@ public class DefaultS3ClientFactory extends Configured
       builder.withMonitoringListener(parameters.getMonitoringListener());
     }
 
-  }
-
-  private void configureBasicParamsV2(S3ClientBuilder s3ClientBuilder,
-      ClientOverrideConfiguration.Builder overrideConfigBuilder, S3ClientCreationParameters parameters) {
-
-    S3Configuration s3Configuration = S3Configuration.builder()
-        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-        .build();
-
-    // TODO: set request handlers, will be done as part of auditor work
-
-    // TODO: Metrics collection, not sure if this can be done with the SDK V2 yet.
   }
 
   /**
@@ -505,13 +498,11 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf config to build the URI from.
    * @return an endpoint uri
    */
-  private static URI getS3Endpoint(
-     String endpoint, final Configuration conf) {
+  private static URI getS3Endpoint(String endpoint, final Configuration conf) {
 
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
 
-    String protocol = secureConnections ?  HTTPS : HTTP;
+    String protocol = secureConnections ? HTTPS : HTTP;
 
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint
@@ -539,7 +530,7 @@ public class DefaultS3ClientFactory extends Configured
    */
   private Region getS3Region(String region, S3Client s3Client) {
 
-    if(!StringUtils.isBlank(region)) {
+    if (!StringUtils.isBlank(region)) {
       return Region.of(region);
     }
 
@@ -552,7 +543,7 @@ public class DefaultS3ClientFactory extends Configured
       if (exception.statusCode() == 301) {
         List<String> bucketRegion =
             exception.awsErrorDetails().sdkHttpResponse().headers().get("x-amz-bucket-region");
-       return Region.of(bucketRegion.get(0));
+        return Region.of(bucketRegion.get(0));
       }
     }
 

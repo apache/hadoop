@@ -594,8 +594,8 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.delimiter(delimiter);
     }
 
-    //TODO: add call to prepareRequest, not added for now as PrepareRequest is a functional interface,
-    // uses AmazonWebServiceRequest, SDKV2 uses AwsRequest. 
+    //TODO: add call to prepareRequest, not added for now as PrepareRequest is a functional
+    // interface, uses AmazonWebServiceRequest, SDKV2 uses AwsRequest.
     return requestBuilder.build();
   }
 

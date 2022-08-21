@@ -62,7 +62,7 @@ public interface S3ClientFactory {
       S3ClientCreationParameters parameters) throws IOException;
 
   /**
-   * Creates a new {@link S3Client}
+   * Creates a new {@link S3Client}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object

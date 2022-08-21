@@ -2638,8 +2638,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                   return S3ListResult.v1(s3V2.listObjects(
                       request.getV1().toBuilder().marker(nextMarker).build()));
                 } else {
-                  //TODO: SDKV2 now supports automatic pagination, using that here requires
-                  // significant refactoring. Investigate performance benefits and if this is something we want to do.
                   return S3ListResult.v2(s3V2.listObjectsV2(request.getV2().toBuilder()
                       .continuationToken(prevResult.getV2().nextContinuationToken()).build()));
                 }

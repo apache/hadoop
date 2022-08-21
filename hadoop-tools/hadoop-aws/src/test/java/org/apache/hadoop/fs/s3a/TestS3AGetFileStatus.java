@@ -81,7 +81,8 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     String keyDir = key + "/";
     List<S3Object> s3Objects = new ArrayList<>(1);
     s3Objects.add(S3Object.builder().key(keyDir).size(0L).build());
-    ListObjectsV2Response listObjectsV2Response = ListObjectsV2Response.builder().contents(s3Objects).build();
+    ListObjectsV2Response listObjectsV2Response =
+        ListObjectsV2Response.builder().contents(s3Objects).build();
     when(s3V2.listObjectsV2(argThat(
         matchListV2Request(BUCKET, keyDir))
     )).thenReturn(listObjectsV2Response);
@@ -156,8 +157,9 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
     ListObjectsV2Response v2Result = mock(ListObjectsV2Response.class);
     when(v2Result.commonPrefixes()).thenReturn(prefixes);
     when(v2Result.contents()).thenReturn(s3Objects);
-    when(s3V2.listObjectsV2(any(software.amazon.awssdk.services.s3.model.ListObjectsV2Request.class)))
-        .thenReturn(v2Result);
+    when(s3V2.listObjectsV2(
+        any(software.amazon.awssdk.services.s3.model.ListObjectsV2Request.class))).thenReturn(
+        v2Result);
   }
 
   private ArgumentMatcher<GetObjectMetadataRequest> correctGetMetadataRequest(

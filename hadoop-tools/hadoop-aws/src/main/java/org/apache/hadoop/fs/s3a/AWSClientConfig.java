@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
@@ -41,6 +59,8 @@ import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 public final class AWSClientConfig {
   private static final Logger LOG = LoggerFactory.getLogger(AWSClientConfig.class);
 
+  private AWSClientConfig() {
+  }
 
   public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf) {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
@@ -72,7 +92,7 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures the http client
+   * Configures the http client.
    *
    * @param conf The Hadoop configuration
    * @return Http client builder
@@ -84,19 +104,20 @@ public final class AWSClientConfig {
     httpClientBuilder.maxConnections(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
 
-    httpClientBuilder.connectionTimeout(Duration.ofSeconds(S3AUtils.intOption(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, 0)));
+    httpClientBuilder.connectionTimeout(Duration.ofSeconds(
+        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0)));
 
     httpClientBuilder.socketTimeout(Duration.ofSeconds(S3AUtils.intOption(conf, SOCKET_TIMEOUT,
         DEFAULT_SOCKET_TIMEOUT, 0)));
 
-    // TODO: Need to set ssl socket factory, as done in  NetworkBinding.bindSSLChannelMode(conf, awsConf);
+    // TODO: Need to set ssl socket factory, as done in
+    //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
 
     return httpClientBuilder;
   }
 
   /**
-   * Configures the retry policy
+   * Configures the retry policy.
    *
    * @param conf The Hadoop configuration
    * @return Retry policy builder
@@ -112,7 +133,7 @@ public final class AWSClientConfig {
   }
 
   /**
-   * Configures the proxy
+   * Configures the proxy.
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
