@@ -59,8 +59,6 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
-import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -213,10 +211,10 @@ public class DefaultS3ClientFactory extends Configured
 
     S3ClientBuilder s3ClientBuilder = S3Client.builder();
 
-    // build a s3 client with region eu-west-2 that can be used to get the region of the bucket as
-    // getBucketLocation does not work with us-east-1.
-    // See https://github.com/aws/aws-sdk-java/issues/1338.
-    S3Client defaultS3Client = S3Client.builder().region(Region.EU_WEST_2).build();
+    // build a s3 client with region eu-west-2 that can be used to get the region of the bucket.
+    S3Client defaultS3Client = S3Client.builder().region(Region.EU_WEST_2)
+        .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()))
+        .build();
 
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
@@ -237,6 +235,8 @@ public class DefaultS3ClientFactory extends Configured
     s3ClientBuilder.httpClientBuilder(httpClientBuilder)
         .overrideConfiguration(clientOverrideConfigBuilder.build());
 
+    // use adapter classes so V1 credential providers continue to work. This will be moved to
+    // AWSCredentialProviderList.add() when that class is updated.
     s3ClientBuilder.credentialsProvider(
         V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()));
 
