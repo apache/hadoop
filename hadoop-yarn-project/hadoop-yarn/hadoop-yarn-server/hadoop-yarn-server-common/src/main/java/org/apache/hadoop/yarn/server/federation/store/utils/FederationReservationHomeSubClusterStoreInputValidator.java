@@ -23,6 +23,8 @@ import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateS
 import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,5 +123,49 @@ public final class FederationReservationHomeSubClusterStoreInputValidator {
       LOG.warn(message);
       throw new FederationStateStoreInvalidInputException(message);
     }
+  }
+
+  /**
+   * Quick validation on the input to check some obvious fail conditions (fail
+   * fast). Check if the provided {@link UpdateReservationHomeSubClusterRequest}
+   * for updating an reservation is valid or not.
+   *
+   * @param request the {@link UpdateReservationHomeSubClusterRequest} to
+   *          validate against
+   * @throws FederationStateStoreInvalidInputException if the request is invalid
+   */
+  public static void validate(UpdateReservationHomeSubClusterRequest request)
+      throws FederationStateStoreInvalidInputException {
+    if (request == null) {
+      String message = "Missing UpdateReservationHomeSubCluster Request." +
+          " Please try again by specifying an ReservationHomeSubCluster information.";
+      LOG.warn(message);
+      throw new FederationStateStoreInvalidInputException(message);
+    }
+
+    // validate ReservationHomeSubCluster info
+    checkReservationHomeSubCluster(request.getReservationHomeSubCluster());
+  }
+
+  /**
+   * Quick validation on the input to check some obvious fail conditions (fail
+   * fast). Check if the provided {@link DeleteReservationHomeSubClusterRequest}
+   * for deleting an Reservation is valid or not.
+   *
+   * @param request the {@link DeleteReservationHomeSubClusterRequest} to
+   *          validate against
+   * @throws FederationStateStoreInvalidInputException if the request is invalid
+   */
+  public static void validate(DeleteReservationHomeSubClusterRequest request)
+      throws FederationStateStoreInvalidInputException {
+    if (request == null) {
+      String message = "Missing DeleteReservationHomeSubCluster Request." +
+          " Please try again by specifying an ReservationHomeSubCluster information.";
+      LOG.warn(message);
+      throw new FederationStateStoreInvalidInputException(message);
+    }
+
+    // validate Reservation Id
+    checkReservationId(request.getReservationId());
   }
 }
