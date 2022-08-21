@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-find_package(Boost REQUIRED COMPONENTS date_time)
+find_package(Boost 1.72.0 REQUIRED COMPONENTS date_time)
 
 # Delegate some functionality to libhdfs, until libhdfspp is complete.
 set (LIBHDFS_SRC_DIR ../../libhdfs)

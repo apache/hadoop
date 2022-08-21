@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+find_package (Boost 1.72.0 REQUIRED)
+
 if(NEED_LINK_DL)
    set(LIB_DL dl)
 endif()
