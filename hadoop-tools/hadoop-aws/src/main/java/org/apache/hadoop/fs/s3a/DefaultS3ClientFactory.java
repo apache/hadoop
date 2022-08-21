@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
@@ -60,6 +61,9 @@ import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -209,10 +213,10 @@ public class DefaultS3ClientFactory extends Configured
 
     S3ClientBuilder s3ClientBuilder = S3Client.builder();
 
-    // build a s3 client with region us-east-2 that can be used to get the region of the bucket as
+    // build a s3 client with region eu-west-2 that can be used to get the region of the bucket as
     // getBucketLocation does not work with us-east-1.
     // See https://github.com/aws/aws-sdk-java/issues/1338.
-    S3Client defaultS3Client = S3Client.builder().region(Region.US_WEST_2).build();
+    S3Client defaultS3Client = S3Client.builder().region(Region.EU_WEST_2).build();
 
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
@@ -528,7 +532,7 @@ public class DefaultS3ClientFactory extends Configured
   /**
    * Get the bucket region.
    *
-   * @param region AWS S3 Region set in the config. This property may not be set, in which case this
+   * @param region AWS S3 Region set in the config. This property may not be set, in which case
    *               ask S3 for the region.
    * @param s3Client A S3 Client with default config, used for getting the region of a bucket.
    * @return region of the bucket.
@@ -539,15 +543,19 @@ public class DefaultS3ClientFactory extends Configured
       return Region.of(region);
     }
 
-    //No region specified so ask s3 for bucket region
-   GetBucketLocationResponse bucketLocationResponse =
-       s3Client.getBucketLocation(GetBucketLocationRequest.builder().bucket(bucket).build());
-
-    // buckets in eu-east-1 have a location constraint of null
-    if(bucketLocationResponse.locationConstraintAsString() != null) {
-      return Region.of(bucketLocationResponse.locationConstraintAsString());
-    } else {
-      return Region.US_EAST_1;
+    try {
+      HeadBucketResponse headBucketResponse =
+          s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+      return Region.of(
+          headBucketResponse.sdkHttpResponse().headers().get("x-amz-bucket-region").get(0));
+    } catch (S3Exception exception) {
+      if (exception.statusCode() == 301) {
+        List<String> bucketRegion =
+            exception.awsErrorDetails().sdkHttpResponse().headers().get("x-amz-bucket-region");
+       return Region.of(bucketRegion.get(0));
+      }
     }
+
+    return Region.US_EAST_1;
   }
 }
