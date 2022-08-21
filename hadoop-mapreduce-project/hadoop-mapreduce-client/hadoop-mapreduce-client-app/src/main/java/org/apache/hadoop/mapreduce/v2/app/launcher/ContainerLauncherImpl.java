@@ -385,6 +385,20 @@ public class ContainerLauncherImpl extends AbstractService implements
       // TODO: Do it only once per NodeManager.
       ContainerId containerID = event.getContainerID();
 
+      // If the container failed to launch earlier (due to dead node for example),
+      // it has been marked as FAILED and removed from containers during
+      // CONTAINER_REMOTE_LAUNCH event handling.
+      // Skip kill() such container during CONTAINER_REMOTE_CLEANUP as
+      // it is not necessary and could cost 15 minutes delay if the node is dead.
+      if (event.getType() == EventType.CONTAINER_REMOTE_CLEANUP &&
+          !containers.containsKey(containerID)) {
+        LOG.info("Skip cleanup of already-removed container " + containerID);
+        // send killed event to task attempt regardless like in kill().
+        context.getEventHandler().handle(new TaskAttemptEvent(event.getTaskAttemptID(),
+            TaskAttemptEventType.TA_CONTAINER_CLEANED));
+        return;
+      }
+
       Container c = getContainer(event);
       switch(event.getType()) {
 
