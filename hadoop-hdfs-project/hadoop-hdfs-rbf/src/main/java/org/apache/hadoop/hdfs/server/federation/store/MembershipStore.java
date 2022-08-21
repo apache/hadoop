@@ -48,7 +48,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipState;
  * StateStoreDriver}, NameNode registrations are cached until the next query.
  * The fetched registration data is aggregated using a quorum to determine the
  * best/most accurate state for each NameNode. The cache is periodically updated
- * by the @{link StateStoreCacheUpdateService}.
+ * by the {@link StateStoreCacheUpdateService}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
