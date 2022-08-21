@@ -4117,11 +4117,11 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY = ROUTER_PREFIX +
       "kerberos.principal.hostname";
 
-  /** Router enable AppsInfo Cache **/
+  /** Router enable AppsInfo Cache. **/
   public static final String ROUTER_APPSINFO_ENABLED = ROUTER_WEBAPP_PREFIX + "appsinfo-enabled";
   public static final boolean DEFAULT_ROUTER_APPSINFO_ENABLED = false;
 
-  /** Router AppsInfo Cache Count**/
+  /** Router AppsInfo Cache Count. **/
   public static final String ROUTER_APPSINFO_CACHED_COUNT =
       ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
   public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;

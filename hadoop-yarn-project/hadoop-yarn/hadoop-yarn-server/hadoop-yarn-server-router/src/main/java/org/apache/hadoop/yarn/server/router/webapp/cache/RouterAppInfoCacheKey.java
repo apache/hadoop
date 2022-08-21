@@ -54,6 +54,7 @@ public class RouterAppInfoCacheKey {
 
   }
 
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public RouterAppInfoCacheKey(UserGroupInformation ugi, String stateQuery,
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
@@ -76,6 +77,8 @@ public class RouterAppInfoCacheKey {
     this.unselectedFields = unselectedFields;
   }
 
+
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public static RouterAppInfoCacheKey newInstance(HttpServletRequest hsr, String stateQuery,
       Set<String> statesQuery, String finalStatusQuery, String userQuery,
       String queueQuery, String count, String startedBegin, String startedEnd,
@@ -103,8 +106,12 @@ public class RouterAppInfoCacheKey {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     RouterAppInfoCacheKey that = (RouterAppInfoCacheKey) o;
 
     return new EqualsBuilder()
