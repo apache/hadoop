@@ -83,7 +83,7 @@ public class TestRollingUpgrade {
   }
 
   @Rule
-  public TemporaryFolder folder= new TemporaryFolder();
+  public TemporaryFolder folder = new TemporaryFolder();
 
   /**
    * Create a default HDFS configuration which has test-specific data directories.  This is
@@ -427,7 +427,7 @@ public class TestRollingUpgrade {
   public void testDFSAdminDatanodeUpgradeControlCommands() throws Exception {
     // start a cluster
     final Configuration conf = getHdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()){
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build()) {
       cluster.waitActive();
       final DFSAdmin dfsadmin = new DFSAdmin(conf);
       DataNode dn = cluster.getDataNodes().get(0);

@@ -21,8 +21,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -43,8 +41,6 @@ public class TestGetJournalEditServlet {
 
   @BeforeClass
   public static void setUp() throws ServletException {
-    LogManager.getLogger(GetJournalEditServlet.class).setLevel(Level.DEBUG);
-
     // Configure Hadoop
     CONF.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     CONF.set(DFSConfigKeys.HADOOP_SECURITY_AUTH_TO_LOCAL,
