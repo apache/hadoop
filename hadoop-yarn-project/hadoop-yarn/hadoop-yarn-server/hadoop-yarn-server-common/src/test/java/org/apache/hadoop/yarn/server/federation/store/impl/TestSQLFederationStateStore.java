@@ -80,4 +80,34 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   public void testAddReservationHomeSubCluster() throws Exception {
     super.testAddReservationHomeSubCluster();
   }
+
+  @Test(expected = NotImplementedException.class)
+  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
+    super.testAddReservationHomeSubClusterReservationAlreadyExists();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC() throws Exception {
+    super.testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testDeleteReservationHomeSubCluster() throws Exception {
+    super.testDeleteReservationHomeSubCluster();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
+    super.testDeleteReservationHomeSubClusterUnknownApp();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateReservationHomeSubCluster() throws Exception {
+    super.testUpdateReservationHomeSubCluster();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
+    super.testUpdateReservationHomeSubClusterUnknownApp();
+  }
 }
