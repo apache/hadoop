@@ -51,6 +51,11 @@ public final class InternalConstants {
   */
   public static final boolean DELETE_CONSIDERED_IDEMPOTENT = true;
 
+  /**
+   * size of a buffer to create when draining the stream.
+   */
+  public static final int DRAIN_BUFFER_SIZE = 16384;
+
   private InternalConstants() {
   }
 
