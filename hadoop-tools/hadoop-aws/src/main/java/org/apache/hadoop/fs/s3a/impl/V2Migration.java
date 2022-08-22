@@ -43,6 +43,9 @@ public final class V2Migration {
   private static final LogExactlyOnce WARN_OF_CUSTOM_SIGNER =
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
+  private static final LogExactlyOnce WARN_ON_GET_OBJECT_METADATA =
+      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
+
   /**
    * Warns on an AWS V1 credential provider being referenced directly.
    * @param name name of the credential provider
@@ -78,6 +81,14 @@ public final class V2Migration {
     WARN_OF_CUSTOM_SIGNER.warn(
         "The signer interface has changed in AWS SDK V2, custom signers will need to be updated "
             + "once S3A is upgraded to SDK V2");
+  }
+
+  /**
+   * Warns on use of getObjectMetadata.
+   */
+  public static void v1GetObjectMetadataCalled() {
+    WARN_ON_GET_OBJECT_METADATA.warn("getObjectMetadata() called. This operation and it's response "
+        + "will be changed as part of upgrading S3A to AWS SDK V2");
   }
 
 }

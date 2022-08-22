@@ -2324,6 +2324,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    V2Migration.v1GetObjectMetadataCalled();
     return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
         getObjectMetadata(makeQualified(path), null, invoker,
             "getObjectMetadata"));
