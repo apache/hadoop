@@ -3920,6 +3920,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FEDERATION_REGISTRY_BASE_KEY =
       "yarnfederation/";
 
+  public static final String FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY =
+      FEDERATION_PREFIX + "state-store.heartbeat.initial-delay";
+
+  // 30 secs
+  public static final int
+      DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY = 30;
+
   public static final String FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS =
       FEDERATION_PREFIX + "state-store.heartbeat-interval-secs";
 
@@ -4106,6 +4113,16 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "read-timeout";
   public static final long DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT =
       TimeUnit.SECONDS.toMillis(30);
+
+  /** The Kerberos keytab for the yarn router.*/
+  public static final String ROUTER_KEYTAB = ROUTER_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the yarn router.*/
+  public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn router.*/
+  public static final String ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY = ROUTER_PREFIX +
+      "kerberos.principal.hostname";
 
   ////////////////////////////////
   // CSI Volume configs

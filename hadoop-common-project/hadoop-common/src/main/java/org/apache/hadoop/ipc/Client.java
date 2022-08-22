@@ -419,7 +419,7 @@ public class Client implements AutoCloseable {
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
-    private final ConnectionId remoteId;                // connection id
+    private final ConnectionId remoteId;          // connection id
     private AuthMethod authMethod; // authentication method
     private AuthProtocol authProtocol;
     private int serviceClass;
@@ -645,6 +645,9 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
+        // Update the remote address so that reconnections are with the updated address.
+        // This avoids thrashing.
+        remoteId.setAddress(currentAddr);
         UserGroupInformation ticket = remoteId.getTicket();
         this.setName("IPC Client (" + socketFactory.hashCode()
             + ") connection to " + server.toString() + " from "
@@ -1700,9 +1703,9 @@ public class Client implements AutoCloseable {
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving
   public static class ConnectionId {
-    InetSocketAddress address;
-    UserGroupInformation ticket;
-    final Class<?> protocol;
+    private InetSocketAddress address;
+    private final UserGroupInformation ticket;
+    private final Class<?> protocol;
     private static final int PRIME = 16777619;
     private final int rpcTimeout;
     private final int maxIdleTime; //connections will be culled if it was idle for 
@@ -1717,7 +1720,7 @@ public class Client implements AutoCloseable {
     private final int pingInterval; // how often sends ping to the server in msecs
     private String saslQop; // here for testing
     private final Configuration conf; // used to get the expected kerberos principal name
-    
+
     public ConnectionId(InetSocketAddress address, Class<?> protocol,
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
@@ -1753,7 +1756,28 @@ public class Client implements AutoCloseable {
     InetSocketAddress getAddress() {
       return address;
     }
-    
+
+    /**
+     * This is used to update the remote address when an address change is detected.  This method
+     * ensures that the {@link #hashCode()} won't change.
+     *
+     * @param address the updated address
+     * @throws IllegalArgumentException if the hostname or port doesn't match
+     * @see Connection#updateAddress()
+     */
+    void setAddress(InetSocketAddress address) {
+      if (!Objects.equals(this.address.getHostName(), address.getHostName())) {
+        throw new IllegalArgumentException("Hostname must match: " + this.address + " vs "
+            + address);
+      }
+      if (this.address.getPort() != address.getPort()) {
+        throw new IllegalArgumentException("Port must match: " + this.address + " vs " + address);
+      }
+
+      this.address = address;
+    }
+
+
     Class<?> getProtocol() {
       return protocol;
     }
@@ -1864,7 +1888,11 @@ public class Client implements AutoCloseable {
     @Override
     public int hashCode() {
       int result = connectionRetryPolicy.hashCode();
-      result = PRIME * result + ((address == null) ? 0 : address.hashCode());
+      // We calculate based on the host name and port without the IP address, since the hashCode
+      // must be stable even if the IP address is updated.
+      result = PRIME * result + ((address == null || address.getHostName() == null) ? 0 :
+          address.getHostName().hashCode());
+      result = PRIME * result + ((address == null) ? 0 : address.getPort());
       result = PRIME * result + (doPing ? 1231 : 1237);
       result = PRIME * result + maxIdleTime;
       result = PRIME * result + pingInterval;

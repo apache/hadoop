@@ -35,9 +35,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -76,6 +76,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -578,5 +580,85 @@ public class MockDefaultRequestInterceptorREST
     AppTimeoutInfo result = new AppTimeoutInfo(applicationTimeout);
 
     return Response.status(Status.OK).entity(result).build();
+  }
+
+  @Override
+  public Response updateApplicationPriority(AppPriority targetPriority, HttpServletRequest hsr,
+      String appId) throws YarnException, InterruptedException, IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (targetPriority == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Priority newPriority = Priority.newInstance(targetPriority.getPriority());
+    appReport.setPriority(newPriority);
+
+    return Response.status(Status.OK).entity(targetPriority).build();
+  }
+
+  @Override
+  public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    Priority priority = appReport.getPriority();
+
+    return new AppPriority(priority.getPriority());
+  }
+
+  @Override
+  public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
+      throws AuthorizationException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+    String queue = applicationMap.get(applicationId).getQueue();
+    return new AppQueue(queue);
+  }
+
+  @Override
+  public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr, String appId)
+      throws AuthorizationException, YarnException, InterruptedException, IOException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+    if (targetQueue == null || StringUtils.isBlank(targetQueue.getQueue())) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    String originalQueue = appReport.getQueue();
+    appReport.setQueue(targetQueue.getQueue());
+    applicationMap.put(applicationId, appReport);
+    LOG.info("Update applicationId = {} from originalQueue = {} to targetQueue = {}.",
+        appId, originalQueue, targetQueue);
+
+    AppQueue targetAppQueue = new AppQueue(targetQueue.getQueue());
+    return Response.status(Status.OK).entity(targetAppQueue).build();
   }
 }

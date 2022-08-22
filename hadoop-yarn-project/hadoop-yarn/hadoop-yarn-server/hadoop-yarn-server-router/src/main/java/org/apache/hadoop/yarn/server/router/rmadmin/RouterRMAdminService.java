@@ -157,7 +157,7 @@ public class RouterRMAdminService extends AbstractService
   }
 
   @VisibleForTesting
-  protected RequestInterceptorChainWrapper getInterceptorChain()
+  public RequestInterceptorChainWrapper getInterceptorChain()
       throws IOException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
     RequestInterceptorChainWrapper chain = userPipelineMap.get(user);

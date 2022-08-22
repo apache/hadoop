@@ -1623,4 +1623,14 @@ public class FederationClientInterceptor
         String.format("Can't Found applicationId = %s in any sub clusters", applicationId);
     throw new YarnException(errorMsg);
   }
+
+  @VisibleForTesting
+  public FederationStateStoreFacade getFederationFacade() {
+    return federationFacade;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterId, ApplicationClientProtocol> getClientRMProxies() {
+    return clientRMProxies;
+  }
 }
