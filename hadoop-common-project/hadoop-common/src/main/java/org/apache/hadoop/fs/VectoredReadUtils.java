@@ -37,6 +37,8 @@ import org.apache.hadoop.util.Preconditions;
  */
 public final class VectoredReadUtils {
 
+  private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
+
   /**
    * Validate a single range.
    * @param range file range.
@@ -114,7 +116,7 @@ public final class VectoredReadUtils {
                                                           FileRange range,
                                                           ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      buffer.put(readInDirectBuffer(stream, range));
+      readInDirectBuffer(stream, range.getLength(), buffer);
       buffer.flip();
     } else {
       stream.readFully(range.getOffset(), buffer.array(),
@@ -122,13 +124,29 @@ public final class VectoredReadUtils {
     }
   }
 
-  private static byte[] readInDirectBuffer(PositionedReadable stream,
-                                           FileRange range) throws IOException {
-    // if we need to read data from a direct buffer and the stream doesn't
-    // support it, we allocate a byte array to use.
-    byte[] tmp = new byte[range.getLength()];
-    stream.readFully(range.getOffset(), tmp, 0, tmp.length);
-    return tmp;
+  /**
+   * Read bytes from stream into a byte buffer using an
+   * intermediate byte array.
+   * @param stream input stream.
+   * @param length number of bytes to read.
+   * @param buffer buffer to fill.
+   * @throws IOException any IOE.
+   */
+  private static void readInDirectBuffer(PositionedReadable stream,
+                                         int length,
+                                         ByteBuffer buffer) throws IOException {
+    int readBytes = 0;
+    int offset = 0;
+    byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
+    while (readBytes < length) {
+      int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
+              TMP_BUFFER_MAX_SIZE
+              : length - readBytes;
+      stream.readFully(offset, tmp, 0, currentLength);
+      buffer.put(tmp, 0, currentLength);
+      offset = offset + currentLength;
+      readBytes = readBytes + currentLength;
+    }
   }
 
   /**
