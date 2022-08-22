@@ -293,7 +293,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
         return -1;
       }
       bytesRead++;
-      if (bytesRead == readToRaiseIOE) {
+      if (readToRaiseIOE > 0 && bytesRead >= readToRaiseIOE) {
         throw new IOException("IOE triggered on reading byte " + bytesRead);
       }
       return (int) '0' + (bytesRead % 10);
@@ -304,13 +304,21 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
         throws IOException {
       int count = 0;
 
-      while (count < len) {
-        int r = read();
-        if (r < 0) {
-          break;
+      try {
+        while (count < len) {
+          int r = read();
+          if (r < 0) {
+            break;
+          }
+          bytes[off + count] = (byte) r;
+          count++;
         }
-        bytes[off + count] = (byte) r;
-        count++;
+      } catch (IOException e) {
+        if (count == 0) {
+          // first byte
+          throw e;
+        }
+        // otherwise break loop
       }
       return count;
     }
