@@ -138,7 +138,7 @@ public final class AWSClientConfig {
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return Proxy configuration builder
-   * @throws IOException
+   * @throws IOException on any IO problem
    */
   public static ProxyConfiguration.Builder createProxyConfigurationBuilder(Configuration conf,
       String bucket) throws IOException {

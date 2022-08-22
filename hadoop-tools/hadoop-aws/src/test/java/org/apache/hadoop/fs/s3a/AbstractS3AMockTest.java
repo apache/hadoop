@@ -51,7 +51,7 @@ public abstract class AbstractS3AMockTest {
 
   protected S3AFileSystem fs;
   protected AmazonS3 s3;
-  protected S3Client s3V2;
+  private S3Client s3V2;
 
   @Before
   public void setup() throws Exception {
@@ -78,6 +78,10 @@ public abstract class AbstractS3AMockTest {
     // about any race conditions
     conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
     return conf;
+  }
+
+  public S3Client getS3Client() {
+    return s3V2;
   }
 
   @After

@@ -67,7 +67,7 @@ public interface S3ClientFactory {
    * @param uri S3A file system URI
    * @param parameters parameter object
    * @return S3 client
-   * @throws IOException
+   * @throws IOException on any IO problem
    */
   S3Client createS3ClientV2(URI uri,
       S3ClientCreationParameters parameters) throws IOException;

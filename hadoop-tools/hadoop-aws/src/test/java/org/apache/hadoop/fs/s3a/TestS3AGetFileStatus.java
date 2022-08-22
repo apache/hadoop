@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CommonPrefix;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
@@ -76,6 +77,7 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   public void testFakeDirectory() throws Exception {
     Path path = new Path("/dir");
     String key = path.toUri().getPath().substring(1);
+    S3Client s3V2 = getS3Client();
     when(s3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
       .thenThrow(NOT_FOUND);
     String keyDir = key + "/";
@@ -146,7 +148,7 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
 
   private void setupListMocks(List<CommonPrefix> prefixes,
       List<S3Object> s3Objects) {
-
+    S3Client s3V2 = getS3Client();
     // V1 list API mock
     ListObjectsResponse v1Response = mock(ListObjectsResponse.class);
     when(v1Response.commonPrefixes()).thenReturn(prefixes);

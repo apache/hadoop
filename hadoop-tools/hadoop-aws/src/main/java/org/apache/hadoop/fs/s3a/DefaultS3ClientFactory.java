@@ -188,7 +188,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param uri S3A file system URI
    * @param parameters parameter object
    * @return S3 client
-   * @throws IOException
+   * @throws IOException on any IO problem
    */
   @Override
   public S3Client createS3ClientV2(
