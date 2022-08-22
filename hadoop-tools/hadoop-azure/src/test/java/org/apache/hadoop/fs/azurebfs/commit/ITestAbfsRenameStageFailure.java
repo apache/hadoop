@@ -52,7 +52,7 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
   public void setup() throws Exception {
     binding.setup();
     super.setup();
-    }
+  }
 
   @Override
   protected Configuration createConfiguration() {
