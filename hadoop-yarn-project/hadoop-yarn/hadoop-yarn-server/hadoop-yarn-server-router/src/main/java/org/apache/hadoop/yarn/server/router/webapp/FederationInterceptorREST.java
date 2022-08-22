@@ -1261,27 +1261,103 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppPriority(hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the getAppPriority appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppPriority Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
   public Response updateApplicationPriority(AppPriority targetPriority,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    if (targetPriority == null) {
+      throw new IllegalArgumentException("Parameter error, the targetPriority is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.updateApplicationPriority(targetPriority, hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get the updateApplicationPriority appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("updateApplicationPriority Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.getAppQueue(hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get queue by appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppQueue Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
   public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    if (targetQueue == null) {
+      throw new IllegalArgumentException("Parameter error, the targetQueue is null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      return interceptor.updateAppQueue(targetQueue, hsr, appId);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to update app queue by appId: %s.", appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("updateAppQueue Failed.", e);
+    }
+
+    return null;
   }
 
   @Override

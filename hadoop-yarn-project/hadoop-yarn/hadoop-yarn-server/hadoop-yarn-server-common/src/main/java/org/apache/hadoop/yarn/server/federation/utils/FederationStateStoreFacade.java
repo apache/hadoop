@@ -43,6 +43,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -51,9 +52,13 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
@@ -62,10 +67,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolic
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +94,8 @@ public final class FederationStateStoreFacade {
   private static final String GET_SUBCLUSTERS_CACHEID = "getSubClusters";
   private static final String GET_POLICIES_CONFIGURATIONS_CACHEID =
       "getPoliciesConfigurations";
+  private static final String GET_APPLICATION_HOME_SUBCLUSTER_CACHEID =
+      "getApplicationHomeSubCluster";
 
   private static final FederationStateStoreFacade FACADE =
       new FederationStateStoreFacade();
@@ -376,10 +386,19 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterId getApplicationHomeSubCluster(ApplicationId appId)
       throws YarnException {
-    GetApplicationHomeSubClusterResponse response =
-        stateStore.getApplicationHomeSubCluster(
+    try {
+      if (isCachingEnabled()) {
+        SubClusterId value = SubClusterId.class.cast(
+            cache.get(buildGetApplicationHomeSubClusterRequest(appId)));
+        return value;
+      } else {
+        GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
-    return response.getApplicationHomeSubCluster().getHomeSubCluster();
+        return response.getApplicationHomeSubCluster().getHomeSubCluster();
+      }
+    } catch (Throwable ex) {
+      throw new YarnException(ex);
+    }
   }
 
   /**
@@ -398,6 +417,63 @@ public final class FederationStateStoreFacade {
    */
   public Configuration getConf() {
     return this.conf;
+  }
+
+  /**
+   * Adds the home {@link SubClusterId} for the specified {@link ReservationId}.
+   *
+   * @param appHomeSubCluster the mapping of the reservation to it's home
+   *          sub-cluster
+   * @return the stored subCluster from StateStore
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public SubClusterId addReservationHomeSubCluster(ReservationHomeSubCluster appHomeSubCluster)
+      throws YarnException {
+    AddReservationHomeSubClusterResponse response = stateStore.addReservationHomeSubCluster(
+        AddReservationHomeSubClusterRequest.newInstance(appHomeSubCluster));
+    return response.getHomeSubCluster();
+  }
+
+  /**
+   * Returns the home {@link SubClusterId} for the specified {@link ReservationId}.
+   *
+   * @param reservationId the identifier of the reservation
+   * @return the home subCluster identifier
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public SubClusterId getReservationHomeSubCluster(ReservationId reservationId)
+      throws YarnException {
+    GetReservationHomeSubClusterResponse response = stateStore.getReservationHomeSubCluster(
+         GetReservationHomeSubClusterRequest.newInstance(reservationId));
+    return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  /**
+   * Updates the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param appHomeSubCluster the mapping of the reservation to it's home
+   *          sub-cluster
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void updateReservationHomeSubCluster(ReservationHomeSubCluster appHomeSubCluster)
+      throws YarnException {
+    UpdateReservationHomeSubClusterRequest request =
+        UpdateReservationHomeSubClusterRequest.newInstance(appHomeSubCluster);
+    stateStore.updateReservationHomeSubCluster(request);
+  }
+
+  /**
+   * Delete the home {@link SubClusterId} for the specified
+   * {@link ReservationId}.
+   *
+   * @param reservationId the identifier of the reservation
+   * @throws YarnException if the call to the state store is unsuccessful
+   */
+  public void deleteReservationHomeSubCluster(ReservationId reservationId) throws YarnException {
+    DeleteReservationHomeSubClusterRequest request =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+    stateStore.deleteReservationHomeSubCluster(request);
   }
 
   /**
@@ -513,6 +589,26 @@ public final class FederationStateStoreFacade {
     return cacheRequest;
   }
 
+  private Object buildGetApplicationHomeSubClusterRequest(ApplicationId applicationId) {
+    final String cacheKey = buildCacheKey(getClass().getSimpleName(),
+        GET_APPLICATION_HOME_SUBCLUSTER_CACHEID, applicationId.toString());
+    CacheRequest<String, SubClusterId> cacheRequest = new CacheRequest<>(
+        cacheKey,
+        input -> {
+
+          GetApplicationHomeSubClusterRequest request =
+              GetApplicationHomeSubClusterRequest.newInstance(applicationId);
+          GetApplicationHomeSubClusterResponse response =
+              stateStore.getApplicationHomeSubCluster(request);
+
+          ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+          SubClusterId subClusterId = appHomeSubCluster.getHomeSubCluster();
+
+          return subClusterId;
+        });
+    return cacheRequest;
+  }
+
   protected String buildCacheKey(String typeName, String methodName,
       String argName) {
     StringBuilder buffer = new StringBuilder();
@@ -560,7 +656,7 @@ public final class FederationStateStoreFacade {
     private K key;
     private Func<K, V> func;
 
-    public CacheRequest(K key, Func<K, V> func) {
+    CacheRequest(K key, Func<K, V> func) {
       this.key = key;
       this.func = func;
     }
@@ -608,5 +704,20 @@ public final class FederationStateStoreFacade {
    */
   protected interface Func<T, TResult> {
     TResult invoke(T input) throws Exception;
+  }
+
+  @VisibleForTesting
+  public Cache<Object, Object> getCache() {
+    return cache;
+  }
+
+  @VisibleForTesting
+  protected Object getAppHomeSubClusterCacheRequest(ApplicationId applicationId) {
+    return buildGetApplicationHomeSubClusterRequest(applicationId);
+  }
+
+  @VisibleForTesting
+  public FederationStateStore getStateStore() {
+    return stateStore;
   }
 }
