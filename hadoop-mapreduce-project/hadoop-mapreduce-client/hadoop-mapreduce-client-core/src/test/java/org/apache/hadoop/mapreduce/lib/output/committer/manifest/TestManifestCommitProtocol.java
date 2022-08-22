@@ -1554,7 +1554,8 @@ public class TestManifestCommitProtocol
     Assertions.assertThat(committer.hasCapability(
             ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING))
         .describedAs("dynamic partitioning capability in committer %s",
-            committer);
+            committer)
+        .isTrue();
     // and through a binding committer -passthrough is critical
     // for the spark binding.
     BindingPathOutputCommitter bindingCommitter =
@@ -1562,7 +1563,8 @@ public class TestManifestCommitProtocol
     Assertions.assertThat(bindingCommitter.hasCapability(
             ManifestCommitterConstants.CAPABILITY_DYNAMIC_PARTITIONING))
         .describedAs("dynamic partitioning capability in committer %s",
-            bindingCommitter);
+            bindingCommitter)
+        .isTrue();
 
 
     // setup
