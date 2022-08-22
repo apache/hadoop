@@ -185,18 +185,19 @@ public class MiniQJMHACluster implements AutoCloseable {
     return journalCluster;
   }
 
-  public void shutdown() {
+  public void shutdown() throws IOException {
     cluster.shutdown();
-    try {
-      journalCluster.shutdown();
-    } catch (IOException shutdownFailure) {
-      LOG.warn("Exception while closing journal cluster", shutdownFailure);
-    }
+    journalCluster.shutdown();
   }
 
   @Override
   public void close() {
-    shutdown();
+    try {
+      shutdown();
+    } catch (IOException shutdownFailure) {
+      LOG.warn("Exception while closing journal cluster", shutdownFailure);
+    }
+
   }
 
 }
