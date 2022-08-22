@@ -31,17 +31,15 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-
-
+import java.net.URI;
 import java.util.Random;
-
 import org.junit.Assert;
 import org.junit.Test;
-
+import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
-import  org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * Unit test TestExponentialRetryPolicy.
@@ -81,7 +79,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   public void testCreateMultipleAccountThrottling() throws Throwable {
     final AzureBlobFileSystem currentFs = getFileSystem();
     Configuration config = new Configuration(this.getRawConfiguration());
-    String fileSystemName = TEST_CONTAINER_PREFIX + java.util.UUID.randomUUID().toString();
+    String fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
     String accountName = config.get(FS_AZURE_ACCOUNT_NAME);
     if (accountName == null) {
       // check if accountName is set using different config key
@@ -91,10 +89,10 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
         accountName != null && !accountName.isEmpty());
 
     final String abfsUrl = fileSystemName + "@" + accountName;
-    java.net.URI defaultUri = null;
+    URI defaultUri = null;
     String abfsScheme = "abfss";
     try {
-      defaultUri = new java.net.URI(abfsScheme, abfsUrl, null, null, null);
+      defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
     } catch (Exception ex) {
       throw new AssertionError(ex);
     }
