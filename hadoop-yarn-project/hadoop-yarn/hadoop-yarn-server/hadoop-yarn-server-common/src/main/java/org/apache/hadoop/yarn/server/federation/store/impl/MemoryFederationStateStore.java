@@ -249,8 +249,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
-    return GetApplicationHomeSubClusterResponse.newInstance(
-        ApplicationHomeSubCluster.newInstance(appId, applications.get(appId)));
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, applications.get(appId));
   }
 
   @Override
