@@ -68,7 +68,6 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
     if (isNamespaceEnabled()) {
       return true;
     }
-
     return false;
   }
 
