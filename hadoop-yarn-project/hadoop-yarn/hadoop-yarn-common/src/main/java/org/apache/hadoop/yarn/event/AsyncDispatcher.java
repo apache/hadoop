@@ -238,6 +238,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       }
     }
     printEventDetailsExecutor.shutdownNow();
+    printEventDetailsExecutor.shutdown();
 
     // stop all the components
     super.serviceStop();

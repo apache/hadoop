@@ -974,7 +974,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   public void testBatchFinishApplicationMaster() throws IOException, InterruptedException {
 
     final RegisterApplicationMasterRequest registerReq =
-       Records.newRecord(RegisterApplicationMasterRequest.class);
+        Records.newRecord(RegisterApplicationMasterRequest.class);
     registerReq.setHost(Integer.toString(testAppId));
     registerReq.setRpcPort(testAppId);
     registerReq.setTrackingUrl("");
