@@ -466,7 +466,7 @@ public class Listing extends AbstractStoreOperation {
           S3AFileStatus status = createFileStatus(keyPath, s3Object,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
-              s3Object.eTag(), null, isCSEEnabled);
+                  s3Object.eTag(), null, isCSEEnabled);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;

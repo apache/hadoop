@@ -35,7 +35,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class MockS3ClientFactory implements S3ClientFactory {
 
   @Override
-  public AmazonS3 createS3Client(URI uri, final S3ClientCreationParameters parameters) {
+  public AmazonS3 createS3Client(URI uri,
+      final S3ClientCreationParameters parameters) {
     AmazonS3 s3 = mock(AmazonS3.class);
     String bucket = uri.getHost();
     when(s3.doesBucketExist(bucket)).thenReturn(true);

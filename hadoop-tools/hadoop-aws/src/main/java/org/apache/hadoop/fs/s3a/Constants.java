@@ -1204,7 +1204,4 @@ public final class Constants {
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
 
-  public static final String HTTP = "http";
-
-  public static final String HTTPS = "https";
 }

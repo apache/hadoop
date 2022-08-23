@@ -56,6 +56,11 @@ import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 
+/**
+ * Methods for configuring the S3 client.
+ * These methods are used when creating and configuring
+ * {@link software.amazon.awssdk.services.s3.S3Client} which communicates with the S3 service.
+ */
 public final class AWSClientConfig {
   private static final Logger LOG = LoggerFactory.getLogger(AWSClientConfig.class);
 
@@ -66,18 +71,7 @@ public final class AWSClientConfig {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();
 
-    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-
-    if (requestTimeoutMillis > Integer.MAX_VALUE) {
-      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          requestTimeoutMillis, Integer.MAX_VALUE);
-      requestTimeoutMillis = Integer.MAX_VALUE;
-    }
-
-    if(requestTimeoutMillis > 0) {
-      overrideConfigBuilder.apiCallAttemptTimeout(Duration.ofMillis(requestTimeoutMillis));
-    }
+    initRequestTimeout(conf, overrideConfigBuilder);
 
     initUserAgent(conf, overrideConfigBuilder);
 
@@ -104,11 +98,12 @@ public final class AWSClientConfig {
     httpClientBuilder.maxConnections(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
         DEFAULT_MAXIMUM_CONNECTIONS, 1));
 
-    httpClientBuilder.connectionTimeout(Duration.ofSeconds(
-        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0)));
+    int connectionEstablishTimeout =
+        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
+    int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
 
-    httpClientBuilder.socketTimeout(Duration.ofSeconds(S3AUtils.intOption(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, 0)));
+    httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
+    httpClientBuilder.socketTimeout(Duration.ofSeconds(socketTimeout));
 
     // TODO: Need to set ssl socket factory, as done in
     //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
@@ -228,4 +223,25 @@ public final class AWSClientConfig {
     clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
   }
 
+  /**
+   * Configures request timeout.
+   *
+   * @param conf Hadoop configuration
+   * @param clientConfig AWS SDK configuration to update
+   */
+  private static void initRequestTimeout(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig) {
+    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
+        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+
+    if (requestTimeoutMillis > Integer.MAX_VALUE) {
+      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
+          requestTimeoutMillis, Integer.MAX_VALUE);
+      requestTimeoutMillis = Integer.MAX_VALUE;
+    }
+
+    if(requestTimeoutMillis > 0) {
+      clientConfig.apiCallAttemptTimeout(Duration.ofMillis(requestTimeoutMillis));
+    }
+  }
 }

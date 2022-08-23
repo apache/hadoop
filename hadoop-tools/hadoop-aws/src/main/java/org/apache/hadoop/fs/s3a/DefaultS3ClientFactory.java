@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.regions.RegionUtils;
@@ -78,8 +79,6 @@ import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.HTTP;
-import static org.apache.hadoop.fs.s3a.Constants.HTTPS;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -211,11 +210,6 @@ public class DefaultS3ClientFactory extends Configured
 
     S3ClientBuilder s3ClientBuilder = S3Client.builder();
 
-    // build a s3 client with region eu-west-2 that can be used to get the region of the bucket.
-    S3Client defaultS3Client = S3Client.builder().region(Region.EU_WEST_2)
-        .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()))
-        .build();
-
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
 
@@ -243,14 +237,17 @@ public class DefaultS3ClientFactory extends Configured
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
 
     Region region =
-        getS3Region(conf.getTrimmed(AWS_REGION), defaultS3Client);
+        getS3Region(conf.getTrimmed(AWS_REGION), parameters.getCredentialSet());
 
     LOG.debug("Using endpoint {}; and region {}", endpoint, region);
 
     s3ClientBuilder.endpointOverride(endpoint).region(region);
 
-    s3ClientBuilder.serviceConfiguration(
-        S3Configuration.builder().pathStyleAccessEnabled(parameters.isPathStyleAccess()).build());
+    S3Configuration s3Configuration = S3Configuration.builder()
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .build();
+
+    s3ClientBuilder.serviceConfiguration(s3Configuration);
 
     // TODO: Some configuration done in configureBasicParams is not done yet.
     //  Request handlers will be added during auditor work. Need to verify how metrics collection
@@ -502,7 +499,7 @@ public class DefaultS3ClientFactory extends Configured
 
     boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
 
-    String protocol = secureConnections ? HTTPS : HTTP;
+    String protocol = secureConnections ? "https" : "http";
 
     if (endpoint == null || endpoint.isEmpty()) {
       // the default endpoint
@@ -525,16 +522,21 @@ public class DefaultS3ClientFactory extends Configured
    *
    * @param region AWS S3 Region set in the config. This property may not be set, in which case
    *               ask S3 for the region.
-   * @param s3Client A S3 Client with default config, used for getting the region of a bucket.
+   * @param credentialsProvider Credentials provider to be used with the default s3 client.
    * @return region of the bucket.
    */
-  private Region getS3Region(String region, S3Client s3Client) {
+  private Region getS3Region(String region, AWSCredentialsProvider credentialsProvider) {
 
     if (!StringUtils.isBlank(region)) {
       return Region.of(region);
     }
 
     try {
+      // build a s3 client with region eu-west-2 that can be used to get the region of the bucket.
+      S3Client s3Client = S3Client.builder().region(Region.EU_WEST_2)
+          .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(credentialsProvider))
+          .build();
+
       HeadBucketResponse headBucketResponse =
           s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
       return Region.of(

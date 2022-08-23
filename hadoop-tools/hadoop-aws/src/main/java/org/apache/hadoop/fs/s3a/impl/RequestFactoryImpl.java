@@ -51,6 +51,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
@@ -149,6 +150,17 @@ public class RequestFactoryImpl implements RequestFactory {
     return requestPreparer != null
         ? requestPreparer.prepareRequest(t)
         : t;
+  }
+
+  /**
+   * Preflight preparation of V2 AWS request.
+   * @param <T> web service request
+   * @return prepared entry.
+   */
+  // TODO: Currently this is a NOOP, will be completed separately as part of auditor work.
+  @Retries.OnceRaw
+  private <T extends AwsRequest> T prepareV2Request(T t) {
+    return t;
   }
 
   /**
@@ -571,8 +583,7 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.delimiter(delimiter);
     }
 
-    //TODO: add call to prepareRequest
-    return requestBuilder.build();
+    return prepareV2Request(requestBuilder.build());
   }
 
   @Override
@@ -587,16 +598,16 @@ public class RequestFactoryImpl implements RequestFactory {
       final String delimiter,
       final int maxKeys) {
 
-    final ListObjectsV2Request.Builder requestBuilder =
-        ListObjectsV2Request.builder().bucket(bucket).maxKeys(maxKeys).prefix(key);
+    final ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+        .bucket(bucket)
+        .maxKeys(maxKeys)
+        .prefix(key);
 
     if (delimiter != null) {
       requestBuilder.delimiter(delimiter);
     }
 
-    //TODO: add call to prepareRequest, not added for now as PrepareRequest is a functional
-    // interface, uses AmazonWebServiceRequest, SDKV2 uses AwsRequest.
-    return requestBuilder.build();
+    return prepareV2Request(requestBuilder.build());
   }
 
   @Override

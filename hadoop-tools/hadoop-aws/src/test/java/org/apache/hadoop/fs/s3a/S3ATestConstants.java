@@ -104,7 +104,7 @@ public interface S3ATestConstants {
    * Default path for the multi MB test file: {@value}.
    */
   String DEFAULT_CSVTEST_FILE = LANDSAT_BUCKET + "scene_list.gz";
-  
+
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.
    *
