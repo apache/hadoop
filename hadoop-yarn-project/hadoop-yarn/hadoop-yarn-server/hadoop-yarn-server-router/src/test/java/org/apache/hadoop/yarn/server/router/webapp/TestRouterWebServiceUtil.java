@@ -600,10 +600,8 @@ public class TestRouterWebServiceUtil {
     ApplicationStatisticsInfo infoA = new ApplicationStatisticsInfo();
     ApplicationStatisticsInfo infoB = new ApplicationStatisticsInfo();
 
-    StatisticsItemInfo item1 =
-        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
-    StatisticsItemInfo item2 =
-        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 20);
+    StatisticsItemInfo item1 = new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
+    StatisticsItemInfo item2 = new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 20);
 
     infoA.add(item1);
     infoB.add(item2);
@@ -629,8 +627,7 @@ public class TestRouterWebServiceUtil {
   @Test
   public void testMergeDiffApplicationStatisticsInfo() {
     ApplicationStatisticsInfo infoA = new ApplicationStatisticsInfo();
-    StatisticsItemInfo item1 =
-        new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
+    StatisticsItemInfo item1 = new StatisticsItemInfo(YarnApplicationState.ACCEPTED, "*", 10);
     StatisticsItemInfo item2 =
         new StatisticsItemInfo(YarnApplicationState.NEW_SAVING, "test1", 20);
     infoA.add(item1);
@@ -639,8 +636,7 @@ public class TestRouterWebServiceUtil {
     ApplicationStatisticsInfo infoB = new ApplicationStatisticsInfo();
     StatisticsItemInfo item3 =
         new StatisticsItemInfo(YarnApplicationState.NEW_SAVING, "test1", 30);
-    StatisticsItemInfo item4 =
-        new StatisticsItemInfo(YarnApplicationState.FINISHED, "test3", 40);
+    StatisticsItemInfo item4 = new StatisticsItemInfo(YarnApplicationState.FINISHED, "test3", 40);
     infoB.add(item3);
     infoB.add(item4);
 
@@ -652,7 +648,7 @@ public class TestRouterWebServiceUtil {
         RouterWebServiceUtil.mergeApplicationStatisticsInfo(lists);
 
     Assert.assertEquals(3, mergeInfo.getStatItems().size());
-    ArrayList<StatisticsItemInfo> mergeInfoStatItems = mergeInfo.getStatItems();
+    List<StatisticsItemInfo> mergeInfoStatItems = mergeInfo.getStatItems();
 
     StatisticsItemInfo item1Result = null;
     StatisticsItemInfo item2Result = null;
@@ -675,11 +671,11 @@ public class TestRouterWebServiceUtil {
       }
     }
 
-    Assert.assertEquals(item1.getType(), item1Result.getType());
+    Assert.assertEquals(YarnApplicationState.ACCEPTED, item1Result.getState());
     Assert.assertEquals(item1.getCount(), item1Result.getCount());
-    Assert.assertEquals(item2.getType(), item2Result.getType());
+    Assert.assertEquals(YarnApplicationState.NEW_SAVING, item2Result.getState());
     Assert.assertEquals((item2.getCount() + item3.getCount()), item2Result.getCount());
-    Assert.assertEquals(item4.getType(), item3Result.getType());
+    Assert.assertEquals(YarnApplicationState.FINISHED, item3Result.getState());
     Assert.assertEquals(item4.getCount(), item3Result.getCount());
   }
 }

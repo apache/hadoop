@@ -999,7 +999,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         interceptor.getAppStatistics(null, stateQueries, typeQueries);
 
     Assert.assertNotNull(response2);
-    Assert.assertTrue(!response2.getStatItems().isEmpty());
+    Assert.assertFalse(response2.getStatItems().isEmpty());
 
     StatisticsItemInfo result = response2.getStatItems().get(0);
     Assert.assertEquals(1, result.getCount());

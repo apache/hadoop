@@ -556,7 +556,7 @@ public final class RouterWebServiceUtil {
             statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
 
         StatisticsItemInfo statisticsItemValue;
-        if(statisticsItemMap.containsKey(statisticsItemKey)) {
+        if (statisticsItemMap.containsKey(statisticsItemKey)) {
           statisticsItemValue = statisticsItemMap.get(statisticsItemKey);
           long statisticsItemValueCount = statisticsItemValue.getCount();
           long statisticsItemInfoCount = statisticsItemInfo.getCount();
