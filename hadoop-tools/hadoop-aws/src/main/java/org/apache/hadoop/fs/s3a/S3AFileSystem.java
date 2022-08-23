@@ -535,8 +535,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
 
       this.prefetchEnabled = conf.getBoolean(PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
-      this.prefetchBlockSize = intOption(
-          conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE, PREFETCH_BLOCK_DEFAULT_SIZE);
+      long prefetchBlockSizeLong =
+          longBytesOption(conf, PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE,
+              PREFETCH_BLOCK_DEFAULT_SIZE);
+      if (prefetchBlockSizeLong > (long) Integer.MAX_VALUE) {
+        throw new IOException("S3A prefetch block size exceeds int limit");
+      }
+      this.prefetchBlockSize = (int) prefetchBlockSizeLong;
       this.prefetchBlockCount =
           intOption(conf, PREFETCH_BLOCK_COUNT_KEY, PREFETCH_BLOCK_DEFAULT_COUNT, 1);
 
