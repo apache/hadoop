@@ -25,11 +25,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 /**
  * Utility class which implements helper methods used
@@ -135,16 +139,20 @@ public final class VectoredReadUtils {
   private static void readInDirectBuffer(PositionedReadable stream,
                                          int length,
                                          ByteBuffer buffer) throws IOException {
+    if (length == 0) {
+      return;
+    }
     int readBytes = 0;
-    int offset = 0;
-    byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
+    int position = 0;
+    int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
+    byte[] tmp = new byte[tmpBufferMaxSize];
     while (readBytes < length) {
-      int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
-              TMP_BUFFER_MAX_SIZE
-              : length - readBytes;
-      stream.readFully(offset, tmp, 0, currentLength);
+      int currentLength = (readBytes + tmpBufferMaxSize) < length ?
+              tmpBufferMaxSize
+              : (length - readBytes);
+      stream.readFully(position, tmp, 0, currentLength);
       buffer.put(tmp, 0, currentLength);
-      offset = offset + currentLength;
+      position = position + currentLength;
       readBytes = readBytes + currentLength;
     }
   }

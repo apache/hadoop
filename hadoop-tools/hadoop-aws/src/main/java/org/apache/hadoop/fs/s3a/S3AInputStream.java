@@ -1152,26 +1152,37 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void populateBuffer(int length,
                               ByteBuffer buffer,
                               S3ObjectInputStream objectContent) throws IOException {
+
     if (buffer.isDirect()) {
-      int readBytes = 0;
-      int offset = 0;
-      byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
-      while (readBytes < length) {
-        checkIfVectoredIOStopped();
-        int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
-                TMP_BUFFER_MAX_SIZE
-                : length - readBytes;
-        readByteArray(objectContent, tmp, 0, currentLength);
-        buffer.put(tmp, 0, currentLength);
-        offset = offset + currentLength;
-        readBytes = readBytes + currentLength;
-      }
+      readInDirectBuffer(length, buffer, objectContent);
       buffer.flip();
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
     }
     // update io stats.
     incrementBytesRead(length);
+  }
+
+  private void readInDirectBuffer(int length,
+                                  ByteBuffer buffer,
+                                  S3ObjectInputStream objectContent) throws IOException {
+    if (length == 0) {
+      return;
+    }
+    int readBytes = 0;
+    int offset = 0;
+    int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
+    byte[] tmp = new byte[tmpBufferMaxSize];
+    while (readBytes < length) {
+      checkIfVectoredIOStopped();
+      int currentLength = (readBytes + tmpBufferMaxSize) < length ?
+              tmpBufferMaxSize
+              : (length - readBytes);
+      readByteArray(objectContent, tmp, 0, currentLength);
+      buffer.put(tmp, 0, currentLength);
+      offset = offset + currentLength;
+      readBytes = readBytes + currentLength;
+    }
   }
 
   /**
