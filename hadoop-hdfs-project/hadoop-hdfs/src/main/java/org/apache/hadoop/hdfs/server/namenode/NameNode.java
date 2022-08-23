@@ -545,9 +545,7 @@ public class NameNode extends ReconfigurableBase implements
     if (cc != null) {
       // if the rpc has a caller context of "clientIp:1.2.3.4,CLI",
       // return "1.2.3.4" as the client machine.
-      String key = CallerContext.CLIENT_IP_STR +
-          CallerContext.Builder.KEY_VALUE_SEPARATOR;
-      return parseSpecialValue(cc, key);
+      return CallerContext.getRealClientIp(cc);
     }
 
     String clientMachine = Server.getRemoteAddress();

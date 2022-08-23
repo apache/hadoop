@@ -21,7 +21,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
+import static org.junit.Assert.assertEquals;
 
 public class TestCallerContext {
   @Test
@@ -80,5 +82,33 @@ public class TestCallerContext {
     conf.set(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY, "\t");
     CallerContext.Builder builder = new CallerContext.Builder(null, conf);
     builder.build();
+  }
+
+  @Test
+  public void testParseSpecialValue() {
+    String mockContent = "mockContent,clientIp:1.1.1.1,clientPort:40820";
+    String clientIp = CallerContext.parseSpecialValue(mockContent, "clientIp:");
+    assertEquals("1.1.1.1", clientIp);
+    String clientPort = CallerContext.parseSpecialValue(mockContent, "clientPort:");
+    assertEquals("40820", clientPort);
+  }
+
+  @Test
+  public void testRealClient() {
+    Configuration conf = new Configuration();
+    String contextFieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+        HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
+    CallerContext.Builder builder =
+        new CallerContext.Builder("", contextFieldSeparator).append("key", "value");
+    String context = builder.getContext();
+    Assert.assertNull(CallerContext.getRealClientIp(context));
+    Assert.assertNull(CallerContext.getRealClientPort(context));
+
+    // Test client ip and client port.
+    builder.append(CallerContext.CLIENT_IP_STR, "1.1.1.1")
+        .append(CallerContext.CLIENT_PORT_STR, "8191");
+    context = builder.getContext();
+    Assert.assertTrue("1.1.1.1".equals(CallerContext.getRealClientIp(context)));
+    Assert.assertTrue("8191".equals(CallerContext.getRealClientPort(context)));
   }
 }
