@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
@@ -449,5 +451,45 @@ public class UnmanagedAMPoolManager extends AbstractService {
         .values()) {
       uam.drainHeartbeatThread();
     }
+  }
+
+  public Map<String, FinishApplicationMasterResponse> batchFinishApplicationMaster(
+      FinishApplicationMasterRequest request, String appId) {
+
+    Map<String, FinishApplicationMasterResponse> responseMap = new HashMap<>();
+    Set<String> subClusterIds = this.unmanagedAppMasterMap.keySet();
+
+    if (subClusterIds.size() > 0) {
+      ExecutorCompletionService<Map<String, FinishApplicationMasterResponse>> finishAppService =
+          new ExecutorCompletionService<>(this.threadpool);
+      LOG.info("Sending finish application request to {} sub-cluster RMs", subClusterIds.size());
+
+      for (final String subClusterId : subClusterIds) {
+        finishAppService.submit(() -> {
+          LOG.info("Sending finish application request to RM {}", subClusterId);
+          FinishApplicationMasterResponse uamResponse = null;
+          try {
+            uamResponse = finishApplicationMaster(subClusterId, request);
+          } catch (Throwable e) {
+            LOG.warn("Failed to finish unmanaged application master: " +
+                " RM address: {} ApplicationId: {}", subClusterId, appId, e);
+          }
+          return Collections.singletonMap(subClusterId, uamResponse);
+        });
+      }
+
+      for (int i = 0; i < subClusterIds.size(); ++i) {
+        try {
+          Future<Map<String, FinishApplicationMasterResponse>> future = finishAppService.take();
+          Map<String, FinishApplicationMasterResponse> uamResponse = future.get();
+          LOG.debug("Received finish application response from RM: {}", uamResponse.keySet());
+          responseMap.putAll(uamResponse);
+        } catch (Throwable e) {
+          LOG.warn("Failed to finish unmanaged application master: ApplicationId: {}", appId, e);
+        }
+      }
+    }
+
+    return responseMap;
   }
 }

@@ -736,50 +736,26 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     this.finishAMCalled = true;
 
-    // TODO: consider adding batchFinishApplicationMaster in UAMPoolManager
     boolean failedToUnRegister = false;
-    ExecutorCompletionService<FinishApplicationMasterResponseInfo> compSvc =
-        null;
 
     // Application master is completing operation. Send the finish
     // application master request to all the registered sub-cluster resource
     // managers in parallel, wait for the responses and aggregate the results.
-    Set<String> subClusterIds = this.uamPool.getAllUAMIds();
-    if (subClusterIds.size() > 0) {
-      final FinishApplicationMasterRequest finishRequest = request;
-      compSvc =
-          new ExecutorCompletionService<FinishApplicationMasterResponseInfo>(
-              this.threadpool);
+    Map<String, FinishApplicationMasterResponse> responseMap =
+         this.uamPool.batchFinishApplicationMaster(request, attemptId.toString());
 
-      LOG.info("Sending finish application request to {} sub-cluster RMs",
-          subClusterIds.size());
-      for (final String subClusterId : subClusterIds) {
-        compSvc.submit(new Callable<FinishApplicationMasterResponseInfo>() {
-          @Override
-          public FinishApplicationMasterResponseInfo call() throws Exception {
-            LOG.info("Sending finish application request to RM {}",
-                subClusterId);
-            FinishApplicationMasterResponse uamResponse = null;
-            try {
-              uamResponse =
-                  uamPool.finishApplicationMaster(subClusterId, finishRequest);
-
-              if (uamResponse.getIsUnregistered()) {
-                secondaryRelayers.remove(subClusterId);
-                if (getNMStateStore() != null) {
-                  getNMStateStore().removeAMRMProxyAppContextEntry(attemptId,
-                      NMSS_SECONDARY_SC_PREFIX + subClusterId);
-                }
-              }
-            } catch (Throwable e) {
-              LOG.warn("Failed to finish unmanaged application master: "
-                  + "RM address: " + subClusterId + " ApplicationId: "
-                  + attemptId, e);
-            }
-            return new FinishApplicationMasterResponseInfo(uamResponse,
-                subClusterId);
-          }
-        });
+    for (Map.Entry<String, FinishApplicationMasterResponse> entry : responseMap.entrySet()) {
+      String subClusterId = entry.getKey();
+      FinishApplicationMasterResponse response = entry.getValue();
+      if (response != null && response.getIsUnregistered()) {
+        secondaryRelayers.remove(subClusterId);
+        if (getNMStateStore() != null) {
+          getNMStateStore().removeAMRMProxyAppContextEntry(attemptId,
+              NMSS_SECONDARY_SC_PREFIX + subClusterId);
+        }
+      } else {
+        // response is null or response.getIsUnregistered() == false
+        failedToUnRegister = true;
       }
     }
 
@@ -791,30 +767,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     // Stop the home heartbeat thread
     this.homeHeartbeartHandler.shutdown();
-
-    if (subClusterIds.size() > 0) {
-      // Wait for other sub-cluster resource managers to return the
-      // response and merge it with the home response
-      LOG.info(
-          "Waiting for finish application response from {} sub-cluster RMs",
-          subClusterIds.size());
-      for (int i = 0; i < subClusterIds.size(); ++i) {
-        try {
-          Future<FinishApplicationMasterResponseInfo> future = compSvc.take();
-          FinishApplicationMasterResponseInfo uamResponse = future.get();
-          LOG.debug("Received finish application response from RM: {}",
-              uamResponse.getSubClusterId());
-          if (uamResponse.getResponse() == null
-              || !uamResponse.getResponse().getIsUnregistered()) {
-            failedToUnRegister = true;
-          }
-        } catch (Throwable e) {
-          failedToUnRegister = true;
-          LOG.warn("Failed to finish unmanaged application master: "
-              + " ApplicationId: " + this.attemptId, e);
-        }
-      }
-    }
 
     if (failedToUnRegister) {
       homeResponse.setIsUnregistered(false);
