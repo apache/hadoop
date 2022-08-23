@@ -664,7 +664,7 @@ public abstract class FederationStateStoreBaseTest {
     AddReservationHomeSubClusterRequest request2 =
         AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
     AddReservationHomeSubClusterResponse response =
-    stateStore.addReservationHomeSubCluster(request2);
+        stateStore.addReservationHomeSubCluster(request2);
 
     Assert.assertNotNull(response);
     Assert.assertEquals(subClusterId1, response.getHomeSubCluster());
@@ -673,7 +673,7 @@ public abstract class FederationStateStoreBaseTest {
 
   @Test
   public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC()
-    throws Exception {
+      throws Exception {
 
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");

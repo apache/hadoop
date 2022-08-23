@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -718,8 +717,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
     }
     return subClusterId;
-  }  
-  
+  }
+
   @VisibleForTesting
   public ZKFederationStateStoreOpDurations getOpDurations() {
     return opDurations;
@@ -729,6 +728,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
 
+    long start = clock.getTime();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
     ReservationId reservationId = reservationHomeSubCluster.getReservationId();
@@ -749,7 +749,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot check app home subcluster for " + reservationId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
+    long end = clock.getTime();
+    opDurations.addReservationHomeSubClusterDuration(start, end);
     return AddReservationHomeSubClusterResponse.newInstance(homeSubCluster);
   }
 
@@ -757,6 +758,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
 
+    long start = clock.getTime();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     SubClusterId homeSubCluster = getReservation(reservationId);
@@ -768,13 +770,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     ReservationHomeSubCluster reservationHomeSubCluster =
         ReservationHomeSubCluster.newInstance(reservationId, homeSubCluster);
-
+    long end = clock.getTime();
+    opDurations.addGetReservationHomeSubClusterDuration(start, end);
     return GetReservationHomeSubClusterResponse.newInstance(reservationHomeSubCluster);
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
+    long start = clock.getTime();
     List<ReservationHomeSubCluster> result = new ArrayList<>();
 
     try {
@@ -789,14 +793,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
+    long end = clock.getTime();
+    opDurations.addGetReservationsHomeSubClusterDuration(start, end);
     return GetReservationsHomeSubClusterResponse.newInstance(result);
   }
 
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-
+    long start = clock.getTime();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     String reservationZNode = getNodePath(reservationsZNode, reservationId.toString());
@@ -820,7 +825,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete reservation: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
+    long end = clock.getTime();
+    opDurations.addDeleteReservationHomeSubClusterDuration(start, end);
     return DeleteReservationHomeSubClusterResponse.newInstance();
   }
 
@@ -828,6 +834,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
 
+    long start = clock.getTime();
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
     ReservationId reservationId = reservationHomeSubCluster.getReservationId();
@@ -840,6 +847,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     SubClusterId newSubClusterId = reservationHomeSubCluster.getHomeSubCluster();
     putReservation(reservationId, newSubClusterId, true);
+    long end = clock.getTime();
+    opDurations.addUpdateReservationHomeSubClusterDuration(start, end);
     return UpdateReservationHomeSubClusterResponse.newInstance();
   }
 }
