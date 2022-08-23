@@ -29,7 +29,7 @@ import com.amazonaws.AmazonServiceException;
  *    <li>Nothing else got through either.</li>
  * </ol>
  */
-public class jAWSStatus500Exception extends AWSServiceIOException {
+public class AWSStatus500Exception extends AWSServiceIOException {
   public AWSStatus500Exception(String operation,
       AmazonServiceException cause) {
     super(operation, cause);
