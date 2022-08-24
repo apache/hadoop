@@ -453,13 +453,21 @@ public class UnmanagedAMPoolManager extends AbstractService {
     }
   }
 
+  /**
+   * Complete FinishApplicationMaster interface calls in batches.
+   *
+   * @param request FinishApplicationMasterRequest
+   * @param appId application Id
+   * @return Returns the Map map,
+   *         the key is subClusterId, the value is FinishApplicationMasterResponse
+   */
   public Map<String, FinishApplicationMasterResponse> batchFinishApplicationMaster(
       FinishApplicationMasterRequest request, String appId) {
 
     Map<String, FinishApplicationMasterResponse> responseMap = new HashMap<>();
     Set<String> subClusterIds = this.unmanagedAppMasterMap.keySet();
 
-    if (subClusterIds.size() > 0) {
+    if (subClusterIds != null && !subClusterIds.isEmpty()) {
       ExecutorCompletionService<Map<String, FinishApplicationMasterResponse>> finishAppService =
           new ExecutorCompletionService<>(this.threadpool);
       LOG.info("Sending finish application request to {} sub-cluster RMs", subClusterIds.size());

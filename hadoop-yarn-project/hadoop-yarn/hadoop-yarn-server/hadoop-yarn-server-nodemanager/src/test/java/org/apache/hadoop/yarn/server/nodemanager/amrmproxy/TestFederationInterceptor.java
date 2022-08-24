@@ -1006,7 +1006,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       List<Container> containers =
           getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
       Assert.assertEquals(2, interceptor.getUnmanagedAMPoolSize());
-      Assert.assertEquals(numberOfContainers, containers.size());
+      Assert.assertEquals(numberOfContainers * 2, containers.size());
 
       // Finish the application
       FinishApplicationMasterRequest finishReq =
@@ -1018,7 +1018,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       FinishApplicationMasterResponse finshResponse =
           interceptor.finishApplicationMaster(finishReq);
       Assert.assertNotNull(finshResponse);
-      Assert.assertEquals(true, finshResponse.getIsUnregistered());
+      Assert.assertTrue(finshResponse.getIsUnregistered());
 
       return null;
     });
