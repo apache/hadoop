@@ -2214,7 +2214,7 @@ public class RouterClientProtocol implements ClientProtocol {
           .invokeConcurrent(locations, method, false, -1,
               DirectoryListing.class);
       return listings;
-    } catch (RouterResolveException e) {
+    } catch (NoLocationException | RouterResolveException e) {
       LOG.debug("Cannot get locations for {}, {}.", src, e.getMessage());
       return new ArrayList<>();
     }
