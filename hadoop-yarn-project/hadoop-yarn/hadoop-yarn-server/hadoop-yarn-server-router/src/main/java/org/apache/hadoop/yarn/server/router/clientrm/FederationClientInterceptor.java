@@ -908,15 +908,14 @@ public class FederationClientInterceptor
       GetNewReservationResponse response = null;
       try {
         response = clientRMProxy.getNewReservation(request);
+        if (response != null) {
+          long stopTime = clock.getTime();
+          routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+          return response;
+        }
       } catch (Exception e) {
         LOG.warn("Unable to create a new Reservation in SubCluster {}.", subClusterId.getId(), e);
         subClustersActive.remove(subClusterId);
-      }
-
-      if (response != null) {
-        long stopTime = clock.getTime();
-        routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
-        return response;
       }
     }
 
@@ -937,31 +936,34 @@ public class FederationClientInterceptor
                "or reservation definition or queue.", null);
     }
 
-    ReservationSubmissionResponse response = null;
     long startTime = clock.getTime();
     ReservationId reservationId = request.getReservationId();
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
+    long retryCount = 0;
+    boolean firstRetry = true;
+
+    while (retryCount < numSubmitRetries) {
 
       SubClusterId subClusterId = policyFacade.getReservationHomeSubCluster(request);
-
       LOG.info("submitReservation reservationId {} try #{} on SubCluster {}.",
-           reservationId, i, subClusterId);
+          reservationId, retryCount, subClusterId);
 
       ReservationHomeSubCluster reservationHomeSubCluster =
           ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
 
-      if (i == 0) {
+      // If it is the first attempt,use StateStore to add the
+      // mapping of reservationId and subClusterId.
+      // if the number of attempts is greater than 1, use StateStore to update the mapping.
+      if (firstRetry) {
         try {
           // persist the mapping of reservationId and the subClusterId which has
           // been selected as its home
           subClusterId = federationFacade.addReservationHomeSubCluster(reservationHomeSubCluster);
+          firstRetry = false;
         } catch (YarnException e) {
           routerMetrics.incrSubmitReservationFailedRetrieved();
-          String message =
-              String.format("Unable to insert the ReservationId %s into the FederationStateStore.",
-                  reservationId);
-          RouterServerUtil.logAndThrowException(message, e);
+          RouterServerUtil.logAndThrowException(e,
+              "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
         }
       } else {
         try {
@@ -969,9 +971,6 @@ public class FederationClientInterceptor
           // the new subClusterId we have selected
           federationFacade.updateReservationHomeSubCluster(reservationHomeSubCluster);
         } catch (YarnException e) {
-          String message =
-              String.format("Unable to update the ReservationId %s into the FederationStateStore.",
-                  reservationId);
           SubClusterId subClusterIdInStateStore =
               federationFacade.getReservationHomeSubCluster(reservationId);
           if (subClusterId == subClusterIdInStateStore) {
@@ -979,25 +978,31 @@ public class FederationClientInterceptor
                 reservationId, subClusterId);
           } else {
             routerMetrics.incrSubmitReservationFailedRetrieved();
-            RouterServerUtil.logAndThrowException(message, e);
+            RouterServerUtil.logAndThrowException(e,
+                "Unable to update the ReservationId %s into the FederationStateStore.", reservationId);
           }
         }
       }
 
+      // Obtain the ApplicationClientProtocol of the corresponding RM according to the subClusterId,
+      // and call the submitReservation method, If the request is responded to,
+      // If the request is responded, it will return directly, otherwise retryCount+1,
+      // continue to submit other request.
       try {
         ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-        response = clientRMProxy.submitReservation(request);
+        ReservationSubmissionResponse response = clientRMProxy.submitReservation(request);
+        if (response != null) {
+          LOG.info("Reservation {} submitted on {}.", request.getReservationId(), subClusterId);
+          long stopTime = clock.getTime();
+          routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+          return response;
+        }
       } catch (Exception e) {
         LOG.warn("Unable to submit the reservation {} to SubCluster {} error = {}.",
             reservationId, subClusterId.getId(), e.getMessage(), e);
       }
 
-      if (response != null) {
-        LOG.info("Reservation {} submitted on {}.", request.getReservationId(), subClusterId);
-        long stopTime = clock.getTime();
-        routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
-        return response;
-      }
+      retryCount++;
     }
 
     routerMetrics.incrSubmitReservationFailedRetrieved();
