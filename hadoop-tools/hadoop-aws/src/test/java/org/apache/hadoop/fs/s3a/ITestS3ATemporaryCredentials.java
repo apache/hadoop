@@ -81,7 +81,6 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
 
   public static final String EU_IRELAND = "eu-west-1";
 
-  @SuppressWarnings("deprecation")
   private AWSCredentialProviderList credentials;
 
   @Override

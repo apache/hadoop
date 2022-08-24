@@ -97,7 +97,6 @@ public class RoleTokenBinding extends SessionTokenBinding {
    * @throws IOException on failure
    */
   @Override
-  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {

@@ -176,7 +176,6 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testFallbackToDefaults() throws Throwable {
     // build up the base provider
     final AWSCredentialProviderList credentials = buildAWSProviderList(
@@ -348,7 +347,6 @@ public class TestS3AAWSCredentialsProvider {
    * @param expectedClasses expected provider classes
    * @param list providers to check
    */
-  @SuppressWarnings("deprecation")
   private static void assertCredentialProviders(
       List<Class<?>> expectedClasses,
       AWSCredentialProviderList list) {
@@ -386,7 +384,6 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testExceptionLogic() throws Throwable {
     AWSCredentialProviderList providers
         = new AWSCredentialProviderList();
@@ -414,7 +411,6 @@ public class TestS3AAWSCredentialsProvider {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testRefCounting() throws Throwable {
     AWSCredentialProviderList providers
         = new AWSCredentialProviderList();

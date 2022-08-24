@@ -115,7 +115,6 @@ public class FullCredentialsTokenBinding extends
    * @throws IOException failure to load
    */
   @Override
-  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList deployUnbonded() throws IOException {
     requireServiceStarted();
     loadAWSCredentials();
@@ -156,7 +155,6 @@ public class FullCredentialsTokenBinding extends
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {

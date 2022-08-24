@@ -570,7 +570,6 @@ public final class S3AUtils {
    * @throws IOException Problems loading the providers (including reading
    * secrets from credential files).
    */
-  @SuppressWarnings("deprecation")
   public static AWSCredentialProviderList createAWSCredentialProviderSet(
       @Nullable URI binding,
       Configuration conf) throws IOException {
@@ -618,7 +617,6 @@ public final class S3AUtils {
    * @return the list of classes, possibly empty
    * @throws IOException on a failure to load the list.
    */
-  @SuppressWarnings("deprecation")
   public static AWSCredentialProviderList buildAWSProviderList(
       @Nullable final URI binding,
       final Configuration conf,

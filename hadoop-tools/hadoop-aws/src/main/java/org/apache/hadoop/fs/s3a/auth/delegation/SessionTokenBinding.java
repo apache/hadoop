@@ -107,7 +107,6 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
   /**
    * The auth chain for the parent options.
    */
-  @SuppressWarnings("deprecation")
   private AWSCredentialProviderList parentAuthChain;
 
   /**
@@ -190,7 +189,6 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException any failure.
    */
   @Override
-  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList deployUnbonded()
       throws IOException {
     requireServiceStarted();
@@ -214,7 +212,6 @@ public class SessionTokenBinding extends AbstractDelegationTokenBinding {
    * @throws IOException failure
    */
   @Override
-  @SuppressWarnings("deprecation")
   public AWSCredentialProviderList bindToTokenIdentifier(
       final AbstractS3ATokenIdentifier retrievedIdentifier)
       throws IOException {
