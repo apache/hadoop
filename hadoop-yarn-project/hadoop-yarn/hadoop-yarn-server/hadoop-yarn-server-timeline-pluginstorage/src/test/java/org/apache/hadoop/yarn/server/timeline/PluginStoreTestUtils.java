@@ -49,8 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Utility methods related to the ATS v1.5 plugin storage tests.
@@ -176,10 +176,8 @@ public class PluginStoreTestUtils {
         UserGroupInformation.getLoginUser());
     assertNotNull(entity1);
     assertNotNull(entity2);
-    assertEquals("Failed to read out entity 1",
-        (Long) 123l, entity1.getStartTime());
-    assertEquals("Failed to read out entity 2",
-        (Long) 456l, entity2.getStartTime());
+    assertEquals((Long) 123l, entity1.getStartTime(), "Failed to read out entity 1");
+    assertEquals((Long) 456l, entity2.getStartTime(), "Failed to read out entity 2");
   }
 
   /**
