@@ -20,57 +20,55 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
  * <p>
- * The response sent by <code>Federation state
- * store</code> to a query for the home subcluster of a newly submitted
- * application.
+ * The request sent by the <code>Router</code> to
+ * <code>Federation state store</code> to update the home subcluster of a newly
+ * submitted reservation.
  *
  * <p>
  * The request includes the mapping details, i.e.:
  * <ul>
- * <li>{@code ApplicationId}</li>
+ * <li>{@code ReservationId}</li>
  * <li>{@code SubClusterId}</li>
  * </ul>
  */
 @Private
 @Unstable
-public abstract class GetApplicationHomeSubClusterResponse {
+public abstract class UpdateReservationHomeSubClusterRequest {
 
   @Private
   @Unstable
-  public static GetApplicationHomeSubClusterResponse newInstance(
-      ApplicationId appId, SubClusterId homeSubCluster) {
-    ApplicationHomeSubCluster applicationHomeSubCluster =
-        ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
-    GetApplicationHomeSubClusterResponse mapResponse =
-        Records.newRecord(GetApplicationHomeSubClusterResponse.class);
-    mapResponse.setApplicationHomeSubCluster(applicationHomeSubCluster);
-    return mapResponse;
+  public static UpdateReservationHomeSubClusterRequest newInstance(
+      ReservationHomeSubCluster reservationHomeSubCluster) {
+    UpdateReservationHomeSubClusterRequest updateReservationRequest =
+        Records.newRecord(UpdateReservationHomeSubClusterRequest.class);
+    updateReservationRequest
+        .setReservationHomeSubCluster(reservationHomeSubCluster);
+    return updateReservationRequest;
   }
 
   /**
-   * Get the {@link ApplicationHomeSubCluster} representing the mapping of the
-   * application to it's home sub-cluster.
+   * Get the {@link ReservationHomeSubCluster} representing the mapping of the
+   * reservation to it's home sub-cluster.
    *
-   * @return the mapping of the application to it's home sub-cluster.
+   * @return the mapping of the reservation to it's home sub-cluster.
    */
   @Public
   @Unstable
-  public abstract ApplicationHomeSubCluster getApplicationHomeSubCluster();
+  public abstract ReservationHomeSubCluster getReservationHomeSubCluster();
 
   /**
-   * Set the {@link ApplicationHomeSubCluster} representing the mapping of the
-   * application to it's home sub-cluster.
+   * Set the {@link ReservationHomeSubCluster} representing the mapping of the
+   * reservation to it's home sub-cluster.
    *
-   * @param applicationHomeSubCluster the mapping of the application to it's
+   * @param reservationHomeSubCluster the mapping of the reservation to it's
    *          home sub-cluster.
    */
   @Private
   @Unstable
-  public abstract void setApplicationHomeSubCluster(
-      ApplicationHomeSubCluster applicationHomeSubCluster);
+  public abstract void setReservationHomeSubCluster(
+      ReservationHomeSubCluster reservationHomeSubCluster);
 }
