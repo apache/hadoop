@@ -113,19 +113,19 @@ In the below mount table configuration, namespace `/data` is linked to the files
     <value>hdfs://nn1-clusterx.example.com:8020/data</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./project</name>
+    <name>fs.viewfs.mounttable.clusterX.link./project</name>
     <value>hdfs://nn2-clusterx.example.com:8020/project</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./user</name>
+    <name>fs.viewfs.mounttable.clusterX.link./user</name>
     <value>hdfs://nn3-clusterx.example.com:8020/user</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./tmp</name>
+    <name>fs.viewfs.mounttable.clusterX.link./tmp</name>
     <value>hdfs://nn4-clusterx.example.com:8020/tmp</value>
   </property>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.linkFallback</name>
+    <name>fs.viewfs.mounttable.clusterX.linkFallback</name>
     <value>hdfs://nn5-clusterx.example.com:8020/home</value>
   </property>
 </configuration>
