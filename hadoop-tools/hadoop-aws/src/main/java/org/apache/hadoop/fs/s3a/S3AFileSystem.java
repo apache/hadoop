@@ -776,7 +776,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
     if (this.prefetchEnabled) {
-      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
+      final S3AInputStreamStatistics s3AInputStreamStatistics =
+          statisticsContext.newInputStreamStatistics();
+      this.futurePool = new ExecutorServiceFuturePool(
+          new SemaphoredDelegatingExecutor(
+              boundedThreadPool,
+              executorCapacity,
+              true,
+              s3AInputStreamStatistics));
     }
   }
 
