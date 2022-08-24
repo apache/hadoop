@@ -575,8 +575,8 @@ public final class FederationStateStoreFacade {
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     return stateStore.getTokenByRouterStoreToken(request);
-   }
-   
+  }
+
   /**
    * Updates the home {@link SubClusterId} for the specified
    * {@link ReservationId}.

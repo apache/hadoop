@@ -716,9 +716,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException{
-    throw new NotImplementedException("Code is not implemented"); 
+    throw new NotImplementedException("Code is not implemented");
   }
-  
+
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
@@ -760,7 +760,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
-  
+
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {

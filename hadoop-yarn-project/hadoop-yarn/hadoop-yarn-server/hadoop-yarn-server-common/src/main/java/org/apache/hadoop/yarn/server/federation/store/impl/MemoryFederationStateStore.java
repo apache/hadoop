@@ -508,7 +508,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
     return routerRMSecretManagerState;
   }
-  
+
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {

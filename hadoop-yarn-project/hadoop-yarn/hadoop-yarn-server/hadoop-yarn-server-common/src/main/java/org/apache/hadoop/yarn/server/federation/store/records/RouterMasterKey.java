@@ -124,7 +124,7 @@ public abstract class RouterMasterKey {
       return new EqualsBuilder()
           .append(this.getKeyId().intValue(), r.getKeyId().intValue())
           .append(this.getExpiryDate().longValue(), this.getExpiryDate().longValue())
-          .append(getKeyBytes().array(),r.getKeyBytes())
+          .append(getKeyBytes().array(), r.getKeyBytes())
           .isEquals();
     }
   }

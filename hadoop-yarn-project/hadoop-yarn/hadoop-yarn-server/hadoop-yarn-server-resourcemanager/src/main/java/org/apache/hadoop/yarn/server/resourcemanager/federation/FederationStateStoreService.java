@@ -392,7 +392,7 @@ public class FederationStateStoreService extends AbstractService
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
-  
+
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
