@@ -70,6 +70,11 @@
   </property>
 
   <property>
+    <name>fs.s3a.bucket.usgs-landsat.endpoint.region</name>
+    <value>us-west-2</value>
+  </property>
+
+  <property>
     <name>fs.s3a.bucket.usgs-landsat.requester.pays.enabled</name>
     <value>true</value>
     <description>usgs-landsat requires requester pays enabled</description>
