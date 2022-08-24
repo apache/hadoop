@@ -25,6 +25,10 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SDK_V2_UPGRADE_LOG_NAME;
 
+/**
+ * This class provides utility methods required for migrating S3A to AWS Java SDK V2.
+ * For more information on the upgrade, see HADOOP-18073.
+ */
 public final class V2Migration {
 
   private V2Migration() { }
