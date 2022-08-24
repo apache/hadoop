@@ -39,6 +39,11 @@
   </property>
 
   <property>
+    <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+    <value>us-west-2</value>
+  </property>
+
+  <property>
     <name>fs.s3a.bucket.landsat-pds.multipart.purge</name>
     <value>false</value>
     <description>Don't try to purge uploads in the read-only bucket, as
