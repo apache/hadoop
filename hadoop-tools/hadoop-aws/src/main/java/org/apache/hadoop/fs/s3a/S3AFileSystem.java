@@ -54,6 +54,8 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
@@ -70,6 +72,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -1219,7 +1223,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This is for internal use within the S3A code itself.
    * @return AmazonS3Client
    */
-  AmazonS3 getAmazonS3Client() {
+  private AmazonS3 getAmazonS3Client() {
     return s3;
   }
 
@@ -1619,6 +1623,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Callbacks for WriteOperationHelper.
+   */
+  private final class WriteOperationHelperCallbacksImpl
+      implements WriteOperationHelper.WriteOperationHelperCallbacks {
+
+    @Override
+    public SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request) {
+      return s3.selectObjectContent(request);
+    }
+
+    @Override
+    public CompleteMultipartUploadResult completeMultipartUpload(
+        CompleteMultipartUploadRequest request) {
+      return s3.completeMultipartUpload(request);
+    }
+  }
+
+
+  /**
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
@@ -1842,7 +1865,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         getConf(),
         statisticsContext,
         getAuditSpanSource(),
-        auditSpan);
+        auditSpan,
+        new WriteOperationHelperCallbacksImpl());
   }
 
   /**
