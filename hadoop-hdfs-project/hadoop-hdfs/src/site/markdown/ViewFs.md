@@ -109,7 +109,7 @@ In the below mount table configuration, namespace `/data` is linked to the files
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterX.link./data</name>
+    <name>fs.viewfs.mounttable.clusterX.link./data</name>
     <value>hdfs://nn1-clusterx.example.com:8020/data</value>
   </property>
   <property>
