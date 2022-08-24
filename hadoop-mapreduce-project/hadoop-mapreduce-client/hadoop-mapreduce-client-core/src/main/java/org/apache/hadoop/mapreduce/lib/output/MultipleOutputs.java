@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
@@ -356,7 +357,8 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     return job.getConfiguration().getBoolean(COUNTERS_ENABLED, false);
   }
 
-  public void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
+  @VisibleForTesting
+  public synchronized void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
     this.recordWriters = recordWriters;
   }
 

@@ -408,8 +408,8 @@ public class MultipleOutputs {
   private boolean countersEnabled;
 
   @VisibleForTesting
-  public void setRecordWriters(Map<String, RecordWriter> recordWriters) {
-    this.recordWriters = recordWriters;
+  public synchronized void setRecordWriters(Map<String, RecordWriter> recordWriters) {
+      this.recordWriters = recordWriters;
   }
 
   /**
