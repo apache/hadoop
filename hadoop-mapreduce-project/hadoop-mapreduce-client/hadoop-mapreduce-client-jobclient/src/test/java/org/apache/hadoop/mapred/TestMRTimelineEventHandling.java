@@ -25,9 +25,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -40,7 +42,6 @@ import org.apache.hadoop.mapreduce.jobhistory.TestJobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -298,8 +299,8 @@ public class TestMRTimelineEventHandling {
         jobEventFile.exists());
     verifyEntity(jobEventFile, EventType.JOB_FINISHED.name(),
         true, false, null, false);
-    Set<String> cfgsToCheck = Sets.newHashSet("dummy_conf1", "dummy_conf2",
-        "huge_dummy_conf1", "huge_dummy_conf2");
+    Set<String> cfgsToCheck = new HashSet<>(Arrays.asList("dummy_conf1", "dummy_conf2",
+        "huge_dummy_conf1", "huge_dummy_conf2"));
     verifyEntity(jobEventFile, null, false, true, cfgsToCheck, false);
 
     // for this test, we expect MR job metrics are published in YARN_APPLICATION
