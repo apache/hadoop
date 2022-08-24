@@ -592,7 +592,7 @@ public class RouterClientRMService extends AbstractService
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
 
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, 3600000);
+        tokenMaxLifetime, tokenRenewInterval, 60 * 60 * 1000);
   }
 
   @VisibleForTesting

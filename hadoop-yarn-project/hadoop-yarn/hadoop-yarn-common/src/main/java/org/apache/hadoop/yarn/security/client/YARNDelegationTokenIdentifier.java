@@ -22,10 +22,9 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
@@ -116,8 +115,8 @@ public abstract class YARNDelegationTokenIdentifier extends
     return builder.build();
   }
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static YARNDelegationTokenIdentifier newInstance(Text owner, Text renewer, Text realUser) {
     YARNDelegationTokenIdentifier policy = Records.newRecord(YARNDelegationTokenIdentifier.class);
     policy.setOwner(owner);

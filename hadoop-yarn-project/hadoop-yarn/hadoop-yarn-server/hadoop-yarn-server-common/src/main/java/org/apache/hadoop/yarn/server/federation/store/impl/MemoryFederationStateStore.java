@@ -391,11 +391,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
-    byte[] keyBytes = new byte[keyByteBuf.remaining()];
-    keyByteBuf.get(keyBytes);
-    DelegationKey delegationKey =
-        new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
 
     Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
     if (rmDTMasterKeyState.contains(delegationKey)) {
@@ -417,11 +413,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
-    byte[] keyBytes = new byte[keyByteBuf.remaining()];
-    keyByteBuf.get(keyBytes);
-    DelegationKey delegationKey =
-        new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
 
     LOG.info("Remove Router-RMDT master key with key id: {}.", delegationKey.getKeyId());
     Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
@@ -433,13 +425,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
+
     // Restore the DelegationKey from the request
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
-    byte[] keyBytes = new byte[keyByteBuf.remaining()];
-    keyByteBuf.get(keyBytes);
-    DelegationKey delegationKey =
-        new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
 
     Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
     if (!rmDTMasterKeyState.contains(delegationKey)) {
@@ -546,5 +535,18 @@ public class MemoryFederationStateStore implements FederationStateStore {
     }
     reservations.remove(reservationId);
     return DeleteReservationHomeSubClusterResponse.newInstance();
+  }
+
+  /**
+   * Get DelegationKey By based on MasterKey.
+   *
+   * @param masterKey masterKey
+   * @return DelegationKey
+   */
+  private DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
+    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
+    byte[] keyBytes = new byte[keyByteBuf.remaining()];
+    keyByteBuf.get(keyBytes);
+    return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
   }
 }

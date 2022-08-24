@@ -28,10 +28,9 @@ import java.util.Set;
 public class RouterRMDTSecretManagerState {
 
   // DTIdentifier -> renewDate
-  private Map<RMDelegationTokenIdentifier, Long> delegationTokenState =
-      new HashMap<RMDelegationTokenIdentifier, Long>();
+  private Map<RMDelegationTokenIdentifier, Long> delegationTokenState = new HashMap<>();
 
-  private Set<DelegationKey> masterKeyState = new HashSet<DelegationKey>();
+  private Set<DelegationKey> masterKeyState = new HashSet<>();
 
   private int dtSequenceNumber = 0;
 

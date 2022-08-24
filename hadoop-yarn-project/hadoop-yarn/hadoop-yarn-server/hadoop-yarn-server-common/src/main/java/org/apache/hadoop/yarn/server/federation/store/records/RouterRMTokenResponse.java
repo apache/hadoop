@@ -17,27 +17,28 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public abstract class RouterRMTokenResponse {
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static RouterRMTokenResponse newInstance(RouterStoreToken routerStoreToken) {
     RouterRMTokenResponse request = Records.newRecord(RouterRMTokenResponse.class);
     request.setRouterStoreToken(routerStoreToken);
     return request;
   }
 
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
+  @Public
+  @Unstable
   public abstract RouterStoreToken getRouterStoreToken();
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract void setRouterStoreToken(RouterStoreToken routerStoreToken);
 }

@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public abstract class RouterMasterKey {
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static RouterMasterKey newInstance(Integer keyId, ByteBuffer keyBytes, Long expiryDate) {
     RouterMasterKey policy = Records.newRecord(RouterMasterKey.class);
     policy.setKeyId(keyId);
@@ -38,8 +40,8 @@ public abstract class RouterMasterKey {
     return policy;
   }
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static RouterMasterKey newInstance(RouterMasterKey masterKey) {
     RouterMasterKey routerMasterKey = Records.newRecord(RouterMasterKey.class);
     routerMasterKey.setKeyId(masterKey.getKeyId());
@@ -53,8 +55,8 @@ public abstract class RouterMasterKey {
    *
    * @return MasterKeyId.
    */
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
+  @Public
+  @Unstable
   public abstract Integer getKeyId();
 
   /**
@@ -62,8 +64,8 @@ public abstract class RouterMasterKey {
    *
    * @param keyId MasterKeyId.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract void setKeyId(Integer keyId);
 
   /**
@@ -71,8 +73,8 @@ public abstract class RouterMasterKey {
    *
    * @return KeyBytes of the DelegationKey.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Public
+  @Unstable
   public abstract ByteBuffer getKeyBytes();
 
   /**
@@ -80,8 +82,8 @@ public abstract class RouterMasterKey {
    *
    * @param keyBytes KeyBytes of the DelegationKey.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract void setKeyBytes(ByteBuffer keyBytes);
 
   /**
@@ -89,8 +91,8 @@ public abstract class RouterMasterKey {
    *
    * @return ExpiryDate of the DelegationKey.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract Long getExpiryDate();
 
   /**
@@ -98,18 +100,17 @@ public abstract class RouterMasterKey {
    *
    * @param expiryDate expiryDate of the DelegationKey.
    */
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract void setExpiryDate(Long expiryDate);
 
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + (int) (getExpiryDate() ^ (getExpiryDate() >>> 32));
-    result = prime * result + Arrays.hashCode(getKeyBytes().array());
-    result = prime * result + getKeyId();
-    return result;
+    return new HashCodeBuilder()
+        .append(this.getExpiryDate().longValue())
+        .append(this.getKeyId().intValue())
+        .append(getKeyBytes().array())
+        .hashCode();
   }
 
   @Override
@@ -120,9 +121,11 @@ public abstract class RouterMasterKey {
       return false;
     } else {
       RouterMasterKey r = (RouterMasterKey) right;
-      return getKeyId().intValue() == r.getKeyId().intValue() &&
-          getExpiryDate().longValue() == r.getExpiryDate().longValue() &&
-          Arrays.equals(getKeyBytes().array(), r.getKeyBytes().array());
+      return new EqualsBuilder()
+          .append(this.getKeyId().intValue(), r.getKeyId().intValue())
+          .append(this.getExpiryDate().longValue(), this.getExpiryDate().longValue())
+          .append(getKeyBytes().array(),r.getKeyBytes())
+          .isEquals();
     }
   }
 }

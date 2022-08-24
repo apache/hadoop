@@ -31,12 +31,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Arrays;
+
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouterTest {
 
   private static final Logger LOG =
-       LoggerFactory.getLogger(TestRouterDelegationTokenSecretManager.class);
+      LoggerFactory.getLogger(TestRouterDelegationTokenSecretManager.class);
 
   @Test
   public void testRouterStoreNewMasterKey() throws Exception {
@@ -56,11 +59,11 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
     DelegationKey paramKey = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     DelegationKey responseKey = secretManager.getMasterKeyByDelegationKey(paramKey);
 
-    Assert.assertNotNull(paramKey);
-    Assert.assertEquals(storeKey.getExpiryDate(), responseKey.getExpiryDate());
-    Assert.assertEquals(storeKey.getKeyId(), responseKey.getKeyId());
-    Assert.assertTrue(Arrays.equals(storeKey.getEncodedKey(), responseKey.getEncodedKey()));
-    Assert.assertEquals(storeKey, responseKey);
+    assertNotNull(paramKey);
+    assertEquals(storeKey.getExpiryDate(), responseKey.getExpiryDate());
+    assertEquals(storeKey.getKeyId(), responseKey.getKeyId());
+    assertArrayEquals(storeKey.getEncodedKey(), responseKey.getEncodedKey());
+    assertEquals(storeKey, responseKey);
 
     stopSecureRouter();
   }
@@ -153,16 +156,16 @@ public class TestRouterDelegationTokenSecretManager extends AbstractSecureRouter
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     dtId2.setSequenceNumber(sequenceNumber);
     RMDelegationTokenIdentifier dtId3 = secretManager.getTokenByRouterStoreToken(dtId2);
-    Assert.assertNotNull(dtId3);
-    Assert.assertEquals(dtId1.getKind(), dtId3.getKind());
-    Assert.assertEquals(dtId1.getOwner(), dtId3.getOwner());
-    Assert.assertEquals(dtId1.getRealUser(), dtId3.getRealUser());
-    Assert.assertEquals(dtId1.getRenewer(), dtId3.getRenewer());
-    Assert.assertEquals(dtId1.getIssueDate(), dtId3.getIssueDate());
-    Assert.assertEquals(dtId1.getMasterKeyId(), dtId3.getMasterKeyId());
-    Assert.assertEquals(dtId1.getSequenceNumber(), dtId3.getSequenceNumber());
-    Assert.assertEquals(sequenceNumber, dtId3.getSequenceNumber());
-    Assert.assertEquals(dtId1, dtId3);
+    assertNotNull(dtId3);
+    assertEquals(dtId1.getKind(), dtId3.getKind());
+    assertEquals(dtId1.getOwner(), dtId3.getOwner());
+    assertEquals(dtId1.getRealUser(), dtId3.getRealUser());
+    assertEquals(dtId1.getRenewer(), dtId3.getRenewer());
+    assertEquals(dtId1.getIssueDate(), dtId3.getIssueDate());
+    assertEquals(dtId1.getMasterKeyId(), dtId3.getMasterKeyId());
+    assertEquals(dtId1.getSequenceNumber(), dtId3.getSequenceNumber());
+    assertEquals(sequenceNumber, dtId3.getSequenceNumber());
+    assertEquals(dtId1, dtId3);
 
     stopSecureRouter();
   }

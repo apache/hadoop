@@ -16,28 +16,28 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public abstract class RouterMasterKeyRequest {
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public static RouterMasterKeyRequest newInstance(RouterMasterKey routerMasterKey) {
     RouterMasterKeyRequest request = Records.newRecord(RouterMasterKeyRequest.class);
     request.setRouterMasterKey(routerMasterKey);
     return request;
   }
 
-  @InterfaceAudience.Public
-  @InterfaceStability.Unstable
+  @Public
+  @Unstable
   public abstract RouterMasterKey getRouterMasterKey();
 
-  @InterfaceAudience.Private
-  @InterfaceStability.Unstable
+  @Private
+  @Unstable
   public abstract void setRouterMasterKey(RouterMasterKey routerMasterKey);
-
 }
