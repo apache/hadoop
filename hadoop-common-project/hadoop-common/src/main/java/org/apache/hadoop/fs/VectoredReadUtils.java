@@ -25,15 +25,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+import org.apache.hadoop.util.functional.Function4RaisingIOE;
 
 /**
  * Utility class which implements helper methods used
@@ -120,7 +117,7 @@ public final class VectoredReadUtils {
                                                           FileRange range,
                                                           ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      readInDirectBuffer(stream, range.getLength(), buffer);
+      readInDirectBuffer(range.getLength(), buffer, stream::readFully);
       buffer.flip();
     } else {
       stream.readFully(range.getOffset(), buffer.array(),
@@ -131,14 +128,13 @@ public final class VectoredReadUtils {
   /**
    * Read bytes from stream into a byte buffer using an
    * intermediate byte array.
-   * @param stream input stream.
    * @param length number of bytes to read.
    * @param buffer buffer to fill.
    * @throws IOException any IOE.
    */
-  private static void readInDirectBuffer(PositionedReadable stream,
-                                         int length,
-                                         ByteBuffer buffer) throws IOException {
+  public static void readInDirectBuffer(int length,
+                                        ByteBuffer buffer,
+                                        Function4RaisingIOE<Integer, byte[], Integer, Integer> operation) throws IOException {
     if (length == 0) {
       return;
     }
@@ -150,7 +146,7 @@ public final class VectoredReadUtils {
       int currentLength = (readBytes + tmpBufferMaxSize) < length ?
               tmpBufferMaxSize
               : (length - readBytes);
-      stream.readFully(position, tmp, 0, currentLength);
+      operation.apply(position, tmp, 0, currentLength);
       buffer.put(tmp, 0, currentLength);
       position = position + currentLength;
       readBytes = readBytes + currentLength;

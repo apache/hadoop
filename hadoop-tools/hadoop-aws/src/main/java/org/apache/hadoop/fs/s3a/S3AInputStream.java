@@ -1154,7 +1154,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
                               S3ObjectInputStream objectContent) throws IOException {
 
     if (buffer.isDirect()) {
-      readInDirectBuffer(length, buffer, objectContent);
+      VectoredReadUtils.readInDirectBuffer(length, buffer,
+              (position, tmp, offset, currentLength) -> readByteArray(objectContent, tmp, offset, currentLength));
       buffer.flip();
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
@@ -1163,27 +1164,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     incrementBytesRead(length);
   }
 
-  private void readInDirectBuffer(int length,
-                                  ByteBuffer buffer,
-                                  S3ObjectInputStream objectContent) throws IOException {
-    if (length == 0) {
-      return;
-    }
-    int readBytes = 0;
-    int offset = 0;
-    int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
-    byte[] tmp = new byte[tmpBufferMaxSize];
-    while (readBytes < length) {
-      checkIfVectoredIOStopped();
-      int currentLength = (readBytes + tmpBufferMaxSize) < length ?
-              tmpBufferMaxSize
-              : (length - readBytes);
-      readByteArray(objectContent, tmp, 0, currentLength);
-      buffer.put(tmp, 0, currentLength);
-      offset = offset + currentLength;
-      readBytes = readBytes + currentLength;
-    }
-  }
 
   /**
    * Read data into destination buffer from s3 object content.
