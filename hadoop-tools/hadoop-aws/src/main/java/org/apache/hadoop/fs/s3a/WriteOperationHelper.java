@@ -156,7 +156,7 @@ public class WriteOperationHelper implements WriteOperations {
    * @param statisticsContext statistics context
    * @param auditSpanSource source of spans
    * @param auditSpan span to activate
-   *
+   * @param writeOperationHelperCallbacks callbacks used by writeOperationHelper
    */
   protected WriteOperationHelper(S3AFileSystem owner,
       Configuration conf,

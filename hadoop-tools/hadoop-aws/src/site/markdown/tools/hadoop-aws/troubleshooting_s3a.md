@@ -2032,7 +2032,7 @@ This will be logged when a custom signer is used.
 Custom signers will currently be implementing `com.amazonaws.auth.Signer` and will need to be
 updated to implement `software.amazon.awssdk.core.signer.Signer`.
 
-### <a name="GetObjectMetadataCalled"></a>  
+### <a name="GetObjectMetadataCalled"></a>
 ### `getObjectMetadata() called. This operation and it's response will be changed`
 
 This will be logged when `getObjectMetadata` is called. In SDK V2, this operation has changed to
