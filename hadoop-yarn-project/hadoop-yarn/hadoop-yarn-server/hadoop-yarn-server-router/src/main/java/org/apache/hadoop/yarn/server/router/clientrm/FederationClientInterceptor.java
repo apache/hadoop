@@ -963,7 +963,8 @@ public class FederationClientInterceptor
         } catch (YarnException e) {
           routerMetrics.incrSubmitReservationFailedRetrieved();
           RouterServerUtil.logAndThrowException(e,
-              "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
+              "Unable to insert the ReservationId %s into the FederationStateStore.",
+                   reservationId);
         }
       } else {
         try {
@@ -979,7 +980,8 @@ public class FederationClientInterceptor
           } else {
             routerMetrics.incrSubmitReservationFailedRetrieved();
             RouterServerUtil.logAndThrowException(e,
-                "Unable to update the ReservationId %s into the FederationStateStore.", reservationId);
+                "Unable to update the ReservationId %s into the FederationStateStore.",
+                     reservationId);
           }
         }
       }
