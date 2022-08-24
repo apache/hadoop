@@ -47,6 +47,7 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
     String namespaceEnabled = fs.getConf().get("fs.azure.test.namespace.enabled");
     return ("true").equals(namespaceEnabled);
   }
+
   @Override
   public void setup() throws Exception {
     binding.setup();
@@ -68,6 +69,7 @@ public class ITestAbfsRenameStageFailure extends TestRenameStageFailure {
     if (isNamespaceEnabled()) {
       return true;
     }
+
     return false;
   }
 
