@@ -29,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -252,6 +253,11 @@ public class LdapGroupsMapping
   public static final String POSIX_GID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.gid.name";
   public static final String POSIX_GID_ATTR_DEFAULT = "gidNumber";
 
+  public static final String GROUP_SEARCH_FILTER_PATTERN =
+      LDAP_CONFIG_PREFIX + ".group.search.filter.pattern";
+  public static final String GROUP_SEARCH_FILTER_PATTERN_DEFAULT =
+      "groupfilter";
+
   /*
    * Posix attributes
    */
@@ -337,6 +343,7 @@ public class LdapGroupsMapping
   private int numAttempts;
   private volatile int numAttemptsBeforeFailover;
   private volatile String ldapCtxFactoryClassName;
+  private volatile String groupSearchFilterParams;
 
   /**
    * Returns list of groups for a user.
@@ -408,7 +415,7 @@ public class LdapGroupsMapping
     }
     if (uidNumber != null && gidNumber != null) {
       return c.search(groupbaseDN,
-              "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
+              "(&"+ resolveGroupFilter(result) + "(|(" + posixGidAttr + "={0})" +
                   "(" + groupMemberAttr + "={1})))",
               new Object[] {gidNumber, uidNumber},
               SEARCH_CONTROLS);
@@ -444,7 +451,7 @@ public class LdapGroupsMapping
       String userDn = result.getNameInNamespace();
       groupResults =
           c.search(groupbaseDN,
-              "(&" + groupSearchFilter + "(" + groupMemberAttr + "={0}))",
+              "(&" + resolveGroupFilter(result) + "(" + groupMemberAttr + "={0}))",
               new Object[]{userDn},
               SEARCH_CONTROLS);
     }
@@ -460,6 +467,26 @@ public class LdapGroupsMapping
       }
     }
     return groups;
+  }
+
+  private String resolveGroupFilter(SearchResult result)
+      throws NamingException {
+    Attribute groupSearchParams =
+        result.getAttributes().get(groupSearchFilterParams);
+    if (groupSearchParams != null) {
+      String[] filterElems = groupSearchParams.get().toString().split(",");
+      for (int i = 0; i < filterElems.length; i++) {
+        // Specific handling for userDN.
+        if (filterElems[i].equalsIgnoreCase("userDN")) {
+          filterElems[i] = result.getNameInNamespace();
+        } else {
+          filterElems[i] =
+              result.getAttributes().get(filterElems[i]).get().toString();
+        }
+      }
+      return MessageFormat.format(groupSearchFilter, filterElems);
+    }
+    return groupSearchFilter;
   }
 
   /**
@@ -781,6 +808,8 @@ public class LdapGroupsMapping
         conf.get(POSIX_UID_ATTR_KEY, POSIX_UID_ATTR_DEFAULT);
     posixGidAttr =
         conf.get(POSIX_GID_ATTR_KEY, POSIX_GID_ATTR_DEFAULT);
+    groupSearchFilterParams = conf.get(GROUP_SEARCH_FILTER_PATTERN,
+        GROUP_SEARCH_FILTER_PATTERN_DEFAULT);
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT,
         DIRECTORY_SEARCH_TIMEOUT_DEFAULT);

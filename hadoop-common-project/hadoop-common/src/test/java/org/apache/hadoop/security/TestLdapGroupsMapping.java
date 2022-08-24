@@ -27,6 +27,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,6 +46,8 @@ import java.util.HashSet;
 
 import javax.naming.CommunicationException;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.Attributes;
 import javax.naming.directory.SearchControls;
 
 import org.apache.hadoop.conf.Configuration;
@@ -118,6 +122,50 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     String baseDN = " dc=xxx,dc=com ";
     conf.set(LdapGroupsMapping.BASE_DN_KEY, baseDN);
     doTestGetGroupsWithBaseDN(conf, baseDN.trim(), baseDN.trim());
+  }
+
+  @Test
+  public void testGetGroupsWithDynamicGroupFilter() throws Exception {
+    // Set basic mock stuff.
+    Configuration conf = getBaseConf(TEST_LDAP_URL);
+    String baseDN = "dc=xxx,dc=com";
+    conf.set(LdapGroupsMapping.BASE_DN_KEY, baseDN);
+    Attributes attributes = getAttributes();
+
+    // Set the groupFilter attributed to take the csv.
+    Attribute groupFilterAttr = mock(Attribute.class);
+    when(groupFilterAttr.get()).thenReturn("userDN,userName");
+    when(attributes.get(eq("groupfilter"))).thenReturn(groupFilterAttr);
+
+    // Set the value for userName attribute that is to be used as part of the
+    // group filter at argument 1.
+    final String userName = "some_user";
+    Attribute userNameAttr = mock(Attribute.class);
+    when(userNameAttr.get()).thenReturn(userName);
+    when(attributes.get(eq("userName"))).thenReturn(userNameAttr);
+
+    // Set the dynamic group search filter.
+    final String groupSearchFilter =
+        "(|(memberUid={0})(uname={1}))" + "(objectClass=group)";
+    conf.set(LdapGroupsMapping.GROUP_SEARCH_FILTER_KEY, groupSearchFilter);
+
+    final LdapGroupsMapping groupsMapping = getGroupsMapping();
+    groupsMapping.setConf(conf);
+
+    // The group search filter should be resolved and should be passed as the
+    // bellow.
+    String resolvedGroupFilter = "(&(|(memberUid=CN=some_user,DC=test,DC=com)"
+        + "(uname=some_user))(objectClass=group)(member={0}))";
+
+    // Return groups only if the resolved filter is passed.
+    when(getContext()
+        .search(anyString(), eq(resolvedGroupFilter), any(Object[].class),
+            any(SearchControls.class)))
+        .thenReturn(getUserNames(), getGroupNames());
+
+    // Check the group filter got resolved and get the desired values.
+    List<String> groups = groupsMapping.getGroups(userName);
+    Assert.assertEquals(Arrays.asList(getTestGroups()), groups);
   }
 
   /**
