@@ -414,6 +414,7 @@ public class ITestS3AConfiguration {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
