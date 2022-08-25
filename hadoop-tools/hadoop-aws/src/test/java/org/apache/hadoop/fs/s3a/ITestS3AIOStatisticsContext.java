@@ -253,6 +253,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
     // Worker thread work and wait for it to finish.
     TestWorkerThread workerThread = new TestWorkerThread(path, null);
     long workerThreadID = workerThread.getId();
+    LOG.info("Worker thread ID: {} ", workerThreadID);
     workerThread.start();
     workerThread.join();
 
@@ -463,6 +464,8 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
 
     @Override
     public void run() {
+      // Setting the worker thread's name.
+      Thread.currentThread().setName("worker thread");
       S3AFileSystem fs = getFileSystem();
       byte[] data = new byte[BYTES_SMALL];
 
@@ -470,6 +473,9 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       if (ioStatisticsContext != null) {
         IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
       }
+      // Storing context in a field to not loose the reference in a GC.
+      IOStatisticsContext ioStatisticsContextWorkerThread =
+          getCurrentIOStatisticsContext();
 
       // Write in the worker thread.
       try (FSDataOutputStream out = fs.create(workerThreadPath)) {
