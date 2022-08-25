@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
@@ -192,6 +193,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
       Assert.fail();
     }
 
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @Override
@@ -1332,32 +1334,31 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   public void testSubmitReservationEmptyRequest() throws Exception {
     LOG.info("Test FederationClientInterceptor : SubmitReservation request empty.");
 
+    String errorMsg =
+        "Missing submitReservation request or reservationId or reservation definition or queue.";
+
     // null request1
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing submitReservation request or reservationId or reservation definition or queue.",
-            () -> interceptor.submitReservation(null));
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(null));
 
     // null request2
     ReservationSubmissionRequest request2 =
         ReservationSubmissionRequest.newInstance(null, null, null);
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing submitReservation request or reservationId or reservation definition or queue.",
-            () -> interceptor.submitReservation(request2));
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request2));
 
     // null request3
     ReservationSubmissionRequest request3 =
         ReservationSubmissionRequest.newInstance(null, "q1", null);
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing submitReservation request or reservationId or reservation definition or queue.",
-            () -> interceptor.submitReservation(request3));
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request3));
 
     // null request4
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     ReservationSubmissionRequest request4 =
         ReservationSubmissionRequest.newInstance(null, null,  reservationId);
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing submitReservation request or reservationId or reservation definition or queue.",
-            () -> interceptor.submitReservation(request4));
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request4));
 
     // null request5
     long arrival = Time.now();
@@ -1370,9 +1371,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         ReservationRequestInterpreter.R_ALL, "u1");
     ReservationSubmissionRequest request5 =
         ReservationSubmissionRequest.newInstance(rDefinition, null,  reservationId);
-    LambdaTestUtils.intercept(YarnException.class,
-        "Missing submitReservation request or reservationId or reservation definition or queue.",
-            () -> interceptor.submitReservation(request5));
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> interceptor.submitReservation(request5));
   }
 
   @Test
