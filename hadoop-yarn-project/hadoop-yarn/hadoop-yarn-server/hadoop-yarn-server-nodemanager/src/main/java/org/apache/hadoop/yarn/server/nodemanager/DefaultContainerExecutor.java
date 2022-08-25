@@ -95,6 +95,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
   private NumaResourceAllocator numaResourceAllocator;
 
+
+  private String numactl;
   /**
    * Default constructor for use in testing.
    */
@@ -148,6 +150,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   public void init(Context nmContext) throws IOException {
     if(numaAwarenessEnabled(getConf())) {
       numaResourceAllocator = new NumaResourceAllocator(nmContext);
+      numactl = this.getConf().get(YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
+              YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);
       try {
         numaResourceAllocator.init(this.getConf());
         LOG.info("NUMA resources allocation is enabled in DefaultContainer Executor," +
@@ -420,7 +424,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String[] command = getRunCommand(wrapperScriptPath,
         containerIdStr, user, pidFile, this.getConf(), resource);
 
-    command = concatStringCommands(command, numaCommands);
+    // check if numa commands are passed and append it as prefix commands
+    if(numaCommands != null && numaCommands.length!=0) {
+      command = concatStringCommands(numaCommands, command);
+    }
 
     LOG.info("launchContainer: {}", Arrays.toString(command));
     return new ShellCommandExecutor(
@@ -1116,8 +1123,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    */
   String[] getNumaCommands(NumaResourceAllocation resourceAllocation) {
     String[] numaCommand = new String[3];
-    numaCommand[0] = this.getConf().get(YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
-            YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);
+    numaCommand[0] = numactl;
     numaCommand[1] = "--interleave=" + String.join(",", resourceAllocation.getMemNodes());
     numaCommand[2] = "--cpunodebind=" + String.join(",", resourceAllocation.getCpuNodes());
     return numaCommand;
@@ -1133,31 +1139,27 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   String[] concatStringCommands(String[] firstStringArray, String[] secondStringArray) {
 
     if(firstStringArray == null && secondStringArray == null) {
-      return null;
+      return secondStringArray;
     }
 
-    int len = 0;
-
-    if(firstStringArray != null){
-      len = len + firstStringArray.length;
+    else if(firstStringArray == null || firstStringArray.length == 0) {
+      return secondStringArray;
     }
 
-    if(secondStringArray != null){
-      len = len + secondStringArray.length;
+    else if(secondStringArray == null || secondStringArray.length == 0){
+      return firstStringArray;
     }
 
-    if (len == 0) {
-      return new String[]{};
-    }
+    int len = firstStringArray.length + secondStringArray.length;
 
     String[] ret = new String[len];
     int idx = 0;
-    for (int i=0; firstStringArray !=null && i < firstStringArray.length; i++) {
-      ret[idx] = firstStringArray[i];
+    for (String s : firstStringArray) {
+      ret[idx] = s;
       idx++;
     }
-    for (int i=0; secondStringArray !=null && i < secondStringArray.length; i++) {
-      ret[idx] = secondStringArray[i];
+    for (String s : secondStringArray) {
+      ret[idx] = s;
       idx++;
     }
     return ret;
@@ -1166,6 +1168,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @VisibleForTesting
   public void setNumaResourceAllocator(NumaResourceAllocator numaResourceAllocator) {
     this.numaResourceAllocator = numaResourceAllocator;
+  }
+
+  @VisibleForTesting
+  public void setNumactl(String numactl) {
+    this.numactl = numactl;
   }
 
 }

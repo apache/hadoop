@@ -827,6 +827,8 @@ public class TestDefaultContainerExecutor {
     when(mockContainer.getResource()).thenReturn(resource);
     NumaResourceAllocation numaResourceAllocation =
             numaResourceAllocator.allocateNumaNodes(mockContainer);
+    containerExecutor.setNumactl(containerExecutor.getConf().get(YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
+            YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD));
     String[] commands = containerExecutor.getNumaCommands(numaResourceAllocation);
     assertEquals(Arrays.asList(commands), Arrays.asList("/usr/bin/numactl",
             "--interleave=" + memNodes, "--cpunodebind=" + cpuNodes));
