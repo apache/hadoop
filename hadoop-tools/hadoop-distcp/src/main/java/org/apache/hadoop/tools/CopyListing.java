@@ -33,9 +33,9 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URI;
+import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.hadoop.util.Sets;
 
 /**
  * The CopyListing abstraction is responsible for how the list of
@@ -163,8 +163,8 @@ public abstract class CopyListing extends Configured {
       CopyListingFileStatus lastFileStatus = new CopyListingFileStatus();
 
       Text currentKey = new Text();
-      Set<URI> aclSupportCheckFsSet = Sets.newHashSet();
-      Set<URI> xAttrSupportCheckFsSet = Sets.newHashSet();
+      Set<URI> aclSupportCheckFsSet = new HashSet<>();
+      Set<URI> xAttrSupportCheckFsSet = new HashSet<>();
       long idx = 0;
       while (reader.next(currentKey)) {
         if (currentKey.equals(lastKey)) {
