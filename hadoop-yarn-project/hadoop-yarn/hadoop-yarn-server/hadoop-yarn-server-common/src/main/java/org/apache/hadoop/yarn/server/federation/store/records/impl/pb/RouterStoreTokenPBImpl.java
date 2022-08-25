@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -34,8 +34,8 @@ import java.io.IOException;
 /**
  * Protocol buffer based implementation of {@link RouterStoreToken}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public class RouterStoreTokenPBImpl extends RouterStoreToken {
 
   private RouterStoreTokenProto proto = RouterStoreTokenProto.getDefaultInstance();

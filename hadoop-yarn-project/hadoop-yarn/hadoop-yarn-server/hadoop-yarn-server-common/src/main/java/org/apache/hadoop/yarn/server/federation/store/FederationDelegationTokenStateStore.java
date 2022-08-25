@@ -16,8 +16,8 @@
  */
 package org.apache.hadoop.yarn.server.federation.store;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
@@ -31,8 +31,8 @@ import java.io.IOException;
  * <em>DelegationToken</em> that have been submitted to the federated cluster.
  *
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public interface FederationDelegationTokenStateStore {
 
   /**
