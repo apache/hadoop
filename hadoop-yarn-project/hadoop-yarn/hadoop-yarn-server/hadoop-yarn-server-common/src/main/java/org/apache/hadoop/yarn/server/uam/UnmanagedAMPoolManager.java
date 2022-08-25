@@ -476,7 +476,8 @@ public class UnmanagedAMPoolManager extends AbstractService {
         finishAppService.submit(() -> {
           LOG.info("Sending finish application request to RM {}", subClusterId);
           try {
-            FinishApplicationMasterResponse uamResponse = finishApplicationMaster(subClusterId, request);
+            FinishApplicationMasterResponse uamResponse =
+                finishApplicationMaster(subClusterId, request);
             return Collections.singletonMap(subClusterId, uamResponse);
           } catch (Throwable e) {
             LOG.warn("Failed to finish unmanaged application master: " +
