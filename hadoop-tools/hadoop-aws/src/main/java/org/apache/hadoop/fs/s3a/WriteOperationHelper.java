@@ -145,19 +145,25 @@ public class WriteOperationHelper implements WriteOperations {
   private final RequestFactory requestFactory;
 
   /**
+   * WriteOperationHelper callbacks.
+   */
+  private final WriteOperationHelperCallbacks writeOperationHelperCallbacks;
+
+  /**
    * Constructor.
    * @param owner owner FS creating the helper
    * @param conf Configuration object
    * @param statisticsContext statistics context
    * @param auditSpanSource source of spans
    * @param auditSpan span to activate
-   *
+   * @param writeOperationHelperCallbacks callbacks used by writeOperationHelper
    */
   protected WriteOperationHelper(S3AFileSystem owner,
       Configuration conf,
       S3AStatisticsContext statisticsContext,
       final AuditSpanSource auditSpanSource,
-      final AuditSpan auditSpan) {
+      final AuditSpan auditSpan,
+      final WriteOperationHelperCallbacks writeOperationHelperCallbacks) {
     this.owner = owner;
     this.invoker = new Invoker(new S3ARetryPolicy(conf),
         this::operationRetried);
@@ -168,6 +174,7 @@ public class WriteOperationHelper implements WriteOperations {
     this.auditSpanSource = auditSpanSource;
     this.auditSpan = checkNotNull(auditSpan);
     this.requestFactory = owner.getRequestFactory();
+    this.writeOperationHelperCallbacks = writeOperationHelperCallbacks;
   }
 
   /**
@@ -359,8 +366,7 @@ public class WriteOperationHelper implements WriteOperations {
             final CompleteMultipartUploadRequest request =
                 getRequestFactory().newCompleteMultipartUploadRequest(
                     destKey, uploadId, partETags);
-            return owner.getAmazonS3Client().completeMultipartUpload(
-                  request);
+            return writeOperationHelperCallbacks.completeMultipartUpload(request);
           });
       owner.finishedWrite(destKey, length, uploadResult.getETag(),
           uploadResult.getVersionId(),
@@ -716,7 +722,7 @@ public class WriteOperationHelper implements WriteOperations {
           try (DurationInfo ignored =
                    new DurationInfo(LOG, "S3 Select operation")) {
             try {
-              return owner.getAmazonS3Client().selectObjectContent(request);
+              return writeOperationHelperCallbacks.selectObjectContent(request);
             } catch (AmazonS3Exception e) {
               LOG.error("Failure of S3 Select request against {}",
                   source);
@@ -756,6 +762,27 @@ public class WriteOperationHelper implements WriteOperations {
    */
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  /***
+   * Callbacks for writeOperationHelper.
+   */
+  public interface WriteOperationHelperCallbacks {
+
+    /**
+     * Initiates a select request.
+     * @param request selectObjectContent request
+     * @return selectObjectContentResult
+     */
+    SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request);
+
+    /**
+     * Initiates a complete multi-part upload request.
+     * @param request Complete multi-part upload request
+     * @return completeMultipartUploadResult
+     */
+    CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
+
   }
 
 }

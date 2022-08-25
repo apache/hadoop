@@ -71,6 +71,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ATemporaryCredentials.class);
 
+  @SuppressWarnings("deprecation")
   private static final String TEMPORARY_AWS_CREDENTIALS
       = TemporaryAWSCredentialsProvider.NAME;
 
@@ -175,6 +176,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testTemporaryCredentialValidation() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ACCESS_KEY, "accesskey");
@@ -358,6 +360,7 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
    * @return the caught exception.
    * @throws Exception any unexpected exception.
    */
+  @SuppressWarnings("deprecation")
   public <E extends Exception> E expectedSessionRequestFailure(
       final Class<E> clazz,
       final String endpoint,

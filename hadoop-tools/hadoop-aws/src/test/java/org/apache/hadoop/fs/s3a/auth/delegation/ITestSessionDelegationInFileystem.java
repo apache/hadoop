@@ -254,6 +254,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAddTokensFromFileSystem() throws Throwable {
     describe("verify FileSystem.addDelegationTokens() collects tokens");
     S3AFileSystem fs = getFileSystem();
@@ -576,6 +577,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
    * @return result of the HEAD
    * @throws Exception failure
    */
+  @SuppressWarnings("deprecation")
   protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
       throws Exception {
     AWSCredentialProviderList testingCreds
