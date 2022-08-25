@@ -290,11 +290,11 @@ public class TestFederationStateStoreFacade {
 
     // get RouterStoreToken from StateStore
     RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
-    RouterRMTokenRequest routerRMTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
-    RouterRMTokenResponse tokenResponse = stateStore.getTokenByRouterStoreToken(routerRMTokenRequest);
-    Assert.assertNotNull(tokenResponse);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
 
-    RouterStoreToken resultStoreToken = tokenResponse.getRouterStoreToken();
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
     YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
     Assert.assertNotNull(resultStoreToken);
     Assert.assertNotNull(resultTokenIdentifier);
@@ -322,11 +322,11 @@ public class TestFederationStateStoreFacade {
 
     // get RouterStoreToken from StateStore
     RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
-    RouterRMTokenRequest routerRMTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
-    RouterRMTokenResponse tokenResponse = stateStore.getTokenByRouterStoreToken(routerRMTokenRequest);
-    Assert.assertNotNull(tokenResponse);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
 
-    RouterStoreToken resultStoreToken = tokenResponse.getRouterStoreToken();
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
     YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
     Assert.assertNotNull(resultStoreToken);
     Assert.assertNotNull(resultTokenIdentifier);
@@ -350,11 +350,11 @@ public class TestFederationStateStoreFacade {
 
     // get RouterStoreToken from StateStore
     RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
-    RouterRMTokenRequest routerRMTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
-    RouterRMTokenResponse tokenResponse = stateStore.getTokenByRouterStoreToken(routerRMTokenRequest);
-    Assert.assertNotNull(tokenResponse);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
 
-    RouterStoreToken resultStoreToken = tokenResponse.getRouterStoreToken();
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
     YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
     Assert.assertNotNull(resultStoreToken);
     Assert.assertNotNull(resultTokenIdentifier);
@@ -369,6 +369,6 @@ public class TestFederationStateStoreFacade {
 
     // Call again(getTokenByRouterStoreToken) after remove will throw IOException(not exist)
     LambdaTestUtils.intercept(IOException.class, "RMDelegationToken: " + dtId1 + " does not exist.",
-        () -> stateStore.getTokenByRouterStoreToken(routerRMTokenRequest));
+        () -> stateStore.getTokenByRouterStoreToken(rmTokenRequest));
   }
 }

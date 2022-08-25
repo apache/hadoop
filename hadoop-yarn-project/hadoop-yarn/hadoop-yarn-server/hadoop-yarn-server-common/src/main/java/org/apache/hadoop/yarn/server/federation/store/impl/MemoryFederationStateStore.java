@@ -542,7 +542,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
    * @param masterKey masterKey
    * @return DelegationKey
    */
-  private DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
+  private static DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
     ByteBuffer keyByteBuf = masterKey.getKeyBytes();
     byte[] keyBytes = new byte[keyByteBuf.remaining()];
     keyByteBuf.get(keyBytes);
