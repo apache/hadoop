@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-find_package(Boost 1.72.0 REQUIRED COMPONENTS date_time)
-
 list(APPEND rpc_object_items $<TARGET_OBJECTS:x_platform_obj> rpc_connection_impl.cc rpc_engine.cc namenode_tracker.cc request.cc sasl_protocol.cc sasl_engine.cc)
 if (CMAKE_USING_CYRUS_SASL)
   list(APPEND rpc_object_items cyrus_sasl_engine.cc)
