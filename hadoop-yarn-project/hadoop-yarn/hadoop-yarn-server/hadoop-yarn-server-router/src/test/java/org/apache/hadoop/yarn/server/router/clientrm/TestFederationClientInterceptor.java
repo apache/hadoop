@@ -164,6 +164,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private final static int APP_PRIORITY_ZERO = 0;
 
+  private final static long DEFAULT_DURATION = 10 * 60 * 1000;
+
   @Override
   public void setUp() {
     super.setUpConfig();
@@ -221,7 +223,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     conf.setInt("yarn.scheduler.minimum-allocation-mb", 512);
     conf.setInt("yarn.scheduler.minimum-allocation-vcores", 1);
-    conf.setInt("yarn.scheduler.maximum-allocation-mb", 102400);
+    conf.setInt("yarn.scheduler.maximum-allocation-mb", 100 * 1024);
     conf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
 
     return conf;
@@ -1333,20 +1335,21 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // null request1
     LambdaTestUtils.intercept(YarnException.class,
         "Missing submitReservation request or reservationId or reservation definition or queue.",
-        () -> interceptor.submitReservation(null));
+            () -> interceptor.submitReservation(null));
 
     // null request2
+    ReservationSubmissionRequest request2 =
+        ReservationSubmissionRequest.newInstance(null, null, null);
     LambdaTestUtils.intercept(YarnException.class,
         "Missing submitReservation request or reservationId or reservation definition or queue.",
-        () -> interceptor.submitReservation(
-        ReservationSubmissionRequest.newInstance(null, null, null)));
+            () -> interceptor.submitReservation(request2));
 
     // null request3
     ReservationSubmissionRequest request3 =
         ReservationSubmissionRequest.newInstance(null, "q1", null);
     LambdaTestUtils.intercept(YarnException.class,
         "Missing submitReservation request or reservationId or reservation definition or queue.",
-        () -> interceptor.submitReservation(request3));
+            () -> interceptor.submitReservation(request3));
 
     // null request4
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
@@ -1354,15 +1357,14 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         ReservationSubmissionRequest.newInstance(null, null,  reservationId);
     LambdaTestUtils.intercept(YarnException.class,
         "Missing submitReservation request or reservationId or reservation definition or queue.",
-        () -> interceptor.submitReservation(request4));
+            () -> interceptor.submitReservation(request4));
 
     // null request5
-    long defaultDuration = 600000;
     long arrival = Time.now();
-    long deadline = arrival + (int)(defaultDuration * 1.1);
+    long deadline = arrival + (int)(DEFAULT_DURATION * 1.1);
 
     ReservationRequest rRequest = ReservationRequest.newInstance(
-        Resource.newInstance(1024, 1), 1, 1, defaultDuration);
+        Resource.newInstance(1024, 1), 1, 1, DEFAULT_DURATION);
     ReservationRequest[] rRequests = new ReservationRequest[] {rRequest};
     ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
         ReservationRequestInterpreter.R_ALL, "u1");
@@ -1370,7 +1372,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         ReservationSubmissionRequest.newInstance(rDefinition, null,  reservationId);
     LambdaTestUtils.intercept(YarnException.class,
         "Missing submitReservation request or reservationId or reservation definition or queue.",
-        () -> interceptor.submitReservation(request5));
+            () -> interceptor.submitReservation(request5));
   }
 
   @Test
@@ -1488,12 +1490,11 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   private ReservationDefinition createReservationDefinition(int memory, int core) {
     // get reservationId
-    long defaultDuration = 600000;
     long arrival = Time.now();
-    long deadline = arrival + (int)(defaultDuration * 1.1);
+    long deadline = arrival + (int)(DEFAULT_DURATION * 1.1);
 
     ReservationRequest rRequest = ReservationRequest.newInstance(
-        Resource.newInstance(memory, core), 1, 1, defaultDuration);
+        Resource.newInstance(memory, core), 1, 1, DEFAULT_DURATION);
     ReservationRequest[] rRequests = new ReservationRequest[] {rRequest};
 
     ReservationDefinition rDefinition = createReservationDefinition(arrival, deadline, rRequests,
