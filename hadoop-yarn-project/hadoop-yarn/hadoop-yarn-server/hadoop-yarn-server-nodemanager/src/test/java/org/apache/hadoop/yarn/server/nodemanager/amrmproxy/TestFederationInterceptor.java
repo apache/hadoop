@@ -1015,10 +1015,9 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       finishReq.setTrackingUrl("");
       finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-      FinishApplicationMasterResponse finshResponse =
-          interceptor.finishApplicationMaster(finishReq);
-      Assert.assertNotNull(finshResponse);
-      Assert.assertTrue(finshResponse.getIsUnregistered());
+      FinishApplicationMasterResponse finishResp = interceptor.finishApplicationMaster(finishReq);
+      Assert.assertNotNull(finishResp);
+      Assert.assertTrue(finishResp.getIsUnregistered());
 
       return null;
     });

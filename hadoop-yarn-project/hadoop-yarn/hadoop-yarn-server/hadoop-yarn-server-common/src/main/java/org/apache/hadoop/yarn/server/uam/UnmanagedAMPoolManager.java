@@ -475,14 +475,14 @@ public class UnmanagedAMPoolManager extends AbstractService {
       for (final String subClusterId : subClusterIds) {
         finishAppService.submit(() -> {
           LOG.info("Sending finish application request to RM {}", subClusterId);
-          FinishApplicationMasterResponse uamResponse = null;
           try {
-            uamResponse = finishApplicationMaster(subClusterId, request);
+            FinishApplicationMasterResponse uamResponse = finishApplicationMaster(subClusterId, request);
+            return Collections.singletonMap(subClusterId, uamResponse);
           } catch (Throwable e) {
             LOG.warn("Failed to finish unmanaged application master: " +
                 " RM address: {} ApplicationId: {}", subClusterId, appId, e);
+            return Collections.singletonMap(subClusterId, null);
           }
-          return Collections.singletonMap(subClusterId, uamResponse);
         });
       }
 
