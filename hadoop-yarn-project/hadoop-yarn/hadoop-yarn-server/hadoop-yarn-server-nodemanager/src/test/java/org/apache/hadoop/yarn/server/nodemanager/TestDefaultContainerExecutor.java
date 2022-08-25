@@ -900,7 +900,7 @@ public class TestDefaultContainerExecutor {
     ResourceMappings resourceMappings = new ResourceMappings();
     AssignedResources assignedRscs = new AssignedResources();
     when(mockContainer.getResource())
-            .thenReturn(Resource.newInstance(142900, 2));
+            .thenReturn(Resource.newInstance(147434, 2));
     ContainerId cid = ContainerId.fromString("container_1481156246874_0001_01_000001");
     when(mockContainer.getContainerId()).thenReturn(cid);
     NumaResourceAllocation numaResourceAllocation =
@@ -923,11 +923,16 @@ public class TestDefaultContainerExecutor {
 
     containerExecutor.reacquireContainer(containerReacquisitionContext);
 
-    // returns null since there are no sufficient resources available for the request
+    // reacquireContainer recovers all the numa resources ,
+    // that should be free to use next
+    testAllocateNumaResource("container_1481156246874_0001_01_000001",
+            Resource.newInstance(147434, 2), "0,1", "1");
     when(mockContainer.getContainerId()).thenReturn(
             ContainerId.fromString("container_1481156246874_0001_01_000004"));
     when(mockContainer.getResource())
-            .thenReturn(Resource.newInstance(156250, 2));
+            .thenReturn(Resource.newInstance(1024, 2));
+
+    // returns null since there are no sufficient resources available for the request
     Assert.assertNull(numaResourceAllocator.allocateNumaNodes(mockContainer));
   }
 
