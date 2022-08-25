@@ -127,8 +127,8 @@ public class TestClientRMTokens {
     long renewInterval = 10000l;
     long delegationTokenRemoverScanInterval =
         conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
-            YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
-                TimeUnit.MILLISECONDS);
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     RMDelegationTokenSecretManager rmDtSecretManager = createRMDelegationTokenSecretManager(
         initialInterval, maxLifetime, renewInterval, delegationTokenRemoverScanInterval);
