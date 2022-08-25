@@ -534,8 +534,12 @@ public class DefaultS3ClientFactory extends Configured
     }
 
     try {
-      // build a s3 client with region eu-west-2 that can be used to get the region of the bucket.
-      S3Client s3Client = S3Client.builder().region(Region.EU_WEST_2)
+      // build a s3 client with region eu-west-1 that can be used to get the region of the bucket.
+      // Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
+      // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com to
+      // the actual region the bucket is in. As the request is signed with us-east-1 and not the
+      // bucket's region, it fails.
+      S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
           .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(credentialsProvider))
           .build();
 
