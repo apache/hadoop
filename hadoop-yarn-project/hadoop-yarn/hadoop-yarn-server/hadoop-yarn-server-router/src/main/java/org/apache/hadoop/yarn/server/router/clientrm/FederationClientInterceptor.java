@@ -978,9 +978,8 @@ public class FederationClientInterceptor
                 reservationId, subClusterId);
           } else {
             routerMetrics.incrSubmitReservationFailedRetrieved();
-            RouterServerUtil.logAndThrowException(e,
-                "Unable to update the ReservationId %s into the FederationStateStore.",
-                     reservationId);
+            RouterServerUtil.logAndThrowException(e, "Unable to update the ReservationId %s " +
+                " into the FederationStateStore.", reservationId);
           }
         }
       }
@@ -1041,7 +1040,7 @@ public class FederationClientInterceptor
       ReservationUpdateRequest request) throws YarnException, IOException {
 
     if (request == null || request.getReservationId() == null
-            || request.getReservationDefinition() == null) {
+        || request.getReservationDefinition() == null) {
       routerMetrics.incrUpdateReservationFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing updateReservation request or reservationId or reservation definition.", null);
