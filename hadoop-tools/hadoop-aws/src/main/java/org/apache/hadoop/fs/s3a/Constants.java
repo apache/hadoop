@@ -1204,4 +1204,13 @@ public final class Constants {
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
 
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Status code for moved permanently.
+   */
+  public static final int HTTP_STATUS_CODE_MOVED_PERMANENTLY = 301;
 }

@@ -75,10 +75,12 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static com.amazonaws.services.s3.Headers.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_STATUS_CODE_MOVED_PERMANENTLY;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -540,9 +542,9 @@ public class DefaultS3ClientFactory extends Configured
       HeadBucketResponse headBucketResponse =
           s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
       return Region.of(
-          headBucketResponse.sdkHttpResponse().headers().get("x-amz-bucket-region").get(0));
+          headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
     } catch (S3Exception exception) {
-      if (exception.statusCode() == 301) {
+      if (exception.statusCode() == HTTP_STATUS_CODE_MOVED_PERMANENTLY) {
         List<String> bucketRegion =
             exception.awsErrorDetails().sdkHttpResponse().headers().get("x-amz-bucket-region");
         return Region.of(bucketRegion.get(0));
