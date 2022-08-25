@@ -550,7 +550,7 @@ public class DefaultS3ClientFactory extends Configured
     } catch (S3Exception exception) {
       if (exception.statusCode() == HTTP_STATUS_CODE_MOVED_PERMANENTLY) {
         List<String> bucketRegion =
-            exception.awsErrorDetails().sdkHttpResponse().headers().get("x-amz-bucket-region");
+            exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER);
         return Region.of(bucketRegion.get(0));
       }
     }
