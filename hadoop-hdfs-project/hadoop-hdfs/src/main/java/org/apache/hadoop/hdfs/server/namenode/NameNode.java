@@ -557,7 +557,6 @@ public class NameNode extends ReconfigurableBase implements
         clientMachine = "";
       }
     }
-
     return clientMachine;
   }
 
