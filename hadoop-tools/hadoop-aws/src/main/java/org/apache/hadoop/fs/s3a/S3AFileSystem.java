@@ -775,10 +775,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    if (this.prefetchEnabled) {
+    if (prefetchEnabled) {
       final S3AInputStreamStatistics s3AInputStreamStatistics =
           statisticsContext.newInputStreamStatistics();
-      this.futurePool = new ExecutorServiceFuturePool(
+      futurePool = new ExecutorServiceFuturePool(
           new SemaphoredDelegatingExecutor(
               boundedThreadPool,
               executorCapacity,
