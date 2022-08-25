@@ -34,6 +34,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
@@ -125,8 +126,9 @@ public class TestClientRMTokens {
     long maxLifetime= 20000l;
     long renewInterval = 10000l;
     long delegationTokenRemoverScanInterval =
-        conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
-            YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT);
+        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+            YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+                TimeUnit.MILLISECONDS);
 
     RMDelegationTokenSecretManager rmDtSecretManager = createRMDelegationTokenSecretManager(
         initialInterval, maxLifetime, renewInterval, delegationTokenRemoverScanInterval);

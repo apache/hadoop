@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSe
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class RMSecretManagerService extends AbstractService {
 
@@ -136,8 +137,10 @@ public class RMSecretManagerService extends AbstractService {
         conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
             YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     long removeScanInterval =
-        conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
-            YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT);
+        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+            YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+                TimeUnit.MILLISECONDS);
+
     return new RMDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, removeScanInterval, rmContext);
   }

@@ -1082,7 +1082,7 @@
       RM delegation token remove-scan interval in ms
     </description>
     <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
-    <value>3600000</value>
+    <value>1h</value>
   </property>
 
   <property>
