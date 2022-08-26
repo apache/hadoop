@@ -473,7 +473,7 @@ public class ITestS3AIOStatisticsContext extends AbstractS3ATestBase {
       if (ioStatisticsContext != null) {
         IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
       }
-      // Storing context in a field to not loose the reference in a GC.
+      // Storing context in a field to not lose the reference in a GC.
       IOStatisticsContext ioStatisticsContextWorkerThread =
           getCurrentIOStatisticsContext();
 
