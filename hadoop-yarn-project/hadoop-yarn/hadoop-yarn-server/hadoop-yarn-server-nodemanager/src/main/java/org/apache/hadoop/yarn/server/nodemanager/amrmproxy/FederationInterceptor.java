@@ -85,6 +85,7 @@ import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMR
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
@@ -1545,18 +1546,72 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   + " from same sub-cluster: {}, so ignoring.",
               container.getId(), subClusterId);
         } else {
+
+          LOG.info("Duplicate containerID found in the allocated containers. " +
+              "try to re-pick the sub-cluster.");
+
           // The same container allocation from different sub-clusters,
           // something is wrong.
-          // TODO: YARN-6667 if some subcluster RM is configured wrong, we
-          // should not fail the entire heartbeat.
-          throw new YarnRuntimeException(
-              "Duplicate containerID found in the allocated containers. This"
-                  + " can happen if the RM epoch is not configured properly."
-                  + " ContainerId: " + container.getId().toString()
-                  + " ApplicationId: " + this.attemptId + " From RM: "
-                  + subClusterId
-                  + " . Previous container was from sub-cluster: "
-                  + existingSubClusterId);
+          try {
+            Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
+
+            boolean existAllocatedScHealth = true;
+            boolean newAllocatedScHealth = true;
+
+            // Existing SubCluster Time Out, Can't Continue to use.
+            if (timeOutScs.contains(existingSubClusterId)) {
+              existAllocatedScHealth = false;
+            }
+
+            // New SubCluster Time Out, Can't Continue to use.
+            if (timeOutScs.contains(existingSubClusterId)) {
+              newAllocatedScHealth = false;
+            }
+
+            // Existing SubCluster Unavailable
+            SubClusterInfo existingSubCluster = federationFacade.getSubCluster(existingSubClusterId);
+            if (existingSubCluster == null || existingSubCluster.getState().isUnusable()) {
+              existAllocatedScHealth = false;
+            }
+
+            // New SubCluster Unavailable
+            SubClusterInfo newSubCluster = federationFacade.getSubCluster(subClusterId);
+            if (newSubCluster == null || newSubCluster.getState().isUnusable()) {
+              newAllocatedScHealth = false;
+            }
+
+            // If the RM of the previously allocated Container is normal,
+            // the original RM will be used first
+            if ((existAllocatedScHealth && !newAllocatedScHealth) ||
+                (existAllocatedScHealth && newAllocatedScHealth)) {
+              LOG.info("Use Previous Allocated Container's subCluster. " +
+                  "ContainerId: {} ApplicationId: {} From RM: {}.", this.attemptId,
+                  container.getId(), existingSubClusterId);
+              continue;
+            } else if (!existAllocatedScHealth && newAllocatedScHealth) {
+              // If the RM of the previously allocated Container is abnormal,
+              // but the RM of the newly allocated Container is normal, use the new RM
+              LOG.info("Use Newly Allocated Container's subCluster. " +
+                  "ApplicationId: {} ContainerId: {} From RM: {}.", this.attemptId,
+                  container.getId(), subClusterId);
+            } else {
+              // The RM of the previously allocated Container
+              // and the RM of the newly allocated Container are not normal.
+              // there is a very small probability that an exception will be thrown.
+              throw new YarnRuntimeException(
+                  " Can't use any subCluster because an exception occurred" +
+                  " ContainerId: " + container.getId() + " ApplicationId: " + this.attemptId +
+                  " From RM: " + subClusterId + ". " +
+                  " Previous Container was From subCluster: " + existingSubClusterId);
+            }
+          } catch (Exception ex) {
+            // An exception occurred
+            throw new YarnRuntimeException(
+                " Can't use any subCluster because an exception occurred" +
+                " ContainerId: " + container.getId() + " ApplicationId: " + this.attemptId +
+                " From RM: " + subClusterId + ". " +
+                " Previous Container was From subCluster: " + existingSubClusterId);
+          }
         }
       }
 
@@ -1808,5 +1863,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   public static <T1, T2> boolean isNullOrEmpty(Map<T1, T2> c) {
     return (c == null || c.size() == 0);
+  }
+
+  @VisibleForTesting
+  protected void cacheAllocatedContainersForSubClusterId(
+      List<Container> containers, SubClusterId subClusterId) {
+    cacheAllocatedContainers(containers, subClusterId);
+  }
+
+  @VisibleForTesting
+  protected Map<ContainerId, SubClusterId> getContainerIdToSubClusterIdMap() {
+    return containerIdToSubClusterIdMap;
   }
 }
