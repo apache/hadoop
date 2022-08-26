@@ -213,7 +213,7 @@ public class S3ARemoteObject {
     }
 
     changeTracker.processResponse(object, operation, offset);
-    S3ObjectInputStream stream = object.getObjectContent();
+    InputStream stream = object.getObjectContent();
     synchronized (s3Objects) {
       s3Objects.put(stream, object);
     }
@@ -224,11 +224,10 @@ public class S3ARemoteObject {
   void close(InputStream inputStream, int numRemainingBytes) {
     S3Object obj;
     synchronized (s3Objects) {
-      obj = s3Objects.get(inputStream);
+      obj = s3Objects.remove(inputStream);
       if (obj == null) {
         throw new IllegalArgumentException("inputStream not found");
       }
-      s3Objects.remove(inputStream);
     }
     SDKStreamDrainer drainer = new SDKStreamDrainer(
         uri,
