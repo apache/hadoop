@@ -71,7 +71,7 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Heartbeat monitor thread. */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
   private final StopWatch heartbeatStopWatch = new StopWatch();
-  private final int removeBatchNum;
+  private final int numOfDeadDatanodesRemove;
 
   final Namesystem namesystem;
   final BlockManager blockManager;
@@ -97,9 +97,9 @@ class HeartbeatManager implements DatanodeStatistics {
     enableLogStaleNodes = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_KEY,
         DFSConfigKeys.DFS_NAMENODE_ENABLE_LOG_STALE_DATANODE_DEFAULT);
-    this.removeBatchNum =
-        conf.getInt(DFSConfigKeys.DFS_NAMENODE_REMOVE_BAD_BATCH_NUM,
-            DFSConfigKeys.DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT);
+    this.numOfDeadDatanodesRemove = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_REMOVE_DEAD_DATANODE_BATCHNUM_KEY,
+        DFSConfigKeys.DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT);
 
     if (avoidStaleDataNodesForWrite && staleInterval < recheckInterval) {
       this.heartbeatRecheckInterval = staleInterval;
@@ -441,9 +441,12 @@ class HeartbeatManager implements DatanodeStatistics {
     }
     boolean allAlive = false;
     // Locate limited dead nodes.
-    List<DatanodeDescriptor> deadDatanodes = new ArrayList<>(removeBatchNum);
+    List<DatanodeDescriptor> deadDatanodes = new ArrayList<>(
+        numOfDeadDatanodesRemove);
     // Locate limited failed storages that isn't on a dead node.
-    List<DatanodeStorageInfo> failedStorages = new ArrayList<>(removeBatchNum);
+    List<DatanodeStorageInfo> failedStorages = new ArrayList<>(
+        numOfDeadDatanodesRemove);
+
     while (!allAlive) {
 
       deadDatanodes.clear();
@@ -458,7 +461,8 @@ class HeartbeatManager implements DatanodeStatistics {
           if (shouldAbortHeartbeatCheck(0)) {
             return;
           }
-          if (deadDatanodes.size() < removeBatchNum && dm.isDatanodeDead(d)) {
+          if (deadDatanodes.size() < numOfDeadDatanodesRemove &&
+              dm.isDatanodeDead(d)) {
             stats.incrExpiredHeartbeats();
             deadDatanodes.add(d);
             // remove the node from stale list to adjust the stale list size
@@ -482,7 +486,7 @@ class HeartbeatManager implements DatanodeStatistics {
               numOfStaleStorages++;
             }
 
-            if (failedStorages.size() < removeBatchNum &&
+            if (failedStorages.size() < numOfDeadDatanodesRemove &&
                 storageInfo.areBlocksOnFailedStorage() &&
                 !deadDatanodes.contains(d)) {
               failedStorages.add(storageInfo);
@@ -498,7 +502,7 @@ class HeartbeatManager implements DatanodeStatistics {
       // log nodes detected as stale since last heartBeat
       dumpStaleNodes(staleNodes);
 
-      allAlive = deadDatanodes.size() == 0 && failedStorages.size() == 0;
+      allAlive = deadDatanodes.isEmpty() && failedStorages.isEmpty();
       if (!allAlive && namesystem.isInStartupSafeMode()) {
         return;
       }
