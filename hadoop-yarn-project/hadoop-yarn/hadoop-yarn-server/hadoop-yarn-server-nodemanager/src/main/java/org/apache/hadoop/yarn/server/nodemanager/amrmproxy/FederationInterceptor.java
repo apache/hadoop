@@ -1553,35 +1553,28 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           // The same container allocation from different sub-clusters,
           // something is wrong.
           try {
+
             Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
+            SubClusterInfo existingSubCluster = federationFacade.getSubCluster(existingSubClusterId);
+            SubClusterInfo newSubCluster = federationFacade.getSubCluster(subClusterId);
 
             boolean existAllocatedScHealth = true;
             boolean newAllocatedScHealth = true;
 
-            // Existing SubCluster Time Out, Can't Continue to use.
-            if (timeOutScs.contains(existingSubClusterId)) {
+            // Previous SubCluster Time Out Or Unusable, Can't Continue to use.
+            if (timeOutScs.contains(existingSubClusterId) ||
+                existingSubCluster == null || existingSubCluster.getState().isUnusable()) {
               existAllocatedScHealth = false;
             }
 
-            // New SubCluster Time Out, Can't Continue to use.
-            if (timeOutScs.contains(existingSubClusterId)) {
+            // New SubCluster Time Out Or Unusable, Can't Continue to use.
+            if (timeOutScs.contains(existingSubClusterId) ||
+                newSubCluster == null || newSubCluster.getState().isUnusable()) {
               newAllocatedScHealth = false;
             }
 
-            // Existing SubCluster Unavailable
-            SubClusterInfo existingSubCluster = federationFacade.getSubCluster(existingSubClusterId);
-            if (existingSubCluster == null || existingSubCluster.getState().isUnusable()) {
-              existAllocatedScHealth = false;
-            }
-
-            // New SubCluster Unavailable
-            SubClusterInfo newSubCluster = federationFacade.getSubCluster(subClusterId);
-            if (newSubCluster == null || newSubCluster.getState().isUnusable()) {
-              newAllocatedScHealth = false;
-            }
-
-            // If the RM of the previously allocated Container is normal,
-            // the original RM will be used first
+            // If the previous RM which allocated Container is normal,
+            // the previous RM will be used first
             if ((existAllocatedScHealth && !newAllocatedScHealth) ||
                 (existAllocatedScHealth && newAllocatedScHealth)) {
               LOG.info("Use Previous Allocated Container's subCluster. " +
@@ -1589,15 +1582,15 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   container.getId(), existingSubClusterId);
               continue;
             } else if (!existAllocatedScHealth && newAllocatedScHealth) {
-              // If the RM of the previously allocated Container is abnormal,
+              // If the previous RM which allocated Container is abnormal,
               // but the RM of the newly allocated Container is normal, use the new RM
               LOG.info("Use Newly Allocated Container's subCluster. " +
                   "ApplicationId: {} ContainerId: {} From RM: {}.", this.attemptId,
                   container.getId(), subClusterId);
             } else {
+              // There is a very small probability that an exception will be thrown.
               // The RM of the previously allocated Container
               // and the RM of the newly allocated Container are not normal.
-              // there is a very small probability that an exception will be thrown.
               throw new YarnRuntimeException(
                   " Can't use any subCluster because an exception occurred" +
                   " ContainerId: " + container.getId() + " ApplicationId: " + this.attemptId +

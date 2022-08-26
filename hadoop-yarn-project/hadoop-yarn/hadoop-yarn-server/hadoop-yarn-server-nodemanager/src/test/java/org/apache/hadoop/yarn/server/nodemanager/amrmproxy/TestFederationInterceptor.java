@@ -997,8 +997,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
 
         // Allocate the first batch of containers, with sc1 active
-        SubClusterId subClusterId01 = SubClusterId.newInstance("SC-1");
-        registerSubCluster(subClusterId01);
+        SubClusterId subClusterId1 = SubClusterId.newInstance("SC-1");
+        registerSubCluster(subClusterId1);
 
         int numberOfContainers = 3;
         List<Container> containers =
@@ -1007,48 +1007,48 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Assert.assertEquals(3, containers.size());
 
         // with sc2 active
-        SubClusterId subClusterId02 = SubClusterId.newInstance("SC-2");
-        registerSubCluster(subClusterId02);
+        SubClusterId subClusterId2 = SubClusterId.newInstance("SC-2");
+        registerSubCluster(subClusterId2);
 
-        // 1.Container has been registered to SubCluster1, try to register the same Container to SubCluster2
-        // because SubCluster1 is in normal state at this time,
-        // so the SubCluster corresponding to Container should be SubCluster1
-        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId02);
+        // 1.Container has been registered to SubCluster1, try to register the same Container to SubCluster2.
+        // Because SubCluster1 is in normal state at this time,
+        // So the SubCluster corresponding to Container should be SubCluster1
+        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId2);
         Map<ContainerId, SubClusterId> cIdToSCMap = interceptor.getContainerIdToSubClusterIdMap();
         for (SubClusterId subClusterId : cIdToSCMap.values()) {
           Assert.assertNotNull(subClusterId);
-          Assert.assertEquals(subClusterId, subClusterId01);
+          Assert.assertEquals(subClusterId, subClusterId1);
         }
 
-        // 2.Deregister subcluster subClusterId01, Register the same Containers to SubCluster2
-        // so the SubCluster corresponding to Container should be SubCluster2
-        deRegisterSubCluster(subClusterId01);
-        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId02);
+        // 2.Deregister SubCluster1, Register the same Containers to SubCluster2
+        // So the SubCluster corresponding to Container should be SubCluster2
+        deRegisterSubCluster(subClusterId1);
+        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId2);
         Map<ContainerId, SubClusterId> cIdToSCMap2 = interceptor.getContainerIdToSubClusterIdMap();
         for (SubClusterId subClusterId : cIdToSCMap2.values()) {
           Assert.assertNotNull(subClusterId);
-          Assert.assertEquals(subClusterId, subClusterId02);
+          Assert.assertEquals(subClusterId, subClusterId2);
         }
 
-        // 3.Deregister subcluster subClusterId02, Register the same Containers to SubCluster01
+        // 3.Deregister subClusterId2, Register the same Containers to SubCluster1
         // Because both SubCluster1 and SubCluster2 are abnormal at this time,
         // an exception will be thrown when registering the first Container.
-        deRegisterSubCluster(subClusterId02);
+        deRegisterSubCluster(subClusterId2);
         Container container01 = containers.get(0);
         String errMsg =
             " Can't use any subCluster because an exception occurred" +
             " ContainerId: " + container01.getId() +
             " ApplicationId: " + interceptor.getAttemptId() +
-            " From RM: " + subClusterId01 + ". " +
-            " Previous Container was From subCluster: " + subClusterId02;
+            " From RM: " + subClusterId1 + ". " +
+            " Previous Container was From subCluster: " + subClusterId2;
 
         LambdaTestUtils.intercept(YarnRuntimeException.class, errMsg,
-            () -> interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId01));
+            () -> interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId1));
 
-        // 4. register SubCluster01, re-register the Container,
+        // 4. register SubCluster1, re-register the Container,
         // and try to finish application
-        registerSubCluster(subClusterId01);
-        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId01);
+        registerSubCluster(subClusterId1);
+        interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId1);
         releaseContainersAndAssert(containers);
 
         // Finish the application
@@ -1058,10 +1058,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         return null;
       }
