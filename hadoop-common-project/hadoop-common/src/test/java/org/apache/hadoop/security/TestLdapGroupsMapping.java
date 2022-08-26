@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -154,12 +155,13 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
 
     // The group search filter should be resolved and should be passed as the
     // bellow.
-    String resolvedGroupFilter = "(&(|(memberUid=CN=some_user,DC=test,DC=com)"
-        + "(uname=some_user))(objectClass=group)(member={0}))";
+    String groupFilter = "(|(memberUid={0})(uname={1}))(objectClass=group)";
+    String[] resolvedFilterArgs =
+        new String[] {"CN=some_user,DC=test,DC=com", "some_user"};
 
     // Return groups only if the resolved filter is passed.
     when(getContext()
-        .search(anyString(), eq(resolvedGroupFilter), any(Object[].class),
+        .search(anyString(), eq(groupFilter), eq(resolvedFilterArgs),
             any(SearchControls.class)))
         .thenReturn(getUserNames(), getGroupNames());
 

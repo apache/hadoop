@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
@@ -415,7 +414,7 @@ public class LdapGroupsMapping
     }
     if (uidNumber != null && gidNumber != null) {
       return c.search(groupbaseDN,
-              "(&"+ resolveGroupFilter(result) + "(|(" + posixGidAttr + "={0})" +
+              "(&"+ groupSearchFilter + "(|(" + posixGidAttr + "={0})" +
                   "(" + groupMemberAttr + "={1})))",
               new Object[] {gidNumber, uidNumber},
               SEARCH_CONTROLS);
@@ -444,14 +443,20 @@ public class LdapGroupsMapping
     Set<String> groupDNs = new HashSet<>();
 
     NamingEnumeration<SearchResult> groupResults;
-    // perform the second LDAP query
-    if (isPosix) {
+
+    String[] resolved = resolveCustomGroupFilterArgs(result);
+    // If custom group filter argument is supplied, use that!!!
+    if (resolved != null) {
+      groupResults =
+          c.search(groupbaseDN, groupSearchFilter, resolved, SEARCH_CONTROLS);
+    } else if (isPosix) {
+      // perform the second LDAP query
       groupResults = lookupPosixGroup(result, c);
     } else {
       String userDn = result.getNameInNamespace();
       groupResults =
           c.search(groupbaseDN,
-              "(&" + resolveGroupFilter(result) + "(" + groupMemberAttr + "={0}))",
+              "(&" + groupSearchFilter + "(" + groupMemberAttr + "={0}))",
               new Object[]{userDn},
               SEARCH_CONTROLS);
     }
@@ -469,7 +474,7 @@ public class LdapGroupsMapping
     return groups;
   }
 
-  private String resolveGroupFilter(SearchResult result)
+  private String[] resolveCustomGroupFilterArgs(SearchResult result)
       throws NamingException {
     Attribute groupSearchParams =
         result.getAttributes().get(groupSearchFilterParams);
@@ -484,9 +489,9 @@ public class LdapGroupsMapping
               result.getAttributes().get(filterElems[i]).get().toString();
         }
       }
-      return MessageFormat.format(groupSearchFilter, filterElems);
+      return filterElems;
     }
-    return groupSearchFilter;
+    return null;
   }
 
   /**
