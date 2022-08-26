@@ -235,6 +235,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
   private static SDKStreamDrainer assertBytesRead(final SDKStreamDrainer drainer,
       final int bytes) {
     Assertions.assertThat(drainer)
+        .describedAs("bytes read by %s", drainer)
         .extracting(SDKStreamDrainer::getDrained)
         .isEqualTo(bytes);
     return drainer;

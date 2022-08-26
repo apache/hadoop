@@ -181,6 +181,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
    * Exceptions are saved then swallowed.
    * If a close() is attempted and fails, the operation escalates to
    * an abort.
+   * @return true if the stream was aborted.
    */
   private boolean drainOrAbortHttpStream() {
     if (executed.getAndSet(true)) {
