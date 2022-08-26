@@ -240,6 +240,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   * Get the current input policy.
+   * @return input policy.
+   */
+  @VisibleForTesting
+  public S3AInputPolicy getInputPolicy() {
+    return inputPolicy;
+  }
+
+  /**
    * Opens up the stream at specified target position and for given length.
    *
    * @param reason reason for reopen
@@ -1239,8 +1248,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     } finally {
       streamStatistics.unbuffered();
       if (inputPolicy.isAdaptive()) {
-        LOG.debug("Switching to Random IO seek policy after unbuffer() invoked");
-        setInputPolicy(S3AInputPolicy.Random);
+        S3AInputPolicy policy = S3AInputPolicy.Random;
+        LOG.debug("Switching to seek policy {} after unbuffer() invoked", policy);
+        setInputPolicy(policy);
       }
     }
   }

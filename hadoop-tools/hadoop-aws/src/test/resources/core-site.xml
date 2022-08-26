@@ -184,7 +184,6 @@
     <value>true</value>
   </property>
 
-
   <property>
     <name>fs.s3a.connection.request.timeout</name>
     <value>10s</value>

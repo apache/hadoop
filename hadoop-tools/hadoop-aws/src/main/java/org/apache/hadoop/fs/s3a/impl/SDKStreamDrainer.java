@@ -259,9 +259,8 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     }
 
     streamStatistics.streamClose(true, remaining);
-    LOG.debug("Stream {} {}: {}; remaining={}",
-        uri, (shouldAbort ? "aborted" : "closed"), reason,
-        remaining);
+    LOG.debug("Stream {} aborted: {}; remaining={}",
+        uri, reason, remaining);
     return true;
   }
 

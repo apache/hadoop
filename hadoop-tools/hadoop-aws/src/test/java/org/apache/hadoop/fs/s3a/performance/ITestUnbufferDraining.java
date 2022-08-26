@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -47,6 +51,11 @@ import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ABORTED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_SEEK_POLICY_CHANGED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_UNBUFFERED;
 
 /**
  * Test stream unbuffer performance/behavior with stream draining
@@ -57,12 +66,25 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestUnbufferDraining.class);
 
+  /**
+   * Readahead range to use, sets drain threshold too.
+   */
   public static final int READAHEAD = 1000;
 
+  /**
+   * How big a file to create?
+   */
   public static final int FILE_SIZE = 50_000;
 
+  /**
+   * Number of attempts to unbuffer on each stream.
+   */
   public static final int ATTEMPTS = 10;
 
+  /**
+   * Test FS with a tiny connection pool and
+   * no recovery.
+   */
   private FileSystem brittleFS;
 
   /**
@@ -112,7 +134,9 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   @Override
   public void teardown() throws Exception {
     super.teardown();
-    IOUtils.cleanupWithLogger(LOG, brittleFS);
+    FileSystem bfs = getBrittleFS();
+    FILESYSTEM_IOSTATS.aggregate(retrieveIOStatistics(bfs));
+    IOUtils.cleanupWithLogger(LOG, bfs);
   }
 
   public FileSystem getBrittleFS() {
@@ -129,6 +153,10 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     describe("unbuffer draining");
     FileStatus st = createTestFile();
 
+    IOStatistics brittleStats = retrieveIOStatistics(getBrittleFS());
+    long originalUnbuffered = lookupCounter(brittleStats,
+        STREAM_READ_UNBUFFERED);
+
     int offset = FILE_SIZE - READAHEAD + 1;
     try (FSDataInputStream in = getBrittleFS().openFile(st.getPath())
         .withFileStatus(st)
@@ -141,19 +169,68 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
         in.read();
         in.unbuffer();
       }
+      // verify the policy switched.
+      assertReadPolicy(in, S3AInputPolicy.Random);
+      // assert that the statistics are as expected
+      IOStatistics stats = in.getIOStatistics();
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_UNBUFFERED,
+          ATTEMPTS);
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_ABORTED,
+          0);
+      // there's always a policy of 1, so
+      // this value must be 1 + 1
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_SEEK_POLICY_CHANGED,
+          2);
     }
+    // filesystem statistic propagation
+    verifyStatisticCounterValue(brittleStats,
+        STREAM_READ_UNBUFFERED,
+        ATTEMPTS + originalUnbuffered);
   }
 
   /**
-   * Test stream close performance/behavior with stream draining
-   * and unbuffer.
+   * Lookup a counter, returning 0 if it is not defined.
+   * @param statistics stats to probe
+   * @param key counter key
+   * @return the value or 0
+   */
+  private static long lookupCounter(
+      final IOStatistics statistics,
+      final String key) {
+    Long counter = statistics.counters().get(key);
+    return counter == null ? 0 : counter;
+  }
+
+  /**
+   * Assert that the read policy is as expected.
+   * @param in input stream
+   * @param policy read policy.
+   */
+  private static void assertReadPolicy(final FSDataInputStream in,
+      final S3AInputPolicy policy) {
+    S3AInputStream inner = (S3AInputStream) in.getWrappedStream();
+    Assertions.assertThat(inner.getInputPolicy())
+        .describedAs("input policy of %s", inner)
+        .isEqualTo(policy);
+  }
+
+  /**
+   * Test stream close performance/behavior with unbuffer
+   * aborting rather than draining.
    */
   @Test
   public void testUnbufferAborting() throws Throwable {
 
-    describe("unbuffer draining");
+    describe("unbuffer aborting");
     FileStatus st = createTestFile();
-
+    IOStatistics brittleStats = retrieveIOStatistics(getBrittleFS());
+    long originalUnbuffered =
+        lookupCounter(brittleStats, STREAM_READ_UNBUFFERED);
+    long originalAborted =
+        lookupCounter(brittleStats, STREAM_READ_ABORTED);
 
     // open the file at the beginning with a whole file read policy,
     // so even with s3a switching to random on unbuffer,
@@ -164,14 +241,37 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
         .must(FS_OPTION_OPENFILE_READ_POLICY,
             FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
         .build().get()) {
+      assertReadPolicy(in, S3AInputPolicy.Sequential);
 
       describe("Initiating unbuffer with async drain\n");
       for (int i = 0; i < ATTEMPTS; i++) {
         describe("Starting read/unbuffer #%d", i);
         in.read();
         in.unbuffer();
+        // because the read policy is sequential, it doesn't change
+        assertReadPolicy(in, S3AInputPolicy.Sequential);
       }
+
+      // assert that the statistics are as expected
+      IOStatistics stats = in.getIOStatistics();
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_UNBUFFERED,
+          ATTEMPTS);
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_ABORTED,
+          ATTEMPTS);
+      // there's always a policy of 1.
+      verifyStatisticCounterValue(stats,
+          STREAM_READ_SEEK_POLICY_CHANGED,
+          1);
     }
+    // look at FS statistics
+    verifyStatisticCounterValue(brittleStats,
+        STREAM_READ_UNBUFFERED,
+        ATTEMPTS + originalUnbuffered);
+    verifyStatisticCounterValue(brittleStats,
+        STREAM_READ_ABORTED,
+        ATTEMPTS + originalAborted);
   }
 
   private FileStatus createTestFile() throws IOException {
@@ -180,8 +280,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
 
     Path path = methodPath();
     ContractTestUtils.createFile(fs, path, true, data);
-    FileStatus st = fs.getFileStatus(path);
-    return st;
+    return fs.getFileStatus(path);
   }
 
 
