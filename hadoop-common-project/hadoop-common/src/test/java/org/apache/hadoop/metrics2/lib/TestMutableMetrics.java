@@ -29,11 +29,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
+import com.google.common.math.Stats;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
 import org.junit.Test;
@@ -306,19 +309,57 @@ public class TestMutableMetrics {
 
   /**
    * Tests that when using {@link MutableStat#add(long, long)}, even with a high
-   * sample count, the mean does not lose accuracy.
+   * sample count, the mean does not lose accuracy. This also validates that
+   * the std dev is correct, assuming samples of equal value.
    */
-  @Test public void testMutableStatWithBulkAdd() {
+  @Test
+  @SuppressWarnings("UnstableApiUsage") // Stats is marked @Beta
+  public void testMutableStatWithBulkAdd() {
+    List<Long> samples = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      samples.add(1000L);
+    }
+    for (int i = 0; i < 1000; i++) {
+      samples.add(2000L);
+    }
+    Stats stats = Stats.of(samples);
+
+    for (int bulkSize : new int[] { 1, 10, 100, 1000 }) {
+      MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+      MetricsRegistry registry = new MetricsRegistry("test");
+      MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
+
+      for (int i = 0; i < samples.size(); i += bulkSize) {
+        stat.add(bulkSize, samples
+            .subList(i, i + bulkSize)
+            .stream()
+            .mapToLong(Long::longValue)
+            .sum()
+        );
+      }
+      registry.snapshot(rb, false);
+
+      assertCounter("TestNumOps", 2000L, rb);
+      assertGauge("TestAvgVal", stats.mean(), rb);
+      assertGauge("TestStdevVal", stats.sampleStandardDeviation(), rb);
+    }
+  }
+
+  @Test
+  public void testLargeMutableStatAdd() {
     MetricsRecordBuilder rb = mockMetricsRecordBuilder();
     MetricsRegistry registry = new MetricsRegistry("test");
-    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", false);
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
 
-    stat.add(1000, 1000);
-    stat.add(1000, 2000);
+    long sample = 1000000000000009L;
+    for (int i = 0; i < 100; i++) {
+      stat.add(1, sample);
+    }
     registry.snapshot(rb, false);
 
-    assertCounter("TestNumOps", 2000L, rb);
-    assertGauge("TestAvgVal", 1.5, rb);
+    assertCounter("TestNumOps", 100L, rb);
+    assertGauge("TestAvgVal", (double) sample, rb);
+    assertGauge("TestStdevVal", 0.0, rb);
   }
 
   /**
