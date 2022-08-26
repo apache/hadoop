@@ -1017,7 +1017,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Map<ContainerId, SubClusterId> cIdToSCMap = interceptor.getContainerIdToSubClusterIdMap();
         for (SubClusterId subClusterId : cIdToSCMap.values()) {
           Assert.assertNotNull(subClusterId);
-          Assert.assertEquals(subClusterId, subClusterId1);
+          Assert.assertEquals(subClusterId1, subClusterId);
         }
 
         // 2.Deregister SubCluster1, Register the same Containers to SubCluster2
@@ -1027,7 +1027,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         Map<ContainerId, SubClusterId> cIdToSCMap2 = interceptor.getContainerIdToSubClusterIdMap();
         for (SubClusterId subClusterId : cIdToSCMap2.values()) {
           Assert.assertNotNull(subClusterId);
-          Assert.assertEquals(subClusterId, subClusterId2);
+          Assert.assertEquals(subClusterId2, subClusterId);
         }
 
         // 3.Deregister subClusterId2, Register the same Containers to SubCluster1
