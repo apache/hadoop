@@ -1555,7 +1555,8 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           try {
 
             Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
-            SubClusterInfo existingSubCluster = federationFacade.getSubCluster(existingSubClusterId);
+            SubClusterInfo existingSubCluster =
+                federationFacade.getSubCluster(existingSubClusterId);
             SubClusterInfo newSubCluster = federationFacade.getSubCluster(subClusterId);
 
             boolean existAllocatedScHealth = true;

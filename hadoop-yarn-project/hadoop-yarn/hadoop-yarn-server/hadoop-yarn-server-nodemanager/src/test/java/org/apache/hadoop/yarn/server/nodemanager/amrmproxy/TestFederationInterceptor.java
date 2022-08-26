@@ -1010,7 +1010,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         SubClusterId subClusterId2 = SubClusterId.newInstance("SC-2");
         registerSubCluster(subClusterId2);
 
-        // 1.Container has been registered to SubCluster1, try to register the same Container to SubCluster2.
+        // 1.Container has been registered to SubCluster1, try to register the same Container
+        // to SubCluster2.
         // Because SubCluster1 is in normal state at this time,
         // So the SubCluster corresponding to Container should be SubCluster1
         interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId2);
