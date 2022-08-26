@@ -68,7 +68,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
   /**
    * Stream from the {@link #requestObject} for draining and closing.
    */
-  private final SdkFilterInputStream inner;
+  private final SdkFilterInputStream sdkStream;
 
   /**
    * Should the request be aborted?
@@ -119,7 +119,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
    * Prepare to drain the stream.
    * @param uri URI for messages
    * @param requestObject http request object; needed to avoid GC issues.
-   * @param inner stream to close.
+   * @param sdkStream stream to close.
    * @param shouldAbort force an abort; used if explicitly requested.
    * @param streamStatistics stats to update
    * @param reason reason for stream being closed; used in messages
@@ -127,14 +127,14 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
    */
   public SDKStreamDrainer(final String uri,
       @Nullable final Closeable requestObject,
-      final SdkFilterInputStream inner,
+      final SdkFilterInputStream sdkStream,
       final boolean shouldAbort,
       final int remaining,
       final S3AInputStreamStatistics streamStatistics,
       final String reason) {
     this.uri = uri;
     this.requestObject = requestObject;
-    this.inner = requireNonNull(inner);
+    this.sdkStream = requireNonNull(sdkStream);
     this.shouldAbort = shouldAbort;
     this.remaining = remaining;
     this.streamStatistics = requireNonNull(streamStatistics);
@@ -207,7 +207,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
           // the connection breaks.
           // this may be a bit overaggressive on buffer underflow.
           while (remaining > 0) {
-            final int count = inner.read(buffer);
+            final int count = sdkStream.read(buffer);
             LOG.debug("read {} bytes", count);
             if (count <= 0) {
               // no more data is left
@@ -231,7 +231,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
         // if there is still data in the stream, the SDK
         // will warn and escalate to an abort itself.
         LOG.debug("Closing stream");
-        inner.close();
+        sdkStream.close();
 
         cleanupWithLogger(LOG, requestObject);
         // this MUST come after the close, so that if the IO operations fail
@@ -250,7 +250,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     // remaining object payload is read from S3 while closing the stream.
     LOG.debug("Aborting stream {}", uri);
     try {
-      inner.abort();
+      sdkStream.abort();
     } catch (Exception e) {
       LOG.warn("When aborting {} stream after failing to close it for {}",
           uri, reason, e);
@@ -273,11 +273,11 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     return requestObject;
   }
 
-  public SdkFilterInputStream getInner() {
-    return inner;
+  public SdkFilterInputStream getSdkStream() {
+    return sdkStream;
   }
 
-  public boolean isShouldAbort() {
+  public boolean shouldAbort() {
     return shouldAbort;
   }
 
@@ -293,7 +293,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     return reason;
   }
 
-  public boolean getExecuted() {
+  public boolean executed() {
     return executed.get();
   }
 
@@ -305,7 +305,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     return drained;
   }
 
-  public boolean isAborted() {
+  public boolean aborted() {
     return aborted;
   }
 
@@ -318,7 +318,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
         ", remaining=" + remaining +
         ", executed=" + executed.get() +
         ", aborted=" + aborted +
-        ", inner=" + inner +
+        ", inner=" + sdkStream +
         ", thrown=" + thrown +
         '}';
   }

@@ -200,7 +200,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    */
   private SDKStreamDrainer assertAborted(SDKStreamDrainer drainer) {
     Assertions.assertThat(drainer)
-        .matches(SDKStreamDrainer::isAborted, "isAborted");
+        .matches(SDKStreamDrainer::aborted, "aborted");
     return drainer;
   }
 
@@ -211,7 +211,7 @@ public class TestSDKStreamDrainer extends HadoopTestBase {
    */
   private SDKStreamDrainer assertNotAborted(SDKStreamDrainer drainer) {
     Assertions.assertThat(drainer)
-        .matches(d -> !d.isAborted(), "is not aborted");
+        .matches(d -> !d.aborted(), "is not aborted");
     return drainer;
   }
 
