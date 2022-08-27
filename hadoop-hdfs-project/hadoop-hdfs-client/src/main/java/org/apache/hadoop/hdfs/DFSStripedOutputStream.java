@@ -1055,7 +1055,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
       }
     }
 
-    dfsClient.endFileLease(fileId);
+    dfsClient.endFileLease(getRenewLeaseKey());
     final IOException ioe = b.build();
     if (ioe != null) {
       throw ioe;
