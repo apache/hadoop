@@ -86,7 +86,7 @@ RUN pkg-resolver/install-common-pkgs.sh
 RUN pkg-resolver/install-spotbugs.sh ubuntu:focal
 RUN pkg-resolver/install-boost.sh ubuntu:focal
 RUN pkg-resolver/install-protobuf.sh ubuntu:focal
-RUN pkg-resolver/install-hadolint.sh ubuntu:focal
+RUN pkg-resolver/install-hadolint.sh ubuntu:focal 2.10.0
 RUN pkg-resolver/install-intel-isa-l.sh ubuntu:focal
 
 ###
