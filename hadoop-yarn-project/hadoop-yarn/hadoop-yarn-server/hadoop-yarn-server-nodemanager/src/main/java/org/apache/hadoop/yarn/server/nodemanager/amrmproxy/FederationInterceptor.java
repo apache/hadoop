@@ -742,7 +742,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // application master request to all the registered sub-cluster resource
     // managers in parallel, wait for the responses and aggregate the results.
     Map<String, FinishApplicationMasterResponse> responseMap =
-         this.uamPool.batchFinishApplicationMaster(request, attemptId.toString());
+        this.uamPool.batchFinishApplicationMaster(request, attemptId.toString());
 
     for (Map.Entry<String, FinishApplicationMasterResponse> entry : responseMap.entrySet()) {
       String subClusterId = entry.getKey();
