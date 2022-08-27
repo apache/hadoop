@@ -27,9 +27,24 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-curl -L -s -S \
-  https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
-  -o /bin/hadolint &&
-  chmod a+rx /bin/hadolint &&
-  shasum -a 512 /bin/hadolint |
-  awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
+default_version="1.11.1"
+version_to_install=$default_version
+if [ -n "$2" ]; then
+  version_to_install="$2"
+fi
+
+if [ "$version_to_install" == "1.11.1" ]; then
+  curl -L -s -S \
+    https://github.com/hadolint/hadolint/releases/download/v1.11.1/hadolint-Linux-x86_64 \
+    -o /bin/hadolint &&
+    chmod a+rx /bin/hadolint &&
+    shasum -a 512 /bin/hadolint |
+    awk '$1!="734e37c1f6619cbbd86b9b249e69c9af8ee1ea87a2b1ff71dccda412e9dac35e63425225a95d71572091a3f0a11e9a04c2fc25d9e91b840530c26af32b9891ca" {exit(1)}'
+elif [ "$version_to_install" == "2.10.0" ]; then
+  curl -L -s -S \
+    https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 \
+    -o /bin/hadolint &&
+    chmod a+rx /bin/hadolint &&
+    shasum -a 512 /bin/hadolint |
+    awk '$1!="4816c95243bedf15476d2225f487fc17465495fb2031e1a4797d82a26db83a1edb63e4fed084b80cef17d5eb67eb45508caadaf7cd0252fb061187113991a338" {exit(1)}'
+fi
