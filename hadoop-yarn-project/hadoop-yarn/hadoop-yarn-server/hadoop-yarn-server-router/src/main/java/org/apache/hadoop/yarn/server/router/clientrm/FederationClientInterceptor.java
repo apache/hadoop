@@ -1764,19 +1764,16 @@ public class FederationClientInterceptor
       return null;
     }
 
-    SubClusterId resultSubClusterId = null;
-
     // try looking for reservation in Home SubCluster
     try {
-      resultSubClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
-    } catch (YarnException ex) {
-      if(LOG.isDebugEnabled()){
-        LOG.debug("Can't find reservationId = {} in home sub cluster.", reservationId);
+      SubClusterId resultSubClusterId =
+          federationFacade.getReservationHomeSubCluster(reservationId);
+      if (resultSubClusterId != null) {
+        return resultSubClusterId;
       }
-    }
-
-    if (resultSubClusterId != null) {
-      return resultSubClusterId;
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Can't find reservationId = %s in home sub cluster.", reservationId);
     }
 
     String errorMsg =
