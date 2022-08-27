@@ -987,7 +987,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(cacheResult);
     Assert.assertEquals(responseGet, cacheResult);
   }
-  
+
   @Test
   public void testGetAppStatistics() throws IOException, InterruptedException, YarnException {
     AppState appStateRUNNING = new AppState(YarnApplicationState.RUNNING.name());
