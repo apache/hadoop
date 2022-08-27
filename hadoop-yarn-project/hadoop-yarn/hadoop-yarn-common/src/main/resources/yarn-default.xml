@@ -1079,6 +1079,18 @@
 
   <property>
     <description>
+      This configuration is used for
+      how often the tokens are scanned for expired tokens in milliseconds.
+      the background thread(delegation token remover thread)
+      will delete expired tokens after the configured time.
+      the default value is 1h.
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
     RM DelegationTokenRenewer thread timeout
     </description>
     <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
