@@ -1129,13 +1129,50 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String appId, String time, Set<String> requestPriorities,
       Set<String> allocationRequestIds, String groupBy, String limit,
       Set<String> actions, boolean summarize) {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Only verify the app_id,
+    // because the specific subCluster needs to be found according to the app_id,
+    // and other verifications are directly handed over to the corresponding subCluster RM
+    if (appId == null || appId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+
+      final HttpServletRequest hsrCopy = clone(hsr);
+      return interceptor.getAppActivities(hsrCopy, appId, time, requestPriorities,
+          allocationRequestIds, groupBy, limit, actions, summarize);
+    } catch (IllegalArgumentException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get subCluster by appId: %s.",
+          appId);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("getAppActivities Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, Set.class, Set.class};
+      Object[] args = new Object[]{hsrCopy, stateQueries, typeQueries};
+      ClientMethod remoteMethod = new ClientMethod("getAppStatistics", argsClasses, args);
+      Map<SubClusterInfo, ApplicationStatisticsInfo> appStatisticsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, ApplicationStatisticsInfo.class);
+      return RouterWebServiceUtil.mergeApplicationStatisticsInfo(appStatisticsMap.values());
+    } catch (IOException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e, "Get all active sub cluster(s) error.");
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException(e, "getAppStatistics error.");
+    }
+    return null;
   }
 
   @Override

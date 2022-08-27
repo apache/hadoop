@@ -23,6 +23,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
 
 import javax.ws.rs.core.Response;
 
@@ -33,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -41,6 +45,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -61,9 +68,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -948,5 +958,74 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     AppQueue queue = interceptor.getAppQueue(null, appId.toString());
     Assert.assertNotNull(queue);
     Assert.assertEquals(queueName, queue.getQueue());
+  }
+
+  @Test
+  public void testGetAppStatistics() throws IOException, InterruptedException, YarnException {
+    AppState appStateRUNNING = new AppState(YarnApplicationState.RUNNING.name());
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setApplicationType("MapReduce");
+    context.setQueue("queue");
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    GetApplicationHomeSubClusterRequest request =
+        GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse response =
+        stateStore.getApplicationHomeSubCluster(request);
+
+    Assert.assertNotNull(response);
+    ApplicationHomeSubCluster homeSubCluster = response.getApplicationHomeSubCluster();
+
+    DefaultRequestInterceptorREST interceptorREST =
+        interceptor.getInterceptorForSubCluster(homeSubCluster.getHomeSubCluster());
+
+    MockDefaultRequestInterceptorREST mockInterceptorREST =
+        (MockDefaultRequestInterceptorREST) interceptorREST;
+    mockInterceptorREST.updateApplicationState(YarnApplicationState.RUNNING,
+        appId.toString());
+
+    Set<String> stateQueries = new HashSet<>();
+    stateQueries.add(YarnApplicationState.RUNNING.name());
+
+    Set<String> typeQueries = new HashSet<>();
+    typeQueries.add("MapReduce");
+
+    ApplicationStatisticsInfo response2 =
+        interceptor.getAppStatistics(null, stateQueries, typeQueries);
+
+    Assert.assertNotNull(response2);
+    Assert.assertFalse(response2.getStatItems().isEmpty());
+
+    StatisticsItemInfo result = response2.getStatItems().get(0);
+    Assert.assertEquals(1, result.getCount());
+    Assert.assertEquals(YarnApplicationState.RUNNING, result.getState());
+    Assert.assertEquals("MapReduce", result.getType());
+  }
+
+  @Test
+  public void testGetAppActivities() throws IOException, InterruptedException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setApplicationType("MapReduce");
+    context.setQueue("queue");
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    Set<String> prioritiesSet = Collections.singleton("0");
+    Set<String> allocationRequestIdsSet = Collections.singleton("0");
+
+    AppActivitiesInfo appActivitiesInfo =
+        interceptor.getAppActivities(null, appId.toString(), String.valueOf(Time.now()),
+        prioritiesSet, allocationRequestIdsSet, null, "-1", null, false);
+
+    Assert.assertNotNull(appActivitiesInfo);
+    Assert.assertEquals(appId.toString(), appActivitiesInfo.getApplicationId());
+    Assert.assertEquals(10, appActivitiesInfo.getAllocations().size());
   }
 }

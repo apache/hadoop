@@ -541,18 +541,21 @@ public class NameNode extends ReconfigurableBase implements
    * @return The actual client's machine.
    */
   public static String getClientMachine(final String[] ipProxyUsers) {
+    String clientMachine = null;
     String cc = clientInfoFromContext(ipProxyUsers);
     if (cc != null) {
       // if the rpc has a caller context of "clientIp:1.2.3.4,CLI",
       // return "1.2.3.4" as the client machine.
       String key = CallerContext.CLIENT_IP_STR +
           CallerContext.Builder.KEY_VALUE_SEPARATOR;
-      return parseSpecialValue(cc, key);
+      clientMachine = parseSpecialValue(cc, key);
     }
 
-    String clientMachine = Server.getRemoteAddress();
-    if (clientMachine == null) { //not a RPC client
-      clientMachine = "";
+    if (clientMachine == null) {
+      clientMachine = Server.getRemoteAddress();
+      if (clientMachine == null) { //not a RPC client
+        clientMachine = "";
+      }
     }
     return clientMachine;
   }
