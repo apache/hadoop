@@ -284,4 +284,48 @@ public class TestHeartbeatHandling {
    monitor.restartHeartbeatStopWatch();
    assertFalse(monitor.shouldAbortHeartbeatCheck(0));
   }
+
+  @Test
+  public void testHeartbeatMonitor() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong(
+            DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setLong(
+            DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
+    conf.setLong(
+            DFSConfigKeys.DFS_HEARTBEAT_MONITOR_INTERVAL_KEY, 1000);
+
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    try {
+      cluster.waitActive();
+      FSNamesystem namesystem = cluster.getNamesystem();
+      HeartbeatManager hm = namesystem.getBlockManager().
+          getDatanodeManager().getHeartbeatManager();
+      String poolId = namesystem.getBlockPoolId();
+      DatanodeRegistration nodeReg1 =
+          InternalDataNodeTestUtils.getDNRegistrationForBP(
+              cluster.getDataNodes().get(0), poolId);
+      DatanodeDescriptor dd1 = NameNodeAdapter.getDatanode(namesystem,
+          nodeReg1);
+      dd1.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
+      DatanodeRegistration nodeReg2 =
+          InternalDataNodeTestUtils.getDNRegistrationForBP(
+              cluster.getDataNodes().get(1), poolId);
+      DatanodeDescriptor dd2 = NameNodeAdapter.getDatanode(namesystem,
+          nodeReg2);
+      dd2.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
+
+      NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem);
+      NameNodeAdapter.sendHeartBeat(nodeReg2, dd2, namesystem);
+
+      assertTrue(hm.getLiveDatanodeCount() == 2);
+      cluster.stopDataNode(dd1.getName());
+      Thread.sleep(15000);
+      assertTrue(hm.getLiveDatanodeCount() < 2);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }
