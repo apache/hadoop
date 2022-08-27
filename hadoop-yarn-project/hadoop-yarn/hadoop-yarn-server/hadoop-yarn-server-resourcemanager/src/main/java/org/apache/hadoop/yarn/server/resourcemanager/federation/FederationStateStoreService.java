@@ -96,6 +96,7 @@ public class FederationStateStoreService extends AbstractService
   private FederationStateStore stateStoreClient = null;
   private SubClusterId subClusterId;
   private long heartbeatInterval;
+  private long heartbeatInitialDelay;
   private RMContext rmContext;
 
   public FederationStateStoreService(RMContext rmContext) {
@@ -126,9 +127,23 @@ public class FederationStateStoreService extends AbstractService
     heartbeatInterval = conf.getLong(
         YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS);
+
     if (heartbeatInterval <= 0) {
       heartbeatInterval =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS;
+    }
+
+    heartbeatInitialDelay = conf.getTimeDuration(
+        YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+        TimeUnit.SECONDS);
+
+    if (heartbeatInitialDelay <= 0) {
+      LOG.warn("{} configured value is wrong, must be > 0; using default value of {}",
+          YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY,
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY);
+      heartbeatInitialDelay =
+          YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY;
     }
     LOG.info("Initialized federation membership service.");
 
@@ -206,9 +221,9 @@ public class FederationStateStoreService extends AbstractService
     scheduledExecutorService =
         HadoopExecutors.newSingleThreadScheduledExecutor();
     scheduledExecutorService.scheduleWithFixedDelay(stateStoreHeartbeat,
-        heartbeatInterval, heartbeatInterval, TimeUnit.SECONDS);
-    LOG.info("Started federation membership heartbeat with interval: {}",
-        heartbeatInterval);
+        heartbeatInitialDelay, heartbeatInterval, TimeUnit.SECONDS);
+    LOG.info("Started federation membership heartbeat with interval: {} and initial delay: {}",
+        heartbeatInterval, heartbeatInitialDelay);
   }
 
   @VisibleForTesting

@@ -3626,6 +3626,16 @@
   </property>
   <property>
     <description>
+      Initial delay for federation state-store heartbeat service. Value is followed by a unit
+      specifier: ns, us, ms, s, m, h, d for nanoseconds, microseconds, milliseconds, seconds,
+      minutes, hours, days respectively. Values should provide units,
+      but seconds are assumed
+    </description>
+    <name>yarn.federation.state-store.heartbeat.initial-delay</name>
+    <value>30s</value>
+  </property>
+  <property>
+    <description>
       Machine list file to be loaded by the FederationSubCluster Resolver
     </description>
     <name>yarn.federation.machine-list</name>

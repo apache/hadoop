@@ -48,6 +48,7 @@ full details.
 * [Auditing Architecture](./auditing_architecture.html).
 * [Testing](./testing.html)
 * [Prefetching](./prefetching.html)
+* [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
 
 ## <a name="overview"></a> Overview
 
@@ -235,6 +236,9 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
+However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
+updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
 *Important*: The S3A connector no longer supports username and secrets
 in URLs of the form `s3a://key:secret@bucket/`.
