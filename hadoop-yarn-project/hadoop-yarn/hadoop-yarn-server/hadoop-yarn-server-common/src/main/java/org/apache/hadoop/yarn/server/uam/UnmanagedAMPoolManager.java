@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.Collections;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -76,6 +75,10 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
   private ExecutorService threadpool;
 
+  private String dispatcherThreadName = "UnmanagedAMPoolManager-Finish-Thread";
+
+  private Thread finishApplicationThread;
+
   public UnmanagedAMPoolManager(ExecutorService threadpool) {
     super(UnmanagedAMPoolManager.class.getName());
     this.threadpool = threadpool;
@@ -96,48 +99,16 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * UAMs running, force kill all of them. Do parallel kill because of
    * performance reasons.
    *
-   * TODO: move waiting for the kill to finish into a separate thread, without
-   * blocking the serviceStop.
    */
   @Override
   protected void serviceStop() throws Exception {
-    ExecutorCompletionService<KillApplicationResponse> completionService =
-        new ExecutorCompletionService<>(this.threadpool);
-    if (this.unmanagedAppMasterMap.isEmpty()) {
-      return;
+
+    if (!this.unmanagedAppMasterMap.isEmpty()) {
+      finishApplicationThread = new Thread(createForceFinishApplicationThread());
+      finishApplicationThread.setName(dispatcherThreadName);
+      finishApplicationThread.start();
     }
 
-    // Save a local copy of the key set so that it won't change with the map
-    Set<String> addressList =
-        new HashSet<>(this.unmanagedAppMasterMap.keySet());
-    LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map",
-        addressList.size());
-
-    for (final String uamId : addressList) {
-      completionService.submit(new Callable<KillApplicationResponse>() {
-        @Override
-        public KillApplicationResponse call() throws Exception {
-          try {
-            LOG.info("Force-killing UAM id " + uamId + " for application "
-                + appIdMap.get(uamId));
-            return unmanagedAppMasterMap.remove(uamId).forceKillApplication();
-          } catch (Exception e) {
-            LOG.error("Failed to kill unmanaged application master", e);
-            return null;
-          }
-        }
-      });
-    }
-
-    for (int i = 0; i < addressList.size(); ++i) {
-      try {
-        Future<KillApplicationResponse> future = completionService.take();
-        future.get();
-      } catch (Exception e) {
-        LOG.error("Failed to kill unmanaged application master", e);
-      }
-    }
-    this.appIdMap.clear();
     super.serviceStop();
   }
 
@@ -500,5 +471,52 @@ public class UnmanagedAMPoolManager extends AbstractService {
     }
 
     return responseMap;
+  }
+
+  Runnable createForceFinishApplicationThread() {
+    return () -> {
+
+      ExecutorCompletionService<KillApplicationResponse> completionService =
+          new ExecutorCompletionService<>(threadpool);
+
+      // Save a local copy of the key set so that it won't change with the map
+      Set<String> addressList = new HashSet<>(unmanagedAppMasterMap.keySet());
+
+      LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map", addressList.size());
+
+      for (final String uamId : addressList) {
+        completionService.submit(() -> {
+          try {
+            ApplicationId appId = appIdMap.get(uamId);
+            LOG.info("Force-killing UAM id {} for application {}", uamId, appId);
+            return unmanagedAppMasterMap.remove(uamId).forceKillApplication();
+          } catch (Exception e) {
+            LOG.error("Failed to kill unmanaged application master", e);
+            return null;
+          }
+        });
+      }
+
+      for (int i = 0; i < addressList.size(); ++i) {
+        try {
+          Future<KillApplicationResponse> future = completionService.take();
+          future.get();
+        } catch (Exception e) {
+          LOG.error("Failed to kill unmanaged application master", e);
+        }
+      }
+
+      appIdMap.clear();
+    };
+  }
+
+  @VisibleForTesting
+  protected Map<String, UnmanagedApplicationManager> getUnmanagedAppMasterMap() {
+    return unmanagedAppMasterMap;
+  }
+
+  @VisibleForTesting
+  protected Thread getFinishApplicationThread() {
+    return finishApplicationThread;
   }
 }
