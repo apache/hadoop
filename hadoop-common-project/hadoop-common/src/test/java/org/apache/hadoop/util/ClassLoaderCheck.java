@@ -30,4 +30,5 @@ public class ClassLoaderCheck {
       throw new RuntimeException("incorrect classloader used");
     }
   }
+
 }
