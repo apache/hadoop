@@ -484,10 +484,10 @@ public class TestUnmanagedApplicationManager {
     }
 
     @Override
-    public UnmanagedApplicationManager createUAM(Configuration conf,
+    public UnmanagedApplicationManager createUAM(Configuration configuration,
         ApplicationId appId, String queueName, String submitter, String appNameSuffix,
         boolean keepContainersAcrossApplicationAttempts, String rmId) {
-      return new TestableUnmanagedApplicationManager(conf, appId, queueName, submitter,
+      return new TestableUnmanagedApplicationManager(configuration, appId, queueName, submitter,
           appNameSuffix, keepContainersAcrossApplicationAttempts, rmId);
     }
   }
@@ -506,7 +506,8 @@ public class TestUnmanagedApplicationManager {
         attemptId2.getApplicationId(), "default", "test-user", "SC-HOME", true, "SC-2");
     Assert.assertNotNull(token2);
 
-    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap = uamPool.getUnmanagedAppMasterMap();
+    Map<String, UnmanagedApplicationManager> unmanagedAppMasterMap =
+        uamPool.getUnmanagedAppMasterMap();
     Assert.assertNotNull(unmanagedAppMasterMap);
     Assert.assertEquals(2, unmanagedAppMasterMap.size());
 
