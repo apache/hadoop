@@ -71,6 +71,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@SuppressWarnings("deprecation")
 public class DefaultS3ClientFactory extends Configured
     implements S3ClientFactory {
 
