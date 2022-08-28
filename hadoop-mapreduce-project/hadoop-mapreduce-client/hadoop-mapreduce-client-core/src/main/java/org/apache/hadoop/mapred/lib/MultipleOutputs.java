@@ -563,8 +563,10 @@ public class MultipleOutputs {
         MRConfig.DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT);
     AtomicBoolean encounteredException = new AtomicBoolean(false);
     ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("MultipleOutputs-close")
-        .setUncaughtExceptionHandler(
-            ((t, e) -> LOG.error("Thread " + t + " failed unexpectedly", e))).build();
+        .setUncaughtExceptionHandler(((t, e) -> {
+          LOG.error("Thread " + t + " failed unexpectedly", e);
+          encounteredException.set(true);
+        })).build();
     ExecutorService executorService = Executors.newFixedThreadPool(nThreads, threadFactory);
 
     List<Callable<Object>> callableList = new ArrayList<>(recordWriters.size());
@@ -587,12 +589,11 @@ public class MultipleOutputs {
       Thread.currentThread().interrupt();
     } finally {
       executorService.shutdown();
-      executorService.awaitTermination(50, TimeUnit.SECONDS);
     }
 
     if (encounteredException.get()) {
       throw new IOException(
-          "One or more threads encountered IOException during close. See prior errors.");
+          "One or more threads encountered exception during close. See prior errors.");
     }
   }
 

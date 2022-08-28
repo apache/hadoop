@@ -71,7 +71,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   }
 
   @Test(expected = IOException.class)
-  public void testParallelClose() throws IOException, InterruptedException {
+  public void testParallelCloseIOException() throws IOException, InterruptedException {
     RecordWriter writer = mock(RecordWriter.class);
     Map<String, RecordWriter<?, ?>> recordWriters = mock(Map.class);
     when(recordWriters.values()).thenReturn(Arrays.asList(new RecordWriter[] {writer, writer}));
