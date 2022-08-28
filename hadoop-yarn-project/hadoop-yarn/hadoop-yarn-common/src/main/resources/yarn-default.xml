@@ -1079,6 +1079,18 @@
 
   <property>
     <description>
+      This configuration is used for
+      how often the tokens are scanned for expired tokens in milliseconds.
+      the background thread(delegation token remover thread)
+      will delete expired tokens after the configured time.
+      the default value is 1h.
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
     RM DelegationTokenRenewer thread timeout
     </description>
     <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
@@ -4928,6 +4940,26 @@
       The hostname for the Router containing this
       configuration file. Will be different for each machine.
       Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-enabled</name>
+    <value>false</value>
+    <description>
+      This configuration is used to enable the cache of AppsInfo.
+      If it is set to true, the cache is enabled.
+      If it is set to false, the cache is not enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-cached-count</name>
+    <value>100</value>
+    <description>
+      When yarn.router.appsinfo-enabled is set to true,
+      the number of cached appsInfo.
+      Default is 100
     </description>
   </property>
 

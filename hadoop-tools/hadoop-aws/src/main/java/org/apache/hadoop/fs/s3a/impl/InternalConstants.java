@@ -114,6 +114,12 @@ public final class InternalConstants {
   public static final String THROTTLE_LOG_NAME =
       "org.apache.hadoop.fs.s3a.throttled";
 
+  /**
+   * Name of the log for events related to the SDK V2 upgrade.
+   */
+  public static final String SDK_V2_UPGRADE_LOG_NAME =
+      "org.apache.hadoop.fs.s3a.SDKV2Upgrade";
+
   /** Directory marker attribute: see HADOOP-16613. Value: {@value}. */
   public static final String X_DIRECTORY =
       "application/x-directory";

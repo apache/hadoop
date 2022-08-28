@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -69,6 +70,8 @@ public class SignerManager implements Closeable {
       LOG.debug("No custom signers specified");
       return;
     }
+
+    V2Migration.v1CustomSignerUsed();
 
     for (String customSigner : customSigners) {
       String[] parts = customSigner.split(":");
