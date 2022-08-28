@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
@@ -590,9 +591,12 @@ public class RouterClientRMService extends AbstractService
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
     long tokenRenewInterval = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
-
+    long removeScanInterval =
+        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
-        tokenMaxLifetime, tokenRenewInterval, 60 * 60 * 1000);
+        tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
   }
 
   @VisibleForTesting
