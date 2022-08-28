@@ -140,6 +140,7 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
+  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -732,6 +733,7 @@ public final class Constants {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1203,6 +1205,11 @@ public final class Constants {
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
 
   /**
    * Controls whether the prefetching input stream is enabled.

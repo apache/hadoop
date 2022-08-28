@@ -21,12 +21,13 @@
 Common problems working with S3 are:
 
 1. [Classpath setup](#classpath)
-1. [Authentication](#authentication)
-1. [Access Denial](#access_denied)
-1. [Connectivity Problems](#connectivity)
-1. [File System Semantics](#semantics)
-1. [Encryption](#encryption)
-1. [Other Errors](#other)
+2. [Authentication](#authentication)
+3. [Access Denial](#access_denied)
+4. [Connectivity Problems](#connectivity)
+5. [File System Semantics](#semantics)
+6. [Encryption](#encryption)
+7. [Other Errors](#other)
+8. [SDK Upgrade Warnings](#upgrade_warnings)
 
 This document also includes some [best pactises](#best) to aid troubleshooting.
 
@@ -1989,3 +1990,51 @@ com.amazonaws.SdkClientException: Unable to execute HTTP request:
 
 When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
 completely by setting it to `0`.
+
+## <a name="upgrade_warnings"></a> SDK Upgrade Warnings
+
+S3A will soon be upgraded to [AWS's Java SDK V2](https://github.com/aws/aws-sdk-java-v2).
+For more information on the upgrade and what's changing, see
+[Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
+
+S3A logs the following warnings for things that will be changing in the upgrade. To disable these
+logs, comment out `log4j.logger.org.apache.hadoop.fs.s3a.SDKV2Upgrade` in log4j.properties.
+
+### <a name="ProviderReferenced"></a>  `Directly referencing AWS SDK V1 credential provider`
+
+This will be logged when an AWS credential provider is referenced directly in
+`fs.s3a.aws.credentials.provider`.
+For example, `com.amazonaws.auth.AWSSessionCredentialsProvider`
+
+To stop this warning, remove any AWS credential providers from `fs.s3a.aws.credentials.provider`.
+Instead, use S3A's credential providers.
+
+### <a name="ClientRequested"></a>  `getAmazonS3ClientForTesting() will be removed`
+
+This will be logged when `getAmazonS3ClientForTesting()` is called to get the S3 Client. With V2,
+the S3 client will change from type `com.amazonaws.services.s3.AmazonS3` to
+`software.amazon.awssdk.services.s3.S3Client`, and so this method will be removed.
+
+### <a name="DelegationTokenProvider"></a>
+### `Custom credential providers used in delegation tokens binding classes will need to be updated`
+
+This will be logged when delegation tokens are used.
+Delegation tokens allow the use of custom binding classes which can implement custom credential
+providers.
+These credential providers will currently be implementing
+`com.amazonaws.auth.AWSCredentialsProvider` and will need to be updated to implement
+`software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
+
+### <a name="CustomSignerUsed"></a>
+### `The signer interface has changed in AWS SDK V2, custom signers will need to be updated`
+
+This will be logged when a custom signer is used.
+Custom signers will currently be implementing `com.amazonaws.auth.Signer` and will need to be
+updated to implement `software.amazon.awssdk.core.signer.Signer`.
+
+### <a name="GetObjectMetadataCalled"></a>
+### `getObjectMetadata() called. This operation and it's response will be changed`
+
+This will be logged when `getObjectMetadata` is called. In SDK V2, this operation has changed to
+`headObject()` and will return a response of the type `HeadObjectResponse`.
+

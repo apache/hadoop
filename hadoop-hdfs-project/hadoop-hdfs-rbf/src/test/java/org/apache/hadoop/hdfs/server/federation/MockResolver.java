@@ -59,6 +59,7 @@ public class MockResolver
   private String defaultNamespace = null;
   private boolean disableDefaultNamespace = false;
   private volatile boolean disableRegistration = false;
+  private TreeSet<String> disableNamespaces = new TreeSet<>();
 
   public MockResolver() {
     this.cleanRegistrations();
@@ -300,9 +301,17 @@ public class MockResolver
     return Collections.unmodifiableSet(this.namespaces);
   }
 
+  public void clearDisableNamespaces() {
+    this.disableNamespaces.clear();
+  }
+
+  public void disableNamespace(String nsId) {
+    this.disableNamespaces.add(nsId);
+  }
+
   @Override
   public Set<String> getDisabledNamespaces() throws IOException {
-    return new TreeSet<>();
+    return this.disableNamespaces;
   }
 
   @Override

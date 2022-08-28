@@ -793,6 +793,10 @@ public class YarnConfiguration extends Configuration {
      RM_PREFIX + "delegation.token.max-lifetime";
   public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
+  public static final String RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY =
+      RM_PREFIX + "delegation.token.remove-scan-interval";
+  public static final long RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT =
+      60*60*1000; // 1 hour
 
   public static final String RM_DELEGATION_TOKEN_MAX_CONF_SIZE =
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
@@ -4123,6 +4127,15 @@ public class YarnConfiguration extends Configuration {
   /** The Kerberos principal hostname for the yarn router.*/
   public static final String ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY = ROUTER_PREFIX +
       "kerberos.principal.hostname";
+
+  /** Router enable AppsInfo Cache. **/
+  public static final String ROUTER_APPSINFO_ENABLED = ROUTER_WEBAPP_PREFIX + "appsinfo-enabled";
+  public static final boolean DEFAULT_ROUTER_APPSINFO_ENABLED = false;
+
+  /** Router AppsInfo Cache Count. **/
+  public static final String ROUTER_APPSINFO_CACHED_COUNT =
+      ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
+  public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;
 
   ////////////////////////////////
   // CSI Volume configs
