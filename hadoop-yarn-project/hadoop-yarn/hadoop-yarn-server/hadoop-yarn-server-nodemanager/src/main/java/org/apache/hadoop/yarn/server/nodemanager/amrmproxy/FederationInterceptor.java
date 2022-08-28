@@ -1476,6 +1476,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   private void cacheAllocatedContainers(List<Container> containers,
       SubClusterId subClusterId) {
     for (Container container : containers) {
+      SubClusterId chooseSubClusterId = SubClusterId.newInstance(subClusterId.toString());
       LOG.debug("Adding container {}", container);
 
       if (this.containerIdToSubClusterIdMap.containsKey(container.getId())) {
@@ -1506,40 +1507,23 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           // something is wrong.
           try {
 
-            Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
-            SubClusterInfo existingSubCluster =
-                federationFacade.getSubCluster(existingSubClusterId);
-            SubClusterInfo newSubCluster = federationFacade.getSubCluster(subClusterId);
+            boolean existAllocatedScHealth = isSCHealth(existingSubClusterId);
+            boolean newAllocatedScHealth = isSCHealth(subClusterId);
 
-            boolean existAllocatedScHealth = true;
-            boolean newAllocatedScHealth = true;
-
-            // Previous SubCluster Time Out Or Unusable, Can't Continue to use.
-            if (timeOutScs.contains(existingSubClusterId) ||
-                existingSubCluster == null || existingSubCluster.getState().isUnusable()) {
-              existAllocatedScHealth = false;
-            }
-
-            // New SubCluster Time Out Or Unusable, Can't Continue to use.
-            if (timeOutScs.contains(existingSubClusterId) ||
-                newSubCluster == null || newSubCluster.getState().isUnusable()) {
-              newAllocatedScHealth = false;
-            }
-
-            // If the previous RM which allocated Container is normal,
-            // the previous RM will be used first
-            if ((existAllocatedScHealth && !newAllocatedScHealth) ||
-                (existAllocatedScHealth && newAllocatedScHealth)) {
+            if (existAllocatedScHealth) {
+              // If the previous RM which allocated Container is normal,
+              // the previous RM will be used first
               LOG.info("Use Previous Allocated Container's subCluster. " +
                   "ContainerId: {} ApplicationId: {} From RM: {}.", this.attemptId,
                   container.getId(), existingSubClusterId);
-              continue;
-            } else if (!existAllocatedScHealth && newAllocatedScHealth) {
+              chooseSubClusterId = existingSubClusterId;
+            } else if (newAllocatedScHealth) {
               // If the previous RM which allocated Container is abnormal,
               // but the RM of the newly allocated Container is normal, use the new RM
               LOG.info("Use Newly Allocated Container's subCluster. " +
                   "ApplicationId: {} ContainerId: {} From RM: {}.", this.attemptId,
                   container.getId(), subClusterId);
+              chooseSubClusterId = subClusterId;
             } else {
               // There is a very small probability that an exception will be thrown.
               // The RM of the previously allocated Container
@@ -1561,7 +1545,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         }
       }
 
-      this.containerIdToSubClusterIdMap.put(container.getId(), subClusterId);
+      this.containerIdToSubClusterIdMap.put(container.getId(), chooseSubClusterId);
     }
   }
 
@@ -1820,5 +1804,16 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   @VisibleForTesting
   protected Map<ContainerId, SubClusterId> getContainerIdToSubClusterIdMap() {
     return containerIdToSubClusterIdMap;
+  }
+
+  private boolean isSCHealth(SubClusterId subClusterId) throws YarnException {
+    boolean isSCHealth = true;
+    Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
+    SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+    if (timeOutScs.contains(subClusterId) ||
+         subClusterInfo == null || subClusterInfo.getState().isUnusable()) {
+      isSCHealth = false;
+    }
+    return isSCHealth;
   }
 }
