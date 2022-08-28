@@ -1540,7 +1540,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 " Can't use any subCluster because an exception occurred" +
                 " ContainerId: " + container.getId() + " ApplicationId: " + this.attemptId +
                 " From RM: " + subClusterId + ". " +
-                " Previous Container was From subCluster: " + existingSubClusterId);
+                " Previous Container was From subCluster: " + existingSubClusterId, ex);
           }
         }
       }

@@ -971,7 +971,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     preemptionMessage.setContract(contract);
     return preemptionMessage;
   }
-  
+
   @Test
   public void testSameContainerFromDiffRM() throws IOException, InterruptedException {
 
@@ -1066,7 +1066,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       return null;
     });
   }
-  
+
   @Test
   public void testBatchFinishApplicationMaster() throws IOException, InterruptedException {
 
