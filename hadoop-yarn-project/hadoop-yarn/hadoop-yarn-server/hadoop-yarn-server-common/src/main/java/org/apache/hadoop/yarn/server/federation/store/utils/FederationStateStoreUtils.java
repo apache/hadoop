@@ -206,7 +206,7 @@ public final class FederationStateStoreUtils {
    * @throws YarnException on failure
    */
   public static void logAndThrowRetriableException(
-     Throwable t, Logger log, String errMsgFormat, Object... args) throws YarnException {
+      Throwable t, Logger log, String errMsgFormat, Object... args) throws YarnException {
     String errMsg = String.format(errMsgFormat, args);
     if (t != null) {
       log.error(errMsg, t);
@@ -215,6 +215,22 @@ public final class FederationStateStoreUtils {
       log.error(errMsg);
       throw new FederationStateStoreRetriableException(errMsg);
     }
+  }
+
+  /**
+   * Throws an <code>FederationStateStoreRetriableException</code> due to an
+   * error in <code>FederationStateStore</code>.
+   *
+   * @param log the logger interface.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowRetriableException(
+      Logger log, String errMsgFormat, Object... args) throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    log.error(errMsg);
+    throw new FederationStateStoreRetriableException(errMsg);
   }
 
   /**

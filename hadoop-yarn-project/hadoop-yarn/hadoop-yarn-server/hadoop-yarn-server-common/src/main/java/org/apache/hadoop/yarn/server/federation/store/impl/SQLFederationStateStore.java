@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -145,6 +146,18 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   private static final String CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER =
       "{call sp_addReservationHomeSubCluster(?, ?, ?, ?)}";
+
+  private static final String CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER =
+      "{call sp_getReservationHomeSubCluster(?, ?)}";
+
+  private static final String CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER =
+      "{call sp_getReservationsHomeSubCluster()}";
+
+  private static final String CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER =
+      "{call sp_deleteReservationHomeSubCluster(?, ?)}";
+
+  private static final String CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER =
+      "{call sp_updateReservationHomeSubCluster(?, ?, ?)}";
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1029,6 +1042,7 @@ public class SQLFederationStateStore implements FederationStateStore {
     ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
     ReservationId reservationId = reservationHomeSubCluster.getReservationId();
     SubClusterId subClusterId = reservationHomeSubCluster.getHomeSubCluster();
+    SubClusterId subClusterHomeId = null;
 
     try {
       // Call procedure
@@ -1045,12 +1059,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt.executeUpdate();
       long stopTime = clock.getTime();
 
-      // Record successful call time
-      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
-
       // Get SubClusterHome
       String subClusterHomeIdString = cstmt.getString(3);
-      SubClusterId subClusterHomeId = SubClusterId.newInstance(subClusterHomeIdString);
+      subClusterHomeId = SubClusterId.newInstance(subClusterHomeIdString);
 
       // Get rowCount
       int rowCount = cstmt.getInt(4);
@@ -1085,7 +1096,8 @@ public class SQLFederationStateStore implements FederationStateStore {
             reservationId, subClusterHomeId);
       }
 
-      return AddReservationHomeSubClusterResponse.newInstance(subClusterHomeId);
+      // Record successful call time
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
@@ -1096,33 +1108,202 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
 
-    // If this line is executed,
-    // the request is not successfully executed, and an exception message is thrown
-    throw new YarnException(
-        "add reservation " + reservationId + " to subcluster " + subClusterId + " error.");
+    return AddReservationHomeSubClusterResponse.newInstance(subClusterHomeId);
   }
 
   @Override
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
-    throw new NotImplementedException("Code is not implemented");
+    // validate
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+
+    CallableStatement cstmt = null;
+    ReservationId reservationId = request.getReservationId();
+    SubClusterId subClusterId = null;
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER);
+
+      // Set the parameters for the stored procedure
+      cstmt.setString(1, reservationId.toString());
+      cstmt.registerOutParameter(2, java.sql.Types.VARCHAR);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.execute();
+      long stopTime = clock.getTime();
+
+      // Get Result
+      String subClusterHomeIdString = cstmt.getString(2);
+
+      if (StringUtils.isNotBlank(subClusterHomeIdString)) {
+        subClusterId = SubClusterId.newInstance(subClusterHomeIdString);
+      } else {
+        // If subClusterHomeIdString blank, we need to throw an exception
+        FederationStateStoreUtils.logAndThrowRetriableException(LOG, "Reservation %s does not exist",
+            reservationId);
+      }
+
+      LOG.info("Got the information about the specified reservation {} in subCluster = {}.",
+          reservationId, subClusterId);
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to obtain the reservation information according to %s.", reservationId);
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+
+    ReservationHomeSubCluster homeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    return GetReservationHomeSubClusterResponse.newInstance(homeSubCluster);
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
-    throw new NotImplementedException("Code is not implemented");
+    CallableStatement cstmt = null;
+    ResultSet rs = null;
+    List<ReservationHomeSubCluster> reservationsHomeSubClusters = new ArrayList<>();
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      rs = cstmt.executeQuery();
+      long stopTime = clock.getTime();
+
+      while (rs.next()) {
+        // Extract the output for each tuple
+        String dbReservationId = rs.getString(1);
+        String dbHomeSubCluster = rs.getString(2);
+
+        // Generate parameters
+        ReservationId reservationId = ReservationId.parseReservationId(dbReservationId);
+        SubClusterId homeSubCluster = SubClusterId.newInstance(dbHomeSubCluster);
+        ReservationHomeSubCluster reservationHomeSubCluster =
+            ReservationHomeSubCluster.newInstance(reservationId, homeSubCluster);
+        reservationsHomeSubClusters.add(reservationHomeSubCluster);
+      }
+
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+    } catch (Exception e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
+          "Unable to obtain the information for all the reservations.", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt, null, rs);
+    }
+
+    return GetReservationsHomeSubClusterResponse.newInstance(
+        reservationsHomeSubClusters);
   }
 
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // validate
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+
+    CallableStatement cstmt = null;
+    ReservationId reservationId = request.getReservationId();
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER);
+
+      // Set the parameters for the stored procedure
+      cstmt.setString(1, reservationId.toString());
+      cstmt.registerOutParameter(2, java.sql.Types.INTEGER);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      int rowCount = cstmt.getInt(2);
+
+      // if it is equal to 0 it means the call
+      // did not delete the reservation from FederationStateStore
+      if (rowCount == 0) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Reservation %s does not exist", reservationId);
+      } else if (rowCount != 1) {
+        // if it is different from 1 it means the call
+        // had a wrong behavior. Maybe the database is not set correctly.
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during deleting the reservation %s.", reservationId);
+      }
+
+      LOG.info("Delete from the StateStore the reservation: {}.", reservationId);
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to delete the reservation %s.", reservationId);
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+    return DeleteReservationHomeSubClusterResponse.newInstance();
   }
 
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // validate
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+
+    CallableStatement cstmt = null;
+    ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
+    ReservationId reservationId = reservationHomeSubCluster.getReservationId();
+    SubClusterId subClusterId = reservationHomeSubCluster.getHomeSubCluster();
+
+    try {
+      cstmt = getCallableStatement(CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER);
+
+      // Set the parameters for the stored procedure
+      cstmt.setString(1, reservationId.toString());
+      cstmt.setString(2, subClusterId.getId());
+      cstmt.registerOutParameter(3, java.sql.Types.INTEGER);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      int rowCount = cstmt.getInt(3);
+
+      // if it is equal to 0 it means the call
+      // did not update the reservation into FederationStateStore
+      if (rowCount == 0) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Reservation %s does not exist", reservationId);
+      } else if (rowCount != 1) {
+        // if it is different from 1 it means the call
+        // had a wrong behavior. Maybe the database is not set correctly.
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during update the subCluster %s according to reservation %s.",
+            subClusterId, reservationId);
+      }
+      LOG.info("Update the subCluster to {} for reservation {} in the StateStore.",
+          subClusterId, reservationId);
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to update the subCluster %s according to reservation %s.",
+          subClusterId, reservationId);
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+    return UpdateReservationHomeSubClusterResponse.newInstance();
   }
 }
