@@ -31,7 +31,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -409,7 +408,7 @@ public class MultipleOutputs {
 
   @VisibleForTesting
   public synchronized void setRecordWriters(Map<String, RecordWriter> recordWriters) {
-      this.recordWriters = recordWriters;
+    this.recordWriters = recordWriters;
   }
 
   /**
