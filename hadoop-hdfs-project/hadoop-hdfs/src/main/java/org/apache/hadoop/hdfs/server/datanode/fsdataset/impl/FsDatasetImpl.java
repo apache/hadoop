@@ -243,7 +243,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public LengthInputStream getMetaDataInputStream(ExtendedBlock b)
       throws IOException {
-    FsVolumeSpi volume = null;
     File meta = null;
     try {
       meta = FsDatasetUtil.getMetaFile(getBlockFile(b), b.getGenerationStamp());
@@ -255,6 +254,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return null;
     }
 
+    FsVolumeSpi volume = null;
     try (AutoCloseableLock lock = datasetWriteLock.acquire()) {
       final ReplicaInfo replicaInfo = getReplicaInfo(b);
       if (replicaInfo != null) {
