@@ -1140,8 +1140,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         subClusterId = SubClusterId.newInstance(subClusterHomeIdString);
       } else {
         // If subClusterHomeIdString blank, we need to throw an exception
-        FederationStateStoreUtils.logAndThrowRetriableException(LOG, "Reservation %s does not exist",
-            reservationId);
+        FederationStateStoreUtils.logAndThrowRetriableException(LOG,
+            "Reservation %s does not exist", reservationId);
       }
 
       LOG.info("Got the information about the specified reservation {} in subCluster = {}.",
