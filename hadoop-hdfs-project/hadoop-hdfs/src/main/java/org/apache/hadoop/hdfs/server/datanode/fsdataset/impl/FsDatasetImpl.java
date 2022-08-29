@@ -243,8 +243,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FsDatasetSpi
   public LengthInputStream getMetaDataInputStream(ExtendedBlock b)
       throws IOException {
-    File meta = FsDatasetUtil.getMetaFile(getBlockFile(b), b.getGenerationStamp());
     FsVolumeSpi volume = null;
+    File meta = null;
+    try {
+      meta = FsDatasetUtil.getMetaFile(getBlockFile(b), b.getGenerationStamp());
+    } catch (IOException e) {
+      throw new FileNotFoundException("BlockId " + b.getBlockName() + " is not valid.");
+    }
 
     if (meta == null || !meta.exists()) {
       return null;
