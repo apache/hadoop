@@ -249,12 +249,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     } catch (IOException e) {
       throw new FileNotFoundException("BlockId " + b.getBlockName() + " is not valid.");
     }
-
     if (meta == null || !meta.exists()) {
       return null;
     }
 
     FsVolumeSpi volume = null;
+
     try (AutoCloseableLock lock = datasetWriteLock.acquire()) {
       final ReplicaInfo replicaInfo = getReplicaInfo(b);
       if (replicaInfo != null) {
