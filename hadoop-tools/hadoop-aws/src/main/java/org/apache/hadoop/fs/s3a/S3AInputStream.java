@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.Function4RaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -1155,7 +1156,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (buffer.isDirect()) {
       VectoredReadUtils.readInDirectBuffer(length, buffer,
-              (position, tmp, offset, currentLength) -> readByteArray(objectContent, tmp, offset, currentLength));
+          (position, tmp, offset, currentLength) -> {
+            readByteArray(objectContent, tmp, offset, currentLength);
+            return null;
+          });
       buffer.flip();
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);

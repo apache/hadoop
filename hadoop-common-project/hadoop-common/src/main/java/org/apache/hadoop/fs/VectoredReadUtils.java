@@ -117,7 +117,12 @@ public final class VectoredReadUtils {
                                                           FileRange range,
                                                           ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      readInDirectBuffer(range.getLength(), buffer, stream::readFully);
+      readInDirectBuffer(range.getLength(),
+          buffer,
+          (position, buffer1, offset, length) -> {
+            stream.readFully(position, buffer1, offset, length);
+            return null;
+          });
       buffer.flip();
     } else {
       stream.readFully(range.getOffset(), buffer.array(),
@@ -130,11 +135,13 @@ public final class VectoredReadUtils {
    * intermediate byte array.
    * @param length number of bytes to read.
    * @param buffer buffer to fill.
+   * @param operation operation to use for reading data.
    * @throws IOException any IOE.
    */
   public static void readInDirectBuffer(int length,
                                         ByteBuffer buffer,
-                                        Function4RaisingIOE<Integer, byte[], Integer, Integer> operation) throws IOException {
+                                        Function4RaisingIOE<Integer, byte[], Integer,
+                                                Integer, Void> operation) throws IOException {
     if (length == 0) {
       return;
     }
