@@ -58,6 +58,12 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " policyType varchar(256) NOT NULL, params varbinary(512),"
           + " CONSTRAINT pk_queue PRIMARY KEY (queue))";
 
+  private static final String TABLE_RESERVATIONSHOMESUBCLUSTER =
+      " CREATE TABLE reservationsHomeSubCluster ("
+           + " reservationId varchar(128) NOT NULL,"
+           + " homeSubCluster varchar(256) NOT NULL,"
+           + " CONSTRAINT pk_reservationId PRIMARY KEY (reservationId))";
+
   private static final String SP_REGISTERSUBCLUSTER =
       "CREATE PROCEDURE sp_registerSubCluster("
           + " IN subClusterId_IN varchar(256),"
@@ -201,6 +207,23 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " DECLARE result CURSOR FOR"
           + " SELECT * FROM policies; OPEN result; END";
 
+  private static final String SP_ADDRESERVATIONHOMESUBCLUSTER =
+      "CREATE PROCEDURE sp_addReservationHomeSubCluster("
+          + " IN reservationID_IN varchar(64),"
+          + " IN homeSubCluster_IN varchar(256),"
+          + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " INSERT INTO reservationsHomeSubCluster "
+          + " (reservationId,homeSubCluster) "
+          + " (SELECT reservationID_IN, homeSubCluster_IN"
+          + " FROM reservationsHomeSubCluster"
+          + " WHERE reservationId = reservationID_IN"
+          + " HAVING COUNT(*) = 0 );"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
+          + " SELECT homeSubCluster INTO storedHomeSubCluster_OUT"
+          + " FROM reservationsHomeSubCluster"
+          + " WHERE reservationId = reservationID_IN; END";
+
   @Override
   public void init(Configuration conf) {
     try {
@@ -216,6 +239,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(TABLE_APPLICATIONSHOMESUBCLUSTER).execute();
       conn.prepareStatement(TABLE_MEMBERSHIP).execute();
       conn.prepareStatement(TABLE_POLICIES).execute();
+      conn.prepareStatement(TABLE_RESERVATIONSHOMESUBCLUSTER).execute();
 
       conn.prepareStatement(SP_REGISTERSUBCLUSTER).execute();
       conn.prepareStatement(SP_DEREGISTERSUBCLUSTER).execute();
@@ -232,6 +256,8 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_SETPOLICYCONFIGURATION).execute();
       conn.prepareStatement(SP_GETPOLICYCONFIGURATION).execute();
       conn.prepareStatement(SP_GETPOLICIESCONFIGURATIONS).execute();
+
+      conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER).execute();
 
       LOG.info("Database Init: Complete");
     } catch (SQLException e) {
