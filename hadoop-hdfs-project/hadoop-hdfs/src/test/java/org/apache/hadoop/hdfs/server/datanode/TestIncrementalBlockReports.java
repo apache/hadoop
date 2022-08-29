@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.exceptions.base.MockitoAssertionError;
 
 /**
  * Verify that incremental block reports are generated in response to
@@ -124,7 +125,7 @@ public class TestIncrementalBlockReports {
 
       // Sleep for a very short time, this is necessary since the IBR is
       // generated asynchronously.
-      Thread.sleep(2000);
+      Thread.sleep(1000);
 
       // Ensure that the received block was reported immediately.
       Mockito.verify(nnSpy, times(1)).blockReceivedAndDeleted(
@@ -166,13 +167,28 @@ public class TestIncrementalBlockReports {
 
       // Trigger a heartbeat, this also triggers an IBR.
       DataNodeTestUtils.triggerHeartbeat(singletonDn);
-      Thread.sleep(2000);
 
       // Ensure that the deleted block is reported.
       Mockito.verify(nnSpy, times(1)).blockReceivedAndDeleted(
           any(DatanodeRegistration.class),
           anyString(),
           any(StorageReceivedDeletedBlocks[].class));
+      int retries = 0;
+      while (true) {
+        try {
+          Mockito.verify(nnSpy, atLeastOnce()).blockReceivedAndDeleted(
+                  any(DatanodeRegistration.class),
+                  anyString(),
+                  any(StorageReceivedDeletedBlocks[].class));
+          break;
+        } catch (MockitoAssertionError e) {
+          if (retries > 7) {
+            throw e;
+          }
+          retries++;
+          Thread.sleep(2000);
+        }
+      }
 
     } finally {
       cluster.shutdown();
