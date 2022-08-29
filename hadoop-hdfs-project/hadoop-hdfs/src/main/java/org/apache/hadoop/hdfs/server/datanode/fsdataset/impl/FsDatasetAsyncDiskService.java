@@ -88,10 +88,10 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
-    threadsPerVolume = datanode.getConf().getInt(
+    this.threadsPerVolume = datanode.getConf().getInt(
       DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_KEY,
           DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_DEFAULT);
-    Preconditions.checkArgument(threadsPerVolume > 0,
+    Preconditions.checkArgument(this.threadsPerVolume > 0,
         DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_KEY +
           " must be a positive integer.");
   }
@@ -114,7 +114,7 @@ class FsDatasetAsyncDiskService {
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
-        threadsPerVolume, threadsPerVolume,
+        this.threadsPerVolume, this.threadsPerVolume,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(), threadFactory);
 
