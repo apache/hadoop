@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
@@ -138,13 +139,15 @@ public class WebAppProxyServlet extends HttpServlet {
   }
 
   private String getRmAppPageUrlBase(ApplicationId id) throws YarnException, IOException {
-    return ((AppReportFetcher) getServletContext().getAttribute(WebAppProxy.FETCHER_ATTRIBUTE))
-        .getRmAppPageUrlBase(id);
+    ServletContext context = getServletContext();
+    AppReportFetcher af = (AppReportFetcher) context.getAttribute(WebAppProxy.FETCHER_ATTRIBUTE);
+    return af.getRmAppPageUrlBase(id);
   }
 
   private String getAhsAppPageUrlBase() {
-    return ((AppReportFetcher) getServletContext().getAttribute(WebAppProxy.FETCHER_ATTRIBUTE))
-        .getAhsAppPageUrlBase();
+    ServletContext context = getServletContext();
+    AppReportFetcher af = (AppReportFetcher) context.getAttribute(WebAppProxy.FETCHER_ATTRIBUTE);
+    return af.getAhsAppPageUrlBase();
   }
 
   /**
