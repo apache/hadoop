@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
@@ -82,6 +83,16 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   private static final int CONTAINER_MB = 1024;
 
   private static class WebServletModule extends ServletModule {
+    private final Class<? extends AbstractYarnScheduler> scheduler;
+
+    public WebServletModule() {
+      this.scheduler = FifoScheduler.class;
+    }
+
+    public WebServletModule(Class<? extends AbstractYarnScheduler> scheduler) {
+      this.scheduler = scheduler;
+    }
+
     @Override
     protected void configureServlets() {
       bind(JAXBContextResolver.class);
@@ -90,8 +101,9 @@ public class TestRMWebServicesApps extends JerseyTestBase {
       Configuration conf = new Configuration();
       conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
           YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, scheduler,
           ResourceScheduler.class);
+      conf.set(YarnConfiguration.RM_CLUSTER_ID, "subCluster1");
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
@@ -1794,7 +1806,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
   public void verifyAppInfo(JSONObject info, RMApp app, boolean hasResourceReqs)
       throws JSONException, Exception {
 
-    int expectedNumberOfElements = 40 + (hasResourceReqs ? 2 : 0);
+    int expectedNumberOfElements = 41 + (hasResourceReqs ? 2 : 0);
     String appNodeLabelExpression = null;
     String amNodeLabelExpression = null;
     if (app.getApplicationSubmissionContext()
@@ -1814,6 +1826,7 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     }
     assertEquals("incorrect number of elements", expectedNumberOfElements,
         info.length());
+    assertEquals("rmClusterId is incorrect", "subCluster1", info.getString("rmClusterId"));
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
         info.getString("name"), info.getString("applicationType"),
         info.getString("queue"), info.getInt("priority"),
@@ -1968,6 +1981,143 @@ public class TestRMWebServicesApps extends JerseyTestBase {
     assertEquals("enforceExecutionType does not match",
         request.getExecutionTypeRequest().getEnforceExecutionType(),
         enforceExecutionType);
+  }
+
+  @Test
+  public void testAppsQueryByQueueShortname() throws Exception {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    //YARN-11114 - Finished apps can only be queried with exactly the
+    // same queue name that the app is submitted to.
+    //As the queue is 'root.default'  and the query is 'default' here,
+    // this app won't be returned.
+    RMApp finishedApp1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    RMApp finishedApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+
+    RMApp runningApp1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+    RMApp runningApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    amNodeManager.nodeHeartbeat(true);
+    finishApp(amNodeManager, finishedApp1);
+    amNodeManager.nodeHeartbeat(true);
+    finishApp(amNodeManager, finishedApp2);
+
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps")
+        .queryParam("queue", "default")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+
+    JSONArray array = apps.getJSONArray("app");
+
+    Set<String> appIds = getApplicationIds(array);
+    assertTrue("Running app 1 should be in the result list!",
+        appIds.contains(runningApp1.getApplicationId().toString()));
+    assertTrue("Running app 2 should be in the result list!",
+        appIds.contains(runningApp2.getApplicationId().toString()));
+    assertFalse("Finished app 1 should not be in the result list " +
+            "as it was submitted to 'root.default' but the query is for 'default'",
+        appIds.contains(finishedApp1.getApplicationId().toString()));
+    assertTrue("Finished app 2 should be in the result list " +
+            "as it was submitted to 'default' and the query is exactly for 'default'",
+        appIds.contains(finishedApp2.getApplicationId().toString()));
+    assertEquals("incorrect number of elements", 3, array.length());
+
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryByQueueFullname() throws Exception {
+    GuiceServletConfig.setInjector(
+        Guice.createInjector(new WebServletModule(CapacityScheduler.class)));
+
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    RMApp finishedApp1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    //YARN-11114 - Finished apps can only be queried with exactly the
+    // same queue name that the app is submitted to.
+    //As the queue is 'default'  and the query is 'root.default' here,
+    // this app won't be returned,
+    RMApp finishedApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+
+    RMApp runningApp1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("default")
+            .build());
+    RMApp runningApp2 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder
+            .createWithMemory(CONTAINER_MB, rm)
+            .withQueue("root.default")
+            .build());
+    amNodeManager.nodeHeartbeat(true);
+    finishApp(amNodeManager, finishedApp1);
+
+    amNodeManager.nodeHeartbeat(true);
+    finishApp(amNodeManager, finishedApp2);
+
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps")
+        .queryParam("queue", "root.default")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+
+    JSONArray array = apps.getJSONArray("app");
+
+    Set<String> appIds = getApplicationIds(array);
+    assertTrue("Running app 1 should be in the result list!",
+        appIds.contains(runningApp1.getApplicationId().toString()));
+    assertTrue("Running app 2 should be in the result list!",
+        appIds.contains(runningApp2.getApplicationId().toString()));
+    assertTrue("Finished app 1 should be in the result list, " +
+            "as it was submitted to 'root.default' and the query is exactly for 'root.default'!",
+        appIds.contains(finishedApp1.getApplicationId().toString()));
+    assertFalse("Finished app 2 should not be in the result list, " +
+            "as it was submitted to 'default' but the query is for 'root.default'!",
+        appIds.contains(finishedApp2.getApplicationId().toString()));
+    assertEquals("incorrect number of elements", 3, array.length());
+
+    rm.stop();
   }
 
 }

@@ -241,7 +241,7 @@ public abstract class AbstractService implements Service {
 
   /**
    * Relay to {@link #stop()}
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public final void close() throws IOException {

@@ -30,11 +30,11 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.sls.AMDefinition;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.slf4j.Logger;
@@ -93,21 +93,14 @@ public class StreamAMSimulator extends AMSimulator {
       LoggerFactory.getLogger(StreamAMSimulator.class);
 
   @SuppressWarnings("checkstyle:parameternumber")
-  public void init(int heartbeatInterval,
-      List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
-      long traceStartTime, long traceFinishTime, String user, String queue,
-      boolean isTracked, String oldAppId, long baselineStartTimeMS,
-      Resource amContainerResource, String nodeLabelExpr,
-      Map<String, String> params, Map<ApplicationId, AMSimulator> appIdAMSim) {
-    super.init(heartbeatInterval, containerList, rm, se, traceStartTime,
-        traceFinishTime, user, queue, isTracked, oldAppId, baselineStartTimeMS,
-        amContainerResource, nodeLabelExpr, params, appIdAMSim);
+  public void init(AMDefinition amDef, ResourceManager rm, SLSRunner slsRunner,
+      boolean tracked, long baselineTimeMS, long heartbeatInterval,
+      Map<ApplicationId, AMSimulator> appIdToAMSim) {
+    super.init(amDef, rm, slsRunner, tracked, baselineTimeMS,
+        heartbeatInterval, appIdToAMSim);
     amtype = "stream";
-
-    allStreams.addAll(containerList);
-
-    duration = traceFinishTime - traceStartTime;
-
+    allStreams.addAll(amDef.getTaskContainers());
+    duration = amDef.getJobFinishTime() - amDef.getJobStartTime();
     LOG.info("Added new job with {} streams, running for {}",
         allStreams.size(), duration);
   }

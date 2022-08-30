@@ -97,7 +97,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(queueName, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(parent, queueName, conf));
 
     queuePriority = parent.getPriority().getPriority();
     if (parent instanceof ParentQueue) {

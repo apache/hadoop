@@ -78,6 +78,8 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
+
 @Private
 @Evolving
 public class ParentQueue extends AbstractCSQueue {
@@ -185,6 +187,16 @@ public class ParentQueue extends AbstractCSQueue {
           + ", allowZeroCapacitySum=" + allowZeroCapacitySum);
     } finally {
       writeLock.unlock();
+    }
+  }
+
+  @Override
+  protected void setDynamicQueueACLProperties() {
+    super.setDynamicQueueACLProperties();
+
+    if (parent instanceof ParentQueue) {
+      acls.putAll(getACLsForFlexibleAutoCreatedParentQueue(
+          ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
     }
   }
 

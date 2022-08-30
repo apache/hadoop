@@ -66,7 +66,7 @@
           <artifactId>jersey-core</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -113,6 +113,18 @@
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>
           <artifactId>jetty-server</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jetbrains.kotlin</groupId>
+          <artifactId>kotlin-stdlib</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jetbrains.kotlin</groupId>
+          <artifactId>kotlin-stdlib-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.squareup.okhttp3</groupId>
+          <artifactId>okhttp</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.sun.jersey</groupId>
@@ -167,7 +179,7 @@
           <artifactId>jersey-core</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -218,7 +230,7 @@
           <artifactId>jersey-server</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>
@@ -275,7 +287,7 @@
           <artifactId>guice-servlet</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.sun.jersey</groupId>
+          <groupId>com.github.pjfanning</groupId>
           <artifactId>jersey-json</artifactId>
         </exclusion>
         <exclusion>

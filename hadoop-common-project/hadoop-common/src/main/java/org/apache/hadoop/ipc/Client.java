@@ -61,6 +61,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.SocketFactory;
 import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslException;
 import java.io.*;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -112,7 +113,12 @@ public class Client implements AutoCloseable {
     return (AsyncGet<T, IOException>) ASYNC_RPC_RESPONSE.get();
   }
 
-  /** Set call id and retry count for the next call. */
+  /**
+   * Set call id and retry count for the next call.
+   * @param cid input cid.
+   * @param rc input rc.
+   * @param externalHandler input externalHandler.
+   */
   public static void setCallIdAndRetryCount(int cid, int rc,
                                             Object externalHandler) {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
@@ -413,7 +419,7 @@ public class Client implements AutoCloseable {
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
-    private final ConnectionId remoteId;                // connection id
+    private final ConnectionId remoteId;          // connection id
     private AuthMethod authMethod; // authentication method
     private AuthProtocol authProtocol;
     private int serviceClass;
@@ -639,6 +645,9 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
+        // Update the remote address so that reconnections are with the updated address.
+        // This avoids thrashing.
+        remoteId.setAddress(currentAddr);
         UserGroupInformation ticket = remoteId.getTicket();
         this.setName("IPC Client (" + socketFactory.hashCode()
             + ") connection to " + server.toString() + " from "
@@ -1349,8 +1358,14 @@ public class Client implements AutoCloseable {
     }
   }
 
-  /** Construct an IPC client whose values are of the given {@link Writable}
-   * class. */
+  /**
+   * Construct an IPC client whose values are of the given {@link Writable}
+   * class.
+   *
+   * @param valueClass input valueClass.
+   * @param conf input configuration.
+   * @param factory input factory.
+   */
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
@@ -1372,9 +1387,9 @@ public class Client implements AutoCloseable {
   }
 
   /**
-   * Construct an IPC client with the default SocketFactory
-   * @param valueClass
-   * @param conf
+   * Construct an IPC client with the default SocketFactory.
+   * @param valueClass input valueClass.
+   * @param conf input Configuration.
    */
   public Client(Class<? extends Writable> valueClass, Configuration conf) {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
@@ -1432,7 +1447,7 @@ public class Client implements AutoCloseable {
    * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the rpc respond.
    *
-   * @param rpcKind
+   * @param rpcKind - input rpcKind.
    * @param rpcRequest -  contains serialized method and method parameters
    * @param remoteId - the target rpc server
    * @param fallbackToSimpleAuth - set to true or false during this method to
@@ -1440,6 +1455,7 @@ public class Client implements AutoCloseable {
    * @return the rpc response
    * Throws exceptions if there are network problems or if the remote code
    * threw an exception.
+   * @throws IOException raised on errors performing I/O.
    */
   public Writable call(RPC.RpcKind rpcKind, Writable rpcRequest,
       ConnectionId remoteId, AtomicBoolean fallbackToSimpleAuth)
@@ -1608,7 +1624,8 @@ public class Client implements AutoCloseable {
       }
 
       if (call.error != null) {
-        if (call.error instanceof RemoteException) {
+        if (call.error instanceof RemoteException ||
+            call.error instanceof SaslException) {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
@@ -1686,9 +1703,9 @@ public class Client implements AutoCloseable {
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   @InterfaceStability.Evolving
   public static class ConnectionId {
-    InetSocketAddress address;
-    UserGroupInformation ticket;
-    final Class<?> protocol;
+    private InetSocketAddress address;
+    private final UserGroupInformation ticket;
+    private final Class<?> protocol;
     private static final int PRIME = 16777619;
     private final int rpcTimeout;
     private final int maxIdleTime; //connections will be culled if it was idle for 
@@ -1703,8 +1720,8 @@ public class Client implements AutoCloseable {
     private final int pingInterval; // how often sends ping to the server in msecs
     private String saslQop; // here for testing
     private final Configuration conf; // used to get the expected kerberos principal name
-    
-    ConnectionId(InetSocketAddress address, Class<?> protocol, 
+
+    public ConnectionId(InetSocketAddress address, Class<?> protocol,
                  UserGroupInformation ticket, int rpcTimeout,
                  RetryPolicy connectionRetryPolicy, Configuration conf) {
       this.protocol = protocol;
@@ -1739,7 +1756,28 @@ public class Client implements AutoCloseable {
     InetSocketAddress getAddress() {
       return address;
     }
-    
+
+    /**
+     * This is used to update the remote address when an address change is detected.  This method
+     * ensures that the {@link #hashCode()} won't change.
+     *
+     * @param address the updated address
+     * @throws IllegalArgumentException if the hostname or port doesn't match
+     * @see Connection#updateAddress()
+     */
+    void setAddress(InetSocketAddress address) {
+      if (!Objects.equals(this.address.getHostName(), address.getHostName())) {
+        throw new IllegalArgumentException("Hostname must match: " + this.address + " vs "
+            + address);
+      }
+      if (this.address.getPort() != address.getPort()) {
+        throw new IllegalArgumentException("Port must match: " + this.address + " vs " + address);
+      }
+
+      this.address = address;
+    }
+
+
     Class<?> getProtocol() {
       return protocol;
     }
@@ -1748,7 +1786,7 @@ public class Client implements AutoCloseable {
       return ticket;
     }
     
-    private int getRpcTimeout() {
+    int getRpcTimeout() {
       return rpcTimeout;
     }
     
@@ -1760,7 +1798,7 @@ public class Client implements AutoCloseable {
       return maxRetriesOnSasl;
     }
 
-    /** max connection retries on socket time outs */
+    /** @return max connection retries on socket time outs */
     public int getMaxRetriesOnSocketTimeouts() {
       return maxRetriesOnSocketTimeouts;
     }
@@ -1781,6 +1819,10 @@ public class Client implements AutoCloseable {
     
     int getPingInterval() {
       return pingInterval;
+    }
+
+    RetryPolicy getRetryPolicy() {
+      return connectionRetryPolicy;
     }
     
     @VisibleForTesting
@@ -1846,7 +1888,11 @@ public class Client implements AutoCloseable {
     @Override
     public int hashCode() {
       int result = connectionRetryPolicy.hashCode();
-      result = PRIME * result + ((address == null) ? 0 : address.hashCode());
+      // We calculate based on the host name and port without the IP address, since the hashCode
+      // must be stable even if the IP address is updated.
+      result = PRIME * result + ((address == null || address.getHostName() == null) ? 0 :
+          address.getHostName().hashCode());
+      result = PRIME * result + ((address == null) ? 0 : address.getPort());
       result = PRIME * result + (doPing ? 1231 : 1237);
       result = PRIME * result + maxIdleTime;
       result = PRIME * result + pingInterval;

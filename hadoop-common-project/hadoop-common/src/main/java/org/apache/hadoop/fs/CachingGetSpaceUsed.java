@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +53,9 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
   /**
    * This is the constructor used by the builder.
    * All overriding classes should implement this.
+   *
+   * @param builder builder.
+   * @throws IOException raised on errors performing I/O.
    */
   public CachingGetSpaceUsed(CachingGetSpaceUsed.Builder builder)
       throws IOException {
@@ -139,6 +143,8 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
 
   /**
    * Increment the cached value of used space.
+   *
+   * @param value dfs used value.
    */
   public void incDfsUsed(long value) {
     used.addAndGet(value);
@@ -153,9 +159,23 @@ public abstract class CachingGetSpaceUsed implements Closeable, GetSpaceUsed {
 
   /**
    * How long in between runs of the background refresh.
+   *
+   * @return refresh interval.
    */
-  long getRefreshInterval() {
+  @VisibleForTesting
+  public long getRefreshInterval() {
     return refreshInterval;
+  }
+
+  /**
+   * Randomize the refresh interval timing by this amount, the actual interval will be chosen
+   * uniformly between {@code interval-jitter} and {@code interval+jitter}.
+   *
+   * @return between interval-jitter and interval+jitter.
+   */
+  @VisibleForTesting
+  public long getJitter() {
+    return jitter;
   }
 
   /**

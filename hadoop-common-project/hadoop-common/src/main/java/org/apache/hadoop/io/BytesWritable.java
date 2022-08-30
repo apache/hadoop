@@ -77,6 +77,8 @@ public class BytesWritable extends BinaryComparable
   /**
    * Get a copy of the bytes that is exactly the length of the data.
    * See {@link #getBytes()} for faster access to the underlying array.
+   *
+   * @return copyBytes.
    */
   public byte[] copyBytes() {
     return Arrays.copyOf(bytes, size);
@@ -95,6 +97,7 @@ public class BytesWritable extends BinaryComparable
   /**
    * Get the data from the BytesWritable.
    * @deprecated Use {@link #getBytes()} instead.
+   * @return data from the BytesWritable.
    */
   @Deprecated
   public byte[] get() {
@@ -112,6 +115,7 @@ public class BytesWritable extends BinaryComparable
   /**
    * Get the current size of the buffer.
    * @deprecated Use {@link #getLength()} instead.
+   * @return current size of the buffer.
    */
   @Deprecated
   public int getSize() {

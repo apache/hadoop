@@ -416,11 +416,13 @@ The RPC server to receive connections from the clients.
 The Router forwards the client requests to the NameNodes.
 It uses a pool of connections to reduce the latency of creating them.
 
-| Property | Default | Description|
+| Property | Default | Description |
 |:---- |:---- |:---- |
 | dfs.federation.router.connection.pool-size | 1 | Size of the pool of connections from the router to namenodes. |
 | dfs.federation.router.connection.clean.ms | 10000 | Time interval, in milliseconds, to check if the connection pool should remove unused connections. |
 | dfs.federation.router.connection.pool.clean.ms | 60000 | Time interval, in milliseconds, to check if the connection manager should remove unused connection pools. |
+| dfs.federation.router.enable.multiple.socket | false | If true, ConnectionPool will use a new socket when creating a new connection for the same user. And it's best used with dfs.federation.router.max.concurrency.per.connection together. |
+| dfs.federation.router.max.concurrency.per.connection | 1 | The maximum number of requests that a connection can handle concurrently. |
 
 ### Admin server
 
@@ -527,7 +529,7 @@ More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/
 Router Federation Rename
 -------
 
-Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
 1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
 2. It doesn't support snapshot path.
 3. It doesn't support to rename path with multiple destinations.

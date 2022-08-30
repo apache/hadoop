@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
@@ -802,6 +803,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     private final AtomicLong readOperations;
     private final AtomicLong readFullyOperations;
     private final AtomicLong seekOperations;
+    private final AtomicLong readVectoredOperations;
+    private final AtomicLong bytesDiscardedInVectoredIO;
+    private final AtomicLong readVectoredIncomingRanges;
+    private final AtomicLong readVectoredCombinedRanges;
 
     /** Bytes read by the application and any when draining streams . */
     private final AtomicLong totalBytesRead;
@@ -835,9 +840,24 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               StreamStatisticNames.STREAM_READ_SEEK_BYTES_SKIPPED,
               StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
               StreamStatisticNames.STREAM_READ_UNBUFFERED,
+              StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES,
+              StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES,
+              StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+              StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
               StreamStatisticNames.STREAM_READ_VERSION_MISMATCHES)
-          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY)
-          .withDurationTracking(ACTION_HTTP_GET_REQUEST)
+          .withGauges(STREAM_READ_GAUGE_INPUT_POLICY,
+              STREAM_READ_BLOCKS_IN_FILE_CACHE.getSymbol(),
+              STREAM_READ_ACTIVE_PREFETCH_OPERATIONS.getSymbol(),
+              STREAM_READ_ACTIVE_MEMORY_IN_USE.getSymbol()
+              )
+          .withDurationTracking(ACTION_HTTP_GET_REQUEST,
+              ACTION_EXECUTOR_ACQUIRED,
+              StoreStatisticNames.ACTION_FILE_OPENED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+              StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+              StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS,
+              StreamStatisticNames.STREAM_READ_REMOTE_BLOCK_READ,
+              StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ)
           .build();
       setIOStatistics(st);
       aborted = st.getCounterReference(
@@ -868,6 +888,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
           StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE);
       readOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_OPERATIONS);
+      readVectoredOperations = st.getCounterReference(
+          StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS);
+      bytesDiscardedInVectoredIO =  st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED);
+      readVectoredIncomingRanges = st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES);
+      readVectoredCombinedRanges = st.getCounterReference(
+              StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES);
       readFullyOperations = st.getCounterReference(
           StreamStatisticNames.STREAM_READ_FULLY_OPERATIONS);
       seekOperations = st.getCounterReference(
@@ -896,6 +924,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
      */
     private long increment(String name, long value) {
       return incCounter(name, value);
+    }
+
+    /**
+     * Increment the Statistic gauge and the local IOStatistics
+     * equivalent.
+     * @param statistic statistic
+     * @param v value.
+     * @return local IOStatistic value
+     */
+    private long incAllGauges(Statistic statistic, long v) {
+      incrementGauge(statistic, v);
+      return incGauge(statistic.getSymbol(), v);
     }
 
     /**
@@ -1011,6 +1051,25 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       if (requested > actual) {
         readsIncomplete.incrementAndGet();
       }
+    }
+
+    @Override
+    public void readVectoredOperationStarted(int numIncomingRanges,
+                                             int numCombinedRanges) {
+      readVectoredIncomingRanges.addAndGet(numIncomingRanges);
+      readVectoredCombinedRanges.addAndGet(numCombinedRanges);
+      readVectoredOperations.incrementAndGet();
+    }
+
+    @Override
+    public void readVectoredBytesDiscarded(int discarded) {
+      bytesDiscardedInVectoredIO.addAndGet(discarded);
+    }
+
+    @Override
+    public void executorAcquired(Duration timeInQueue) {
+      // update the duration fields in the IOStatistics.
+      localIOStatistics().addTimedOperation(ACTION_EXECUTOR_ACQUIRED, timeInQueue);
     }
 
     /**
@@ -1271,6 +1330,43 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       return trackDuration(ACTION_HTTP_GET_REQUEST);
     }
 
+    @Override
+    public DurationTracker initiateInnerStreamClose(final boolean abort) {
+      return trackDuration(abort
+          ? StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED
+          : StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED);
+    }
+
+    @Override
+    public DurationTracker prefetchOperationStarted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, 1);
+      return trackDuration(StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS);
+    }
+
+    @Override
+    public void blockAddedToFileCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, 1);
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
+      incAllGauges(STREAM_READ_BLOCKS_IN_FILE_CACHE, -1);
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+      incAllGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS, -1);
+    }
+
+    @Override
+    public void memoryAllocated(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, size);
+    }
+
+    @Override
+    public void memoryFreed(int size) {
+      incAllGauges(STREAM_READ_ACTIVE_MEMORY_IN_USE, -size);
+    }
   }
 
   /**
@@ -1298,8 +1394,18 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     incrementCounter(STREAM_WRITE_EXCEPTIONS,
         source.lookupCounterValue(
             StreamStatisticNames.STREAM_WRITE_EXCEPTIONS));
+
     // merge in all the IOStatistics
-    this.getIOStatistics().aggregate(source.getIOStatistics());
+    final IOStatisticsStore sourceIOStatistics = source.getIOStatistics();
+    this.getIOStatistics().aggregate(sourceIOStatistics);
+
+    // propagate any extra values into the FS-level stats.
+    incrementMutableCounter(OBJECT_PUT_REQUESTS.getSymbol(),
+        sourceIOStatistics.counters().get(OBJECT_PUT_REQUESTS.getSymbol()));
+    incrementMutableCounter(
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
+        sourceIOStatistics.counters().get(COMMITTER_MAGIC_MARKER_PUT.getSymbol()));
+
   }
 
   /**
@@ -1356,9 +1462,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(
               ACTION_EXECUTOR_ACQUIRED,
+              COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
               INVOCATION_ABORT.getSymbol(),
+              MULTIPART_UPLOAD_COMPLETED.getSymbol(),
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(),
-              MULTIPART_UPLOAD_COMPLETED.getSymbol())
+              OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
+              OBJECT_PUT_REQUESTS.getSymbol())
           .build();
       setIOStatistics(st);
       // these are extracted to avoid lookups on heavily used counters.
@@ -1620,6 +1729,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               COMMITTER_TASKS_SUCCEEDED.getSymbol())
           .withDurationTracking(
               COMMITTER_COMMIT_JOB.getSymbol(),
+              COMMITTER_LOAD_SINGLE_PENDING_FILE.getSymbol(),
               COMMITTER_MATERIALIZE_FILE.getSymbol(),
               COMMITTER_STAGE_FILE_UPLOAD.getSymbol())
           .build();

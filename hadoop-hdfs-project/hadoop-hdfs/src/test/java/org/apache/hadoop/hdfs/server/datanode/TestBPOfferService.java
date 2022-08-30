@@ -88,6 +88,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -155,6 +156,13 @@ public class TestBPOfferService {
     // Wire the dataset to the DN.
     Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
     Mockito.doReturn(dataSetLockManager).when(mockDn).getDataSetLockManager();
+  }
+
+  @After
+  public void checkDataSetLockManager() {
+    dataSetLockManager.lockLeakCheck();
+    // make sure no lock Leak.
+    assertNull(dataSetLockManager.getLastException());
   }
 
   /**

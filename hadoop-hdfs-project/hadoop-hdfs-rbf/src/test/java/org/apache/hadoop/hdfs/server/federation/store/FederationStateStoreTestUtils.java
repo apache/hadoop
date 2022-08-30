@@ -269,6 +269,7 @@ public final class FederationStateStoreTestUtils {
     stats.setNumOfDecomActiveDatanodes(15);
     stats.setNumOfDecomDeadDatanodes(5);
     stats.setNumOfBlocks(10);
+    stats.setPendingSPSPaths(10);
     entry.setStats(stats);
     return entry;
   }

@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
@@ -32,7 +33,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
-import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,8 +51,7 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
 
     configureWeights(20);
 
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
+    setupContext();
   }
 
   public void configureWeights(float numSubClusters) {
@@ -68,10 +67,11 @@ public class TestWeightedRandomRouterPolicy extends BaseRouterPoliciesTest {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
       // with 5% omit a subcluster
       if (getRand().nextFloat() < 0.95f) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
-        getActiveSubclusters().put(sc.toId(), sci);
+        long now = Time.now();
+        SubClusterInfo federationSubClusterInfo = SubClusterInfo.newInstance(
+            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83",
+            now - 1000, SubClusterState.SC_RUNNING, now - 2000, generateClusterMetricsInfo(i));
+        getActiveSubclusters().put(sc.toId(), federationSubClusterInfo);
       }
 
       // 80% of the weight is evenly spread, 20% is randomly generated

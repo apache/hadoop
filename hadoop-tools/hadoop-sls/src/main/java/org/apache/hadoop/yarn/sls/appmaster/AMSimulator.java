@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.sls.AMDefinition;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
@@ -128,27 +129,25 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.responseQueue = new LinkedBlockingQueue<>();
   }
 
-  @SuppressWarnings("checkstyle:parameternumber")
-  public void init(int heartbeatInterval,
-      List<ContainerSimulator> containerList, ResourceManager resourceManager,
-      SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
-      String simQueue, boolean tracked, String oldApp, long baseTimeMS,
-      Resource amResource, String nodeLabelExpr, Map<String, String> params,
-      Map<ApplicationId, AMSimulator> appIdAMSim) {
-    super.init(startTime, startTime + 1000000L * heartbeatInterval,
-        heartbeatInterval);
-    this.user = simUser;
-    this.rm = resourceManager;
-    this.se = slsRunnner;
-    this.queue = simQueue;
-    this.oldAppId = oldApp;
+  public void init(AMDefinition amDef, ResourceManager rm, SLSRunner slsRunner,
+      boolean tracked, long baselineTimeMS, long heartbeatInterval,
+      Map<ApplicationId, AMSimulator> appIdToAMSim) {
+    long startTime = amDef.getJobStartTime();
+    long endTime = startTime + 1000000L * heartbeatInterval;
+    super.init(startTime, endTime, heartbeatInterval);
+
+    this.user = amDef.getUser();
+    this.queue = amDef.getQueue();
+    this.oldAppId = amDef.getOldAppId();
+    this.amContainerResource = amDef.getAmResource();
+    this.nodeLabelExpression = amDef.getLabelExpression();
+    this.traceStartTimeMS = amDef.getJobStartTime();
+    this.traceFinishTimeMS = amDef.getJobFinishTime();
+    this.rm = rm;
+    this.se = slsRunner;
     this.isTracked = tracked;
-    this.baselineTimeMS = baseTimeMS;
-    this.traceStartTimeMS = startTime;
-    this.traceFinishTimeMS = finishTime;
-    this.amContainerResource = amResource;
-    this.nodeLabelExpression = nodeLabelExpr;
-    this.appIdToAMSim = appIdAMSim;
+    this.baselineTimeMS = baselineTimeMS;
+    this.appIdToAMSim = appIdToAMSim;
   }
 
   /**

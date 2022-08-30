@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
-import org.apache.hadoop.util.ChunkedArrayList;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

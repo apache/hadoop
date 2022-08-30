@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CodecPool;
@@ -41,8 +40,12 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.input.CompressedSplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.SplitLineReader;
 import org.apache.hadoop.mapreduce.lib.input.UncompressedSplitLineReader;
+import org.apache.hadoop.util.functional.FutureIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 
 /**
  * Treats keys as offset in file and value as line. 
@@ -109,10 +112,14 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     // open the file and seek to the start of the split
     final FutureDataInputStreamBuilder builder =
         file.getFileSystem(job).openFile(file);
-    FutureIOSupport.propagateOptions(builder, job,
+    // the start and end of the split may be used to build
+    // an input strategy.
+    builder.opt(FS_OPTION_OPENFILE_SPLIT_START, start)
+        .opt(FS_OPTION_OPENFILE_SPLIT_END, end);
+    FutureIO.propagateOptions(builder, job,
         MRJobConfig.INPUT_FILE_OPTION_PREFIX,
         MRJobConfig.INPUT_FILE_MANDATORY_PREFIX);
-    fileIn = FutureIOSupport.awaitFuture(builder.build());
+    fileIn = FutureIO.awaitFuture(builder.build());
     if (isCompressedInput()) {
       decompressor = CodecPool.getDecompressor(codec);
       if (codec instanceof SplittableCompressionCodec) {

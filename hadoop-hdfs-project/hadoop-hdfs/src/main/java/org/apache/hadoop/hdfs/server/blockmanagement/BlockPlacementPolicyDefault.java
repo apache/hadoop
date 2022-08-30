@@ -238,8 +238,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       return getPipeline(writer,
           results.toArray(new DatanodeStorageInfo[results.size()]));
     } catch (NotEnoughReplicasException nr) {
-      LOG.debug("Failed to choose with favored nodes (={}), disregard favored"
-          + " nodes hint and retry.", favoredNodes, nr);
+      LOG.debug("Failed to choose with favored nodes (={}), disregard favored nodes hint and retry",
+          favoredNodes, nr);
       // Fall back to regular block placement disregarding favored nodes hint
       return chooseTarget(src, numOfReplicas, writer, 
           new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
@@ -304,7 +304,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         && stats.isAvoidingStaleDataNodesForWrite());
     boolean avoidLocalRack = (addBlockFlags != null
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_RACK) && writer != null
-        && clusterMap.getNumOfRacks() > 2);
+        && clusterMap.getNumOfNonEmptyRacks() > 2);
     boolean avoidLocalNode = (addBlockFlags != null
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_WRITE)
         && writer != null
@@ -385,7 +385,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       totalNumOfReplicas = clusterSize;
     }
     // No calculation needed when there is only one rack or picking one node.
-    int numOfRacks = clusterMap.getNumOfRacks();
+    int numOfRacks = clusterMap.getNumOfNonEmptyRacks();
     // HDFS-14527 return default when numOfRacks = 0 to avoid
     // ArithmeticException when calc maxNodesPerRack at following logic.
     if (numOfRacks <= 1 || totalNumOfReplicas <= 1) {
@@ -715,17 +715,19 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         DatanodeDescriptor nextNode = resultStorage.getDatanodeDescriptor();
         if (nextNode != localMachine) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Failed to choose from local rack (location = " + localRack
-                + "), retry with the rack of the next replica (location = "
-                + nextNode.getNetworkLocation() + ")", e);
+            LOG.debug("Failed to choose from local rack (location = {}), retry with the rack "
+                + "of the next replica (location = {})", localRack,
+                nextNode.getNetworkLocation(), e);
           }
           return chooseFromNextRack(nextNode, excludedNodes, blocksize,
               maxNodesPerRack, results, avoidStaleNodes, storageTypes);
         }
       }
 
-      LOG.debug("Failed to choose from local rack (location = {}); the second"
-          + " replica is not found, retry choosing randomly", localRack, e);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to choose from local rack (location = {}); the second"
+            + " replica is not found, retry choosing randomly", localRack, e);
+      }
 
       //the second replica is not found, randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
@@ -745,9 +747,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       return chooseRandom(nextRack, excludedNodes, blocksize, maxNodesPerRack,
           results, avoidStaleNodes, storageTypes);
     } catch (NotEnoughReplicasException e) {
-      LOG.debug("Failed to choose from the next rack (location = {}), "
-          + "retry choosing randomly", nextRack, e);
-        // otherwise randomly choose one from the network
+      LOG.debug("Failed to choose from the next rack (location = {}), retry choosing randomly",
+          nextRack, e);
+
+      // otherwise randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes);
     }
@@ -775,10 +778,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           excludedNodes, blocksize, maxReplicasPerRack, results,
           avoidStaleNodes, storageTypes);
     } catch (NotEnoughReplicasException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to choose remote rack (location = ~"
-            + localMachine.getNetworkLocation() + "), fallback to local rack", e);
-      }
+      LOG.debug("Failed to choose remote rack (location = ~{}), fallback to local rack",
+          localMachine.getNetworkLocation(), e);
       chooseRandom(numOfReplicas-(results.size()-oldNumOfReplicas),
                    localMachine.getNetworkLocation(), excludedNodes, blocksize, 
                    maxReplicasPerRack, results, avoidStaleNodes, storageTypes);
@@ -1173,7 +1174,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         .map(dn -> dn.getNetworkLocation()).distinct().count();
 
     return new BlockPlacementStatusDefault(Math.toIntExact(rackCount),
-        minRacks, clusterMap.getNumOfRacks());
+        minRacks, clusterMap.getNumOfNonEmptyRacks());
   }
 
   /**
@@ -1276,8 +1277,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       firstOne = false;
       if (cur == null) {
         LOG.debug(
-            "No excess replica can be found. excessTypes: {}. "
-                + "moreThanOne: {}. exactlyOne: {}.",
+            "No excess replica can be found. excessTypes: {}. moreThanOne: {}. exactlyOne: {}.",
             excessTypes, moreThanOne, exactlyOne);
         break;
       }
@@ -1370,4 +1370,3 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     return excludeSlowNodesEnabled;
   }
 }
-

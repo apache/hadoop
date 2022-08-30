@@ -70,8 +70,8 @@ public abstract class MultithreadedTestUtil {
   public static class TestContext {
     private Throwable err = null;
     private boolean stopped = false;
-    private Set<TestingThread> testThreads = new HashSet<TestingThread>();
-    private Set<TestingThread> finishedThreads = new HashSet<TestingThread>();
+    private Set<TestingThread> testThreads = new HashSet<>();
+    private Set<TestingThread> finishedThreads = new HashSet<>();
 
     /**
      * Check if the context can run threads.

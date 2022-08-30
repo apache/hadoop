@@ -80,11 +80,15 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
   private Daemon movementTrackerThread;
   private final SPSService service;
   private final BlockDispatcher blkDispatcher;
+  private final int maxRetry;
 
   public ExternalSPSBlockMoveTaskHandler(Configuration conf,
       NameNodeConnector nnc, SPSService spsService) {
     int moverThreads = conf.getInt(DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY,
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
+    maxRetry = conf.getInt(
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_KEY,
+        DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT);
     moveExecutor = initializeBlockMoverThreadPool(moverThreads);
     mCompletionServ = new ExecutorCompletionService<>(moveExecutor);
     this.nnc = nnc;
@@ -151,7 +155,7 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
     // during block movement assignment logic. In the internal movement,
     // remaining space is bookkeeping at the DatanodeDescriptor, please refer
     // IntraSPSNameNodeBlockMoveTaskHandler#submitMoveTask implementation and
-    // updating via the funcation call -
+    // updating via the function call -
     // dn.incrementBlocksScheduled(blkMovingInfo.getTargetStorageType());
     LOG.debug("Received BlockMovingTask {}", blkMovingInfo);
     BlockMovingTask blockMovingTask = new BlockMovingTask(blkMovingInfo);
@@ -195,21 +199,25 @@ public class ExternalSPSBlockMoveTaskHandler implements BlockMoveTaskHandler {
 
       final KeyManager km = nnc.getKeyManager();
       Token<BlockTokenIdentifier> accessToken;
-      try {
-        accessToken = km.getAccessToken(eb,
-            new StorageType[]{blkMovingInfo.getTargetStorageType()},
-            new String[0]);
-      } catch (IOException e) {
-        // TODO: handle failure retries
-        LOG.warn(
-            "Failed to move block:{} from src:{} to destin:{} to satisfy "
-                + "storageType:{}",
-            blkMovingInfo.getBlock(), blkMovingInfo.getSource(),
-            blkMovingInfo.getTarget(), blkMovingInfo.getTargetStorageType(), e);
-        return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE;
+      int retry = 0;
+      while (retry <= maxRetry) {
+        try {
+          ExternalSPSFaultInjector.getInstance().mockAnException(retry);
+          accessToken = km.getAccessToken(eb,
+              new StorageType[]{blkMovingInfo.getTargetStorageType()},
+              new String[0]);
+          return blkDispatcher.moveBlock(blkMovingInfo, saslClient, eb,
+              new Socket(), km, accessToken);
+        } catch (IOException e) {
+          LOG.warn(
+              "Failed to move block:{} from src:{} to dest:{} to satisfy "
+                  + "storageType:{}, retry: {}",
+              blkMovingInfo.getBlock(), blkMovingInfo.getSource(),
+              blkMovingInfo.getTarget(), blkMovingInfo.getTargetStorageType(), retry, e);
+          retry++;
+        }
       }
-      return blkDispatcher.moveBlock(blkMovingInfo, saslClient, eb,
-          new Socket(), km, accessToken);
+      return BlockMovementStatus.DN_BLK_STORAGE_MOVEMENT_FAILURE;
     }
   }
 

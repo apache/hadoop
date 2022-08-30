@@ -330,7 +330,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     stage.accept("teravalidate");
     stage.accept("overall");
     String text = results.toString();
-    File resultsFile = File.createTempFile("results", ".csv");
+    File resultsFile = new File(getReportDir(), committerName + ".csv");
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
   }

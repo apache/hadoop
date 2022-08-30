@@ -448,7 +448,7 @@ public class TestClientProtocolForPipelineRecovery {
    *  rolling upgrades. The client should be able to retry pipeline recovery
    *  more times than the default.
    *  (in a row for the same packet, including the heartbeat packet)
-   *  (See{@link DataStreamer#pipelineRecoveryCount})
+   *  (See{@link DataStreamer#getPipelineRecoveryCount})
    */
   @Test(timeout = 60000)
   public void testPipelineRecoveryOnDatanodeUpgrade() throws Exception {

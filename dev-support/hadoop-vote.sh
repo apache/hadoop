@@ -189,6 +189,8 @@ pushd "${OUTPUT_DIR}"
 download_and_import_keys
 download_release_candidate
 
+pushd "${HADOOP_RC_VERSION}"
+
 execute verify_signatures
 execute verify_checksums
 execute unzip_from_source
@@ -196,6 +198,7 @@ execute rat_test
 execute build_from_source
 execute build_tar_from_source
 
+popd
 popd
 
 print_when_exit

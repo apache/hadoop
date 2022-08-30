@@ -56,6 +56,7 @@ import org.junit.Assert;
 import java.io.IOException;
 import java.util.Set;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfAmbiguousQueue;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.setupQueueConfiguration;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -172,6 +173,16 @@ public final class CapacitySchedulerTestUtilities {
         new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
     cs.handle(addAttemptEvent1);
     return appAttemptId1;
+  }
+
+  public static MockRM setUpMoveAmbiguousQueue() {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfAmbiguousQueue(conf);
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    return rm;
   }
 
   public static MockRM setUpMove() {

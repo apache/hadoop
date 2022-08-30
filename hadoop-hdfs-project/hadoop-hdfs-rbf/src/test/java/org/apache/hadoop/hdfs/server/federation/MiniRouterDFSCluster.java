@@ -237,12 +237,8 @@ public class MiniRouterDFSCluster {
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to router at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public RouterClient getAdminClient() throws IOException {
@@ -384,12 +380,8 @@ public class MiniRouterDFSCluster {
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to namenode at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public DFSClient getClient() throws IOException, URISyntaxException {
@@ -789,7 +781,7 @@ public class MiniRouterDFSCluster {
       Configuration nnConf = generateNamenodeConfiguration(ns0);
       if (overrideConf != null) {
         nnConf.addResource(overrideConf);
-        // Router also uses this configurations as initial values.
+        // Router also uses these configurations as initial values.
         routerConf = new Configuration(overrideConf);
       }
 

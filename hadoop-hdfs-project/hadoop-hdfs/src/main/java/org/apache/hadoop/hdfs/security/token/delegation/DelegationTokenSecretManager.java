@@ -383,7 +383,7 @@ public class DelegationTokenSecretManager
           namesystem.logUpdateMasterKey(key);
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("logUpdateMasterKey");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
@@ -412,7 +412,7 @@ public class DelegationTokenSecretManager
           namesystem.logExpireDelegationToken(dtId);
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("logExpireToken");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.

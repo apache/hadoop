@@ -54,7 +54,7 @@ public interface RouterRpcMonitor {
 
   /**
    * Start proxying an operation to the Namenode.
-   * @return Id of the thread doing the proxying.
+   * @return id of the thread doing the proxying.
    */
   long proxyOp();
 

@@ -92,6 +92,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    *
    * @param netgroup return users for this netgroup
    * @return list of users for a given netgroup
+   * @throws IOException raised on errors performing I/O.
    */
   protected List<String> getUsersForNetgroup(String netgroup) 
     throws IOException {
@@ -128,6 +129,7 @@ public class ShellBasedUnixGroupsNetgroupMapping
    *
    * @param netgroup get users for this netgroup
    * @return string of users for a given netgroup in getent netgroups format
+   * @throws IOException raised on errors performing I/O.
    */
   protected String execShellGetUserForNetgroup(final String netgroup)
       throws IOException {

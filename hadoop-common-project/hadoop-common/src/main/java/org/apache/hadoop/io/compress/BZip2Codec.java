@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 
@@ -99,7 +100,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param out        the location for the final output stream
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -116,7 +117,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to, to have it 
    *         compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
@@ -154,7 +155,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -171,7 +172,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,
@@ -255,10 +256,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
     private void writeStreamHeader() throws IOException {
       if (super.out != null) {
-        // The compressed bzip2 stream should start with the
-        // identifying characters BZ. Caller of CBZip2OutputStream
-        // i.e. this class must write these characters.
-        out.write(HEADER.getBytes(StandardCharsets.UTF_8));
+        writeHeader(out);
       }
     }
 
@@ -547,4 +545,11 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
 
   }// end of BZip2CompressionInputStream
 
+  @VisibleForTesting
+  public static void writeHeader(OutputStream out) throws IOException {
+    // The compressed bzip2 stream should start with the
+    // identifying characters BZ. Caller of CBZip2OutputStream
+    // i.e. this class must write these characters.
+    out.write(HEADER.getBytes(StandardCharsets.UTF_8));
+  }
 }

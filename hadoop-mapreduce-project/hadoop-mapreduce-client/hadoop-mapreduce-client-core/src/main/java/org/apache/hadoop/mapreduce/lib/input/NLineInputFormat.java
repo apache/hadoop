@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -39,6 +38,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.LineReader;
+import org.apache.hadoop.util.functional.FutureIO;
 
 /**
  * NLineInputFormat which splits N lines of input as one split.
@@ -99,10 +99,10 @@ public class NLineInputFormat extends FileInputFormat<LongWritable, Text> {
     try {
       final FutureDataInputStreamBuilder builder =
           fileName.getFileSystem(conf).openFile(fileName);
-      FutureIOSupport.propagateOptions(builder, conf,
+      FutureIO.propagateOptions(builder, conf,
           MRJobConfig.INPUT_FILE_OPTION_PREFIX,
           MRJobConfig.INPUT_FILE_MANDATORY_PREFIX);
-      FSDataInputStream in  = FutureIOSupport.awaitFuture(builder.build());
+      FSDataInputStream in  = FutureIO.awaitFuture(builder.build());
       lr = new LineReader(in, conf);
       Text line = new Text();
       int numLines = 0;

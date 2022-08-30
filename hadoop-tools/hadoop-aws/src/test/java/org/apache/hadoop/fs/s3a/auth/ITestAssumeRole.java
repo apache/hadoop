@@ -47,9 +47,10 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
@@ -72,7 +73,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Tests use of assumed roles.
  * Only run if an assumed role is provided.
  */
-@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed", "ThrowableNotThrown"})
+@SuppressWarnings("ThrowableNotThrown")
 public class ITestAssumeRole extends AbstractS3ATestBase {
 
   private static final Logger LOG =
@@ -139,6 +140,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
@@ -152,6 +154,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -169,6 +172,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * @return a configuration set to use to the role ARN.
    * @throws JsonProcessingException problems working with JSON policies.
    */
+  @SuppressWarnings("deprecation")
   protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
@@ -182,6 +186,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedInvalidRole() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
@@ -199,6 +204,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleNoARN() throws Exception {
     describe("Attemnpt to create the FS with no ARN");
     Configuration conf = createAssumedRoleConfig();
@@ -231,6 +237,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleCannotAuthAssumedRole() throws Exception {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
@@ -244,13 +251,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth() throws Exception {
     describe("Try to authenticate with a keypair with spaces");
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "not valid");
     conf.set(SECRET_KEY, "not secret");
     expectFileSystemCreateFailure(conf,
@@ -260,13 +267,13 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth2() throws Exception {
     describe("Try to authenticate with an invalid keypair");
 
     Configuration conf = createAssumedRoleConfig();
     unsetHadoopCredentialProviders(conf);
-    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
-        SimpleAWSCredentialsProvider.NAME);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER, SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "notvalid");
     conf.set(SECRET_KEY, "notsecret");
     expectFileSystemCreateFailure(conf,
@@ -344,6 +351,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumeRoleUndefined() throws Throwable {
     describe("Verify that you cannot instantiate the"
         + " AssumedRoleCredentialProvider without a role ARN");
@@ -355,6 +363,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedIllegalDuration() throws Throwable {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
@@ -528,6 +537,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * don't break.
    */
   @Test
+  @SuppressWarnings("deprecation")
   public void testAssumedRoleRetryHandler() throws Throwable {
     try(AssumedRoleCredentialProvider provider
             = new AssumedRoleCredentialProvider(getFileSystem().getUri(),
@@ -563,9 +573,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     roleFS = (S3AFileSystem) writeableDir.getFileSystem(conf);
     CommitterStatistics committerStatistics = fs.newCommitterStatistics();
     CommitOperations fullOperations = new CommitOperations(fs,
-        committerStatistics);
+        committerStatistics, "/");
     CommitOperations operations = new CommitOperations(roleFS,
-        committerStatistics);
+        committerStatistics, "/");
 
     File localSrc = File.createTempFile("source", "");
     writeCSVData(localSrc);
@@ -595,37 +605,37 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
           SinglePendingCommit pending =
               fullOperations.uploadFileToPendingCommit(src, dest, "",
                   uploadPartSize, progress);
-          pending.save(fs, new Path(readOnlyDir,
-              name + CommitConstants.PENDING_SUFFIX), true);
+          pending.save(fs,
+              new Path(readOnlyDir, name + CommitConstants.PENDING_SUFFIX),
+              SinglePendingCommit.serializer());
           assertTrue(src.delete());
         }));
     progress.assertCount("progress counter is not expected",
         range);
 
-    try {
+    try(CommitContext commitContext =
+            operations.createCommitContextForTesting(uploadDest,
+                null, 0)) {
       // we expect to be able to list all the files here
       Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
           pendingCommits = operations.loadSinglePendingCommits(readOnlyDir,
-          true);
+          true, commitContext);
 
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();
       assertEquals(range, commits.size());
-      try(CommitOperations.CommitContext commitContext
-              = operations.initiateCommitOperation(uploadDest)) {
-        commits.parallelStream().forEach(
-            (c) -> {
-              CommitOperations.MaybeIOE maybeIOE =
-                  commitContext.commit(c, "origin");
-              Path path = c.destinationPath();
-              assertCommitAccessDenied(path, maybeIOE);
-            });
-      }
+      commits.parallelStream().forEach(
+          (c) -> {
+            CommitOperations.MaybeIOE maybeIOE =
+                commitContext.commit(c, "origin");
+            Path path = c.destinationPath();
+            assertCommitAccessDenied(path, maybeIOE);
+          });
 
       // fail of all list and abort of .pending files.
       LOG.info("abortAllSinglePendingCommits({})", readOnlyDir);
       assertCommitAccessDenied(readOnlyDir,
-          operations.abortAllSinglePendingCommits(readOnlyDir, true));
+          operations.abortAllSinglePendingCommits(readOnlyDir, commitContext, true));
 
       // try writing a magic file
       Path magicDestPath = new Path(readOnlyDir,

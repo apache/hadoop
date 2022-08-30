@@ -105,7 +105,8 @@ class Display extends FsCommand {
     }
 
     protected InputStream getInputStream(PathData item) throws IOException {
-      return item.fs.open(item.path);
+      // Always do sequential reads;
+      return item.openForSequentialIO();
     }
   }
   

@@ -127,6 +127,8 @@ public class CompressedSplitLineReader extends SplitLineReader {
   @Override
   protected int fillBuffer(InputStream in, byte[] buffer, boolean inDelimiter)
       throws IOException {
+    boolean alreadyReadAfterSplit = didReadAfterSplit();
+
     int bytesRead = in.read(buffer);
 
     // If the split ended in the middle of a record delimiter then we need
@@ -135,7 +137,9 @@ public class CompressedSplitLineReader extends SplitLineReader {
     // However if using the default delimiter and the next character is a
     // linefeed then next split will treat it as a delimiter all by itself
     // and the additional record read should not be performed.
-    if (inDelimiter && bytesRead > 0) {
+    boolean justReadAfterSplit = !alreadyReadAfterSplit && didReadAfterSplit();
+
+    if (justReadAfterSplit && inDelimiter && bytesRead > 0) {
       if (usingCRLF) {
         needAdditionalRecord = (buffer[0] != '\n');
       } else {
@@ -152,7 +156,7 @@ public class CompressedSplitLineReader extends SplitLineReader {
     if (!finished) {
       // only allow at most one more record to be read after the stream
       // reports the split ended
-      if (scin.getPos() > scin.getAdjustedEnd()) {
+      if (didReadAfterSplit()) {
         finished = true;
       }
 
@@ -169,5 +173,9 @@ public class CompressedSplitLineReader extends SplitLineReader {
   @Override
   protected void unsetNeedAdditionalRecordAfterSplit() {
     needAdditionalRecord = false;
+  }
+
+  private boolean didReadAfterSplit() throws IOException {
+    return scin.getPos() > scin.getAdjustedEnd();
   }
 }

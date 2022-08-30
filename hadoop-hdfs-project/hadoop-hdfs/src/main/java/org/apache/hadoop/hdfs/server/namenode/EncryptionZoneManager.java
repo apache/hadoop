@@ -192,7 +192,7 @@ public class EncryptionZoneManager {
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("pauseForTestingAfterNthCheckpoint");
     }
     reencryptionHandler
         .pauseForTestingAfterNthCheckpoint(iip.getLastINode().getId(), count);
@@ -224,7 +224,7 @@ public class EncryptionZoneManager {
       return getReencryptionStatus().getZoneStatus(inode.getId());
     } finally {
       dir.readUnlock();
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("getZoneStatus");
     }
   }
 
@@ -285,7 +285,7 @@ public class EncryptionZoneManager {
     try {
       reencryptionHandler.stopThreads();
     } finally {
-      dir.getFSNamesystem().writeUnlock();
+      dir.getFSNamesystem().writeUnlock("stopReencryptThread");
     }
     if (reencryptHandlerExecutor != null) {
       reencryptHandlerExecutor.shutdownNow();

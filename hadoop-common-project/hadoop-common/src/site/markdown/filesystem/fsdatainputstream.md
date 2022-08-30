@@ -443,6 +443,52 @@ The semantics of this are exactly equivalent to
 That is, the buffer is filled entirely with the contents of the input source
 from position `position`
 
+### `default void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
+
+Read fully data for a list of ranges asynchronously. The default implementation
+iterates through the ranges, tries to coalesce the ranges based on values of
+`minSeekForVectorReads` and `maxReadSizeForVectorReads` and then read each merged
+ranges synchronously, but the intent is sub classes can implement efficient
+implementation. Reading in both direct and heap byte buffers are supported.
+Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for
+allocating buffers such that even direct buffers are garbage collected when
+they are no longer referenced.
+
+The position returned by `getPos()` after `readVectored()` is undefined.
+
+If a file is changed while the `readVectored()` operation is in progress, the output is
+undefined. Some ranges may have old data, some may have new, and some may have both.
+
+While a `readVectored()` operation is in progress, normal read api calls may block.
+
+Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
+lead to memory fragmentation explained in HADOOP-18296.
+
+
+#### Preconditions
+
+For each requested range:
+
+    range.getOffset >= 0 else raise IllegalArgumentException
+    range.getLength >= 0 else raise EOFException
+
+#### Postconditions
+
+For each requested range:
+
+    range.getData() returns CompletableFuture<ByteBuffer> which will have data
+    from range.getOffset to range.getLength.
+
+### `minSeekForVectorReads()`
+
+The smallest reasonable seek. Two ranges won't be merged together if the difference between
+end of first and start of next range is more than this value.
+
+### `maxReadSizeForVectorReads()`
+
+Maximum number of bytes which can be read in one go after merging the ranges.
+Two ranges won't be merged if the combined data to be read is more than this value.
+Essentially setting this to 0 will disable the merging of ranges.
 
 ## Consistency
 

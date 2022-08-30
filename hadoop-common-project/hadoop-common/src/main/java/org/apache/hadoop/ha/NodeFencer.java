@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
  * <ul>
  * <li><code>shell(/path/to/some/script.sh args...)</code></li>
  * <li><code>sshfence(...)</code> (see {@link SshFenceByTcpPort})
+ * <li><code>powershell(...)</code> (see {@link PowerShellFencer})
  * </ul>
  */
 @InterfaceAudience.Private

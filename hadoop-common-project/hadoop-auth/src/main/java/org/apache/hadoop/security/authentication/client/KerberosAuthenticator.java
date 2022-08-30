@@ -280,6 +280,9 @@ public class KerberosAuthenticator implements Authenticator {
     boolean negotiate = false;
     if (conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       String authHeader = conn.getHeaderField(WWW_AUTHENTICATE);
+      if (authHeader == null) {
+        authHeader = conn.getHeaderField(WWW_AUTHENTICATE.toLowerCase());
+      }
       negotiate = authHeader != null && authHeader.trim().startsWith(NEGOTIATE);
     }
     return negotiate;
@@ -388,6 +391,9 @@ public class KerberosAuthenticator implements Authenticator {
     int status = conn.getResponseCode();
     if (status == HttpURLConnection.HTTP_OK || status == HttpURLConnection.HTTP_UNAUTHORIZED) {
       String authHeader = conn.getHeaderField(WWW_AUTHENTICATE);
+      if (authHeader == null) {
+        authHeader = conn.getHeaderField(WWW_AUTHENTICATE.toLowerCase());
+      }
       if (authHeader == null || !authHeader.trim().startsWith(NEGOTIATE)) {
         throw new AuthenticationException("Invalid SPNEGO sequence, '" + WWW_AUTHENTICATE +
                                           "' header incorrect: " + authHeader);

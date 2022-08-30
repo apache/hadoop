@@ -793,6 +793,10 @@ public class YarnConfiguration extends Configuration {
      RM_PREFIX + "delegation.token.max-lifetime";
   public static final long RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT =
     7*24*60*60*1000; // 7 days
+  public static final String RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY =
+      RM_PREFIX + "delegation.token.remove-scan-interval";
+  public static final long RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT =
+      60*60*1000; // 1 hour
 
   public static final String RM_DELEGATION_TOKEN_MAX_CONF_SIZE =
       RM_PREFIX + "delegation-token.max-conf-size-bytes";
@@ -3920,6 +3924,13 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FEDERATION_REGISTRY_BASE_KEY =
       "yarnfederation/";
 
+  public static final String FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY =
+      FEDERATION_PREFIX + "state-store.heartbeat.initial-delay";
+
+  // 30 secs
+  public static final int
+      DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY = 30;
+
   public static final String FEDERATION_STATESTORE_HEARTBEAT_INTERVAL_SECS =
       FEDERATION_PREFIX + "state-store.heartbeat-interval-secs";
 
@@ -4106,6 +4117,25 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "read-timeout";
   public static final long DEFAULT_ROUTER_WEBAPP_READ_TIMEOUT =
       TimeUnit.SECONDS.toMillis(30);
+
+  /** The Kerberos keytab for the yarn router.*/
+  public static final String ROUTER_KEYTAB = ROUTER_PREFIX + "keytab.file";
+
+  /** The Kerberos principal for the yarn router.*/
+  public static final String ROUTER_PRINCIPAL = ROUTER_PREFIX + "kerberos.principal";
+
+  /** The Kerberos principal hostname for the yarn router.*/
+  public static final String ROUTER_KERBEROS_PRINCIPAL_HOSTNAME_KEY = ROUTER_PREFIX +
+      "kerberos.principal.hostname";
+
+  /** Router enable AppsInfo Cache. **/
+  public static final String ROUTER_APPSINFO_ENABLED = ROUTER_WEBAPP_PREFIX + "appsinfo-enabled";
+  public static final boolean DEFAULT_ROUTER_APPSINFO_ENABLED = false;
+
+  /** Router AppsInfo Cache Count. **/
+  public static final String ROUTER_APPSINFO_CACHED_COUNT =
+      ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
+  public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;
 
   ////////////////////////////////
   // CSI Volume configs
@@ -4408,6 +4438,12 @@ public class YarnConfiguration extends Configuration {
 
   private static final String RM_NODE_LABELS_PREFIX = RM_PREFIX
       + "node-labels.";
+
+  public static final String AM_DEFAULT_NODE_LABEL =
+      RM_NODE_LABELS_PREFIX + "am.default-node-label-expression";
+
+  public static final String AM_ALLOW_NON_EXCLUSIVE_ALLOCATION =
+      RM_NODE_LABELS_PREFIX + "am.allow-non-exclusive-allocation";
 
   public static final String RM_NODE_LABELS_PROVIDER_CONFIG =
       RM_NODE_LABELS_PREFIX + "provider";

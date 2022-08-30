@@ -263,6 +263,7 @@ public abstract class AbstractCSQueue implements CSQueue {
   @Override
   public void setParent(CSQueue newParentQueue) {
     this.parent = newParentQueue;
+    getMetrics().setParentQueue(newParentQueue);
   }
 
   @Override
@@ -342,8 +343,11 @@ public abstract class AbstractCSQueue implements CSQueue {
     writeLock.lock();
     try {
       CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
+      this.acls = configuration.getAcls(getQueuePath());
+
       if (isDynamicQueue() || this instanceof AbstractAutoCreatedLeafQueue) {
         setDynamicQueueProperties();
+        setDynamicQueueACLProperties();
       }
 
       // Collect and set the Node label configuration
@@ -369,8 +373,6 @@ public abstract class AbstractCSQueue implements CSQueue {
       QueueStateHelper.setQueueState(this);
 
       authorizer = YarnAuthorizationProvider.getInstance(configuration);
-
-      this.acls = configuration.getAcls(getQueuePath());
 
       this.userWeights = getUserWeightsFromHierarchy();
 
@@ -426,6 +428,9 @@ public abstract class AbstractCSQueue implements CSQueue {
             .setLabelsByQueue(getQueuePath(), new HashSet<>(parentNodeLabels));
       }
     }
+  }
+
+  protected void setDynamicQueueACLProperties() {
   }
 
   private UserWeights getUserWeightsFromHierarchy() {
@@ -1023,8 +1028,8 @@ public abstract class AbstractCSQueue implements CSQueue {
     Set<String> nodeLabels = new HashSet<String>();
     if (this.getAccessibleNodeLabels() != null && this.getAccessibleNodeLabels()
         .contains(RMNodeLabelsManager.ANY)) {
-      nodeLabels.addAll(Sets.union(this.getQueueCapacities().getNodePartitionsSet(),
-          this.getQueueResourceUsage().getNodePartitionsSet()));
+      nodeLabels.addAll(Sets.union(this.getQueueCapacities().getExistingNodeLabels(),
+          this.getQueueResourceUsage().getExistingNodeLabels()));
     } else {
       nodeLabels.addAll(this.getAccessibleNodeLabels());
     }

@@ -37,22 +37,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptI
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 
-import java.util.Map;
 
 public class MockAMLauncher extends ApplicationMasterLauncher
     implements EventHandler<AMLauncherEvent> {
   private static final Logger LOG = LoggerFactory.getLogger(
       MockAMLauncher.class);
 
-  private Map<ApplicationId, AMSimulator> appIdAMSim;
+  private SLSRunner slsRunner;
 
-  SLSRunner se;
-
-  public MockAMLauncher(SLSRunner se, RMContext rmContext,
-      Map<ApplicationId, AMSimulator> appIdAMSim) {
+  public MockAMLauncher(SLSRunner slsRunner, RMContext rmContext) {
     super(rmContext);
-    this.appIdAMSim = appIdAMSim;
-    this.se = se;
+    this.slsRunner = slsRunner;
   }
 
   @Override
@@ -79,12 +74,11 @@ public class MockAMLauncher extends ApplicationMasterLauncher
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public void handle(AMLauncherEvent event) {
     ApplicationId appId =
         event.getAppAttempt().getAppAttemptId().getApplicationId();
     // find AMSimulator
-    AMSimulator ams = appIdAMSim.get(appId);
+    AMSimulator ams = slsRunner.getAMSimulatorByAppId(appId);
     if (ams == null) {
       throw new YarnRuntimeException(
           "Didn't find any AMSimulator for applicationId=" + appId);
@@ -103,7 +97,7 @@ public class MockAMLauncher extends ApplicationMasterLauncher
             event.getAppAttempt().getMasterContainer());
         LOG.info("Notify AM launcher launched:" + amContainer.getId());
 
-        se.getNmMap().get(amContainer.getNodeId())
+        slsRunner.getNmMap().get(amContainer.getNodeId())
             .addNewContainer(amContainer, -1, appId);
         ams.getRanNodes().add(amContainer.getNodeId());
         return;
@@ -111,7 +105,7 @@ public class MockAMLauncher extends ApplicationMasterLauncher
         throw new YarnRuntimeException(e);
       }
     case CLEANUP:
-      se.getNmMap().get(amContainer.getNodeId())
+      slsRunner.getNmMap().get(amContainer.getNodeId())
           .cleanupContainer(amContainer.getId());
       break;
     default:

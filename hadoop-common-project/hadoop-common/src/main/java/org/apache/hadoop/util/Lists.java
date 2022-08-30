@@ -44,6 +44,9 @@ public final class Lists {
 
   /**
    * Creates a <i>mutable</i>, empty {@code ArrayList} instance.
+   *
+   * @param <E> Generics Type E.
+   * @return ArrayList Generics Type E.
    */
   public static <E> ArrayList<E> newArrayList() {
     return new ArrayList<>();
@@ -59,6 +62,10 @@ public final class Lists {
    * {@link Arrays#asList asList}
    * {@code (...))}, or for creating an empty list then calling
    * {@link Collections#addAll}.
+   *
+   * @param <E> Generics Type E.
+   * @param elements elements.
+   * @return ArrayList Generics Type E.
    */
   @SafeVarargs
   public static <E> ArrayList<E> newArrayList(E... elements) {
@@ -76,6 +83,10 @@ public final class Lists {
    * Creates a <i>mutable</i> {@code ArrayList} instance containing the
    * given elements; a very thin shortcut for creating an empty list then
    * calling Iterables#addAll.
+   *
+   * @param <E> Generics Type E.
+   * @param elements elements.
+   * @return ArrayList Generics Type E.
    */
   public static <E> ArrayList<E> newArrayList(Iterable<? extends E> elements) {
     if (elements == null) {
@@ -90,6 +101,10 @@ public final class Lists {
    * Creates a <i>mutable</i> {@code ArrayList} instance containing the
    * given elements; a very thin shortcut for creating an empty list
    * and then calling Iterators#addAll.
+   *
+   * @param <E> Generics Type E.
+   * @param elements elements.
+   * @return ArrayList Generics Type E.
    */
   public static <E> ArrayList<E> newArrayList(Iterator<? extends E> elements) {
     ArrayList<E> list = newArrayList();
@@ -102,6 +117,7 @@ public final class Lists {
    * specified initial size;
    * simply delegates to {@link ArrayList#ArrayList(int)}.
    *
+   * @param <E> Generics Type E.
    * @param initialArraySize the exact size of the initial backing array for
    *     the returned array list
    *     ({@code ArrayList} documentation calls this value the "capacity").
@@ -126,6 +142,8 @@ public final class Lists {
    * @return a new, empty {@code ArrayList}, sized appropriately to hold the
    *     estimated number of elements.
    * @throws IllegalArgumentException if {@code estimatedSize} is negative.
+   *
+   * @param <E> Generics Type E.
    */
   public static <E> ArrayList<E> newArrayListWithExpectedSize(
       int estimatedSize) {
@@ -140,7 +158,10 @@ public final class Lists {
    * outperform {@code LinkedList} except in certain rare and specific
    * situations. Unless you have
    * spent a lot of time benchmarking your specific needs, use one of those
-   * instead.
+   * instead.</p>
+   *
+   * @param <E> Generics Type E.
+   * @return Generics Type E List.
    */
   public static <E> LinkedList<E> newLinkedList() {
     return new LinkedList<>();
@@ -155,7 +176,11 @@ public final class Lists {
    * {@link java.util.ArrayDeque} consistently
    * outperform {@code LinkedList} except in certain rare and specific
    * situations. Unless you have spent a lot of time benchmarking your
-   * specific needs, use one of those instead.
+   * specific needs, use one of those instead.</p>
+   *
+   * @param elements elements.
+   * @param <E> Generics Type E.
+   * @return Generics Type E List.
    */
   public static <E> LinkedList<E> newLinkedList(
       Iterable<? extends E> elements) {
@@ -238,6 +263,7 @@ public final class Lists {
    * @param originalList original big list.
    * @param pageSize desired size of each sublist ( last one
    *                 may be smaller)
+   * @param <T> Generics Type.
    * @return a list of sub lists.
    */
   public static <T> List<List<T>> partition(List<T> originalList, int pageSize) {

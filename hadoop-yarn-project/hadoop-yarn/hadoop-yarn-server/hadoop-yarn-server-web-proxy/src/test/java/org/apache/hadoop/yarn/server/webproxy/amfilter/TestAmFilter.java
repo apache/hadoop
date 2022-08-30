@@ -25,12 +25,9 @@ import java.net.HttpURLConnection;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Enumeration;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.servlet.FilterConfig;

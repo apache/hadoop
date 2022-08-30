@@ -213,12 +213,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         allocateResponse.getCompletedContainersStatuses().size();
 
     if (ask.size() > 0 || release.size() > 0) {
-      LOG.info("getResources() for " + applicationId + ":" + " ask="
-          + ask.size() + " release= " + release.size() + " newContainers="
-          + allocateResponse.getAllocatedContainers().size()
-          + " finishedContainers=" + numCompletedContainers
-          + " resourcelimit=" + availableResources + " knownNMs="
-          + clusterNmCount);
+      LOG.info("applicationId={}: ask={} release={} newContainers={} finishedContainers={}"
+              + " resourceLimit={} knownNMs={}", applicationId, ask.size(), release.size(),
+          allocateResponse.getAllocatedContainers().size(), numCompletedContainers,
+          availableResources, clusterNmCount);
     }
 
     ask.clear();

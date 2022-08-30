@@ -25,13 +25,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-
-import javax.security.auth.login.AppConfigurationEntry;
 
 import org.apache.curator.ensemble.fixed.FixedEnsembleProvider;
 import org.apache.curator.framework.CuratorFramework;
@@ -52,6 +48,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenManager;
 import static org.apache.hadoop.util.Time.now;
@@ -249,68 +246,6 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         new JaasConfiguration(JAAS_LOGIN_ENTRY_NAME, principal, keytabFile);
     javax.security.auth.login.Configuration.setConfiguration(jConf);
     return principal.split("[/@]")[0];
-  }
-
-  /**
-   * Creates a programmatic version of a jaas.conf file. This can be used
-   * instead of writing a jaas.conf file and setting the system property,
-   * "java.security.auth.login.config", to point to that file. It is meant to be
-   * used for connecting to ZooKeeper.
-   */
-  @InterfaceAudience.Private
-  public static class JaasConfiguration extends
-      javax.security.auth.login.Configuration {
-
-    private final javax.security.auth.login.Configuration baseConfig =
-        javax.security.auth.login.Configuration.getConfiguration();
-    private static AppConfigurationEntry[] entry;
-    private String entryName;
-
-    /**
-     * Add an entry to the jaas configuration with the passed in name,
-     * principal, and keytab. The other necessary options will be set for you.
-     *
-     * @param entryName
-     *          The name of the entry (e.g. "Client")
-     * @param principal
-     *          The principal of the user
-     * @param keytab
-     *          The location of the keytab
-     */
-    public JaasConfiguration(String entryName, String principal, String keytab) {
-      this.entryName = entryName;
-      Map<String, String> options = new HashMap<String, String>();
-      options.put("keyTab", keytab);
-      options.put("principal", principal);
-      options.put("useKeyTab", "true");
-      options.put("storeKey", "true");
-      options.put("useTicketCache", "false");
-      options.put("refreshKrb5Config", "true");
-      String jaasEnvVar = System.getenv("HADOOP_JAAS_DEBUG");
-      if (jaasEnvVar != null && "true".equalsIgnoreCase(jaasEnvVar)) {
-        options.put("debug", "true");
-      }
-      entry = new AppConfigurationEntry[] {
-          new AppConfigurationEntry(getKrb5LoginModuleName(),
-              AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-              options) };
-    }
-
-    @Override
-    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-      return (entryName.equals(name)) ? entry : ((baseConfig != null)
-        ? baseConfig.getAppConfigurationEntry(name) : null);
-    }
-
-    private String getKrb5LoginModuleName() {
-      String krb5LoginModuleName;
-      if (System.getProperty("java.vendor").contains("IBM")) {
-        krb5LoginModuleName = "com.ibm.security.auth.module.Krb5LoginModule";
-      } else {
-        krb5LoginModuleName = "com.sun.security.auth.module.Krb5LoginModule";
-      }
-      return krb5LoginModuleName;
-    }
   }
 
   @Override

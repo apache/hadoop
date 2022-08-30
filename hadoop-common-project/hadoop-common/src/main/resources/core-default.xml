@@ -131,6 +131,14 @@
 </property>
 
 <property>
+  <name>hadoop.security.resolver.impl</name>
+  <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+  <description>
+    The resolver implementation used to resolve FQDN for Kerberos
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.dns.log-slow-lookups.enabled</name>
   <value>false</value>
   <description>
@@ -793,7 +801,8 @@
   <description>The size of buffer for use in sequence files.
   The size of this buffer should probably be a multiple of hardware
   page size (4096 on Intel x86), and it determines how much data is
-  buffered during read and write operations.</description>
+  buffered during read and write operations. Must be greater than zero.
+  </description>
 </property>
 
 <property>
@@ -2929,7 +2938,7 @@ The switch to turn S3A auditing on or off.
   <value></value>
   <description>
     List of fencing methods to use for service fencing. May contain
-    builtin methods (eg shell and sshfence) or user-defined method.
+    builtin methods (eg shell, sshfence and powershell) or user-defined method.
   </description>
 </property>
 

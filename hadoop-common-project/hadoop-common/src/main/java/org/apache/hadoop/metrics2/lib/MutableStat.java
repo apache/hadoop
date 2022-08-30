@@ -179,7 +179,7 @@ public class MutableStat extends MutableMetric {
   }
 
   /**
-   * Return the SampleStat snapshot timestamp
+   * @return Return the SampleStat snapshot timestamp.
    */
   public long getSnapshotTimeStamp() {
     return snapshotTimeStamp;

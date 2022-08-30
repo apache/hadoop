@@ -66,6 +66,8 @@ public class LogLevel {
   public static final String PROTOCOL_HTTPS = "https";
   /**
    * A command line implementation
+   * @param args input args.
+   * @throws Exception exception.
    */
   public static void main(String[] args) throws Exception {
     CLI cli = new CLI(new Configuration());

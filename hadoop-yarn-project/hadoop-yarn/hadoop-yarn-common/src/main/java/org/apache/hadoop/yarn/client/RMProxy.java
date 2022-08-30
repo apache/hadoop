@@ -98,8 +98,7 @@ public class RMProxy<T> {
     YarnConfiguration conf = (configuration instanceof YarnConfiguration)
         ? (YarnConfiguration) configuration
         : new YarnConfiguration(configuration);
-    RetryPolicy retryPolicy = createRetryPolicy(conf,
-        (HAUtil.isHAEnabled(conf) || HAUtil.isFederationFailoverEnabled(conf)));
+    RetryPolicy retryPolicy = createRetryPolicy(conf, isFailoverEnabled(conf));
     return newProxyInstance(conf, protocol, instance, retryPolicy);
   }
 
@@ -126,7 +125,7 @@ public class RMProxy<T> {
       final Class<T> protocol, RMProxy<T> instance, RetryPolicy retryPolicy)
           throws IOException{
     RMFailoverProxyProvider<T> provider;
-    if (HAUtil.isHAEnabled(conf) || HAUtil.isFederationEnabled(conf)) {
+    if (isFailoverEnabled(conf)) {
       provider = instance.createRMFailoverProxyProvider(conf, protocol);
     } else {
       provider = instance.createNonHaRMFailoverProxyProvider(conf, protocol);
@@ -300,7 +299,20 @@ public class RMProxy<T> {
     // YARN-4288: local IOException is also possible.
     exceptionToPolicyMap.put(IOException.class, retryPolicy);
     // Not retry on remote IO exception.
-    return RetryPolicies.retryOtherThanRemoteException(
+    return RetryPolicies.retryOtherThanRemoteAndSaslException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
   }
+
+  private static boolean isFailoverEnabled(YarnConfiguration conf) {
+    if (HAUtil.isHAEnabled(conf)) {
+      // Considering Resource Manager HA is enabled.
+      return true;
+    }
+    if (HAUtil.isFederationEnabled(conf) && HAUtil.isFederationFailoverEnabled(conf)) {
+      // Considering both federation and federation failover are enabled.
+      return true;
+    }
+    return false;
+  }
+
 }

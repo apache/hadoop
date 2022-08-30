@@ -27,7 +27,6 @@
 
     <properties>
         <grpc.version>1.26.0</grpc.version>
-        <os-maven-plugin.version>1.5.0.Final</os-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -149,13 +148,6 @@
     </dependencies>
 
     <build>
-        <extensions>
-            <extension>
-                <groupId>kr.motd.maven</groupId>
-                <artifactId>os-maven-plugin</artifactId>
-                <version>${os-maven-plugin.version}</version>
-            </extension>
-        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

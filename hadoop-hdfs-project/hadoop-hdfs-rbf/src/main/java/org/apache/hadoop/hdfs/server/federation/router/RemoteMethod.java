@@ -36,7 +36,7 @@ public class RemoteMethod {
   private static final Logger LOG = LoggerFactory.getLogger(RemoteMethod.class);
 
 
-  /** List of parameters: static and dynamic values, matchings types. */
+  /** List of parameters: static and dynamic values, matching types. */
   private final Object[] params;
   /** List of method parameters types, matches parameters. */
   private final Class<?>[] types;

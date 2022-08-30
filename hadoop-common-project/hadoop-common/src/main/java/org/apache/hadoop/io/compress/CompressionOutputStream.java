@@ -48,7 +48,7 @@ public abstract class CompressionOutputStream extends OutputStream
   /**
    * Create a compression output stream that writes
    * the compressed bytes to the given stream.
-   * @param out
+   * @param out out.
    */
   protected CompressionOutputStream(OutputStream out) {
     this.out = out;
@@ -89,12 +89,14 @@ public abstract class CompressionOutputStream extends OutputStream
   /**
    * Finishes writing compressed data to the output stream 
    * without closing the underlying stream.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void finish() throws IOException;
   
   /**
    * Reset the compression to the initial state. 
    * Does not reset the underlying stream.
+   * @throws IOException raised on errors performing I/O.
    */
   public abstract void resetState() throws IOException;
 

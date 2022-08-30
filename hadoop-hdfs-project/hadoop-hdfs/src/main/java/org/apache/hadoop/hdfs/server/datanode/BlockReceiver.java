@@ -307,6 +307,17 @@ class BlockReceiver implements Closeable {
     return replicaInfo;
   }
 
+  public void releaseAnyRemainingReservedSpace() {
+    if (replicaInfo != null) {
+      if (replicaInfo.getReplicaInfo().getBytesReserved() > 0) {
+        LOG.warn("Block {} has not released the reserved bytes. "
+                + "Releasing {} bytes as part of close.", replicaInfo.getBlockId(),
+            replicaInfo.getReplicaInfo().getBytesReserved());
+        replicaInfo.releaseAllBytesReserved();
+      }
+    }
+  }
+
   /**
    * close files and release volume reference.
    */
@@ -412,6 +423,7 @@ class BlockReceiver implements Closeable {
   void flushOrSync(boolean isSync, long seqno) throws IOException {
     long flushTotalNanos = 0;
     long begin = Time.monotonicNow();
+    DataNodeFaultInjector.get().delay();
     if (checksumOut != null) {
       long flushStartNanos = System.nanoTime();
       checksumOut.flush();
@@ -445,6 +457,7 @@ class BlockReceiver implements Closeable {
     }
     long duration = Time.monotonicNow() - begin;
     if (duration > datanodeSlowLogThresholdMs && LOG.isWarnEnabled()) {
+      datanode.metrics.incrSlowFlushOrSyncCount();
       LOG.warn("Slow flushOrSync took " + duration + "ms (threshold="
           + datanodeSlowLogThresholdMs + "ms), isSync:" + isSync + ", flushTotalNanos="
           + flushTotalNanos + "ns, volume=" + getVolumeBaseUri()
@@ -1656,6 +1669,7 @@ class BlockReceiver implements Closeable {
       }
       // send my ack back to upstream datanode
       long begin = Time.monotonicNow();
+      DataNodeFaultInjector.get().delay();
       /* for test only, no-op in production system */
       DataNodeFaultInjector.get().delaySendingAckToUpstream(inAddr);
       replyAck.write(upstreamOut);
@@ -1665,6 +1679,7 @@ class BlockReceiver implements Closeable {
           inAddr,
           duration);
       if (duration > datanodeSlowLogThresholdMs) {
+        datanode.metrics.incrSlowAckToUpstreamCount();
         LOG.warn("Slow PacketResponder send ack to upstream took " + duration
             + "ms (threshold=" + datanodeSlowLogThresholdMs + "ms), " + myString
             + ", replyAck=" + replyAck

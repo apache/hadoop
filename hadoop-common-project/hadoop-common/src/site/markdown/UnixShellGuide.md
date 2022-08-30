@@ -134,7 +134,7 @@ Apache Hadoop's shell code has a [function library](./UnixShellAPI.html) that is
 
 The shell code allows for core functions to be overridden. However, not all functions can be or are safe to be replaced.  If a function is not safe to replace, it will have an attribute of Replaceable: No.  If a function is safe to replace, it will have the attribute of Replaceable: Yes.
 
-In order to replace a function, create a file called `hadoop-user-functions.sh` in the `${HADOOP_CONF_DIR}` directory.  Simply define the new, replacement function in this file and the system will pick it up automatically.  There may be as many replacement functions as needed in this file.  Examples of function replacement are in the `hadoop-user-functions.sh.examples` file.
+In order to replace a function, create a file called `hadoop-user-functions.sh` in the `${HADOOP_CONF_DIR}` directory.  Simply define the new, replacement function in this file and the system will pick it up automatically.  There may be as many replacement functions as needed in this file.  Examples of function replacement are in the `hadoop-user-functions.sh.example` file.
 
 Functions that are marked Public and Stable are safe to use in shell profiles as-is.  Other functions may change in a minor release.
 

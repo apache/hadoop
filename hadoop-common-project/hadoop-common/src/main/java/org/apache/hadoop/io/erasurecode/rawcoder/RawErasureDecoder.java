@@ -80,6 +80,7 @@ public abstract class RawErasureDecoder {
    * @param erasedIndexes indexes of erased units in the inputs array
    * @param outputs output buffers to put decoded data into according to
    *                erasedIndexes, ready for read after the call
+   * @throws IOException raised on errors performing I/O.
    */
   public synchronized void decode(ByteBuffer[] inputs, int[] erasedIndexes,
                      ByteBuffer[] outputs) throws IOException {
@@ -117,6 +118,7 @@ public abstract class RawErasureDecoder {
   /**
    * Perform the real decoding using Direct ByteBuffer.
    * @param decodingState the decoding state
+   * @throws IOException  raised on errors performing I/O.
    */
   protected abstract void doDecode(ByteBufferDecodingState decodingState)
       throws IOException;

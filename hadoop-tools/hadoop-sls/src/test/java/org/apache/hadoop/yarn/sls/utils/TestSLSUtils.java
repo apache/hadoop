@@ -36,7 +36,7 @@ public class TestSLSUtils {
   @Test
   public void testGetRackHostname() {
     String str = "/rack1/node1";
-    String rackHostname[] = SLSUtils.getRackHostName(str);
+    String[] rackHostname = SLSUtils.getRackHostName(str);
     Assert.assertEquals("rack1", rackHostname[0]);
     Assert.assertEquals("node1", rackHostname[1]);
 
@@ -81,7 +81,7 @@ public class TestSLSUtils {
           } else if(nodeLabel.getName().equals("label2")) {
             Assert.assertFalse(nodeLabel.isExclusive());
           } else {
-            Assert.assertTrue("Unexepected label", false);
+            Assert.fail("Unexpected label");
           }
         }
       } else if (nodeDetail.getHostname().equals("/rack1/node4")) {

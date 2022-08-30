@@ -222,7 +222,7 @@ public class BackupImage extends FSImage {
       try {
         getNamesystem().dir.updateCountForQuota();
       } finally {
-        getNamesystem().writeUnlock();
+        getNamesystem().writeUnlock("applyEdits");
       }
     } finally {
       backupInputStream.clear();

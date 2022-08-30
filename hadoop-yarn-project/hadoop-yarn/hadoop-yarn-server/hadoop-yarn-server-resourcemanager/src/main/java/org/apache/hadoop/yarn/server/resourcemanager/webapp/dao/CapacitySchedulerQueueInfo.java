@@ -157,7 +157,7 @@ public class CapacitySchedulerQueueInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(queuePath, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(q, queuePath, conf));
 
     queuePriority = q.getPriority().getPriority();
     if (q instanceof ParentQueue) {
@@ -183,11 +183,11 @@ public class CapacitySchedulerQueueInfo {
     leafQueueTemplate = new LeafQueueTemplateInfo(conf, queuePath);
   }
 
-  public static ArrayList<QueueAclInfo> getSortedQueueAclInfoList(String queuePath,
-                                                             CapacitySchedulerConfiguration conf) {
+  public static ArrayList<QueueAclInfo> getSortedQueueAclInfoList(
+      CSQueue queue, String queuePath, CapacitySchedulerConfiguration conf) {
     ArrayList<QueueAclInfo> queueAclsInfo = new ArrayList<>();
-    for (Map.Entry<AccessType, AccessControlList> e : conf
-        .getAcls(queuePath).entrySet()) {
+    for (Map.Entry<AccessType, AccessControlList> e :
+        ((AbstractCSQueue) queue).getACLs().entrySet()) {
       QueueAclInfo queueAcl = new QueueAclInfo(e.getKey().toString(),
           e.getValue().getAclString());
       queueAclsInfo.add(queueAcl);

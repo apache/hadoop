@@ -351,7 +351,13 @@ Datanode supports hot swappable drives. The user can add or replace HDFS data vo
 * The user runs `dfsadmin -reconfig datanode HOST:PORT start` to start
   the reconfiguration process. The user can use
   `dfsadmin -reconfig datanode HOST:PORT status`
-  to query the running status of the reconfiguration task.
+  to query the running status of the reconfiguration task. In place of
+  HOST:PORT, we can also specify livenodes for datanode. It would allow
+  start or query reconfiguration on all live datanodes, whereas specifying
+  HOST:PORT would only allow start or query of reconfiguration on the
+  particular datanode represented by HOST:PORT. The examples for livenodes
+  queries are `dfsadmin -reconfig datanode livenodes start` and
+  `dfsadmin -reconfig datanode livenodes status`.
 
 * Once the reconfiguration task has completed, the user can safely `umount`
   the removed data volume directories and physically remove the disks.

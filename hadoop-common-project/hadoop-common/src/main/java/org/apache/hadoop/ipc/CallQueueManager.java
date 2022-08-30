@@ -405,6 +405,12 @@ public class CallQueueManager<E extends Schedulable>
   /**
    * Replaces active queue with the newly requested one and transfers
    * all calls to the newQ before returning.
+   *
+   * @param schedulerClass input schedulerClass.
+   * @param queueClassToUse input queueClassToUse.
+   * @param maxSize input maxSize.
+   * @param ns input ns.
+   * @param conf input configuration.
    */
   public synchronized void swapQueue(
       Class<? extends RpcScheduler> schedulerClass,

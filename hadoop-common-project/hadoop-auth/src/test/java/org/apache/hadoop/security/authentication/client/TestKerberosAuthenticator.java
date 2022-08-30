@@ -21,8 +21,13 @@ import static org.apache.hadoop.security.authentication.server.KerberosAuthentic
 import static org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler.NAME_RULES;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.charset.CharacterCodingException;
 import javax.security.sasl.AuthenticationException;
+
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -32,10 +37,12 @@ import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHa
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
@@ -248,4 +255,79 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     Assert.assertTrue(ex.equals(ex2));
   }
 
+  @Test(timeout = 60000)
+  public void testNegotiate() throws NoSuchMethodException, InvocationTargetException,
+          IllegalAccessException, IOException {
+    KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
+
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE)).
+            thenReturn(KerberosAuthenticator.NEGOTIATE);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
+            HttpURLConnection.class);
+    method.setAccessible(true);
+
+    Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
+  }
+
+  @Test(timeout = 60000)
+  public void testNegotiateLowerCase() throws NoSuchMethodException, InvocationTargetException,
+          IllegalAccessException, IOException {
+    KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
+
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getHeaderField("www-authenticate"))
+            .thenReturn(KerberosAuthenticator.NEGOTIATE);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("isNegotiate",
+            HttpURLConnection.class);
+    method.setAccessible(true);
+
+    Assert.assertTrue((boolean)method.invoke(kerberosAuthenticator, conn));
+  }
+
+  @Test(timeout = 60000)
+  public void testReadToken() throws NoSuchMethodException, IOException, IllegalAccessException,
+          InvocationTargetException {
+    KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
+    FieldUtils.writeField(kerberosAuthenticator, "base64", new Base64(), true);
+
+    Base64 base64 = new Base64();
+
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    Mockito.when(conn.getHeaderField(KerberosAuthenticator.WWW_AUTHENTICATE))
+            .thenReturn(KerberosAuthenticator.NEGOTIATE + " " +
+                    Arrays.toString(base64.encode("foobar".getBytes())));
+
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken",
+            HttpURLConnection.class);
+    method.setAccessible(true);
+
+    method.invoke(kerberosAuthenticator, conn); // expecting this not to throw an exception
+  }
+
+  @Test(timeout = 60000)
+  public void testReadTokenLowerCase() throws NoSuchMethodException, IOException,
+          IllegalAccessException, InvocationTargetException {
+    KerberosAuthenticator kerberosAuthenticator = new KerberosAuthenticator();
+    FieldUtils.writeField(kerberosAuthenticator, "base64", new Base64(), true);
+
+    Base64 base64 = new Base64();
+
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+    Mockito.when(conn.getHeaderField("www-authenticate"))
+            .thenReturn(KerberosAuthenticator.NEGOTIATE +
+                    Arrays.toString(base64.encode("foobar".getBytes())));
+
+    Method method = KerberosAuthenticator.class.getDeclaredMethod("readToken",
+            HttpURLConnection.class);
+    method.setAccessible(true);
+
+    method.invoke(kerberosAuthenticator, conn); // expecting this not to throw an exception
+  }
 }

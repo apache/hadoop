@@ -103,7 +103,7 @@ class CapacitySchedulerPage extends RmView {
           ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : nodeLabel;
       // first display the queue's label specific details :
       ResponseInfo ri =
-          info("\'" + lqinfo.getQueuePath().substring(5)
+          info("\'" + lqinfo.getQueuePath()
               + "\' Queue Status for Partition \'" + nodeLabelDisplay + "\'");
       renderQueueCapacityInfo(ri, nodeLabel);
       html.__(InfoBlock.class);
@@ -113,7 +113,7 @@ class CapacitySchedulerPage extends RmView {
 
       // second display the queue specific details :
       ri =
-          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
+          info("\'" + lqinfo.getQueuePath() + "\' Queue Status")
               .__("Queue State:", lqinfo.getQueueState());
       renderCommonLeafQueueInfo(ri);
 
@@ -125,7 +125,7 @@ class CapacitySchedulerPage extends RmView {
 
     private void renderLeafQueueInfoWithoutParition(Block html) {
       ResponseInfo ri =
-          info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status")
+          info("\'" + lqinfo.getQueuePath() + "\' Queue Status")
               .__("Queue State:", lqinfo.getQueueState());
       renderQueueCapacityInfo(ri, "");
       renderCommonLeafQueueInfo(ri);
@@ -348,7 +348,7 @@ class CapacitySchedulerPage extends RmView {
               span().$style(join(width(usedCapPercent),
                 ";font-size:1px;left:0%;", absUsedCap > absCap ? Q_OVER : Q_UNDER)).
             __('.').__().
-              span(".q", "Queue: "+info.getQueuePath().substring(5)).__().
+              span(".q", info.getQueuePath()).__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
             __(join(percent(used), " used")).__();
 
@@ -492,7 +492,7 @@ class CapacitySchedulerPage extends RmView {
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
-              span(".q", "Queue: root").__().
+              span(".q", "root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
               __(join(percent(used), " used")).__().
               __(QueueBlock.class).__();
@@ -522,7 +522,7 @@ class CapacitySchedulerPage extends RmView {
             a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER)).__(".").__().
-              span(".q", "Queue: root").__().
+              span(".q", "root").__().
             span().$class("qstats").$style(left(Q_STATS_POS)).
                 __(join(percent(used), " used")).__().
                 __(QueueBlock.class).__().__();
@@ -656,12 +656,9 @@ class CapacitySchedulerPage extends RmView {
           "    }",
           "  });",
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
-          "    var q = $('.q', data.rslt.obj).first().text();",
-          "    if (q == 'Queue: root') q = '';",
-          "    else {",
-          "      q = q.substr(q.lastIndexOf(':') + 2);",
-          "      q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
-          "    }",
+          "    var queues = $('.q', data.rslt.obj);",
+          "    var q = '^' + queues.first().text();",
+          "    q += queues.length == 1 ? '$' : '\\\\.';",
           // Update this filter column index for queue if new columns are added
           // Current index for queue column is 5
           "    $('#apps').dataTable().fnFilter(q, 5, true);",

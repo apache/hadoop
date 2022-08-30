@@ -86,6 +86,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedLeafQueue;
+
 import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
@@ -579,6 +581,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName, boolean isMoveApp) {
     // Careful! Locking order is important!
+    boolean isAppAlreadySubmitted = applicationAttemptMap.containsKey(
+        application.getApplicationAttemptId());
     writeLock.lock();
     try {
       // TODO, should use getUser, use this method just to avoid UT failure
@@ -592,7 +596,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     }
 
     // We don't want to update metrics for move app
-    if (!isMoveApp) {
+    if (!isMoveApp && !isAppAlreadySubmitted) {
       boolean unmanagedAM = application.getAppSchedulingInfo() != null &&
           application.getAppSchedulingInfo().isUnmanagedAM();
       usageTracker.getMetrics().submitAppAttempt(userName, unmanagedAM);
@@ -1700,6 +1704,19 @@ public class AbstractLeafQueue extends AbstractCSQueue {
     super.setDynamicQueueProperties();
   }
 
+  @Override
+  protected void setDynamicQueueACLProperties() {
+    super.setDynamicQueueACLProperties();
+
+    if (parent instanceof AbstractManagedParentQueue) {
+      acls.putAll(queueContext.getConfiguration().getACLsForLegacyAutoCreatedLeafQueue(
+          parent.getQueuePath()));
+    } else if (parent instanceof ParentQueue) {
+      acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(
+          ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
+    }
+  }
+
   private void updateSchedulerHealthForCompletedContainer(
       RMContainer rmContainer, ContainerStatus containerStatus) {
     // Update SchedulerHealth for released / preempted container
@@ -1736,8 +1753,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       if (nodePartition == null) {
         for (String partition : Sets.union(
-            getQueueCapacities().getNodePartitionsSet(),
-            queueResourceUsage.getNodePartitionsSet())) {
+            getQueueCapacities().getExistingNodeLabels(),
+            queueResourceUsage.getExistingNodeLabels())) {
           usersManager.updateUsageRatio(partition, clusterResource);
         }
       } else {
@@ -2251,7 +2268,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       readLock.unlock();
     }
   }
-
 
   public void setCapacity(float capacity) {
     configuredCapacityVectors.put(NO_LABEL, QueueCapacityVector.of(capacity * 100, PERCENTAGE));
