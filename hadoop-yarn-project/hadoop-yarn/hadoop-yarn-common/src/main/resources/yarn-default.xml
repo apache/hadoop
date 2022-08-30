@@ -1549,7 +1549,9 @@
   </property>
 
   <property>
-    <description>Whether to clean up nodemanager logs when log aggregation is enabled
+    <description>Whether to clean up nodemanager logs when log aggregation is enabled. Setting to
+      false disables the cleanup nodemanager logging, and it causes disk full in the long run. Users
+      can set to false for test-only purpose.
     </description>
     <name>yarn.log-aggregation.enable-local-cleanup</name>
     <value>true</value>

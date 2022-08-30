@@ -176,6 +176,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.enableLocalCleanup =
         conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP,
             YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP);
+    if (!this.enableLocalCleanup) {
+      LOG.warn("{} is only for testing and not for any production system ",
+          YarnConfiguration.LOG_AGGREGATION_ENABLE_LOCAL_CLEANUP);
+    }
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
     this.logFileSizeThreshold =
@@ -476,9 +480,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // do post clean up of log directories on any other exception
       LOG.error("Error occurred while aggregating the log for the application "
           + appId, e);
-      if (enableLocalCleanup) {
-        doAppLogAggregationPostCleanUp();
-      }
+      doAppLogAggregationPostCleanUp();
     } finally {
       if (!this.appAggregationFinished.get() && !this.aborted.get()) {
         LOG.warn("Log aggregation did not complete for application " + appId);
@@ -522,9 +524,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       // App is finished, upload the container logs.
       uploadLogsForContainers(true);
 
-      if (enableLocalCleanup) {
-        doAppLogAggregationPostCleanUp();
-      }
+      doAppLogAggregationPostCleanUp();
     } catch (LogAggregationDFSException e) {
       LOG.error("Error during log aggregation", e);
     }
@@ -536,6 +536,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   }
 
   private void doAppLogAggregationPostCleanUp() {
+    if (!enableLocalCleanup) {
+      return;
+    }
     // Remove the local app-log-dirs
     List<Path> localAppLogDirs = new ArrayList<Path>();
     for (String rootLogDir : dirsHandler.getLogDirsForCleanup()) {
