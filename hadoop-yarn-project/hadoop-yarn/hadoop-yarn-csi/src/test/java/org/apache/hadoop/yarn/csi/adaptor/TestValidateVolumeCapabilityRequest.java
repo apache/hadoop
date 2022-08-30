@@ -26,11 +26,11 @@ import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos.VolumeCapability.AccessMode;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos.VolumeCapability.VolumeType;
 import org.apache.hadoop.yarn.proto.YarnProtos;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.AccessMode.MULTI_NODE_MULTI_WRITER;
 import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeType.FILE_SYSTEM;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * UT for message exchanges.
@@ -38,7 +38,7 @@ import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilit
 public class TestValidateVolumeCapabilityRequest {
 
   @Test
-  public void testPBRecord() {
+  void testPBRecord() {
     CsiAdaptorProtos.VolumeCapability vcProto =
         CsiAdaptorProtos.VolumeCapability.newBuilder()
             .setAccessMode(AccessMode.MULTI_NODE_MULTI_WRITER)
@@ -64,22 +64,22 @@ public class TestValidateVolumeCapabilityRequest {
     ValidateVolumeCapabilitiesRequestPBImpl request =
         new ValidateVolumeCapabilitiesRequestPBImpl(requestProto);
 
-    Assert.assertEquals("volume-id-0000001", request.getVolumeId());
-    Assert.assertEquals(2, request.getVolumeAttributes().size());
-    Assert.assertEquals("value0", request.getVolumeAttributes().get("attr0"));
-    Assert.assertEquals("value1", request.getVolumeAttributes().get("attr1"));
-    Assert.assertEquals(1, request.getVolumeCapabilities().size());
+    assertEquals("volume-id-0000001", request.getVolumeId());
+    assertEquals(2, request.getVolumeAttributes().size());
+    assertEquals("value0", request.getVolumeAttributes().get("attr0"));
+    assertEquals("value1", request.getVolumeAttributes().get("attr1"));
+    assertEquals(1, request.getVolumeCapabilities().size());
     VolumeCapability vc =
         request.getVolumeCapabilities().get(0);
-    Assert.assertEquals(MULTI_NODE_MULTI_WRITER, vc.getAccessMode());
-    Assert.assertEquals(FILE_SYSTEM, vc.getVolumeType());
-    Assert.assertEquals(2, vc.getMountFlags().size());
+    assertEquals(MULTI_NODE_MULTI_WRITER, vc.getAccessMode());
+    assertEquals(FILE_SYSTEM, vc.getVolumeType());
+    assertEquals(2, vc.getMountFlags().size());
 
-    Assert.assertEquals(requestProto, request.getProto());
+    assertEquals(requestProto, request.getProto());
   }
 
   @Test
-  public void testNewInstance() {
+  void testNewInstance() {
     ValidateVolumeCapabilitiesRequest pbImpl =
         ValidateVolumeCapabilitiesRequestPBImpl
             .newInstance("volume-id-0000123",
@@ -89,25 +89,25 @@ public class TestValidateVolumeCapabilityRequest {
                         ImmutableList.of("mountFlag1", "mountFlag2"))),
                 ImmutableMap.of("k1", "v1", "k2", "v2"));
 
-    Assert.assertEquals("volume-id-0000123", pbImpl.getVolumeId());
-    Assert.assertEquals(1, pbImpl.getVolumeCapabilities().size());
-    Assert.assertEquals(FILE_SYSTEM,
+    assertEquals("volume-id-0000123", pbImpl.getVolumeId());
+    assertEquals(1, pbImpl.getVolumeCapabilities().size());
+    assertEquals(FILE_SYSTEM,
         pbImpl.getVolumeCapabilities().get(0).getVolumeType());
-    Assert.assertEquals(MULTI_NODE_MULTI_WRITER,
+    assertEquals(MULTI_NODE_MULTI_WRITER,
         pbImpl.getVolumeCapabilities().get(0).getAccessMode());
-    Assert.assertEquals(2, pbImpl.getVolumeAttributes().size());
+    assertEquals(2, pbImpl.getVolumeAttributes().size());
 
     CsiAdaptorProtos.ValidateVolumeCapabilitiesRequest proto =
         ((ValidateVolumeCapabilitiesRequestPBImpl) pbImpl).getProto();
-    Assert.assertEquals("volume-id-0000123", proto.getVolumeId());
-    Assert.assertEquals(1, proto.getVolumeCapabilitiesCount());
-    Assert.assertEquals(AccessMode.MULTI_NODE_MULTI_WRITER,
+    assertEquals("volume-id-0000123", proto.getVolumeId());
+    assertEquals(1, proto.getVolumeCapabilitiesCount());
+    assertEquals(AccessMode.MULTI_NODE_MULTI_WRITER,
         proto.getVolumeCapabilities(0).getAccessMode());
-    Assert.assertEquals(VolumeType.FILE_SYSTEM,
+    assertEquals(VolumeType.FILE_SYSTEM,
         proto.getVolumeCapabilities(0).getVolumeType());
-    Assert.assertEquals(2, proto.getVolumeCapabilities(0)
+    assertEquals(2, proto.getVolumeCapabilities(0)
         .getMountFlagsCount());
-    Assert.assertEquals(2, proto.getVolumeCapabilities(0)
+    assertEquals(2, proto.getVolumeCapabilities(0)
         .getMountFlagsList().size());
   }
 }
