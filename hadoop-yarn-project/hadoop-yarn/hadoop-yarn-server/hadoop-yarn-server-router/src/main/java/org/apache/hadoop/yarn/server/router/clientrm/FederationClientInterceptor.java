@@ -948,8 +948,8 @@ public class FederationClientInterceptor
 
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
-        Boolean exists = isExistsReservationHomeSubCluster(reservationId);
-        if(!exists) {
+        Boolean exists = existsReservationHomeSubCluster(reservationId);
+        if (!exists) {
           addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
         } else {
           updateReservationHomeSubCluster(subClusterId, reservationId, reservationHomeSubCluster);
@@ -1791,7 +1791,7 @@ public class FederationClientInterceptor
     return clientRMProxies;
   }
 
-  private Boolean isExistsReservationHomeSubCluster(ReservationId reservationId) {
+  private Boolean existsReservationHomeSubCluster(ReservationId reservationId) {
     try {
       SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
       if (subClusterId != null) {
@@ -1812,7 +1812,7 @@ public class FederationClientInterceptor
     } catch (YarnException e) {
       RouterServerUtil.logAndThrowException(e,
           "Unable to insert the ReservationId %s into the FederationStateStore.",
-           reservationId);
+          reservationId);
     }
   }
 
