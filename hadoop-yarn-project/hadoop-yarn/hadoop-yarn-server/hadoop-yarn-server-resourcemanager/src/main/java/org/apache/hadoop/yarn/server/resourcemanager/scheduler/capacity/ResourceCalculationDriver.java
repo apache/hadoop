@@ -35,7 +35,7 @@ import static org.apache.hadoop.yarn.api.records.ResourceInformation.MEMORY_URI;
  * bookkeeper of disposable update information that is used by all children under the common parent.
  */
 public class ResourceCalculationDriver {
-  protected static final ResourceUnitCapacityType[] CALCULATOR_PRECEDENCE =
+  private static final ResourceUnitCapacityType[] CALCULATOR_PRECEDENCE =
       new ResourceUnitCapacityType[] {
           ResourceUnitCapacityType.ABSOLUTE,
           ResourceUnitCapacityType.PERCENTAGE,
