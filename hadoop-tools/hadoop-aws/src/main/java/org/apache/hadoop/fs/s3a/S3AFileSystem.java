@@ -766,9 +766,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         DEFAULT_KEEPALIVE_TIME, 0);
     int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
 
+    int activeTasksForBoundedThreadPool = maxThreads;
+    int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        maxThreads,
-        maxThreads + totalTasks + numPrefetchThreads,
+        activeTasksForBoundedThreadPool,
+        waitingTasksForBoundedThreadPool,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -786,7 +788,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       futurePool = new ExecutorServiceFuturePool(
           new SemaphoredDelegatingExecutor(
               boundedThreadPool,
-              executorCapacity,
+              activeTasksForBoundedThreadPool + waitingTasksForBoundedThreadPool,
               true,
               s3AInputStreamStatistics));
     }
