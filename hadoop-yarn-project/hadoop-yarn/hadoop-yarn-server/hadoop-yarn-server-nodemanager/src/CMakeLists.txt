@@ -163,9 +163,9 @@ add_executable(container-executor
 # the directory containing container-executor. However, $ORIGIN is not supported by
 # all operating systems.
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|SunOS")
-    set(RPATH "\$ORIGIN/")
+    set(RPATH "\$ORIGIN/../lib/native")
     if(EXTRA_LIBHADOOP_RPATH)
-        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}/")
+        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}")
     endif()
     message("RPATH SET AS ${RPATH}.")
     set_target_properties(container-executor PROPERTIES INSTALL_RPATH "${RPATH}")
@@ -187,9 +187,9 @@ add_executable(test-container-executor
 # the directory containing test-container-executor. However, $ORIGIN is not supported by
 # all operating systems.
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|SunOS")
-    set(RPATH "\$ORIGIN/")
+    set(RPATH "\$ORIGIN/../lib/native")
     if(EXTRA_LIBHADOOP_RPATH)
-        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}/")
+        set(RPATH "${RPATH}:${EXTRA_LIBHADOOP_RPATH}")
     endif()
     message("RPATH SET AS ${RPATH}.")
     set_target_properties(test-container-executor PROPERTIES INSTALL_RPATH "${RPATH}")

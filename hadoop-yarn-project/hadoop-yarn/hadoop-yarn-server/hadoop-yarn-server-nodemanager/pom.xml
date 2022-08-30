@@ -30,7 +30,7 @@
     <!-- Basedir eeded for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
     <container-executor.conf.dir>../etc/hadoop</container-executor.conf.dir>
-    <extra.libhadoop.rpath>../lib/native</extra.libhadoop.rpath>
+    <extra.libhadoop.rpath></extra.libhadoop.rpath>
     <container-executor.additional_cflags></container-executor.additional_cflags>
   </properties>
 
