@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -717,11 +718,11 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
 
   @Override
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
-      String containerIdStr, String userName, Path pidFile, Resource resource,
-      File wordDir, Map<String, String> environment, String[] numaCommands) {
+       String userName, Path pidFile, File wordDir,
+       Container container, String[] numaCommands) {
      return new WintuilsProcessStubExecutor(
          wordDir.toString(),
-         containerIdStr, userName, pidFile.toString(),
+         container.getContainerId().toString(), userName, pidFile.toString(),
          "cmd /c " + wrapperScriptPath);
    }
    
