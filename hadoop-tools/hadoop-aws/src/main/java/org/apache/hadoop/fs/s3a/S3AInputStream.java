@@ -58,7 +58,6 @@ import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.apache.hadoop.util.functional.Function4RaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
