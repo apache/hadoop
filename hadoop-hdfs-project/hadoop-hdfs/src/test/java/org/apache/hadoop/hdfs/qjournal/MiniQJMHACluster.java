@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,6 +59,13 @@ public class MiniQJMHACluster implements AutoCloseable {
       // most QJMHACluster tests don't need DataNodes, so we'll make
       // this the default
       this.dfsBuilder = new MiniDFSCluster.Builder(conf).numDataNodes(0);
+    }
+
+    public Builder(Configuration conf, TemporaryFolder baseDir) {
+      this.conf = conf;
+      // most QJMHACluster tests don't need DataNodes, so we'll make
+      // this the default
+      this.dfsBuilder = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0);
     }
 
     public MiniDFSCluster.Builder getDfsBuilder() {

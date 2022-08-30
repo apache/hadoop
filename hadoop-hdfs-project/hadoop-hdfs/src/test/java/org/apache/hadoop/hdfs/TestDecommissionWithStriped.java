@@ -62,11 +62,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.PathUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +92,9 @@ public class TestDecommissionWithStriped {
   private Path hostsFile;
   private Path excludeFile;
   private FileSystem localFileSys;
+
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -117,10 +121,8 @@ public class TestDecommissionWithStriped {
   public void setup() throws IOException {
     conf = createConfiguration();
     // Set up the hosts/exclude files.
-    localFileSys = FileSystem.getLocal(conf);
-    Path workingDir = localFileSys.getWorkingDirectory();
-    decommissionDir = new Path(workingDir,
-        PathUtils.getTestDirName(getClass()) + "/work-dir/decommission");
+    localFileSys = FileSystem.get(baseDir.getRoot().toURI(), conf);
+    decommissionDir = new Path(baseDir.newFolder("work-dir/decommission").toString());
     hostsFile = new Path(decommissionDir, "hosts");
     excludeFile = new Path(decommissionDir, "exclude");
     writeConfigFile(hostsFile, null);
@@ -582,16 +584,15 @@ public class TestDecommissionWithStriped {
       localFileSys.delete(name, true);
     }
 
-    FSDataOutputStream stm = localFileSys.create(name);
-
-    if (nodes != null) {
-      for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
-        String node = it.next();
-        stm.writeBytes(node);
-        stm.writeBytes("\n");
+    try (FSDataOutputStream stm = localFileSys.create(name)) {
+      if (nodes != null) {
+        for (Iterator<String> it = nodes.iterator(); it.hasNext(); ) {
+          String node = it.next();
+          stm.writeBytes(node);
+          stm.writeBytes("\n");
+        }
       }
     }
-    stm.close();
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {

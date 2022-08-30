@@ -32,6 +32,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.util.Lists;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -64,7 +65,17 @@ public final class MiniJournalCluster implements Closeable {
     public Builder(Configuration conf) {
       this.conf = conf;
     }
-    
+
+    public Builder(Configuration conf, TemporaryFolder baseDir) {
+      this.conf = conf;
+      baseDir(baseDir);
+    }
+
+    public Builder baseDir(TemporaryFolder baseDir) {
+      this.baseDir = baseDir.getRoot().getAbsolutePath();
+      return this;
+    }
+
     public Builder baseDir(String d) {
       this.baseDir = d;
       return this;
