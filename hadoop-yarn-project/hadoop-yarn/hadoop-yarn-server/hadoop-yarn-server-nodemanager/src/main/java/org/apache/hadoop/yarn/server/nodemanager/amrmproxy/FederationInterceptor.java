@@ -1807,13 +1807,12 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   }
 
   private boolean isSCHealth(SubClusterId subClusterId) throws YarnException {
-    boolean isSCHealth = true;
     Set<SubClusterId> timeOutScs = getTimedOutSCs(true);
     SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
     if (timeOutScs.contains(subClusterId) ||
-         subClusterInfo == null || subClusterInfo.getState().isUnusable()) {
-      isSCHealth = false;
+        subClusterInfo == null || subClusterInfo.getState().isUnusable()) {
+      return false;
     }
-    return isSCHealth;
+    return true;
   }
 }
