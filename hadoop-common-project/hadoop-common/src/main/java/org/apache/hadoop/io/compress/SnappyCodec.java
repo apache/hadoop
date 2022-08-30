@@ -61,7 +61,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    *
    * @param out the location for the final output stream
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
@@ -77,7 +77,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    * @param out        the location for the final output stream
    * @param compressor compressor to use
    * @return a stream the user can write uncompressed data to have it compressed
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
@@ -122,7 +122,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    *
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in)
@@ -138,7 +138,7 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    * @param in           the stream to read compressed bytes from
    * @param decompressor decompressor to use
    * @return a stream to read uncompressed bytes from
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Override
   public CompressionInputStream createInputStream(InputStream in,

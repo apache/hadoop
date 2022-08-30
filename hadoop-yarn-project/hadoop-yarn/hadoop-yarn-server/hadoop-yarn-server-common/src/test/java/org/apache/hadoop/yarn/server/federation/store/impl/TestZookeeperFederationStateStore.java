@@ -25,13 +25,20 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.metrics2.MetricsRecord;
+import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
+import org.apache.hadoop.metrics2.impl.MetricsRecords;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Unit tests for ZookeeperFederationStateStore.
@@ -83,5 +90,67 @@ public class TestZookeeperFederationStateStore
   protected FederationStateStore createStateStore() {
     super.setConf(getConf());
     return new ZookeeperFederationStateStore();
+  }
+
+  @Test
+  public void testMetricsInited() throws Exception {
+    ZookeeperFederationStateStore zkStateStore = (ZookeeperFederationStateStore) createStateStore();
+    ZKFederationStateStoreOpDurations zkStateStoreOpDurations = zkStateStore.getOpDurations();
+    MetricsCollectorImpl collector = new MetricsCollectorImpl();
+
+    long anyDuration = 10;
+    long start = Time.now();
+    long end = start + anyDuration;
+
+    zkStateStoreOpDurations.addAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addUpdateAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetAppsHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addDeleteAppHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addRegisterSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addDeregisterSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addSubClusterHeartbeatDuration(start, end);
+    zkStateStoreOpDurations.addGetSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetSubClustersDuration(start, end);
+    zkStateStoreOpDurations.addGetPolicyConfigurationDuration(start, end);
+    zkStateStoreOpDurations.addSetPolicyConfigurationDuration(start, end);
+    zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(start, end);
+
+    zkStateStoreOpDurations.getMetrics(collector, true);
+    assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());
+
+    MetricsRecord record = collector.getRecords().get(0);
+    MetricsRecords.assertTag(record, ZKFederationStateStoreOpDurations.RECORD_INFO.name(),
+        "ZKFederationStateStoreOpDurations");
+
+    double expectAvgTime = anyDuration;
+    MetricsRecords.assertMetric(record, "AddAppHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "UpdateAppHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetAppHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetAppsHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "DeleteAppHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "RegisterSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "DeregisterSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "SubClusterHeartbeatAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetSubClustersAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetPolicyConfigurationAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "SetPolicyConfigurationAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsAvgTime",  expectAvgTime);
+
+    long expectOps = 1;
+    MetricsRecords.assertMetric(record, "AddAppHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "UpdateAppHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetAppHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetAppsHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "DeleteAppHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "RegisterSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "DeregisterSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "SubClusterHeartbeatNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetSubClustersNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetPolicyConfigurationNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "SetPolicyConfigurationNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsNumOps",  expectOps);
   }
 }

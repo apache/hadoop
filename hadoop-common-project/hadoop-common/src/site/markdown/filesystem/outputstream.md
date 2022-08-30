@@ -42,7 +42,7 @@ or `FSDataOutputStreamBuilder.build()`.
 These all return instances of `FSDataOutputStream`, through which data
 can be written through various `write()` methods.
 After a stream's `close()` method is called, all data written to the
-stream MUST BE persisted to the fileysystem and visible to oll other
+stream MUST BE persisted to the filesystem and visible to oll other
 clients attempting to read data from that path via `FileSystem.open()`.
 
 As well as operations to write the data, Hadoop's `OutputStream` implementations
@@ -126,7 +126,7 @@ consistent with the data at the filesystem.
 
 The output stream returned from a call of
  `FileSystem.append(path, buffersize, progress)` within a filesystem `FS`,
-can be modelled as a stream whose `buffer` is intialized to that of
+can be modelled as a stream whose `buffer` is initialized to that of
 the original file:
 
 ```python
@@ -184,7 +184,7 @@ This document covers the requirements of such implementations.
 
 HDFS's `FileSystem` implementation, `DistributedFileSystem`, returns an instance
 of `HdfsDataOutputStream`. This implementation has at least two behaviors
-which are not explicitly declared by the base Java implmentation
+which are not explicitly declared by the base Java implementation
 
 1. Writes are synchronized: more than one thread can write to the same
 output stream. This is a use pattern which HBase relies on.
@@ -648,7 +648,7 @@ in production.
 1. `OutputStream.write()` MAY persist the data, synchronously or asynchronously
 1. `OutputStream.flush()` flushes data to the destination. There
 are no strict persistence requirements.
-1. `Syncable.hflush()` synchronously sends all outstaning data to the destination
+1. `Syncable.hflush()` synchronously sends all outstanding data to the destination
 filesystem. After returning to the caller, the data MUST be visible to other readers,
 it MAY be durable. That is: it does not have to be persisted, merely guaranteed
 to be consistently visible to all clients attempting to open a new stream reading
@@ -678,7 +678,7 @@ public void hflush() throws IOException {
 ```
 
 This is perfectly acceptable as an implementation: the semantics of `hflush()`
-are satisifed.
+are satisfied.
 What is not acceptable is downgrading `hsync()` to `hflush()`, as the durability guarantee is no longer met.
 
 
@@ -863,7 +863,7 @@ local data as can be written to full checksummed blocks of data.
 That is, the hsync/hflush operations are not guaranteed to write all the pending
 data until the file is finally closed.
 
-For this reason, the local fileystem accessed via `file://` URLs
+For this reason, the local filesystem accessed via `file://` URLs
 does not support `Syncable` unless `setWriteChecksum(false)` was
 called on that FileSystem instance so as to disable checksum creation.
 After which, obviously, checksums are not generated for any file.

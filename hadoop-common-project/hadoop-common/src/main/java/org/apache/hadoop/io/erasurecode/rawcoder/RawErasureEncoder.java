@@ -100,7 +100,8 @@ public abstract class RawErasureEncoder {
 
   /**
    * Perform the real encoding work using direct ByteBuffer.
-   * @param encodingState the encoding state
+   * @param encodingState the encoding state.
+   * @throws IOException raised on errors performing I/O.
    */
   protected abstract void doEncode(ByteBufferEncodingState encodingState)
       throws IOException;
@@ -111,6 +112,7 @@ public abstract class RawErasureEncoder {
    * @param inputs input buffers to read data from
    * @param outputs output buffers to put the encoded data into, read to read
    *                after the call
+   * @throws IOException raised on errors performing I/O.
    */
   public void encode(byte[][] inputs, byte[][] outputs) throws IOException {
     ByteArrayEncodingState baeState = new ByteArrayEncodingState(
@@ -128,6 +130,7 @@ public abstract class RawErasureEncoder {
    * Perform the real encoding work using bytes array, supporting offsets
    * and lengths.
    * @param encodingState the encoding state
+   * @throws IOException  raised on errors performing I/O.
    */
   protected abstract void doEncode(ByteArrayEncodingState encodingState)
       throws IOException;

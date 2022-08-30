@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
-import org.apache.hadoop.fs.s3a.test.OperationTrackingStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.test.HadoopTestBase;
 
@@ -98,7 +97,7 @@ public class TestHeaderProcessing extends HadoopTestBase {
         X_HEADER_MAGIC_MARKER,
         Long.toString(MAGIC_LEN));
     context = S3ATestUtils.createMockStoreContext(true,
-        new OperationTrackingStore(), CONTEXT_ACCESSORS);
+        CONTEXT_ACCESSORS);
     headerProcessing = new HeaderProcessing(context, CONTEXT_ACCESSORS);
   }
 

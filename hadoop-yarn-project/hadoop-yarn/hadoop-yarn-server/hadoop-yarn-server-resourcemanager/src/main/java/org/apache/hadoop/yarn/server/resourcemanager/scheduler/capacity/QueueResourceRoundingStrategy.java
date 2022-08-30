@@ -32,5 +32,5 @@ public interface QueueResourceRoundingStrategy {
    * @param capacityVectorEntry configured capacity entry
    * @return rounded resource value
    */
-  float getRoundedResource(float resourceValue, QueueCapacityVectorEntry capacityVectorEntry);
+  double getRoundedResource(double resourceValue, QueueCapacityVectorEntry capacityVectorEntry);
 }

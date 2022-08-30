@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
 import org.junit.Test;
 
@@ -81,10 +82,20 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     skipIfEncryptionTestsDisabled(getFileSystem().getConf());
   }
 
+  /**
+   * Skipping tests when running against mandatory encryption bucket
+   * which allows only certain encryption method.
+   * S3 throw AmazonS3Exception with status 403 AccessDenied
+   * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
+   */
   @Override
   public void setup() throws Exception {
-    super.setup();
-    requireEncryptedFileSystem();
+    try {
+      super.setup();
+      requireEncryptedFileSystem();
+    } catch (AccessDeniedException e) {
+      skip("Bucket does not allow " + getSSEAlgorithm() + " encryption method");
+    }
   }
 
   /**
@@ -104,7 +115,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Test
   public void testEncryption() throws Throwable {
     requireEncryptedFileSystem();
-    validateEncrytionSecrets(getFileSystem().getEncryptionSecrets());
+    validateEncryptionSecrets(getFileSystem().getEncryptionSecrets());
     for (int size: SIZES) {
       validateEncryptionForFilesize(size);
     }
@@ -116,7 +127,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();
     EncryptionSecrets secrets = fs.getEncryptionSecrets();
-    validateEncrytionSecrets(secrets);
+    validateEncryptionSecrets(secrets);
     writeDataset(fs, src, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, src, data);
     // this file will be encrypted
@@ -135,7 +146,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    * This makes sure that the settings have propagated properly.
    * @param secrets encryption secrets of the filesystem.
    */
-  protected void validateEncrytionSecrets(final EncryptionSecrets secrets) {
+  protected void validateEncryptionSecrets(final EncryptionSecrets secrets) {
     assertNotNull("No encryption secrets for filesystem", secrets);
     S3AEncryptionMethods sseAlgorithm = getSSEAlgorithm();
     assertEquals("Filesystem has wrong encryption algorithm",

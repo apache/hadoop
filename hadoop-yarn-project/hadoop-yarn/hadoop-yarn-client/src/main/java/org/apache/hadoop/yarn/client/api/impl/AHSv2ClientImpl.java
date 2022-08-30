@@ -137,9 +137,8 @@ public class AHSv2ClientImpl extends AHSClient {
     ApplicationId appId = applicationAttemptId.getApplicationId();
     ApplicationReport appReport = getApplicationReport(appId);
     Map<String, String> filters = new HashMap<>();
-    filters.put("infofilters", "SYSTEM_INFO_PARENT_ENTITY eq {\"id\":\"" +
-        applicationAttemptId.toString() +
-        "\",\"type\":\"YARN_APPLICATION_ATTEMPT\"}");
+    filters.put("infofilters", "SYSTEM_INFO_PARENT_ENTITY eq "
+        + "{\"type\":\"YARN_APPLICATION_ATTEMPT\",\"id\":\"" + applicationAttemptId + "\"}");
     List<TimelineEntity> entities = readerClient.getContainerEntities(
         appId, "ALL", filters, 0, null);
     List<ContainerReport> containers =

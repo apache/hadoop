@@ -32,8 +32,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.ArrayDeque;
-import java.util.Queue;
+import java.util.stream.Collectors;
 
 /**
  * This class implements the logic to track decommissioning and entering
@@ -69,12 +68,6 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    */
   private HashMap<DatanodeDescriptor, HashMap<BlockInfo, Integer>>
       outOfServiceNodeBlocks = new HashMap<>();
-
-  /**
-   * Any nodes where decommission or maintenance has been cancelled are added
-   * to this queue for later processing.
-   */
-  private final Queue<DatanodeDescriptor> cancelledNodes = new ArrayDeque<>();
 
   /**
    * The numbe of blocks to process when moving blocks to pendingReplication
@@ -149,8 +142,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    */
   @Override
   public void stopTrackingNode(DatanodeDescriptor dn) {
-    pendingNodes.remove(dn);
-    cancelledNodes.add(dn);
+    getPendingNodes().remove(dn);
+    getCancelledNodes().add(dn);
   }
 
   @Override
@@ -189,9 +182,32 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
          * node will be removed from tracking by the pending cancel.
          */
         processCancelledNodes();
+
+        // Having more nodes decommissioning than can be tracked will impact decommissioning
+        // performance due to queueing delay
+        int numTrackedNodes = outOfServiceNodeBlocks.size();
+        int numQueuedNodes = getPendingNodes().size();
+        int numDecommissioningNodes = numTrackedNodes + numQueuedNodes;
+        if (numDecommissioningNodes > maxConcurrentTrackedNodes) {
+          LOG.warn(
+              "{} nodes are decommissioning but only {} nodes will be tracked at a time. "
+                  + "{} nodes are currently queued waiting to be decommissioned.",
+              numDecommissioningNodes, maxConcurrentTrackedNodes, numQueuedNodes);
+
+          // Re-queue unhealthy nodes to make space for decommissioning healthy nodes
+          final List<DatanodeDescriptor> unhealthyDns = outOfServiceNodeBlocks.keySet().stream()
+              .filter(dn -> !blockManager.isNodeHealthyForDecommissionOrMaintenance(dn))
+              .collect(Collectors.toList());
+          getUnhealthyNodesToRequeue(unhealthyDns, numDecommissioningNodes).forEach(dn -> {
+            getPendingNodes().add(dn);
+            outOfServiceNodeBlocks.remove(dn);
+            pendingRep.remove(dn);
+          });
+        }
+
         processPendingNodes();
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("DatanodeAdminMonitorV2Thread");
       }
       // After processing the above, various parts of the check() method will
       // take and drop the read / write lock as needed. Aside from the
@@ -207,8 +223,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       LOG.info("Checked {} blocks this tick. {} nodes are now " +
           "in maintenance or transitioning state. {} nodes pending. {} " +
           "nodes waiting to be cancelled.",
-          numBlocksChecked, outOfServiceNodeBlocks.size(), pendingNodes.size(),
-          cancelledNodes.size());
+          numBlocksChecked, outOfServiceNodeBlocks.size(), getPendingNodes().size(),
+          getCancelledNodes().size());
     }
   }
 
@@ -220,10 +236,10 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * the pendingNodes list from being modified externally.
    */
   private void processPendingNodes() {
-    while (!pendingNodes.isEmpty() &&
+    while (!getPendingNodes().isEmpty() &&
         (maxConcurrentTrackedNodes == 0 ||
             outOfServiceNodeBlocks.size() < maxConcurrentTrackedNodes)) {
-      outOfServiceNodeBlocks.put(pendingNodes.poll(), null);
+      outOfServiceNodeBlocks.put(getPendingNodes().poll(), null);
     }
   }
 
@@ -235,8 +251,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * write lock to prevent the cancelledNodes list being modified externally.
    */
   private void processCancelledNodes() {
-    while(!cancelledNodes.isEmpty()) {
-      DatanodeDescriptor dn = cancelledNodes.poll();
+    while(!getCancelledNodes().isEmpty()) {
+      DatanodeDescriptor dn = getCancelledNodes().poll();
       outOfServiceNodeBlocks.remove(dn);
       pendingRep.remove(dn);
     }
@@ -321,12 +337,12 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // which added the node to the cancelled list. Therefore expired
           // maintenance nodes do not need to be added to the toRemove list.
           dnAdmin.stopMaintenance(dn);
-          namesystem.writeUnlock();
+          namesystem.writeUnlock("processMaintenanceNodes");
           namesystem.writeLock();
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processMaintenanceNodes");
     }
   }
 
@@ -385,7 +401,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processCompletedNodes");
     }
   }
 
@@ -507,7 +523,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // replication
           if (blocksProcessed >= blocksPerLock) {
             blocksProcessed = 0;
-            namesystem.writeUnlock();
+            namesystem.writeUnlock("moveBlocksToPending");
             namesystem.writeLock();
           }
           blocksProcessed++;
@@ -529,7 +545,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("moveBlocksToPending");
     }
     LOG.debug("{} blocks are now pending replication", pendingCount);
   }
@@ -613,7 +629,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     try {
       storage = dn.getStorageInfos();
     } finally {
-      namesystem.readUnlock();
+      namesystem.readUnlock("scanDatanodeStorage");
     }
 
     for (DatanodeStorageInfo s : storage) {
@@ -643,7 +659,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           numBlocksChecked++;
         }
       } finally {
-        namesystem.readUnlock();
+        namesystem.readUnlock("scanDatanodeStorage");
       }
     }
   }
@@ -698,7 +714,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
             suspectBlocks.getOutOfServiceBlockCount());
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("processPendingReplication");
     }
   }
 

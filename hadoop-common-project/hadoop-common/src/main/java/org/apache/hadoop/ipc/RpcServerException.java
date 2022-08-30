@@ -47,14 +47,14 @@ public class RpcServerException extends RpcException {
   }
   
   /**
-   * get the rpc status corresponding to this exception
+   * @return get the rpc status corresponding to this exception.
    */
   public RpcStatusProto getRpcStatusProto() {
     return RpcStatusProto.ERROR;
   }
 
   /**
-   * get the detailed rpc status corresponding to this exception
+   * @return get the detailed rpc status corresponding to this exception.
    */
   public RpcErrorCodeProto getRpcErrorCodeProto() {
     return RpcErrorCodeProto.ERROR_RPC_SERVER;

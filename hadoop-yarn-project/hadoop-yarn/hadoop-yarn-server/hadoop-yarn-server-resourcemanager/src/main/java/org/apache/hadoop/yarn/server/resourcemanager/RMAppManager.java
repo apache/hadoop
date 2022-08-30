@@ -28,6 +28,10 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
+import org.apache.hadoop.yarn.security.Permission;
+import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +87,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
 import org.apache.hadoop.yarn.util.StringHelper;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.isNotEmpty;
+
 /**
  * This class manages the list of applications for the resource manager.
  */
@@ -106,6 +113,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private boolean timelineServiceV2Enabled;
   private boolean nodeLabelsEnabled;
   private Set<String> exclusiveEnforcedPartitions;
+  private String amDefaultNodeLabel;
 
   private static final String USER_ID_PREFIX = "userid=";
 
@@ -134,6 +142,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
     this.exclusiveEnforcedPartitions = YarnConfiguration
         .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
+    this.amDefaultNodeLabel = conf
+        .get(YarnConfiguration.AM_DEFAULT_NODE_LABEL, null);
   }
 
   /**
@@ -294,7 +304,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   protected void writeAuditLog(ApplicationId appId) {
     RMApp app = rmContext.getRMApps().get(appId);
-    String operation = "UNKONWN";
+    String operation = "UNKNOWN";
     boolean success = false;
     switch (app.getState()) {
       case FAILED:
@@ -467,32 +477,33 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       if (scheduler instanceof CapacityScheduler) {
         String queueName = placementContext == null ?
             submissionContext.getQueue() : placementContext.getFullQueuePath();
+        CapacityScheduler cs = (CapacityScheduler) scheduler;
+        CSQueue csqueue = cs.getQueue(queueName);
+        PrivilegedEntity privilegedEntity = new PrivilegedEntity(
+            csqueue == null ? queueName : csqueue.getQueuePath());
 
-        String appName = submissionContext.getApplicationName();
-        CSQueue csqueue = ((CapacityScheduler) scheduler).getQueue(queueName);
-
-        if (csqueue == null && placementContext != null) {
-          //could be an auto created queue through queue mapping. Validate
-          // parent queue exists and has valid acls
-          String parentQueueName = placementContext.getParentQueue();
-          csqueue = ((CapacityScheduler) scheduler).getQueue(parentQueueName);
+        YarnAuthorizationProvider dynamicAuthorizer = null;
+        if (csqueue == null) {
+          List<Permission> permissions =
+              cs.getCapacitySchedulerQueueManager().getPermissionsForDynamicQueue(
+                  new QueuePath(queueName), cs.getConfiguration());
+          if (!permissions.isEmpty()) {
+            dynamicAuthorizer = new ConfiguredYarnAuthorizer();
+            dynamicAuthorizer.setPermission(permissions, userUgi);
+          }
         }
 
-        if (csqueue != null
-            && !authorizer.checkPermission(
-            new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
-                SchedulerUtils.toAccessType(QueueACL.SUBMIT_APPLICATIONS),
-                applicationId.toString(), appName, Server.getRemoteAddress(),
-                null))
-            && !authorizer.checkPermission(
-            new AccessRequest(csqueue.getPrivilegedEntity(), userUgi,
-                SchedulerUtils.toAccessType(QueueACL.ADMINISTER_QUEUE),
-                applicationId.toString(), appName, Server.getRemoteAddress(),
-                null))) {
-          throw RPCUtil.getRemoteException(new AccessControlException(
-              "User " + user + " does not have permission to submit "
-                  + applicationId + " to queue "
-                  + submissionContext.getQueue()));
+        if (csqueue != null || dynamicAuthorizer != null) {
+          String appName = submissionContext.getApplicationName();
+          if (!checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
+                  appName, QueueACL.SUBMIT_APPLICATIONS), dynamicAuthorizer) &&
+              !checkPermission(createAccessRequest(privilegedEntity, userUgi, applicationId,
+                  appName, QueueACL.ADMINISTER_QUEUE), dynamicAuthorizer)) {
+            throw RPCUtil.getRemoteException(new AccessControlException(
+                "User " + user + " does not have permission to submit "
+                    + applicationId + " to queue "
+                    + submissionContext.getQueue()));
+          }
         }
       }
       if (scheduler instanceof FairScheduler) {
@@ -566,6 +577,23 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     return application;
   }
 
+  private boolean checkPermission(AccessRequest accessRequest,
+                                  YarnAuthorizationProvider dynamicAuthorizer) {
+    return authorizer.checkPermission(accessRequest) ||
+        (dynamicAuthorizer != null && dynamicAuthorizer.checkPermission(accessRequest));
+  }
+
+  private static AccessRequest createAccessRequest(PrivilegedEntity privilegedEntity,
+                                                   UserGroupInformation userUgi,
+                                                   ApplicationId applicationId,
+                                                   String appName,
+                                                   QueueACL submitApplications) {
+    return new AccessRequest(privilegedEntity, userUgi,
+        SchedulerUtils.toAccessType(submitApplications),
+        applicationId.toString(), appName, Server.getRemoteAddress(),
+        null);
+  }
+
   private List<ResourceRequest> validateAndCreateResourceRequest(
       ApplicationSubmissionContext submissionContext, boolean isRecovery)
       throws InvalidResourceRequestException {
@@ -622,9 +650,12 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         }
 
         // set label expression for AM ANY request if not set
-        if (null == anyReq.getNodeLabelExpression()) {
-          anyReq.setNodeLabelExpression(submissionContext
-              .getNodeLabelExpression());
+        if (isEmpty(anyReq.getNodeLabelExpression())) {
+          if (isNotEmpty(amDefaultNodeLabel)) {
+            anyReq.setNodeLabelExpression(amDefaultNodeLabel);
+          } else {
+            anyReq.setNodeLabelExpression(submissionContext.getNodeLabelExpression());
+          }
         }
 
         // Put ANY request at the front

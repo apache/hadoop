@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,11 +28,6 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 
 /**
  * Simple object which stores current failure injection settings.
- * "Delaying a key" can mean:
- *    - Removing it from the S3 client's listings while delay is in effect.
- *    - Causing input stream reads to fail.
- *    - Causing the S3 side of getFileStatus(), i.e.
- *      AmazonS3#getObjectMetadata(), to throw FileNotFound.
  */
 public class FailureInjectionPolicy {
   /**
@@ -40,28 +35,8 @@ public class FailureInjectionPolicy {
    */
   public static final String DEFAULT_DELAY_KEY_SUBSTRING = "DELAY_LISTING_ME";
 
-  /**
-   * How many seconds affected keys will have delayed visibility.
-   * This should probably be a config value.
-   */
-  public static final long DEFAULT_DELAY_KEY_MSEC = 5 * 1000;
-
-  public static final float DEFAULT_DELAY_KEY_PROBABILITY = 1.0f;
-
-  /** Special config value since we can't store empty strings in XML. */
-  public static final String MATCH_ALL_KEYS = "*";
-
   private static final Logger LOG =
       LoggerFactory.getLogger(InconsistentAmazonS3Client.class);
-
-  /** Empty string matches all keys. */
-  private String delayKeySubstring;
-
-  /** Probability to delay visibility of a matching key. */
-  private float delayKeyProbability;
-
-  /** Time in milliseconds to delay visibility of newly modified object. */
-  private long delayKeyMsec;
 
   /**
    * Probability of throttling a request.
@@ -75,31 +50,8 @@ public class FailureInjectionPolicy {
 
   public FailureInjectionPolicy(Configuration conf) {
 
-    this.delayKeySubstring = conf.get(FAIL_INJECT_INCONSISTENCY_KEY,
-        DEFAULT_DELAY_KEY_SUBSTRING);
-    // "" is a substring of all strings, use it to match all keys.
-    if (this.delayKeySubstring.equals(MATCH_ALL_KEYS)) {
-      this.delayKeySubstring = "";
-    }
-    this.delayKeyProbability = validProbability(
-        conf.getFloat(FAIL_INJECT_INCONSISTENCY_PROBABILITY,
-            DEFAULT_DELAY_KEY_PROBABILITY));
-    this.delayKeyMsec = conf.getLong(FAIL_INJECT_INCONSISTENCY_MSEC,
-        DEFAULT_DELAY_KEY_MSEC);
     this.setThrottleProbability(conf.getFloat(FAIL_INJECT_THROTTLE_PROBABILITY,
         0.0f));
-  }
-
-  public String getDelayKeySubstring() {
-    return delayKeySubstring;
-  }
-
-  public float getDelayKeyProbability() {
-    return delayKeyProbability;
-  }
-
-  public long getDelayKeyMsec() {
-    return delayKeyMsec;
   }
 
   public float getThrottleProbability() {
@@ -126,25 +78,10 @@ public class FailureInjectionPolicy {
     return Math.random() < p;
   }
 
-  /**
-   * Should we delay listing visibility for this key?
-   * @param key key which is being put
-   * @return true if we should delay
-   */
-  public boolean shouldDelay(String key) {
-    float p = getDelayKeyProbability();
-    boolean delay = key.contains(getDelayKeySubstring());
-    delay = delay && trueWithProbability(p);
-    LOG.debug("{}, p={} -> {}", key, p, delay);
-    return delay;
-  }
-
   @Override
   public String toString() {
     return String.format("FailureInjectionPolicy:" +
-            " %s msec delay, substring %s, delay probability %s;" +
             " throttle probability %s" + "; failure limit %d",
-        delayKeyMsec, delayKeySubstring, delayKeyProbability,
         throttleProbability, failureLimit);
   }
 

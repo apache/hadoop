@@ -450,6 +450,24 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETSNAPSHOTDIFFLISTING: {
+      String oldSnapshotName = params.get(OldSnapshotNameParam.NAME,
+          OldSnapshotNameParam.class);
+      String snapshotName = params.get(SnapshotNameParam.NAME,
+          SnapshotNameParam.class);
+      String snapshotDiffStartPath = params
+          .get(HttpFSParametersProvider.SnapshotDiffStartPathParam.NAME,
+              HttpFSParametersProvider.SnapshotDiffStartPathParam.class);
+      Integer snapshotDiffIndex = params.get(HttpFSParametersProvider.SnapshotDiffIndexParam.NAME,
+          HttpFSParametersProvider.SnapshotDiffIndexParam.class);
+      FSOperations.FSGetSnapshotDiffListing command =
+          new FSOperations.FSGetSnapshotDiffListing(path, oldSnapshotName,
+              snapshotName, snapshotDiffStartPath, snapshotDiffIndex);
+      String js = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GETSNAPSHOTTABLEDIRECTORYLIST: {
       FSOperations.FSGetSnapshottableDirListing command =
           new FSOperations.FSGetSnapshottableDirListing();

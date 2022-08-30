@@ -200,6 +200,78 @@ public class TestFsShellTouch {
     FileStatus fileStatus = lfs.getFileStatus(newFile);
     assertThat(fileStatus.getAccessTime()).isEqualTo(dateObj.getTime());
     assertThat(fileStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+
+    lfs.delete(newFile, true);
+    assertThat(lfs.exists(newFile)).isFalse();
+
+  }
+
+  @Test
+  public void testTouchDir() throws Exception {
+    String strTime;
+    final String newFileName = "dir3/newFile3";
+    Date dateObj;
+    final Path newFile = new Path(newFileName);
+    FileStatus fstatus;
+    Path dirPath = new Path("dir3");
+    lfs.delete(dirPath, true);
+    lfs.mkdirs(dirPath);
+    lfs.delete(newFile, true);
+    assertThat(lfs.exists(newFile)).isFalse();
+
+    strTime = formatTimestamp(System.currentTimeMillis());
+    dateObj = parseTimestamp(strTime);
+
+    assertThat(shellRun("-touch", "-t", strTime, newFileName)).as(
+        "Expected successful touch on a new file with a specified timestamp").isEqualTo(0);
+    FileStatus newStatus = lfs.getFileStatus(newFile);
+    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+
+    Thread.sleep(500);
+    strTime = formatTimestamp(System.currentTimeMillis());
+    dateObj = parseTimestamp(strTime);
+
+    assertThat(shellRun("-touch", "-m", "-a", "-t", strTime, "dir3")).as(
+        "Expected successful touch with a specified modification time").isEqualTo(0);
+
+    newStatus = lfs.getFileStatus(dirPath);
+    // Verify if both modification and access times are recorded correctly
+    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+
+    fstatus = lfs.getFileStatus(dirPath);
+    Thread.sleep(500);
+    strTime = formatTimestamp(System.currentTimeMillis());
+    dateObj = parseTimestamp(strTime);
+
+    assertThat(shellRun("-touch", "-m", "-t", strTime, "dir3")).as(
+        "Expected successful touch with a specified modification time").isEqualTo(0);
+
+    newStatus = lfs.getFileStatus(dirPath);
+    // Verify if modification time is recorded correctly (and access time
+    // remains unchanged).
+    assertThat(newStatus.getAccessTime()).isEqualTo(fstatus.getAccessTime());
+    assertThat(newStatus.getModificationTime()).isEqualTo(dateObj.getTime());
+
+    fstatus = lfs.getFileStatus(dirPath);
+    Thread.sleep(500);
+    strTime = formatTimestamp(System.currentTimeMillis());
+    dateObj = parseTimestamp(strTime);
+
+    assertThat(shellRun("-touch", "-a", "-t", strTime, "dir3")).as(
+        "Expected successful touch with a specified modification time").isEqualTo(0);
+
+    newStatus = lfs.getFileStatus(dirPath);
+    // Verify if access time is recorded correctly (and modification time
+    // remains unchanged).
+    assertThat(newStatus.getAccessTime()).isEqualTo(dateObj.getTime());
+    assertThat(newStatus.getModificationTime()).isEqualTo(fstatus.getModificationTime());
+
+    lfs.delete(newFile, true);
+    lfs.delete(dirPath, true);
+    assertThat(lfs.exists(newFile)).isFalse();
+    assertThat(lfs.exists(dirPath)).isFalse();
   }
 
   private String formatTimestamp(long timeInMillis) {

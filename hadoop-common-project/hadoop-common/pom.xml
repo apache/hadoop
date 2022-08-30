@@ -141,12 +141,39 @@
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-servlet</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.enterprise</groupId>
+          <artifactId>cdi-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ch.qos.cal10n</groupId>
+          <artifactId>cal10n-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <!-- Used, even though 'mvn dependency:analyze' doesn't find it -->
-      <groupId>com.sun.jersey</groupId>
+      <groupId>com.github.pjfanning</groupId>
       <artifactId>jersey-json</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.jaxrs</groupId>
+          <artifactId>jackson-jaxrs-json-provider</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
@@ -187,6 +214,12 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-configuration2</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -651,38 +684,6 @@
           </filesets>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>de.skuzzle.enforcer</groupId>
-            <artifactId>restrict-imports-enforcer-rule</artifactId>
-            <version>${restrict-imports.enforcer.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>banned-illegal-imports</id>
-            <phase>process-sources</phase>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
-                  <includeTestCode>true</includeTestCode>
-                  <reason>Use hadoop-common provided implementations rather than the one provided by Guava</reason>
-                  <bannedImports>
-                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
-                    <bannedImport>com.google.common.base.Preconditions</bannedImport>
-                  </bannedImports>
-                </restrictImports>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
@@ -947,7 +948,6 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <testFailureIgnore>${ignoreTestFailure}</testFailureIgnore>
               <forkCount>${testsThreadCount}</forkCount>
               <reuseForks>false</reuseForks>
               <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
@@ -1151,7 +1151,7 @@
                 <id>src-test-compile-protoc-legacy</id>
                 <phase>generate-test-sources</phase>
                 <goals>
-                  <goal>compile</goal>
+                  <goal>test-compile</goal>
                 </goals>
                 <configuration>
                   <skip>false</skip>
@@ -1160,7 +1160,7 @@
                     com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
                   </protocArtifact>
                   <includeDependenciesInDescriptorSet>false</includeDependenciesInDescriptorSet>
-                  <protoSourceRoot>${basedir}/src/test/proto</protoSourceRoot>
+                  <protoTestSourceRoot>${basedir}/src/test/proto</protoTestSourceRoot>
                   <outputDirectory>${project.build.directory}/generated-test-sources/java</outputDirectory>
                   <clearOutputDirectory>false</clearOutputDirectory>
                   <includes>
@@ -1170,6 +1170,16 @@
                 </configuration>
               </execution>
              </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <sourceFileExcludes>
+                <sourceFileExclude>**/FSProtos.java</sourceFileExclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.proto:*.tracing:*.protobuf</excludePackageNames>
+            </configuration>
           </plugin>
         </plugins>
       </build>

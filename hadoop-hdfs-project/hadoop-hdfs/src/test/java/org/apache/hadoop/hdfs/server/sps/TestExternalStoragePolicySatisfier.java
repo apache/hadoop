@@ -33,15 +33,18 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_KERBEROS_PRINCIPAL_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SPS_MAX_OUTSTANDING_PATHS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_SATISFY_STORAGE_POLICY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -82,6 +85,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockMovementListener;
 import org.apache.hadoop.hdfs.server.namenode.sps.BlockStorageMovementAttemptedItems;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
+import org.apache.hadoop.hdfs.server.sps.metrics.ExternalSPSBeanMetrics;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
@@ -90,6 +94,8 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -98,6 +104,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.util.function.Supplier;
 
 /**
@@ -127,6 +135,14 @@ public class TestExternalStoragePolicySatisfier {
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final Logger LOG =
       LoggerFactory.getLogger(TestExternalStoragePolicySatisfier.class);
+  private final ExternalSPSFaultInjector injector = new ExternalSPSFaultInjector() {
+    @Override
+    public void mockAnException(int retry) throws IOException {
+      if (retry < DFS_STORAGE_POLICY_SATISFIER_MOVE_TASK_MAX_RETRY_ATTEMPTS_DEFAULT) {
+        throw new IOException("IO exception");
+      }
+    }
+  };
 
   @Before
   public void setUp() {
@@ -189,6 +205,20 @@ public class TestExternalStoragePolicySatisfier {
     }
   }
 
+  private void stopExternalSps() {
+    if (externalSps != null) {
+      externalSps.stopGracefully();
+    }
+  }
+
+  private void startExternalSps() {
+    externalSps = new StoragePolicySatisfier(getConf());
+    externalCtxt = new ExternalSPSContext(externalSps, nnc);
+
+    externalSps.init(externalCtxt);
+    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
+  }
+
   private void createCluster() throws IOException {
     getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
@@ -197,9 +227,32 @@ public class TestExternalStoragePolicySatisfier {
     writeContent(FILE);
   }
 
+  private void createCluster(boolean createMoverPath) throws IOException {
+    getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
+        STORAGES_PER_DATANODE, CAPACITY, createMoverPath, true));
+    getFS();
+    writeContent(FILE);
+  }
+
+  private void createClusterDoNotStartSPS() throws IOException {
+    getConf().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    setCluster(startCluster(getConf(), allDiskTypes, NUM_OF_DATANODES,
+        STORAGES_PER_DATANODE, CAPACITY, true, false));
+    getFS();
+    writeContent(FILE);
+  }
+
   private MiniDFSCluster startCluster(final Configuration conf,
       StorageType[][] storageTypes, int numberOfDatanodes, int storagesPerDn,
       long nodeCapacity) throws IOException {
+    return startCluster(conf, storageTypes, numberOfDatanodes, storagesPerDn,
+        nodeCapacity, false, true);
+  }
+
+  private MiniDFSCluster startCluster(final Configuration conf,
+      StorageType[][] storageTypes, int numberOfDatanodes, int storagesPerDn,
+      long nodeCapacity, boolean createMoverPath, boolean startSPS) throws IOException {
     long[][] capacities = new long[numberOfDatanodes][storagesPerDn];
     for (int i = 0; i < numberOfDatanodes; i++) {
       for (int j = 0; j < storagesPerDn; j++) {
@@ -211,14 +264,16 @@ public class TestExternalStoragePolicySatisfier {
         .storageTypes(storageTypes).storageCapacities(capacities).build();
     cluster.waitActive();
 
-    nnc = DFSTestUtil.getNameNodeConnector(getConf(),
-        HdfsServerConstants.MOVER_ID_PATH, 1, false);
+    if (startSPS) {
+      nnc = DFSTestUtil.getNameNodeConnector(getConf(),
+          HdfsServerConstants.MOVER_ID_PATH, 1, createMoverPath);
 
-    externalSps = new StoragePolicySatisfier(getConf());
-    externalCtxt = new ExternalSPSContext(externalSps, nnc);
+      externalSps = new StoragePolicySatisfier(getConf());
+      externalCtxt = new ExternalSPSContext(externalSps, nnc);
 
-    externalSps.init(externalCtxt);
-    externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
+      externalSps.init(externalCtxt);
+      externalSps.start(StoragePolicySatisfierMode.EXTERNAL);
+    }
     return cluster;
   }
 
@@ -422,6 +477,44 @@ public class TestExternalStoragePolicySatisfier {
 
     try {
       createCluster();
+      doTestWhenStoragePolicySetToCOLD();
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testInfiniteStartWhenAnotherSPSRunning()
+      throws Exception {
+
+    try {
+      // Create cluster and create mover path when get NameNodeConnector.
+      createCluster(true);
+
+      // Disable system exit for assert.
+      ExitUtil.disableSystemExit();
+
+      // Get NameNodeConnector one more time to simulate starting other sps process.
+      // It should exit immediately when another sps is running.
+      LambdaTestUtils.intercept(ExitUtil.ExitException.class,
+          "Exit immediately because another ExternalStoragePolicySatisfier is running",
+          () -> ExternalStoragePolicySatisfier.getNameNodeConnector(config));
+    } finally {
+      // Reset first exit exception to avoid AssertionError in MiniDFSCluster#shutdown.
+      // This has no effect on functionality.
+      ExitUtil.resetFirstExitException();
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testWhenStoragePolicySetToCOLDWithException()
+      throws Exception {
+
+    try {
+      createCluster();
+      // Mock an IOException 3 times, and moving tasks should succeed finally.
+      ExternalSPSFaultInjector.setInstance(injector);
       doTestWhenStoragePolicySetToCOLD();
     } finally {
       shutdownCluster();
@@ -1258,7 +1351,7 @@ public class TestExternalStoragePolicySatisfier {
    * 4. Set policy and call satisfyStoragePolicy for file.
    * 5. Block should be moved successfully.
    */
-  @Test(timeout = 300000)
+  @Test(timeout = 600000)
   public void testSPSWhenFileHasExcessRedundancyBlocks() throws Exception {
     try {
       config.set(DFSConfigKeys
@@ -1371,6 +1464,45 @@ public class TestExternalStoragePolicySatisfier {
   }
 
   /**
+   * Test SPS that satisfy the files and then delete the files before start SPS.
+   */
+  @Test(timeout = 300000)
+  public void testSPSSatisfyAndThenDeleteFileBeforeStartSPS() throws Exception {
+    try {
+      createCluster();
+      HdfsAdmin hdfsAdmin =
+          new HdfsAdmin(FileSystem.getDefaultUri(config), config);
+
+      StorageType[][] newtypes =
+          new StorageType[][]{{StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE},
+              {StorageType.DISK, StorageType.ARCHIVE}};
+      startAdditionalDNs(config, 3, NUM_OF_DATANODES, newtypes,
+          STORAGES_PER_DATANODE, CAPACITY, hdfsCluster);
+
+      stopExternalSps();
+
+      dfs.setStoragePolicy(new Path(FILE), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(FILE));
+      dfs.delete(new Path(FILE), true);
+
+      startExternalSps();
+
+      String file1 = "/testMoveToSatisfyStoragePolicy_1";
+      writeContent(file1);
+      dfs.setStoragePolicy(new Path(file1), COLD);
+      hdfsAdmin.satisfyStoragePolicy(new Path(file1));
+
+      hdfsCluster.triggerHeartbeats();
+      DFSTestUtil.waitExpectedStorageType(file1, StorageType.ARCHIVE, 3, 30000,
+          dfs);
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+
+  /**
    * Test SPS for directory which has multilevel directories.
    */
   @Test(timeout = 300000)
@@ -1469,6 +1601,20 @@ public class TestExternalStoragePolicySatisfier {
         DFSTestUtil.waitExpectedStorageType(filePath.toString(),
             StorageType.SSD, 2, 30000, hdfsCluster.getFileSystem());
       }
+    } finally {
+      shutdownCluster();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testExternalSPSMetrics()
+      throws Exception {
+
+    try {
+      createClusterDoNotStartSPS();
+      dfs.satisfyStoragePolicy(new Path(FILE));
+      // Assert metrics.
+      assertEquals(1, hdfsCluster.getNamesystem().getPendingSPSPaths());
     } finally {
       shutdownCluster();
     }
@@ -1646,7 +1792,7 @@ public class TestExternalStoragePolicySatisfier {
     }
 
     cluster.startDataNodes(conf, newNodesRequired, newTypes, true, null, null,
-        null, capacities, null, false, false, false, null);
+        null, capacities, null, false, false, false, null, null, null);
     cluster.triggerHeartbeats();
   }
 
@@ -1673,6 +1819,36 @@ public class TestExternalStoragePolicySatisfier {
 
     public void clear() {
       actualBlockMovements.clear();
+    }
+  }
+
+  @Test(timeout = 300000)
+  public void testExternalSPSMetricsExposedToJMX() throws Exception {
+    try {
+      createCluster();
+      // Start JMX but stop SPS thread to prevent mock data from being consumed.
+      externalSps.stop(true);
+      externalCtxt.initMetrics(externalSps);
+
+      ExternalSPSBeanMetrics spsBeanMetrics = externalCtxt.getSpsBeanMetrics();
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxBeanName = new ObjectName("Hadoop:service=ExternalSPS,name=ExternalSPS");
+      // Assert metrics before update.
+      assertEquals(0, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(0, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+
+      // Update metrics.
+      spsBeanMetrics.updateAttemptedItemsCount();
+      spsBeanMetrics.updateProcessingQueueSize();
+      spsBeanMetrics.updateMovementFinishedBlocksCount();
+
+      // Assert metrics after update.
+      assertEquals(1, mbs.getAttribute(mxBeanName, "AttemptedItemsCount"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "ProcessingQueueSize"));
+      assertEquals(1, mbs.getAttribute(mxBeanName, "MovementFinishedBlocksCount"));
+    } finally {
+      shutdownCluster();
     }
   }
 }

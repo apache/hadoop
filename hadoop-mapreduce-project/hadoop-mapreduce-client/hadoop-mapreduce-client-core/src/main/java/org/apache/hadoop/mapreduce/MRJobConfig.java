@@ -919,6 +919,13 @@ public interface MRJobConfig {
     MR_AM_PREFIX + "scheduler.heartbeat.interval-ms";
   public static final int DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS = 1000;
 
+  /** Whether to consider ping from tasks in liveliness check. */
+  String MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK =
+      "mapreduce.task.ping-for-liveliness-check.enabled";
+  boolean DEFAULT_MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK
+      = false;
+
+
   /**
    * If contact with RM is lost, the AM will wait MR_AM_TO_RM_WAIT_INTERVAL_MS
    * milliseconds before aborting. During this interval, AM will still try

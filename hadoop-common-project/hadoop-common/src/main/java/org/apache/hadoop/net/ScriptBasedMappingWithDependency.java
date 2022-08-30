@@ -74,12 +74,13 @@ public class ScriptBasedMappingWithDependency  extends ScriptBasedMapping
   }
 
   /**
-   * {@inheritDoc}
+   * {@inheritDoc}.
    * <p>
    * This will get called in the superclass constructor, so a check is needed
    * to ensure that the raw mapping is defined before trying to relaying a null
    * configuration.
-   * @param conf
+   * </p>
+   * @param conf input Configuration.
    */
   @Override
   public void setConf(Configuration conf) {

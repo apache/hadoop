@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -259,6 +259,11 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
+      MinValue = 0,
+      DefaultValue = RATE_LIMIT_DEFAULT)
+  private int rateLimit;
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USER_AGENT_PREFIX_KEY,
       DefaultValue = DEFAULT_FS_AZURE_USER_AGENT_PREFIX)
@@ -724,6 +729,10 @@ public class AbfsConfiguration{
 
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
+  }
+
+  public int getRateLimit() {
+    return rateLimit;
   }
 
   public String getCustomUserAgentPrefix() {

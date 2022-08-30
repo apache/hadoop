@@ -41,9 +41,6 @@ public class CSQueueUsageTracker {
 
   private final QueueResourceQuotas queueResourceQuotas;
 
-  private final Map<String, ResourceVector> absoluteMinCapacityVector = new HashMap<>();
-  private final Map<String, ResourceVector> absoluteMaxCapacityVector = new HashMap<>();
-
   public CSQueueUsageTracker(CSQueueMetrics metrics) {
     this.metrics = metrics;
     this.queueUsage = new ResourceUsage();
@@ -82,11 +79,4 @@ public class CSQueueUsageTracker {
     return queueResourceQuotas;
   }
 
-  public Map<String, ResourceVector> getAbsoluteMinCapacityVector() {
-    return absoluteMinCapacityVector;
-  }
-
-  public Map<String, ResourceVector> getAbsoluteMaxCapacityVector() {
-    return absoluteMaxCapacityVector;
-  }
 }

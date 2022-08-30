@@ -243,7 +243,7 @@ public class FsImageValidation {
         loader.load(fsImageFile, false);
       } finally {
         namesystem.getFSDirectory().writeUnlock();
-        namesystem.writeUnlock();
+        namesystem.writeUnlock("loadImage");
       }
     }
     t.cancel();

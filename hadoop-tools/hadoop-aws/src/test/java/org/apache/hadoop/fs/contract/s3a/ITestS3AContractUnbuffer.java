@@ -22,17 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
-
 public class ITestS3AContractUnbuffer extends AbstractContractUnbufferTest {
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    return conf;
-  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {

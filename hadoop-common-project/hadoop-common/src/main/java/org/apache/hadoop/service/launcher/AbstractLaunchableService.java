@@ -42,6 +42,8 @@ public abstract class AbstractLaunchableService extends AbstractService
 
   /**
    * Construct an instance with the given name.
+   *
+   * @param name input name.
    */
   protected AbstractLaunchableService(String name) {
     super(name);

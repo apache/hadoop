@@ -54,7 +54,7 @@ public interface RouterRpcMonitor {
 
   /**
    * Start proxying an operation to the Namenode.
-   * @return Id of the thread doing the proxying.
+   * @return id of the thread doing the proxying.
    */
   long proxyOp();
 
@@ -62,18 +62,18 @@ public interface RouterRpcMonitor {
    * Mark a proxy operation as completed.
    * @param success If the operation was successful.
    */
-  void proxyOpComplete(boolean success);
+  void proxyOpComplete(boolean success, String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because it was in standby.
    */
-  void proxyOpFailureStandby();
+  void proxyOpFailureStandby(String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because of an unexpected
    * exception.
    */
-  void proxyOpFailureCommunicate();
+  void proxyOpFailureCommunicate(String nsId);
 
   /**
    * Failed to proxy an operation to a Namenode because the client was
@@ -95,7 +95,7 @@ public interface RouterRpcMonitor {
   /**
    * Failed to proxy an operation because of no namenodes available.
    */
-  void proxyOpNoNamenodes();
+  void proxyOpNoNamenodes(String nsId);
 
   /**
    * If the Router cannot contact the State Store in an operation.

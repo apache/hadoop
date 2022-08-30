@@ -220,6 +220,9 @@ public final class ConfigurationKeys {
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
+  /** Key for rate limit capacity, as used by IO operations which try to throttle themselves. */
+  public static final String FS_AZURE_ABFS_IO_RATE_LIMIT = "fs.azure.io.rate.limit";
+
   public static String accountProperty(String property, String account) {
     return property + "." + account;
   }

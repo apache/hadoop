@@ -48,9 +48,11 @@ void CreateSnapshotMock::SetExpectations(
   }
 
   if (*test_case_func == &PassNOptAndAPath<CreateSnapshotMock>) {
-    const auto arg1 = args[1];
-    const auto arg2 = std::optional{args[0]};
-    EXPECT_CALL(*this, HandleSnapshot(arg1, arg2))
+    const auto opt_n = args[0];
+    const auto path = args[2];
+    const auto opt_n_value = std::optional{args[1]};
+    ASSERT_EQ(opt_n, "-n");
+    EXPECT_CALL(*this, HandleSnapshot(path, opt_n_value))
         .Times(1)
         .WillOnce(testing::Return(true));
   }

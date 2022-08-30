@@ -21,12 +21,12 @@ package org.apache.hadoop.fs.s3a;
 import javax.annotation.Nonnull;
 
 import com.amazonaws.arn.Arn;
-import com.amazonaws.regions.RegionUtils;
 
 /**
  * Represents an Arn Resource, this can be an accesspoint or bucket.
  */
 public final class ArnResource {
+  private final static String ACCESSPOINT_ENDPOINT_FORMAT = "s3-accesspoint.%s.amazonaws.com";
 
   /**
    * Resource name.
@@ -106,8 +106,7 @@ public final class ArnResource {
    * @return resource endpoint.
    */
   public String getEndpoint() {
-    return RegionUtils.getRegion(accessPointRegionKey)
-        .getServiceEndpoint("s3");
+    return String.format(ACCESSPOINT_ENDPOINT_FORMAT, region);
   }
 
   /**

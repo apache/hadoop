@@ -21,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -29,11 +28,9 @@ import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
@@ -54,7 +51,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -239,7 +235,7 @@ public class TestOfflineImageViewerForAcl {
     try (PrintStream o = new PrintStream(output)) {
       PBImageDelimitedTextWriter v =
           new PBImageDelimitedTextWriter(o, DELIMITER, "");  // run in memory.
-      v.visit(new RandomAccessFile(originalFsimage, "r"));
+      v.visit(originalFsimage.getAbsolutePath());
     }
 
     try (

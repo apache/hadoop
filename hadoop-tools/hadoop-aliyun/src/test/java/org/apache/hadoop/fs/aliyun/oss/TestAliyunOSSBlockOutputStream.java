@@ -23,19 +23,27 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.BUFFER_DIR_KEY;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_KEY;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests regular and multi-part upload functionality for
@@ -43,6 +51,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestAliyunOSSBlockOutputStream {
   private FileSystem fs;
+  private static final int PART_SIZE = 1024 * 1024;
   private static String testRootPath =
       AliyunOSSTestUtils.generateUniqueTestPath();
 
@@ -52,7 +61,7 @@ public class TestAliyunOSSBlockOutputStream {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    conf.setInt(MULTIPART_UPLOAD_PART_SIZE_KEY, 1024 * 1024);
+    conf.setInt(MULTIPART_UPLOAD_PART_SIZE_KEY, PART_SIZE);
     conf.setInt(IO_CHUNK_BUFFER_SIZE,
         conf.getInt(MULTIPART_UPLOAD_PART_SIZE_KEY, 0));
     conf.setInt(Constants.UPLOAD_ACTIVE_BLOCKS_KEY, 20);
@@ -155,10 +164,8 @@ public class TestAliyunOSSBlockOutputStream {
 
   @Test
   public void testHugeUpload() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        MULTIPART_UPLOAD_PART_SIZE_DEFAULT - 1);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), PART_SIZE - 1);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), PART_SIZE);
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
         MULTIPART_UPLOAD_PART_SIZE_DEFAULT + 1);
     bufferDirShouldEmpty();
@@ -201,5 +208,45 @@ public class TestAliyunOSSBlockOutputStream {
         fs.getConf()).listStatus(bufferPath);
     // Temporary file should be deleted
     assertEquals(0, files.length);
+  }
+
+  @Test
+  public void testDirectoryAllocator() throws Throwable {
+    Configuration conf = fs.getConf();
+    File tmp = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
+    assertTrue("not found: " + tmp, tmp.exists());
+    tmp.delete();
+
+    // tmp should not in DeleteOnExitHook
+    try {
+      Class<?> c = Class.forName("java.io.DeleteOnExitHook");
+      Field field = c.getDeclaredField("files");
+      field.setAccessible(true);
+      String name = field.getName();
+      LinkedHashSet<String> files = (LinkedHashSet<String>)field.get(name);
+      assertTrue("in DeleteOnExitHook", files.isEmpty());
+      assertFalse("in DeleteOnExitHook",
+          (new ArrayList<>(files)).contains(tmp.getPath()));
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Test
+  public void testDirectoryAllocatorRR() throws Throwable {
+    File dir1 = GenericTestUtils.getRandomizedTestDir();
+    File dir2 = GenericTestUtils.getRandomizedTestDir();
+    dir1.mkdirs();
+    dir2.mkdirs();
+
+    Configuration conf = new Configuration();
+    conf.set(BUFFER_DIR_KEY, dir1 + ", " + dir2);
+    fs = AliyunOSSTestUtils.createTestFileSystem(conf);
+    File tmp1 = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
+    tmp1.delete();
+    File tmp2 = AliyunOSSUtils.createTmpFileForWrite("out-", 1024, conf);
+    tmp2.delete();
+    assertNotEquals("round robin not working",
+        tmp1.getParent(), tmp2.getParent());
   }
 }

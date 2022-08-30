@@ -143,6 +143,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLoc
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaUsageRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSlowDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingRequestProto;
@@ -743,11 +744,15 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
 
   @Override
-  public void renewLease(String clientName) throws IOException {
-    RenewLeaseRequestProto req = RenewLeaseRequestProto.newBuilder()
-        .setClientName(clientName).build();
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
+    RenewLeaseRequestProto.Builder builder = RenewLeaseRequestProto
+        .newBuilder().setClientName(clientName);
+    if (namespaces != null && !namespaces.isEmpty()) {
+      builder.addAllNamespaces(namespaces);
+    }
     try {
-      rpcProxy.renewLease(null, req);
+      rpcProxy.renewLease(null, builder.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -2060,6 +2065,18 @@ public class ClientNamenodeProtocolTranslatorPB implements
         SatisfyStoragePolicyRequestProto.newBuilder().setSrc(src).build();
     try {
       rpcProxy.satisfyStoragePolicy(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    GetSlowDatanodeReportRequestProto req =
+        GetSlowDatanodeReportRequestProto.newBuilder().build();
+    try {
+      return PBHelperClient.convert(
+          rpcProxy.getSlowDatanodeReport(null, req).getDatanodeInfoProtoList());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

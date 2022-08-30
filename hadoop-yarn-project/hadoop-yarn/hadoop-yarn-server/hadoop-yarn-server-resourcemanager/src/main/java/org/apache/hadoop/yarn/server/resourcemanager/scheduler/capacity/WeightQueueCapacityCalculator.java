@@ -28,9 +28,8 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
-    super.calculateResourcePrerequisites(resourceCalculationDriver);
-
-    for (CSQueue childQueue : resourceCalculationDriver.getParent().getChildQueues()) {
+    // Precalculate the summary of children's weight
+    for (CSQueue childQueue : resourceCalculationDriver.getChildQueues()) {
       for (String label : childQueue.getConfiguredNodeLabels()) {
         for (String resourceName : childQueue.getConfiguredCapacityVector(label)
             .getResourceNamesByCapacityType(getCapacityType())) {
@@ -42,14 +41,14 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
   }
 
   @Override
-  public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                        CalculationContext context,
                                         String label) {
-    CSQueue parentQueue = resourceCalculationDriver.getParent();
-    String resourceName = resourceCalculationDriver.getCurrentResourceName();
-    float normalizedWeight = resourceCalculationDriver.getCurrentMinimumCapacityEntry(label)
+    String resourceName = context.getResourceName();
+    double normalizedWeight = context.getCurrentMinimumCapacityEntry(label)
         .getResourceValue() / resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
 
-    float remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
+    double remainingResource = resourceCalculationDriver.getBatchRemainingResource(label).getValue(
         resourceName);
 
     // Due to rounding loss it is better to use all remaining resources if no other resource uses
@@ -58,27 +57,22 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
       return remainingResource;
     }
 
-    float remainingPerEffectiveResourceRatio = remainingResource / parentQueue.getEffectiveCapacity(
-        label).getResourceValue(resourceName);
+    double remainingResourceRatio = resourceCalculationDriver.getRemainingRatioOfResource(
+        label, resourceName);
+    double parentAbsoluteCapacity = resourceCalculationDriver.getParentAbsoluteMinCapacity(
+        label, resourceName);
+    double queueAbsoluteCapacity = parentAbsoluteCapacity * remainingResourceRatio
+        * normalizedWeight;
 
-    float parentAbsoluteCapacity = parentQueue.getOrCreateAbsoluteMinCapacityVector(label)
-        .getValue(resourceName);
-    float queueAbsoluteCapacity = parentAbsoluteCapacity *
-        remainingPerEffectiveResourceRatio * normalizedWeight;
-
-    // Weight capacity types are the last to consider, therefore it is safe to assign all remaining
-    // effective resources between queues. The strategy is to round values to the closest whole
-    // number.
-    float resource = resourceCalculationDriver.getUpdateContext()
+    return resourceCalculationDriver.getUpdateContext()
         .getUpdatedClusterResource(label).getResourceValue(resourceName) * queueAbsoluteCapacity;
-
-    return Math.round(resource);
   }
 
   @Override
-  public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                        CalculationContext context,
                                         String label) {
-    throw new IllegalStateException("Resource " + resourceCalculationDriver.getCurrentMinimumCapacityEntry(
+    throw new IllegalStateException("Resource " + context.getCurrentMinimumCapacityEntry(
         label).getResourceName() + " has " + "WEIGHT maximum capacity type, which is not supported");
 
   }
@@ -90,19 +84,18 @@ public class WeightQueueCapacityCalculator extends AbstractQueueCapacityCalculat
 
   @Override
   public void updateCapacitiesAfterCalculation(
-      ResourceCalculationDriver resourceCalculationDriver, String label) {
-    float sumCapacityPerResource = 0f;
+      ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
+    double sumCapacityPerResource = 0f;
 
-    Collection<String> resourceNames = getResourceNames(resourceCalculationDriver.getCurrentChild(), label);
+    Collection<String> resourceNames = getResourceNames(queue, label);
     for (String resourceName : resourceNames) {
-      float sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
-      float capacity =  resourceCalculationDriver.getCurrentChild().getConfiguredCapacityVector(
+      double sumBranchWeight = resourceCalculationDriver.getSumWeightsByResource(label, resourceName);
+      double capacity =  queue.getConfiguredCapacityVector(
           label).getResource(resourceName).getResourceValue() / sumBranchWeight;
       sumCapacityPerResource += capacity;
     }
 
-    resourceCalculationDriver.getCurrentChild().getQueueCapacities().setNormalizedWeight(label,
-        sumCapacityPerResource / resourceNames.size());
-    ((AbstractCSQueue) resourceCalculationDriver.getCurrentChild()).updateAbsoluteCapacities();
+    queue.getQueueCapacities().setNormalizedWeight(label, (float) (sumCapacityPerResource / resourceNames.size()));
+    ((AbstractCSQueue) queue).updateAbsoluteCapacities();
   }
 }

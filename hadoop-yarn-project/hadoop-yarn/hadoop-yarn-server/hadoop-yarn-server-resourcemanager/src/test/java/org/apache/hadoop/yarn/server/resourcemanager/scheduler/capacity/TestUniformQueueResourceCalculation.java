@@ -43,12 +43,12 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
   private static final Resource UPDATE_RES = Resource.newInstance(250 * GB, 40);
   private static final Resource PERCENTAGE_ALL_RES = Resource.newInstance(10 * GB, 20);
 
-  public static final float A_CAPACITY = 0.3f;
-  public static final float B_CAPACITY = 0.7f;
-  public static final float A1_CAPACITY = 0.17f;
-  public static final float A11_CAPACITY = 0.25f;
-  public static final float A12_CAPACITY = 0.75f;
-  public static final float A2_CAPACITY = 0.83f;
+  public static final double A_CAPACITY = 0.3;
+  public static final double B_CAPACITY = 0.7;
+  public static final double A1_CAPACITY = 0.17;
+  public static final double A11_CAPACITY = 0.25;
+  public static final double A12_CAPACITY = 0.75;
+  public static final double A2_CAPACITY = 0.83;
 
   public static final float A_WEIGHT = 3;
   public static final float B_WEIGHT = 6;
@@ -57,12 +57,12 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
   public static final float A12_WEIGHT = 8;
   public static final float A2_WEIGHT = 3;
 
-  public static final float A_NORMALIZED_WEIGHT = A_WEIGHT / (A_WEIGHT + B_WEIGHT);
-  public static final float B_NORMALIZED_WEIGHT = B_WEIGHT / (A_WEIGHT + B_WEIGHT);
-  public static final float A1_NORMALIZED_WEIGHT = A1_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
-  public static final float A2_NORMALIZED_WEIGHT = A2_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
-  public static final float A11_NORMALIZED_WEIGHT = A11_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
-  public static final float A12_NORMALIZED_WEIGHT = A12_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
+  public static final double A_NORMALIZED_WEIGHT = A_WEIGHT / (A_WEIGHT + B_WEIGHT);
+  public static final double B_NORMALIZED_WEIGHT = B_WEIGHT / (A_WEIGHT + B_WEIGHT);
+  public static final double A1_NORMALIZED_WEIGHT = A1_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
+  public static final double A2_NORMALIZED_WEIGHT = A2_WEIGHT / (A1_WEIGHT + A2_WEIGHT);
+  public static final double A11_NORMALIZED_WEIGHT = A11_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
+  public static final double A12_NORMALIZED_WEIGHT = A12_WEIGHT / (A11_WEIGHT + A12_WEIGHT);
 
   @Test
   public void testWeightResourceCalculation() throws IOException {
@@ -75,35 +75,27 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(A_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(A_NORMALIZED_WEIGHT)
         .withQueue(B)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, B_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(B_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES, B_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(B_NORMALIZED_WEIGHT)
         .withQueue(A1)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES,
+            A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT)
         .withQueue(A2)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT * A2_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(A_NORMALIZED_WEIGHT * A2_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES,
+            A_NORMALIZED_WEIGHT * A2_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(A_NORMALIZED_WEIGHT * A2_NORMALIZED_WEIGHT)
         .withQueue(A11)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A11_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A11_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES,
+            A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A11_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A11_NORMALIZED_WEIGHT)
         .withQueue(A12)
-        .toExpect(ResourceUtils.multiplyRound(UPDATE_RES, A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A12_NORMALIZED_WEIGHT))
-        .assertEffectiveMinResource()
-        .toExpect(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A12_NORMALIZED_WEIGHT)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyRound(UPDATE_RES,
+            A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A12_NORMALIZED_WEIGHT))
+        .assertAbsoluteCapacity(A_NORMALIZED_WEIGHT * A1_NORMALIZED_WEIGHT * A12_NORMALIZED_WEIGHT)
         .build();
 
     update(queueAssertionBuilder, UPDATE_RES);
@@ -111,56 +103,42 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
   @Test
   public void testPercentageResourceCalculation() throws IOException {
-    csConf.setCapacity(A, A_CAPACITY * 100);
-    csConf.setCapacity(B, B_CAPACITY * 100);
-    csConf.setCapacity(A1, A1_CAPACITY * 100);
-    csConf.setCapacity(A11, A11_CAPACITY * 100);
-    csConf.setCapacity(A12, A12_CAPACITY * 100);
-    csConf.setCapacity(A2, A2_CAPACITY * 100);
+    csConf.setCapacity(A, (float) (A_CAPACITY * 100));
+    csConf.setCapacity(B, (float) (B_CAPACITY * 100));
+    csConf.setCapacity(A1, (float) (A1_CAPACITY * 100));
+    csConf.setCapacity(A11, (float) (A11_CAPACITY * 100));
+    csConf.setCapacity(A12, (float) (A12_CAPACITY * 100));
+    csConf.setCapacity(A2, (float) (A2_CAPACITY * 100));
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(A_CAPACITY)
-        .assertCapacity()
-        .toExpect(A_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES, A_CAPACITY))
+        .assertCapacity(A_CAPACITY)
+        .assertAbsoluteCapacity(A_CAPACITY)
         .withQueue(B)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, B_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(B_CAPACITY)
-        .assertCapacity()
-        .toExpect(B_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES, B_CAPACITY))
+        .assertCapacity(B_CAPACITY)
+        .assertAbsoluteCapacity(B_CAPACITY)
         .withQueue(A1)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A_CAPACITY * A1_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(A1_CAPACITY)
-        .assertCapacity()
-        .toExpect(A_CAPACITY * A1_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
+            A_CAPACITY * A1_CAPACITY))
+        .assertCapacity(A1_CAPACITY)
+        .assertAbsoluteCapacity(A_CAPACITY * A1_CAPACITY)
         .withQueue(A2)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A_CAPACITY * A2_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(A2_CAPACITY)
-        .assertCapacity()
-        .toExpect(A_CAPACITY * A2_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
+            A_CAPACITY * A2_CAPACITY))
+        .assertCapacity(A2_CAPACITY)
+        .assertAbsoluteCapacity(A_CAPACITY * A2_CAPACITY)
         .withQueue(A11)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A11_CAPACITY * A_CAPACITY * A1_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(A11_CAPACITY)
-        .assertCapacity()
-        .toExpect(A11_CAPACITY * A_CAPACITY * A1_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
+            A11_CAPACITY * A_CAPACITY * A1_CAPACITY))
+        .assertCapacity(A11_CAPACITY)
+        .assertAbsoluteCapacity(A11_CAPACITY * A_CAPACITY * A1_CAPACITY)
         .withQueue(A12)
-        .toExpect(ResourceUtils.multiply(PERCENTAGE_ALL_RES, A12_CAPACITY * A_CAPACITY * A1_CAPACITY))
-        .assertEffectiveMinResource()
-        .toExpect(A12_CAPACITY)
-        .assertCapacity()
-        .toExpect(A12_CAPACITY * A_CAPACITY * A1_CAPACITY)
-        .assertAbsoluteCapacity()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(PERCENTAGE_ALL_RES,
+            A12_CAPACITY * A_CAPACITY * A1_CAPACITY))
+        .assertCapacity(A12_CAPACITY)
+        .assertAbsoluteCapacity(A12_CAPACITY * A_CAPACITY * A1_CAPACITY)
         .build();
 
     update(queueAssertionBuilder, PERCENTAGE_ALL_RES);
@@ -168,58 +146,46 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
   @Test
   public void testAbsoluteResourceCalculation() throws IOException {
-    csConf.setMinimumResourceRequirement("", A, QUEUE_A_RES);
-    csConf.setMinimumResourceRequirement("", B, QUEUE_B_RES);
-    csConf.setMinimumResourceRequirement("", A1, QUEUE_A1_RES);
-    csConf.setMinimumResourceRequirement("", A2, QUEUE_A2_RES);
-    csConf.setMinimumResourceRequirement("", A11, QUEUE_A11_RES);
-    csConf.setMinimumResourceRequirement("", A12, QUEUE_A12_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(A), QUEUE_A_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(B), QUEUE_B_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(A1), QUEUE_A1_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(A2), QUEUE_A2_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(A11), QUEUE_A11_RES);
+    csConf.setMinimumResourceRequirement("", new QueuePath(A12), QUEUE_A12_RES);
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue(A)
-        .toExpect(QUEUE_A_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_A_RES)
         .withQueue(B)
-        .toExpect(QUEUE_B_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_B_RES)
         .withQueue(A1)
-        .toExpect(QUEUE_A1_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_A1_RES)
         .withQueue(A2)
-        .toExpect(QUEUE_A2_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_A2_RES)
         .withQueue(A11)
-        .toExpect(QUEUE_A11_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_A11_RES)
         .withQueue(A12)
-        .toExpect(QUEUE_A12_RES)
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(QUEUE_A12_RES)
         .build();
 
     update(queueAssertionBuilder, UPDATE_RES);
 
     QueueAssertionBuilder queueAssertionHalfClusterResource = createAssertionBuilder()
         .withQueue(A)
-        .toExpect(ResourceUtils.multiply(QUEUE_A_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A_RES, 0.5f))
         .withQueue(B)
-        .toExpect(ResourceUtils.multiply(QUEUE_B_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_B_RES, 0.5f))
         .withQueue(A1)
-        .toExpect(ResourceUtils.multiply(QUEUE_A1_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A1_RES, 0.5f))
         .withQueue(A2)
-        .toExpect(ResourceUtils.multiply(QUEUE_A2_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A2_RES, 0.5f))
         .withQueue(A11)
-        .toExpect(ResourceUtils.multiply(QUEUE_A11_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A11_RES, 0.5f))
         .withQueue(A12)
-        .toExpect(ResourceUtils.multiply(QUEUE_A12_RES, 0.5f))
-        .assertEffectiveMinResource()
+        .assertEffectiveMinResource(ResourceUtils.multiplyFloor(QUEUE_A12_RES, 0.5f))
         .build();
 
-    update(queueAssertionHalfClusterResource, ResourceUtils.multiply(UPDATE_RES, 0.5f));
+    update(queueAssertionHalfClusterResource, ResourceUtils.multiplyFloor(UPDATE_RES, 0.5f));
   }
 
 }

@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for DagAMSimulator.
@@ -74,7 +76,17 @@ public class TestDagAMSimulator {
 
   private ContainerSimulator createContainerSim(long allocationId,
       long requestDelay) {
-    return new ContainerSimulator(null, 1000, "*", 1, "Map",
-        null, allocationId, requestDelay);
+    TaskContainerDefinition taskContainerDef =
+        mock(TaskContainerDefinition.class);
+    when(taskContainerDef.getResource()).thenReturn(null);
+    when(taskContainerDef.getDuration()).thenReturn(1000L);
+    when(taskContainerDef.getHostname()).thenReturn("*");
+    when(taskContainerDef.getPriority()).thenReturn(1);
+    when(taskContainerDef.getType()).thenReturn("Map");
+    when(taskContainerDef.getExecutionType()).thenReturn(null);
+    when(taskContainerDef.getAllocationId()).thenReturn(allocationId);
+    when(taskContainerDef.getRequestDelay()).thenReturn(requestDelay);
+    return ContainerSimulator.createFromTaskContainerDefinition(
+        taskContainerDef);
   }
 }

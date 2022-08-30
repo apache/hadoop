@@ -75,6 +75,7 @@ public class NamenodeStatusReport {
   private long numberOfMissingBlocksWithReplicationFactorOne = -1;
   private long highestPriorityLowRedundancyReplicatedBlocks = -1;
   private long highestPriorityLowRedundancyECBlocks = -1;
+  private int pendingSPSPaths = -1;
 
   /** If the fields are valid. */
   private boolean registrationValid = false;
@@ -367,12 +368,13 @@ public class NamenodeStatusReport {
    * @param numBlocksPendingReplication Number of blocks pending replication.
    * @param numBlocksUnderReplicated Number of blocks under replication.
    * @param numBlocksPendingDeletion Number of blocks pending deletion.
-   * @param providedSpace Space in provided storage.
+   * @param providedStorageSpace Space in provided storage.
+   * @param numPendingSPSPaths The number of paths to be processed by storage policy satisfier.
    */
   public void setNamesystemInfo(long available, long total,
       long numFiles, long numBlocks, long numBlocksMissing,
       long numBlocksPendingReplication, long numBlocksUnderReplicated,
-      long numBlocksPendingDeletion, long providedSpace) {
+      long numBlocksPendingDeletion, long providedStorageSpace, int numPendingSPSPaths) {
     this.totalSpace = total;
     this.availableSpace = available;
     this.numOfBlocks = numBlocks;
@@ -382,7 +384,8 @@ public class NamenodeStatusReport {
     this.numOfBlocksPendingDeletion = numBlocksPendingDeletion;
     this.numOfFiles = numFiles;
     this.statsValid = true;
-    this.providedSpace = providedSpace;
+    this.providedSpace = providedStorageSpace;
+    this.pendingSPSPaths = numPendingSPSPaths;
   }
 
   /**
@@ -458,6 +461,15 @@ public class NamenodeStatusReport {
    */
   public long getHighestPriorityLowRedundancyECBlocks() {
     return this.highestPriorityLowRedundancyECBlocks;
+  }
+
+  /**
+   * Returns the number of paths to be processed by storage policy satisfier.
+   *
+   * @return The number of paths to be processed by sps.
+   */
+  public int getPendingSPSPaths() {
+    return this.pendingSPSPaths;
   }
 
   /**

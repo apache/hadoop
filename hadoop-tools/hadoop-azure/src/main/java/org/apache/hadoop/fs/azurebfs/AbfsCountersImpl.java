@@ -87,7 +87,11 @@ public class AbfsCountersImpl implements AbfsCounters {
       BYTES_RECEIVED,
       READ_THROTTLES,
       WRITE_THROTTLES,
-      SERVER_UNAVAILABLE
+      SERVER_UNAVAILABLE,
+      RENAME_RECOVERY,
+      METADATA_INCOMPLETE_RENAME_FAILURES,
+      RENAME_PATH_ATTEMPTS
+
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {

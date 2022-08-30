@@ -343,7 +343,7 @@ stores pretend that they are a FileSystem, a FileSystem with the same
 features and operations as HDFS. This is &mdash;ultimately&mdash;a pretence:
 they have different characteristics and occasionally the illusion fails.
 
-1. **Consistency**. Object stores are generally *Eventually Consistent*: it
+1. **Consistency**. Object may be *Eventually Consistent*: it
 can take time for changes to objects &mdash;creation, deletion and updates&mdash;
 to become visible to all callers. Indeed, there is no guarantee a change is
 immediately visible to the client which just made the change. As an example,
@@ -447,10 +447,6 @@ Object stores have an even vaguer view of time, which can be summarized as
  * The timestamp is likely to be in UTC or the TZ of the object store. If the
    client is in a different timezone, the timestamp of objects may be ahead or
    behind that of the client.
- * Object stores with cached metadata databases (for example: AWS S3 with
-   an in-memory or a DynamoDB metadata store) may have timestamps generated
-   from the local system clock, rather than that of the service.
-   This is an optimization to avoid round-trip calls to the object stores.
  + A file's modification time is often the same as its creation time.
  + The `FileSystem.setTimes()` operation to set file timestamps *may* be ignored.
  * `FileSystem.chmod()` may update modification times (example: Azure `wasb://`).

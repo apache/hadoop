@@ -49,7 +49,7 @@ Overview
 
   [The erstwhile implementation of DistCp]
   (http://hadoop.apache.org/docs/r1.2.1/distcp.html) has its share of quirks
-  and drawbacks, both in its usage, as well as its extensibility and
+  and drawbacks, both in its usage and its extensibility and
   performance. The purpose of the DistCp refactor was to fix these
   shortcomings, enabling it to be used and extended programmatically. New
   paradigms have been introduced to improve runtime and setup performance,
@@ -179,7 +179,7 @@ $H3 Update and Overwrite
     hdfs://nn2:8020/target/10 32
     hdfs://nn2:8020/target/20 64
 
-  Will effect:
+  The result will be:
 
     hdfs://nn2:8020/target/1 32
     hdfs://nn2:8020/target/2 32
@@ -190,7 +190,7 @@ $H3 Update and Overwrite
   because it doesn't exist at the target. `10` and `20` are overwritten since
   the contents don't match the source.
 
-  If `-update` is used, `1` is skipped because the file-length and contents match. `2` is copied because it doesn’t exist at the target. `10` and `20` are overwritten since the contents don’t match the source. However, if `-append` is additionally used, then only `10` is overwritten (source length less than destination) and `20` is appended with the change in file (if the files match up to the destination's original length).
+  If `-update` is used, `1` is skipped because the file-length and contents match. `2` is copied because it doesn't exist at the target. `10` and `20` are overwritten since the contents don’t match the source. However, if `-append` is additionally used, then only `10` is overwritten (source length less than destination) and `20` is appended with the change in file (if the files match up to the destination's original length).
 
   If `-overwrite` is used, `1` is overwritten as well.
 
@@ -269,7 +269,7 @@ $H4 Experiment 1: Syncing diff of two adjacent snapshots
 
 $H4 Experiment 2: syncing diff of two non-adjacent snapshots
 
-  First do a clean up from Experiment 1.
+  First do a cleanup from Experiment 1.
 
     hdfs dfs -rm -skipTrash /dst/1.txt
 
@@ -363,6 +363,7 @@ Command Line Options
 | `-xtrack <path>` | Save information about missing source files to the specified path. | This option is only valid with `-update` option. This is an experimental property and it cannot be used with `-atomic` option. |
 | `-direct` | Write directly to destination paths | Useful for avoiding potentially very expensive temporary file rename operations when the destination is an object store |
 | `-useiterator` | Uses single threaded listStatusIterator to build listing | Useful for saving memory at the client side. Using this option will ignore the numListstatusThreads option |
+| `-updateRoot` | Update root directory attributes (eg permissions, ownership ...) | Useful if you need to enforce root directory attributes update when using distcp |
 
 Architecture of DistCp
 ----------------------
@@ -513,7 +514,7 @@ $H3 InputFormats and MapReduce Components
      * A file with the same name exists at target, but `-overwrite` is
        specified.
      * A file with the same name exists at target, but differs in block-size
-       (and block-size needs to be preserved.
+       and block-size needs to be preserved.
 
   * **CopyCommitter:** This class is responsible for the commit-phase of the
     DistCp job, including:
@@ -575,7 +576,7 @@ $H3 MapReduce and other side-effects
     map on a re-execution will be marked as "skipped".
   * If a map fails `mapreduce.map.maxattempts` times, the remaining map tasks
     will be killed (unless `-i` is set).
-  * If `mapreduce.map.speculative` is set set final and true, the result of the
+  * If `mapreduce.map.speculative` is set to be true, the result of the
     copy is undefined.
 
 $H3 DistCp and Object Stores
@@ -690,7 +691,7 @@ Frequently Asked Questions
      directory is copied over, rather than the source-directory itself. This
      behaviour is consistent with the legacy DistCp implementation as well.
 
-  2. **How does the new DistCp differ in semantics from the Legacy DistCp?**
+  2. **How does the new DistCp differs in semantics from the Legacy DistCp?**
 
      * Files that are skipped during copy used to also have their
        file-attributes (permissions, owner/group info, etc.) unchanged, when

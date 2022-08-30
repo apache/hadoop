@@ -139,7 +139,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Constructor for {@link MutableRollingAverages}.
-   * @param metricValueName
+   * @param metricValueName input metricValueName.
    */
   public MutableRollingAverages(String metricValueName) {
     if (metricValueName == null) {
@@ -167,7 +167,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
   }
 
   @Override
-  public void snapshot(MetricsRecordBuilder builder, boolean all) {
+  public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       for (final Entry<String, LinkedBlockingDeque<SumAndCount>> entry
           : averages.entrySet()) {
@@ -179,8 +179,11 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
         long totalCount = 0;
 
         for (final SumAndCount sumAndCount : entry.getValue()) {
-          totalCount += sumAndCount.getCount();
-          totalSum += sumAndCount.getSum();
+          if (Time.monotonicNow() - sumAndCount.getSnapshotTimeStamp()
+              < recordValidityMs) {
+            totalCount += sumAndCount.getCount();
+            totalSum += sumAndCount.getSum();
+          }
         }
 
         if (totalCount != 0) {
@@ -282,6 +285,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
    * Retrieve a map of metric name {@literal ->} (aggregate).
    * Filter out entries that don't have at least minSamples.
    *
+   * @param minSamples input minSamples.
    * @return a map of peer DataNode Id to the average latency to that
    *         node seen over the measurement period.
    */
@@ -311,6 +315,7 @@ public class MutableRollingAverages extends MutableMetric implements Closeable {
 
   /**
    * Use for test only.
+   * @param value input value.
    */
   @VisibleForTesting
   public synchronized void setRecordValidityMs(long value) {

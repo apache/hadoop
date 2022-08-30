@@ -51,16 +51,6 @@ These branches have read-only compatibility.
   such directories have child entries.
 * They will open files under directories with such markers.
 
-However, they have limitations when writing/deleting directories.
-
-Specifically: S3Guard tables may not be correctly updated in
-all conditions, especially on the partial failure of delete
-operations. Specifically: they may mistakenly add a tombstone in
-the dynamoDB table and so future directory/directory tree listings
-will consider the directory to be nonexistent.
-
-_It is not safe for Hadoop releases before Hadoop 3.3.1 to write
-to S3 buckets which have directory markers when S3Guard is enabled_
 
 ## Verifying read compatibility.
 
@@ -261,7 +251,7 @@ This is backwards compatible _outside authoritative directories_.
 
 Until now, the notion of an "authoritative"
 directory has only been used as a performance optimization for deployments
-where it is known that all Applications are using the same S3Guard metastore
+where it is known that all applications were using the same S3Guard metastore
 when writing and reading data.
 In such a deployment, if it is also known that all applications are using a
 compatible version of the s3a connector, then they
@@ -272,41 +262,31 @@ every shipping Hadoop releases.
 
 ##  <a name="s3guard"></a> Directory Markers and S3Guard
 
-Applications which interact with S3A in S3A clients with S3Guard enabled still
-create and delete markers. There's no attempt to skip operations, such as by having
-`mkdirs() `create entries in the DynamoDB table but not the store.
-Having the client always update S3 ensures that other applications and clients
-do (eventually) see the changes made by the "guarded" application.
 
+The now-deleted S3Guard feature included the concept of "authoritative paths";
+paths where all clients were required to be using S3Guard and sharing the
+same metadata store.
+In such a setup, listing authoritative paths would skip all queries of the S3
+store -potentially being much faster.
+
+In production, authoritative paths were usually only ever for Hive managed
+tables, where access was strictly restricted to the Hive services.
+
+Likewise, the directory marker retention can enabled purely for authoritative
+paths.
 When S3Guard is configured to treat some directories as  [Authoritative](s3guard.html#authoritative)
 then an S3A connector with a retention policy of `fs.s3a.directory.marker.retention` of
 `authoritative` will omit deleting markers in authoritative directories.
 
-*Note* there may be further changes in directory semantics in "authoritative mode";
-only use in managed applications where all clients are using the same version of
-hadoop, and configured consistently.
-
-After the directory marker feature [HADOOP-13230](https://issues.apache.org/jira/browse/HADOOP-13230)
-was added, issues related to S3Guard integration surfaced:
-
-1. The incremental update of the S3Guard table was inserting tombstones
-   over directories as the markers were deleted, hiding files underneath.
-   This happened during directory `rename()` and `delete()`.
-1. The update of the S3Guard table after a partial failure of a bulk delete
-   operation would insert tombstones in S3Guard records of successfully
-   deleted markers, irrespective of the directory status.
-
-Issue #1 is unique to Hadoop branch 3.3; however issue #2 is s critical
-part of the S3Guard consistency handling.
-
-Both issues have been fixed in Hadoop 3.3.x,
-in [HADOOP-17244](https://issues.apache.org/jira/browse/HADOOP-17244)
-
-Issue #2, delete failure handling, is not easily backported and is
-not likely to be backported.
-
-Accordingly: Hadoop releases with read-only compatibility must not be used
-to rename or delete directories where markers are retained *when S3Guard is enabled.*
+```xml
+<property>
+  <name>fs.s3a.bucket.hive.authoritative.path</name>
+  <value>/tables</value>
+</property>
+```
+This an option to consider if not 100% confident that all
+applications interacting with a store are using an S3A client
+which is marker aware.
 
 ## <a name="bucket-info"></a> Verifying marker policy with `s3guard bucket-info`
 
@@ -334,7 +314,6 @@ Example: `s3guard bucket-info -markers aware` on a compatible release.
 > hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
  Filesystem s3a://landsat-pds
  Location: us-west-2
- Filesystem s3a://landsat-pds is not using S3Guard
 
 ...
 
@@ -354,13 +333,9 @@ is unknown
 > hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
 Illegal option -markers
 Usage: hadoop bucket-info [OPTIONS] s3a://BUCKET
-    provide/check S3Guard information about a specific bucket
+    provide/check information about a specific bucket
 
 Common options:
-  -guarded - Require S3Guard
-  -unguarded - Force S3Guard to be disabled
-  -auth - Require the S3Guard mode to be "authoritative"
-  -nonauth - Require the S3Guard mode to be "non-authoritative"
   -magic - Require the S3 filesystem to be support the "magic" committer
   -encryption -require {none, sse-s3, sse-kms} - Require encryption policy
 
@@ -380,7 +355,6 @@ A specific policy check verifies that the connector is configured as desired
 > hadoop s3guard bucket-info -markers delete s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
 
 ...
 
@@ -394,16 +368,33 @@ does not match that requested:
 > hadoop s3guard bucket-info -markers keep s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
 
-...
+S3A Client
+        Signing Algorithm: fs.s3a.signing-algorithm=(unset)
+        Endpoint: fs.s3a.endpoint=s3.amazonaws.com
+        Encryption: fs.s3a.encryption.algorithm=none
+        Input seek policy: fs.s3a.experimental.input.fadvise=normal
+        Change Detection Source: fs.s3a.change.detection.source=etag
+        Change Detection Mode: fs.s3a.change.detection.mode=server
+
+S3A Committers
+        The "magic" committer is supported in the filesystem
+        S3A Committer factory class: mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
+        S3A Committer name: fs.s3a.committer.name=magic
+        Store magic committer integration: fs.s3a.committer.magic.enabled=true
 
 Security
-    Delegation token support is disabled
+        Delegation token support is disabled
 
-The directory marker policy is "delete"
+Directory Markers
+        The directory marker policy is "delete"
+        Available Policies: delete, keep, authoritative
+        Authoritative paths: fs.s3a.authoritative.path=
 
-2020-08-12 17:14:30,563 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 46: 46: Bucket s3a://landsat-pds: required marker policy is "keep" but actual policy is "delete"
+2021-11-22 16:03:59,175 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210))
+ -Exiting with status 46: 46: Bucket s3a://landsat-pds: required marker polic is
+  "keep" but actual policy is "delete"
+
 ```
 
 

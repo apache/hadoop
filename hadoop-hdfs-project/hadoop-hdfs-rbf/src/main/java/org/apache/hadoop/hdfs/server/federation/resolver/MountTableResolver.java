@@ -359,7 +359,7 @@ public class MountTableResolver
   public static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
-        RouterRpcServer.getRemoteUser().getUserName() + "/" +
+        RouterRpcServer.getRemoteUser().getShortUserName() + "/" +
         FileSystem.TRASH_PREFIX;
   }
 

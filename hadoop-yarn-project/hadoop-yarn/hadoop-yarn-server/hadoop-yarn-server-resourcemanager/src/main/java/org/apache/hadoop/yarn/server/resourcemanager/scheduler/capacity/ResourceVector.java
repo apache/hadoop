@@ -22,18 +22,16 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Represents a simple resource floating point value storage
- * grouped by resource names.
+ * Represents a simple resource floating point value grouped by resource names.
  */
-public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
-  private final Map<String, Float> resourcesByName = new HashMap<>();
+public class ResourceVector implements Iterable<Map.Entry<String, Double>> {
+  private final Map<String, Double> resourcesByName = new HashMap<>();
 
   /**
    * Creates a new {@code ResourceVector} with all pre-defined resources set to
@@ -55,7 +53,7 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
    * @param value the value to set all resources to
    * @return uniform resource vector
    */
-  public static ResourceVector of(float value) {
+  public static ResourceVector of(double value) {
     ResourceVector emptyResourceVector = new ResourceVector();
     for (ResourceInformation resource : ResourceUtils.getResourceTypesArray()) {
       emptyResourceVector.setValue(resource.getName(), value);
@@ -81,21 +79,21 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   }
 
   /**
-   * Subtract values for each resource defined in the given resource vector.
+   * Decrements values for each resource defined in the given resource vector.
    * @param otherResourceVector rhs resource vector of the subtraction
    */
-  public void subtract(ResourceVector otherResourceVector) {
-    for (Map.Entry<String, Float> resource : otherResourceVector) {
+  public void decrement(ResourceVector otherResourceVector) {
+    for (Map.Entry<String, Double> resource : otherResourceVector) {
       setValue(resource.getKey(), getValue(resource.getKey()) - resource.getValue());
     }
   }
 
   /**
-   * Subtracts the given resource by the specified value.
+   * Decrements the given resource by the specified value.
    * @param resourceName name of the resource
    * @param value value to be subtracted from the resource's current value
    */
-  public void subtract(String resourceName, float value) {
+  public void decrement(String resourceName, double value) {
     setValue(resourceName, getValue(resourceName) - value);
   }
 
@@ -104,15 +102,15 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
    * @param resourceName name of the resource
    * @param value value to be added to the resource's current value
    */
-  public void increment(String resourceName, float value) {
+  public void increment(String resourceName, double value) {
     setValue(resourceName, getValue(resourceName) + value);
   }
 
-  public float getValue(String resourceName) {
+  public double getValue(String resourceName) {
     return resourcesByName.get(resourceName);
   }
 
-  public void setValue(String resourceName, float value) {
+  public void setValue(String resourceName, double value) {
     resourcesByName.put(resourceName, value);
   }
 
@@ -125,7 +123,7 @@ public class ResourceVector implements Iterable<Map.Entry<String, Float>> {
   }
 
   @Override
-  public Iterator<Map.Entry<String, Float>> iterator() {
+  public Iterator<Map.Entry<String, Double>> iterator() {
     return resourcesByName.entrySet().iterator();
   }
 

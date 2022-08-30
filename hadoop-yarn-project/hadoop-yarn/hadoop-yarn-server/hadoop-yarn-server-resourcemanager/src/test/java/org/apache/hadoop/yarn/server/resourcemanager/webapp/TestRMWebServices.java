@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.*;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -1003,8 +1004,8 @@ public class TestRMWebServices extends JerseyTestBase {
     Assert.assertEquals(Status.BAD_REQUEST
             .getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity().toString()
-            .contains("Configuration change validation only supported by"
-                    +" MutableConfScheduler."));
+            .contains(String.format("Configuration change validation only supported by %s.",
+                MutableConfScheduler.class.getSimpleName())));
   }
 
   @Test

@@ -44,15 +44,14 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_NORMAL;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_RANDOM;
-import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADV_SEQUENTIAL;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.FS_S3A_IMPL_DISABLE_CACHE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
@@ -88,9 +87,9 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {INPUT_FADV_SEQUENTIAL, Default_JSSE},
-        {INPUT_FADV_RANDOM, OpenSSL},
-        {INPUT_FADV_NORMAL, Default_JSSE_with_GCM},
+        {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE},
+        {FS_OPTION_OPENFILE_READ_POLICY_RANDOM, OpenSSL},
+        {FS_OPTION_OPENFILE_READ_POLICY_DEFAULT, Default_JSSE_with_GCM},
     });
   }
 
@@ -105,7 +104,7 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   }
 
   /**
-   * Create a configuration, possibly patching in S3Guard options.
+   * Create a configuration.
    * The FS is set to be uncached and the readahead and seek policies
    * of the bucket itself are removed, so as to guarantee that the
    * parameterized and test settings are
@@ -114,8 +113,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
     // purge any per-bucket overrides.
     try {
       URI bucketURI = new URI(checkNotNull(conf.get("fs.contract.test.fs.s3a")));
@@ -218,7 +215,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   public void testReadPolicyInFS() throws Throwable {
     describe("Verify the read policy is being consistently set");
     S3AFileSystem fs = getFileSystem();
-    assertEquals(S3AInputPolicy.getPolicy(seekPolicy), fs.getInputPolicy());
+    assertEquals(S3AInputPolicy.getPolicy(seekPolicy, S3AInputPolicy.Normal),
+        fs.getInputPolicy());
   }
 
   /**

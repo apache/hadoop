@@ -190,6 +190,8 @@ public class TestBlocksScheduledCounter {
 
       // 4. delete the file
       dfs.delete(filePath, true);
+      BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+          cluster.getNamesystem(0).getBlockManager());
       int blocksScheduled = 0;
       for (DatanodeDescriptor descriptor : dnList) {
         if (descriptor.getBlocksScheduled() != 0) {

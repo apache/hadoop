@@ -55,6 +55,10 @@ public enum Statistic {
       StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST,
       "HEAD request.",
       TYPE_DURATION),
+  ACTION_FILE_OPENED(
+      StoreStatisticNames.ACTION_FILE_OPENED,
+      "File opened.",
+      TYPE_DURATION),
   ACTION_HTTP_GET_REQUEST(
       StoreStatisticNames.ACTION_HTTP_GET_REQUEST,
       "GET request.",
@@ -106,6 +110,10 @@ public enum Statistic {
   INVOCATION_CREATE(
       StoreStatisticNames.OP_CREATE,
       "Calls of create()",
+      TYPE_DURATION),
+  INVOCATION_CREATE_FILE(
+      StoreStatisticNames.OP_CREATE_FILE,
+      "Calls of createFile()",
       TYPE_DURATION),
   INVOCATION_CREATE_NON_RECURSIVE(
       StoreStatisticNames.OP_CREATE_NON_RECURSIVE,
@@ -174,6 +182,10 @@ public enum Statistic {
   INVOCATION_OPEN(
       StoreStatisticNames.OP_OPEN,
       "Calls of open()",
+      TYPE_COUNTER),
+  INVOCATION_OPENFILE(
+      StoreStatisticNames.OP_OPENFILE,
+      "Calls of openFile()",
       TYPE_COUNTER),
   INVOCATION_RENAME(
       StoreStatisticNames.OP_RENAME,
@@ -296,6 +308,32 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_OPERATIONS,
       "Count of read() operations in an input stream",
       TYPE_COUNTER),
+  STREAM_READ_VECTORED_OPERATIONS(
+          StreamStatisticNames.STREAM_READ_VECTORED_OPERATIONS,
+          "Count of readVectored() operations in an input stream.",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_READ_BYTES_DISCARDED(
+          StreamStatisticNames.STREAM_READ_VECTORED_READ_BYTES_DISCARDED,
+          "Count of bytes discarded during readVectored() operation." +
+                  " in an input stream",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_INCOMING_RANGES(
+          StreamStatisticNames.STREAM_READ_VECTORED_INCOMING_RANGES,
+          "Count of incoming file ranges during readVectored() operation.",
+          TYPE_COUNTER),
+  STREAM_READ_VECTORED_COMBINED_RANGES(
+          StreamStatisticNames.STREAM_READ_VECTORED_COMBINED_RANGES,
+          "Count of combined file ranges during readVectored() operation.",
+          TYPE_COUNTER),
+  STREAM_READ_REMOTE_STREAM_ABORTED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_ABORTED,
+      "Duration of aborting a remote stream during stream IO",
+      TYPE_DURATION),
+  STREAM_READ_REMOTE_STREAM_CLOSED(
+      StreamStatisticNames.STREAM_READ_REMOTE_STREAM_DRAINED,
+      "Duration of closing a remote stream during stream IO",
+      TYPE_DURATION),
+
   STREAM_READ_OPERATIONS_INCOMPLETE(
       StreamStatisticNames.STREAM_READ_OPERATIONS_INCOMPLETE,
       "Count of incomplete read() operations in an input stream",
@@ -340,6 +378,18 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
       "Total count of bytes read from an input stream",
       TYPE_COUNTER),
+  STREAM_READ_BLOCKS_IN_FILE_CACHE(
+      StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE,
+      "Gauge of blocks in disk cache",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_PREFETCH_OPERATIONS(
+      StreamStatisticNames.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS,
+      "Gauge of active prefetches",
+      TYPE_GAUGE),
+  STREAM_READ_ACTIVE_MEMORY_IN_USE(
+      StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE,
+      "Gauge of active memory in use",
+      TYPE_GAUGE),
 
   /* Stream Write statistics */
 
@@ -442,10 +492,19 @@ public enum Statistic {
       "committer_commits_reverted",
       "Count of commits reverted",
       TYPE_COUNTER),
+  COMMITTER_LOAD_SINGLE_PENDING_FILE(
+      "committer_load_single_pending_file",
+      "Duration to load a single pending file in task commit",
+      TYPE_DURATION),
   COMMITTER_MAGIC_FILES_CREATED(
       "committer_magic_files_created",
       "Count of files created under 'magic' paths",
       TYPE_COUNTER),
+
+  COMMITTER_MAGIC_MARKER_PUT(
+      "committer_magic_marker_put",
+      "Duration Tracking of marker files created under 'magic' paths",
+      TYPE_DURATION),
   COMMITTER_MATERIALIZE_FILE(
       "committer_materialize_file",
       "Duration Tracking of time to materialize a file in job commit",
@@ -454,47 +513,6 @@ public enum Statistic {
       "committer_stage_file_upload",
       "Duration Tracking of files uploaded from a local staging path",
       TYPE_DURATION),
-
-  /* S3guard stats */
-  S3GUARD_METADATASTORE_PUT_PATH_REQUEST(
-      "s3guard_metadatastore_put_path_request",
-      "S3Guard metadata store put one metadata path request",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_PUT_PATH_LATENCY(
-      "s3guard_metadatastore_put_path_latency",
-      "S3Guard metadata store put one metadata path latency",
-      TYPE_QUANTILE),
-  S3GUARD_METADATASTORE_INITIALIZATION(
-      "s3guard_metadatastore_initialization",
-      "S3Guard metadata store initialization times",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_DELETES(
-      "s3guard_metadatastore_record_deletes",
-      "S3Guard metadata store records deleted",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_READS(
-      "s3guard_metadatastore_record_reads",
-      "S3Guard metadata store records read",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RECORD_WRITES(
-      "s3guard_metadatastore_record_writes",
-      "S3Guard metadata store records written",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_RETRY("s3guard_metadatastore_retry",
-      "S3Guard metadata store retry events",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_THROTTLED("s3guard_metadatastore_throttled",
-      "S3Guard metadata store throttled events",
-      TYPE_COUNTER),
-  S3GUARD_METADATASTORE_THROTTLE_RATE(
-      "s3guard_metadatastore_throttle_rate",
-      "S3Guard metadata store throttle rate",
-      TYPE_QUANTILE),
-  S3GUARD_METADATASTORE_AUTHORITATIVE_DIRECTORIES_UPDATED(
-      "s3guard_metadatastore_authoritative_directories_updated",
-      "S3Guard metadata store authoritative directories updated from S3",
-      TYPE_COUNTER),
-
 
   /* General Store operations */
   STORE_EXISTS_PROBE(StoreStatisticNames.STORE_EXISTS_PROBE,

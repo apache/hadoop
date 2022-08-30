@@ -82,6 +82,29 @@ extern  "C" {
     } tObjectKind;
     struct hdfsStreamBuilder;
 
+    /**
+     * The C reflection of the enum values from java.util.concurrent.TimeUnit .
+     */
+    typedef enum javaConcurrentTimeUnit {
+        jNanoseconds,
+        jMicroseconds,
+        jMilliseconds,
+        jSeconds,
+        jMinutes,
+        jHours,
+        jDays,
+    } javaConcurrentTimeUnit;
+
+    /**
+     * The C reflection of java.util.concurrent.Future specifically used for
+     * opening HDFS files asynchronously.
+     */
+    typedef struct hdfsOpenFileFuture hdfsOpenFileFuture;
+
+    /**
+     * The C reflection of o.a.h.fs.FutureDataInputStreamBuilder .
+     */
+    typedef struct hdfsOpenFileBuilder hdfsOpenFileBuilder;
 
     /**
      * The C reflection of org.apache.org.hadoop.FileSystem .
@@ -428,6 +451,118 @@ extern  "C" {
     LIBHDFS_EXTERNAL
     hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                           int bufferSize, short replication, tSize blocksize);
+
+    /**
+     * hdfsOpenFileBuilderAlloc - Allocate a HDFS open file builder.
+     *
+     * @param fs The configured filesystem handle.
+     * @param path The full path to the file.
+     * @return Returns the hdfsOpenFileBuilder, or NULL on error.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsOpenFileBuilder *hdfsOpenFileBuilderAlloc(hdfsFS fs,
+            const char *path);
+
+    /**
+     * hdfsOpenFileBuilderMust - Specifies a mandatory parameter for the open
+     * file builder. While the underlying FsBuilder supports various various
+     * types for the value (boolean, int, float, double), currently only
+     * strings are supported.
+     *
+     * @param builder The open file builder to set the config for.
+     * @param key The config key
+     * @param value The config value
+     * @return Returns the hdfsOpenFileBuilder, or NULL on error.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsOpenFileBuilder *hdfsOpenFileBuilderMust(hdfsOpenFileBuilder *builder,
+            const char *key, const char *value);
+
+    /**
+     * hdfsOpenFileBuilderOpt - Specifies an optional parameter for the open
+     * file builder. While the underlying FsBuilder supports various various
+     * types for the value (boolean, int, float, double), currently only
+     * strings are supported.
+     *
+     * @param builder The open file builder to set the config for.
+     * @param key The config key
+     * @param value The config value
+     * @return Returns the hdfsOpenFileBuilder, or NULL on error.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsOpenFileBuilder *hdfsOpenFileBuilderOpt(hdfsOpenFileBuilder *builder,
+            const char *key, const char *value);
+
+    /**
+     * hdfsOpenFileBuilderBuild - Builds the open file builder and returns a
+     * hdfsOpenFileFuture which tracks the asynchronous call to open the
+     * specified file.
+     *
+     * @param builder The open file builder to build.
+     * @return Returns the hdfsOpenFileFuture, or NULL on error.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsOpenFileFuture *hdfsOpenFileBuilderBuild(hdfsOpenFileBuilder *builder);
+
+    /**
+     * hdfsOpenFileBuilderFree - Free a HDFS open file builder.
+     *
+     * It is normally not necessary to call this function since
+     * hdfsOpenFileBuilderBuild frees the builder.
+     *
+     * @param builder The hdfsOpenFileBuilder to free.
+     */
+    LIBHDFS_EXTERNAL
+    void hdfsOpenFileBuilderFree(hdfsOpenFileBuilder *builder);
+
+    /**
+     * hdfsOpenFileFutureGet - Call Future#get() on the underlying Java Future
+     * object. A call to #get() will block until the asynchronous operation has
+     * completed. In this case, until the open file call has completed. This
+     * method blocks indefinitely until blocking call completes.
+     *
+     * @param future The hdfsOpenFileFuture to call #get on
+     * @return Returns the opened hdfsFile, or NULL on error.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsFile hdfsOpenFileFutureGet(hdfsOpenFileFuture *future);
+
+    /**
+     * hdfsOpenFileFutureGetWithTimeout - Call Future#get(long, TimeUnit) on
+     * the underlying Java Future object. A call to #get(long, TimeUnit) will
+     * block until the asynchronous operation has completed (in this case,
+     * until the open file call has completed) or the specified timeout has
+     * been reached.
+     *
+     * @param future The hdfsOpenFileFuture to call #get on
+     * @return Returns the opened hdfsFile, or NULL on error or if the timeout
+     *         has been reached.
+     */
+    LIBHDFS_EXTERNAL
+    hdfsFile hdfsOpenFileFutureGetWithTimeout(hdfsOpenFileFuture *future,
+            int64_t timeout, javaConcurrentTimeUnit timeUnit);
+
+    /**
+     * hdfsOpenFileFutureCancel - Call Future#cancel(boolean) on the
+     * underlying Java Future object. The value of mayInterruptedIfRunning
+     * controls whether the Java thread running the Future should be
+     * interrupted or not.
+     *
+     * @param future The hdfsOpenFileFuture to call #cancel on
+     * @param mayInterruptIfRunning if true, interrupts the running thread
+     * @return Returns 0 if the thread was successfully cancelled, else -1
+     */
+    LIBHDFS_EXTERNAL
+    int hdfsOpenFileFutureCancel(hdfsOpenFileFuture *future,
+            int mayInterruptIfRunning);
+
+    /**
+     * hdfsOpenFileFutureFree - Free a HDFS open file future.
+     *
+     * @param hdfsOpenFileFuture The hdfsOpenFileFuture to free.
+     */
+    LIBHDFS_EXTERNAL
+    void hdfsOpenFileFutureFree(hdfsOpenFileFuture *future);
 
     /**
      * hdfsStreamBuilderAlloc - Allocate an HDFS stream builder.

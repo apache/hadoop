@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 /**
@@ -330,7 +331,7 @@ public class DefaultRequestInterceptorREST
   }
 
   @Override
-  public Response removeFromCluserNodeLabels(Set<String> oldNodeLabels,
+  public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
     // oldNodeLabels is specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
@@ -562,6 +563,25 @@ public class DefaultRequestInterceptorREST
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId + "/"
             + RMWSConsts.APPATTEMPTS + "/" + appAttemptId + "/"
             + RMWSConsts.CONTAINERS + "/" + containerId,
+        null, null, getConf(), client);
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest req)
+      throws AuthorizationException, InterruptedException {
+    return RouterWebServiceUtil.genericForward(webAppAddress, req,
+        Response.class, HTTPMethods.PUT,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_CONF,
+        mutationInfo, null, getConf(), client);
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest req)
+      throws AuthorizationException {
+    return RouterWebServiceUtil.genericForward(webAppAddress, req,
+        Response.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_CONF,
         null, null, getConf(), client);
   }
 

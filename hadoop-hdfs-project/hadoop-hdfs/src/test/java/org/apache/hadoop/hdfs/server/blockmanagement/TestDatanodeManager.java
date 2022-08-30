@@ -86,6 +86,10 @@ public class TestDatanodeManager {
   private static DatanodeManager mockDatanodeManager(
       FSNamesystem fsn, Configuration conf) throws IOException {
     BlockManager bm = Mockito.mock(BlockManager.class);
+    Mockito.when(bm.getMaxReplicationStreams()).thenReturn(
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 2));
+    Mockito.when(bm.getReplicationStreamsHardLimit()).thenReturn(
+        conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY, 2));
     BlockReportLeaseManager blm = new BlockReportLeaseManager(conf);
     Mockito.when(bm.getBlockReportLeaseManager()).thenReturn(blm);
     DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
@@ -136,6 +140,35 @@ public class TestDatanodeManager {
     assertNull("should be no more version0 nodes", mapToCheck.get("version0"));
     assertEquals("should be one version1 node",
         mapToCheck.get("version1").intValue(), 1);
+  }
+
+  /**
+   * This test checks that if a node is re-registered with a different ip, its
+   * host2DatanodeMap is correctly updated with the new ip.
+   */
+  @Test
+  public void testHost2NodeMapCorrectAfterReregister()
+          throws IOException, InterruptedException {
+    //Create the DatanodeManager which will be tested
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    Configuration conf = new Configuration();
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
+
+    String storageID = "someStorageID1";
+    String ipOld = "someIPOld" + storageID;
+    String ipNew = "someIPNew" + storageID;
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ipOld, "", storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    dm.registerDatanode(new DatanodeRegistration(
+            new DatanodeID(ipNew, "", storageID, 9000, 0, 0, 0),
+            null, null, "version"));
+
+    assertNull("should be no node with old ip", dm.getDatanodeByHost(ipOld));
+    assertNotNull("should be a node with new ip", dm.getDatanodeByHost(ipNew));
   }
 
   /**
@@ -936,25 +969,33 @@ public class TestDatanodeManager {
    * @param numReplicationBlocks the number of replication blocks in the queue.
    * @param numECBlocks number of EC blocks in the queue.
    * @param maxTransfers the maxTransfer value.
+   * @param maxTransfersHardLimit the maxTransfer hard limit value.
    * @param numReplicationTasks the number of replication tasks polled from
    *                            the queue.
    * @param numECTasks the number of EC tasks polled from the queue.
+   * @param isDecommissioning if the node is in the decommissioning process.
    *
    * @throws IOException
    */
   private void verifyPendingRecoveryTasks(
       int numReplicationBlocks, int numECBlocks,
-      int maxTransfers, int numReplicationTasks, int numECTasks)
+      int maxTransfers, int maxTransfersHardLimit,
+      int numReplicationTasks, int numECTasks, boolean isDecommissioning)
       throws IOException {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, maxTransfers);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
+        maxTransfersHardLimit);
     DatanodeManager dm = Mockito.spy(mockDatanodeManager(fsn, conf));
 
     DatanodeDescriptor nodeInfo = Mockito.mock(DatanodeDescriptor.class);
     Mockito.when(nodeInfo.isRegistered()).thenReturn(true);
     Mockito.when(nodeInfo.getStorageInfos())
         .thenReturn(new DatanodeStorageInfo[0]);
+    Mockito.when(nodeInfo.isDecommissionInProgress())
+        .thenReturn(isDecommissioning);
 
     if (numReplicationBlocks > 0) {
       Mockito.when(nodeInfo.getNumberOfReplicateBlocks())
@@ -981,7 +1022,7 @@ public class TestDatanodeManager {
     DatanodeRegistration dnReg = Mockito.mock(DatanodeRegistration.class);
     Mockito.when(dm.getDatanode(dnReg)).thenReturn(nodeInfo);
     DatanodeCommand[] cmds = dm.handleHeartbeat(
-        dnReg, new StorageReport[1], "bp-123", 0, 0, 10, maxTransfers, 0, null,
+        dnReg, new StorageReport[1], "bp-123", 0, 0, 10, 0, 0, null,
         SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
 
     long expectedNumCmds = Arrays.stream(
@@ -1013,11 +1054,14 @@ public class TestDatanodeManager {
   @Test
   public void testPendingRecoveryTasks() throws IOException {
     // Tasks are slitted according to the ratio between queue lengths.
-    verifyPendingRecoveryTasks(20, 20, 20, 10, 10);
-    verifyPendingRecoveryTasks(40, 10, 20, 16, 4);
+    verifyPendingRecoveryTasks(20, 20, 20, 30, 10, 10, false);
+    verifyPendingRecoveryTasks(40, 10, 20, 30, 16, 4, false);
 
     // Approximately load tasks if the ratio between queue length is large.
-    verifyPendingRecoveryTasks(400, 1, 20, 20, 1);
+    verifyPendingRecoveryTasks(400, 1, 20, 30, 20, 1, false);
+
+    // Tasks use dfs.namenode.replication.max-streams-hard-limit for decommissioning node
+    verifyPendingRecoveryTasks(30, 30, 20, 30, 15, 15, true);
   }
 
   @Test

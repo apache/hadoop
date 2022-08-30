@@ -404,16 +404,49 @@ public class DominantResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    float ratio = 0.0f;
+    return ratio(a, b, true);
+  }
+
+  /**
+   * Computes the ratio of resource a over resource b,
+   * where the boolean flag {@literal isDominantShare} allows
+   * specification of whether the max- or min-share should be computed.
+   * @param a the numerator resource.
+   * @param b the denominator resource.
+   * @param isDominantShare whether the dominant (max) share should be computed,
+   *                        computes the min-share if false.
+   * @return the max- or min-share ratio of the resources.
+   */
+  private float ratio(Resource a, Resource b, boolean isDominantShare) {
+    float ratio = isDominantShare ? 0.0f : 1.0f;
     int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation aResourceInformation = a.getResourceInformation(i);
       ResourceInformation bResourceInformation = b.getResourceInformation(i);
       final float tmp = divideSafelyAsFloat(aResourceInformation.getValue(),
           bResourceInformation.getValue());
-      ratio = ratio > tmp ? ratio : tmp;
+      if (isDominantShare) {
+        ratio = Math.max(ratio, tmp);
+      } else {
+        ratio = Math.min(ratio, tmp);
+      }
     }
     return ratio;
+  }
+
+  /**
+   * Computes the ratio of resource a over resource b.
+   * However, different from ratio(Resource, Resource),
+   * this returns the min-share of the resources.
+   * For example, ratio(Resource(10, 50), Resource(100, 100)) would return 0.5,
+   * whereas minRatio(Resource(10, 50), Resource(100, 100)) would return 0.1.
+   * @param a the numerator resource.
+   * @param b the denominator resource.
+   * @return the min-share ratio of the resources.
+   */
+  @Unstable
+  public float minRatio(Resource a, Resource b) {
+    return ratio(a, b, false);
   }
 
   @Override

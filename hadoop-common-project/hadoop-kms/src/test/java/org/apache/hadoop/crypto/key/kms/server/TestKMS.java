@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +49,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Time;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.After;
@@ -929,6 +929,7 @@ public class TestKMS {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testKMSProviderCaching() throws Exception {
     Configuration conf = new Configuration();
     File confDir = getTestDir();
@@ -946,11 +947,12 @@ public class TestKMS {
         KMSClientProvider kmscp = createKMSClientProvider(uri, conf);
 
         // get the reference to the internal cache, to test invalidation.
-        ValueQueue vq =
-            (ValueQueue) Whitebox.getInternalState(kmscp, "encKeyVersionQueue");
+        ValueQueue vq = (ValueQueue) FieldUtils.getField(KMSClientProvider.class,
+            "encKeyVersionQueue", true).get(kmscp);
         LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>> kq =
-            ((LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
-                Whitebox.getInternalState(vq, "keyQueues"));
+            (LoadingCache<String, LinkedBlockingQueue<EncryptedKeyVersion>>)
+                 FieldUtils.getField(ValueQueue.class, "keyQueues", true).get(vq);
+
         EncryptedKeyVersion mockEKV = Mockito.mock(EncryptedKeyVersion.class);
         when(mockEKV.getEncryptionKeyName()).thenReturn(keyName);
         when(mockEKV.getEncryptionKeyVersionName()).thenReturn(mockVersionName);

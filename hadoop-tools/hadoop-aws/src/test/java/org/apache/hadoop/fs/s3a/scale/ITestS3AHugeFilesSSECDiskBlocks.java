@@ -23,6 +23,9 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import java.nio.file.AccessDeniedException;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
@@ -41,10 +44,20 @@ public class ITestS3AHugeFilesSSECDiskBlocks
   private static final String KEY_1
       = "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=";
 
+  /**
+   * Skipping tests when running against mandatory encryption bucket
+   * which allows only certain encryption method.
+   * S3 throw AmazonS3Exception with status 403 AccessDenied
+   * then it is translated into AccessDeniedException by S3AUtils.translateException(...)
+   */
   @Override
   public void setup() throws Exception {
-    super.setup();
-    skipIfEncryptionTestsDisabled(getConfiguration());
+    try {
+      super.setup();
+      skipIfEncryptionTestsDisabled(getConfiguration());
+    } catch (AccessDeniedException e) {
+      skip("Bucket does not allow " + S3AEncryptionMethods.SSE_C + " encryption method");
+    }
   }
 
   @SuppressWarnings("deprecation")

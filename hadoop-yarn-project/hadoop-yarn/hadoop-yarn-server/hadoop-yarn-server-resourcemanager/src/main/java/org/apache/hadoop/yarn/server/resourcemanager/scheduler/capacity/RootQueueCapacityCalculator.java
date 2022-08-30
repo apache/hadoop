@@ -18,32 +18,42 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType;
+
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacityVector.ResourceUnitCapacityType.PERCENTAGE;
 
-public class RootQueueCapacityCalculator extends
-    AbstractQueueCapacityCalculator {
+public class RootQueueCapacityCalculator extends AbstractQueueCapacityCalculator {
 
   @Override
-  public float calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver, String label) {
-    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(resourceCalculationDriver.getCurrentResourceName());
+  public void calculateResourcePrerequisites(ResourceCalculationDriver resourceCalculationDriver) {
+    AbsoluteResourceCapacityCalculator.setNormalizedResourceRatio(resourceCalculationDriver);
   }
 
   @Override
-  public float calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver, String label) {
-    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label).getResourceValue(resourceCalculationDriver.getCurrentResourceName());
+  public double calculateMinimumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                         CalculationContext context, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
+        .getResourceValue(context.getResourceName());
+  }
+
+  @Override
+  public double calculateMaximumResource(ResourceCalculationDriver resourceCalculationDriver,
+                                         CalculationContext context, String label) {
+    return resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label)
+        .getResourceValue(context.getResourceName());
   }
 
   @Override
   public void updateCapacitiesAfterCalculation(
-      ResourceCalculationDriver resourceCalculationDriver, String label) {
-    resourceCalculationDriver.getParent().getQueueCapacities().setAbsoluteCapacity(label, 1);
-    if (resourceCalculationDriver.getParent().getQueueCapacities().getWeight(label) == 1) {
-      resourceCalculationDriver.getParent().getQueueCapacities().setNormalizedWeight(label, 1);
+      ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
+    queue.getQueueCapacities().setAbsoluteCapacity(label, 1);
+    if (queue.getQueueCapacities().getWeight(label) == 1) {
+      queue.getQueueCapacities().setNormalizedWeight(label, 1);
     }
   }
 
   @Override
-  public QueueCapacityVector.ResourceUnitCapacityType getCapacityType() {
+  public ResourceUnitCapacityType getCapacityType() {
     return PERCENTAGE;
   }
 }

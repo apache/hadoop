@@ -68,10 +68,12 @@ public class ShutdownThreadsHelper {
   }
 
   /**
+   * shutdownExecutorService.
+   *
    * @param service {@link ExecutorService to be shutdown}
    * @return <tt>true</tt> if the service is terminated,
    * <tt>false</tt> otherwise
-   * @throws InterruptedException
+   * @throws InterruptedException if the thread is interrupted.
    */
   public static boolean shutdownExecutorService(ExecutorService service)
       throws InterruptedException {
@@ -79,13 +81,15 @@ public class ShutdownThreadsHelper {
   }
 
   /**
+   * shutdownExecutorService.
+   *
    * @param service {@link ExecutorService to be shutdown}
    * @param timeoutInMs time to wait for {@link
    * ExecutorService#awaitTermination(long, java.util.concurrent.TimeUnit)}
    *                    calls in milli seconds.
    * @return <tt>true</tt> if the service is terminated,
    * <tt>false</tt> otherwise
-   * @throws InterruptedException
+   * @throws InterruptedException if the thread is interrupted.
    */
   public static boolean shutdownExecutorService(ExecutorService service,
                                         long timeoutInMs)

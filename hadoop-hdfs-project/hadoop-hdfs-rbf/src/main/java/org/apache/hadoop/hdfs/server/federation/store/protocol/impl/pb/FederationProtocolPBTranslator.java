@@ -92,7 +92,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
 
   /**
    * Get the serialized proto object. If the translator was created from a byte
-   * stream, returns the intitial byte stream. Otherwise creates a new byte
+   * stream, returns the initial byte stream. Otherwise, creates a new byte
    * stream from the cached builder.
    *
    * @return Protobuf message object

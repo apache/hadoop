@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -34,22 +35,15 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 
 /**
  * GetContentSummary operation.
- * This is based on {@code FileSystem.get#getContentSummary};
- * its still doing sequential treewalk with the efficiency
- * issues.
  *
- * Changes:
- * 1. On the recursive calls there
- * is no probe to see if the path is a file: we know the
- * recursion only happens with a dir.
- * 2. If a subdirectory is not found during the walk, that
- * does not trigger an error. The directory is clearly
- * not part of the content any more.
+ * It is optimized for s3 and performs a deep tree listing,
+ * inferring directory counts from the paths returned.
  *
  * The Operation serves up IOStatistics; this counts
  * the cost of all the list operations, but not the
@@ -122,9 +116,7 @@ public class GetContentSummaryOperation extends
 
   /**
    * Return the {@link ContentSummary} of a given directory.
-   * This is a recursive operation (as the original is);
-   * it'd be more efficient of stack and heap if it managed its
-   * own stack.
+   *
    * @param dir dir to scan
    * @throws FileNotFoundException if the path does not resolve
    * @throws IOException IO failure
@@ -133,34 +125,65 @@ public class GetContentSummaryOperation extends
    * @throws IOException failure
    */
   public ContentSummary getDirSummary(Path dir) throws IOException {
+
     long totalLength = 0;
     long fileCount = 0;
     long dirCount = 1;
-    final RemoteIterator<S3AFileStatus> it
-        = callbacks.listStatusIterator(dir);
+
+    RemoteIterator<S3ALocatedFileStatus> it = callbacks.listFilesIterator(dir, true);
+
+    Set<Path> dirSet = new HashSet<>();
+    Set<Path> pathsTraversed = new HashSet<>();
 
     while (it.hasNext()) {
-      final S3AFileStatus s = it.next();
-      if (s.isDirectory()) {
-        try {
-          ContentSummary c = getDirSummary(s.getPath());
-          totalLength += c.getLength();
-          fileCount += c.getFileCount();
-          dirCount += c.getDirectoryCount();
-        } catch (FileNotFoundException ignored) {
-          // path was deleted during the scan; exclude from
-          // summary.
-        }
-      } else {
-        totalLength += s.getLen();
+      S3ALocatedFileStatus fileStatus = it.next();
+      Path filePath = fileStatus.getPath();
+
+      if (fileStatus.isDirectory() && !filePath.equals(dir)) {
+        dirSet.add(filePath);
+        buildDirectorySet(dirSet, pathsTraversed, dir, filePath.getParent());
+      } else if (!fileStatus.isDirectory()) {
         fileCount += 1;
+        totalLength += fileStatus.getLen();
+        buildDirectorySet(dirSet, pathsTraversed, dir, filePath.getParent());
       }
+
     }
+
     // Add the list's IOStatistics
     iostatistics.aggregate(retrieveIOStatistics(it));
+
     return new ContentSummary.Builder().length(totalLength).
-        fileCount(fileCount).directoryCount(dirCount).
-        spaceConsumed(totalLength).build();
+            fileCount(fileCount).directoryCount(dirCount + dirSet.size()).
+            spaceConsumed(totalLength).build();
+  }
+
+  /***
+   * This method builds the set of all directories found under the base path. We need to do this
+   * because if the directory structure /a/b/c was created with a single mkdirs() call, it is
+   * stored as 1 object in S3 and the list files iterator will only return a single entry /a/b/c.
+   *
+   * We keep track of paths traversed so far to prevent duplication of work. For eg, if we had
+   * a/b/c/file-1.txt and /a/b/c/file-2.txt, we will only recurse over the complete path once
+   * and won't have to do anything for file-2.txt.
+   *
+   * @param dirSet Set of all directories found in the path
+   * @param pathsTraversed Set of all paths traversed so far
+   * @param basePath Path of directory to scan
+   * @param parentPath Parent path of the current file/directory in the iterator
+   */
+  private void buildDirectorySet(Set<Path> dirSet, Set<Path> pathsTraversed, Path basePath,
+      Path parentPath) {
+
+    if (parentPath == null || pathsTraversed.contains(parentPath) || parentPath.equals(basePath)) {
+      return;
+    }
+
+    dirSet.add(parentPath);
+
+    buildDirectorySet(dirSet, pathsTraversed, basePath, parentPath.getParent());
+
+    pathsTraversed.add(parentPath);
   }
 
   /**
@@ -186,23 +209,23 @@ public class GetContentSummaryOperation extends
 
     /**
      * Get the status of a path.
-     * @param path path to probe.
+     *
+     * @param path   path to probe.
      * @param probes probes to exec
      * @return the status
      * @throws IOException failure
      */
     @Retries.RetryTranslated
-    S3AFileStatus probePathStatus(Path path,
-        Set<StatusProbeEnum> probes) throws IOException;
+    S3AFileStatus probePathStatus(Path path, Set<StatusProbeEnum> probes) throws IOException;
 
-    /**
-     * Incremental list of all entries in a directory.
-     * @param path path of dir
-     * @return an iterator
+    /***
+     * List all entries under a path.
+     * @param path path.
+     * @param recursive if the subdirectories need to be traversed recursively
+     * @return an iterator over the listing.
      * @throws IOException failure
      */
-    RemoteIterator<S3AFileStatus> listStatusIterator(Path path)
+    RemoteIterator<S3ALocatedFileStatus> listFilesIterator(Path path, boolean recursive)
         throws IOException;
-
   }
 }

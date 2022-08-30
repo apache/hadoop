@@ -81,8 +81,12 @@ class FSDirRenameOp {
     // Assume dstParent existence check done by callers.
     INode dstParent = dst.getINode(-2);
     // Use the destination parent's storage policy for quota delta verify.
+    final boolean isSrcSetSp = src.getLastINode().isSetStoragePolicy();
+    final byte storagePolicyID = isSrcSetSp ?
+        src.getLastINode().getLocalStoragePolicyID() :
+        dstParent.getStoragePolicyID();
     final QuotaCounts delta = src.getLastINode()
-        .computeQuotaUsage(bsps, dstParent.getStoragePolicyID(), false,
+        .computeQuotaUsage(bsps, storagePolicyID, false,
             Snapshot.CURRENT_STATE_ID);
 
     // Reduce the required quota by dst that is being removed

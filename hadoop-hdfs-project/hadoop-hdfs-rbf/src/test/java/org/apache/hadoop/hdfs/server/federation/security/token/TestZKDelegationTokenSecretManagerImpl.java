@@ -110,7 +110,7 @@ public class TestZKDelegationTokenSecretManagerImpl
     conf.setBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED, false);
     // make sync quick
     conf.setInt(ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL, 3);
-    // set the renew window and removal interval to be a
+    // set the renewal window and removal interval to be a
     // short time to trigger the background cleanup
     conf.setInt(RENEW_INTERVAL, 10);
     conf.setInt(REMOVAL_SCAN_INTERVAL, 10);
@@ -170,7 +170,7 @@ public class TestZKDelegationTokenSecretManagerImpl
     conf.setBoolean(ZK_DTSM_TOKEN_WATCHER_ENABLED, false);
     // make sync quick
     conf.setInt(ZK_DTSM_ROUTER_TOKEN_SYNC_INTERVAL, 20);
-    // set the renew window and removal interval to be a
+    // set the renewal window and removal interval to be a
     // short time to trigger the background cleanup
     conf.setInt(RENEW_INTERVAL, 10);
     conf.setInt(REMOVAL_SCAN_INTERVAL, 10);

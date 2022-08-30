@@ -125,15 +125,6 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     this.committerName = committerName;
   }
 
-  /**
-   * Not using special paths here.
-   * @return false
-   */
-  @Override
-  public boolean useInconsistentClient() {
-    return false;
-  }
-
   @Override
   protected String committerName() {
     return committerName;
@@ -339,7 +330,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     stage.accept("teravalidate");
     stage.accept("overall");
     String text = results.toString();
-    File resultsFile = File.createTempFile("results", ".csv");
+    File resultsFile = new File(getReportDir(), committerName + ".csv");
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
   }

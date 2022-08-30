@@ -133,5 +133,10 @@ public final class FileSystemConfigurations {
   public static final String DATA_BLOCKS_BUFFER_DEFAULT =
       DATA_BLOCKS_BUFFER_DISK;
 
+  /**
+   * IO rate limit. Value: {@value}
+   */
+  public static final int RATE_LIMIT_DEFAULT = 10_000;
+
   private FileSystemConfigurations() {}
 }

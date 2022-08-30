@@ -39,7 +39,6 @@ import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableS3GuardInTestBucket;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
@@ -82,7 +81,7 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(getTestBucketName(conf),
         conf,
         DIRECTORY_MARKER_POLICY);
-    disableS3GuardInTestBucket(conf);
+
     return conf;
   }
 

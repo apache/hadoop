@@ -92,9 +92,22 @@
         </dependency>
 
         <dependency>
-            <groupId>com.sun.jersey</groupId>
+            <groupId>com.github.pjfanning</groupId>
             <artifactId>jersey-json</artifactId>
-            <version>${jersey.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-json-provider</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -276,8 +289,8 @@
                         </goals>
                         <phase>generate-resources</phase>
                         <configuration>
-                            <nodeVersion>v8.11.3</nodeVersion>
-                            <yarnVersion>v1.7.0</yarnVersion>
+                            <nodeVersion>${nodejs.version}</nodeVersion>
+                            <yarnVersion>${yarnpkg.version}</yarnVersion>
                         </configuration>
                     </execution>
                     <execution>

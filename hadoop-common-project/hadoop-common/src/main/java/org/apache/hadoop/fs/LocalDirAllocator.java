@@ -78,8 +78,9 @@ public class LocalDirAllocator {
 
   private final DiskValidator diskValidator;
 
-  /**Create an allocator object
-   * @param contextCfgItemName
+  /**
+   * Create an allocator object.
+   * @param contextCfgItemName contextCfgItemName.
    */
   public LocalDirAllocator(String contextCfgItemName) {
     this.contextCfgItemName = contextCfgItemName;
@@ -123,7 +124,7 @@ public class LocalDirAllocator {
    *  available disk)
    *  @param conf the Configuration object
    *  @return the complete path to the file on a local disk
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public Path getLocalPathForWrite(String pathStr, 
       Configuration conf) throws IOException {
@@ -139,7 +140,7 @@ public class LocalDirAllocator {
    *  @param size the size of the file that is going to be written
    *  @param conf the Configuration object
    *  @return the complete path to the file on a local disk
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public Path getLocalPathForWrite(String pathStr, long size, 
       Configuration conf) throws IOException {
@@ -156,7 +157,7 @@ public class LocalDirAllocator {
    *  @param conf the Configuration object
    *  @param checkWrite ensure that the path is writable
    *  @return the complete path to the file on a local disk
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public Path getLocalPathForWrite(String pathStr, long size, 
                                    Configuration conf,
@@ -171,7 +172,7 @@ public class LocalDirAllocator {
    *  @param pathStr the requested file (this will be searched)
    *  @param conf the Configuration object
    *  @return the complete path to the file on a local disk
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public Path getLocalPathToRead(String pathStr, 
       Configuration conf) throws IOException {
@@ -184,7 +185,7 @@ public class LocalDirAllocator {
    * @param pathStr the path underneath the roots
    * @param conf the configuration to look up the roots in
    * @return all of the paths that exist under any of the roots
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public Iterable<Path> getAllLocalPathsToRead(String pathStr, 
                                                Configuration conf
@@ -205,7 +206,7 @@ public class LocalDirAllocator {
    *  @param size the size of the file that is going to be written
    *  @param conf the Configuration object
    *  @return a unique temporary file
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public File createTmpFileForWrite(String pathStr, long size, 
       Configuration conf) throws IOException {
@@ -213,8 +214,9 @@ public class LocalDirAllocator {
     return context.createTmpFileForWrite(pathStr, size, conf);
   }
   
-  /** Method to check whether a context is valid
-   * @param contextCfgItemName
+  /**
+   * Method to check whether a context is valid.
+   * @param contextCfgItemName contextCfgItemName.
    * @return true/false
    */
   public static boolean isContextValid(String contextCfgItemName) {
@@ -224,9 +226,9 @@ public class LocalDirAllocator {
   }
   
   /**
-   * Removes the context from the context config items
+   * Removes the context from the context config items.
    * 
-   * @param contextCfgItemName
+   * @param contextCfgItemName contextCfgItemName.
    */
   @Deprecated
   @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -236,8 +238,9 @@ public class LocalDirAllocator {
     }
   }
     
-  /** We search through all the configured dirs for the file's existence
-   *  and return true when we find  
+  /**
+   *  We search through all the configured dirs for the file's existence
+   *  and return true when we find.
    *  @param pathStr the requested file (this will be searched)
    *  @param conf the Configuration object
    *  @return true if files exist. false otherwise

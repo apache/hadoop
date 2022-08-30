@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
@@ -144,6 +145,18 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
+
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
+        BULK_DELETE_PAGE_SIZE,
+        USER_AGENT_PREFIX,
+        ENABLE_MULTI_DELETE);
+    conf.setBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING, throttle);
+    conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
+    conf.set(USER_AGENT_PREFIX,
+        String.format("ILoadTestS3ABulkDeleteThrottling-%s-%04d",
+            throttle, pageSize));
+
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
@@ -151,19 +164,6 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   @Override
   public void setup() throws Exception {
     final Configuration conf = getConf();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf,
-        EXPERIMENTAL_AWS_INTERNAL_THROTTLING,
-        BULK_DELETE_PAGE_SIZE,
-        USER_AGENT_PREFIX);
-    conf.setBoolean(EXPERIMENTAL_AWS_INTERNAL_THROTTLING, throttle);
-    Assertions.assertThat(pageSize)
-        .describedAs("page size")
-        .isGreaterThan(0);
-    conf.setInt(BULK_DELETE_PAGE_SIZE, pageSize);
-    conf.set(USER_AGENT_PREFIX,
-        String.format("ILoadTestS3ABulkDeleteThrottling-%s-%04d",
-            throttle, pageSize));
-
     super.setup();
     Assume.assumeTrue("multipart delete disabled",
         conf.getBoolean(ENABLE_MULTI_DELETE, true));
@@ -246,8 +246,8 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
         final ContractTestUtils.NanoTimer timer =
             new ContractTestUtils.NanoTimer();
         Exception ex = null;
-        try {
-          fs.removeKeys(fileList, false, null);
+        try (AuditSpan span = span())  {
+          fs.removeKeys(fileList, false);
         } catch (IOException e) {
           ex = e;
         }

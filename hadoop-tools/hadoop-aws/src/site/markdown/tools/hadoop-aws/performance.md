@@ -55,15 +55,35 @@ it isn't, and some attempts to preserve the metaphor are "aggressively suboptima
 
 To make most efficient use of S3, care is needed.
 
-## <a name="s3guard"></a> Speeding up directory listing operations through S3Guard
+## <a name="vectoredIO"></a> Improving read performance using Vectored IO
+The S3A FileSystem supports implementation of vectored read api using which
+a client can provide a list of file ranges to read returning a future read
+object associated with each range. For full api specification please see
+[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
 
-[S3Guard](s3guard.html) provides significant speedups for operations which
-list files a lot. This includes the setup of all queries against data:
-MapReduce, Hive and Spark, as well as DistCP.
+The following properties can be configured to optimise vectored reads based
+on the client requirements.
 
-
-Experiment with using it to see what speedup it delivers.
-
+```xml
+<property>
+  <name>fs.s3a.vectored.read.min.seek.size</name>
+  <value>4K</value>
+  <description>
+     What is the smallest reasonable seek in bytes such
+     that we group ranges together during vectored
+     read operation.
+   </description>
+</property>
+<property>
+<name>fs.s3a.vectored.read.max.merged.size</name>
+<value>1M</value>
+<description>
+   What is the largest merged read size in bytes such
+   that we group ranges together during vectored read.
+   Setting this value to 0 will disable merging of ranges.
+</description>
+</property>
+```
 
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
@@ -157,9 +177,7 @@ When using S3 as a destination, this is slow because of the way `rename()`
 is mimicked with copy and delete.
 
 If committing output takes a long time, it is because you are using the standard
-`FileOutputCommitter`. If you are doing this on any S3 endpoint which lacks
-list consistency (Amazon S3 without [S3Guard](s3guard.html)), this committer
-is at risk of losing data!
+`FileOutputCommitter`.
 
 *Your problem may appear to be performance, but that is a symptom
 of the underlying problem: the way S3A fakes rename operations means that
@@ -448,27 +466,6 @@ If you believe that you are reaching these limits, you may be able to
 get them increased.
 Consult [the KMS Rate Limit documentation](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
 
-### <a name="s3guard_throttling"></a> S3Guard and Throttling
-
-
-S3Guard uses DynamoDB for directory and file lookups;
-it is rate limited to the amount of (guaranteed) IO purchased for a
-table.
-
-To see the allocated capacity of a bucket, the `hadoop s3guard bucket-info s3a://bucket`
-command will print out the allocated capacity.
-
-
-If significant throttling events/rate is observed here, the pre-allocated
-IOPs can be increased with the `hadoop s3guard set-capacity` command, or
-through the AWS Console. Throttling events in S3Guard are noted in logs, and
-also in the S3A metrics `s3guard_metadatastore_throttle_rate` and
-`s3guard_metadatastore_throttled`.
-
-If you are using DistCP for a large backup to/from a S3Guarded bucket, it is
-actually possible to increase the capacity for the duration of the operation.
-
-
 ## <a name="coding"></a> Best Practises for Code
 
 Here are some best practises if you are writing applications to work with
@@ -483,10 +480,6 @@ multiple HTTP requests to scan each directory, all the way down.
 Cache the outcome of `getFileStats()`, rather than repeatedly ask for it.
 That includes using `isFile()`, `isDirectory()`, which are simply wrappers
 around `getFileStatus()`.
-
-Don't immediately look for a file with a `getFileStatus()` or listing call
-after creating it, or try to read it immediately.
-This is where eventual consistency problems surface: the data may not yet be visible.
 
 Rely on `FileNotFoundException` being raised if the source of an operation is
 missing, rather than implementing your own probe for the file before

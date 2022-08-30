@@ -214,7 +214,6 @@ public class ObserverReadProxyProvider<T>
         OBSERVER_PROBE_RETRY_PERIOD_KEY,
         OBSERVER_PROBE_RETRY_PERIOD_DEFAULT, TimeUnit.MILLISECONDS);
 
-    // TODO : make this configurable or remove this variable
     if (wrappedProxy instanceof ClientProtocol) {
       this.observerReadEnabled = true;
     } else {

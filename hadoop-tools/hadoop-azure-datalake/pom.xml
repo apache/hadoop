@@ -29,7 +29,6 @@
   </description>
   <packaging>jar</packaging>
   <properties>
-    <okHttpVersion>${okhttp.version}</okHttpVersion>
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
@@ -119,12 +118,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.squareup.okhttp</groupId>
-      <artifactId>okhttp</artifactId>
-      <version>${okhttp.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -140,12 +133,6 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp</groupId>
-      <artifactId>mockwebserver</artifactId>
-      <version>${okhttp.version}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>

@@ -25,7 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.stream.Stream;
 
 /**
  * This abstract class provides some base methods which are inherited by
@@ -35,12 +39,26 @@ import java.util.Queue;
 public abstract class DatanodeAdminMonitorBase
     implements DatanodeAdminMonitorInterface, Configurable {
 
+  /**
+   * Sort by lastUpdate time descending order, such that unhealthy
+   * nodes are de-prioritized given they cannot be decommissioned.
+   */
+  static final Comparator<DatanodeDescriptor> PENDING_NODES_QUEUE_COMPARATOR =
+      (dn1, dn2) -> Long.compare(dn2.getLastUpdate(), dn1.getLastUpdate());
+
   protected BlockManager blockManager;
   protected Namesystem namesystem;
   protected DatanodeAdminManager dnAdmin;
   protected Configuration conf;
 
-  protected final Queue<DatanodeDescriptor> pendingNodes = new ArrayDeque<>();
+  private final PriorityQueue<DatanodeDescriptor> pendingNodes = new PriorityQueue<>(
+      PENDING_NODES_QUEUE_COMPARATOR);
+
+  /**
+   * Any nodes where decommission or maintenance has been cancelled are added
+   * to this queue for later processing.
+   */
+  private final Queue<DatanodeDescriptor> cancelledNodes = new ArrayDeque<>();
 
   /**
    * The maximum number of nodes to track in outOfServiceNodeBlocks.
@@ -150,5 +168,40 @@ public abstract class DatanodeAdminMonitorBase
   @Override
   public Queue<DatanodeDescriptor> getPendingNodes() {
     return pendingNodes;
+  }
+
+  @Override
+  public Queue<DatanodeDescriptor> getCancelledNodes() {
+    return cancelledNodes;
+  }
+
+  /**
+   * If node "is dead while in Decommission In Progress", it cannot be decommissioned
+   * until it becomes healthy again. If there are more pendingNodes than can be tracked
+   * & some unhealthy tracked nodes, then re-queue the unhealthy tracked nodes
+   * to avoid blocking decommissioning of healthy nodes.
+   *
+   * @param unhealthyDns The unhealthy datanodes which may be re-queued
+   * @param numDecommissioningNodes The total number of nodes being decommissioned
+   * @return Stream of unhealthy nodes to be re-queued
+   */
+  Stream<DatanodeDescriptor> getUnhealthyNodesToRequeue(
+      final List<DatanodeDescriptor> unhealthyDns, int numDecommissioningNodes) {
+    if (!unhealthyDns.isEmpty()) {
+      // Compute the number of unhealthy nodes to re-queue
+      final int numUnhealthyNodesToRequeue =
+          Math.min(numDecommissioningNodes - maxConcurrentTrackedNodes, unhealthyDns.size());
+
+      LOG.warn("{} limit has been reached, re-queueing {} "
+              + "nodes which are dead while in Decommission In Progress.",
+          DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+          numUnhealthyNodesToRequeue);
+
+      // Order unhealthy nodes by lastUpdate descending such that nodes
+      // which have been unhealthy the longest are preferred to be re-queued
+      return unhealthyDns.stream().sorted(PENDING_NODES_QUEUE_COMPARATOR.reversed())
+          .limit(numUnhealthyNodesToRequeue);
+    }
+    return Stream.empty();
   }
 }

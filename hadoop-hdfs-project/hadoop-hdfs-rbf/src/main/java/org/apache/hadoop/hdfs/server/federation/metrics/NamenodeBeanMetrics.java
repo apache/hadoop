@@ -874,6 +874,16 @@ public class NamenodeBeanMetrics
     return 0;
   }
 
+  @Override
+  public int getPendingSPSPaths() {
+    try {
+      return getRBFMetrics().getPendingSPSPaths();
+    } catch (IOException e) {
+      LOG.debug("Failed to get number of paths to be processed by sps", e);
+    }
+    return 0;
+  }
+
   private Router getRouter() throws IOException {
     if (this.router == null) {
       throw new IOException("Router is not initialized");

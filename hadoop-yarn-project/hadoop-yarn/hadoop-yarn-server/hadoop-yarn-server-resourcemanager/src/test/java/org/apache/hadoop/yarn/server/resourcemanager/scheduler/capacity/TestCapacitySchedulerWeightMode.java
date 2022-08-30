@@ -26,6 +26,7 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -73,6 +75,28 @@ public class TestCapacitySchedulerWeightMode {
     Set<E> set = Sets.newHashSet(elements);
     return set;
   }
+
+  public static CapacitySchedulerConfiguration getConfigWithInheritedAccessibleNodeLabel(
+      Configuration config) {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(
+        config);
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] { "a"});
+
+    conf.setCapacityByLabel(A, RMNodeLabelsManager.NO_LABEL, 100f);
+    conf.setCapacityByLabel(A, "newLabel", 100f);
+    conf.setAccessibleNodeLabels(A, toSet("newLabel"));
+    conf.setAllowZeroCapacitySum(A, true);
+
+    // Define 2nd-level queues
+    conf.setQueues(A, new String[] { "a1" });
+    conf.setCapacityByLabel(A1, RMNodeLabelsManager.NO_LABEL, 100f);
+
+    return conf;
+  }
+
 
   /*
    * Queue structure:
@@ -366,6 +390,28 @@ public class TestCapacitySchedulerWeightMode {
     Assert.assertEquals("", b1ExistingNodeLabels.iterator().next());
 
     rm.close();
+  }
+
+  /**
+   * Tests whether weight is correctly reset to -1. See YARN-11016 for further details.
+   * @throws IOException if reinitialization fails
+   */
+  @Test()
+  public void testAccessibleNodeLabelsInheritanceNoWeightMode() throws IOException {
+    CapacitySchedulerConfiguration newConf = getConfigWithInheritedAccessibleNodeLabel(conf);
+
+    MockRM rm = new MockRM(newConf);
+    CapacityScheduler cs =
+        (CapacityScheduler) rm.getRMContext().getScheduler();
+
+    Resource clusterResource = Resource.newInstance(1024, 2);
+    cs.getRootQueue().updateClusterResource(clusterResource, new ResourceLimits(clusterResource));
+
+    try {
+      cs.reinitialize(newConf, rm.getRMContext());
+    } catch (Exception e) {
+      Assert.fail("Reinitialization failed with " + e);
+    }
   }
 
   @Test

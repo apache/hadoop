@@ -80,6 +80,7 @@ public class OfflineImageViewerPB {
       + "    delimiter. The default delimiter is \\t, though this may be\n"
       + "    changed via the -delimiter argument.\n"
       + "    -sp print storage policy, used by delimiter only.\n"
+      + "    -ec print erasure coding policy, used by delimiter only.\n"
       + "  * DetectCorruption: Detect potential corruption of the image by\n"
       + "    selectively loading parts of it and actively searching for\n"
       + "    inconsistencies. Outputs a summary of the found corruptions\n"
@@ -107,6 +108,7 @@ public class OfflineImageViewerPB {
       + "                       Delimited outputs. If not set, the processor\n"
       + "                       constructs the namespace in memory \n"
       + "                       before outputting text.\n"
+      + "-m,--multiThread <arg> Use multiThread to process sub-sections.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -131,7 +133,9 @@ public class OfflineImageViewerPB {
     options.addOption("addr", true, "");
     options.addOption("delimiter", true, "");
     options.addOption("sp", false, "");
+    options.addOption("ec", false, "");
     options.addOption("t", "temp", true, "");
+    options.addOption("m", "multiThread", true, "");
 
     return options;
   }
@@ -185,6 +189,7 @@ public class OfflineImageViewerPB {
     String delimiter = cmd.getOptionValue("delimiter",
         PBImageTextWriter.DEFAULT_DELIMITER);
     String tempPath = cmd.getOptionValue("t", "");
+    int threads = Integer.parseInt(cmd.getOptionValue("m", "1"));
 
     Configuration conf = new Configuration();
     PrintStream out = null;
@@ -225,17 +230,18 @@ public class OfflineImageViewerPB {
         break;
       case "DELIMITED":
         boolean printStoragePolicy = cmd.hasOption("sp");
+        boolean printECPolicy = cmd.hasOption("ec");
         try (PBImageDelimitedTextWriter writer =
             new PBImageDelimitedTextWriter(out, delimiter,
-                tempPath, printStoragePolicy);
-            RandomAccessFile r = new RandomAccessFile(inputFile, "r")) {
-          writer.visit(r);
+                tempPath, printStoragePolicy, printECPolicy, threads,
+                outputFile, conf)) {
+          writer.visit(inputFile);
         }
         break;
       case "DETECTCORRUPTION":
         try (PBImageCorruptionDetector detector =
             new PBImageCorruptionDetector(out, delimiter, tempPath)) {
-          detector.visit(new RandomAccessFile(inputFile, "r"));
+          detector.visit(inputFile);
         }
         break;
       default:

@@ -17,15 +17,22 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
+import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -34,6 +41,8 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.util.List;
+import java.util.Random;
 
 import static org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil.*;
 import static org.junit.Assert.assertEquals;
@@ -44,23 +53,16 @@ public class TestDebugAdmin {
   static private final String TEST_ROOT_DIR =
       new File(System.getProperty("test.build.data", "/tmp"),
           TestDebugAdmin.class.getSimpleName()).getAbsolutePath();
-
+  private Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
-  private DistributedFileSystem fs;
   private DebugAdmin admin;
-  private DataNode datanode;
 
   @Before
   public void setUp() throws Exception {
     final File testRoot = new File(TEST_ROOT_DIR);
     testRoot.delete();
     testRoot.mkdirs();
-    Configuration conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-    cluster.waitActive();
-    fs = cluster.getFileSystem();
     admin = new DebugAdmin(conf);
-    datanode = cluster.getDataNodes().get(0);
   }
 
   @After
@@ -92,8 +94,11 @@ public class TestDebugAdmin {
 
   @Test(timeout = 60000)
   public void testRecoverLease() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
     assertEquals("ret: 1, You must supply a -path argument to recoverLease.",
         runCmd(new String[]{"recoverLease", "-retries", "1"}));
+    DistributedFileSystem fs = cluster.getFileSystem();
     FSDataOutputStream out = fs.create(new Path("/foo"));
     out.write(123);
     out.close();
@@ -103,6 +108,10 @@ public class TestDebugAdmin {
 
   @Test(timeout = 60000)
   public void testVerifyMetaCommand() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    DataNode datanode = cluster.getDataNodes().get(0);
     DFSTestUtil.createFile(fs, new Path("/bar"), 1234, (short) 1, 0xdeadbeef);
     FsDatasetSpi<?> fsd = datanode.getFSDataset();
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, new Path("/bar"));
@@ -128,6 +137,10 @@ public class TestDebugAdmin {
 
   @Test(timeout = 60000)
   public void testComputeMetaCommand() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    DataNode datanode = cluster.getDataNodes().get(0);
     DFSTestUtil.createFile(fs, new Path("/bar"), 1234, (short) 1, 0xdeadbeef);
     FsDatasetSpi<?> fsd = datanode.getFSDataset();
     ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, new Path("/bar"));
@@ -166,8 +179,97 @@ public class TestDebugAdmin {
 
   @Test(timeout = 60000)
   public void testRecoverLeaseforFileNotFound() throws Exception {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
     assertTrue(runCmd(new String[] {
         "recoverLease", "-path", "/foo", "-retries", "2" }).contains(
         "Giving up on recoverLease for /foo after 1 try"));
   }
+
+  @Test(timeout = 60000)
+  public void testVerifyECCommand() throws Exception {
+    final ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByID(
+        SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
+    cluster = DFSTestUtil.setupCluster(conf, 6, 5, 0);
+    cluster.waitActive();
+    DistributedFileSystem fs = cluster.getFileSystem();
+
+    assertEquals("ret: 1, verifyEC -file <file>  Verify HDFS erasure coding on " +
+        "all block groups of the file.", runCmd(new String[]{"verifyEC"}));
+
+    assertEquals("ret: 1, File /bar does not exist.",
+        runCmd(new String[]{"verifyEC", "-file", "/bar"}));
+
+    fs.create(new Path("/bar")).close();
+    assertEquals("ret: 1, File /bar is not erasure coded.",
+        runCmd(new String[]{"verifyEC", "-file", "/bar"}));
+
+
+    final Path ecDir = new Path("/ec");
+    fs.mkdir(ecDir, FsPermission.getDirDefault());
+    fs.enableErasureCodingPolicy(ecPolicy.getName());
+    fs.setErasureCodingPolicy(ecDir, ecPolicy.getName());
+
+    assertEquals("ret: 1, File /ec is not a regular file.",
+        runCmd(new String[]{"verifyEC", "-file", "/ec"}));
+
+    fs.create(new Path(ecDir, "foo"));
+    assertEquals("ret: 1, File /ec/foo is not closed.",
+        runCmd(new String[]{"verifyEC", "-file", "/ec/foo"}));
+
+    final short repl = 1;
+    final long k = 1024;
+    final long m = k * k;
+    final long seed = 0x1234567L;
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_65535"), 65535, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_65535"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_256k"), 256 * k, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_256k"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_1m"), m, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_1m"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_2m"), 2 * m, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_2m"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_3m"), 3 * m, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_3m"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_5m"), 5 * m, repl, seed);
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_5m"})
+        .contains("All EC block group status: OK"));
+    DFSTestUtil.createFile(fs, new Path(ecDir, "foo_6m"), (int) k, 6 * m, m, repl, seed);
+    assertEquals("ret: 0, Checking EC block group: blk_x;Status: OK" +
+            "Checking EC block group: blk_x;Status: OK" +
+            "All EC block group status: OK",
+        runCmd(new String[]{"verifyEC", "-file", "/ec/foo_6m"})
+            .replaceAll("blk_-[0-9]+", "blk_x;"));
+
+    Path corruptFile = new Path(ecDir, "foo_corrupt");
+    DFSTestUtil.createFile(fs, corruptFile, 5841961, repl, seed);
+    List<LocatedBlock> blocks = DFSTestUtil.getAllBlocks(fs, corruptFile);
+    assertEquals(1, blocks.size());
+    LocatedStripedBlock blockGroup = (LocatedStripedBlock) blocks.get(0);
+    LocatedBlock[] indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
+        ecPolicy.getCellSize(), ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
+    // Try corrupt block 0 in block group.
+    LocatedBlock toCorruptLocatedBlock = indexedBlocks[0];
+    ExtendedBlock toCorruptBlock = toCorruptLocatedBlock.getBlock();
+    DataNode datanode = cluster.getDataNode(toCorruptLocatedBlock.getLocations()[0].getIpcPort());
+    File blockFile = getBlockFile(datanode.getFSDataset(),
+        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
+    File metaFile = getMetaFile(datanode.getFSDataset(),
+        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
+    // Write error bytes to block file and re-generate meta checksum.
+    byte[] errorBytes = new byte[2097152];
+    new Random(seed).nextBytes(errorBytes);
+    FileUtils.writeByteArrayToFile(blockFile, errorBytes);
+    metaFile.delete();
+    runCmd(new String[]{"computeMeta", "-block", blockFile.getAbsolutePath(),
+        "-out", metaFile.getAbsolutePath()});
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_corrupt"})
+        .contains("Status: ERROR, message: EC compute result not match."));
+  }
+
 }

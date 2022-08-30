@@ -17,10 +17,9 @@
  */
 
 /**
- * This package contains classes related to S3Guard: a feature of S3A to mask
- * the eventual consistency behavior of S3 and optimize access patterns by
- * coordinating with a strongly consistent external store for file system
- * metadata.
+ * This package contained S3Guard support; now the feature has been removed,
+ * its contents are limited to the public command line and some
+ * methods still used by directory marker code.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

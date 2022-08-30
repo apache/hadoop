@@ -27,7 +27,7 @@ import java.util.concurrent.Future;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ import static org.apache.hadoop.io.IOUtils.wrapException;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.APPEND_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_CLOSE_MODE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters.Mode.FLUSH_MODE;
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.

@@ -83,7 +83,7 @@ public abstract class ErasureEncoder extends Configured
 
   /**
    * Perform encoding against a block group.
-   * @param blockGroup
+   * @param blockGroup blockGroup.
    * @return encoding step for caller to do the real work
    */
   protected abstract ErasureCodingStep prepareEncodingStep(

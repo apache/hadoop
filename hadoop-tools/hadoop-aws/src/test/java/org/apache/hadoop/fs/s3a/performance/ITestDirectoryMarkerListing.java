@@ -49,13 +49,9 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -199,12 +195,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
 
-    // Turn off S3Guard
-    removeBaseAndBucketOverrides(bucketName, conf,
-        S3_METADATA_STORE_IMPL,
-        METADATASTORE_AUTHORITATIVE,
-        AUTHORITATIVE_PATH);
-
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY);
@@ -222,8 +212,6 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs = getFileSystem();
-    assume("unguarded FS only",
-        !fs.hasMetadataStore());
     s3client = fs.getAmazonS3ClientForTesting("markers");
     bucket = fs.getBucket();
     Path base = new Path(methodPath(), "base");

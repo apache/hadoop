@@ -472,7 +472,7 @@ public class TestReconstructStripedFile {
 
     BlockECReconstructionInfo invalidECInfo = new BlockECReconstructionInfo(
         new ExtendedBlock("bp-id", 123456), dataDNs, dnStorageInfo, liveIndices,
-        ecPolicy);
+        new byte[0], ecPolicy);
     List<BlockECReconstructionInfo> ecTasks = new ArrayList<>();
     ecTasks.add(invalidECInfo);
     dataNode.getErasureCodingWorker().processErasureCodingTasks(ecTasks);

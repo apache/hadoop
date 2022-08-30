@@ -93,8 +93,8 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
         && e.getCause() instanceof UnmarshalException) {
       s = Response.Status.BAD_REQUEST;
     } else {
-      LOG.warn("INTERNAL_SERVER_ERROR", e);
-      s = Response.Status.INTERNAL_SERVER_ERROR;
+      LOG.warn("SERVICE_UNAVAILABLE", e);
+      s = Response.Status.SERVICE_UNAVAILABLE;
     }
 
     // let jaxb handle marshalling data out in the same format requested

@@ -41,8 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Test the Router handlers fairness control rejects
- * requests when the handlers are overloaded.
+ * Test the Router handlers fairness control rejects and accepts requests.
  */
 public class TestRouterHandlersFairness {
 
@@ -126,6 +125,12 @@ public class TestRouterHandlersFairness {
       throws Exception {
 
     RouterContext routerContext = cluster.getRandomRouter();
+    URI address = routerContext.getFileSystemURI();
+    Configuration conf = new HdfsConfiguration();
+    final int numOps = 10;
+    AtomicInteger overloadException = new AtomicInteger();
+
+    // Test when handlers are overloaded
     if (fairness) {
       if (isConcurrent) {
         LOG.info("Taking fanout lock first");
@@ -142,11 +147,80 @@ public class TestRouterHandlersFairness {
         }
       }
     }
-    URI address = routerContext.getFileSystemURI();
-    Configuration conf = new HdfsConfiguration();
-    final int numOps = 10;
-    final AtomicInteger overloadException = new AtomicInteger();
+    int originalRejectedPermits = getTotalRejectedPermits(routerContext);
 
+    // |- All calls should fail since permits not released
+    innerCalls(address, numOps, isConcurrent, conf, overloadException);
+
+    int latestRejectedPermits = getTotalRejectedPermits(routerContext);
+    assertEquals(latestRejectedPermits - originalRejectedPermits,
+        overloadException.get());
+
+    if (fairness) {
+      assertTrue(overloadException.get() > 0);
+      if (isConcurrent) {
+        LOG.info("Release fanout lock that was taken before test");
+        // take the lock for concurrent NS to block fanout calls
+        routerContext.getRouter().getRpcServer()
+            .getRPCClient().getRouterRpcFairnessPolicyController()
+            .releasePermit(RouterRpcFairnessConstants.CONCURRENT_NS);
+      } else {
+        for (String ns : cluster.getNameservices()) {
+          routerContext.getRouter().getRpcServer()
+              .getRPCClient().getRouterRpcFairnessPolicyController()
+              .releasePermit(ns);
+        }
+      }
+    } else {
+      assertEquals("Number of failed RPCs without fairness configured",
+          0, overloadException.get());
+    }
+
+    // Test when handlers are not overloaded
+    int originalAcceptedPermits = getTotalAcceptedPermits(routerContext);
+    overloadException = new AtomicInteger();
+
+    // |- All calls should succeed since permits not acquired
+    innerCalls(address, numOps, isConcurrent, conf, overloadException);
+
+    int latestAcceptedPermits = getTotalAcceptedPermits(routerContext);
+    assertEquals(latestAcceptedPermits - originalAcceptedPermits, numOps);
+    assertEquals(overloadException.get(), 0);
+  }
+
+  private void invokeSequential(ClientProtocol routerProto) throws IOException {
+    routerProto.getFileInfo("/test.txt");
+  }
+
+  private void invokeConcurrent(ClientProtocol routerProto, String clientName)
+      throws IOException {
+    routerProto.renewLease(clientName, null);
+  }
+
+  private int getTotalRejectedPermits(RouterContext routerContext) {
+    int totalRejectedPermits = 0;
+    for (String ns : cluster.getNameservices()) {
+      totalRejectedPermits += routerContext.getRouterRpcClient()
+          .getRejectedPermitForNs(ns);
+    }
+    totalRejectedPermits += routerContext.getRouterRpcClient()
+        .getRejectedPermitForNs(RouterRpcFairnessConstants.CONCURRENT_NS);
+    return totalRejectedPermits;
+  }
+
+  private int getTotalAcceptedPermits(RouterContext routerContext) {
+    int totalAcceptedPermits = 0;
+    for (String ns : cluster.getNameservices()) {
+      totalAcceptedPermits += routerContext.getRouterRpcClient()
+          .getAcceptedPermitForNs(ns);
+    }
+    totalAcceptedPermits += routerContext.getRouterRpcClient()
+        .getAcceptedPermitForNs(RouterRpcFairnessConstants.CONCURRENT_NS);
+    return totalAcceptedPermits;
+  }
+
+  private void innerCalls(URI address, int numOps, boolean isConcurrent,
+      Configuration conf, AtomicInteger overloadException) throws IOException {
     for (int i = 0; i < numOps; i++) {
       DFSClient routerClient = null;
       try {
@@ -177,35 +251,5 @@ public class TestRouterHandlersFairness {
       }
       overloadException.get();
     }
-
-    if (fairness) {
-      assertTrue(overloadException.get() > 0);
-      if (isConcurrent) {
-        LOG.info("Release fanout lock that was taken before test");
-        // take the lock for concurrent NS to block fanout calls
-        routerContext.getRouter().getRpcServer()
-            .getRPCClient().getRouterRpcFairnessPolicyController()
-            .releasePermit(RouterRpcFairnessConstants.CONCURRENT_NS);
-      } else {
-        for (String ns : cluster.getNameservices()) {
-          routerContext.getRouter().getRpcServer()
-              .getRPCClient().getRouterRpcFairnessPolicyController()
-              .releasePermit(ns);
-        }
-      }
-    } else {
-      assertEquals("Number of failed RPCs without fairness configured",
-          0, overloadException.get());
-    }
   }
-
-  private void invokeSequential(ClientProtocol routerProto) throws IOException {
-    routerProto.getFileInfo("/test.txt");
-  }
-
-  private void invokeConcurrent(ClientProtocol routerProto, String clientName)
-      throws IOException {
-    routerProto.renewLease(clientName);
-  }
-
 }

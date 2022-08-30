@@ -103,7 +103,7 @@ public abstract class BaseSLSRunnerTest {
     }
 
     if (nodeFile != null) {
-      args = ArrayUtils.addAll(args, new String[] {"-nodes", nodeFile });
+      args = ArrayUtils.addAll(args, "-nodes", nodeFile);
     }
 
     // enable continuous invariant checks

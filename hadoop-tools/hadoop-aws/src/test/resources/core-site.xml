@@ -30,6 +30,8 @@
     <final>false</final>
   </property>
 
+  <!-- Per-bucket configurations: landsat-pds -->
+
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint</name>
     <value>${central.endpoint}</value>
@@ -41,14 +43,6 @@
     <value>false</value>
     <description>Don't try to purge uploads in the read-only bucket, as
     it will only create log noise.</description>
-  </property>
-
-  <!-- Make sure S3Guard is disabled for read-only bucket tests. -->
-  <property>
-    <name>fs.s3a.bucket.landsat-pds.metadatastore.impl</name>
-    <value>${s3guard.null}</value>
-    <description>The read-only landsat-pds repository isn't
-        managed by s3guard</description>
   </property>
 
   <property>
@@ -63,16 +57,31 @@
     <description>Do not add the referrer header to landsat operations</description>
   </property>
 
-  <!-- Convenience definitions. -->
+  <!-- Per-bucket configurations: usgs-landsat -->
+
   <property>
-    <name>s3guard.null</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore</value>
+    <name>fs.s3a.bucket.usgs-landsat.endpoint</name>
+    <value>${central.endpoint}</value>
   </property>
 
   <property>
-    <name>s3guard.dynamo</name>
-    <value>org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore</value>
+    <name>fs.s3a.bucket.usgs-landsat.requester.pays.enabled</name>
+    <value>true</value>
+    <description>usgs-landsat requires requester pays enabled</description>
   </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.multipart.purge</name>
+    <value>false</value>
+    <description>Don't try to purge uploads in the read-only bucket, as
+      it will only create log noise.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.usgs-landsat.audit.add.referrer.header</name>
+    <value>false</value>
+  </property>
+
 
   <!--
    This is the default endpoint, which can be used to interact
@@ -162,20 +171,16 @@
     <value>simple</value>
   </property>
 
-  <!-- Reduce DDB capacity on auto-created tables, to keep bills down. -->
-  <property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-    <value>0</value>
-  </property>
-  <property>
-    <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-    <value>0</value>
-  </property>
-
   <!-- auditing rejects out of span operations; this ensures that
         no regressions take place. -->
   <property>
     <name>fs.s3a.audit.reject.out.of.span.operations</name>
+    <value>true</value>
+  </property>
+
+  <!-- Enable IOStatisticsContext support for Thread level. -->
+  <property>
+    <name>fs.iostatistics.thread.level.enabled</name>
     <value>true</value>
   </property>
 

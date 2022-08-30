@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
 
 /**
@@ -35,14 +34,6 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.*;
  */
 public class ITestS3AContractStreamIOStatistics extends
     AbstractContractStreamIOStatisticsTest {
-
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    return conf;
-  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {

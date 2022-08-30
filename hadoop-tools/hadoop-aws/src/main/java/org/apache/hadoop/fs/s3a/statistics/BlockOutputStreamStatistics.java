@@ -25,7 +25,8 @@ import java.time.Duration;
  * Block output stream statistics.
  */
 public interface BlockOutputStreamStatistics extends Closeable,
-    S3AStatisticInterface {
+    S3AStatisticInterface,
+    PutTrackerStatistics {
 
   /**
    * Block is queued for upload.

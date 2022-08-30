@@ -25,6 +25,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 public class WebAppException extends YarnRuntimeException {
 
   private static final long serialVersionUID = 1L;
+  private WebApp webApp;
+
+  public WebApp getWebApp() {
+    return webApp;
+  }
 
   public WebAppException(String msg) {
     super(msg);
@@ -35,6 +40,11 @@ public class WebAppException extends YarnRuntimeException {
   }
 
   public WebAppException(String msg, Throwable cause) {
+    this(msg, cause, null);
+  }
+
+  public WebAppException(String msg, Throwable cause, WebApp webApp) {
     super(msg, cause);
+    this.webApp = webApp;
   }
 }

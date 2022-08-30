@@ -45,7 +45,7 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.queues</name>
-    <value>default</value>
+    <value>default,decided,target</value>
     <description>
       The queues at the this level (root is the root queue).
     </description>
@@ -53,8 +53,14 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.default.capacity</name>
-    <value>100</value>
+    <value>90</value>
     <description>Default queue target capacity.</description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.target.capacity</name>
+    <value>10</value>
+    <description>target queue capacity.</description>
   </property>
 
   <property>
@@ -82,6 +88,14 @@
   </property>
 
   <property>
+    <name>yarn.scheduler.capacity.root.target.state</name>
+    <value>RUNNING</value>
+    <description>
+      The state of the target queue. State can be one of RUNNING or STOPPED.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.scheduler.capacity.root.default.acl_submit_applications</name>
     <value>*</value>
     <description>
@@ -90,10 +104,35 @@
   </property>
 
   <property>
+    <name>yarn.scheduler.capacity.root.target.acl_submit_applications</name>
+    <value>*</value>
+    <description>
+      The ACL of who can submit jobs to the target queue.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.scheduler.capacity.root.default.acl_administer_queue</name>
     <value>*</value>
     <description>
       The ACL of who can administer jobs on the default queue.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.target.acl_administer_queue</name>
+    <value>*</value>
+    <description>
+      The ACL of who can administer jobs on the target queue.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.decided.reservable</name>
+    <value>true</value>
+    <description>
+      indicates to the ReservationSystem that the queue’s resources
+      is available for users to reserve.
     </description>
   </property>
 

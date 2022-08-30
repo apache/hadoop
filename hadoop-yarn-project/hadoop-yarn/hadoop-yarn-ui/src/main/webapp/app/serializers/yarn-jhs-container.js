@@ -45,8 +45,8 @@ export default DS.JSONAPISerializer.extend({
   },
 
   normalizeArrayResponse(store, primaryModelClass, payload/*, id, requestType*/) {
-
-    payload = payload["containerLogsInfo"]
+    // Handling single container and multiple containers case at the same time
+    payload = [].concat(payload["containerLogsInfo"]);
 
     var normalizedArrayResponse = {
       data: []

@@ -191,8 +191,8 @@ public class TrashPolicyDefault extends TrashPolicy {
         cause = e;
       }
     }
-    throw (IOException)
-      new IOException("Failed to move to trash: " + path).initCause(cause);
+    throw new IOException("Failed to move " + path + " to trash " + trashPath,
+        cause);
   }
 
   @SuppressWarnings("deprecation")

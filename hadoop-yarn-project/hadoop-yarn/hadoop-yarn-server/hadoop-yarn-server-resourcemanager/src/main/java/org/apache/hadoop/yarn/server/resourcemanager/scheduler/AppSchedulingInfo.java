@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,8 @@ public class AppSchedulingInfo {
   private final int retryAttempts;
   private boolean unmanagedAM;
 
+  private final String defaultResourceRequestAppPlacementType;
+
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId, String user,
       Queue queue, AbstractUsersManager abstractUsersManager, long epoch,
       ResourceUsage appResourceUsage,
@@ -129,6 +132,31 @@ public class AppSchedulingInfo {
     updateContext = new ContainerUpdateContext(this);
     readLock = lock.readLock();
     writeLock = lock.writeLock();
+
+    this.defaultResourceRequestAppPlacementType =
+        getDefaultResourceRequestAppPlacementType();
+  }
+
+  /**
+   * Set default App Placement Allocator.
+   *
+   * @return app placement class.
+   */
+  public String getDefaultResourceRequestAppPlacementType() {
+    if (this.rmContext != null
+        && this.rmContext.getYarnConfiguration() != null) {
+
+      String appPlacementClass = applicationSchedulingEnvs.get(
+          ApplicationSchedulingConfig.ENV_APPLICATION_PLACEMENT_TYPE_CLASS);
+      if (null != appPlacementClass) {
+        return appPlacementClass;
+      } else {
+        Configuration conf = rmContext.getYarnConfiguration();
+        return conf.get(
+            YarnConfiguration.APPLICATION_PLACEMENT_TYPE_CLASS);
+      }
+    }
+    return null;
   }
 
   public ApplicationId getApplicationId() {
@@ -331,8 +359,7 @@ public class AppSchedulingInfo {
       SchedulerRequestKey schedulerRequestKey = entry.getKey();
       AppPlacementAllocator<SchedulerNode> appPlacementAllocator =
           getAndAddAppPlacementAllocatorIfNotExist(schedulerRequestKey,
-              applicationSchedulingEnvs.get(
-                  ApplicationSchedulingConfig.ENV_APPLICATION_PLACEMENT_TYPE_CLASS));
+              defaultResourceRequestAppPlacementType);
 
       // Update AppPlacementAllocator
       PendingAskUpdateResult pendingAmountChanges =

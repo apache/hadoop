@@ -339,6 +339,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return false;
   }
 
+  /**
+   * Check if this inode itself has a storage policy set.
+   */
+  public boolean isSetStoragePolicy() {
+    if (isSymlink()) {
+      return false;
+    }
+    return getLocalStoragePolicyID() != HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
+  }
+
   /** Cast this inode to an {@link INodeFile}.  */
   public INodeFile asFile() {
     throw new IllegalStateException("Current inode is not a file: "
@@ -994,14 +1004,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
     /**
      * @param bsps
- *          block storage policy suite to calculate intended storage type
- *          usage
+     *      block storage policy suite to calculate intended storage type
+     *      usage
      * @param collectedBlocks
-*          blocks collected from the descents for further block
-*          deletion/update will be added to the given map.
+     *     blocks collected from the descents for further block
+     *     deletion/update will be added to the given map.
      * @param removedINodes
-*          INodes collected from the descents for further cleaning up of
-     * @param removedUCFiles
+     *     INodes collected from the descents for further cleaning up of
+     * @param removedUCFiles INodes whose leases need to be released
      */
     public ReclaimContext(
         BlockStoragePolicySuite bsps, BlocksMapUpdateInfo collectedBlocks,

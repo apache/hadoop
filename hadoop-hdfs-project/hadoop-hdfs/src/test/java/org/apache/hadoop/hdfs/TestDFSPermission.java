@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
@@ -258,6 +259,17 @@ public class TestDFSPermission {
 
     // check if permission is correctly set
     checkPermission(name, expectedPermission, delete);
+  }
+
+  @Test
+  public void testFSNamesystemCheckAccess() throws Exception{
+    Path testInvalidPath = new Path("/test2");
+    fs = FileSystem.get(conf);
+
+    LambdaTestUtils.intercept(
+        FileNotFoundException.class,
+        "Path not found: " + testInvalidPath,
+        () -> fs.access(testInvalidPath, FsAction.READ));
   }
 
   /* Check if the permission of a file/directory is the same as the

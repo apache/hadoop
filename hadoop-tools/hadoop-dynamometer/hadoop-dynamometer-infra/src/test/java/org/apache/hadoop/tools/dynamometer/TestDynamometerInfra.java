@@ -76,6 +76,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,6 +112,7 @@ import static org.junit.Assert.fail;
  * property to point directly to a Hadoop tarball which is present locally and
  * no download will occur.
  */
+@Ignore
 public class TestDynamometerInfra {
 
   private static final Logger LOG =

@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -447,7 +448,7 @@ public class TestClientProtocolForPipelineRecovery {
    *  rolling upgrades. The client should be able to retry pipeline recovery
    *  more times than the default.
    *  (in a row for the same packet, including the heartbeat packet)
-   *  (See{@link DataStreamer#pipelineRecoveryCount})
+   *  (See{@link DataStreamer#getPipelineRecoveryCount})
    */
   @Test(timeout = 60000)
   public void testPipelineRecoveryOnDatanodeUpgrade() throws Exception {
@@ -891,6 +892,58 @@ public class TestClientProtocolForPipelineRecovery {
         cluster.shutdown();
       }
       DataNodeFaultInjector.set(oldDnInjector);
+    }
+  }
+
+  @Test
+  public void testPipelineRecoveryWithSlowNode() throws Exception {
+    final int oneWriteSize = 5000;
+
+    final int threshold = 3;
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(HdfsClientConfigKeys.DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY, threshold);
+
+    // Need 4 datanodes to verify the replaceDatanode during pipeline recovery
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+    DataNodeFaultInjector old = DataNodeFaultInjector.get();
+
+    try {
+      DistributedFileSystem fs = cluster.getFileSystem();
+      Path fileName = new Path("/f");
+      FSDataOutputStream o = fs.create(fileName);
+      // Flush to get the pipeline created.
+      o.writeBytes("hello");
+      o.hflush();
+      DFSOutputStream dfsO = (DFSOutputStream) o.getWrappedStream();
+      final DatanodeInfo[] pipeline = dfsO.getStreamer().getNodes();
+      final String lastDn = pipeline[2].getXferAddr(false);
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        @Override
+        public void markSlow(String mirrorAddr, int[] replies) {
+          if (!lastDn.equals(mirrorAddr)) {
+            // Only fail for last DN
+            return;
+          }
+          assert(replies.length == 2);
+          replies[1] = PipelineAck.setSLOWForHeader(replies[1], PipelineAck.SLOW.SLOW);
+        }
+      });
+
+      int count = 0;
+      Random r = new Random();
+      byte[] b = new byte[oneWriteSize];
+      while (count < threshold) {
+        r.nextBytes(b);
+        o.write(b);
+        count++;
+        o.hflush();
+      }
+      Assert.assertNotEquals(lastDn, dfsO.getStreamer().getNodes()[2].getXferAddr(false));
+    } finally {
+      DataNodeFaultInjector.set(old);
+      cluster.shutdown();
     }
   }
 }

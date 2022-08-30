@@ -39,7 +39,7 @@ are, how to configure their policies, etc.
 * You need a role to assume, and know its "ARN".
 * You need a pair of long-lived IAM User credentials, not the root account set.
 * Have the AWS CLI installed, and test that it works there.
-* Give the role access to S3, and, if using S3Guard, to DynamoDB.
+* Give the role access to S3.
 * For working with data encrypted with SSE-KMS, the role must
 have access to the appropriate KMS keys.
 
@@ -80,7 +80,7 @@ and for background refreshes, a different credential provider must be
 created, one which uses long-lived credentials (secret keys, environment variables).
 Short lived credentials (e.g other session tokens, EC2 instance credentials) cannot be used.
 
-A list of providers can be set in `s.s3a.assumed.role.credentials.provider`;
+A list of providers can be set in `fs.s3a.assumed.role.credentials.provider`;
 if unset the standard `BasicAWSCredentialsProvider` credential provider is used,
 which uses `fs.s3a.access.key` and `fs.s3a.secret.key`.
 
@@ -234,9 +234,6 @@ s3:Get*
 s3:ListBucket
 ```
 
-When using S3Guard, the client needs the appropriate
-<a href="s3guard-permissions">DynamoDB access permissions</a>
-
 To use SSE-KMS encryption, the client needs the
 <a href="sse-kms-permissions">SSE-KMS Permissions</a> to access the
 KMS key(s).
@@ -277,47 +274,6 @@ If the caller doesn't have these permissions, the operation will fail with an
 `AccessDeniedException`: the S3 Store does not provide the specifics of
 the cause of the failure.
 
-### <a name="s3guard-permissions"></a> S3Guard Permissions
-
-To use S3Guard, all clients must have a subset of the
-[AWS DynamoDB Permissions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/api-permissions-reference.html).
-
-To work with buckets protected with S3Guard, the client must have
-all the following rights on the DynamoDB Table used to protect that bucket.
-
-```
-dynamodb:BatchGetItem
-dynamodb:BatchWriteItem
-dynamodb:DeleteItem
-dynamodb:DescribeTable
-dynamodb:GetItem
-dynamodb:PutItem
-dynamodb:Query
-dynamodb:UpdateItem
-```
-
-This is true, *even if the client only has read access to the data*.
-
-For the `hadoop s3guard` table management commands, _extra_ permissions are required:
-
-```
-dynamodb:CreateTable
-dynamodb:DescribeLimits
-dynamodb:DeleteTable
-dynamodb:Scan
-dynamodb:TagResource
-dynamodb:UntagResource
-dynamodb:UpdateTable
-```
-
-Without these permissions, tables cannot be created, destroyed or have their IO capacity
-changed through the `s3guard set-capacity` call.
-The `dynamodb:Scan` permission is needed for `s3guard prune`
-
-The `dynamodb:CreateTable` permission is needed by a client when it tries to
-create the DynamoDB table on startup, that is
-`fs.s3a.s3guard.ddb.table.create` is `true` and the table does not already exist.
-
 ### <a name="mixed-permissions"></a> Mixed Permissions in a single S3 Bucket
 
 Mixing permissions down the "directory tree" is limited
@@ -347,10 +303,6 @@ Even though the operation failed, for a single file copy, the destination
 file will exist.
 For a directory copy, only a partial copy of the source data may take place
 before the permission failure is raised.
-
-
-*S3Guard*: if [S3Guard](s3guard.html) is used to manage the directory listings,
-then after partial failures of rename/copy the DynamoDB tables can get out of sync.
 
 ### Example: Read access to the base, R/W to the path underneath
 
@@ -817,29 +769,6 @@ Caused by:  com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Se
 
 Note: the ability to read encrypted data in the store does not guarantee that the caller can encrypt new data.
 It is a separate permission.
-
-
-### <a name="dynamodb_exception"></a> `AccessDeniedException` + `AmazonDynamoDBException`
-
-```
-java.nio.file.AccessDeniedException: bucket1:
-  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
-  User: arn:aws:sts::980678866538:assumed-role/s3guard-test-role/test is not authorized to perform:
-  dynamodb:DescribeTable on resource: arn:aws:dynamodb:us-west-1:980678866538:table/bucket1
-   (Service: AmazonDynamoDBv2; Status Code: 400;
-```
-
-The caller is trying to access an S3 bucket which uses S3Guard, but the caller
-lacks the relevant DynamoDB access permissions.
-
-The `dynamodb:DescribeTable` operation is the first one used in S3Guard to access,
-the DynamoDB table, so it is often the first to fail. It can be a sign
-that the role has no permissions at all to access the table named in the exception,
-or just that this specific permission has been omitted.
-
-If the role policy requested for the assumed role didn't ask for any DynamoDB
-permissions, this is where all attempts to work with a S3Guarded bucket will
-fail. Check the value of `fs.s3a.assumed.role.policy`
 
 ### Error `Unable to execute HTTP request`
 

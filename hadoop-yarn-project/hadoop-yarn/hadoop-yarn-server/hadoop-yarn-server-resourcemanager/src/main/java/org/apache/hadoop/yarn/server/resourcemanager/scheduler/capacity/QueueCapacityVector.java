@@ -61,7 +61,7 @@ public class QueueCapacityVector implements
   public static QueueCapacityVector newInstance() {
     QueueCapacityVector newCapacityVector =
         new QueueCapacityVector(ResourceVector.newInstance());
-    for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
+    for (Map.Entry<String, Double> resourceEntry : newCapacityVector.resource) {
       newCapacityVector.storeResourceType(resourceEntry.getKey(),
           ResourceUnitCapacityType.ABSOLUTE);
     }
@@ -78,10 +78,10 @@ public class QueueCapacityVector implements
    * @return uniform capacity vector
    */
   public static QueueCapacityVector of(
-      float value, ResourceUnitCapacityType capacityType) {
+      double value, ResourceUnitCapacityType capacityType) {
     QueueCapacityVector newCapacityVector =
         new QueueCapacityVector(ResourceVector.of(value));
-    for (Map.Entry<String, Float> resourceEntry : newCapacityVector.resource) {
+    for (Map.Entry<String, Double> resourceEntry : newCapacityVector.resource) {
       newCapacityVector.storeResourceType(resourceEntry.getKey(), capacityType);
     }
 
@@ -109,7 +109,7 @@ public class QueueCapacityVector implements
    * @param value        value of the resource
    * @param capacityType type of the resource
    */
-  public void setResource(String resourceName, float value,
+  public void setResource(String resourceName, double value,
                           ResourceUnitCapacityType capacityType) {
     // Necessary due to backward compatibility (memory = memory-mb)
     String convertedResourceName = resourceName;
@@ -125,7 +125,7 @@ public class QueueCapacityVector implements
    *
    * @return value of memory resource
    */
-  public float getMemory() {
+  public double getMemory() {
     return resource.getValue(ResourceInformation.MEMORY_URI);
   }
 
@@ -162,7 +162,7 @@ public class QueueCapacityVector implements
   @Override
   public Iterator<QueueCapacityVectorEntry> iterator() {
     return new Iterator<QueueCapacityVectorEntry>() {
-      private final Iterator<Map.Entry<String, Float>> resources =
+      private final Iterator<Map.Entry<String, Double>> resources =
           resource.iterator();
       private int i = 0;
 
@@ -173,7 +173,7 @@ public class QueueCapacityVector implements
 
       @Override
       public QueueCapacityVectorEntry next() {
-        Map.Entry<String, Float> resourceInformation = resources.next();
+        Map.Entry<String, Double> resourceInformation = resources.next();
         i++;
         return new QueueCapacityVectorEntry(
             capacityTypes.get(resourceInformation.getKey()),
@@ -223,7 +223,7 @@ public class QueueCapacityVector implements
     stringVector.append(START_PARENTHESES);
 
     int resourceCount = 0;
-    for (Map.Entry<String, Float> resourceEntry : resource) {
+    for (Map.Entry<String, Double> resourceEntry : resource) {
       resourceCount++;
       stringVector.append(resourceEntry.getKey())
           .append(VALUE_DELIMITER)
@@ -257,11 +257,11 @@ public class QueueCapacityVector implements
 
   public static class QueueCapacityVectorEntry {
     private final ResourceUnitCapacityType vectorResourceType;
-    private final float resourceValue;
+    private final double resourceValue;
     private final String resourceName;
 
     public QueueCapacityVectorEntry(ResourceUnitCapacityType vectorResourceType,
-                                    String resourceName, float resourceValue) {
+                                    String resourceName, double resourceValue) {
       this.vectorResourceType = vectorResourceType;
       this.resourceValue = resourceValue;
       this.resourceName = resourceName;
@@ -271,7 +271,7 @@ public class QueueCapacityVector implements
       return vectorResourceType;
     }
 
-    public float getResourceValue() {
+    public double getResourceValue() {
       return resourceValue;
     }
 

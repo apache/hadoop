@@ -168,6 +168,7 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       int version, long startTime, StartContainerRequest startRequest) {
     RecoveredContainerState rcs = new RecoveredContainerState(containerId);
     rcs.startRequest = startRequest;
+    rcs.status = RecoveredContainerStatus.REQUESTED;
     rcs.version = version;
     try {
       ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils

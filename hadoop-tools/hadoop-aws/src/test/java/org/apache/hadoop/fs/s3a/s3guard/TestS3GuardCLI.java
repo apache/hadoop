@@ -22,7 +22,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 
@@ -81,41 +80,6 @@ public class TestS3GuardCLI extends Assert {
   @Test
   public void testUnknownCommand() throws Throwable {
     runToFailure(E_USAGE, "unknown");
-  }
-
-  @Test
-  public void testPruneNoArgs() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Prune.NAME);
-  }
-
-  @Test
-  public void testDiffNoArgs() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Diff.NAME);
-  }
-
-  @Test
-  public void testImportNoArgs() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Import.NAME);
-  }
-
-  @Test
-  public void testDestroyNoArgs() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Destroy.NAME);
-  }
-
-  @Test
-  public void testDestroyUnknownTableNoRegion() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Destroy.NAME,
-        "-meta", "dynamodb://ireland-team");
-  }
-
-  @Test
-  public void testInitBucketAndRegion() throws Throwable {
-    runToFailure(INVALID_ARGUMENT, Init.NAME,
-        "-meta", "dynamodb://ireland-team",
-        "-region", "eu-west-1",
-        S3ATestConstants.DEFAULT_CSVTEST_FILE
-    );
   }
 
 }

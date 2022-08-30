@@ -35,7 +35,6 @@
 #include "hdfspp/uri.h"
 #include "x-platform/syscall.h"
 
-#include <strings.h>
 #include <sstream>
 #include <map>
 #include <rapidxml/rapidxml.hpp>

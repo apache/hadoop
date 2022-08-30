@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Class to hold extra input stream configs.

@@ -52,6 +52,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETALLSTORAGEPOLICY`](#Get_all_Storage_Policies) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getAllStoragePolicies)
     * [`GETSTORAGEPOLICY`](#Get_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy)
     * [`GETSNAPSHOTDIFF`](#Get_Snapshot_Diff)
+    * [`GETSNAPSHOTDIFFLISTING`](#Get_Snapshot_Diff_Iteratively)
     * [`GETSNAPSHOTTABLEDIRECTORYLIST`](#Get_Snapshottable_Directory_List)
     * [`GETSNAPSHOTLIST`](#Get_Snapshot_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
@@ -1604,6 +1605,27 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSna
 
         {"SnapshotDiffReport":{"diffList":[],"fromSnapshot":"s3","snapshotRoot":"/foo","toSnapshot":"s4"}}
 
+### Get Snapshot Diff Iteratively
+
+* Submit a HTTP GET request.
+
+        curl -i -X GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETSNAPSHOTDIFFLISTING
+                           &oldsnapshotname=<SNAPSHOTNAME>&snapshotname=<SNAPSHOTNAME>&snapshotdiffstartpath=<STARTPATH>&snapshotdiffindex=<STARTINDEX>
+
+    If `snapshotdiffstartpath` and `snapshotdiffindex` are not given,
+    `""` (empty string) and `-1` are used respectively implying the first iteration.
+
+    The client receives a response with a
+    [`SnapshotDiffReportListing` JSON object](#SnapshotDiffReportListing_JSON_Schema).
+    The value of `lastPath` and `lastIndex` must be specified as
+    the value of `snapshotdiffstartpath` and `snapshotdiffindex` respectively on next iteration.
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {"SnapshotDiffReportListing":{"createList":[],"deleteList":[],"isFromEarlier":true,"lastIndex":-1,"lastPath":"","modifyList":[]}}
+
 ### Get Snapshottable Directory List
 
 * Submit a HTTP GET request.
@@ -2664,6 +2686,109 @@ var diffReportEntries =
   }
 }
 ```
+
+### SnapshotDiffReportListing JSON Schema
+
+```json
+{
+  "name": "SnapshotDiffReportListing",
+  "type": "object",
+  "properties":
+  {
+    "SnapshotDiffReportListing":
+    {
+      "type"        : "object",
+      "properties"  :
+      {
+        "isFromEarlier":
+        {
+          "description" : "the diff is calculated from older to newer snapshot or not",
+          "type"        : "boolean",
+          "required"    : true
+        },
+        "lastIndex":
+        {
+          "description" : "the last index of listing iteration",
+          "type"        : "integer",
+          "required"    : true
+        },
+        "lastPath":
+        {
+          "description" : "String representation of the last path of the listing iteration",
+          "type"        : "string",
+          "required"    : true
+        },
+        "modifyList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        },
+        "createList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        },
+        "deleteList":
+        {
+          "description": "An array of DiffReportListingEntry",
+          "type"        : "array",
+          "items"       : diffReportListingEntries,
+          "required"    : true
+        }
+      }
+    }
+  }
+}
+```
+
+#### DiffReportListing Entries
+
+JavaScript syntax is used to define `diffReportEntries` so that it can be referred in `SnapshotDiffReport` JSON schema.
+
+```javascript
+var diffReportListingEntries =
+{
+  "type": "object",
+  "properties":
+  {
+    "dirId":
+    {
+      "description" : "inode id of the directory",
+      "type"        : "integer",
+      "required"    : true
+    },
+    "fileId":
+    {
+      "description" : "inode id of the file",
+      "type"        : "integer",
+      "required"    : true
+    },
+    "isRereference":
+    {
+      "description" : "this is reference or not",
+      "type"        : "boolean",
+      "required"    : true
+    },
+    "sourcePath":
+    {
+      "description" : "string representation of path where changes have happened",
+      "type"        : "string",
+      "required"    : true
+    },
+    "targetPath":
+    {
+      "description" : "string representation of target path of rename op",
+      "type"        : "string",
+      "required"    : false
+    }
+  }
+}
+```
+
 
 ### SnapshottableDirectoryList JSON Schema
 

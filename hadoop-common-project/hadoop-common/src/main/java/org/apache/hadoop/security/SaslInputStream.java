@@ -281,7 +281,7 @@ public class SaslInputStream extends InputStream implements ReadableByteChannel 
    * <p>
    * Fewer bytes than requested might be skipped. The actual number of bytes
    * skipped is equal to <code>n</code> or the result of a call to
-   * {@link #available() <code>available</code>}, whichever is smaller. If
+   * {@link #available()}, whichever is smaller. If
    * <code>n</code> is less than zero, no bytes are skipped.
    * 
    * <p>

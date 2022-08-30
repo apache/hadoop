@@ -73,12 +73,9 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(bucketName, conf,
         S3A_BUCKET_PROBE,
         DIRECTORY_MARKER_POLICY,
-        S3_METADATA_STORE_IMPL,
-        METADATASTORE_AUTHORITATIVE,
         AUTHORITATIVE_PATH);
     // base FS is legacy
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
 
     // turn off bucket probes for a bit of speedup in the connectors we create.
     conf.setInt(S3A_BUCKET_PROBE, 0);
@@ -192,7 +189,6 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
-        S3_METADATA_STORE_IMPL,
         BULK_DELETE_PAGE_SIZE,
         AUTHORITATIVE_PATH);
     if (authPath != null) {
@@ -201,7 +197,6 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
     // Use a very small page size to force the paging
     // code to be tested.
     conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
-    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
     S3AFileSystem fs2 = new S3AFileSystem();
     fs2.initialize(testFSUri, conf);

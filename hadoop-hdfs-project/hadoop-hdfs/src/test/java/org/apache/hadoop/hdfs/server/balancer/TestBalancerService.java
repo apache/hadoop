@@ -126,6 +126,7 @@ public class TestBalancerService {
     TestBalancer.initConf(conf);
     try {
       setupCluster(conf);
+      TestBalancerWithHANameNodes.waitStoragesNoStale(cluster, client, 0);
       long totalCapacity = addOneDataNode(conf); // make cluster imbalanced
 
       Thread balancerThread =
@@ -193,6 +194,7 @@ public class TestBalancerService {
       cluster.transitionToActive(0);
       cluster.waitActive();
 
+      TestBalancerWithHANameNodes.waitStoragesNoStale(cluster, client, 0);
       long totalCapacity = addOneDataNode(conf);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
           cluster, BalancerParameters.DEFAULT);

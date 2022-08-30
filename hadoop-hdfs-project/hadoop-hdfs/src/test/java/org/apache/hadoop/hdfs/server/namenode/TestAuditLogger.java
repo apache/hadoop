@@ -55,6 +55,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY;
@@ -69,6 +70,7 @@ import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
 import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.NNTOP_ENABLED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -89,6 +91,20 @@ public class TestAuditLogger {
   }
 
   private static final short TEST_PERMISSION = (short) 0654;
+  private static final Pattern AUDIT_PATTERN = Pattern.compile(
+      ".*allowed=.*?\\s" +
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
+      "perm=.*?");
+  private static final Pattern AUDIT_WITH_PORT_PATTERN = Pattern.compile(
+      ".*allowed=.*?\\s" +
+      "ugi=.*?\\s" +
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" +
+      "cmd=.*?\\ssrc=.*?\\sdst=null\\s" +
+      "perm=.*?" +
+      "proto=.*?" +
+      "callerContext=.*?clientPort\\:(\\d{0,9}).*?");
 
   @Before
   public void setup() {
@@ -240,10 +256,9 @@ public class TestAuditLogger {
     conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
     conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
 
-    try {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
       cluster.waitClusterUp();
       final FileSystem fs = cluster.getFileSystem();
       final long time = System.currentTimeMillis();
@@ -398,8 +413,8 @@ public class TestAuditLogger {
       assertFalse(auditlog.getOutput().contains("callerContext="));
       auditlog.clearOutput();
 
-    } finally {
-      cluster.shutdown();
+      // clear client context
+      CallerContext.setCurrent(null);
     }
   }
 
@@ -541,6 +556,75 @@ public class TestAuditLogger {
       // Expected.
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test adding remote port to audit log.
+   */
+  @Test
+  public void testAuditLogWithRemotePort() throws Exception {
+    // Audit log without remote port by default.
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster1 = new MiniDFSCluster.Builder(conf).build();
+    try {
+      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      cluster1.waitClusterUp();
+      FileSystem fs = cluster1.getFileSystem();
+      long time = System.currentTimeMillis();
+      fs.setTimes(new Path("/"), time, time);
+      assertTrue(AUDIT_PATTERN.matcher(auditLog.getOutput().trim()).matches());
+      assertFalse(auditLog.getOutput().contains("clientPort"));
+      auditLog.clearOutput();
+    } finally {
+      cluster1.shutdown();
+    }
+
+    // Audit log with remote port.
+    conf.setBoolean(DFS_NAMENODE_AUDIT_LOG_WITH_REMOTE_PORT_KEY, true);
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    MiniDFSCluster cluster2 = new MiniDFSCluster.Builder(conf).build();
+    try {
+      LogCapturer auditLog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      cluster2.waitClusterUp();
+      FileSystem fs = cluster2.getFileSystem();
+      long time = System.currentTimeMillis();
+      fs.setTimes(new Path("/"), time, time);
+      assertTrue(AUDIT_WITH_PORT_PATTERN.matcher(
+          auditLog.getOutput().trim()).matches());
+      auditLog.clearOutput();
+    } finally {
+      cluster2.shutdown();
+    }
+  }
+
+  @Test
+  public void testCallerContextCharacterEscape() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
+    conf.setInt(HADOOP_CALLER_CONTEXT_MAX_SIZE_KEY, 128);
+    conf.setInt(HADOOP_CALLER_CONTEXT_SIGNATURE_MAX_SIZE_KEY, 40);
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      LogCapturer auditlog = LogCapturer.captureLogs(FSNamesystem.auditLog);
+      cluster.waitClusterUp();
+      final FileSystem fs = cluster.getFileSystem();
+      final long time = System.currentTimeMillis();
+      final Path p = new Path("/");
+
+      assertNull(CallerContext.getCurrent());
+
+      CallerContext context = new CallerContext.Builder("c1\nc2").append("c3\tc4")
+          .setSignature("s1\ns2".getBytes(CallerContext.SIGNATURE_ENCODING)).build();
+      CallerContext.setCurrent(context);
+      LOG.info("Set current caller context as {}", CallerContext.getCurrent());
+      fs.setTimes(p, time, time);
+      assertTrue(auditlog.getOutput().endsWith(
+          String.format("callerContext=c1\\nc2,c3\\tc4:s1\\ns2%n")));
+      auditlog.clearOutput();
+
+      // clear client context
+      CallerContext.setCurrent(null);
     }
   }
 

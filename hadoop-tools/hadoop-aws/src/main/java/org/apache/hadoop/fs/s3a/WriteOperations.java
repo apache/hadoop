@@ -25,7 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
@@ -38,12 +37,11 @@ import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.amazonaws.services.s3.transfer.model.UploadResult;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -80,22 +78,25 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key
    * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
-   * @param headers optional map of custom headers.
+   * @param options options for the request
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
       InputStream inputStream,
       long length,
-      @Nullable Map<String, String> headers);
+      @Nullable PutObjectOptions options);
 
   /**
    * Create a {@link PutObjectRequest} request to upload a file.
    * @param dest key to PUT to.
    * @param sourceFile source file
+   * @param options options for the request
    * @return the request
    */
-  PutObjectRequest createPutObjectRequest(String dest,
-      File sourceFile);
+  PutObjectRequest createPutObjectRequest(
+      String dest,
+      File sourceFile,
+      @Nullable PutObjectOptions options);
 
   /**
    * Callback on a successful write.
@@ -122,11 +123,12 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Start the multipart upload process.
    * Retry policy: retrying, translated.
    * @param destKey destination of upload
+   * @param options options for the put request
    * @return the upload result containing the ID
    * @throws IOException IO problem
    */
   @Retries.RetryTranslated
-  String initiateMultiPartUpload(String destKey) throws IOException;
+  String initiateMultiPartUpload(String destKey, PutObjectOptions options) throws IOException;
 
   /**
    * This completes a multipart upload to the destination key via
@@ -139,6 +141,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param length length of the upload
    * @param errorCount a counter incremented by 1 on every error; for
    * use in statistics
+   * @param putOptions put object options
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -149,7 +152,8 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      AtomicInteger errorCount)
+      AtomicInteger errorCount,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
@@ -239,33 +243,37 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * Byte length is calculated from the file length, or, if there is no
    * file, from the content length of the header.
    * @param putObjectRequest the request
+   * @param putOptions put object options
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  PutObjectResult putObject(PutObjectRequest putObjectRequest)
+  PutObjectResult putObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
    * PUT an object via the transfer manager.
+   *
    * @param putObjectRequest the request
-   * @return the result of the operation
+   * @param putOptions put object options
+   *
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadResult uploadObject(PutObjectRequest putObjectRequest)
+  void uploadObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions)
       throws IOException;
 
   /**
    * Revert a commit by deleting the file.
-   * Relies on retry code in filesystem
+   * No attempt is made to probe for/recreate a parent dir marker
+   * Relies on retry code in filesystem.
    * @throws IOException on problems
    * @param destKey destination key
-   * @param operationState operational state for a bulk update
    */
   @Retries.OnceTranslated
-  void revertCommit(String destKey,
-      @Nullable BulkOperationState operationState) throws IOException;
+  void revertCommit(String destKey) throws IOException;
 
   /**
    * This completes a multipart upload to the destination key via
@@ -276,7 +284,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param uploadId multipart operation Id
    * @param partETags list of partial uploads
    * @param length length of the upload
-   * @param operationState operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException if problems arose which could not be retried, or
    * the retry count was exceeded
@@ -286,28 +293,8 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       String destKey,
       String uploadId,
       List<PartETag> partETags,
-      long length,
-      @Nullable BulkOperationState operationState)
+      long length)
       throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateCommitOperation(
-      Path path) throws IOException;
-
-  /**
-   * Initiate a commit operation through any metastore.
-   * @param path path under which the writes will all take place.
-   * @param operationType operation to initiate
-   * @return an possibly null operation state from the metastore.
-   * @throws IOException failure to instantiate.
-   */
-  BulkOperationState initiateOperation(Path path,
-      BulkOperationState.OperationType operationType) throws IOException;
 
   /**
    * Upload part of a multi-partition file.

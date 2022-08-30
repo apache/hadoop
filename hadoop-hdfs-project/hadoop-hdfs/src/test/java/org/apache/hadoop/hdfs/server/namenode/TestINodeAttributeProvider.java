@@ -48,6 +48,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.fail;
+
 public class TestINodeAttributeProvider {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestINodeAttributeProvider.class);
@@ -57,6 +59,15 @@ public class TestINodeAttributeProvider {
   private static final short HDFS_PERMISSION = 0777;
   private static final short PROVIDER_PERMISSION = 0770;
   private static boolean runPermissionCheck = false;
+  private static boolean shouldThrowAccessException = false;
+
+  public static class MyAuthorizationProviderAccessException
+      extends AccessControlException {
+
+    public MyAuthorizationProviderAccessException() {
+      super();
+    }
+  };
 
   public static class MyAuthorizationProvider extends INodeAttributeProvider {
 
@@ -82,6 +93,9 @@ public class TestINodeAttributeProvider {
               ancestorAccess, parentAccess, access, subAccess, ignoreEmptyDir);
         }
         CALLED.add("checkPermission|" + ancestorAccess + "|" + parentAccess + "|" + access);
+        if (shouldThrowAccessException) {
+          throw new MyAuthorizationProviderAccessException();
+        }
       }
 
       @Override
@@ -96,6 +110,9 @@ public class TestINodeAttributeProvider {
         CALLED.add("checkPermission|" + authzContext.getAncestorAccess()
             + "|" + authzContext.getParentAccess() + "|" + authzContext
             .getAccess());
+        if (shouldThrowAccessException) {
+          throw new MyAuthorizationProviderAccessException();
+        }
       }
     }
 
@@ -238,6 +255,7 @@ public class TestINodeAttributeProvider {
       miniDFS = null;
     }
     runPermissionCheck = false;
+    shouldThrowAccessException = false;
     Assert.assertTrue(CALLED.contains("stop"));
   }
 
@@ -452,6 +470,44 @@ public class TestINodeAttributeProvider {
         Assert.assertEquals("bar", fs.getAclStatus(authzChild).getGroup());
         Assert.assertEquals(PROVIDER_PERMISSION,
             fs.getAclStatus(authzChild).getPermission().toShort());
+        return null;
+      }
+    });
+  }
+
+  @Test
+  // HDFS-16529 - Ensure enforcer AccessControlException subclass are caught
+  // and re-thrown as plain ACE exceptions.
+  public void testSubClassedAccessControlExceptions() throws Exception {
+    FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+    shouldThrowAccessException = true;
+    final Path userPath = new Path("/user");
+    final Path authz = new Path("/user/authz");
+    final Path authzChild = new Path("/user/authz/child2");
+
+    fs.mkdirs(userPath);
+    fs.setPermission(userPath, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authz);
+    fs.setPermission(authz, new FsPermission(HDFS_PERMISSION));
+    fs.mkdirs(authzChild);
+    fs.setPermission(authzChild, new FsPermission(HDFS_PERMISSION));
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("u1",
+        new String[]{"g1"});
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        try {
+          fs.access(authzChild, FsAction.ALL);
+          fail("Exception should be thrown");
+          // The DFS Client will get a RemoteException containing an
+          // AccessControlException (ACE). If the ACE is a subclass of ACE then
+          // the client does not unwrap it correctly. The change in HDFS-16529
+          // is to ensure ACE is always thrown rather than a sub class to avoid
+          // this issue.
+        } catch (AccessControlException ace) {
+          Assert.assertEquals(AccessControlException.class, ace.getClass());
+        }
         return null;
       }
     });

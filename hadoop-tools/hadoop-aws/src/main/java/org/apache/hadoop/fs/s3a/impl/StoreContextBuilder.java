@@ -27,8 +27,6 @@ import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
-import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -63,13 +61,9 @@ public class StoreContextBuilder {
 
   private boolean multiObjectDeleteEnabled = true;
 
-  private MetadataStore metadataStore;
-
   private boolean useListV1 = false;
 
   private ContextAccessors contextAccessors;
-
-  private ITtlTimeProvider timeProvider;
 
   private AuditSpanSource<AuditSpanS3A> auditor;
 
@@ -147,12 +141,6 @@ public class StoreContextBuilder {
     return this;
   }
 
-  public StoreContextBuilder setMetadataStore(
-      final MetadataStore store) {
-    this.metadataStore = store;
-    return this;
-  }
-
   public StoreContextBuilder setUseListV1(
       final boolean useV1) {
     this.useListV1 = useV1;
@@ -162,12 +150,6 @@ public class StoreContextBuilder {
   public StoreContextBuilder setContextAccessors(
       final ContextAccessors accessors) {
     this.contextAccessors = accessors;
-    return this;
-  }
-
-  public StoreContextBuilder setTimeProvider(
-      final ITtlTimeProvider provider) {
-    this.timeProvider = provider;
     return this;
   }
 
@@ -193,7 +175,6 @@ public class StoreContextBuilder {
     return this;
   }
 
-  @SuppressWarnings("deprecation")
   public StoreContext build() {
     return new StoreContext(fsURI,
         bucket,
@@ -208,10 +189,8 @@ public class StoreContextBuilder {
         inputPolicy,
         changeDetectionPolicy,
         multiObjectDeleteEnabled,
-        metadataStore,
         useListV1,
         contextAccessors,
-        timeProvider,
         auditor,
         isCSEEnabled);
   }

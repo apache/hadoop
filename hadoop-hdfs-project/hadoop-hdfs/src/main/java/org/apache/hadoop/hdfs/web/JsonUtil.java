@@ -577,6 +577,58 @@ public class JsonUtil {
     return m;
   }
 
+  public static String toJsonString(SnapshotDiffReportListing diffReport) {
+    return toJsonString(SnapshotDiffReportListing.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReportListing diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("lastPath", DFSUtilClient.bytes2String(diffReport.getLastPath()));
+    m.put("lastIndex", diffReport.getLastIndex());
+    m.put("isFromEarlier", diffReport.getIsFromEarlier());
+
+    Object[] modifyList = new Object[diffReport.getModifyList().size()];
+    for (int i = 0; i < diffReport.getModifyList().size(); i++) {
+      modifyList[i] = toJsonMap(diffReport.getModifyList().get(i));
+    }
+    m.put("modifyList", modifyList);
+
+    Object[] createList = new Object[diffReport.getCreateList().size()];
+    for (int i = 0; i < diffReport.getCreateList().size(); i++) {
+      createList[i] = toJsonMap(diffReport.getCreateList().get(i));
+    }
+    m.put("createList", createList);
+
+    Object[] deleteList = new Object[diffReport.getDeleteList().size()];
+    for (int i = 0; i < diffReport.getDeleteList().size(); i++) {
+      deleteList[i] = toJsonMap(diffReport.getDeleteList().get(i));
+    }
+    m.put("deleteList", deleteList);
+
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReportListing.DiffReportListingEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("dirId", diffReportEntry.getDirId());
+    m.put("fileId", diffReportEntry.getFileId());
+
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getSourcePath()));
+    }
+
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getTargetPath()));
+    }
+
+    m.put("isReference", diffReportEntry.isReference());
+    return m;
+  }
+
   public static String toJsonString(
       SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
     if (snapshottableDirectoryList == null) {

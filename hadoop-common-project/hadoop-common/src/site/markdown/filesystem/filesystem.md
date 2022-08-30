@@ -453,6 +453,26 @@ The function `getLocatedFileStatus(FS, d)` is as defined in
 The atomicity and consistency constraints are as for
 `listStatus(Path, PathFilter)`.
 
+
+### `ContentSummary getContentSummary(Path path)`
+
+Given a path return its content summary.
+
+`getContentSummary()` first checks if the given path is a file and if yes, it returns 0 for directory count
+and 1 for file count.
+
+#### Preconditions
+
+    exists(FS, path) else raise FileNotFoundException
+
+#### Postconditions
+
+Returns a `ContentSummary` object with information such as directory count
+and file count for a given path.
+
+The atomicity and consistency constraints are as for
+`listStatus(Path, PathFilter)`.
+
 ### `BlockLocation[] getFileBlockLocations(FileStatus f, int s, int l)`
 
 #### Preconditions
@@ -794,97 +814,11 @@ exists in the metadata, but no copies of any its blocks can be located;
 
 ### `FSDataInputStreamBuilder openFile(Path path)`
 
-Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
-to construct a operation to open the file at `path` for reading.
+See [openFile()](openfile.html).
 
-When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
-the builder parameters are verified and
-`openFileWithOptions(Path, OpenFileParameters)` invoked.
-
-This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
-which, when its `get()` method is called, either returns an input
-stream of the contents of opened file, or raises an exception.
-
-The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)`
-ultimately invokes `open(Path, int)`.
-
-Thus the chain `openFile(path).build().get()` has the same preconditions
-and postconditions as `open(Path p, int bufferSize)`
-
-However, there is one difference which implementations are free to
-take advantage of: 
-
-The returned stream MAY implement a lazy open where file non-existence or
-access permission failures may not surface until the first `read()` of the
-actual data.
-
-The `openFile()` operation may check the state of the filesystem during its
-invocation, but as the state of the filesystem may change betwen this call and
-the actual `build()` and `get()` operations, this file-specific
-preconditions (file exists, file is readable, etc) MUST NOT be checked here.
-
-FileSystem implementations which do not implement `open(Path, int)`
-MAY postpone raising an `UnsupportedOperationException` until either the
-`FSDataInputStreamBuilder.build()` or the subsequent `get()` call,
-else they MAY fail fast in the `openFile()` call.
-
-### Implementors notes
-
-The base implementation of `openFileWithOptions()` actually executes
-the `open(path)` operation synchronously, yet still returns the result
-or any failures in the `CompletableFuture<>`, so as to ensure that users
-code expecting this.
-
-Any filesystem where the time to open a file may be significant SHOULD
-execute it asynchronously by submitting the operation in some executor/thread
-pool. This is particularly recommended for object stores and other filesystems
-likely to be accessed over long-haul connections.
-
-Arbitrary filesystem-specific options MAY be supported; these MUST
-be prefixed with either the filesystem schema, e.g. `hdfs.`
-or in the "fs.SCHEMA" format as normal configuration settings `fs.hdfs`). The
-latter style allows the same configuration option to be used for both
-filesystem configuration and file-specific configuration.
-
-It SHOULD be possible to always open a file without specifying any options,
-so as to present a consistent model to users. However, an implementation MAY
-opt to require one or more mandatory options to be set.
-
-The returned stream may perform "lazy" evaluation of file access. This is
-relevant for object stores where the probes for existence are expensive, and,
-even with an asynchronous open, may be considered needless.
- 
 ### `FSDataInputStreamBuilder openFile(PathHandle)`
 
-Creates a `FSDataInputStreamBuilder` to build an operation to open a file.
-Creates a [`FSDataInputStreamBuilder`](fsdatainputstreambuilder.html)
-to construct a operation to open the file identified by the given `PathHandle` for reading.
-
-When `build()` is invoked on the returned `FSDataInputStreamBuilder` instance,
-the builder parameters are verified and
-`openFileWithOptions(PathHandle, OpenFileParameters)` invoked.
-
-This (protected) operation returns a `CompletableFuture<FSDataInputStream>`
-which, when its `get()` method is called, either returns an input
-stream of the contents of opened file, or raises an exception.
-
-The base implementation of the `openFileWithOptions(PathHandle, OpenFileParameters)` method
-returns a future which invokes `open(Path, int)`.
-
-Thus the chain `openFile(pathhandle).build().get()` has the same preconditions
-and postconditions as `open(Pathhandle, int)`
-
-As with `FSDataInputStreamBuilder openFile(PathHandle)`, the `openFile()`
-call must not be where path-specific preconditions are checked -that
-is postponed to the `build()` and `get()` calls.
-
-FileSystem implementations which do not implement `open(PathHandle handle, int bufferSize)`
-MAY postpone raising an `UnsupportedOperationException` until either the
-`FSDataInputStreamBuilder.build()` or the subsequent `get()` call,
-else they MAY fail fast in the `openFile()` call.
-
-The base implementation raises this exception in the `build()` operation;
-other implementations SHOULD copy this.
+See [openFile()](openfile.html).
 
 ### `PathHandle getPathHandle(FileStatus stat, HandleOpt... options)`
 
@@ -1240,7 +1174,7 @@ Renaming a file where the destination is a directory moves the file as a child
         FS' where:
             not exists(FS', src)
             and exists(FS', dest)
-            and data(FS', dest) == data (FS, dest)
+            and data(FS', dest) == data (FS, source)
         result = True
 
 
@@ -1697,4 +1631,93 @@ hsync        | HSYNC      | Syncable         | Flush out the data in client's us
 in:readahead | READAHEAD  | CanSetReadahead  | Set the readahead on the input stream.
 dropbehind   | DROPBEHIND | CanSetDropBehind | Drop the cache.
 in:unbuffer  | UNBUFFER   | CanUnbuffer      | Reduce the buffering on the input stream.
+
+## <a name="etagsource"></a> Etag probes through the interface `EtagSource`
+
+FileSystem implementations MAY support querying HTTP etags from `FileStatus`
+entries. If so, the requirements are as follows
+
+### Etag support MUST BE across all list/`getFileStatus()` calls.
+
+That is: when adding etag support, all operations which return `FileStatus` or `ListLocatedStatus`
+entries MUST return subclasses which are instances of `EtagSource`.
+
+### FileStatus instances MUST have etags whenever the remote store provides them.
+
+To support etags, they MUST BE to be provided in both `getFileStatus()`
+and list calls.
+
+Implementors note: the core APIs which MUST BE overridden to achieve this are as follows:
+
+```java
+FileStatus getFileStatus(Path)
+FileStatus[] listStatus(Path)
+RemoteIterator<FileStatus> listStatusIterator(Path)
+RemoteIterator<LocatedFileStatus> listFiles([Path, boolean)
+```
+
+
+### Etags of files MUST BE Consistent across all list/getFileStatus operations.
+
+The value of `EtagSource.getEtag()` MUST be the same for list* queries which return etags for calls of `getFileStatus()` for the specific object.
+
+```java
+((EtagSource)getFileStatus(path)).getEtag() == ((EtagSource)listStatus(path)[0]).getEtag()
+```
+
+Similarly, the same value MUST BE returned for `listFiles()`, `listStatusIncremental()` of the path and
+when listing the parent path, of all files in the listing.
+
+### Etags MUST BE different for different file contents.
+
+Two different arrays of data written to the same path MUST have different etag values when probed.
+This is a requirement of the HTTP specification.
+
+### Etags of files SHOULD BE preserved across rename operations
+
+After a file is renamed, the value of `((EtagSource)getFileStatus(dest)).getEtag()`
+SHOULD be the same as the value of `((EtagSource)getFileStatus(source)).getEtag()`
+was before the rename took place.
+
+This is an implementation detail of the store; it does not hold for AWS S3.
+
+If and only if the store consistently meets this requirement, the filesystem SHOULD
+declare in `hasPathCapability()` that it supports
+`fs.capability.etags.preserved.in.rename`
+
+### Directories MAY have etags
+
+Directory entries MAY return etags in listing/probe operations; these entries MAY be preserved across renames.
+
+Equally, directory entries MAY NOT provide such entries, MAY NOT preserve them acrosss renames,
+and MAY NOT guarantee consistency over time.
+
+Note: special mention of the root path "/".
+As that isn't a real "directory", nobody should expect it to have an etag.
+
+### All etag-aware `FileStatus` subclass MUST BE `Serializable`; MAY BE `Writable`
+
+The base `FileStatus` class implements `Serializable` and  `Writable` and marshalls its fields appropriately.
+
+Subclasses MUST support java serialization (Some Apache Spark applications use it), preserving the etag.
+This is a matter of making the etag field non-static and adding a `serialVersionUID`.
+
+The `Writable` support was used for marshalling status data over Hadoop IPC calls;
+in Hadoop 3 that is implemented through `org/apache/hadoop/fs/protocolPB/PBHelper.java`and the methods deprecated.
+Subclasses MAY override the deprecated methods to add etag marshalling.
+However -but there is no expectation of this and such marshalling is unlikely to ever take place.
+
+### Appropriate etag Path Capabilities SHOULD BE declared
+
+1. `hasPathCapability(path, "fs.capability.etags.available")` MUST return true iff
+    the filesystem returns valid (non-empty etags) on file status/listing operations.
+2. `hasPathCapability(path, "fs.capability.etags.consistent.across.rename")` MUST return
+   true if and only if etags are preserved across renames.
+
+### Non-requirements of etag support
+
+* There is no requirement/expectation that `FileSystem.getFileChecksum(Path)` returns
+  a checksum value related to the etag of an object, if any value is returned.
+* If the same data is uploaded to the twice to the same or a different path,
+  the etag of the second upload MAY NOT match that of the first upload.
 

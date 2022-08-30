@@ -103,4 +103,11 @@ public class StatisticDurationTracker extends OperationDuration
     }
     iostats.addTimedOperation(name, asDuration());
   }
+
+  @Override
+  public String toString() {
+    return " Duration of " +
+        (failed? (key + StoreStatisticNames.SUFFIX_FAILURES) : key)
+        + ": " + super.toString();
+  }
 }

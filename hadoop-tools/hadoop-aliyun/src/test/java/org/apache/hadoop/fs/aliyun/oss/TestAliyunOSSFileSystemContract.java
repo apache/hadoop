@@ -47,6 +47,8 @@ import static org.junit.Assume.assumeTrue;
 public class TestAliyunOSSFileSystemContract
     extends FileSystemContractBaseTest {
   public static final String TEST_FS_OSS_NAME = "test.fs.oss.name";
+  public static final String FS_OSS_IMPL_DISABLE_CACHE
+      = "fs.oss.impl.disable.cache";
   private static Path testRootPath =
       new Path(AliyunOSSTestUtils.generateUniqueTestPath());
 
@@ -413,7 +415,7 @@ public class TestAliyunOSSFileSystemContract
     Thread thread = new Thread(task);
     thread.start();
     while (!task.isRunning()) {
-      Thread.sleep(1000);
+      Thread.sleep(1);
     }
 
     if (changing) {
@@ -421,7 +423,11 @@ public class TestAliyunOSSFileSystemContract
     }
 
     thread.join();
-    assertEquals(result, task.isSucceed());
+    if (changing) {
+      assertTrue(task.isSucceed() || fs.exists(this.path("a")));
+    } else {
+      assertEquals(result, task.isSucceed());
+    }
   }
 
   class TestRenameTask implements Runnable {
@@ -451,6 +457,8 @@ public class TestAliyunOSSFileSystemContract
         running = true;
         result = fs.rename(srcPath, dstPath);
       } catch (Exception e) {
+        e.printStackTrace();
+        this.result = false;
       }
     }
   }

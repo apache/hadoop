@@ -38,12 +38,15 @@ public class ShortWritable implements WritableComparable<ShortWritable> {
     set(value);
   }
 
-  /** Set the value of this ShortWritable. */
+  /**
+   * Set the value of this ShortWritable.
+   * @param value input value.
+   */
   public void set(short value) {
     this.value = value;
   }
 
-  /** Return the value of this ShortWritable. */
+  /** @return Return the value of this ShortWritable. */
   public short get() {
     return value;
   }

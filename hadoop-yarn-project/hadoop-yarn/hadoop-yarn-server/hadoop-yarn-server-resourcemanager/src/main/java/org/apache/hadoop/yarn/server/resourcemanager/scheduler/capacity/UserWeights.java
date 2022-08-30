@@ -54,7 +54,7 @@ public final class UserWeights {
       if (m.find()) {
         String userName = item.getKey().replaceFirst("\\." + USER_WEIGHT, "");
         if (!userName.isEmpty()) {
-          String value = conf.substituteVars(item.getValue());
+          String value = conf.substituteCommonVariables(item.getValue());
           userWeights.data.put(userName, new Float(value));
         }
       }

@@ -23,13 +23,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UsersManager.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -39,7 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.IntraQueue
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy.IntraQueuePreemptionOrderPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceUsage;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AbstractLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.SchedulingMode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy.FairOrderingPolicy;
@@ -401,8 +401,7 @@ public class FifoIntraQueuePreemptionPlugin
       pending = (pending == null) ? Resources.createResource(0, 0) : pending;
       reserved = (reserved == null) ? Resources.createResource(0, 0) : reserved;
 
-      HashSet<String> partitions = new HashSet<String>(
-          app.getAppAttemptResourceUsage().getNodePartitionsSet());
+      Set<String> partitions = app.getAppAttemptResourceUsage().getExistingNodeLabels();
       partitions.addAll(app.getTotalPendingRequestsPerPartition().keySet());
 
       // Create TempAppPerQueue for further calculation.
@@ -419,8 +418,10 @@ public class FifoIntraQueuePreemptionPlugin
       String userName = app.getUser();
       TempUserPerPartition tmpUser = usersPerPartition.get(userName);
       if (tmpUser == null) {
-        ResourceUsage userResourceUsage = tq.leafQueue.getUser(userName)
-            .getResourceUsage();
+        // User might have already been removed, but preemption still accounts for this app,
+        // therefore reinserting the user will not cause a memory leak
+        User  user = tq.leafQueue.getOrCreateUser(userName);
+        ResourceUsage userResourceUsage = user.getResourceUsage();
 
         // perUserAMUsed was populated with running apps, now we are looping
         // through both running and pending apps.
@@ -428,8 +429,7 @@ public class FifoIntraQueuePreemptionPlugin
         amUsed = (userSpecificAmUsed == null)
             ? Resources.none() : userSpecificAmUsed;
 
-        tmpUser = new TempUserPerPartition(
-            tq.leafQueue.getUser(userName), tq.queueName,
+        tmpUser = new TempUserPerPartition(user, tq.queueName,
             Resources.clone(userResourceUsage.getUsed(partition)),
             Resources.clone(amUsed),
             Resources.clone(userResourceUsage.getReserved(partition)),
@@ -575,7 +575,7 @@ public class FifoIntraQueuePreemptionPlugin
   }
 
   private Resource calculateUsedAMResourcesPerQueue(String partition,
-      LeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
+      AbstractLeafQueue leafQueue, Map<String, Resource> perUserAMUsed) {
     Collection<FiCaSchedulerApp> runningApps = leafQueue.getApplications();
     Resource amUsed = Resources.createResource(0, 0);
 

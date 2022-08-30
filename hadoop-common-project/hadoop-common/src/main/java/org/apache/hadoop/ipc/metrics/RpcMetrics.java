@@ -133,6 +133,11 @@ public class RpcMetrics {
     return server.getNumOpenConnections();
   }
 
+  @Metric("Number of in process handlers")
+  public int getNumInProcessHandler() {
+    return server.getNumInProcessHandler();
+  }
+
   @Metric("Number of open connections per user")
   public String numOpenConnectionsPerUser() {
     return server.getNumOpenConnectionsPerUser();
@@ -144,6 +149,16 @@ public class RpcMetrics {
 
   @Metric("Number of dropped connections") public long numDroppedConnections() {
     return server.getNumDroppedConnections();
+  }
+
+  @Metric("Number of total requests")
+  public long getTotalRequests() {
+    return server.getTotalRequests();
+  }
+
+  @Metric("Number of total requests per second")
+  public long getTotalRequestsPerSecond() {
+    return server.getTotalRequestsPerSecond();
   }
 
   public TimeUnit getMetricsTimeUnit() {
@@ -288,6 +303,7 @@ public class RpcMetrics {
   public  void incrSlowRpc() {
     rpcSlowCalls.incr();
   }
+
   /**
    * Returns a MutableRate Counter.
    * @return Mutable Rate

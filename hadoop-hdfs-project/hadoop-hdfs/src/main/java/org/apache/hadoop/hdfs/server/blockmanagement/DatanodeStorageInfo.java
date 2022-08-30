@@ -168,6 +168,11 @@ public class DatanodeStorageInfo {
     return blockContentsStale;
   }
 
+  @VisibleForTesting
+  public void setBlockContentsStale(boolean value) {
+    blockContentsStale = value;
+  }
+
   void markStaleAfterFailover() {
     heartbeatedSinceFailover = false;
     blockContentsStale = true;

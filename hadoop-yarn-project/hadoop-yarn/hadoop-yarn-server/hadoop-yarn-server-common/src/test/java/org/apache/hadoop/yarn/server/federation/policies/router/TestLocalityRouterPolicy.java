@@ -73,6 +73,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
 
     configureWeights(4);
 
+    // initialize policy with context
     initializePolicy(new YarnConfiguration());
   }
 
@@ -86,9 +87,7 @@ public class TestLocalityRouterPolicy extends TestWeightedRandomRouterPolicy {
             .newInstance("queue1", getPolicy().getClass().getCanonicalName(),
                 buf));
     getFederationPolicyContext().setHomeSubcluster(getHomeSubCluster());
-    FederationPoliciesTestUtil
-        .initializePolicyContext(getFederationPolicyContext(), getPolicy(),
-            getPolicyInfo(), getActiveSubclusters(), conf);
+    setupContext();
   }
 
   /**

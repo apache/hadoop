@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 
 /**
  * Used for injecting faults in DFSClient and DFSOutputStream tests.
@@ -65,4 +66,7 @@ public class DFSClientFaultInjector {
   public void sleepBeforeHedgedGet() {}
 
   public void delayWhenRenewLeaseTimeout() {}
+
+  public void onCreateBlockReader(LocatedBlock block, int chunkIndex, long offset, long length) {}
+
 }

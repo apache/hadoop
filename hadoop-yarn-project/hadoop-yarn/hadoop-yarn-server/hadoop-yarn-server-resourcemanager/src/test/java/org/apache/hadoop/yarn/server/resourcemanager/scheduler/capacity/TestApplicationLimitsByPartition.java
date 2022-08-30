@@ -778,6 +778,12 @@ public class TestApplicationLimitsByPartition {
     when(spyRMContext.getNodeLabelManager()).thenReturn(mgr);
     when(csContext.getRMContext()).thenReturn(spyRMContext);
     when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    CapacitySchedulerQueueManager queueManager =
+        new CapacitySchedulerQueueManager(csConf, mgr, null);
+    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+
+    // Setup nodelabels
+    queueManager.reinitConfiguredNodeLabels(csConf);
     setQueueHandler(csContext);
     csContext.getCapacitySchedulerQueueManager().reinitConfiguredNodeLabels(csConf);
 
@@ -792,15 +798,14 @@ public class TestApplicationLimitsByPartition {
     Resource clusterResource = Resources.createResource(160 * GB);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
 
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
+
     CSQueueStore queues = new CSQueueStore();
-    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(csContext,
+    CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(queueContext,
         csConf, null, "root", queues, queues, TestUtils.spyHook);
+    queueManager.setRootQueue(rootQueue);
     rootQueue.updateClusterResource(clusterResource,
         new ResourceLimits(clusterResource));
-
-    ResourceUsage queueResUsage = rootQueue.getQueueResourceUsage();
-    when(csContext.getClusterResourceUsage())
-        .thenReturn(queueResUsage);
 
     // Manipulate queue 'a'
     LeafQueue queue = TestLeafQueue.stubLeafQueue((LeafQueue) queues.get("b2"));

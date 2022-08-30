@@ -466,7 +466,7 @@ class JobSubmitter {
         throw new IllegalArgumentException(e);
       }
 
-      DistributedCache.addCacheArchive(uri, conf);
+      Job.addCacheArchive(uri, conf);
     }
   }
 }

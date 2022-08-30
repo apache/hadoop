@@ -60,6 +60,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.AM_ALLOW_NON_EXCLUSIVE_ALLOCATION;
+
 /**
  * Allocate normal (new) containers, considers locality/label, etc. Using
  * delayed scheduling mechanism to get better locality allocation.
@@ -80,7 +82,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // require
     Resource resourceCouldBeUnReserved =
         application.getAppAttemptResourceUsage().getReserved(nodePartition);
-    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
       // If we don't allow reservation continuous looking,
       // we won't allow to unreserve before allocation.
       resourceCouldBeUnReserved = Resources.none();
@@ -121,10 +123,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
-    // AM container allocation doesn't support non-exclusive allocation to
-    // avoid painful of preempt an AM container
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
-      if (application.isWaitingForAMContainer()) {
+      if (application.isWaitingForAMContainer() && !rmContext.getYarnConfiguration()
+          .getBoolean(AM_ALLOW_NON_EXCLUSIVE_ALLOCATION, false)) {
         LOG.debug("Skip allocating AM container to app_attempt={},"
             + " don't allow to allocate AM container in non-exclusive mode",
             application.getApplicationAttemptId());
@@ -154,7 +155,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       return ContainerAllocation.PRIORITY_SKIPPED;
     }
 
-    if (!application.getCSLeafQueue().getReservationContinueLooking()) {
+    if (!application.getCSLeafQueue().isReservationsContinueLooking()) {
       if (!shouldAllocOrReserveNewContainer(schedulerKey, required)) {
         LOG.debug("doesn't need containers based on reservation algo!");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
@@ -551,7 +552,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     RMContainer unreservedContainer = null;
     boolean reservationsContinueLooking =
-        application.getCSLeafQueue().getReservationContinueLooking();
+        application.getCSLeafQueue().isReservationsContinueLooking();
 
     // Check if we need to kill some containers to allocate this one
     List<RMContainer> toKillContainers = null;

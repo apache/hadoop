@@ -154,6 +154,9 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_KEY =
       "dfs.client.slow.io.warning.threshold.ms";
   long    DFS_CLIENT_SLOW_IO_WARNING_THRESHOLD_DEFAULT = 30000;
+  String  DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_KEY =
+      "dfs.client.mark.slownode.as.badnode.threshold";
+  int DFS_CLIENT_MARK_SLOWNODE_AS_BADNODE_THRESHOLD_DEFAULT = 10;
   String  DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS =
           "dfs.client.key.provider.cache.expiry";
   long    DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
@@ -201,6 +204,19 @@ public interface HdfsClientConfigKeys {
   String  DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_KEY =
       "dfs.client.refresh.read-block-locations.ms";
   long DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_MS_DEFAULT = 0L;
+
+  //  Number of threads to use for refreshing LocatedBlocks of registered
+  //  DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+  //  this may help refresh them all in a timely manner.
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_KEY =
+      "dfs.client.refresh.read-block-locations.threads";
+  int DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_THREADS_DEFAULT = 5;
+
+  // Whether to auto-register all DFSInputStreams for background refreshes.
+  // If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+  String DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_KEY =
+      "dfs.client.refresh.read-block-locations.register-automatically";
+  boolean DFS_CLIENT_REFRESH_READ_BLOCK_LOCATIONS_AUTOMATICALLY_DEFAULT = true;
 
   String  DFS_DATANODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.datanode.kerberos.principal";
@@ -256,6 +272,14 @@ public interface HdfsClientConfigKeys {
 
   String DFS_LEASE_HARDLIMIT_KEY = "dfs.namenode.lease-hard-limit-sec";
   long DFS_LEASE_HARDLIMIT_DEFAULT = 20 * 60;
+
+  String DFS_CLIENT_FSCK_CONNECT_TIMEOUT =
+      "dfs.client.fsck.connect.timeout";
+  int DFS_CLIENT_FSCK_CONNECT_TIMEOUT_DEFAULT = 60 * 1000;
+
+  String DFS_CLIENT_FSCK_READ_TIMEOUT =
+      "dfs.client.fsck.read.timeout";
+  int DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT = 60 * 1000;
 
   /**
    * These are deprecated config keys to client code.

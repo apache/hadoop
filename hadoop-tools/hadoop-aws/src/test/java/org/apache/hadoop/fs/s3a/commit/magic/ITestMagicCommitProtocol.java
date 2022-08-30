@@ -25,8 +25,6 @@ import java.util.List;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -34,7 +32,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
-import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.CommitUtils;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjection;
 import org.apache.hadoop.fs.s3a.commit.CommitterFaultInjectionImpl;
@@ -45,7 +42,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
-import static org.hamcrest.CoreMatchers.containsString;
+import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 
 /**
  * Test the magic committer's commit protocol.
@@ -55,15 +52,6 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   @Override
   protected String suitename() {
     return "ITestMagicCommitProtocol";
-  }
-
-  /**
-   * Need consistency here.
-   * @return false
-   */
-  @Override
-  public boolean useInconsistentClient() {
-    return false;
   }
 
   @Override
@@ -108,8 +96,9 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   protected void validateTaskAttemptPathDuringWrite(Path p,
       final long expectedLength) throws IOException {
     String pathStr = p.toString();
-    assertTrue("not magic " + pathStr,
-        pathStr.contains(MAGIC));
+    Assertions.assertThat(pathStr)
+        .describedAs("Magic path")
+        .contains(MAGIC);
     assertPathDoesNotExist("task attempt visible", p);
   }
 
@@ -125,9 +114,9 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     // if you list the parent dir and find the marker, it
     // is really 0 bytes long
     String name = marker.getName();
-    List<LocatedFileStatus> filtered = listAndFilter(fs,
+    List<LocatedFileStatus> filtered = toList(listAndFilter(fs,
         marker.getParent(), false,
-        (path) -> path.getName().equals(name));
+        (path) -> path.getName().equals(name)));
     Assertions.assertThat(filtered)
         .hasSize(1);
     Assertions.assertThat(filtered.get(0))
@@ -135,14 +124,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
             "Listing should return 0 byte length");
 
     // marker file is empty
-    FileStatus st = fs.getFileStatus(marker);
-    assertEquals("file length in " + st, 0, st.getLen());
-    // xattr header
-    Assertions.assertThat(CommitOperations.extractMagicFileLength(fs,
-        marker))
-        .describedAs("XAttribute " + XA_MAGIC_MARKER)
-        .isNotEmpty()
-        .hasValue(expectedLength);
+    getTestHelper().assertIsMarkerFile(marker, expectedLength);
   }
 
   /**
@@ -160,8 +142,8 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
     assertEquals("Wrong schema for working dir " + wd
         + " with committer " + committer,
         "s3a", wd.getScheme());
-    assertThat(wd.getPath(),
-        containsString('/' + CommitConstants.MAGIC + '/'));
+    Assertions.assertThat(wd.getPath())
+        .contains('/' + CommitConstants.MAGIC + '/');
   }
 
   /**

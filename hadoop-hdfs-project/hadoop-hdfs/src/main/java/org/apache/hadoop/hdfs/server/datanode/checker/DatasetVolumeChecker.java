@@ -77,7 +77,6 @@ public class DatasetVolumeChecker {
 
   private final AtomicLong numVolumeChecks = new AtomicLong(0);
   private final AtomicLong numSyncDatasetChecks = new AtomicLong(0);
-  private final AtomicLong numAsyncDatasetChecks = new AtomicLong(0);
   private final AtomicLong numSkippedChecks = new AtomicLong(0);
 
   /**

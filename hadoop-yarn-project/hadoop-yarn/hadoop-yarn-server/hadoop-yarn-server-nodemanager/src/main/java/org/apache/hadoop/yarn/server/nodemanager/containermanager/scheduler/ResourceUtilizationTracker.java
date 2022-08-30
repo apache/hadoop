@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler;
 
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
@@ -56,4 +57,10 @@ public interface ResourceUtilizationTracker {
    */
   boolean hasResourcesAvailable(Container container);
 
+  /**
+   * Check if NM has resources available currently to run requested resources.
+   * @param resource the resources.
+   * @return True, if NM has enough available resources.
+   */
+  boolean hasResourcesAvailable(Resource resource);
 }

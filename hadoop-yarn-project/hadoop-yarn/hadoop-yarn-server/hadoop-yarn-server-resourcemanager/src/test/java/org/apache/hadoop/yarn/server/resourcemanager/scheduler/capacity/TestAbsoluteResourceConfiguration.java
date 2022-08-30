@@ -22,12 +22,16 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,18 +48,21 @@ public class TestAbsoluteResourceConfiguration {
   private static final String QUEUEA2 = "queueA2";
   private static final String QUEUEB1 = "queueB1";
 
-  private static final String QUEUEA_FULL = CapacitySchedulerConfiguration.ROOT
-      + "." + QUEUEA;
-  private static final String QUEUEB_FULL = CapacitySchedulerConfiguration.ROOT
-      + "." + QUEUEB;
-  private static final String QUEUEC_FULL = CapacitySchedulerConfiguration.ROOT
-      + "." + QUEUEC;
-  private static final String QUEUED_FULL = CapacitySchedulerConfiguration.ROOT
-      + "." + QUEUED;
+  private static final QueuePath QUEUEA_FULL =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT, QUEUEA);
+  private static final QueuePath QUEUEB_FULL =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT, QUEUEB);
+  private static final QueuePath QUEUEC_FULL =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT, QUEUEC);
+  private static final QueuePath QUEUED_FULL =
+          new QueuePath(CapacitySchedulerConfiguration.ROOT, QUEUED);
 
-  private static final String QUEUEA1_FULL = QUEUEA_FULL + "." + QUEUEA1;
-  private static final String QUEUEA2_FULL = QUEUEA_FULL + "." + QUEUEA2;
-  private static final String QUEUEB1_FULL = QUEUEB_FULL + "." + QUEUEB1;
+  private static final QueuePath QUEUEA1_FULL =
+          new QueuePath(QUEUEA_FULL.getFullPath() + "." + QUEUEA1);
+  private static final QueuePath QUEUEA2_FULL =
+          new QueuePath(QUEUEA_FULL.getFullPath() + "." + QUEUEA2);
+  private static final QueuePath QUEUEB1_FULL =
+          new QueuePath(QUEUEB_FULL.getFullPath() + "." + QUEUEB1);
 
   private static final Resource QUEUE_A_MINRES = Resource.newInstance(100 * GB,
       10);
@@ -88,9 +95,26 @@ public class TestAbsoluteResourceConfiguration {
       Resource.newInstance(25 * GB, 5);
   private static final Resource QUEUE_D_TEMPL_MAXRES =
       Resource.newInstance(150 * GB, 20);
+  public static final String X_LABEL = "X";
+  public static final String Y_LABEL = "Y";
 
   private static Set<String> resourceTypes = new HashSet<>(
       Arrays.asList("memory", "vcores"));
+
+  private CapacitySchedulerConfiguration setupNormalizationConfiguration() {
+    CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[]{QUEUEA, QUEUEB});
+    csConf.setQueues(QUEUEA_FULL.getFullPath(), new String[]{QUEUEA1, QUEUEA2});
+
+//    60, 28
+    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, Resource.newInstance(50 * GB, 20));
+    csConf.setMinimumResourceRequirement("", QUEUEA1_FULL, Resource.newInstance(30 * GB, 15));
+    csConf.setMinimumResourceRequirement("", QUEUEA2_FULL, Resource.newInstance(20 * GB, 5));
+    csConf.setMinimumResourceRequirement("", QUEUEB_FULL, Resource.newInstance(10 * GB, 8));
+
+    return csConf;
+  }
 
   private CapacitySchedulerConfiguration setupSimpleQueueConfiguration(
       boolean isCapacityNeeded) {
@@ -100,18 +124,18 @@ public class TestAbsoluteResourceConfiguration {
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
-      csConf.setCapacity(QUEUEA_FULL, 50f);
-      csConf.setCapacity(QUEUEB_FULL, 25f);
-      csConf.setCapacity(QUEUEC_FULL, 25f);
-      csConf.setCapacity(QUEUED_FULL, 25f);
+      csConf.setCapacity(QUEUEA_FULL.getFullPath(), 50f);
+      csConf.setCapacity(QUEUEB_FULL.getFullPath(), 25f);
+      csConf.setCapacity(QUEUEC_FULL.getFullPath(), 25f);
+      csConf.setCapacity(QUEUED_FULL.getFullPath(), 25f);
     }
 
-    csConf.setAutoCreateChildQueueEnabled(QUEUED_FULL, true);
+    csConf.setAutoCreateChildQueueEnabled(QUEUED_FULL.getFullPath(), true);
 
     // Setup leaf queue template configs
-    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(QUEUED_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateCapacityByLabel(QUEUED_FULL.getFullPath(), "",
         QUEUE_D_TEMPL_MINRES);
-    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(QUEUED_FULL, "",
+    csConf.setAutoCreatedLeafQueueTemplateMaxCapacity(QUEUED_FULL.getFullPath(), "",
         QUEUE_D_TEMPL_MAXRES);
 
     return csConf;
@@ -122,24 +146,45 @@ public class TestAbsoluteResourceConfiguration {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{QUEUEA, QUEUEB, QUEUEC});
-    csConf.setQueues(QUEUEA_FULL, new String[]{QUEUEA1, QUEUEA2});
-    csConf.setQueues(QUEUEB_FULL, new String[]{QUEUEB1});
+    csConf.setQueues(QUEUEA_FULL.getFullPath(), new String[]{QUEUEA1, QUEUEA2});
+    csConf.setQueues(QUEUEB_FULL.getFullPath(), new String[]{QUEUEB1});
 
     // Set default capacities like normal configuration.
     if (isCapacityNeeded) {
-      csConf.setCapacity(QUEUEA_FULL, 50f);
-      csConf.setCapacity(QUEUEB_FULL, 25f);
-      csConf.setCapacity(QUEUEC_FULL, 25f);
-      csConf.setCapacity(QUEUEA1_FULL, 50f);
-      csConf.setCapacity(QUEUEA2_FULL, 50f);
-      csConf.setCapacity(QUEUEB1_FULL, 100f);
+      csConf.setCapacity(QUEUEA_FULL.getFullPath(), 50f);
+      csConf.setCapacity(QUEUEB_FULL.getFullPath(), 25f);
+      csConf.setCapacity(QUEUEC_FULL.getFullPath(), 25f);
+      csConf.setCapacity(QUEUEA1_FULL.getFullPath(), 50f);
+      csConf.setCapacity(QUEUEA2_FULL.getFullPath(), 50f);
+      csConf.setCapacity(QUEUEB1_FULL.getFullPath(), 100f);
     }
+
+    return csConf;
+  }
+
+  private CapacitySchedulerConfiguration setupLabeledConfiguration(
+      CapacitySchedulerConfiguration csConf) {
+    csConf.setMinimumResourceRequirement("", QUEUEA_FULL, Resource.newInstance(20 * GB, 8));
+    csConf.setMinimumResourceRequirement("", QUEUEB_FULL, Resource.newInstance(10 * GB, 3));
+    csConf.setMinimumResourceRequirement("", QUEUEC_FULL, Resource.newInstance(10 * GB, 2));
+    csConf.setMinimumResourceRequirement("", QUEUED_FULL, Resource.newInstance(10 * GB, 2));
+
+    csConf.setMinimumResourceRequirement(X_LABEL, QUEUEA_FULL, Resource.newInstance(20 * GB, 8));
+    csConf.setMinimumResourceRequirement(X_LABEL, QUEUEB_FULL, Resource.newInstance(10 * GB, 3));
+    csConf.setMinimumResourceRequirement(X_LABEL, QUEUEC_FULL, Resource.newInstance(10 * GB, 2));
+    csConf.setMinimumResourceRequirement(X_LABEL, QUEUED_FULL, Resource.newInstance(10 * GB, 2));
+
+    csConf.setMinimumResourceRequirement(Y_LABEL, QUEUEA_FULL, Resource.newInstance(2 * GB, 1));
+    csConf.setMinimumResourceRequirement(Y_LABEL, QUEUEB_FULL, Resource.newInstance(2 * GB, 1));
+    csConf.setMinimumResourceRequirement(Y_LABEL, QUEUEC_FULL, Resource.newInstance(2 * GB, 1));
+    csConf.setMinimumResourceRequirement(Y_LABEL, QUEUED_FULL, Resource.newInstance(2 * GB, 2));
 
     return csConf;
   }
 
   private CapacitySchedulerConfiguration setupMinMaxResourceConfiguration(
       CapacitySchedulerConfiguration csConf) {
+
     // Update min/max resource to queueA/B/C
     csConf.setMinimumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MINRES);
     csConf.setMinimumResourceRequirement("", QUEUEB_FULL, QUEUE_B_MINRES);
@@ -180,22 +225,22 @@ public class TestAbsoluteResourceConfiguration {
 
     Assert.assertEquals("Min resource configured for QUEUEA is not correct",
         QUEUE_A_MINRES,
-        csConf.getMinimumResourceRequirement("", QUEUEA_FULL, resourceTypes));
+        csConf.getMinimumResourceRequirement("", QUEUEA_FULL.getFullPath(), resourceTypes));
     Assert.assertEquals("Max resource configured for QUEUEA is not correct",
         QUEUE_A_MAXRES,
-        csConf.getMaximumResourceRequirement("", QUEUEA_FULL, resourceTypes));
+        csConf.getMaximumResourceRequirement("", QUEUEA_FULL.getFullPath(), resourceTypes));
     Assert.assertEquals("Min resource configured for QUEUEB is not correct",
         QUEUE_B_MINRES,
-        csConf.getMinimumResourceRequirement("", QUEUEB_FULL, resourceTypes));
+        csConf.getMinimumResourceRequirement("", QUEUEB_FULL.getFullPath(), resourceTypes));
     Assert.assertEquals("Max resource configured for QUEUEB is not correct",
         QUEUE_B_MAXRES,
-        csConf.getMaximumResourceRequirement("", QUEUEB_FULL, resourceTypes));
+        csConf.getMaximumResourceRequirement("", QUEUEB_FULL.getFullPath(), resourceTypes));
     Assert.assertEquals("Min resource configured for QUEUEC is not correct",
         QUEUE_C_MINRES,
-        csConf.getMinimumResourceRequirement("", QUEUEC_FULL, resourceTypes));
+        csConf.getMinimumResourceRequirement("", QUEUEC_FULL.getFullPath(), resourceTypes));
     Assert.assertEquals("Max resource configured for QUEUEC is not correct",
         QUEUE_C_MAXRES,
-        csConf.getMaximumResourceRequirement("", QUEUEC_FULL, resourceTypes));
+        csConf.getMaximumResourceRequirement("", QUEUEC_FULL.getFullPath(), resourceTypes));
 
     csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -211,7 +256,7 @@ public class TestAbsoluteResourceConfiguration {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue(QUEUED);
-    AutoCreatedLeafQueue d1 = new AutoCreatedLeafQueue(cs, "d1", parentQueue);
+    AutoCreatedLeafQueue d1 = new AutoCreatedLeafQueue(cs.getQueueContext(), "d1", parentQueue);
     cs.addQueue(d1);
 
     /**
@@ -236,7 +281,7 @@ public class TestAbsoluteResourceConfiguration {
      * d1 will occupy all entire resource
      * of Managed Parent queue.
      */
-    AutoCreatedLeafQueue d2 = new AutoCreatedLeafQueue(cs, "d2", parentQueue);
+    AutoCreatedLeafQueue d2 = new AutoCreatedLeafQueue(cs.getQueueContext(), "d2", parentQueue);
     cs.addQueue(d2);
 
     cs.getRootQueue().updateClusterResource(cs.getClusterResource(),
@@ -261,6 +306,37 @@ public class TestAbsoluteResourceConfiguration {
         d1.usageTracker.getQueueResourceQuotas().getEffectiveMaxResource());
 
     rm.close();
+  }
+
+  @Test
+  public void testNormalizationAfterNodeRemoval() throws Exception {
+    CapacitySchedulerConfiguration csConf = setupNormalizationConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    MockRM rm = new MockRM(csConf);
+
+    rm.start();
+    rm.registerNode("h1:1234", 8 * GB, 4);
+    rm.registerNode("h2:1234", 8 * GB, 4);
+    rm.registerNode("h3:1234", 8 * GB, 4);
+    MockNM nm = rm.registerNode("h4:1234", 8 * GB, 4);
+    rm.registerNode("h5:1234", 28 * GB, 12);
+
+    // Send a removal event to CS. MockRM#unregisterNode does not reflect the real world scenario,
+    // therefore we manually need to invoke this removal event.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    cs.handle(new NodeRemovedSchedulerEvent(rm.getRMContext().getRMNodes().get(nm.getNodeId())));
+
+    Resource res = Resources.add(
+        cs.getQueue(QUEUEA1_FULL.getFullPath()).getEffectiveCapacity(""),
+        cs.getQueue(QUEUEA2_FULL.getFullPath()).getEffectiveCapacity(""));
+    Resource resParent = cs.getQueue(QUEUEA_FULL.getFullPath()).getEffectiveCapacity("");
+
+    // Check if there is no overcommitment on behalf of the child queues
+    Assert.assertTrue(String.format("Summarized resource %s of all children is greater than " +
+        "their parent's %s", res, resParent),
+        Resources.lessThan(cs.getResourceCalculator(), cs.getClusterResource(), res, resParent));
   }
 
   @Test
@@ -487,9 +563,9 @@ public class TestAbsoluteResourceConfiguration {
     // 1. Explicitly set percentage based config for parent queues. This will
     // make Queue A,B and C with percentage based and A1,A2 or B1 with absolute
     // resource.
-    csConf.setCapacity(QUEUEA_FULL, 50f);
-    csConf.setCapacity(QUEUEB_FULL, 25f);
-    csConf.setCapacity(QUEUEC_FULL, 25f);
+    csConf.setCapacity(QUEUEA_FULL.getFullPath(), 50f);
+    csConf.setCapacity(QUEUEB_FULL.getFullPath(), 25f);
+    csConf.setCapacity(QUEUEC_FULL.getFullPath(), 25f);
 
     // Get queue object to verify min/max resource configuration.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -534,13 +610,13 @@ public class TestAbsoluteResourceConfiguration {
         new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[] {QUEUEA, QUEUEB});
-    csConf.setQueues(QUEUEA_FULL, new String[] {QUEUEA1, QUEUEA2});
+    csConf.setQueues(QUEUEA_FULL.getFullPath(), new String[] {QUEUEA1, QUEUEA2});
 
     // Set default capacities like normal configuration.
-    csConf.setCapacity(QUEUEA_FULL, "[memory=125]");
-    csConf.setCapacity(QUEUEB_FULL, "[memory=0]");
-    csConf.setCapacity(QUEUEA1_FULL, "[memory=100]");
-    csConf.setCapacity(QUEUEA2_FULL, "[memory=25]");
+    csConf.setCapacity(QUEUEA_FULL.getFullPath(), "[memory=125]");
+    csConf.setCapacity(QUEUEB_FULL.getFullPath(), "[memory=0]");
+    csConf.setCapacity(QUEUEA1_FULL.getFullPath(), "[memory=100]");
+    csConf.setCapacity(QUEUEA2_FULL.getFullPath(), "[memory=25]");
 
     // Update min/max resource to queueA
     csConf.setMinimumResourceRequirement("", QUEUEA_FULL, QUEUE_A_MINRES);
@@ -560,8 +636,8 @@ public class TestAbsoluteResourceConfiguration {
     // doesnt throw exception saying "Parent queue 'root.A' and
     // child queue 'root.A.A2' should use either percentage
     // based capacityconfiguration or absolute resource together for label"
-    csConf.setCapacity(QUEUEA1_FULL, "[memory=125]");
-    csConf.setCapacity(QUEUEA2_FULL, "[memory=0]");
+    csConf.setCapacity(QUEUEA1_FULL.getFullPath(), "[memory=125]");
+    csConf.setCapacity(QUEUEA2_FULL.getFullPath(), "[memory=0]");
 
     // Get queue object to verify min/max resource configuration.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -570,6 +646,42 @@ public class TestAbsoluteResourceConfiguration {
     } catch (IOException e) {
       Assert.fail(e.getMessage());
     }
+  }
+
+  @Test
+  public void testDownscalingForLabels() throws Exception {
+    CapacitySchedulerConfiguration csConf = setupSimpleQueueConfiguration(false);
+    setupLabeledConfiguration(csConf);
+
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        ResourceScheduler.class);
+
+    MockRM rm = new MockRM(csConf);
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * GB, 5);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * GB, 5);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 8 * GB, 5);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 8 * GB, 5);
+
+    rm.getRMContext().getNodeLabelManager().addToCluserNodeLabelsWithDefaultExclusivity(
+        ImmutableSet.of(X_LABEL, Y_LABEL));
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(
+        ImmutableMap.of(nm1.getNodeId(), ImmutableSet.of(X_LABEL),
+            nm2.getNodeId(), ImmutableSet.of(X_LABEL),
+            nm3.getNodeId(), ImmutableSet.of(X_LABEL),
+            nm4.getNodeId(), ImmutableSet.of(Y_LABEL)));
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    CSQueue root = cs.getRootQueue();
+    root.updateClusterResource(cs.getClusterResource(), new ResourceLimits(cs.getClusterResource()));
+
+    Resource childrenResource = root.getChildQueues().stream().map(q -> q.getEffectiveCapacity(
+        X_LABEL)).reduce(Resources::add).orElse(Resource.newInstance(0, 0));
+
+    Assert.assertTrue("Children of root have more resource than overall cluster resource",
+        Resources.greaterThan(cs.getResourceCalculator(), cs.getClusterResource(),
+            root.getEffectiveCapacity(X_LABEL), childrenResource));
   }
 
   @Test

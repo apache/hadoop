@@ -154,4 +154,8 @@ public final class Constants {
   public static final String UPLOAD_ACTIVE_BLOCKS_KEY =
       "fs.oss.upload.active.blocks";
   public static final int UPLOAD_ACTIVE_BLOCKS_DEFAULT = 4;
+
+  public static final String LIST_VERSION = "fs.oss.list.version";
+
+  public static final int DEFAULT_LIST_VERSION = 2;
 }

@@ -42,6 +42,7 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
       final ClientConfiguration awsConf,
       final S3ClientCreationParameters parameters) {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
+    LOG.warn("List inconsistency is no longer emulated; only throttling and read errors");
     InconsistentAmazonS3Client s3
         = new InconsistentAmazonS3Client(
             parameters.getCredentialSet(), awsConf, getConf());

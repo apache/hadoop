@@ -41,7 +41,7 @@ public interface RefreshAuthorizationPolicyProtocol {
 
   /**
    * Refresh the service-level authorization policy in-effect.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Idempotent
   void refreshServiceAcl() throws IOException;

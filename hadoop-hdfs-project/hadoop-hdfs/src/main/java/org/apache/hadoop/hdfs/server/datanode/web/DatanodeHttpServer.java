@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
@@ -28,6 +28,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.ssl.SslHandler;
@@ -64,7 +65,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.security.GeneralSecurityException;
 import java.util.Enumeration;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_DEFAULT;
@@ -77,8 +77,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_INTERNAL_PR
  */
 public class DatanodeHttpServer implements Closeable {
   static final Logger LOG = LoggerFactory.getLogger(DatanodeHttpServer.class);
-  private static final ConcurrentHashMap<Class<?>, Object> HANDLER_STATE
-      = new ConcurrentHashMap<Class<?>, Object>() {};
   // HttpServer threads are only used for the web UI and basic servlets, so
   // set them to the minimum possible
   private static final int HTTP_SELECTOR_THREADS = 1;
@@ -171,15 +169,13 @@ public class DatanodeHttpServer implements Closeable {
             });
 
       this.httpServer.childOption(
-          ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK,
-          conf.getInt(
-              DFSConfigKeys.DFS_WEBHDFS_NETTY_HIGH_WATERMARK,
-              DFSConfigKeys.DFS_WEBHDFS_NETTY_HIGH_WATERMARK_DEFAULT));
-      this.httpServer.childOption(
-          ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-          conf.getInt(
-              DFSConfigKeys.DFS_WEBHDFS_NETTY_LOW_WATERMARK,
-              DFSConfigKeys.DFS_WEBHDFS_NETTY_LOW_WATERMARK_DEFAULT));
+          ChannelOption.WRITE_BUFFER_WATER_MARK,
+          new WriteBufferWaterMark(conf.getInt(
+               DFSConfigKeys.DFS_WEBHDFS_NETTY_LOW_WATERMARK,
+               DFSConfigKeys.DFS_WEBHDFS_NETTY_LOW_WATERMARK_DEFAULT),
+               conf.getInt(
+                   DFSConfigKeys.DFS_WEBHDFS_NETTY_HIGH_WATERMARK,
+                   DFSConfigKeys.DFS_WEBHDFS_NETTY_HIGH_WATERMARK_DEFAULT)));
 
       if (externalHttpChannel == null) {
         httpServer.channel(NioServerSocketChannel.class);
@@ -281,11 +277,10 @@ public class DatanodeHttpServer implements Closeable {
       try {
         Method initializeState = classes[i].getDeclaredMethod("initializeState",
             Configuration.class);
-        Constructor constructor =
+        Constructor<?> constructor =
             classes[i].getDeclaredConstructor(initializeState.getReturnType());
         handlers[i] = (ChannelHandler) constructor.newInstance(
-            HANDLER_STATE.getOrDefault(classes[i],
-            initializeState.invoke(null, configuration)));
+            initializeState.invoke(null, configuration));
       } catch (NoSuchMethodException | InvocationTargetException
           | IllegalAccessException | InstantiationException
           | IllegalArgumentException e) {
@@ -307,18 +302,7 @@ public class DatanodeHttpServer implements Closeable {
   public void start() throws IOException {
     if (httpServer != null) {
       InetSocketAddress infoAddr = DataNode.getInfoAddr(conf);
-      ChannelFuture f = httpServer.bind(infoAddr);
-      try {
-        f.syncUninterruptibly();
-      } catch (Throwable e) {
-        if (e instanceof BindException) {
-          throw NetUtils.wrapException(null, 0, infoAddr.getHostName(),
-              infoAddr.getPort(), (SocketException) e);
-        } else {
-          throw e;
-        }
-      }
-      httpAddress = (InetSocketAddress) f.channel().localAddress();
+      httpAddress = getChannelLocalAddress(httpServer, infoAddr);
       LOG.info("Listening HTTP traffic on " + httpAddress);
     }
 
@@ -327,21 +311,25 @@ public class DatanodeHttpServer implements Closeable {
           NetUtils.createSocketAddr(conf.getTrimmed(
               DFS_DATANODE_HTTPS_ADDRESS_KEY,
               DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
-      ChannelFuture f = httpsServer.bind(secInfoSocAddr);
-
-      try {
-        f.syncUninterruptibly();
-      } catch (Throwable e) {
-        if (e instanceof BindException) {
-          throw NetUtils.wrapException(null, 0, secInfoSocAddr.getHostName(),
-              secInfoSocAddr.getPort(), (SocketException) e);
-        } else {
-          throw e;
-        }
-      }
-      httpsAddress = (InetSocketAddress) f.channel().localAddress();
+      httpsAddress = getChannelLocalAddress(httpsServer, secInfoSocAddr);
       LOG.info("Listening HTTPS traffic on " + httpsAddress);
     }
+  }
+
+  private InetSocketAddress getChannelLocalAddress(
+      ServerBootstrap server, InetSocketAddress address) throws IOException {
+    ChannelFuture f = server.bind(address);
+    try {
+      f.syncUninterruptibly();
+    } catch (Throwable e) {
+      if (e instanceof BindException) {
+        throw NetUtils.wrapException(null, 0, address.getHostName(),
+                address.getPort(), (SocketException) e);
+      } else {
+        throw e;
+      }
+    }
+    return (InetSocketAddress) f.channel().localAddress();
   }
 
   @Override

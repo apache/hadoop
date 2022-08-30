@@ -391,8 +391,8 @@ public class SnapshotManager implements SnapshotStatsMXBean {
       final INodesInPath iip) throws IOException {
     final INodeDirectory dir = getSnapshottableAncestorDir(iip);
     if (dir == null) {
-      throw new SnapshotException("Directory is neither snapshottable nor" +
-          " under a snap root!");
+      throw new SnapshotException("The path " + iip.getPath()
+          + " is neither snapshottable nor under a snapshot root!");
     }
     return dir;
   }
@@ -402,7 +402,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     final String path = iip.getPath();
     final INode inode = iip.getLastINode();
     final INodeDirectory dir;
-    if (inode instanceof INodeDirectory) {
+    if (inode != null && inode.isDirectory()) {
       dir = INodeDirectory.valueOf(inode, path);
     } else {
       dir = INodeDirectory.valueOf(iip.getINode(-2), iip.getParentPath());

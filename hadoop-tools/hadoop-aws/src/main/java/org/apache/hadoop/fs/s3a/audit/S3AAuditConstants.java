@@ -35,6 +35,19 @@ public final class S3AAuditConstants {
   public static final String UNAUDITED_OPERATION = "unaudited operation";
 
   /**
+   * Is auditing enabled?
+   * Value: {@value}.
+   */
+  public static final String AUDIT_ENABLED = "fs.s3a.audit.enabled";
+
+  /**
+   * Default auditing flag.
+   * Value: {@value}.
+   */
+  public static final boolean AUDIT_ENABLED_DEFAULT = true;
+
+
+  /**
    * Name of class used for audit logs: {@value}.
    */
   public static final String AUDIT_SERVICE_CLASSNAME =

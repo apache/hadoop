@@ -21,8 +21,6 @@ import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -48,8 +46,11 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
@@ -128,7 +129,7 @@ public class TestJsonUtil {
         .isdir(true)
         .build();
 
-    assertFalse(hdfsFileStatus.isSymlink());
+    Assert.assertFalse(hdfsFileStatus.isSymlink());
     LambdaTestUtils.intercept(IOException.class,
         "Path " + hdfsFileStatus.getPath() + " is not a symbolic link",
         () -> hdfsFileStatus.getSymlink());
@@ -150,7 +151,7 @@ public class TestJsonUtil {
         .append("}")
         .toString();
 
-    assertEquals(expectString, hdfsFileStatus.toString());
+    Assert.assertEquals(expectString, hdfsFileStatus.toString());
   }
 
   @Test
@@ -389,6 +390,83 @@ public class TestJsonUtil {
     // Get xattr: user.a2
     byte[] value = JsonUtilClient.getXAttr(json, "user.a2");
     Assert.assertArrayEquals(XAttrCodec.decodeValue("0x313131"), value);
+  }
+
+  @Test
+  public void testSnapshotDiffReportListingEmptyReport() throws IOException {
+    SnapshotDiffReportListing report = new SnapshotDiffReportListing();
+    String jsonString = JsonUtil.toJsonString(report);
+    Map<?, ?> json = READER.readValue(jsonString);
+    SnapshotDiffReportListing parsed =
+        JsonUtilClient.toSnapshotDiffReportListing(json);
+
+    assertEquals(report, parsed);
+  }
+
+  @Test
+  public void testSnapshotDiffReportListing() throws IOException {
+    List<DiffReportListingEntry> mlist = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> clist = new ChunkedArrayList<>();
+    List<DiffReportListingEntry> dlist = new ChunkedArrayList<>();
+    clist.add(new DiffReportListingEntry(
+        1L, 2L, DFSUtilClient.string2Bytes("dir1/file2"), false, null));
+    clist.add(new DiffReportListingEntry(
+        1L, 3L, DFSUtilClient.string2Bytes("dir1/file3"), false, null));
+    dlist.add(new DiffReportListingEntry(
+        1L, 4L, DFSUtilClient.string2Bytes("dir1/file4"), false, null));
+    dlist.add(new DiffReportListingEntry(
+        1L, 5L,
+        DFSUtilClient.string2Bytes("dir1/file5"),
+        true,
+        DFSUtilClient.string2Bytes("dir1/file6")));
+
+    SnapshotDiffReportListing report =
+        new SnapshotDiffReportListing(
+            DFSUtilClient.string2Bytes("dir1/file2"), mlist, clist, dlist, 3, true);
+    String jsonString = JsonUtil.toJsonString(report);
+    Map<?, ?> json = READER.readValue(jsonString);
+    SnapshotDiffReportListing parsed =
+        JsonUtilClient.toSnapshotDiffReportListing(json);
+
+    assertEquals(report, parsed);
+  }
+
+  private void assertEquals(
+      SnapshotDiffReportListing expected, SnapshotDiffReportListing actual) {
+    Assert.assertEquals(expected.getLastIndex(), actual.getLastIndex());
+    Assert.assertEquals(expected.getIsFromEarlier(), actual.getIsFromEarlier());
+    assertEquals(expected.getModifyList(), actual.getModifyList());
+    assertEquals(expected.getCreateList(), actual.getCreateList());
+    assertEquals(expected.getDeleteList(), actual.getDeleteList());
+    Assert.assertArrayEquals(expected.getLastPath(), actual.getLastPath());
+  }
+
+  private void assertEquals(
+      List<DiffReportListingEntry> expected, List<DiffReportListingEntry> actual) {
+    Assert.assertEquals(expected.size(), actual.size());
+
+    for (int i = 0; i < expected.size(); i++) {
+      DiffReportListingEntry a = expected.get(i);
+      DiffReportListingEntry b = actual.get(i);
+
+      Assert.assertEquals(a.getFileId(), b.getFileId());
+      Assert.assertEquals(a.getDirId(), b.getDirId());
+      Assert.assertEquals(a.isReference(), b.isReference());
+      if (a.getSourcePath() != null) {
+        Assert.assertArrayEquals(
+            DFSUtilClient.byteArray2bytes(a.getSourcePath()),
+            DFSUtilClient.byteArray2bytes(b.getSourcePath()));
+      } else {
+        Assert.assertArrayEquals(a.getSourcePath(), b.getSourcePath());
+      }
+      if (a.getTargetPath() != null) {
+        Assert.assertArrayEquals(
+            DFSUtilClient.byteArray2bytes(a.getTargetPath()),
+            DFSUtilClient.byteArray2bytes(b.getTargetPath()));
+      } else {
+        Assert.assertArrayEquals(a.getTargetPath(), b.getTargetPath());
+      }
+    }
   }
 
   private void checkDecodeFailure(Map<String, Object> map) {

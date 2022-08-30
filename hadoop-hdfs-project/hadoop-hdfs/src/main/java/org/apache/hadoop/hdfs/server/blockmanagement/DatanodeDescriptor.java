@@ -647,6 +647,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(startBlock, getStorageInfos());
   }
 
+  /**
+   * Get iterator, which starts iterating from the specified block and storages.
+   *
+   * @param startBlock on which blocks are start iterating
+   * @param storageInfos specified storages
+   */
+  Iterator<BlockInfo> getBlockIterator(
+      final int startBlock, final DatanodeStorageInfo[] storageInfos) {
+    return new BlockIterator(startBlock, storageInfos);
+  }
+
   @VisibleForTesting
   public void incrementPendingReplicationWithoutTargets() {
     pendingReplicationWithoutTargets++;
@@ -672,10 +683,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
       DatanodeDescriptor[] sources, DatanodeStorageInfo[] targets,
-      byte[] liveBlockIndices, ErasureCodingPolicy ecPolicy) {
+      byte[] liveBlockIndices, byte[] excludeReconstrutedIndices, ErasureCodingPolicy ecPolicy) {
     assert (block != null && sources != null && sources.length > 0);
     BlockECReconstructionInfo task = new BlockECReconstructionInfo(block,
-        sources, targets, liveBlockIndices, ecPolicy);
+        sources, targets, liveBlockIndices, excludeReconstrutedIndices, ecPolicy);
     erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block reconstruction task " + task + "to "
         + getName() + ", current queue size is " + erasurecodeBlocks.size());

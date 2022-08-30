@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.obs;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.AbortMultipartUploadRequest;

@@ -21,21 +21,17 @@ package org.apache.hadoop.conf;
 import java.util.HashSet;
 
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
-import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ftp.FtpConfigKeys;
 import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.ha.SshFenceByTcpPort;
 import org.apache.hadoop.ha.ZKFailoverController;
-import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.security.CompositeGroupsMapping;
 import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.LdapGroupsMapping;
 import org.apache.hadoop.security.RuleBasedLdapGroupsMapping;
-import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.apache.hadoop.security.ssl.SSLFactory;
 
 /**
@@ -80,9 +76,9 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         };
 
     // Initialize used variables
-    xmlPropsToSkipCompare = new HashSet<String>();
-    xmlPrefixToSkipCompare = new HashSet<String>();
-    configurationPropsToSkipCompare = new HashSet<String>();
+    xmlPropsToSkipCompare = new HashSet<>();
+    xmlPrefixToSkipCompare = new HashSet<>();
+    configurationPropsToSkipCompare = new HashSet<>();
 
     // Set error modes
     errorIfMissingConfigProps = true;
