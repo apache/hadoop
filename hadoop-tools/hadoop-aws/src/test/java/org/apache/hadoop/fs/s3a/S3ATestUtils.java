@@ -608,6 +608,7 @@ public final class S3ATestUtils {
    * @return a set of credentials
    * @throws IOException on a failure
    */
+  @SuppressWarnings("deprecation")
   public static AWSCredentialsProvider buildAwsCredentialsProvider(
       final Configuration conf)
       throws IOException {

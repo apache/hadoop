@@ -720,8 +720,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
     return GetApplicationHomeSubClusterResponse
-        .newInstance(ApplicationHomeSubCluster
-            .newInstance(request.getApplicationId(), homeRM));
+        .newInstance(request.getApplicationId(), homeRM);
   }
 
   @Override
