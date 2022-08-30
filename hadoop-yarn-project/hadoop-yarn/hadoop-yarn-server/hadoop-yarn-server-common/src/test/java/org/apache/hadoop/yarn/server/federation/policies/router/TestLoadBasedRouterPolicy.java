@@ -168,7 +168,7 @@ public class TestLoadBasedRouterPolicy extends BaseRouterPoliciesTest {
     Map<SubClusterId, SubClusterInfo> activeSubClusters = getActiveSubclusters();
 
     // Update ReservationHomeSubCluster
-    // Cannot be randomly selected, SubCl with Weight >= 1.0 needs to be selected
+    // Cannot be randomly selected, SubCluster with Weight >= 1.0 needs to be selected
     WeightedPolicyInfo weightedPolicyInfo = this.getPolicyInfo();
     Map<SubClusterIdInfo, Float> routerPolicyWeights = weightedPolicyInfo.getRouterPolicyWeights();
 
