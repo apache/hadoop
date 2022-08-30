@@ -330,6 +330,7 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
   private static DFSClient newDfsClient
     (String nnId, Configuration conf) throws IOException {
+    Preconditions.checkArgument(nnId != null);
     URI uri = URI.create(HDFS_URI_SCHEME + "://" + nnId);
     return new DFSClient(uri, conf);
   }
