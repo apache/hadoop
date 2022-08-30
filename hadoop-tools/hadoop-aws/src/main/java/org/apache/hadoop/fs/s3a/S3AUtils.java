@@ -46,6 +46,7 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -551,6 +552,7 @@ public final class S3AUtils {
   /**
    * The standard AWS provider list for AWS connections.
    */
+  @SuppressWarnings("deprecation")
   public static final List<Class<?>>
       STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
       Arrays.asList(
@@ -636,6 +638,10 @@ public final class S3AUtils {
     // each provider
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
+
+      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+        V2Migration.v1ProviderReferenced(aClass.getName());
+      }
 
       if (forbidden.contains(aClass)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
