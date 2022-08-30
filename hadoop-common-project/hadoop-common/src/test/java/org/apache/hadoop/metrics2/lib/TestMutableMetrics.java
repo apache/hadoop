@@ -440,7 +440,10 @@ public class TestMutableMetrics {
     verify(mb, times(2)).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
   }
-  
+
+  /**
+   * Test {@link MutableGaugeFloat#incr()}
+   */
   @Test(timeout = 30000)
   public void testMutableGaugeFloat() {
     MutableGaugeFloat mgf = new MutableGaugeFloat(Context,3.2f);
