@@ -186,6 +186,9 @@ public class KafkaSink implements MetricsSink, Closeable {
     LOG.debug("Kafka seems not to have any flush() mechanism!");
   }
 
+  /**
+   * Close the producer and set it to null.
+   */
   @Override
   public void close() throws IOException {
     // Close the producer and set it to null.
