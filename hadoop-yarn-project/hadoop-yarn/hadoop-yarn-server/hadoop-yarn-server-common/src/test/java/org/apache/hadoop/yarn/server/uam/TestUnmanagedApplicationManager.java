@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.AMHeartbeatRequestHandler;
 import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.util.AsyncCallback;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -83,6 +84,24 @@ public class TestUnmanagedApplicationManager {
     uamPool = new TestableUnmanagedAMPoolManager(this.threadpool);
     uamPool.init(conf);
     uamPool.start();
+  }
+
+  @After
+  public void tearDown() throws IOException, InterruptedException {
+    if (uam != null) {
+      uam.shutDownConnections();
+      uam = null;
+    }
+    if (uamPool != null) {
+      if (uamPool.isInState(Service.STATE.STARTED)) {
+        uamPool.stop();
+      }
+      uamPool = null;
+    }
+    if (threadpool != null) {
+      threadpool.shutdownNow();
+      threadpool = null;
+    }
   }
 
   protected void waitForCallBackCountAndCheckZeroPending(

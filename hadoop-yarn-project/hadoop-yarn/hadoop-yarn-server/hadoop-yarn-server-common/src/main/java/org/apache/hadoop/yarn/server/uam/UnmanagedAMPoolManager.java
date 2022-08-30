@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -476,7 +477,7 @@ public class UnmanagedAMPoolManager extends AbstractService {
   Runnable createForceFinishApplicationThread() {
     return () -> {
 
-      ExecutorCompletionService<KillApplicationResponse> completionService =
+      ExecutorCompletionService<Pair<String, KillApplicationResponse>> completionService =
           new ExecutorCompletionService<>(threadpool);
 
       // Save a local copy of the key set so that it won't change with the map
@@ -489,18 +490,28 @@ public class UnmanagedAMPoolManager extends AbstractService {
           try {
             ApplicationId appId = appIdMap.get(uamId);
             LOG.info("Force-killing UAM id {} for application {}", uamId, appId);
-            return unmanagedAppMasterMap.remove(uamId).forceKillApplication();
+            UnmanagedApplicationManager applicationManager = unmanagedAppMasterMap.remove(uamId);
+            KillApplicationResponse response = applicationManager.forceKillApplication();
+            return Pair.of(uamId, response);
           } catch (Exception e) {
             LOG.error("Failed to kill unmanaged application master", e);
-            return null;
+            return Pair.of(uamId, null);
           }
         });
       }
 
       for (int i = 0; i < addressList.size(); ++i) {
         try {
-          Future<KillApplicationResponse> future = completionService.take();
-          future.get();
+          Future<Pair<String, KillApplicationResponse>> future = completionService.take();
+          Pair<String, KillApplicationResponse> pairs = future.get();
+          String uamId = pairs.getLeft();
+          ApplicationId appId = appIdMap.get(uamId);
+          KillApplicationResponse response = pairs.getRight();
+          if (response == null) {
+            throw new YarnException("Failed Force-killing UAM id " + uamId + " for application " + appId);
+          }
+          LOG.info("Force-killing UAM id = {} for application {} KillCompleted {}.",
+              uamId, appId, response.getIsKillCompleted());
         } catch (Exception e) {
           LOG.error("Failed to kill unmanaged application master", e);
         }
