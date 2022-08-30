@@ -245,21 +245,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
-      int count = 0;
-      int maxAttempts = 50;
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        count = 0;
-        while ((f.exists()) && (count < maxAttempts)) {
-          count++;
-          Thread.sleep(100);
-        }
+        Thread.sleep(5000);
         Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
-      }
-      count = 0;
-      while ((app1LogDir.exists()) && (count < maxAttempts)) {
-        count++;
-        Thread.sleep(100);
       }
       Assert.assertFalse("Directory [" + app1LogDir + "] was not deleted",
           app1LogDir.exists());
@@ -271,21 +260,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
-      int count = 0;
-      int maxAttempts = 50;
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        count = 0;
-        while ((f.exists()) && (count < maxAttempts)) {
-          count++;
-          Thread.sleep(100);
-        }
+        Thread.sleep(5000);
         Assert.assertTrue("File [" + f + "] was not deleted", f.exists());
-      }
-      count = 0;
-      while ((app1LogDir.exists()) && (count < maxAttempts)) {
-        count++;
-        Thread.sleep(100);
       }
       Assert.assertTrue("Directory [" + app1LogDir + "] was not deleted",
           app1LogDir.exists());
