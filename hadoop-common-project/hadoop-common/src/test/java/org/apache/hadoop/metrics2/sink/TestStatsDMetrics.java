@@ -35,6 +35,7 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.impl.MetricsRecordImpl;
 import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.sink.StatsDSink.StatsD;
 import org.junit.Test;
@@ -61,7 +62,7 @@ public class TestStatsDMetrics {
     metrics.add(makeMetric("foo1", 1.25, MetricType.COUNTER));
     metrics.add(makeMetric("foo2", 2.25, MetricType.GAUGE));
     final MetricsRecord record =
-        new TestMetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
+        new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
     try (DatagramSocket sock = new DatagramSocket()) {
       sock.setReceiveBufferSize(8192);
@@ -96,7 +97,7 @@ public class TestStatsDMetrics {
     metrics.add(makeMetric("foo1", 1, MetricType.COUNTER));
     metrics.add(makeMetric("foo2", 2, MetricType.GAUGE));
     MetricsRecord record =
-        new TestMetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
+        new MetricsRecordImpl(MsInfo.Context, (long) 10000, tags, metrics);
 
     try (DatagramSocket sock = new DatagramSocket()) {
       sock.setReceiveBufferSize(8192);
