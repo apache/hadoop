@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.yarn.security.client.impl.pb;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
 import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProtoOrBuilder;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 public class YARNDelegationTokenIdentifierPBImpl extends YARNDelegationTokenIdentifier {
 
   private YARNDelegationTokenIdentifierProto proto =

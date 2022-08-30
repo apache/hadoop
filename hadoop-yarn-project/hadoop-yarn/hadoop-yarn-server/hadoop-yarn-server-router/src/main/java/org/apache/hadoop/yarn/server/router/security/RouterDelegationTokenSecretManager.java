@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.router.security;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -227,13 +227,13 @@ public class RouterDelegationTokenSecretManager
     this.federationFacade = federationFacade;
   }
 
-  @InterfaceAudience.Private
+  @Public
   @VisibleForTesting
   public int getLatestDTSequenceNumber() {
     return delegationTokenSequenceNumber;
   }
 
-  @InterfaceAudience.Private
+  @Public
   @VisibleForTesting
   public synchronized Set<DelegationKey> getAllMasterKeys() {
     HashSet<DelegationKey> keySet = new HashSet<>();
@@ -241,7 +241,7 @@ public class RouterDelegationTokenSecretManager
     return keySet;
   }
 
-  @InterfaceAudience.Private
+  @Public
   @VisibleForTesting
   public synchronized Map<RMDelegationTokenIdentifier, Long> getAllTokens() {
     Map<RMDelegationTokenIdentifier, Long> allTokens = new HashMap<>();
