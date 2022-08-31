@@ -3705,8 +3705,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       curBlock = blocks[nrCompleteBlocks];
       if(!curBlock.isComplete())
         break;
-      assert blockManager.hasMinStorage(curBlock) :
-              "A COMPLETE block is not minimally replicated in " + src;
+      if (!blockManager.hasMinStorage(curBlock)) {
+        LOG.warn("A COMPLETE block {} is not minimally replicated in {}.", curBlock, src);
+      }
     }
 
     // If there are no incomplete blocks associated with this file,
