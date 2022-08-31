@@ -45,6 +45,7 @@ import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
@@ -102,6 +103,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
         INPUT_FADVISE,
         MAX_ERROR_RETRIES,
         MAXIMUM_CONNECTIONS,
+        PREFETCH_ENABLED_KEY,
         READAHEAD_RANGE,
         REQUEST_TIMEOUT,
         RETRY_LIMIT,
