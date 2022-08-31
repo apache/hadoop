@@ -95,7 +95,9 @@ public class TestRollingUpgrade {
   public void testDFSAdminRollingUpgradeCommands() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir)
+        .numDataNodes(0)
+        .build()) {
       cluster.waitActive();
 
       final Path foo = new Path("/foo");
@@ -316,7 +318,9 @@ public class TestRollingUpgrade {
   public void testRollback() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster  = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(1).build()) {
+    try (MiniDFSCluster cluster  = new MiniDFSCluster.Builder(conf, baseDir)
+        .numDataNodes(1)
+        .build()) {
       cluster.waitActive();
 
       final Path foo = new Path("/foo");
@@ -410,7 +414,9 @@ public class TestRollingUpgrade {
   public void testDFSAdminDatanodeUpgradeControlCommands() throws Exception {
     // start a cluster
     final Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(1).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir)
+        .numDataNodes(1)
+        .build()) {
       cluster.waitActive();
       final DFSAdmin dfsadmin = new DFSAdmin(conf);
       DataNode dn = cluster.getDataNodes().get(0);
@@ -527,7 +533,9 @@ public class TestRollingUpgrade {
 
   private void testQuery(int nnCount) throws Exception{
     final Configuration conf = new HdfsConfiguration();
-    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf, baseDir).setNumNameNodes(nnCount).build()) {
+    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf, baseDir)
+        .setNumNameNodes(nnCount)
+        .build()) {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
 
@@ -563,7 +571,9 @@ public class TestRollingUpgrade {
   @Test (timeout = 300000)
   public void testQueryAfterRestart() throws IOException, InterruptedException {
     final Configuration conf = new HdfsConfiguration();
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf, baseDir)
+        .numDataNodes(0)
+        .build()) {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
 
@@ -643,7 +653,8 @@ public class TestRollingUpgrade {
 
     final Path foo = new Path("/foo");
 
-    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf, baseDir).setNumNameNodes(nnCount)
+    try (MiniQJMHACluster cluster = new MiniQJMHACluster.Builder(conf, baseDir)
+        .setNumNameNodes(nnCount)
         .build()) {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
