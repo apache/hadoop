@@ -586,8 +586,7 @@ public class TestDecommissionWithStriped {
 
     try (FSDataOutputStream stm = localFileSys.create(name)) {
       if (nodes != null) {
-        for (Iterator<String> it = nodes.iterator(); it.hasNext(); ) {
-          String node = it.next();
+        for (String node: nodes) {
           stm.writeBytes(node);
           stm.writeBytes("\n");
         }
