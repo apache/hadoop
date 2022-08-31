@@ -817,7 +817,6 @@ public class LdapGroupsMapping
     if(groupSearchFilterParamCSV!=null && !groupSearchFilterParamCSV.isEmpty()) {
       LOG.debug("Using custom group search filters: {}", groupSearchFilterParamCSV);
       groupSearchFilterParams = groupSearchFilterParamCSV.split(",");
-      LOG.debug("Using custom group search filters: {}", groupSearchFilterParams);
     }
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT,
