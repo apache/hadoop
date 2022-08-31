@@ -101,7 +101,7 @@ public class TestNameNodeMXBean {
 
   @Rule
   public TemporaryFolder baseDir = new TemporaryFolder();
-  
+
   static {
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
   }
@@ -144,7 +144,7 @@ public class TestNameNodeMXBean {
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
       assertEquals(fsn.getClusterId(), clusterId);
       // get attribute "BlockPoolId"
-      String blockpoolId = (String) mbs.getAttribute(mxbeanName, 
+      String blockpoolId = (String) mbs.getAttribute(mxbeanName,
           "BlockPoolId");
       assertEquals(fsn.getBlockPoolId(), blockpoolId);
       // get attribute "Version"
@@ -275,7 +275,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, FileUtil.chmod(
           new File(failedNameDir, "current").getAbsolutePath(), "000"));
       cluster.getNameNodeRpc().rollEditLog();
-      
+
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
       statusMap = (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
@@ -680,7 +680,7 @@ public class TestNameNodeMXBean {
           (String) (mbs.getAttribute(mxbeanNameFsns, "TopUserOpCounts"));
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> map = mapper.readValue(topUsers, Map.class);
-      assertTrue("Could not find map key timestamp", 
+      assertTrue("Could not find map key timestamp",
           map.containsKey("timestamp"));
       assertTrue("Could not find map key windows", map.containsKey("windows"));
       List<Map<String, List<Map<String, Object>>>> windows =

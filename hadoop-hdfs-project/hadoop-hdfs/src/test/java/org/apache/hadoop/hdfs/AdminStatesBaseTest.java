@@ -69,7 +69,7 @@ public class AdminStatesBaseTest {
 
   @Rule
   public TemporaryFolder baseDir = new TemporaryFolder();
-  
+
   private HostsFileWriter hostsFileWriter;
   private Configuration conf;
   private MiniDFSCluster cluster = null;
