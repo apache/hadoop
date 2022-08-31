@@ -378,6 +378,10 @@ public enum Statistic {
       StreamStatisticNames.STREAM_READ_TOTAL_BYTES,
       "Total count of bytes read from an input stream",
       TYPE_COUNTER),
+  STREAM_READ_UNBUFFERED(
+      StreamStatisticNames.STREAM_READ_UNBUFFERED,
+      "Total count of input stream unbuffering operations",
+      TYPE_COUNTER),
 
   /* Stream Write statistics */
 
