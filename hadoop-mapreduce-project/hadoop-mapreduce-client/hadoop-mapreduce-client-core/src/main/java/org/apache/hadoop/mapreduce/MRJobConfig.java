@@ -1303,5 +1303,5 @@ public interface MRJobConfig {
   @Unstable
   String INPUT_FILE_MANDATORY_PREFIX = "mapreduce.job.input.file.must.";
   String SHUFFLE_KEY_LENGTH = "mapreduce.shuffle-key-length";
-  int DEFAULT_SHUFFLE_KEY_LENGTH = 64;
+  int DEFAULT_SHUFFLE_KEY_LENGTH = 256;
 }
