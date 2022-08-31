@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -770,7 +771,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     if (failedToUnRegister) {
       homeResponse.setIsUnregistered(false);
-    } else {
+    } else if (request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)) {
       // Clean up UAMs only when the app finishes successfully, so that no more
       // attempt will be launched.
       this.uamPool.stop();
@@ -816,6 +817,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     // Stop the home heartbeat thread
     this.homeHeartbeartHandler.shutdown();
     this.homeRMRelayer.shutdown();
+
+    // Shutdown needs to clean up app
+    if (this.registryClient != null) {
+      this.registryClient.removeAppFromRegistry(this.attemptId.getApplicationId());
+    }
 
     super.shutdown();
   }
