@@ -71,8 +71,8 @@ public final class MiniJournalCluster implements Closeable {
       baseDir(baseDir);
     }
 
-    public Builder baseDir(TemporaryFolder baseDir) {
-      this.baseDir = baseDir.getRoot().getAbsolutePath();
+    public Builder baseDir(TemporaryFolder temporaryFolder) {
+      this.baseDir = temporaryFolder.getRoot().getAbsolutePath();
       return this;
     }
 
