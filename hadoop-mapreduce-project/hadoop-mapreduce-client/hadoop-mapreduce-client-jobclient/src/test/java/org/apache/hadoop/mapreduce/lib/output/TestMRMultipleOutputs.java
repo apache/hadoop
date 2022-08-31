@@ -33,7 +33,6 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
 import org.junit.After;
 import org.junit.Before;
@@ -73,12 +72,12 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
   @Test(expected = IOException.class)
   public void testParallelCloseIOException() throws IOException, InterruptedException {
     RecordWriter writer = mock(RecordWriter.class);
-    Map<String, RecordWriter<?, ?>> recordWriters = mock(Map.class);
-    when(recordWriters.values()).thenReturn(Arrays.asList(new RecordWriter[] {writer, writer}));
-    TaskInputOutputContext taskInputOutputContext = mock(TaskInputOutputContext.class);
+    Map recordWriters = mock(Map.class);
+    when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
+    Mapper.Context taskInputOutputContext = mock(Mapper.Context.class);
     when(taskInputOutputContext.getConfiguration()).thenReturn(createJobConf());
     doThrow(new IOException("test IO exception")).when(writer).close(taskInputOutputContext);
-    MultipleOutputs mos = new MultipleOutputs(taskInputOutputContext);
+    MultipleOutputs<Long, String> mos = new MultipleOutputs<Long, String>(taskInputOutputContext);
     mos.setRecordWriters(recordWriters);
     mos.close();
   }
