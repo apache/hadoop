@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import static org.apache.hadoop.security.LdapGroupsMapping.CONNECTION_TIMEOUT;
+import static org.apache.hadoop.security.LdapGroupsMapping.GROUP_SEARCH_FILTER_PATTERN;
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_NUM_ATTEMPTS_KEY;
 import static org.apache.hadoop.security.LdapGroupsMapping.READ_TIMEOUT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -27,7 +28,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -133,10 +133,8 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     conf.set(LdapGroupsMapping.BASE_DN_KEY, baseDN);
     Attributes attributes = getAttributes();
 
-    // Set the groupFilter attributed to take the csv.
-    Attribute groupFilterAttr = mock(Attribute.class);
-    when(groupFilterAttr.get()).thenReturn("userDN,userName");
-    when(attributes.get(eq("groupfilter"))).thenReturn(groupFilterAttr);
+    // Set the groupFilter conf to take the csv.
+    conf.set(GROUP_SEARCH_FILTER_PATTERN,"userDN,userName");
 
     // Set the value for userName attribute that is to be used as part of the
     // group filter at argument 1.
