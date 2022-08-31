@@ -323,7 +323,7 @@ public abstract class AbstractCSQueue implements CSQueue {
 
       queueCapacities.setMaximumCapacity(maximumCapacity);
       queueCapacities.setAbsoluteMaximumCapacity(absMaxCapacity);
-      configuredMaximumCapacityVectors.put(nodeLabel, QueueCapacityVector.of(
+      configuredMaxCapacityVectors.put(nodeLabel, QueueCapacityVector.of(
           maximumCapacity * 100, PERCENTAGE));
     } finally {
       writeLock.unlock();
@@ -432,9 +432,9 @@ public abstract class AbstractCSQueue implements CSQueue {
         }
           // Default to weight 1
           for (String label : parentNodeLabels) {
-            float weightByLabel = configuration.getLabeledQueueWeight(queuePath.getFullPath(), label);
+            float weightByLabel = queueContext.getConfiguration().getLabeledQueueWeight(queuePath, label);
             if (weightByLabel == -1) {
-              configuration.setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
+              queueContext.getConfiguration().setLabeledQueueWeight(queuePath.getFullPath(), label, 1);
           }
         }
       }

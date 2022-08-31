@@ -231,19 +231,19 @@ public class TestLeafQueue {
     containerTokenSecretManager.rollMasterKey();
     when(csContext.getContainerTokenSecretManager()).thenReturn(
         containerTokenSecretManager);
-    queueContext = new CapacitySchedulerQueueContext(csContext);
     CapacitySchedulerQueueManager mockCsQm = mock(CapacitySchedulerQueueManager.class);
     capacityHandler =
         new CapacitySchedulerQueueCapacityHandler(csContext.getRMContext().getNodeLabelManager());
     when(mockCsQm.getQueueCapacityHandler()).thenReturn(capacityHandler);
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(mockCsQm);
+    queueContext = new CapacitySchedulerQueueContext(csContext);
 
     root = 
         CapacitySchedulerQueueManager.parseQueue(queueContext, csConf, null,
             ROOT,
             queues, queues, 
             TestUtils.spyHook);
-    queueManager.setRootQueue(root);
+    mockCsQm.setRootQueue(root);
     root.updateClusterResource(Resources.createResource(100 * 16 * GB, 100 * 32),
         new ResourceLimits(Resources.createResource(100 * 16 * GB, 100 * 32)));
 
@@ -4061,6 +4061,7 @@ public class TestLeafQueue {
     CapacitySchedulerQueueManager mockCsQm = mock(CapacitySchedulerQueueManager.class);
     when(mockCsQm.getQueueCapacityHandler()).thenReturn(capacityHandler);
     when(csContext.getCapacitySchedulerQueueManager()).thenReturn(mockCsQm);
+    CapacitySchedulerQueueContext newQueueContext = new CapacitySchedulerQueueContext(csContext);
     csConf.setFloat(
         CapacitySchedulerConfiguration.MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
         0.1f);

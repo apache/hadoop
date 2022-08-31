@@ -224,7 +224,7 @@ public class ResourceCalculationDriver {
           continue;
         }
 
-        if (!overallRemainingResource.containsKey(label)) {
+        if (!overallRemainingResourcePerLabel.containsKey(label)) {
           continue;
         }
 

@@ -555,7 +555,7 @@ public class ParentQueue extends AbstractCSQueue {
       } catch (IOException e) {
         LOG.warn("Caught Exception during auto queue creation", e);
       }
-      if (!weightsAreUsed && csContext.getConfiguration().isLegacyQueueMode()) {
+      if (!weightsAreUsed && queueContext.getConfiguration().isLegacyQueueMode()) {
         throw new SchedulerDynamicEditException(
             "Trying to create new queue=" + childQueuePath
                 + " but not all the queues under parent=" + this.getQueuePath()
@@ -1224,7 +1224,11 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public void updateClusterResource(Resource clusterResource,
                                     ResourceLimits resourceLimits) {
-    csContext.getCapacitySchedulerQueueManager().getQueueCapacityHandler().update(clusterResource, this);
+    if (rootQueue) {
+      queueContext.getQueueManager().getQueueCapacityHandler().updateRoot(this, clusterResource);
+    } else {
+      queueContext.getQueueManager().getQueueCapacityHandler().updateChildren(clusterResource, getParent());
+    }
   }
 
   @Override

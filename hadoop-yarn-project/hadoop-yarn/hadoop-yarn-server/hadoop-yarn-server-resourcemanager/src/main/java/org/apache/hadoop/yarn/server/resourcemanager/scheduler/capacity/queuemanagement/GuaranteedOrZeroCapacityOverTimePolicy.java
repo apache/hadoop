@@ -563,7 +563,7 @@ public class GuaranteedOrZeroCapacityOverTimePolicy
       LeafQueueEntitlements leafQueueEntitlements) {
     for (String leafQueue : leafQueuesToBeActivated) {
       QueueCapacities capacities = leafQueueEntitlements.getCapacityOfQueueByPath(leafQueue);
-      CSQueue queue = scheduler.getCapacitySchedulerQueueManager().getQueue(leafQueue);
+      CSQueue queue = managedParentQueue.getQueueContext().getQueueManager().getQueue(leafQueue);
       updateCapacityFromTemplate(capacities, nodeLabel, queue);
     }
   }
