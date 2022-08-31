@@ -1026,7 +1026,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   }
 
   @Test
-  public void testRemoveAppFromRegistryApplicationSuccess() throws IOException, InterruptedException {
+  public void testRemoveAppFromRegistryApplicationSuccess()
+      throws IOException, InterruptedException {
 
     final RegisterApplicationMasterRequest registerReq =
         Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -1082,7 +1083,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   }
 
   @Test
-  public void testRemoveAppFromRegistryApplicationFailed() throws IOException, InterruptedException {
+  public void testRemoveAppFromRegistryApplicationFailed()
+      throws IOException, InterruptedException {
 
     final RegisterApplicationMasterRequest registerReq =
         Records.newRecord(RegisterApplicationMasterRequest.class);
