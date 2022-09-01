@@ -258,6 +258,50 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; END";
 
+  protected static final String SP_DROP_ADDRESERVATIONHOMESUBCLUSTER =
+      "DROP PROCEDURE sp_addReservationHomeSubCluster";
+
+  protected static final String SP_ADDRESERVATIONHOMESUBCLUSTER2 =
+      "CREATE PROCEDURE sp_addReservationHomeSubCluster("
+          + " IN reservationId_IN varchar(128),"
+          + " IN homeSubCluster_IN varchar(256),"
+          + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " INSERT INTO reservationsHomeSubCluster "
+          + " (reservationId,homeSubCluster) "
+          + " (SELECT reservationId_IN, homeSubCluster_IN"
+          + " FROM reservationsHomeSubCluster"
+          + " WHERE reservationId = reservationId_IN"
+          + " HAVING COUNT(*) = 0 );"
+          + " SELECT homeSubCluster, 2 INTO storedHomeSubCluster_OUT, rowCount_OUT"
+          + " FROM reservationsHomeSubCluster"
+          + " WHERE reservationId = reservationId_IN; END";
+
+  protected static final String SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER =
+      "DROP PROCEDURE sp_updateReservationHomeSubCluster";
+
+  protected static final String SP_UPDATERESERVATIONHOMESUBCLUSTER2 =
+      "CREATE PROCEDURE sp_updateReservationHomeSubCluster("
+          + " IN reservationId_IN varchar(128),"
+          + " IN homeSubCluster_IN varchar(256), OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " UPDATE reservationsHomeSubCluster"
+          + " SET homeSubCluster = homeSubCluster_IN"
+          + " WHERE reservationId = reservationId_IN;"
+          + " SET rowCount_OUT = 2; END";
+
+  protected static final String SP_DROP_DELETERESERVATIONHOMESUBCLUSTER =
+      "DROP PROCEDURE sp_deleteReservationHomeSubCluster";
+
+  protected static final String SP_DELETERESERVATIONHOMESUBCLUSTER2 =
+      "CREATE PROCEDURE sp_deleteReservationHomeSubCluster("
+          + " IN reservationId_IN varchar(128), OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM reservationsHomeSubCluster"
+          + " WHERE reservationId = reservationId_IN;"
+          + " SET rowCount_OUT = 2; END";
+
+
   @Override
   public void init(Configuration conf) {
     try {

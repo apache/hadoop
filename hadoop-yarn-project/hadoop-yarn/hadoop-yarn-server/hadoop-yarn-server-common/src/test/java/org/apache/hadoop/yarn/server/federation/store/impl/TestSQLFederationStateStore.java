@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -28,6 +28,10 @@ import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateSto
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -36,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -46,6 +51,12 @@ import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationS
 import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore.CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER;
 import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore.CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER;
 import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore.CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DROP_ADDRESERVATIONHOMESUBCLUSTER;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_ADDRESERVATIONHOMESUBCLUSTER2;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_UPDATERESERVATIONHOMESUBCLUSTER2;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DROP_DELETERESERVATIONHOMESUBCLUSTER;
+import static org.apache.hadoop.yarn.server.federation.store.impl.HSQLDBFederationStateStore.SP_DELETERESERVATIONHOMESUBCLUSTER2;
 
 /**
  * Unit tests for SQLFederationStateStore.
@@ -120,24 +131,23 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     super.testUpdateReservationHomeSubCluster();
   }
 
-  @Test(expected = NotImplementedException.class)
   public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
     super.testUpdateReservationHomeSubClusterUnknownApp();
   }
 
-  class ReservationHomeSubCluster {
+  class ReservationHomeSC {
     ReservationId reservationId;
     String subHomeClusterId;
     int dbUpdateCount;
 
-    public ReservationHomeSubCluster(ReservationId rId, String subHomeSCId, int dbUpdateCount) {
+    public ReservationHomeSC(ReservationId rId, String subHomeSCId, int dbUpdateCount) {
       this.reservationId = rId;
       this.subHomeClusterId = subHomeSCId;
       this.dbUpdateCount = dbUpdateCount;
     }
   }
 
-  private ReservationHomeSubCluster AddReservationHomeSubCluster(
+  private ReservationHomeSC AddReservationHomeSubCluster(
       SQLFederationStateStore sqlFederationStateStore, String procedure,
       ReservationId reservationId, String subHomeClusterId) throws SQLException {
     // procedure call parameter preparation
@@ -154,10 +164,10 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     String dbStoredHomeSubCluster = cstmt.getString("storedHomeSubCluster_OUT");
     int dbRowCount = cstmt.getInt("rowCount_OUT");
 
-    return new ReservationHomeSubCluster(reservationId, dbStoredHomeSubCluster, dbRowCount);
+    return new ReservationHomeSC(reservationId, dbStoredHomeSubCluster, dbRowCount);
   }
 
-  private ReservationHomeSubCluster getReservationHomeSubCluster(
+  private ReservationHomeSC getReservationHomeSubCluster(
       SQLFederationStateStore sqlFederationStateStore, String procedure,
       ReservationId reservationId) throws SQLException, YarnException {
 
@@ -176,14 +186,14 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     FederationStateStoreUtils.returnToPool(LOG, cstmt);
 
     // returns the ReservationHomeSubCluster object
-    return new ReservationHomeSubCluster(reservationId, dBSubClusterHomeId, 0);
+    return new ReservationHomeSC(reservationId, dBSubClusterHomeId, 0);
   }
 
-  private List<ReservationHomeSubCluster> getReservationsHomeSubCluster(
+  private List<ReservationHomeSC> getReservationsHomeSubCluster(
       SQLFederationStateStore sqlFederationStateStore, String procedure)
       throws SQLException, IOException, YarnException {
 
-    List<ReservationHomeSubCluster> results = new ArrayList<>();
+    List<ReservationHomeSC> results = new ArrayList<>();
 
     // procedure call parameter preparation
     CallableStatement cstmt = sqlFederationStateStore.getCallableStatement(procedure);
@@ -197,7 +207,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
       // 2）OUT homeSubCluster
       String dbHomeSubCluster = rs.getString("homeSubCluster");
-      results.add(new ReservationHomeSubCluster(reservationId, dbHomeSubCluster, 0));
+      results.add(new ReservationHomeSC(reservationId, dbHomeSubCluster, 0));
     }
 
     // return cstmt to pool
@@ -207,7 +217,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     return results;
   }
 
-  private ReservationHomeSubCluster updateReservationHomeSubCluster(
+  private ReservationHomeSC updateReservationHomeSubCluster(
       SQLFederationStateStore sqlFederationStateStore, String procedure,
       ReservationId reservationId, String subHomeClusterId)
       throws SQLException, IOException {
@@ -229,10 +239,10 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     int rowCount = cstmt.getInt("rowCount_OUT");
 
     // returns the ReservationHomeSubCluster object
-    return new ReservationHomeSubCluster(reservationId, subHomeClusterId, rowCount);
+    return new ReservationHomeSC(reservationId, subHomeClusterId, rowCount);
   }
 
-  private ReservationHomeSubCluster deleteReservationHomeSubCluster(
+  private ReservationHomeSC deleteReservationHomeSubCluster(
       SQLFederationStateStore sqlFederationStateStore, String procedure,
       ReservationId reservationId) throws SQLException {
     // procedure call parameter preparation
@@ -251,7 +261,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     int rowCount = cstmt.getInt("rowCount_OUT");
 
     // returns the ReservationHomeSubCluster object
-    return new ReservationHomeSubCluster(reservationId, "-", rowCount);
+    return new ReservationHomeSC(reservationId, "-", rowCount);
   }
 
   /**
@@ -272,7 +282,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId = "SC-1";
-    ReservationHomeSubCluster resultHC = AddReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = AddReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId, subHomeClusterId);
 
     // validation results
@@ -304,7 +314,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId, subHomeClusterId);
 
     // Call getReservationHomeSubCluster to get the result
-    ReservationHomeSubCluster resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId);
 
     Assert.assertNotNull(resultHC);
@@ -342,19 +352,19 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     AddReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER,  reservationId2,  subHomeClusterId2);
 
-    List<ReservationHomeSubCluster> reservationHomeSubClusters =
+    List<ReservationHomeSC> reservationHomeSubClusters =
     getReservationsHomeSubCluster(
         sqlFederationStateStore, CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER);
 
     Assert.assertNotNull(reservationHomeSubClusters);
     Assert.assertEquals(2, reservationHomeSubClusters.size());
 
-    ReservationHomeSubCluster resultHC1 = reservationHomeSubClusters.get(0);
+    ReservationHomeSC resultHC1 = reservationHomeSubClusters.get(0);
     Assert.assertNotNull(resultHC1);
     Assert.assertEquals(reservationId1, resultHC1.reservationId);
     Assert.assertEquals(subHomeClusterId1, resultHC1.subHomeClusterId);
 
-    ReservationHomeSubCluster resultHC2 = reservationHomeSubClusters.get(1);
+    ReservationHomeSC resultHC2 = reservationHomeSubClusters.get(1);
     Assert.assertNotNull(resultHC2);
     Assert.assertEquals(reservationId2, resultHC2.reservationId);
     Assert.assertEquals(subHomeClusterId2, resultHC2.subHomeClusterId);
@@ -387,14 +397,14 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId, subHomeClusterId);
 
     // verify that the subHomeClusterId corresponding to reservationId is SC-1
-    ReservationHomeSubCluster resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId);
     Assert.assertNotNull(resultHC);
     Assert.assertEquals(subHomeClusterId, resultHC.subHomeClusterId);
 
     // prepare to update parameters
     String newSubHomeClusterId = "SC-2";
-    ReservationHomeSubCluster reservationHomeSubCluster =
+    ReservationHomeSC reservationHomeSubCluster =
         updateReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER, reservationId, newSubHomeClusterId);
 
@@ -402,7 +412,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     Assert.assertEquals(1, reservationHomeSubCluster.dbUpdateCount);
 
     // verify that the subHomeClusterId corresponding to reservationId is SC-2
-    ReservationHomeSubCluster resultHC2 = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC2 = getReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId);
     Assert.assertNotNull(resultHC2);
     Assert.assertEquals(newSubHomeClusterId, resultHC2.subHomeClusterId);
@@ -434,16 +444,142 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId, subHomeClusterId);
 
     // call the delete method of the reservation
-    ReservationHomeSubCluster resultHC = deleteReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = deleteReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER, reservationId);
 
     Assert.assertNotNull(resultHC);
     Assert.assertEquals(1, resultHC.dbUpdateCount);
 
-    // Call getReservationHomeSubCluster to get the result
-    ReservationHomeSubCluster resultHC1 = getReservationHomeSubCluster(sqlFederationStateStore,
+    // call getReservationHomeSubCluster to get the result
+    ReservationHomeSC resultHC1 = getReservationHomeSubCluster(sqlFederationStateStore,
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId);
     Assert.assertNotNull(resultHC1);
     Assert.assertEquals(null, resultHC1.subHomeClusterId);
+  }
+
+  /**
+   * This test case is used to verify the processing logic of the incorrect number of
+   * updated records returned by the database when AddReservationHomeSubCluster is used.
+   *
+   * The probability of the database returning an update record greater than 1 is very low.
+   *
+   * @throws Exception when the error occurs
+   */
+  @Test
+  public void testAddReservationHomeSubClusterAbnormalSituation() throws Exception {
+    FederationStateStore stateStore = getStateStore();
+    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
+
+    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
+
+    Connection conn =  sqlFederationStateStore.conn;
+    conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
+    conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER2).execute();
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+
+    String errorMsg = String.format(
+        "Wrong behavior during the insertion of subCluster %s according to reservation %s. " +
+        "The database expects to insert 1 record, but the number of " +
+        "inserted changes is greater than 1, " +
+        "please check the records of the database.", subClusterId, reservationId);
+
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> stateStore.addReservationHomeSubCluster(request));
+  }
+
+  /**
+   * This test case is used to verify the logic when calling the updateReservationHomeSubCluster
+   * method if the database returns an inaccurate result.
+   *
+   * The probability of the database returning an update record greater than 1 is very low.
+   *
+   * @throws Exception when the error occurs
+   */
+  @Test
+  public void testUpdateReservationHomeSubClusterAbnormalSituation() throws Exception {
+    FederationStateStore stateStore = getStateStore();
+    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
+
+    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
+
+    Connection conn =  sqlFederationStateStore.conn;
+    conn.prepareStatement(SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
+    conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER2).execute();
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+
+    // add Reservation data.
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+    AddReservationHomeSubClusterRequest addRequest =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(addRequest);
+
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
+    ReservationHomeSubCluster reservationHomeSubCluster2 =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId2);
+    UpdateReservationHomeSubClusterRequest updateRequest =
+        UpdateReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
+
+    String errorMsg = String.format(
+        "Wrong behavior during update the subCluster %s according to reservation %s. " +
+        "The database is expected to update 1 record, " +
+        "but the number of database update records is greater than 1, " +
+        "the records of the database should be checked.",
+        subClusterId2, reservationId);
+
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> stateStore.updateReservationHomeSubCluster(updateRequest));
+  }
+
+  /**
+   * This test case is used to verify the logic when calling the deleteReservationHomeSubCluster
+   * method if the database returns an inaccurate result.
+   *
+   * The probability of the database returning an update record greater than 1 is very low.
+   *
+   * @throws Exception when the error occurs
+   */
+  @Test
+  public void testDeleteReservationHomeSubClusterAbnormalSituation() throws Exception {
+    FederationStateStore stateStore = getStateStore();
+    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
+
+    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
+
+    Connection conn =  sqlFederationStateStore.conn;
+    conn.prepareStatement(SP_DROP_DELETERESERVATIONHOMESUBCLUSTER).execute();
+    conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER2).execute();
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+
+    // add Reservation data.
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+    AddReservationHomeSubClusterRequest addRequest =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(addRequest);
+
+    DeleteReservationHomeSubClusterRequest delRequest =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+
+    String errorMsg = String.format(
+        "Wrong behavior during deleting the reservation %s. " +
+        "The database is expected to delete 1 record, " +
+        "but the number of deleted records returned by the database is greater than 1, " +
+        "indicating that a duplicate reservationId occurred during the deletion process.",
+        reservationId);
+
+    LambdaTestUtils.intercept(YarnException.class, errorMsg,
+        () -> stateStore.deleteReservationHomeSubCluster(delRequest));
   }
 }
