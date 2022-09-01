@@ -49,7 +49,11 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -1171,7 +1175,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-              subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
 
       final HttpServletRequest hsrCopy = clone(hsr);
       return interceptor.getAppActivities(hsrCopy, appId, time, requestPriorities,
