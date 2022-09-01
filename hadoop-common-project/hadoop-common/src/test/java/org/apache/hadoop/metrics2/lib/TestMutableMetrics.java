@@ -36,9 +36,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import com.google.common.math.Stats;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.util.Quantile;
+import org.apache.hadoop.thirdparty.com.google.common.math.Stats;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,7 @@ public class TestMutableMetrics {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestMutableMetrics.class);
-  private final double EPSILON = 1e-42;
+  private static final double EPSILON = 1e-42;
 
   /**
    * Test the snapshot method
@@ -313,7 +313,6 @@ public class TestMutableMetrics {
    * the std dev is correct, assuming samples of equal value.
    */
   @Test
-  @SuppressWarnings("UnstableApiUsage") // Stats is marked @Beta
   public void testMutableStatWithBulkAdd() {
     List<Long> samples = new ArrayList<>();
     for (int i = 0; i < 1000; i++) {
@@ -324,7 +323,7 @@ public class TestMutableMetrics {
     }
     Stats stats = Stats.of(samples);
 
-    for (int bulkSize : new int[] { 1, 10, 100, 1000 }) {
+    for (int bulkSize : new int[] {1, 10, 100, 1000}) {
       MetricsRecordBuilder rb = mockMetricsRecordBuilder();
       MetricsRegistry registry = new MetricsRegistry("test");
       MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);

@@ -33,21 +33,23 @@ public class SampleStat {
    * Construct a new running sample stat
    */
   public SampleStat() {
-    mean = s = 0.0;
+    mean = 0.0;
+    s = 0.0;
   }
 
   public void reset() {
     numSamples = 0;
-    mean = s = 0.0;
+    mean = 0.0;
+    s = 0.0;
     minmax.reset();
   }
 
   // We want to reuse the object, sometimes.
-  void reset(long numSamples, double a0, double s0, MinMax minmax) {
-    this.numSamples = numSamples;
-    this.mean = a0;
-    this.s = s0;
-    this.minmax.reset(minmax);
+  void reset(long numSamples1, double mean1, double s1, MinMax minmax1) {
+    numSamples = numSamples1;
+    mean = mean1;
+    s = s1;
+    minmax.reset(minmax1);
   }
 
   /**
