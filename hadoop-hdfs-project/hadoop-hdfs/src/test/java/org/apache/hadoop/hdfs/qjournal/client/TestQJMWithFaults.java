@@ -198,7 +198,7 @@ public class TestQJMWithFaults {
   public void testUnresolvableHostName() throws Exception {
     expectedException.expect(UnknownHostException.class);
     new QuorumJournalManager(conf,
-        new URI("qjournal://" + "bogus:12345" + "/" + JID), FAKE_NSINFO);
+        new URI("qjournal://" + "bogus.invalid:12345" + "/" + JID), FAKE_NSINFO);
   }
 
   /**
