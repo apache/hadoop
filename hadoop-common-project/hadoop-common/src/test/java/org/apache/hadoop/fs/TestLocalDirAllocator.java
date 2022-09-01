@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 
@@ -532,4 +533,19 @@ public class TestLocalDirAllocator {
     }
   }
 
+  /**
+   * Test to check the LocalDirAllocation for the less space HADOOP-16769.
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testGetLocalPathForWriteForLessSpace() throws Exception {
+    String dir0 = buildBufferDir(ROOT, 0);
+    String dir1 = buildBufferDir(ROOT, 1);
+    conf.set(CONTEXT, dir0 + "," + dir1);
+    LambdaTestUtils.intercept(DiskErrorException.class,
+        String.format("Could not find any valid local directory for %s with requested size %s",
+            "p1/x", Long.MAX_VALUE - 1), "Expect a DiskErrorException.",
+        () -> dirAllocator.getLocalPathForWrite("p1/x", Long.MAX_VALUE - 1, conf));
+  }
 }
