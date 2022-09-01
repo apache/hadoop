@@ -508,7 +508,8 @@ public class UnmanagedAMPoolManager extends AbstractService {
           ApplicationId appId = appIdMap.get(uamId);
           KillApplicationResponse response = pairs.getRight();
           if (response == null) {
-            throw new YarnException("Failed Force-killing UAM id " + uamId + " for application " + appId);
+            throw new YarnException(
+                "Failed Force-killing UAM id " + uamId + " for application " + appId);
           }
           LOG.info("Force-killing UAM id = {} for application {} KillCompleted {}.",
               uamId, appId, response.getIsKillCompleted());
