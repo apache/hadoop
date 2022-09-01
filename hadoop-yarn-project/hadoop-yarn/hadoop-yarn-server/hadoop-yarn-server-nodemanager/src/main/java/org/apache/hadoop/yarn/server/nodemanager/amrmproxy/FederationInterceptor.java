@@ -771,16 +771,24 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     if (failedToUnRegister) {
       homeResponse.setIsUnregistered(false);
-    } else if (request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)) {
+    } else if (checkRequestFinalApplicationStatusSuccess(request)) {
       // Clean up UAMs only when the app finishes successfully, so that no more
       // attempt will be launched.
       this.uamPool.stop();
-      if (this.registryClient != null) {
-        this.registryClient
-            .removeAppFromRegistry(this.attemptId.getApplicationId());
-      }
+      removeAppFromRegistry();
     }
     return homeResponse;
+  }
+
+  private boolean checkRequestFinalApplicationStatusSuccess(FinishApplicationMasterRequest request) {
+    if (request == null) {
+      return false;
+    } else if(request.getFinalApplicationStatus() == null){
+      return false;
+    } else if(request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)){
+      return true;
+    }
+    return false;
   }
 
   @Override
@@ -819,11 +827,18 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.homeRMRelayer.shutdown();
 
     // Shutdown needs to clean up app
-    if (this.registryClient != null) {
-      this.registryClient.removeAppFromRegistry(this.attemptId.getApplicationId());
-    }
+    removeAppFromRegistry();
 
     super.shutdown();
+  }
+
+  private void removeAppFromRegistry() {
+    if (this.registryClient != null && this.attemptId != null) {
+      ApplicationId applicationId = this.attemptId.getApplicationId();
+      if (applicationId != null) {
+        this.registryClient.removeAppFromRegistry(applicationId);
+      }
+    }
   }
 
   /**

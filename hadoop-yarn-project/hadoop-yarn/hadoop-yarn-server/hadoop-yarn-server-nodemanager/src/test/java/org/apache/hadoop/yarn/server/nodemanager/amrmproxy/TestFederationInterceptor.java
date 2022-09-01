@@ -1048,7 +1048,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
       // Register ApplicationMaster
       RegisterApplicationMasterResponse registerResponse =
-              interceptor.registerApplicationMaster(registerReq1);
+          interceptor.registerApplicationMaster(registerReq1);
       Assert.assertNotNull(registerResponse);
       lastResponseId = 0;
 
@@ -1059,7 +1059,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
       int numberOfContainers = 3;
       List<Container> containers =
-              getContainersAndAssert(numberOfContainers, numberOfContainers);
+          getContainersAndAssert(numberOfContainers, numberOfContainers);
       Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
       Assert.assertEquals(numberOfContainers, containers.size());
 
