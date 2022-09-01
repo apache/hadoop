@@ -19,10 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.security;
 
 import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Base64;
-import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
 import org.apache.hadoop.util.Preconditions;
@@ -34,8 +32,6 @@ public class EncryptionAdapter implements Destroyable {
   private ABFSKey encryptionContext;
   private ABFSKey encryptionKey;
   private final EncryptionContextProvider provider;
-  private String encodedKey = null;
-  private String encodedKeySHA = null;
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       byte[] encryptionContext) throws IOException {
@@ -43,6 +39,7 @@ public class EncryptionAdapter implements Destroyable {
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
     this.encryptionContext = new ABFSKey(Base64.getDecoder().decode(encryptionContext));
+    Arrays.fill(encryptionContext, (byte) 0);
   }
 
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
@@ -51,44 +48,39 @@ public class EncryptionAdapter implements Destroyable {
     this.path = path;
   }
 
-  public ABFSKey getEncryptionKey() throws IOException {
-    if (encryptionKey != null) {
-      return encryptionKey;
+  private void computeKeys() throws IOException {
+    if (encryptionContext == null) {
+      encryptionContext = provider.getEncryptionContext(path);
     }
-    encryptionKey = provider.getEncryptionKey(path, encryptionContext);
-    return encryptionKey;
-  }
-
-  public ABFSKey createEncryptionContext() throws IOException {
-    encryptionContext = provider.getEncryptionContext(path);
     Preconditions.checkNotNull(encryptionContext,
-        "Encryption context should not be null.");
-    return encryptionContext;
-  }
-
-  public void computeKeys() throws IOException {
-    ABFSKey key = getEncryptionKey();
-    Preconditions.checkNotNull(key, "Encryption key should not be null.");
-    encodedKey = key.getBase64EncodedString();
-    encodedKeySHA = EncodingHelper.getBase64EncodedString(key.getSHA256Hash());
+            "Encryption context should not be null.");
+    if (encryptionKey == null) {
+      encryptionKey = provider.getEncryptionKey(path, encryptionContext);
+    }
+    Preconditions.checkNotNull(encryptionKey, "Encryption key should not be null.");
   }
 
   public String getEncodedKey() throws IOException {
-    if (encodedKey == null) {
-      computeKeys();
-    }
-    return encodedKey;
+    computeKeys();
+    return getBase64EncodedString(encryptionKey.getEncoded());
   }
 
   public String getEncodedKeySHA() throws IOException {
-    if (encodedKeySHA == null) {
-      computeKeys();
-    }
-    return encodedKeySHA;
+    computeKeys();
+    return getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
   }
 
-  public void destroy() throws DestroyFailedException {
-    encryptionKey.destroy();
-    provider.destroy();
+  public String getEncodedContext() throws IOException {
+    computeKeys();
+    return getBase64EncodedString(encryptionContext.getEncoded());
+  }
+
+  public void destroy() {
+    if (encryptionContext != null) encryptionContext.destroy();
+    if (encryptionKey != null) encryptionKey.destroy();
+  }
+
+  public static String getBase64EncodedString(byte[] bytes) {
+    return Base64.getEncoder().encodeToString(bytes);
   }
 }

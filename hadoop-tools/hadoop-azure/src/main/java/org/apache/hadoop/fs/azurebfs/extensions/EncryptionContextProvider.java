@@ -40,7 +40,7 @@ public interface EncryptionContextProvider extends Destroyable {
    * Fetch encryption context for a given path
    *
    * @param path file path from filesystem root
-   * @return encryptionContext string
+   * @return encryptionContext key
    * @throws IOException error in fetching encryption context
    */
   ABFSKey getEncryptionContext(String path) throws IOException;

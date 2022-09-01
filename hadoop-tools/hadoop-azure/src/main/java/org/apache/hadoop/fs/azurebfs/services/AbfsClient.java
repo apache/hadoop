@@ -240,6 +240,7 @@ public class AbfsClient implements Closeable {
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
       throws IOException {
     String encodedKey, encodedKeySHA256;
+    boolean encryptionAdapterCreated = false;
     switch (encryptionType) {
     case GLOBAL_KEY:
       encodedKey = clientProvidedEncryptionKey;
@@ -249,14 +250,8 @@ public class AbfsClient implements Closeable {
     case ENCRYPTION_CONTEXT:
       if (isCreateFileRequest) {
         // get new context for create file request
-        final ABFSKey encryptionContext =
-            encryptionAdapter.createEncryptionContext();
-        encryptionAdapter.computeKeys();
-        String base64EncodedSecret;
-          base64EncodedSecret = encryptionContext.getBase64EncodedString();
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
-            base64EncodedSecret));
-        encryptionContext.destroy();
+            encryptionAdapter.getEncodedContext()));
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
         byte[] encryptionContext;
@@ -272,6 +267,7 @@ public class AbfsClient implements Closeable {
         try {
           encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
               new Path(path).toUri().getPath(), encryptionContext);
+          encryptionAdapterCreated = true;
         } catch (IOException e) {
           LOG.debug("Could not initialize EncryptionAdapter");
           throw e;
@@ -284,6 +280,16 @@ public class AbfsClient implements Closeable {
 
     default: return; // no client-provided encryption keys
     }
+
+    if (encryptionAdapterCreated && encryptionAdapter != null) {
+      try {
+        encryptionAdapter.destroy();
+      } catch (Exception e) {
+        throw new IOException(
+          "Could not destroy encryptionContext: " + e.getMessage());
+      }
+    }
+
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, encodedKeySHA256));
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
