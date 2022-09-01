@@ -114,7 +114,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected final String src;
   protected final long fileId;
   private final String namespace;
-  private final String renewLeaseKey;
+  private final String uniqKey;
   protected final long blockSize;
   protected final int bytesPerChecksum;
 
@@ -199,9 +199,12 @@ public class DFSOutputStream extends FSOutputSummer
     this.fileId = stat.getFileId();
     this.namespace = stat.getNamespace();
     if (this.namespace == null) {
-      this.renewLeaseKey = "DEFAULT" + "_" + this.fileId;
+      String defaultKey = dfsClient.getConfiguration().get(
+          HdfsClientConfigKeys.DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY,
+          HdfsClientConfigKeys.DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT);
+      this.uniqKey = defaultKey + "_" + this.fileId;
     } else {
-      this.renewLeaseKey = this.namespace + "_" + this.fileId;
+      this.uniqKey = this.namespace + "_" + this.fileId;
     }
     this.blockSize = stat.getBlockSize();
     this.blockReplication = stat.getReplication();
@@ -826,7 +829,7 @@ public class DFSOutputStream extends FSOutputSummer
 
   void setClosed() {
     closed = true;
-    dfsClient.endFileLease(getRenewLeaseKey());
+    dfsClient.endFileLease(getUniqKey());
     getStreamer().release();
   }
 
@@ -929,7 +932,7 @@ public class DFSOutputStream extends FSOutputSummer
   protected void recoverLease(boolean recoverLeaseOnCloseException) {
     if (recoverLeaseOnCloseException) {
       try {
-        dfsClient.endFileLease(getRenewLeaseKey());
+        dfsClient.endFileLease(getUniqKey());
         dfsClient.recoverLease(src);
         leaseRecovered = true;
       } catch (Exception e) {
@@ -1097,8 +1100,9 @@ public class DFSOutputStream extends FSOutputSummer
     return namespace;
   }
 
-  public String getRenewLeaseKey() {
-    return this.renewLeaseKey;
+  @VisibleForTesting
+  public String getUniqKey() {
+    return this.uniqKey;
   }
 
   /**

@@ -1304,7 +1304,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         src, masked, flag, createParent, replication, blockSize, progress,
         dfsClientConf.createChecksum(checksumOpt),
         getFavoredNodesStr(favoredNodes), ecPolicyName, storagePolicy);
-    beginFileLease(result.getRenewLeaseKey(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1359,7 +1359,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           flag, createParent, replication, blockSize, progress, checksum,
           null, null, null);
     }
-    beginFileLease(result.getRenewLeaseKey(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 
@@ -1504,7 +1504,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     checkOpen();
     final DFSOutputStream result = callAppend(src, flag, progress,
         favoredNodes);
-    beginFileLease(result.getRenewLeaseKey(), result);
+    beginFileLease(result.getUniqKey(), result);
     return result;
   }
 

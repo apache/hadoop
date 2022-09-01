@@ -853,7 +853,7 @@ public class TestHASafeMode {
       create.write(testData.getBytes());
       create.hflush();
       String renewLeaseKey = ((DFSOutputStream)create.
-          getWrappedStream()).getRenewLeaseKey();
+          getWrappedStream()).getUniqKey();
       FileStatus fileStatus = dfs.getFileStatus(filePath);
       DFSClient client = DFSClientAdapter.getClient(dfs);
       // add one dummy block at NN, but not write to DataNode
