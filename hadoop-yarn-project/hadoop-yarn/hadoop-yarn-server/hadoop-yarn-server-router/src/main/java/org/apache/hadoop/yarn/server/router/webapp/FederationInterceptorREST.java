@@ -49,10 +49,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -1174,7 +1171,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+              subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
 
       final HttpServletRequest hsrCopy = clone(hsr);
       return interceptor.getAppActivities(hsrCopy, appId, time, requestPriorities,
@@ -1483,7 +1480,27 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Response listReservation(String queue, String reservationId,
       long startTime, long endTime, boolean includeResourceAllocations,
       HttpServletRequest hsr) throws Exception {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (queue == null || queue.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
+    }
+
+    if (reservationId == null || reservationId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
+    }
+
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      return interceptor.listReservation(queue, reservationId, startTime, endTime,
+          includeResourceAllocations, hsrCopy);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("listReservation Failed.", e);
+    }
+
+    return null;
   }
 
   @Override
@@ -1806,6 +1823,32 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           "Get HomeSubClusterInfo by applicationId %s failed.", appId);
     }
     throw new YarnException("Unable to get subCluster by applicationId = " + appId);
+  }
+
+  /**
+   * get the HomeSubCluster according to ReservationId.
+   *
+   * @param resId reservationId
+   * @return HomeSubCluster
+   * @throws YarnException on failure
+   */
+  private SubClusterInfo getHomeSubClusterInfoByReservationId(String resId)
+      throws YarnException {
+    SubClusterInfo subClusterInfo = null;
+    try {
+      ReservationId reservationId = ReservationId.parseReservationId(resId);
+      SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
+      if (subClusterId == null) {
+        RouterServerUtil.logAndThrowException(null,
+            "Can't get HomeSubCluster by reservationId %s", resId);
+      }
+      subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      return subClusterInfo;
+    } catch (YarnException | IOException e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Get HomeSubClusterInfo by reservationId %s failed.", resId);
+    }
+    throw new YarnException("Unable to get subCluster by reservationId = " + resId);
   }
 
   @VisibleForTesting
