@@ -1079,9 +1079,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     stateStore.addReservationHomeSubCluster(request);
 
     // Call the listReservation method
+    String applyReservationId = reservationId.toString();
     Response listReservationResponse =
         interceptor.listReservation(MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL,
-        reservationId.toString(), -1, -1, false, null);
+        applyReservationId, -1, -1, false, null);
     Assert.assertNotNull(listReservationResponse);
     Assert.assertNotNull(listReservationResponse.getStatus());
     Status status = Status.fromStatusCode(listReservationResponse.getStatus());
@@ -1100,17 +1101,16 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     ReservationInfo reservationInfo = reservationInfoList.get(0);
     Assert.assertNotNull(reservationInfo);
-    Assert.assertEquals(reservationId.toString(), reservationInfo.getReservationId());
+    Assert.assertEquals(applyReservationId, reservationInfo.getReservationId());
 
     ReservationDefinitionInfo definitionInfo = reservationInfo.getReservationDefinition();
     Assert.assertNotNull(definitionInfo);
-    Assert.assertEquals(reservationId.toString(), reservationInfo.getReservationId());
 
     ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
     Assert.assertNotNull(reservationRequestsInfo);
 
     ArrayList<ReservationRequestInfo> reservationRequestInfoList =
-       reservationRequestsInfo.getReservationRequest();
+        reservationRequestsInfo.getReservationRequest();
     Assert.assertNotNull(reservationRequestInfoList);
     Assert.assertEquals(1, reservationRequestInfoList.size());
 
