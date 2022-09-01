@@ -139,8 +139,8 @@ public class MockDefaultRequestInterceptorREST
   private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
 
-  private final String QUEUE_DEFAULT = "default";
-  private final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
+  private static final String QUEUE_DEFAULT = "default";
+  private static final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
       CapacitySchedulerConfiguration.DOT + QUEUE_DEFAULT;
   private static final String QUEUE_DEDICATED = "dedicated";
   public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
@@ -849,8 +849,8 @@ public class MockDefaultRequestInterceptorREST
     clientService.submitReservation(submissionRequest);
 
     // listReservations
-    ReservationListRequest request = ReservationListRequest.newInstance(queue, reservationID.toString(), startTime,
-        endTime, includeResourceAllocations);
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        queue, reservationID.toString(), startTime, endTime, includeResourceAllocations);
     ReservationListResponse resRespInfo = clientService.listReservations(request);
     ReservationListInfo resResponse =
         new ReservationListInfo(resRespInfo, includeResourceAllocations);
