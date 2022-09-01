@@ -62,8 +62,7 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {FAST_UPLOAD_BUFFER_DISK},
-        {FAST_UPLOAD_BUFFER_ARRAY},
-        {FAST_UPLOAD_BYTEBUFFER}
+        {FAST_UPLOAD_BUFFER_ARRAY}
     });
   }
 
