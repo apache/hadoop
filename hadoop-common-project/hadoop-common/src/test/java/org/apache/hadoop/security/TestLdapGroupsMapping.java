@@ -152,7 +152,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     groupsMapping.setConf(conf);
 
     // The group search filter should be resolved and should be passed as the
-    // bellow.
+    // below.
     String groupFilter = "(|(memberUid={0})(uname={1}))(objectClass=group)";
     String[] resolvedFilterArgs =
         new String[] {"CN=some_user,DC=test,DC=com", "some_user"};

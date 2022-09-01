@@ -85,6 +85,11 @@ This is the limit for each ldap query.  If `hadoop.security.group.mapping.ldap.s
 `hadoop.security.group.mapping.ldap.base` configures how far to walk up the groups hierarchy when resolving groups.
 By default, with a limit of 0, in order to be considered a member of a group, the user must be an explicit member in LDAP.  Otherwise, it will traverse the group hierarchy `hadoop.security.group.mapping.ldap.search.group.hierarchy.levels` levels up.
 
+It is possible to have specific group search filters with different arguments using
+the conf `hadoop.security.group.mapping.ldap.group.search.filter.pattern`, we can configure comma separated values here and the values configured will be fetched from the LDAP attributes and will be replaced in the group
+search filter in the order they appear here, say if the first entry here is uid, so uid will be fetched from the attributes and the value fetched
+will be used in place of {0} in the group search filter, similarly the second value configured will replace {1} and so on.
+
 ### Bind user(s) ###
 If the LDAP server does not support anonymous binds,
 set the distinguished name of the user to bind in `hadoop.security.group.mapping.ldap.bind.user`.
