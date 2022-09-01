@@ -76,14 +76,13 @@ public class TestMultipleOutputs extends HadoopTestCase {
     _testMOWithJavaSerialization(true);
   }
 
-  @Test(expected=IOException.class)
+  @SuppressWarnings("unchecked")
+  @Test(expected = IOException.class)
   public void testParallelCloseIOException() throws IOException, InterruptedException {
     RecordWriter writer = mock(RecordWriter.class);
-    Map recordWriters  = mock(Map.class);
+    Map<String, RecordWriter> recordWriters = mock(Map.class);
     when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
-    doThrow(new IOException("test IO exception"))
-        .when(writer)
-        .close(null);
+    doThrow(new IOException("test IO exception")).when(writer).close(null);
     JobConf conf = createJobConf();
     MultipleOutputs mos = new MultipleOutputs(conf);
     mos.setRecordWriters(recordWriters);

@@ -69,6 +69,7 @@ public class TestMRMultipleOutputs extends HadoopTestCase {
     _testMOWithJavaSerialization(true);
   }
 
+  @SuppressWarnings("unchecked")
   @Test(expected = IOException.class)
   public void testParallelCloseIOException() throws IOException, InterruptedException {
     RecordWriter writer = mock(RecordWriter.class);
