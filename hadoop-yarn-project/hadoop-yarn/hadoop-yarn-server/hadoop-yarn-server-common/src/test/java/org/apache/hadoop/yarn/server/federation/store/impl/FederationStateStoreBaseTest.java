@@ -24,13 +24,17 @@ import java.util.List;
 import java.util.TimeZone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
@@ -56,6 +60,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegister
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -599,4 +611,153 @@ public abstract class FederationStateStoreBaseTest {
     return stateStore;
   }
 
+  SubClusterId queryReservationHomeSC(ReservationId reservationId)
+      throws YarnException {
+
+    GetReservationHomeSubClusterRequest request =
+        GetReservationHomeSubClusterRequest.newInstance(reservationId);
+
+    GetReservationHomeSubClusterResponse response =
+        stateStore.getReservationHomeSubCluster(request);
+
+    return response.getReservationHomeSubCluster().getHomeSubCluster();
+  }
+
+  @Test
+  public void testAddReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId = SubClusterId.newInstance("SC");
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request);
+
+    Assert.assertEquals(subClusterId, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId, queryReservationHomeSC(reservationId));
+  }
+
+  private void addReservationHomeSC(ReservationId reservationId, SubClusterId subClusterId)
+      throws YarnException {
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(request);
+  }
+
+  @Test
+  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
+    ReservationHomeSubCluster reservationHomeSubCluster2 =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId2);
+    AddReservationHomeSubClusterRequest request2 =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request2);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(subClusterId1, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId1, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC()
+      throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    ReservationHomeSubCluster reservationHomeSubCluster2 =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+    AddReservationHomeSubClusterRequest request2 =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster2);
+    AddReservationHomeSubClusterResponse response =
+        stateStore.addReservationHomeSubCluster(request2);
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(subClusterId1, response.getHomeSubCluster());
+    Assert.assertEquals(subClusterId1, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testDeleteReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    DeleteReservationHomeSubClusterRequest delReservationRequest =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+    DeleteReservationHomeSubClusterResponse delReservationResponse =
+        stateStore.deleteReservationHomeSubCluster(delReservationRequest);
+
+    Assert.assertNotNull(delReservationResponse);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+
+    DeleteReservationHomeSubClusterRequest delReservationRequest =
+        DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStore.deleteReservationHomeSubCluster(delReservationRequest));
+  }
+
+  @Test
+  public void testUpdateReservationHomeSubCluster() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC");
+    addReservationHomeSC(reservationId, subClusterId1);
+
+    SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId2);
+
+    UpdateReservationHomeSubClusterRequest updateReservationRequest =
+        UpdateReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+
+    UpdateReservationHomeSubClusterResponse updateReservationResponse =
+        stateStore.updateReservationHomeSubCluster(updateReservationRequest);
+
+    Assert.assertNotNull(updateReservationResponse);
+    Assert.assertEquals(subClusterId2, queryReservationHomeSC(reservationId));
+  }
+
+  @Test
+  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
+
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("SC1");
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
+
+    UpdateReservationHomeSubClusterRequest updateReservationRequest =
+        UpdateReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "Reservation " + reservationId + " does not exist",
+        () -> stateStore.updateReservationHomeSubCluster(updateReservationRequest));
+  }
 }

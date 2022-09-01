@@ -74,6 +74,21 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
   @Metric("Duration for a get PolicyConfigurations call")
   private MutableRate getPoliciesConfigurations;
 
+  @Metric("Duration for a add reservation homeSubCluster call")
+  private MutableRate addReservationHomeSubCluster;
+
+  @Metric("Duration for a get reservation homeSubCluster call")
+  private MutableRate getReservationHomeSubCluster;
+
+  @Metric("Duration for a get reservations homeSubCluster call")
+  private MutableRate getReservationsHomeSubCluster;
+
+  @Metric("Duration for a delete reservation homeSubCluster call")
+  private MutableRate deleteReservationHomeSubCluster;
+
+  @Metric("Duration for a update reservation homeSubCluster call")
+  private MutableRate updateReservationHomeSubCluster;
+
   protected static final MetricsInfo RECORD_INFO =
       info("ZKFederationStateStoreOpDurations", "Durations of ZKFederationStateStore calls");
 
@@ -151,5 +166,25 @@ public final class ZKFederationStateStoreOpDurations implements MetricsSource {
 
   public void addGetPoliciesConfigurationsDuration(long startTime, long endTime) {
     getPoliciesConfigurations.add(endTime - startTime);
+  }
+
+  public void addReservationHomeSubClusterDuration(long startTime, long endTime) {
+    addReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addGetReservationHomeSubClusterDuration(long startTime, long endTime) {
+    getReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addGetReservationsHomeSubClusterDuration(long startTime, long endTime) {
+    getReservationsHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addDeleteReservationHomeSubClusterDuration(long startTime, long endTime) {
+    deleteReservationHomeSubCluster.add(endTime - startTime);
+  }
+
+  public void addUpdateReservationHomeSubClusterDuration(long startTime, long endTime) {
+    updateReservationHomeSubCluster.add(endTime - startTime);
   }
 }

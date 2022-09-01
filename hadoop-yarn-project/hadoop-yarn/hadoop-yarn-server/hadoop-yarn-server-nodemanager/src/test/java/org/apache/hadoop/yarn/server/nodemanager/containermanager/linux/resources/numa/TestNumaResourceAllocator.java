@@ -95,7 +95,7 @@ public class TestNumaResourceAllocator {
         + "1: 20 10";
     numaResourceAllocator = new NumaResourceAllocator(mock(Context.class)) {
       @Override
-      String executeNGetCmdOutput(Configuration config)
+      public String executeNGetCmdOutput(Configuration config)
           throws YarnRuntimeException {
         return cmdOutput;
       }

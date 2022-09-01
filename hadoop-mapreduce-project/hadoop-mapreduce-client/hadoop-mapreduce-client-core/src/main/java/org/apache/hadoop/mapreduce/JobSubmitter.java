@@ -71,7 +71,6 @@ class JobSubmitter {
   protected static final Logger LOG =
       LoggerFactory.getLogger(JobSubmitter.class);
   private static final String SHUFFLE_KEYGEN_ALGORITHM = "HmacSHA1";
-  private static final int SHUFFLE_KEY_LENGTH = 64;
   private FileSystem jtFs;
   private ClientProtocol submitClient;
   private String submitHostName;
@@ -177,7 +176,9 @@ class JobSubmitter {
         KeyGenerator keyGen;
         try {
           keyGen = KeyGenerator.getInstance(SHUFFLE_KEYGEN_ALGORITHM);
-          keyGen.init(SHUFFLE_KEY_LENGTH);
+          int shuffleKeyLength =
+              conf.getInt(MRJobConfig.SHUFFLE_KEY_LENGTH, MRJobConfig.DEFAULT_SHUFFLE_KEY_LENGTH);
+          keyGen.init(shuffleKeyLength);
         } catch (NoSuchAlgorithmException e) {
           throw new IOException("Error generating shuffle secret key", e);
         }
