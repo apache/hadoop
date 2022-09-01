@@ -5366,6 +5366,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.remove.dead.datanode.batchnum</name>
+  <value>10</value>
+  <description>
+    Maximum number of datanodes removed by HeartbeatManager per scan.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.snapshot.capture.openfiles</name>
   <value>false</value>
   <description>
