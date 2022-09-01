@@ -17,8 +17,9 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -26,14 +27,25 @@ import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateSto
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+
+import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore.CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER;
+import static org.apache.hadoop.yarn.server.federation.store.impl.SQLFederationStateStore.CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER;
 
 /**
  * Unit tests for SQLFederationStateStore.
  */
 public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(TestSQLFederationStateStore.class);
   private static final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
   private static final String DATABASE_URL = "jdbc:hsqldb:mem:state";
   private static final String DATABASE_USERNAME = "SA";
@@ -76,38 +88,62 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         FederationStateStoreClientMetrics.getNumConnections());
   }
 
-  @Test(expected = NotImplementedException.class)
-  public void testAddReservationHomeSubCluster() throws Exception {
-    super.testAddReservationHomeSubCluster();
+  private CallableStatement AddReservationHomeSubCluster(SQLFederationStateStore sqlFederationStateStore,
+      String procedure, ReservationId reservationId, String subHomeClusterId) throws SQLException {
+    // procedure call parameter preparation
+    CallableStatement cstmt = sqlFederationStateStore.getCallableStatement(procedure);
+    cstmt.setString("reservationId_IN", reservationId.toString());
+    cstmt.setString("homeSubCluster_IN", subHomeClusterId);
+    cstmt.registerOutParameter("storedHomeSubCluster_OUT", java.sql.Types.VARCHAR);
+    cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
+    // execute procedure
+    cstmt.executeUpdate();
+    return cstmt;
   }
 
-  @Test(expected = NotImplementedException.class)
-  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
-    super.testAddReservationHomeSubClusterReservationAlreadyExists();
+  @Test
+  public void testCheckAddReservationHomeSubCluster() throws Exception {
+    FederationStateStore stateStore = getStateStore();
+    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
+
+    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
+
+    // procedure call parameter preparation
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    String subHomeClusterId = "SC-1";
+    CallableStatement cstmt = AddReservationHomeSubCluster( sqlFederationStateStore,
+        CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER,  reservationId,  subHomeClusterId);
+
+    // get call result
+    String dbStoredHomeSubCluster = cstmt.getString("storedHomeSubCluster_OUT");
+    int dbRowCount = cstmt.getInt("rowCount_OUT");
+
+    // validation results
+    Assert.assertEquals(subHomeClusterId, dbStoredHomeSubCluster);
+    Assert.assertEquals(1, dbRowCount);
   }
 
-  @Test(expected = NotImplementedException.class)
-  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC() throws Exception {
-    super.testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC();
-  }
+  @Test
+  public void testCheckGetReservationHomeSubCluster() throws Exception {
+    FederationStateStore stateStore = getStateStore();
+    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
 
-  @Test(expected = NotImplementedException.class)
-  public void testDeleteReservationHomeSubCluster() throws Exception {
-    super.testDeleteReservationHomeSubCluster();
-  }
+    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-  @Test(expected = NotImplementedException.class)
-  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
-    super.testDeleteReservationHomeSubClusterUnknownApp();
-  }
+    // procedure call parameter preparation
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    String subHomeClusterId = "SC-1";
+    AddReservationHomeSubCluster( sqlFederationStateStore,
+        CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER,  reservationId,  subHomeClusterId);
 
-  @Test(expected = NotImplementedException.class)
-  public void testUpdateReservationHomeSubCluster() throws Exception {
-    super.testUpdateReservationHomeSubCluster();
-  }
+    CallableStatement cstmt =
+        sqlFederationStateStore.getCallableStatement(CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER);
+    cstmt.setString("reservationId_IN", reservationId.toString());
+    cstmt.registerOutParameter("homeSubCluster_OUT", java.sql.Types.VARCHAR);
+    cstmt.execute();
 
-  @Test(expected = NotImplementedException.class)
-  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
-    super.testUpdateReservationHomeSubClusterUnknownApp();
+    // get call result
+    String dBSubClusterHomeId = cstmt.getString("homeSubCluster_OUT");
+    Assert.assertEquals(subHomeClusterId, dBSubClusterHomeId);
   }
 }

@@ -144,33 +144,20 @@ public class SQLFederationStateStore implements FederationStateStore {
   private static final String CALL_SP_GET_POLICIES_CONFIGURATIONS =
       "{call sp_getPoliciesConfigurations()}";
 
-  private static final String CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER =
+  protected static final String CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER =
       "{call sp_addReservationHomeSubCluster(?, ?, ?, ?)}";
-  private static final int IN_ADD_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX = 1;
-  private static final int IN_ADD_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX = 2;
-  private static final int OUT_ADD_RESERVATION_HOME_SUBCLUSTER_STOREDHOMESUBCLUSTER_INDEX = 3;
-  private static final int OUT_ADD_RESERVATION_HOME_SUBCLUSTER_ROWCOUNTOUT_INDEX = 4;
 
-  private static final String CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER =
+  protected static final String CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER =
       "{call sp_getReservationHomeSubCluster(?, ?)}";
-  private static final int IN_GET_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX = 1;
-  private static final int OUT_GET_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX = 2;
 
-  private static final String CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER =
+  protected static final String CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER =
       "{call sp_getReservationsHomeSubCluster()}";
-  private static final int OUT_GET_RESERVATIONS_HOME_SUBCLUSTER_RESERVATIONID_INDEX = 1;
-  private static final int OUT_GET_RESERVATIONS_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX = 2;
 
-  private static final String CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER =
+  protected static final String CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER =
       "{call sp_deleteReservationHomeSubCluster(?, ?)}";
-  private static final int IN_DELETE_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX = 1;
-  private static final int OUT_DELETE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX = 2;
 
-  private static final String CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER =
+  protected static final String CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER =
       "{call sp_updateReservationHomeSubCluster(?, ?, ?)}";
-  private static final int IN_UPDATE_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX = 1;
-  private static final int IN_UPDATE_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX = 2;
-  private static final int OUT_UPDATE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX = 3;
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1029,12 +1016,14 @@ public class SQLFederationStateStore implements FederationStateStore {
    * @return a connection from the DataSource pool.
    * @throws SQLException on failure
    */
-  public Connection getConnection() throws SQLException {
+  @VisibleForTesting
+  protected Connection getConnection() throws SQLException {
     FederationStateStoreClientMetrics.incrConnections();
     return dataSource.getConnection();
   }
 
-  private CallableStatement getCallableStatement(String procedure)
+  @VisibleForTesting
+  protected CallableStatement getCallableStatement(String procedure)
       throws SQLException {
     return conn.prepareCall(procedure);
   }
@@ -1074,17 +1063,13 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Set the parameters for the stored procedure
       // 1）IN reservationId_IN varchar(128)
-      cstmt.setString(IN_ADD_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX,
-          reservationId.toString());
+      cstmt.setString("reservationId_IN", reservationId.toString());
       // 2）IN homeSubCluster_IN varchar(256)
-      cstmt.setString(IN_ADD_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX,
-          subClusterId.getId());
+      cstmt.setString("homeSubCluster_IN", subClusterId.getId());
       // 3) OUT storedHomeSubCluster_OUT varchar(256)
-      cstmt.registerOutParameter(OUT_ADD_RESERVATION_HOME_SUBCLUSTER_STOREDHOMESUBCLUSTER_INDEX,
-          java.sql.Types.VARCHAR);
+      cstmt.registerOutParameter("storedHomeSubCluster_OUT", java.sql.Types.VARCHAR);
       // 4) OUT rowCount_OUT int
-      cstmt.registerOutParameter(OUT_ADD_RESERVATION_HOME_SUBCLUSTER_ROWCOUNTOUT_INDEX,
-          java.sql.Types.INTEGER);
+      cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
       // Execute the query
       long startTime = clock.getTime();
@@ -1092,12 +1077,11 @@ public class SQLFederationStateStore implements FederationStateStore {
       long stopTime = clock.getTime();
 
       // Get SubClusterHome
-      String subClusterHomeIdString =
-          cstmt.getString(OUT_ADD_RESERVATION_HOME_SUBCLUSTER_STOREDHOMESUBCLUSTER_INDEX);
+      String subClusterHomeIdString = cstmt.getString("storedHomeSubCluster_OUT");
       subClusterHomeId = SubClusterId.newInstance(subClusterHomeIdString);
 
       // Get rowCount
-      int rowCount = cstmt.getInt(OUT_ADD_RESERVATION_HOME_SUBCLUSTER_ROWCOUNTOUT_INDEX);
+      int rowCount = cstmt.getInt("rowCount_OUT");
 
       // For failover reason, we check the returned subClusterId.
       // 1.If it is equal to the subClusterId we sent, the call added the new
@@ -1171,11 +1155,9 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Set the parameters for the stored procedure
       // 1）IN reservationId_IN varchar(128)
-      cstmt.setString(IN_GET_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX,
-          reservationId.toString());
+      cstmt.setString("reservationId_IN", reservationId.toString());
       // 2）OUT homeSubCluster_OUT varchar(256)
-      cstmt.registerOutParameter(OUT_GET_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX,
-          java.sql.Types.VARCHAR);
+      cstmt.registerOutParameter("homeSubCluster_OUT", java.sql.Types.VARCHAR);
 
       // Execute the query
       long startTime = clock.getTime();
@@ -1183,8 +1165,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       long stopTime = clock.getTime();
 
       // Get Result
-      String subClusterHomeIdString =
-          cstmt.getString(OUT_GET_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX);
+      String subClusterHomeIdString = cstmt.getString("homeSubCluster_OUT");
 
       if (StringUtils.isNotBlank(subClusterHomeIdString)) {
         subClusterId = SubClusterId.newInstance(subClusterHomeIdString);
@@ -1236,11 +1217,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       while (rs.next()) {
         // Extract the output for each tuple
         // 1）OUT reservationId
-        String dbReservationId =
-            rs.getString(OUT_GET_RESERVATIONS_HOME_SUBCLUSTER_RESERVATIONID_INDEX);
+        String dbReservationId = rs.getString("reservationId");
         // 2）OUT homeSubCluster
-        String dbHomeSubCluster =
-            rs.getString(OUT_GET_RESERVATIONS_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX);
+        String dbHomeSubCluster = rs.getString("homeSubCluster");
 
         // Generate parameters
         ReservationId reservationId = ReservationId.parseReservationId(dbReservationId);
@@ -1287,18 +1266,16 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Set the parameters for the stored procedure
       // 1）IN reservationId_IN varchar(128)
-      cstmt.setString(IN_DELETE_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX,
-          reservationId.toString());
+      cstmt.setString("reservationId_IN", reservationId.toString());
       // 2）OUT rowCount_OUT int
-      cstmt.registerOutParameter(OUT_DELETE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX,
-          java.sql.Types.INTEGER);
+      cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
       // Execute the query
       long startTime = clock.getTime();
       cstmt.executeUpdate();
       long stopTime = clock.getTime();
 
-      int rowCount = cstmt.getInt(OUT_DELETE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX);
+      int rowCount = cstmt.getInt("rowCount_OUT");
 
       // if it is equal to 0 it means the call
       // did not delete the reservation from FederationStateStore
@@ -1356,21 +1333,18 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Set the parameters for the stored procedure
       // 1）IN reservationId_IN varchar(128)
-      cstmt.setString(IN_UPDATE_RESERVATION_HOME_SUBCLUSTER_RESERVATIONID_INDEX,
-          reservationId.toString());
+      cstmt.setString("reservationId_IN", reservationId.toString());
       // 2）IN homeSubCluster_IN varchar(256)
-      cstmt.setString(IN_UPDATE_RESERVATION_HOME_SUBCLUSTER_HOMESUBCLUSTER_INDEX,
-          subClusterId.getId());
+      cstmt.setString("homeSubCluster_IN", subClusterId.getId());
       // 3）OUT rowCount_OUT int
-      cstmt.registerOutParameter(OUT_UPDATE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX,
-          java.sql.Types.INTEGER);
+      cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
       // Execute the query
       long startTime = clock.getTime();
       cstmt.executeUpdate();
       long stopTime = clock.getTime();
 
-      int rowCount = cstmt.getInt(OUT_UPDATE_RESERVATION_HOME_SUBCLUSTER_ROWCOUNT_INDEX);
+      int rowCount = cstmt.getInt("rowCount_OUT");
 
       // if it is equal to 0 it means the call
       // did not update the reservation into FederationStateStore
