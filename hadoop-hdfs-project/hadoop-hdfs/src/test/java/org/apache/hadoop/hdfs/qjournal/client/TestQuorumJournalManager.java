@@ -1109,13 +1109,14 @@ public class TestQuorumJournalManager {
   /**
    * Test selecting EditLogInputStream after some journalNode jitter.
    * Suppose there are 3 journalNodes, JN0 ~ JN2.
-   *  1. JN0 has some abnormal cases when Active Namenode is syncing 10 Edits with first txid 11
-   *  2. NameNode just ignore the abnormal JN0 and continue to sync Edits to Journal 1 and 2
-   *  3. JN0 backed to health
+   *  1. JN0 has some abnormal cases when Active Namenode is syncing 10 Edits with first txid 11.
+   *  2. NameNode just ignore the abnormal JN0 and continue to sync Edits to Journal 1 and 2.
+   *  3. JN0 backed to health.
    *  4. NameNode continue sync 10 Edits with first txid 21.
-   *  5. At this point, there are no Edits 11 ~ 30 in the cache of JN0
-   *  6. Observer NameNode try to select EditLogInputStream through getJournaledEdits with since txId 21
-   *  7. JN2 has some abnormal cases and caused a slow response
+   *  5. At this point, there are no Edits 11 ~ 30 in the cache of JN0.
+   *  6. Observer NameNode try to select EditLogInputStream through
+   *     getJournaledEdits with since txId 21.
+   *  7. JN2 has some abnormal cases and caused a slow response.
    */
   @Test
   public void testSelectViaRPCAfterJNJitter() throws Exception {
