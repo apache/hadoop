@@ -115,6 +115,11 @@ public class TestZookeeperFederationStateStore
     zkStateStoreOpDurations.addGetPolicyConfigurationDuration(start, end);
     zkStateStoreOpDurations.addSetPolicyConfigurationDuration(start, end);
     zkStateStoreOpDurations.addGetPoliciesConfigurationsDuration(start, end);
+    zkStateStoreOpDurations.addReservationHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetReservationHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addGetReservationsHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addDeleteReservationHomeSubClusterDuration(start, end);
+    zkStateStoreOpDurations.addUpdateReservationHomeSubClusterDuration(start, end);
 
     zkStateStoreOpDurations.getMetrics(collector, true);
     assertEquals("Incorrect number of perf metrics", 1, collector.getRecords().size());
@@ -137,6 +142,11 @@ public class TestZookeeperFederationStateStore
     MetricsRecords.assertMetric(record, "GetPolicyConfigurationAvgTime",  expectAvgTime);
     MetricsRecords.assertMetric(record, "SetPolicyConfigurationAvgTime",  expectAvgTime);
     MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "AddReservationHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetReservationHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "GetReservationsHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "DeleteReservationHomeSubClusterAvgTime",  expectAvgTime);
+    MetricsRecords.assertMetric(record, "UpdateReservationHomeSubClusterAvgTime",  expectAvgTime);
 
     long expectOps = 1;
     MetricsRecords.assertMetric(record, "AddAppHomeSubClusterNumOps",  expectOps);
@@ -152,5 +162,10 @@ public class TestZookeeperFederationStateStore
     MetricsRecords.assertMetric(record, "GetPolicyConfigurationNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "SetPolicyConfigurationNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "GetPoliciesConfigurationsNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "AddReservationHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetReservationHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "GetReservationsHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "DeleteReservationHomeSubClusterNumOps",  expectOps);
+    MetricsRecords.assertMetric(record, "UpdateReservationHomeSubClusterNumOps",  expectOps);
   }
 }
