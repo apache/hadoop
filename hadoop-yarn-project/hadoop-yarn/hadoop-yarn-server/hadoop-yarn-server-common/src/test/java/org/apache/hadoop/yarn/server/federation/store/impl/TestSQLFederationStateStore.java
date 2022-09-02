@@ -107,34 +107,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         FederationStateStoreClientMetrics.getNumConnections());
   }
 
-  public void testAddReservationHomeSubCluster() throws Exception {
-    super.testAddReservationHomeSubCluster();
-  }
-
-  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
-    super.testAddReservationHomeSubClusterReservationAlreadyExists();
-  }
-
-  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC() throws Exception {
-    super.testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC();
-  }
-
-  public void testDeleteReservationHomeSubCluster() throws Exception {
-    super.testDeleteReservationHomeSubCluster();
-  }
-
-  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
-    super.testDeleteReservationHomeSubClusterUnknownApp();
-  }
-
-  public void testUpdateReservationHomeSubCluster() throws Exception {
-    super.testUpdateReservationHomeSubCluster();
-  }
-
-  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
-    super.testUpdateReservationHomeSubClusterUnknownApp();
-  }
-
   class ReservationHomeSC {
     private String reservationId;
     private String subHomeClusterId;
@@ -321,7 +293,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     Assert.assertNotNull(resultHC);
     Assert.assertEquals(subHomeClusterId, resultHC.subHomeClusterId);
-    Assert.assertEquals(reservationId, resultHC.reservationId);
+    Assert.assertEquals(reservationId.toString(), resultHC.reservationId);
   }
 
   /**
@@ -362,12 +334,12 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     ReservationHomeSC resultHC1 = reservationHomeSubClusters.get(0);
     Assert.assertNotNull(resultHC1);
-    Assert.assertEquals(reservationId1, resultHC1.reservationId);
+    Assert.assertEquals(reservationId1.toString(), resultHC1.reservationId);
     Assert.assertEquals(subHomeClusterId1, resultHC1.subHomeClusterId);
 
     ReservationHomeSC resultHC2 = reservationHomeSubClusters.get(1);
     Assert.assertNotNull(resultHC2);
-    Assert.assertEquals(reservationId2, resultHC2.reservationId);
+    Assert.assertEquals(reservationId2.toString(), resultHC2.reservationId);
     Assert.assertEquals(subHomeClusterId2, resultHC2.subHomeClusterId);
   }
 

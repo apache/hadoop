@@ -1177,7 +1177,13 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       LOG.info("Got the information about the specified reservation {} in subCluster = {}.",
           reservationId, subClusterId);
+
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+
+      ReservationHomeSubCluster homeSubCluster =
+          ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+      return GetReservationHomeSubClusterResponse.newInstance(homeSubCluster);
+
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
@@ -1187,9 +1193,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
 
-    ReservationHomeSubCluster homeSubCluster =
-        ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
-    return GetReservationHomeSubClusterResponse.newInstance(homeSubCluster);
+    throw new YarnException(
+        "Unable to obtain the reservation information according to " + reservationId);
   }
 
   @Override
@@ -1230,6 +1235,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       }
 
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+
+      return GetReservationsHomeSubClusterResponse.newInstance(
+          reservationsHomeSubClusters);
     } catch (Exception e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(LOG,
@@ -1239,8 +1247,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.returnToPool(LOG, cstmt, null, rs);
     }
 
-    return GetReservationsHomeSubClusterResponse.newInstance(
-        reservationsHomeSubClusters);
+    throw new YarnException("Unable to obtain the information for all the reservations.");
   }
 
   @Override
@@ -1295,7 +1302,7 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       LOG.info("Delete from the StateStore the reservation: {}.", reservationId);
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
-
+      return DeleteReservationHomeSubClusterResponse.newInstance();
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
@@ -1304,7 +1311,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
-    return DeleteReservationHomeSubClusterResponse.newInstance();
+    throw new YarnException("Unable to delete the reservation " + reservationId);
   }
 
   @Override
@@ -1364,6 +1371,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       LOG.info("Update the subCluster to {} for reservation {} in the StateStore.",
           subClusterId, reservationId);
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+      return UpdateReservationHomeSubClusterResponse.newInstance();
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
       FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
@@ -1373,6 +1381,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
-    return UpdateReservationHomeSubClusterResponse.newInstance();
+    throw new YarnException(
+        "Unable to update the subCluster " + subClusterId +
+        " according to reservation" + reservationId);
   }
 }
