@@ -780,13 +780,12 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     return homeResponse;
   }
 
-  private boolean checkRequestFinalApplicationStatusSuccess(FinishApplicationMasterRequest request) {
-    if (request == null) {
-      return false;
-    } else if(request.getFinalApplicationStatus() == null){
-      return false;
-    } else if(request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)){
-      return true;
+  private boolean checkRequestFinalApplicationStatusSuccess(
+      FinishApplicationMasterRequest request) {
+    if (request != null && request.getFinalApplicationStatus() != null) {
+      if (request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)) {
+        return true;
+      }
     }
     return false;
   }
