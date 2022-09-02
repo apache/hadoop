@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.StrictPreemptionContract;
 import org.apache.hadoop.yarn.api.records.UpdateContainerRequest;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.client.AMRMClientUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
@@ -771,16 +772,23 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     if (failedToUnRegister) {
       homeResponse.setIsUnregistered(false);
-    } else {
+    } else if (checkRequestFinalApplicationStatusSuccess(request)) {
       // Clean up UAMs only when the app finishes successfully, so that no more
       // attempt will be launched.
       this.uamPool.stop();
-      if (this.registryClient != null) {
-        this.registryClient
-            .removeAppFromRegistry(this.attemptId.getApplicationId());
-      }
+      removeAppFromRegistry();
     }
     return homeResponse;
+  }
+
+  private boolean checkRequestFinalApplicationStatusSuccess(
+      FinishApplicationMasterRequest request) {
+    if (request != null && request.getFinalApplicationStatus() != null) {
+      if (request.getFinalApplicationStatus().equals(FinalApplicationStatus.SUCCEEDED)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -818,7 +826,19 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     this.homeHeartbeartHandler.shutdown();
     this.homeRMRelayer.shutdown();
 
+    // Shutdown needs to clean up app
+    removeAppFromRegistry();
+
     super.shutdown();
+  }
+
+  private void removeAppFromRegistry() {
+    if (this.registryClient != null && this.attemptId != null) {
+      ApplicationId applicationId = this.attemptId.getApplicationId();
+      if (applicationId != null) {
+        this.registryClient.removeAppFromRegistry(applicationId);
+      }
+    }
   }
 
   /**
