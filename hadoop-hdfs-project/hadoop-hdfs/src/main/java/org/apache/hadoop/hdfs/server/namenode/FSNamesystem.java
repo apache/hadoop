@@ -417,7 +417,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private void logAuditEvent(boolean succeeded, String cmd, String src,
       String dst, FileStatus stat) throws IOException {
     if (isAuditEnabled() && isExternalInvocation()) {
-      logAuditEvent(succeeded, Server.getRemoteUser(), Server.getRemoteIp(),
+      logAuditEvent(succeeded, NameNode.getRemoteUser(), Server.getRemoteIp(),
           cmd, src, dst, stat);
     }
   }
