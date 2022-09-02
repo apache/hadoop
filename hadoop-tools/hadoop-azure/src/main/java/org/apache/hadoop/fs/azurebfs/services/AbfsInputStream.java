@@ -46,8 +46,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
-import javax.security.auth.DestroyFailedException;
-
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
