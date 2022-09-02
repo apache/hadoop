@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -73,5 +74,40 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // Verify if connection is created only once at statestore init
     Assert.assertEquals(1,
         FederationStateStoreClientMetrics.getNumConnections());
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testAddReservationHomeSubCluster() throws Exception {
+    super.testAddReservationHomeSubCluster();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testAddReservationHomeSubClusterReservationAlreadyExists() throws Exception {
+    super.testAddReservationHomeSubClusterReservationAlreadyExists();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC() throws Exception {
+    super.testAddReservationHomeSubClusterAppAlreadyExistsInTheSameSC();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testDeleteReservationHomeSubCluster() throws Exception {
+    super.testDeleteReservationHomeSubCluster();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testDeleteReservationHomeSubClusterUnknownApp() throws Exception {
+    super.testDeleteReservationHomeSubClusterUnknownApp();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateReservationHomeSubCluster() throws Exception {
+    super.testUpdateReservationHomeSubCluster();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateReservationHomeSubClusterUnknownApp() throws Exception {
+    super.testUpdateReservationHomeSubClusterUnknownApp();
   }
 }
