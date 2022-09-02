@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -106,6 +107,8 @@ public abstract class BaseRouterRMAdminTest {
     this.dispatcher.init(conf);
     this.dispatcher.start();
     this.rmAdminService = createAndStartRouterRMAdminService();
+
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @After
