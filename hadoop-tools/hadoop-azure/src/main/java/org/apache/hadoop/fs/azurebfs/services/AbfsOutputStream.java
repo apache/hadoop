@@ -52,6 +52,8 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
 
+import javax.security.auth.DestroyFailedException;
+
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsErrors.ERR_WRITE_WITHOUT_LEASE;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
@@ -499,7 +501,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     } finally {
       try {
         if (encryptionAdapter != null) encryptionAdapter.destroy();
-      } catch (Exception e) {
+      } catch (DestroyFailedException e) {
         throw new IOException(
                 "Could not destroy encryptionContext: " + e.getMessage());
       } finally {

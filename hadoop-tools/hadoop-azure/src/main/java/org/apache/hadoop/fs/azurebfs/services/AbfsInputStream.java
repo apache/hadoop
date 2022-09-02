@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
+import javax.security.auth.DestroyFailedException;
+
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
@@ -701,7 +703,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     closed = true;
     try {
       if (encryptionAdapter != null) encryptionAdapter.destroy();
-    } catch (Exception e) {
+    } catch (DestroyFailedException e) {
       throw new IOException(
           "Could not destroy encryptionContext: " + e.getMessage());
     } finally {

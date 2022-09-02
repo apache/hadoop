@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.security;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
+import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
 import org.apache.hadoop.util.Preconditions;
@@ -75,7 +76,7 @@ public class EncryptionAdapter implements Destroyable {
     return getBase64EncodedString(encryptionContext.getEncoded());
   }
 
-  public void destroy() {
+  public void destroy() throws DestroyFailedException {
     if (encryptionContext != null) encryptionContext.destroy();
     if (encryptionKey != null) encryptionKey.destroy();
   }
