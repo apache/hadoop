@@ -27,7 +27,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -36,9 +35,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -72,7 +69,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import javax.crypto.SecretKey;
 import javax.security.auth.DestroyFailedException;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -284,7 +280,7 @@ public class AbfsClient implements Closeable {
     if (encryptionAdapterCreated && encryptionAdapter != null) {
       try {
         encryptionAdapter.destroy();
-      } catch (Exception e) {
+      } catch (DestroyFailedException e) {
         throw new IOException(
           "Could not destroy encryptionContext: " + e.getMessage());
       }
