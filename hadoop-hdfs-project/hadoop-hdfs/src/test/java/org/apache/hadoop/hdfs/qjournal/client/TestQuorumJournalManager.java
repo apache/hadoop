@@ -1108,14 +1108,14 @@ public class TestQuorumJournalManager {
 
   /**
    * Test selecting EditLogInputStream after some journalNode jitter.
-   * And the corner case as below:
-   * 1. Journal 0 has some abnormal cases when journaling Edits with start txId 11.
-   * 2. NameNode just ignore the abnormal journal 0 and continue to write Edits to Journal 1 and 2.
-   * 3. Journal 0 backed to health.
-   * 4. Observer NameNode try to select EditLogInputStream vis PRC with start txId 21.
-   * 5. Journal 1 has some abnormal cases caused slow response.
-   *
-   * The expected result should contain txn 21 - 40.
+   * Suppose there are 3 journalNodes, JN0 ~ JN2.
+   *  1. JN0 has some abnormal cases when Active Namenode is syncing 10 Edits with first txid 11
+   *  2. NameNode just ignore the abnormal JN0 and continue to sync Edits to Journal 1 and 2
+   *  3. JN0 backed to health
+   *  4. NameNode continue sync 10 Edits with first txid 21.
+   *  5. At this point, there are no Edits 11 ~ 30 in the cache of JN0
+   *  6. Observer NameNode try to select EditLogInputStream through getJournaledEdits with since txId 21
+   *  7. JN2 has some abnormal cases and caused a slow response
    */
   @Test
   public void testSelectViaRPCAfterJNJitter() throws Exception {
@@ -1132,33 +1132,9 @@ public class TestQuorumJournalManager {
     writeTxns(stm, 21, 20);
 
     Semaphore semaphore = new Semaphore(0);
-
-    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
-      semaphore.release(1);
-      @SuppressWarnings("unchecked")
-      ListenableFuture<GetJournaledEditsResponseProto> result =
-          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
-      return result;
-    }).when(spies.get(0)).getJournaledEdits(21,
-        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
-
-    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
-      semaphore.release(1);
-      @SuppressWarnings("unchecked")
-      ListenableFuture<GetJournaledEditsResponseProto> result =
-          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
-      return result;
-    }).when(spies.get(1)).getJournaledEdits(21,
-        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
-
-    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
-      semaphore.acquire(2);
-      @SuppressWarnings("unchecked")
-      ListenableFuture<GetJournaledEditsResponseProto> result =
-          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
-      return result;
-    }).when(spies.get(2)).getJournaledEdits(21,
-        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
+    spyGetJournaledEdits(0, 21, () -> semaphore.release(1));
+    spyGetJournaledEdits(1, 21, () -> semaphore.release(1));
+    spyGetJournaledEdits(2, 21, () -> semaphore.acquireUninterruptibly(2));
 
     List<EditLogInputStream> streams = new ArrayList<>();
     qjm.selectInputStreams(streams, 21, true, true);
@@ -1166,6 +1142,17 @@ public class TestQuorumJournalManager {
     assertEquals(1, streams.size());
     assertEquals(21, streams.get(0).getFirstTxId());
     assertEquals(40, streams.get(0).getLastTxId());
+  }
+
+  private void spyGetJournaledEdits(int jnSpyIdx, long fromTxId, Runnable preHook) {
+    Mockito.doAnswer((Answer<ListenableFuture<GetJournaledEditsResponseProto>>) invocation -> {
+      preHook.run();
+      @SuppressWarnings("unchecked")
+      ListenableFuture<GetJournaledEditsResponseProto> result =
+          (ListenableFuture<GetJournaledEditsResponseProto>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(jnSpyIdx)).getJournaledEdits(fromTxId,
+        QuorumJournalManager.QJM_RPC_MAX_TXNS_DEFAULT);
   }
 
   @Test
