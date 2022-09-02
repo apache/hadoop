@@ -149,6 +149,17 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
   }
 
+  public static TracingContext getSampleTracingContext(AzureBlobFileSystem fs,
+      boolean needsPrimaryReqId) {
+    String correlationId, fsId;
+    TracingHeaderFormat format;
+    correlationId = "test-corr-id";
+    fsId = "test-filesystem-id";
+    format = TracingHeaderFormat.ALL_ID_FORMAT;
+    return new TracingContext(correlationId, fsId,
+        FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
+  }
+
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
       boolean needsPrimaryReqId) {
     String correlationId, fsId;
@@ -166,7 +177,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     return new TracingContext(correlationId, fsId,
         FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
-
 
   @Before
   public void setup() throws Exception {
