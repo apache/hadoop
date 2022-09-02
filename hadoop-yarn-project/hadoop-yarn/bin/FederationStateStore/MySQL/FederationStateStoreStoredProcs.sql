@@ -122,10 +122,14 @@ BEGIN
    WHERE applicationId = applicationID_IN;
 END //
 
-CREATE PROCEDURE sp_getApplicationsHomeSubCluster()
+CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int)
 BEGIN
-   SELECT applicationId, homeSubCluster
-   FROM applicationsHomeSubCluster;
+   SELECT
+       applicationId, homeSubCluster
+   FROM
+   (SELECT
+        applicationId, homeSubCluster, ROW_NUMBER() OVER (ORDER BY applicationId) AS row_num
+    FROM applicationsHomeSubCluster) WHERE row_num <= limit_IN
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(

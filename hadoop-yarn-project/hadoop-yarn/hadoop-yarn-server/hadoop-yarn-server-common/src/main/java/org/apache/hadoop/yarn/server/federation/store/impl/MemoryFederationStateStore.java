@@ -24,10 +24,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -90,6 +92,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private Map<ApplicationId, SubClusterId> applications;
   private Map<ReservationId, SubClusterId> reservations;
   private Map<String, SubClusterPolicyConfiguration> policies;
+  private int maxAppsInStateStore;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -102,6 +105,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
     applications = new ConcurrentHashMap<ApplicationId, SubClusterId>();
     reservations = new ConcurrentHashMap<ReservationId, SubClusterId>();
     policies = new ConcurrentHashMap<String, SubClusterPolicyConfiguration>();
+    maxAppsInStateStore = conf.getInt(
+        YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
   }
 
   @Override
@@ -255,14 +261,33 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    List<ApplicationHomeSubCluster> result =
-        new ArrayList<ApplicationHomeSubCluster>();
-    for (Entry<ApplicationId, SubClusterId> e : applications.entrySet()) {
-      result
-          .add(ApplicationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
     }
 
-    GetApplicationsHomeSubClusterResponse.newInstance(result);
+    List<ApplicationHomeSubCluster> result = new ArrayList<>();
+    List<ApplicationId> applicationIdList =
+        applications.keySet().stream().collect(Collectors.toList());
+
+    SubClusterId requestSubClusterId = request.getSubClusterId();
+    int appCount = 0;
+    for (int i = 0; i < applicationIdList.size(); i++) {
+      if (appCount >= maxAppsInStateStore) {
+        break;
+      }
+      ApplicationId applicationId = applicationIdList.get(i);
+      SubClusterId subClusterId = applications.get(applicationId);
+      // If the requestSubClusterId that needs to be filtered in the request
+      // is inconsistent with the SubClusterId in the data, continue to the next round
+      if (requestSubClusterId != null && !requestSubClusterId.equals(subClusterId)){
+        continue;
+      }
+      result.add(ApplicationHomeSubCluster.newInstance(applicationId, subClusterId));
+      appCount++;
+    }
+
+    LOG.info("requestSubClusterId = {}, appCount = {}.", requestSubClusterId, appCount);
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
   }
 

@@ -133,6 +133,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String membershipZNode;
   private String policiesZNode;
   private String reservationsZNode;
+  private int maxAppsInStateStore;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -143,6 +144,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("Initializing ZooKeeper connection");
+
+    maxAppsInStateStore = conf.getInt(
+       YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+       YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
 
     baseZNode = conf.get(
         YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
@@ -255,16 +260,32 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
+    }
+
     long start = clock.getTime();
     List<ApplicationHomeSubCluster> result = new ArrayList<>();
+    SubClusterId requestSubClusterId = request.getSubClusterId();
+    int appCount = 0;
 
     try {
-      for (String child : zkManager.getChildren(appsZNode)) {
+      List<String> childrens = zkManager.getChildren(appsZNode);
+      for (String child : childrens) {
+        if (appCount >= maxAppsInStateStore) {
+          break;
+        }
         ApplicationId appId = ApplicationId.fromString(child);
         SubClusterId homeSubCluster = getApp(appId);
-        ApplicationHomeSubCluster app =
-            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
+        // If the requestSubClusterId that needs to be filtered in the request
+        // is inconsistent with the SubClusterId in the data, continue to the next round
+        if (requestSubClusterId != null && !requestSubClusterId.equals(homeSubCluster)) {
+          continue;
+        }
+        ApplicationHomeSubCluster app = ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
         result.add(app);
+        appCount ++;
       }
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();
@@ -272,6 +293,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
     long end = clock.getTime();
     opDurations.addGetAppsHomeSubClusterDuration(start, end);
+
+    LOG.info("requestSubClusterId = {}, appCount = {}.", requestSubClusterId, appCount);
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
   }
 

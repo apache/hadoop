@@ -22,6 +22,8 @@ import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -408,6 +410,89 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(2, result.getAppsHomeSubClusters().size());
     Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc1));
     Assert.assertTrue(result.getAppsHomeSubClusters().contains(ahsc2));
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterEmpty() throws Exception {
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getApplicationsHomeSubCluster request",
+        () -> stateStore.getApplicationsHomeSubCluster(null));
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterFilter() throws Exception {
+    // Add ApplicationHomeSC - SC1
+    long now = Time.now();
+
+    Set<ApplicationHomeSubCluster> appHomeSubClusters = new HashSet<>();
+
+    for (int i = 0; i < 10; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC1");
+      addApplicationHomeSC(appId, subClusterId);
+      ApplicationHomeSubCluster ahsc =
+          ApplicationHomeSubCluster.newInstance(appId, subClusterId);
+      appHomeSubClusters.add(ahsc);
+    }
+
+    // Add ApplicationHomeSC - SC2
+    for (int i = 10; i < 20; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC2");
+      addApplicationHomeSC(appId, subClusterId);
+    }
+
+    GetApplicationsHomeSubClusterRequest getRequest =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest.setSubClusterId(SubClusterId.newInstance("SC1"));
+
+    GetApplicationsHomeSubClusterResponse result =
+        stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertNotNull(result);
+
+    List<ApplicationHomeSubCluster> items = result.getAppsHomeSubClusters();
+    Assert.assertNotNull(items);
+    Assert.assertEquals(10, items.size());
+
+    for (ApplicationHomeSubCluster item : items) {
+      Assert.assertTrue(appHomeSubClusters.contains(item));
+    }
+  }
+
+  @Test
+  public void testGetApplicationsHomeSubClusterLimit() throws Exception {
+    // Add ApplicationHomeSC - SC1
+    long now = Time.now();
+
+    for (int i = 0; i < 50; i++) {
+      ApplicationId appId = ApplicationId.newInstance(now, i);
+      SubClusterId subClusterId = SubClusterId.newInstance("SC1");
+      addApplicationHomeSC(appId, subClusterId);
+    }
+
+    GetApplicationsHomeSubClusterRequest getRequest =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest.setSubClusterId(SubClusterId.newInstance("SC1"));
+    GetApplicationsHomeSubClusterResponse result =
+        stateStore.getApplicationsHomeSubCluster(getRequest);
+    Assert.assertNotNull(result);
+
+    // Write 50 records, but get 10 records because the maximum number is limited to 10
+    List<ApplicationHomeSubCluster> items = result.getAppsHomeSubClusters();
+    Assert.assertNotNull(items);
+    Assert.assertEquals(10, items.size());
+
+    GetApplicationsHomeSubClusterRequest getRequest1 =
+        GetApplicationsHomeSubClusterRequest.newInstance();
+    getRequest1.setSubClusterId(SubClusterId.newInstance("SC2"));
+    GetApplicationsHomeSubClusterResponse result1 =
+        stateStore.getApplicationsHomeSubCluster(getRequest1);
+    Assert.assertNotNull(result1);
+
+    // SC2 data does not exist, so the number of returned records is 0
+    List<ApplicationHomeSubCluster> items1 = result1.getAppsHomeSubClusters();
+    Assert.assertNotNull(items1);
+    Assert.assertEquals(0, items1.size());
   }
 
   @Test

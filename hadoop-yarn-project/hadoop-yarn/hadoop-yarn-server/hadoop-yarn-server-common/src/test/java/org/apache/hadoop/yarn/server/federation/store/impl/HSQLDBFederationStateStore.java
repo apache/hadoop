@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.slf4j.Logger;
@@ -164,11 +165,14 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE applicationId = applicationID_IN; END";
 
   private static final String SP_GETAPPLICATIONSHOMESUBCLUSTER =
-      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster()"
+      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubCluster_IN varchar(256))"
           + " MODIFIES SQL DATA DYNAMIC RESULT SETS 1 BEGIN ATOMIC"
           + " DECLARE result CURSOR FOR"
           + " SELECT applicationId, homeSubCluster"
-          + " FROM applicationsHomeSubCluster; OPEN result; END";
+          + " FROM applicationsHomeSubCluster "
+          + " WHERE ROWNUM() <= limit_IN AND "
+          + " CASE WHEN homeSubCluster_IN IS NULL THEN 1 = 1 "
+          + " WHEN homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN END; OPEN result; END";
 
   private static final String SP_DELETEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_deleteApplicationHomeSubCluster("
@@ -204,6 +208,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
   @Override
   public void init(Configuration conf) {
     try {
+      conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
       super.init(conf);
     } catch (YarnException e1) {
       LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
