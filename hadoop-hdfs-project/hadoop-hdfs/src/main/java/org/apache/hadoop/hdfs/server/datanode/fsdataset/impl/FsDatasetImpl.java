@@ -2348,11 +2348,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               "not backed by a local file", info);
         }
         removing = volumeMap.remove(bpid, invalidBlks[i]);
-        if (removing == null) {
-          errors.add("Failed to delete replica " + invalidBlks[i]
-              +  ". Replicate not found.");
-          continue;
-        }
         addDeletingBlock(bpid, removing.getBlockId());
         LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
         if (datanode.getMetrics() != null) {
