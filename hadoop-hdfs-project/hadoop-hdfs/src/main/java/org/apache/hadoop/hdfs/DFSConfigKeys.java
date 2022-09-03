@@ -495,6 +495,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int DFS_NAMENODE_BLOCK_DELETION_UNLOCK_INTERVAL_MS_DEFAULT =
       10;
 
+  /** Block deletion increment. */
+  public static final String DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY =
+      "dfs.namenode.block.deletion.increment";
+  public static final int DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT = 1000;
   /** Block deletion asynchronous. */
   public static final String DFS_NAMENODE_BLOCK_DELETION_ASYNC_KEY = "dfs.namenode.block.deletion.async";
   public static final boolean DFS_NAMENODE_BLOCK_DELETION_ASYNC_DEFAULT = true;

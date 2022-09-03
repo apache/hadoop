@@ -501,6 +501,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private final String supergroup;
   private final boolean standbyShouldCheckpoint;
   private final boolean isSnapshotTrashRootEnabled;
+  private final boolean blockDeletionAsync;
+  private final int blockDeletionIncrement;
   private final int snapshotDiffReportLimit;
 
   /**
@@ -1064,6 +1066,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.allowOwnerSetQuota = conf.getBoolean(
           DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_KEY,
           DFSConfigKeys.DFS_PERMISSIONS_ALLOW_OWNER_SET_QUOTA_DEFAULT);
+      this.blockDeletionAsync = conf.getBoolean(
+          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_ASYNC_KEY,
+          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_ASYNC_DEFAULT);
+      this.blockDeletionIncrement = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_KEY,
+          DFSConfigKeys.DFS_NAMENODE_BLOCK_DELETION_INCREMENT_DEFAULT);
       this.isGetBlocksCheckOperationEnabled = conf.getBoolean(
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_KEY,
           DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_CHECK_OPERATION_DEFAULT);

@@ -6165,9 +6165,9 @@
 
   <property>
     <name>dfs.namenode.block.deletion.async</name>
-    <value>false</value>
+    <value>true</value>
     <description>
-      If true, enable block deleting asynchronously
+      If false, disable block deleting asynchronously
     </description>
   </property>
 
