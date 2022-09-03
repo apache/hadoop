@@ -136,7 +136,7 @@ Alternatively we can have the mount table's root merged with the root of another
 ```xml
 <configuration>
   <property>
-    <name>fs.viewfs.mounttable.ClusterY.linkMergeSlash</name>
+    <name>fs.viewfs.mounttable.clusterY.linkMergeSlash</name>
     <value>hdfs://nn1-clustery.example.com:8020/</value>
   </property>
 </configuration>
