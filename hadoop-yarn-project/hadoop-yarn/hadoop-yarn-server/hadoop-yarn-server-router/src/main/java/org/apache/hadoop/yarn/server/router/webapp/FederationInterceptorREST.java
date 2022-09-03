@@ -100,9 +100,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
+import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -132,8 +134,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private RouterMetrics routerMetrics;
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
+  private boolean appInfosCacheEnabled;
+  private int appInfosCacheCount;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
+  private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
 
   /**
    * Thread pool used for asynchronous operations.
@@ -170,6 +175,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_WEBAPP_PARTIAL_RESULTS_ENABLED);
+
+    appInfosCacheEnabled = conf.getBoolean(
+        YarnConfiguration.ROUTER_APPSINFO_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_APPSINFO_ENABLED);
+
+    if(appInfosCacheEnabled) {
+      appInfosCacheCount = conf.getInt(
+          YarnConfiguration.ROUTER_APPSINFO_CACHED_COUNT,
+          YarnConfiguration.DEFAULT_ROUTER_APPSINFO_CACHED_COUNT);
+      appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
+    }
   }
 
   private SubClusterId getRandomActiveSubCluster(
@@ -681,6 +697,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String queueQuery, String count, String startedBegin, String startedEnd,
       String finishBegin, String finishEnd, Set<String> applicationTypes,
       Set<String> applicationTags, String name, Set<String> unselectedFields) {
+
+    RouterAppInfoCacheKey routerAppInfoCacheKey = RouterAppInfoCacheKey.newInstance(
+        hsr, stateQuery, statesQuery, finalStatusQuery, userQuery, queueQuery, count,
+        startedBegin, startedEnd, finishBegin, finishEnd, applicationTypes,
+        applicationTags, name, unselectedFields);
+
+    if (appInfosCacheEnabled && routerAppInfoCacheKey != null) {
+      if (appInfosCaches.containsKey(routerAppInfoCacheKey)) {
+        return appInfosCaches.get(routerAppInfoCacheKey);
+      }
+    }
+
     AppsInfo apps = new AppsInfo();
     long startTime = clock.getTime();
 
@@ -744,8 +772,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     // Merge all the application reports got from all the available YARN RMs
-    return RouterWebServiceUtil.mergeAppsInfo(
+    AppsInfo resultAppsInfo = RouterWebServiceUtil.mergeAppsInfo(
         apps.getApps(), returnPartialReport);
+
+    if (appInfosCacheEnabled && routerAppInfoCacheKey != null) {
+      appInfosCaches.put(routerAppInfoCacheKey, resultAppsInfo);
+    }
+
+    return resultAppsInfo;
   }
 
   /**
@@ -1772,5 +1806,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           "Get HomeSubClusterInfo by applicationId %s failed.", appId);
     }
     throw new YarnException("Unable to get subCluster by applicationId = " + appId);
+  }
+
+  @VisibleForTesting
+  public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
+    return appInfosCaches;
   }
 }

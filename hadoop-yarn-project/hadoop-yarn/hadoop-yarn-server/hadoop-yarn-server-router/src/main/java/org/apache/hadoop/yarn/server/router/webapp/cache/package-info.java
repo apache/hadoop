@@ -15,15 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
--- Script to drop all the tables from the Federation StateStore in MySQL
-
-USE FederationStateStore
-
-DROP TABLE applicationsHomeSubCluster;
-
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
+package org.apache.hadoop.yarn.server.router.webapp.cache;

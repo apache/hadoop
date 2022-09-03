@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,14 +16,28 @@
  * limitations under the License.
  */
 
--- Script to drop all the tables from the Federation StateStore in MySQL
+package org.apache.hadoop.util.functional;
 
-USE FederationStateStore
+import java.io.IOException;
 
-DROP TABLE applicationsHomeSubCluster;
+/**
+ * Function of arity 4 which may raise an IOException.
+ * @param <I1> type of arg1.
+ * @param <I2> type of arg2.
+ * @param <I3> type of arg3.
+ * @param <I4> type of arg4.
+ * @param <R> return type.
+ */
+public interface Function4RaisingIOE<I1, I2, I3, I4, R> {
 
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
+  /**
+   * Apply the function.
+   * @param i1 argument 1.
+   * @param i2 argument 2.
+   * @param i3 argument 3.
+   * @param i4 argument 4.
+   * @return return value.
+   * @throws IOException any IOE.
+   */
+  R apply(I1 i1, I2 i2, I3 i3, I4 i4) throws IOException;
+}
