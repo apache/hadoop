@@ -131,7 +131,7 @@ In the below mount table configuration, namespace `/data` is linked to the files
 </configuration>
 ```
 
-Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, ClusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
+Alternatively we can have the mount table's root merged with the root of another filesystem via `linkMergeSlash`. In the below mount table configuration, clusterY's root is merged with the root filesystem at `hdfs://nn1-clustery.example.com:8020`.
 
 ```xml
 <configuration>
