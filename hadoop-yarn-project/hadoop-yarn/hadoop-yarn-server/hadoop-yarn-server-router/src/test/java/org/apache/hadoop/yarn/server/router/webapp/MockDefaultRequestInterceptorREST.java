@@ -851,7 +851,8 @@ public class MockDefaultRequestInterceptorREST
     long deadline = (long) (arrival + 1.05 * duration);
 
     // In this test of reserved resources, we will apply for 4 containers (1 core, 1GB memory)
-    // arrival = Time.now(), and make sure deadline - arrival > duration, 3000ms
+    // arrival = Time.now(), and make sure deadline - arrival > duration,
+    // the current setting is greater than 3000ms
     ReservationSubmissionRequest submissionRequest = mock(ReservationSubmissionRequest.class);
         ReservationSystemTestUtil.createSimpleReservationRequest(
             reservationID, 4, arrival, deadline, duration);
