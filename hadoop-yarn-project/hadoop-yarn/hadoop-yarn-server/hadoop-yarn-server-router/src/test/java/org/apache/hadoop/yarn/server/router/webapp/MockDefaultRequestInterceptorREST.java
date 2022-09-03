@@ -840,12 +840,21 @@ public class MockDefaultRequestInterceptorREST
 
     // Generate reserved resources
     ClientRMService clientService = mockRM.getClientRMService();
+
+    // arrival time from which the resource(s) can be allocated.
     long arrival = Time.now();
+
+    // duration(milliseconds)
     long duration = 60000;
+
+    // deadline by when the resource(s) must be allocated.
     long deadline = (long) (arrival + 1.05 * duration);
-    ReservationSubmissionRequest submissionRequest =
-        ReservationSystemTestUtil.createSimpleReservationRequest(reservationID, 4,
-        arrival, deadline, duration);
+
+    // In this test of reserved resources, we will apply for 4 containers (1 core, 1GB memory)
+    // arrival = Time.now(), and make sure deadline - arrival > duration, 3000ms
+    ReservationSubmissionRequest submissionRequest = mock(ReservationSubmissionRequest.class);
+        ReservationSystemTestUtil.createSimpleReservationRequest(
+            reservationID, 4, arrival, deadline, duration);
     clientService.submitReservation(submissionRequest);
 
     // listReservations

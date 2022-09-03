@@ -1838,7 +1838,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    */
   private SubClusterInfo getHomeSubClusterInfoByReservationId(String resId)
       throws YarnException {
-    SubClusterInfo subClusterInfo = null;
     try {
       ReservationId reservationId = ReservationId.parseReservationId(resId);
       SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
@@ -1846,7 +1845,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         RouterServerUtil.logAndThrowException(null,
             "Can't get HomeSubCluster by reservationId %s", resId);
       }
-      subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
       return subClusterInfo;
     } catch (YarnException | IOException e) {
       RouterServerUtil.logAndThrowException(e,
