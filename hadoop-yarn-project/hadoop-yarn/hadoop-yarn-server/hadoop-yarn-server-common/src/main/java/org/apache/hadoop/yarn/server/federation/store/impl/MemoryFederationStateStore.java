@@ -266,29 +266,29 @@ public class MemoryFederationStateStore implements FederationStateStore {
       throw new YarnException("Missing getApplicationsHomeSubCluster request");
     }
 
-    List<ApplicationHomeSubCluster> result = new ArrayList<>();
-    List<ApplicationId> applicationIdList =
-        applications.keySet().stream().collect(Collectors.toList());
+    SubClusterId requestSC = request.getSubClusterId();
+    List<ApplicationHomeSubCluster> result = applications.keySet().stream()
+        .map(applicationId -> generateAppHomeSC(applicationId))
+        .filter(appHomeSC -> judgeAdd(requestSC, appHomeSC.getHomeSubCluster()))
+        .limit(maxAppsInStateStore)
+        .collect(Collectors.toList());
 
-    SubClusterId requestSubClusterId = request.getSubClusterId();
-    int appCount = 0;
-    for (int i = 0; i < applicationIdList.size(); i++) {
-      if (appCount >= maxAppsInStateStore) {
-        break;
-      }
-      ApplicationId applicationId = applicationIdList.get(i);
-      SubClusterId subClusterId = applications.get(applicationId);
-      // If the requestSubClusterId that needs to be filtered in the request
-      // is inconsistent with the SubClusterId in the data, continue to the next round
-      if (requestSubClusterId != null && !requestSubClusterId.equals(subClusterId)){
-        continue;
-      }
-      result.add(ApplicationHomeSubCluster.newInstance(applicationId, subClusterId));
-      appCount++;
-    }
-
-    LOG.info("requestSubClusterId = {}, appCount = {}.", requestSubClusterId, appCount);
+    LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
+    SubClusterId subClusterId = applications.get(applicationId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+  }
+
+  private boolean judgeAdd(SubClusterId filterSubCluster, SubClusterId homeSubCluster) {
+    if (filterSubCluster == null) {
+      return true;
+    } else if (filterSubCluster != null && filterSubCluster.equals(homeSubCluster)) {
+      return true;
+    }
+    return false;
   }
 
   @Override

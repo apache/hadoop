@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -265,37 +266,47 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       throw new YarnException("Missing getApplicationsHomeSubCluster request");
     }
 
-    long start = clock.getTime();
-    List<ApplicationHomeSubCluster> result = new ArrayList<>();
-    SubClusterId requestSubClusterId = request.getSubClusterId();
-    int appCount = 0;
-
     try {
-      List<String> childrens = zkManager.getChildren(appsZNode);
-      for (String child : childrens) {
-        if (appCount >= maxAppsInStateStore) {
-          break;
-        }
-        ApplicationId appId = ApplicationId.fromString(child);
-        SubClusterId homeSubCluster = getApp(appId);
-        // If the requestSubClusterId that needs to be filtered in the request
-        // is inconsistent with the SubClusterId in the data, continue to the next round
-        if (requestSubClusterId != null && !requestSubClusterId.equals(homeSubCluster)) {
-          continue;
-        }
-        ApplicationHomeSubCluster app = ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
-        result.add(app);
-        appCount ++;
-      }
+      long start = clock.getTime();
+      SubClusterId requestSC = request.getSubClusterId();
+      List<String> children = zkManager.getChildren(appsZNode);
+      List<ApplicationHomeSubCluster> result =
+          children.stream().map(child -> generateAppHomeSC(child))
+          .filter(appHomeSC -> judgeAdd(requestSC, appHomeSC.getHomeSubCluster()))
+          .limit(maxAppsInStateStore)
+          .collect(Collectors.toList());
+      long end = clock.getTime();
+      opDurations.addGetAppsHomeSubClusterDuration(start, end);
+      LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
+      return GetApplicationsHomeSubClusterResponse.newInstance(result);
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
-    opDurations.addGetAppsHomeSubClusterDuration(start, end);
 
-    LOG.info("requestSubClusterId = {}, appCount = {}.", requestSubClusterId, appCount);
-    return GetApplicationsHomeSubClusterResponse.newInstance(result);
+    throw new YarnException("Cannot get app by request");
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(String appId) {
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterId homeSubCluster = getApp(applicationId);
+      ApplicationHomeSubCluster app =
+          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
+      return app;
+    } catch (Exception ex) {
+      LOG.error("get homeSubCluster by appId = {}.", appId);
+    }
+    return null;
+  }
+
+  private boolean judgeAdd(SubClusterId filterSubCluster, SubClusterId homeSubCluster) {
+    if (filterSubCluster == null) {
+      return true;
+    } else if (filterSubCluster != null && filterSubCluster.equals(homeSubCluster)) {
+      return true;
+    }
+    return false;
   }
 
   @Override

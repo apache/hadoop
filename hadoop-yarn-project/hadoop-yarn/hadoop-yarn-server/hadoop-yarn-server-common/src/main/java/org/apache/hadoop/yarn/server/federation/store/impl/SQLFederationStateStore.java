@@ -743,9 +743,10 @@ public class SQLFederationStateStore implements FederationStateStore {
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER);
       cstmt.setInt("limit_IN", maxAppsInStateStore);
-      String homeSubClusterIN = null;;
-      if (request.getSubClusterId() != null) {
-        homeSubClusterIN = request.getSubClusterId().toString();
+      String homeSubClusterIN = null;
+      SubClusterId subClusterId = request.getSubClusterId();
+      if (subClusterId != null) {
+        homeSubClusterIN = subClusterId.toString();
       }
       cstmt.setString("homeSubCluster_IN", homeSubClusterIN);
 
@@ -757,8 +758,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       while (rs.next()) {
 
         // Extract the output for each tuple
-        String applicationId = rs.getString(1);
-        String homeSubCluster = rs.getString(2);
+        String applicationId = rs.getString("applicationId");
+        String homeSubCluster = rs.getString("homeSubCluster");
 
         appsHomeSubClusters.add(ApplicationHomeSubCluster.newInstance(
             ApplicationId.fromString(applicationId),
