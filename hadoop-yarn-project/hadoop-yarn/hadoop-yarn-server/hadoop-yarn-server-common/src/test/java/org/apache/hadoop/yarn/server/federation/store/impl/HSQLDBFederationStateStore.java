@@ -165,14 +165,16 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE applicationId = applicationID_IN; END";
 
   private static final String SP_GETAPPLICATIONSHOMESUBCLUSTER =
-      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubCluster_IN varchar(256))"
+      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster("
+          + "IN limit_IN int, IN homeSubCluster_IN varchar(256))"
           + " MODIFIES SQL DATA DYNAMIC RESULT SETS 1 BEGIN ATOMIC"
           + " DECLARE result CURSOR FOR"
           + " SELECT applicationId, homeSubCluster"
           + " FROM applicationsHomeSubCluster "
           + " WHERE ROWNUM() <= limit_IN AND "
           + " CASE WHEN homeSubCluster_IN IS NULL THEN 1 = 1 "
-          + " WHEN homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN END; OPEN result; END";
+          + " WHEN homeSubCluster_IN IS NOT NULL "
+          + " THEN homeSubCluster = homeSubCluster_IN END; OPEN result; END";
 
   private static final String SP_DELETEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_deleteApplicationHomeSubCluster("

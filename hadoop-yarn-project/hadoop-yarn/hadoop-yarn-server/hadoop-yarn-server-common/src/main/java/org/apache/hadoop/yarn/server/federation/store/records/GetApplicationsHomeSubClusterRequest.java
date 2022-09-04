@@ -41,7 +41,7 @@ public abstract class GetApplicationsHomeSubClusterRequest {
   @Private
   @Unstable
   public static GetApplicationsHomeSubClusterRequest
-    newInstance(SubClusterId subClusterId) {
+      newInstance(SubClusterId subClusterId) {
     GetApplicationsHomeSubClusterRequest request =
         Records.newRecord(GetApplicationsHomeSubClusterRequest.class);
     request.setSubClusterId(subClusterId);

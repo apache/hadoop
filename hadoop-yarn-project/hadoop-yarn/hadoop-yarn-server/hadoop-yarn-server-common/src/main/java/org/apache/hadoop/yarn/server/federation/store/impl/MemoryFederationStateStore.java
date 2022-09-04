@@ -285,7 +285,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private boolean judgeAdd(SubClusterId filterSubCluster, SubClusterId homeSubCluster) {
     if (filterSubCluster == null) {
       return true;
-    } else if (filterSubCluster != null && filterSubCluster.equals(homeSubCluster)) {
+    } else if (filterSubCluster.equals(homeSubCluster)) {
       return true;
     }
     return false;
