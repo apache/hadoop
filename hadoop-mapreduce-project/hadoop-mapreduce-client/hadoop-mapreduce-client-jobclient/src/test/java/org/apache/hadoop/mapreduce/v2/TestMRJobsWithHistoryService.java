@@ -25,7 +25,7 @@ import java.util.List;
 
 import org.junit.Assert;
 
-import org.apache.avro.AvroRemoteException;
+import org.apache.hadoop.thirdparty.avro.AvroRemoteException;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
