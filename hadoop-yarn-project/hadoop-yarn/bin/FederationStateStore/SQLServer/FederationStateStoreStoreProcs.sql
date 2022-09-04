@@ -111,12 +111,28 @@ IF OBJECT_ID ( '[sp_getApplicationsHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationsHomeSubCluster]
+    @limit int,
+    @homeSubCluster VARCHAR(256)
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
-        SELECT [applicationId], [homeSubCluster], [createTime]
-        FROM [dbo].[applicationsHomeSubCluster]
+        SELECT
+            [applicationId],
+            [homeSubCluster],
+            [createTime]
+        FROM
+        (SELECT
+            [applicationId],
+            [homeSubCluster],
+            [createTime],
+            row_number() over(order by [createTime] desc) as row_num
+        FROM [dbo].[applicationsHomeSubCluster]) AS t
+        WHERE row_num < @limit
+          AND (CASE WHEN @homeSubCluster IS NULL THEN 1
+                    WHEN @homeSubCluster IS NOT NULL
+                    AND [homeSubCluster] = @homeSubCluster
+               THEN 1 END) = 1
     END TRY
 
     BEGIN CATCH
