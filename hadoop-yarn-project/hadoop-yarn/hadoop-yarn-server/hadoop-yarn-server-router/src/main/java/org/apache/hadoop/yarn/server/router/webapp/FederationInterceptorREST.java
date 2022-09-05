@@ -49,10 +49,11 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -61,42 +62,13 @@ import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsEntryList;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
@@ -1455,28 +1427,210 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+    long startTime = clock.getTime();
+
+    Map<SubClusterId, SubClusterInfo> subClustersActive;
+    try {
+      subClustersActive = federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      routerMetrics.incrGetNewReservationFailedRetrieved();
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity(e.getLocalizedMessage()).build();
+    }
+
+    List<SubClusterId> blacklist = new ArrayList<>();
+    for (int i = 0; i < numSubmitRetries; ++i) {
+      SubClusterId subClusterId = null;
+      try {
+        subClusterId = getRandomActiveSubCluster(subClustersActive, blacklist);
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterId,
+            subClustersActive.get(subClusterId).getRMWebServiceAddress());
+        Response response = interceptor.createNewReservation(hsr);
+        LOG.info("createNewReservation try #{} on SubCluster {}.", i, subClusterId);
+        if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+          long stopTime = clock.getTime();
+          routerMetrics.succeededGetNewReservationRetrieved(stopTime - startTime);
+          return response;
+        } else {
+          // Empty response from the ResourceManager.
+          // Blacklist this subCluster for this request.
+          blacklist.add(subClusterId);
+        }
+      } catch (YarnException e) {
+        routerMetrics.incrGetNewReservationFailedRetrieved();
+        LOG.error("createNewReservation try #{} on SubCluster {} error.", i, subClusterId, e);
+      }
+    }
+
+    // return Status.SERVICE_UNAVAILABLE
+    return Response.status(Status.SERVICE_UNAVAILABLE).entity("createNewReservation error").build();
   }
 
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (resContext == null || resContext.getReservationId() == null
+        || resContext.getReservationDefinition() == null || resContext.getQueue() == null) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      String errMsg = "Missing submitReservation resContext or reservationId " +
+          "or reservation definition or queue.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+    String resId = resContext.getReservationId();
+
+    long startTime = clock.getTime();
+    for (int i = 0; i < numSubmitRetries; i++) {
+      try {
+        ReservationId reservationId = ReservationId.parseReservationId(resId);
+        ReservationDefinitionInfo definitionInfo = resContext.getReservationDefinition();
+        ReservationDefinition definition = convertReservationDefinition(definitionInfo);
+
+        // First, Get SubClusterId according to specific strategy.
+        ReservationSubmissionRequest request =
+            ReservationSubmissionRequest.newInstance(definition, resContext.getQueue(), reservationId);
+        SubClusterId subClusterId = policyFacade.getReservationHomeSubCluster(request);
+
+        LOG.info("submitReservation ReservationId {} try #{} on SubCluster {}.",
+            reservationId, i, subClusterId);
+
+        ReservationHomeSubCluster reservationHomeSubCluster =
+            ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+
+        // Second, determine whether the current ReservationId has a corresponding subCluster.
+        // If it does not exist, add it. If it exists, update it.
+        Boolean exists = RouterServerUtil.existsReservationHomeSubCluster(
+            federationFacade, reservationId);
+        if (!exists) {
+          RouterServerUtil.addReservationHomeSubCluster(federationFacade,
+              reservationId, reservationHomeSubCluster);
+        } else {
+          RouterServerUtil.updateReservationHomeSubCluster(federationFacade,
+              subClusterId, reservationId, reservationHomeSubCluster);
+        }
+
+        // Third, Submit a Reservation request to the subCluster
+        SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+            subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+        HttpServletRequest hsrCopy = clone(hsr);
+        Response response = interceptor.submitReservation(resContext, hsrCopy);
+        if (response != null) {
+          LOG.info("Reservation {} submitted on subCluster {}.", reservationId, subClusterId);
+          long stopTime = clock.getTime();
+          routerMetrics.succeededSubmitReservationRetrieved(stopTime - startTime);
+          return response;
+        }
+      } catch (Exception e) {
+        LOG.warn("Unable to submit(try #{}) the Reservation {}.", i, resId, e);
+      }
+    }
+
+    routerMetrics.incrSubmitReservationFailedRetrieved();
+    String msg = String.format("Reservation %s failed to be submitted.", resId);
+    throw new YarnRuntimeException(msg);
+  }
+
+  private ReservationDefinition convertReservationDefinition(ReservationDefinitionInfo definitionInfo) {
+
+    // basic variable
+    long arrival = definitionInfo.getArrival();
+    long deadline = definitionInfo.getDeadline();
+    // ReservationRequests reservationRequests
+    String name = definitionInfo.getReservationName();
+    String recurrenceExpression = definitionInfo.getRecurrenceExpression();
+    Priority priority = Priority.newInstance(definitionInfo.getPriority());
+
+    // reservation requests info
+    List<ReservationRequest> reservationRequestList = new ArrayList<>();
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+    List<ReservationRequestInfo> reservationRequestInfos = reservationRequestsInfo.getReservationRequest();
+    for (ReservationRequestInfo resRequestInfo : reservationRequestInfos) {
+      ResourceInfo resourceInfo = resRequestInfo.getCapability();
+      Resource capability =
+          Resource.newInstance(resourceInfo.getMemorySize(), resourceInfo.getvCores());
+      ReservationRequest reservationRequest = ReservationRequest.newInstance(capability,
+          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(), resRequestInfo.getDuration());
+      reservationRequestList.add(reservationRequest);
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter reservationRequestInterpreter =
+        values[reservationRequestsInfo.getReservationRequestsInterpreter()];
+    ReservationRequests reservationRequests =
+        ReservationRequests.newInstance(reservationRequestList, reservationRequestInterpreter);
+
+    ReservationDefinition definition =
+        ReservationDefinition.newInstance(arrival, deadline, reservationRequests,
+            name, recurrenceExpression, priority);
+
+    return definition;
   }
 
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // parameter verification
+    if (resContext == null || resContext.getReservationId() == null
+        || resContext.getReservationDefinition() == null) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      String errMsg = "Missing updateReservation resContext or reservationId " +
+          " or reservation definition.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    // get ReservationId
+    String reservationId = resContext.getReservationId();
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      Response response = interceptor.updateReservation(resContext, hsrCopy);
+      if (response != null) {
+        return response;
+      }
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowRunTimeException("updateReservation Failed.", e);
+    }
+
+    // throw an exception
+    throw new YarnRuntimeException("updateReservation Failed, reservationId = " + reservationId);
   }
 
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    throw new NotImplementedException("Code is not implemented");
+
+    // parameter verification
+    if (resContext == null || resContext.getReservationId() == null) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      String errMsg = "Missing deleteReservation request or reservationId.";
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+
+    // get ReservationId
+    String reservationId = resContext.getReservationId();
+    try {
+      SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
+      DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+          subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+      HttpServletRequest hsrCopy = clone(hsr);
+      Response response = interceptor.deleteReservation(resContext, hsrCopy);
+      if (response != null) {
+        return response;
+      }
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowRunTimeException("deleteReservation Failed.", e);
+    }
+
+    // throw an exception
+    throw new YarnRuntimeException("deleteReservation Failed, reservationId = " + reservationId);
   }
 
   @Override
@@ -1811,5 +1965,30 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
+  }
+
+  /**
+   * get the HomeSubCluster according to ReservationId.
+   *
+   * @param resId reservationId
+   * @return HomeSubCluster
+   * @throws YarnException on failure
+   */
+  private SubClusterInfo getHomeSubClusterInfoByReservationId(String resId)
+      throws YarnException {
+    try {
+      ReservationId reservationId = ReservationId.parseReservationId(resId);
+      SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
+      if (subClusterId == null) {
+        RouterServerUtil.logAndThrowException(null,
+            "Can't get HomeSubCluster by reservationId %s", resId);
+      }
+      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
+      return subClusterInfo;
+    } catch (YarnException | IOException e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Get HomeSubClusterInfo by reservationId %s failed.", resId);
+    }
+    throw new YarnException("Unable to get subCluster by reservationId = " + resId);
   }
 }
