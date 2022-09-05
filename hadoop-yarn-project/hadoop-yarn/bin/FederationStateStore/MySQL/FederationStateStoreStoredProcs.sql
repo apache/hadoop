@@ -124,16 +124,15 @@ END //
 
 CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubCluster_IN varchar(256))
 BEGIN
+   SET @row_num = 0;
    SELECT
        applicationId, homeSubCluster
-   FROM
-   (SELECT
-        applicationId, homeSubCluster, ROW_NUMBER() OVER (ORDER BY applicationId) AS row_num
-    FROM applicationsHomeSubCluster)
-   WHERE row_num <= limit_IN
-     AND CASE WHEN homeSubCluster_IN IS NULL THEN 1 = 1
-              WHEN homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN
-         END
+   FROM (SELECT
+         applicationId, homeSubCluster,  (@rownum := @rownum + 1) AS row_num
+        FROM applicationsHomeSubCluster) AS t
+        WHERE row_num <= limit_IN
+    AND (CASE WHEN homeSubCluster_IN IS NULL THEN 1 = 1
+              WHEN homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN END);
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(
