@@ -147,6 +147,12 @@ public class MockDefaultRequestInterceptorREST
       CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
   private MockRM mockRM;
 
+  // duration(milliseconds), 1mins
+  public static final long DURATION = 60*1000;
+
+  // Containers 4
+  public static final int NUM_CONTAINERS = 4;
+
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
       throw new ConnectException("RM is stopped");
@@ -844,18 +850,17 @@ public class MockDefaultRequestInterceptorREST
     // arrival time from which the resource(s) can be allocated.
     long arrival = Time.now();
 
-    // duration(milliseconds)
-    long duration = 60000;
-
     // deadline by when the resource(s) must be allocated.
-    long deadline = (long) (arrival + 1.05 * duration);
+    // The reason for choosing 1.05 is because this gives an integer
+    // deadline = arrival + 3000ms
+    long deadline = (long) (arrival + 1.05 * DURATION);
 
     // In this test of reserved resources, we will apply for 4 containers (1 core, 1GB memory)
     // arrival = Time.now(), and make sure deadline - arrival > duration,
     // the current setting is greater than 3000ms
     ReservationSubmissionRequest submissionRequest =
         ReservationSystemTestUtil.createSimpleReservationRequest(
-            reservationID, 4, arrival, deadline, duration);
+            reservationID, NUM_CONTAINERS, arrival, deadline, DURATION);
     clientService.submitReservation(submissionRequest);
 
     // listReservations
