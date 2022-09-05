@@ -22,17 +22,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -232,4 +241,37 @@ public class TestFederationStateStoreFacade {
     }
   }
 
+  @Test
+  public void testStoreNewMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(4567, 7654, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    // check to delete delegationKey
+    facade.removeStoredMasterKey(key);
+    keySet.clear();
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
 }
