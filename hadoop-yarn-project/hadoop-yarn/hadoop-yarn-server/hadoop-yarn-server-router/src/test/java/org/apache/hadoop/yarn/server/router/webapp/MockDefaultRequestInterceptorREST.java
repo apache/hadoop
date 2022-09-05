@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,7 +41,9 @@ import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -97,6 +100,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -124,7 +131,9 @@ public class MockDefaultRequestInterceptorREST
   // down e.g. network issue, failover.
   private boolean isRunning = true;
   private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
+  private Map<ReservationId, SubClusterId> reservationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
+  private AtomicLong resCounter = new AtomicLong();
 
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
@@ -787,5 +796,93 @@ public class MockDefaultRequestInterceptorREST
         Integer.parseInt(limit), summarize, 3);
 
     return appActivitiesInfo;
+  }
+
+  @Override
+  public Response createNewReservation(HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ReservationId resId = ReservationId.newInstance(Time.now(), resCounter.incrementAndGet());
+    LOG.info("Allocated new reservationId: " + resId);
+    NewReservation reservationId = new NewReservation(resId.toString());
+    return Response.status(Status.OK).entity(reservationId).build();
+  }
+
+  @Override
+  public Response submitReservation(ReservationSubmissionRequestInfo resContext, HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (resContext == null || resContext.getReservationId() == null ||
+        resContext.getReservationDefinition() == null || resContext.getQueue() == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    String resId = resContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+    SubClusterId subClusterId = getSubClusterId();
+
+    // Stores the mapping relationship between reservationId and subClusterId
+    reservationMap.put(reservationId, subClusterId);
+
+    // TODO: Need to simulate the ResourseManager for Reservation allocation
+    // Wait for YARN-7614 to finish
+
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response updateReservation(ReservationUpdateRequestInfo resContext, HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (resContext == null || resContext.getReservationId() == null ||
+        resContext.getReservationDefinition() == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    String resId = resContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+
+    if (!reservationMap.containsKey(reservationId)) {
+      throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+    }
+
+    // TODO: Need to simulate the ResourseManager for Reservation allocation
+    // Wait for YARN-7614 to finish
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response deleteReservation(ReservationDeleteRequestInfo resContext, HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (resContext == null || resContext.getReservationId() == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    String resId = resContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+
+    if (!reservationMap.containsKey(reservationId)) {
+      throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+    }
+
+    // TODO: Need to simulate the ResourseManager for Reservation allocation
+    // Wait for YARN-7614 to finish
+    return Response.status(Status.OK).build();
   }
 }
