@@ -362,7 +362,7 @@ org.ehcache:ehcache:3.3.1
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
-org.yaml:snakeyaml:1.16:
+org.yaml:snakeyaml:1.31:
 org.wildfly.openssl:wildfly-openssl:1.0.7.Final
 
 
