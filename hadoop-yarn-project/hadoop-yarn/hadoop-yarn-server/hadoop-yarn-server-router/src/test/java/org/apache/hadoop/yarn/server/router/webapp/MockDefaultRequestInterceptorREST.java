@@ -852,6 +852,7 @@ public class MockDefaultRequestInterceptorREST
 
     // deadline by when the resource(s) must be allocated.
     // The reason for choosing 1.05 is because this gives an integer
+    // DURATION * 0.05 = 3000(ms)
     // deadline = arrival + 3000ms
     long deadline = (long) (arrival + 1.05 * DURATION);
 
