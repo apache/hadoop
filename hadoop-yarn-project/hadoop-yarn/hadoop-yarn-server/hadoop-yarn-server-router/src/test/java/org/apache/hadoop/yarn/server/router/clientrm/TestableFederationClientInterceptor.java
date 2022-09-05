@@ -28,13 +28,16 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -43,6 +46,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
@@ -90,6 +95,7 @@ public class TestableFederationClientInterceptor
         mockRMs.put(subClusterId, mockRM);
       }
       initNodeAttributes(subClusterId, mockRM);
+      initReservationSystem(mockRM);
       return mockRM.getClientRMService();
     }
   }
@@ -159,6 +165,23 @@ public class TestableFederationClientInterceptor
       mgr.addNodeAttributes(nodes);
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private void initReservationSystem(MockRM mockRM) throws YarnException {
+    try {
+      // Ensure that the reserved resources of the RM#Reservation System are allocated
+      String planName = "root.decided";
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan(planName, true);
+
+      GenericTestUtils.waitFor(() -> {
+        Plan plan = reservationSystem.getPlan(planName);
+        Resource resource = plan.getTotalCapacity();
+        return (resource.getMemorySize() > 0 && resource.getVirtualCores() > 0);
+      }, 100, 2000);
+    } catch (TimeoutException | InterruptedException e) {
+      throw new YarnException(e);
     }
   }
 }

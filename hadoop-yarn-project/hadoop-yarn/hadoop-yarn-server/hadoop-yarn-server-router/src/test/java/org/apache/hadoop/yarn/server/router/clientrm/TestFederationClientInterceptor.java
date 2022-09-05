@@ -28,10 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
@@ -132,6 +134,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUt
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -1308,13 +1311,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetNewReservationResponse response = interceptor.getNewReservation(request);
     Assert.assertNotNull(response);
 
-    // allow plan follower to synchronize, manually trigger an assignment
-    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
-    for (MockRM mockRM : mockRMs.values()) {
-      ReservationSystem reservationSystem = mockRM.getReservationSystem();
-      reservationSystem.synchronizePlan("root.decided", true);
-    }
-
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
     ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
@@ -1383,13 +1379,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetNewReservationRequest request = GetNewReservationRequest.newInstance();
     GetNewReservationResponse response = interceptor.getNewReservation(request);
     Assert.assertNotNull(response);
-
-    // allow plan follower to synchronize, manually trigger an assignment
-    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
-    for (MockRM mockRM : mockRMs.values()) {
-      ReservationSystem reservationSystem = mockRM.getReservationSystem();
-      reservationSystem.synchronizePlan("root.decided", true);
-    }
 
     // First Submit Reservation
     ReservationId reservationId = response.getReservationId();
