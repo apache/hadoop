@@ -184,8 +184,8 @@ public class NameNodeResourceChecker {
       }
     } catch (IllegalArgumentException e){
       LOG.warn("The value of " + DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY
-      + " is greater than the total number of existing storage volumes"
-      + " and will result in adding resources and still not being able to turn off safe mode.", e);
+        + " is greater than the total number of existing storage volumes"
+        + " and will result in adding resources and still not being able to turn off safe mode.", e);
     }
     return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
         minimumRedundantVolumes);
