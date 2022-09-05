@@ -948,11 +948,13 @@ public class FederationClientInterceptor
 
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
-        Boolean exists = existsReservationHomeSubCluster(reservationId);
+        Boolean exists = RouterServerUtil.existsReservationHomeSubCluster(federationFacade, reservationId);
         if (!exists) {
-          addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
+          RouterServerUtil.addReservationHomeSubCluster(federationFacade,
+              reservationId, reservationHomeSubCluster);
         } else {
-          updateReservationHomeSubCluster(subClusterId, reservationId, reservationHomeSubCluster);
+          RouterServerUtil.updateReservationHomeSubCluster(federationFacade,
+              subClusterId, reservationId, reservationHomeSubCluster);
         }
 
         // Third, Submit a Reservation request to the subCluster
@@ -1789,50 +1791,5 @@ public class FederationClientInterceptor
   @VisibleForTesting
   public Map<SubClusterId, ApplicationClientProtocol> getClientRMProxies() {
     return clientRMProxies;
-  }
-
-  private Boolean existsReservationHomeSubCluster(ReservationId reservationId) {
-    try {
-      SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
-      if (subClusterId != null) {
-        return true;
-      }
-    } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
-    }
-    return false;
-  }
-
-  private void addReservationHomeSubCluster(ReservationId reservationId,
-      ReservationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      // persist the mapping of reservationId and the subClusterId which has
-      // been selected as its home
-      federationFacade.addReservationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      RouterServerUtil.logAndThrowException(e,
-          "Unable to insert the ReservationId %s into the FederationStateStore.",
-          reservationId);
-    }
-  }
-
-  private void updateReservationHomeSubCluster(SubClusterId subClusterId,
-      ReservationId reservationId, ReservationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      // update the mapping of reservationId and the home subClusterId to
-      // the new subClusterId we have selected
-      federationFacade.updateReservationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      SubClusterId subClusterIdInStateStore =
-          federationFacade.getReservationHomeSubCluster(reservationId);
-      if (subClusterId == subClusterIdInStateStore) {
-        LOG.info("Reservation {} already submitted on SubCluster {}.",
-            reservationId, subClusterId);
-      } else {
-        RouterServerUtil.logAndThrowException(e,
-            "Unable to update the ReservationId %s into the FederationStateStore.",
-            reservationId);
-      }
-    }
   }
 }
