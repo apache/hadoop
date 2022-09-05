@@ -1486,10 +1486,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsr) throws Exception {
 
     if (queue == null || queue.isEmpty()) {
+      routerMetrics.incrListReservationFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
     }
 
     if (reservationId == null || reservationId.isEmpty()) {
+      routerMetrics.incrListReservationFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
@@ -1498,13 +1500,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       HttpServletRequest hsrCopy = clone(hsr);
-      return interceptor.listReservation(queue, reservationId, startTime, endTime,
+      Response response = interceptor.listReservation(queue, reservationId, startTime, endTime,
           includeResourceAllocations, hsrCopy);
+      if (response != null) {
+        return response;
+      }
     } catch (YarnException e) {
+      routerMetrics.incrListReservationFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("listReservation Failed.", e);
     }
 
-    return null;
+    routerMetrics.incrListReservationFailedRetrieved();
+    throw new YarnException("listReservation Failed.");
   }
 
   @Override
