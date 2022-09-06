@@ -126,9 +126,9 @@ AS BEGIN
             [applicationId],
             [homeSubCluster],
             [createTime],
-            row_number() over(order by [createTime] desc) as row_num
+            row_number() over(partition by [homeSubCluster] order by [createTime] desc) as row_num
         FROM [dbo].[applicationsHomeSubCluster]) AS t
-        WHERE row_num < @limit
+        WHERE row_num <= @limit
           AND (CASE WHEN @homeSubCluster IS NULL THEN 1
                     WHEN @homeSubCluster IS NOT NULL AND [homeSubCluster] = @homeSubCluster THEN 1
                ELSE 0 END) = 1
