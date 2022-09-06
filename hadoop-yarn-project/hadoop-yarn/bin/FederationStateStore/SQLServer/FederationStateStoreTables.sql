@@ -77,7 +77,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             CONSTRAINT [pk_subClusterId] PRIMARY KEY
             (
                 [subClusterId]
-            )
+            ),
             CONSTRAINT [uc_lastStartTime] UNIQUE
             (
                 [lastStartTime]
