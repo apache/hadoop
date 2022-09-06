@@ -134,7 +134,7 @@ public class TestLdapGroupsMapping extends TestLdapGroupsMappingBase {
     Attributes attributes = getAttributes();
 
     // Set the groupFilter conf to take the csv.
-    conf.set(GROUP_SEARCH_FILTER_PATTERN,"userDN,userName");
+    conf.set(GROUP_SEARCH_FILTER_PATTERN, "userDN,userName");
 
     // Set the value for userName attribute that is to be used as part of the
     // group filter at argument 1.
