@@ -91,7 +91,7 @@ public class SampleStat {
     }
     else {
       // The Welford method for numerical stability
-      a1 = a0 + (x - a0) / numSamples;
+      a1 = a0 + (x - a0 * nSamples) / numSamples;
       s1 = s0 + (x - a0) * (x - a1);
       a0 = a1;
       s0 = s1;
@@ -117,7 +117,7 @@ public class SampleStat {
    * @return  the arithmetic mean of the samples
    */
   public double mean() {
-    return numSamples > 0 ? (total / numSamples) : 0.0;
+    return numSamples > 0 ? a1 : 0.0;
   }
 
   /**

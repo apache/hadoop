@@ -321,6 +321,25 @@ public class TestMutableMetrics {
     assertGauge("TestAvgVal", 1.5, rb);
   }
 
+  @Test
+  public void testLargeMutableStatAdd() {
+    MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", false);
+
+    long sample = 1000000000000009L;
+    // Sample 100 identical numbers, the mean should be the same as the sample
+    // value. We can check that if the calculation of the mean is not accurate
+    // because the sum of the sample values is too large.
+    for (int i = 0; i < 100; i++) {
+      stat.add(1, sample);
+    }
+    registry.snapshot(rb, false);
+
+    assertCounter("TestNumOps", 100L, rb);
+    assertGauge("TestAvgVal", (double) sample, rb);
+  }
+
   /**
    * Ensure that quantile estimates from {@link MutableQuantiles} are within
    * specified error bounds.
