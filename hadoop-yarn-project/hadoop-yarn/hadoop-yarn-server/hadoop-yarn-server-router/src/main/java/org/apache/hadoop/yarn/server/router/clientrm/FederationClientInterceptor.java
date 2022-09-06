@@ -949,7 +949,7 @@ public class FederationClientInterceptor
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
         Boolean exists = existsReservationHomeSubCluster(reservationId);
-        if (!exists) {
+        if (!exists || i == 0) {
           addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
         } else {
           updateReservationHomeSubCluster(subClusterId, reservationId, reservationHomeSubCluster);
