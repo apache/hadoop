@@ -371,12 +371,23 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       IntBuffer sums = sumsBytes.asIntBuffer();
       sums.position(offset / FSInputChecker.CHECKSUM_SIZE);
       ByteBuffer current = data.duplicate();
-      int numChunks = data.remaining() / bytesPerSum;
+      int numFullChunks = data.remaining() / bytesPerSum;
+      boolean partialChunk = (data.remaining() % bytesPerSum != 0);
+      int totalChunks = numFullChunks;
+      if (partialChunk) {
+        totalChunks++;
+      }
       CRC32 crc = new CRC32();
       // check each chunk to ensure they match
-      for(int c = 0; c < numChunks; ++c) {
+      for(int c = 0; c < totalChunks; ++c) {
         // set the buffer position and the limit
-        current.limit((c + 1) * bytesPerSum);
+        if (c == numFullChunks) {
+          int lastIncompleteChunk = data.remaining() % bytesPerSum;
+          current.limit((c * bytesPerSum) + lastIncompleteChunk);
+        } else {
+          current.limit((c + 1) * bytesPerSum);
+        }
+
         current.position(c * bytesPerSum);
         // compute the crc
         crc.reset();
@@ -396,11 +407,33 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       return data;
     }
 
+    /**
+     * Validates range parameters.
+     * In case of CheckSum FS, we already have calculated
+     * fileLength so failing fast here.
+     * @param ranges requested ranges.
+     * @param fileLen length of file.
+     * @throws EOFException end of file exception.
+     */
+    private void validateRangeRequest(List<? extends FileRange> ranges, long fileLen) throws EOFException {
+      for (FileRange range : ranges) {
+        VectoredReadUtils.validateRangeRequest(range);
+        if (range.getOffset() + range.getLength() > fileLen) {
+          LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+                  range.getOffset(), range.getLength(), file);
+          throw new EOFException("Requested range [" + range.getOffset() + ", "
+                  + range.getLength() + ") is beyond EOF for path " + file);
+        }
+      }
+    }
+
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
+      long length = fs.getFileStatus(file).getLen();
+      validateRangeRequest(ranges, length);
+
       // If the stream doesn't have checksums, just delegate.
-      VectoredReadUtils.validateVectoredReadRanges(ranges);
       if (sums == null) {
         datas.readVectored(ranges, allocate);
         return;
@@ -410,15 +443,18 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       List<CombinedFileRange> dataRanges =
           VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(ranges)), bytesPerSum,
               minSeek, maxReadSizeForVectorReads());
+      // While merging the ranges above, they are rounded up based on the value of bytesPerSum
+      // which leads to some ranges crossing the EOF thus they need to be fixed else it will
+      // cause EOFException during actual reads.
+      for (CombinedFileRange range : dataRanges) {
+        if (range.getOffset() + range.getLength() > length) {
+          range.setLength((int) (length - range.getOffset()));
+        }
+      }
       List<CombinedFileRange> checksumRanges = findChecksumRanges(dataRanges,
           bytesPerSum, minSeek, maxSize);
       sums.readVectored(checksumRanges, allocate);
       datas.readVectored(dataRanges, allocate);
-      // Data read is correct. I have verified content of dataRanges.
-      // There is some bug below here as test (testVectoredReadMultipleRanges)
-      // is failing, should be
-      // somewhere while slicing the merged data into smaller user ranges.
-      // Spend some time figuring out but it is a complex code.
       for(CombinedFileRange checksumRange: checksumRanges) {
         for(FileRange dataRange: checksumRange.getUnderlying()) {
           // when we have both the ranges, validate the checksum
