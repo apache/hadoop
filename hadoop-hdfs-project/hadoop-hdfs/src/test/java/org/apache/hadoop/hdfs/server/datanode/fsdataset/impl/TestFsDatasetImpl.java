@@ -25,6 +25,8 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.fs.DF;
@@ -216,6 +218,7 @@ public class TestFsDatasetImpl {
     this.conf.setLong(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, 0);
     this.conf.set(DFSConfigKeys.DFS_DATANODE_REPLICA_CACHE_ROOT_DIR_KEY,
         replicaCacheRootDir);
+    this.conf.setInt(DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_KEY, 10);
 
     when(datanode.getDataSetLockManager()).thenReturn(manager);
     when(datanode.getConf()).thenReturn(conf);
@@ -474,6 +477,37 @@ public class TestFsDatasetImpl {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testAsyncParallelism() throws InterruptedException {
+    FsVolumeReferences volReferences = dataset.getFsVolumeReferences();
+    FsVolumeImpl firstVolume = (FsVolumeImpl) volReferences.get(0);
+    Semaphore runningThread = new Semaphore(0);
+    Semaphore semaphore = new Semaphore(0);
+    for (int i = 0; i < 100; i++) {
+      dataset.asyncDiskService.execute(firstVolume, () -> {
+        try {
+          semaphore.acquire();
+          runningThread.release();
+        } catch (InterruptedException e) {
+          // ignore
+        }
+      });
+    }
+    ThreadPoolExecutor threadPoolExecutor =
+        dataset.asyncDiskService.getThreadPoolExecutor(firstVolume);
+    Assert.assertEquals(10, threadPoolExecutor.getActiveCount());
+    Assert.assertEquals(10, threadPoolExecutor.getCorePoolSize());
+    Assert.assertEquals(100, dataset.asyncDiskService.countPendingDeletions());
+
+    for (int i = 0; i < 100; i++) {
+      semaphore.release();
+    }
+    // Wait for all thread complete
+    runningThread.acquire(100);
+    Assert.assertEquals(10, threadPoolExecutor.getCorePoolSize());
+    Assert.assertEquals(0, dataset.asyncDiskService.countPendingDeletions());
   }
 
   @Test(timeout = 30000)

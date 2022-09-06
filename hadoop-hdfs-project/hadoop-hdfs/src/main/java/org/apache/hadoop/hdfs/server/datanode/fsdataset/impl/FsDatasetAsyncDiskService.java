@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -165,6 +166,17 @@ class FsDatasetAsyncDiskService {
       count += exec.getTaskCount() - exec.getCompletedTaskCount();
     }
     return count;
+  }
+
+  @VisibleForTesting
+  synchronized ThreadPoolExecutor getThreadPoolExecutor(FsVolumeImpl volume) {
+    if (executors == null) {
+      throw new RuntimeException("AsyncDiskService is already shutdown");
+    }
+    if (volume == null) {
+      throw new RuntimeException("A null volume does not have a executor");
+    }
+    return executors.get(volume.getStorageID());
   }
   
   /**
