@@ -130,9 +130,8 @@ AS BEGIN
         FROM [dbo].[applicationsHomeSubCluster]) AS t
         WHERE row_num < @limit
           AND (CASE WHEN @homeSubCluster IS NULL THEN 1
-                    WHEN @homeSubCluster IS NOT NULL
-                    AND [homeSubCluster] = @homeSubCluster
-               THEN 1 END) = 1
+                    WHEN @homeSubCluster IS NOT NULL AND [homeSubCluster] = @homeSubCluster THEN 1
+               ELSE 0 END) = 1
     END TRY
 
     BEGIN CATCH
