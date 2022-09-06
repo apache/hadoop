@@ -34,7 +34,7 @@ import org.apache.hadoop.util.DurationInfo;
  * It still "claims" to be enabled via {@link #isEnabled()} but
  * it isn't.
  */
-public class DeleteFilesTrashPolicy  extends TrashPolicy {
+public class DeleteFilesTrashPolicy extends TrashPolicy {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DeleteFilesTrashPolicy.class);

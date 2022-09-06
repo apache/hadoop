@@ -172,14 +172,14 @@ public abstract class TrashPolicy extends Configured {
    */
   @SuppressWarnings("ClassReferencesSubclass")
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs) {
+    String scheme = fs.getUri().getScheme();
     String key;
-    key = String.format(FS_TRASH_SCHEMA_CLASSNAME, fs.getScheme());
+    key = String.format(FS_TRASH_SCHEMA_CLASSNAME, scheme);
     if (conf.get(key) == null) {
       // no specific trash policy for this scheme, use the default key
       key = FS_TRASH_CLASSNAME;
     }
     LOG.debug("Looking up trash policy from configuration key {}", key);
-
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         key, TrashPolicyDefault.class, TrashPolicy.class);
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
