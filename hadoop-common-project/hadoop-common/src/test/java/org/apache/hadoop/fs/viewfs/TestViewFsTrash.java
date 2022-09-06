@@ -17,15 +17,23 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
+import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.TrashPolicyDefault;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
+import static org.apache.hadoop.fs.viewfs.Constants.*;
+import static org.junit.Assert.*;
 
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
@@ -65,5 +73,39 @@ public class TestViewFsTrash {
     TestTrash.trashShell(conf, fileSystemTestHelper.getTestRootPath(fsView),
         fsView, new Path(fileSystemTestHelper.getTestRootPath(fsView), ".Trash/Current"));
   }
-  
+
+  @Test
+  public void testLocalizedTrashInMoveToAppropriateTrash() throws IOException {
+    Configuration conf2 = new Configuration(conf);
+
+    // Enable moveToTrash and add a mount point for /data
+    conf2.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    ConfigUtil.addLink(conf2, "/data", new Path(fileSystemTestHelper.getAbsoluteTestRootPath(fsTarget), "data").toUri());
+
+    // Default case. file should be moved to fsTarget.getTrashRoot()/resolvedPath
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, false);
+    FileSystem fsView2 = FileSystem.get(conf2);
+    Path f = new Path("/data/testfile.txt");
+    DataOutputStream out = fsView2.create(f);
+    out.writeBytes("testfile.txt:" + f);
+    out.close();
+    Path resolvedFile = fsView2.resolvePath(f);
+
+    Trash.moveToAppropriateTrash(fsView2, f, conf2);
+    Trash trash = new Trash(fsTarget, conf2);
+    Path movedPath = Path.mergePaths(trash.getCurrentTrashDir(f), resolvedFile);
+    assertTrue("File not in trash", fsTarget.exists(movedPath));
+
+    // Turn on localized trash. File should be moved to viewfs:/data/.Trash/{user}/Current.
+    conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+    fsView2 = FileSystem.get(conf2);
+    out = fsView2.create(f);
+    out.writeBytes("testfile.txt:" + f);
+    out.close();
+
+    Trash.moveToAppropriateTrash(fsView2, f, conf2);
+    trash = new Trash(fsView2, conf2);
+    movedPath = Path.mergePaths(trash.getCurrentTrashDir(f), f);
+    assertTrue("File not in localized trash", fsView2.exists(movedPath));
+  }
 }

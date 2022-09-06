@@ -23,8 +23,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static org.apache.hadoop.fs.viewfs.Constants.*;
 
 /** 
  * Provides a trash facility which supports pluggable Trash policies. 
@@ -94,6 +96,27 @@ public class Trash extends Configured {
       LOG.warn("Failed to get server trash configuration", e);
       throw new IOException("Failed to get server trash configuration", e);
     }
+
+    // Directly use viewfs if localized trash is enabled
+    if (fs instanceof ViewFileSystem &&
+        conf.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+        CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
+      // Save the original config in savedValue for localized trash config.
+      String savedValue = fs.getConf().get(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT);
+      fs.getConf().setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+      Trash trash = new Trash(fs, conf);
+      boolean res = trash.moveToTrash(p);
+
+      // Restore the original value of localized trash config
+      if (savedValue != null) {
+        fs.getConf().set(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, savedValue);
+      } else {
+        fs.getConf().unset(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT);
+      }
+
+      return res;
+    }
+
     Trash trash = new Trash(fullyResolvedFs, conf);
     return trash.moveToTrash(fullyResolvedPath);
   }
