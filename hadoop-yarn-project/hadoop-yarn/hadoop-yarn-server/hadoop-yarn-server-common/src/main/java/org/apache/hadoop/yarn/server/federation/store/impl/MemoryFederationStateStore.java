@@ -269,7 +269,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
     SubClusterId requestSC = request.getSubClusterId();
     List<ApplicationHomeSubCluster> result = applications.keySet().stream()
         .map(applicationId -> generateAppHomeSC(applicationId))
-        .filter(appHomeSC -> judgeAdd(requestSC, appHomeSC.getHomeSubCluster()))
+        .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
         .limit(maxAppsInStateStore)
         .collect(Collectors.toList());
 
@@ -282,12 +282,21 @@ public class MemoryFederationStateStore implements FederationStateStore {
     return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
   }
 
-  private boolean judgeAdd(SubClusterId filterSubCluster, SubClusterId homeSubCluster) {
+  private boolean filterHomeSubCluster(SubClusterId filterSubCluster,
+      SubClusterId homeSubCluster) {
+
+    // If the filter condition is empty,
+    // it means that homeSubCluster needs to be added
     if (filterSubCluster == null) {
       return true;
-    } else if (filterSubCluster.equals(homeSubCluster)) {
+    }
+
+    // If the filter condition filterSubCluster is not empty,
+    // and filterSubCluster is equal to homeSubCluster, it needs to be added
+    if (filterSubCluster.equals(homeSubCluster)) {
       return true;
     }
+
     return false;
   }
 

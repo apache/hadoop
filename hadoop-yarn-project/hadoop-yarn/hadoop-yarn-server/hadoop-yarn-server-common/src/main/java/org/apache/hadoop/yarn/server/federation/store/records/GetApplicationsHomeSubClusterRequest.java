@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.federation.store.records;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.Records;
@@ -54,7 +55,7 @@ public abstract class GetApplicationsHomeSubClusterRequest {
    *
    * @return the subcluster identifier
    */
-  @InterfaceAudience.Public
+  @Public
   @Unstable
   public abstract SubClusterId getSubClusterId();
 

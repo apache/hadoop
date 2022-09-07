@@ -272,7 +272,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       List<String> children = zkManager.getChildren(appsZNode);
       List<ApplicationHomeSubCluster> result =
           children.stream().map(child -> generateAppHomeSC(child))
-          .filter(appHomeSC -> judgeAdd(requestSC, appHomeSC.getHomeSubCluster()))
+          .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
           .limit(maxAppsInStateStore)
           .collect(Collectors.toList());
       long end = clock.getTime();
@@ -300,7 +300,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     return null;
   }
 
-  private boolean judgeAdd(SubClusterId filterSubCluster, SubClusterId homeSubCluster) {
+  private boolean filterHomeSubCluster(SubClusterId filterSubCluster,
+      SubClusterId homeSubCluster) {
     if (filterSubCluster == null) {
       return true;
     } else if (filterSubCluster.equals(homeSubCluster)) {
