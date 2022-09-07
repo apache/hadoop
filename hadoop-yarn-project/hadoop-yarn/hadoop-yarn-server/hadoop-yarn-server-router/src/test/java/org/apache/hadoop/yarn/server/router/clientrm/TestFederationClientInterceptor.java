@@ -1390,7 +1390,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(subClusterId1);
     Assert.assertTrue(subClusters.contains(subClusterId1));
 
-    // First Retry, Repeat the submission
+    // First Retry, repeat the submission
     ReservationSubmissionResponse submissionResponse1 =
         interceptor.submitReservation(rSubmissionRequest);
     Assert.assertNotNull(submissionResponse1);
