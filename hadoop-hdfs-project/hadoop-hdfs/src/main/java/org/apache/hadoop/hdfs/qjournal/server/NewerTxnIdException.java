@@ -15,15 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.qjournal.server;
 
--- Script to drop all the tables from the Federation StateStore in MySQL
+import java.io.IOException;
 
-USE FederationStateStore
+/**
+ * Exception when no edits are available.
+ */
+public class NewerTxnIdException extends IOException {
+  private static final long serialVersionUID = 0L;
 
-DROP TABLE applicationsHomeSubCluster;
-
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
+  public NewerTxnIdException(String msgFormat, Object... msgArgs) {
+    super(String.format(msgFormat, msgArgs));
+  }
+}
