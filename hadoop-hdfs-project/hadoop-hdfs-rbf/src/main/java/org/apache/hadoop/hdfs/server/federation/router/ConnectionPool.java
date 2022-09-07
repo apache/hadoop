@@ -110,7 +110,7 @@ public class ConnectionPool {
   /** Enable using multiple physical socket or not. **/
   private final boolean enableMultiSocket;
   /** StateID alignment context. */
-  private final AlignmentContext alignmentContext;
+  private final PoolAlignmentContext alignmentContext;
 
   /** Map for the protocols and their protobuf implementations. */
   private final static Map<Class<?>, ProtoImpl> PROTO_MAP = new HashMap<>();
@@ -141,7 +141,7 @@ public class ConnectionPool {
 
   protected ConnectionPool(Configuration config, String address,
       UserGroupInformation user, int minPoolSize, int maxPoolSize,
-      float minActiveRatio, Class<?> proto, AlignmentContext alignmentContext)
+      float minActiveRatio, Class<?> proto, PoolAlignmentContext alignmentContext)
       throws IOException {
 
     this.conf = config;
@@ -215,6 +215,14 @@ public class ConnectionPool {
   @VisibleForTesting
   public AtomicInteger getClientIndex() {
     return this.clientIndex;
+  }
+
+  /**
+   * Get the alignment context for this pool
+   * @return Alignment context
+   */
+  public PoolAlignmentContext getPoolAlignmentContext() {
+    return this.alignmentContext;
   }
 
   /**

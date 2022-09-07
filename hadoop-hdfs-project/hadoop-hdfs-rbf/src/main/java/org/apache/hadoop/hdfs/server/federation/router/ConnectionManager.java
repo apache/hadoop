@@ -33,7 +33,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -194,7 +193,8 @@ public class ConnectionManager {
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol, String nsId) throws IOException {
+      String nnAddress, Class<?> protocol, String nsId,
+      Long clientStateId) throws IOException {
 
     // Check if the manager is shutdown
     if (!this.running) {
@@ -224,10 +224,11 @@ public class ConnectionManager {
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
               this.minActiveRatio, protocol,
-              new ClientGSIContext(this.federatedNamespaceIds.getNamespaceId(nsId)));
+              new PoolAlignmentContext(this.federatedNamespaceIds.getNamespaceId(nsId)));
           this.pools.put(connectionId, pool);
           this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
+        pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
       }

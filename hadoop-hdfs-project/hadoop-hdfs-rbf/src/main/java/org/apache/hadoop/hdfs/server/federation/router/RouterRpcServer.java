@@ -255,18 +255,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param conf HDFS Configuration.
    * @param router A router using this RPC server.
    * @param nnResolver The NN resolver instance to determine active NNs in HA.
-   * @param fileResolver File resolver to resolve file paths to subclusters.
+   * @param fResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
   public RouterRpcServer(Configuration conf, Router router,
-      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
+      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
     this.conf = conf;
     this.router = router;
     this.namenodeResolver = nnResolver;
-    this.subclusterResolver = fileResolver;
+    this.subclusterResolver = fResolver;
 
     // RPC server settings
     int handlerCount = this.conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY,
@@ -332,7 +332,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
-        .setAlignmentContext(new RouterStateIdContext(federatedNamespaceIds))
+        .setAlignmentContext(new RouterStateIdContext(conf, federatedNamespaceIds))
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 

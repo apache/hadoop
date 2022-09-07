@@ -74,7 +74,7 @@ public class ClientGSIContext implements AlignmentContext {
    * in responses.
    */
   @Override
-  public void receiveResponseState(RpcResponseHeaderProto header) {
+  public synchronized void receiveResponseState(RpcResponseHeaderProto header) {
     if (header.hasRouterFederatedState()) {
       routerFederatedState = header.getRouterFederatedState();
     } else {
@@ -86,7 +86,7 @@ public class ClientGSIContext implements AlignmentContext {
    * Client side implementation for providing state alignment info in requests.
    */
   @Override
-  public void updateRequestState(RpcRequestHeaderProto.Builder header) {
+  public synchronized void updateRequestState(RpcRequestHeaderProto.Builder header) {
     if (lastSeenStateId.get() != NamespaceStateId.DEFAULT) {
       header.setStateId(lastSeenStateId.get());
     }

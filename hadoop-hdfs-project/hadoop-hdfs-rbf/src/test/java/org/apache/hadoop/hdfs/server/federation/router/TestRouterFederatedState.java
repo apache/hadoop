@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.ipc.AlignmentContext;
@@ -40,7 +39,7 @@ public class TestRouterFederatedState {
     byte[] uuid = ClientId.getClientId();
     Map<String, Long> expectedStateIds = new HashMap<String, Long>() {
       {
-        put("namespace1", 11L );
+        put("namespace1", 11L);
         put("namespace2", 22L);
       }
     };

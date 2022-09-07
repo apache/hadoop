@@ -21,8 +21,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.NamespaceStateId;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos.RouterFederatedStateProto;
@@ -36,67 +34,30 @@ import org.apache.hadoop.thirdparty.protobuf.ByteString;
  * Router clients share and query the entire collection.
  */
 public class FederatedNamespaceIds {
-  private final Map<String, NamespaceStateId> namespaceIdMap = new ConcurrentHashMap<>();
-  private final ReentrantLock lock = new ReentrantLock();
-
-  public void updateStateUsingRequestHeader(RpcHeaderProtos.RpcRequestHeaderProto header) {
-    if (header.hasRouterFederatedState()) {
-      RouterFederatedStateProto federatedState;
-      try {
-        federatedState = RouterFederatedStateProto.parseFrom(header.getRouterFederatedState());
-      } catch (InvalidProtocolBufferException e) {
-        throw new RuntimeException(e);
-      }
-      lock.lock();
-      try {
-        federatedState.getNamespaceStateIdsMap().forEach((nsId, stateId) -> {
-          if (!namespaceIdMap.containsKey(nsId)) {
-            namespaceIdMap.putIfAbsent(nsId, new NamespaceStateId());
-          }
-          namespaceIdMap.get(nsId).update(stateId);
-        });
-      } finally {
-        lock.unlock();
-      }
-
-    }
-  }
+  private final ConcurrentHashMap<String, NamespaceStateId> namespaceIdMap =
+      new ConcurrentHashMap<>();
 
   public void setResponseHeaderState(RpcHeaderProtos.RpcResponseHeaderProto.Builder headerBuilder) {
+    if (namespaceIdMap.isEmpty()) {
+      return;
+    }
     RouterFederatedStateProto.Builder federatedStateBuilder =
         RouterFederatedStateProto.newBuilder();
-    lock.lock();
-    try {
-      namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
-    } finally {
-      lock.unlock();
-    }
+    namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
     headerBuilder.setRouterFederatedState(federatedStateBuilder.build().toByteString());
   }
 
   public NamespaceStateId getNamespaceId(String nsId) {
-    lock.lock();
-    try {
-      namespaceIdMap.putIfAbsent(nsId, new NamespaceStateId());
-    } finally {
-      lock.unlock();
-    }
-    return namespaceIdMap.get(nsId);
+    return namespaceIdMap.computeIfAbsent(nsId, key -> new NamespaceStateId());
   }
 
   public void removeNamespaceId(String nsId) {
-    lock.lock();
-    try {
-      namespaceIdMap.remove(nsId);
-    } finally {
-      lock.unlock();
-    }
+    namespaceIdMap.remove(nsId);
   }
 
   /**
-   * Utility function to view state of routerFederatedState field in RPC headers.
+   * Utility function to parse routerFederatedState field in RPC headers.
    */
-  @VisibleForTesting
   public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
     if (byteString != null) {
       RouterFederatedStateProto federatedState;
@@ -109,5 +70,9 @@ public class FederatedNamespaceIds {
     } else {
       return Collections.emptyMap();
     }
+  }
+
+  public int size() {
+    return namespaceIdMap.size();
   }
 }

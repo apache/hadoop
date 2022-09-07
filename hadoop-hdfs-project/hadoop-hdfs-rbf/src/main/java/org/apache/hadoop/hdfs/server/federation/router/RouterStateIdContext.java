@@ -23,6 +23,7 @@ import java.util.HashSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
@@ -30,11 +31,10 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
-import static org.apache.hadoop.ipc.RpcConstants.REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
 
 /**
- * This is the router implementation responsible for passing
- * client state id to next level.
+ * This is the router implementation to hold the state Ids for all
+ * namespaces. This object is only updated by responses from NameNodes.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -42,8 +42,12 @@ class RouterStateIdContext implements AlignmentContext {
 
   private final HashSet<String> coordinatedMethods;
   private final FederatedNamespaceIds federatedNamespaceIds;
+  /**
+   * Size limit for the map of state Ids to send to clients.
+   */
+  private final int maxSizeOfFederatedStateToPropagate;
 
-  RouterStateIdContext(FederatedNamespaceIds federatedNamespaceIds) {
+  RouterStateIdContext(Configuration conf, FederatedNamespaceIds federatedNamespaceIds) {
     this.federatedNamespaceIds = federatedNamespaceIds;
     this.coordinatedMethods = new HashSet<>();
     // For now, only ClientProtocol methods can be coordinated, so only checking
@@ -54,11 +58,17 @@ class RouterStateIdContext implements AlignmentContext {
         coordinatedMethods.add(method.getName());
       }
     }
+
+    maxSizeOfFederatedStateToPropagate =
+        conf.getInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT);
   }
 
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
-    federatedNamespaceIds.setResponseHeaderState(header);
+    if (federatedNamespaceIds.size() <= maxSizeOfFederatedStateToPropagate) {
+      federatedNamespaceIds.setResponseHeaderState(header);
+    }
   }
 
   @Override
@@ -71,14 +81,15 @@ class RouterStateIdContext implements AlignmentContext {
     // Do nothing.
   }
 
+  /**
+   * Routers do not update their state using information from clients
+   * to avoid clients interfering with one another.
+   */
   @Override
   public long receiveRequestState(RpcRequestHeaderProto header,
       long clientWaitTime) throws RetriableException {
-    federatedNamespaceIds.updateStateUsingRequestHeader(header);
-    if (header.hasRouterFederatedState()) {
-      return REQUEST_HEADER_NAMESPACE_STATEIDS_SET;
-    }
-    return header.getStateId();
+    // Do nothing.
+    return 0;
   }
 
   @Override
