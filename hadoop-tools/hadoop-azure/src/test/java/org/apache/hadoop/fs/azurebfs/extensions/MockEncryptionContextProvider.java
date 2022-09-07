@@ -47,9 +47,9 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     pathToContextMap.put(path, newContext);
     byte[] newKey = new byte[ENCRYPTION_KEY_LEN];
     new Random().nextBytes(newKey);
-    ABFSKey key = new ABFSKey(newKey);
+    ABFSKey key = new MockABFSKey(newKey);
     contextToKeyMap.put(newContext, key);
-    return new ABFSKey(newContext.getBytes(StandardCharsets.UTF_8));
+    return new MockABFSKey(newContext.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override
@@ -71,31 +71,13 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     contextToKeyMap = null;
   }
 
-  class Key implements SecretKey {
-
-    private final byte[] key;
-
-    Key(byte[] secret) {
-      key = secret;
-    }
-    @Override
-    public String getAlgorithm() {
-      return null;
-    }
-
-    @Override
-    public String getFormat() {
-      return null;
-    }
-
-    @Override
-    public byte[] getEncoded() {
-      return key;
+  class MockABFSKey extends ABFSKey {
+    public MockABFSKey(byte[] bytes) {
+      super(bytes);
     }
 
     @Override
     public void destroy() {
-      Arrays.fill(key, (byte) 0);
     }
   }
 
