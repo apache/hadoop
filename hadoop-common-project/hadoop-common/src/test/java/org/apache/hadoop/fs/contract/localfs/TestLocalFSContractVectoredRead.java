@@ -76,7 +76,9 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     validateCheckReadException(testPath, length, smallFileRanges);
   }
 
-  private void validateCheckReadException(Path testPath, int length, List<FileRange> ranges) throws Exception {
+  private void validateCheckReadException(Path testPath,
+                                          int length,
+                                          List<FileRange> ranges) throws Exception {
     LocalFileSystem localFs = (LocalFileSystem) getFileSystem();
     final byte[] datasetCorrect = ContractTestUtils.dataset(length, 'a', 32);
     try (FSDataOutputStream out = localFs.create(testPath, true)){
@@ -101,7 +103,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       // Expect checksum exception when data is updated directly through
       // raw local fs instance.
       intercept(ChecksumException.class,
-              () -> validateVectoredReadResult(ranges, datasetCorrupted));
+          () -> validateVectoredReadResult(ranges, datasetCorrupted));
     }
   }
   @Test
@@ -115,12 +117,12 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     }
     Path checksumPath = localFs.getChecksumFile(testPath);
     Assertions.assertThat(localFs.exists(checksumPath))
-            .describedAs("Checksum file should be present")
+            .describedAs("Checksum file should be present at {} ", checksumPath)
             .isTrue();
     CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
     List<FileRange> smallRange = new ArrayList<>();
     smallRange.add(FileRange.createFileRange(1000, 71));
-    try ( FSDataInputStream in = fis.get()) {
+    try (FSDataInputStream in = fis.get()){
       in.readVectored(smallRange, getAllocate());
       validateVectoredReadResult(smallRange, datasetCorrect);
     }

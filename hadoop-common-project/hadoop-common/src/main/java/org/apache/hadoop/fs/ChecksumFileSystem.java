@@ -174,6 +174,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private static final int HEADER_LENGTH = 8;
 
     private int bytesPerSum = 1;
+    private long fileLen = -1L;
 
     public ChecksumFSInputChecker(ChecksumFileSystem fs, Path file)
       throws IOException {
@@ -321,6 +322,18 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
+     * Calculate length of file if not already cached.
+     * @return file length.
+     * @throws IOException any IOE.
+     */
+    private long getFileLength() throws IOException {
+      if (fileLen == -1L) {
+        fileLen = fs.getFileStatus(file).getLen();
+      }
+      return fileLen;
+    }
+
+    /**
      * Find the checksum ranges that correspond to the given data ranges.
      * @param dataRanges the input data ranges, which are assumed to be sorted
      *                   and non-overlapping
@@ -372,7 +385,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       sums.position(offset / FSInputChecker.CHECKSUM_SIZE);
       ByteBuffer current = data.duplicate();
       int numFullChunks = data.remaining() / bytesPerSum;
-      boolean partialChunk = (data.remaining() % bytesPerSum != 0);
+      boolean partialChunk = ((data.remaining() % bytesPerSum) != 0);
       int totalChunks = numFullChunks;
       if (partialChunk) {
         totalChunks++;
@@ -380,15 +393,19 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       CRC32 crc = new CRC32();
       // check each chunk to ensure they match
       for(int c = 0; c < totalChunks; ++c) {
-        // set the buffer position and the limit
+        // set the buffer position to the start of every chunk.
+        current.position(c * bytesPerSum);
+
         if (c == numFullChunks) {
+          // During last chunk, there may be less than chunk size
+          // data preset, so setting the limit accordingly.
           int lastIncompleteChunk = data.remaining() % bytesPerSum;
           current.limit((c * bytesPerSum) + lastIncompleteChunk);
         } else {
+          // set the buffer limit to end of every chunk.
           current.limit((c + 1) * bytesPerSum);
         }
 
-        current.position(c * bytesPerSum);
         // compute the crc
         crc.reset();
         crc.update(current);
@@ -415,14 +432,15 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      * @param fileLen length of file.
      * @throws EOFException end of file exception.
      */
-    private void validateRangeRequest(List<? extends FileRange> ranges, long fileLen) throws EOFException {
+    private void validateRangeRequest(List<? extends FileRange> ranges,
+                                      long fileLen) throws EOFException {
       for (FileRange range : ranges) {
         VectoredReadUtils.validateRangeRequest(range);
         if (range.getOffset() + range.getLength() > fileLen) {
-          LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+          final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
                   range.getOffset(), range.getLength(), file);
-          throw new EOFException("Requested range [" + range.getOffset() + ", "
-                  + range.getLength() + ") is beyond EOF for path " + file);
+          LOG.warn(errMsg);
+          throw new EOFException(errMsg);
         }
       }
     }
@@ -430,7 +448,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
-      long length = fs.getFileStatus(file).getLen();
+      final long length = getFileLength();
       validateRangeRequest(ranges, length);
 
       // If the stream doesn't have checksums, just delegate.

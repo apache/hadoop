@@ -1103,10 +1103,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void validateRangeRequest(FileRange range) throws EOFException {
     VectoredReadUtils.validateRangeRequest(range);
     if(range.getOffset() + range.getLength() > contentLength) {
-      LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+      final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
               range.getOffset(), range.getLength(), pathStr);
-      throw new EOFException("Requested range [" + range.getOffset() +", "
-              + range.getLength() + ") is beyond EOF for path " + pathStr);
+      LOG.warn(errMsg);
+      throw new EOFException(errMsg);
     }
   }
 
