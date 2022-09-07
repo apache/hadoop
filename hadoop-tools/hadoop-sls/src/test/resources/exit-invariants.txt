@@ -1,8 +1,0 @@
-ActiveApplications >= 0
-AppsCompleted >= 0
-AppsFailed >= 0
-AppsKilled >= 0
-AppsPending >= 0
-AppsRunning >= 0
-AppsSubmitted >= 0
-PendingContainers >= 0

@@ -1,6 +1,0 @@
-+10hdfscreate/tmp/test1 0.0.0.0
-+20hdfsmkdirs/tmp/testDir 0.0.0.0
-+30hdfsrename/tmp/testDir/tmp/testDirRenamed0.0.0.0
-+40hdfs@REALM.COMmkdirs/tmp/testDir2 0.0.0.0
-+50hdfs/127.0.0.1@REALM.COMmkdirs/tmp/testDir3 0.0.0.0
-+60otherUsermkdirs/denied 0.0.0.0

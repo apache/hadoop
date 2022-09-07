@@ -1,6 +1,0 @@
-1970-01-01 00:00:01,010 INFO FSNamesystem.audit: allowed=true	ugi=hdfs	ip=/0.0.0.0	cmd=create	src=/tmp/test1	dst=null	perm=null	proto=rpc
-1970-01-01 00:00:01,020 INFO FSNamesystem.audit: allowed=true	ugi=hdfs	ip=/0.0.0.0	cmd=mkdirs	src=/tmp/testDir	dst=null	perm=null	proto=rpc
-1970-01-01 00:00:01,030 INFO FSNamesystem.audit: allowed=true	ugi=hdfs	ip=/0.0.0.0	cmd=rename	src=/tmp/testDir	dst=/tmp/testDirRenamed	perm=null	proto=rpc
-1970-01-01 00:00:01,040 INFO FSNamesystem.audit: allowed=true	ugi=hdfs@REALM.COM	ip=/0.0.0.0	cmd=mkdirs	src=/tmp/testDir2	dst=null	perm=null	proto=rpc
-1970-01-01 00:00:01,050 INFO FSNamesystem.audit: allowed=true	ugi=hdfs/127.0.0.1@REALM.COM	ip=/0.0.0.0	cmd=mkdirs	src=/tmp/testDir3	dst=null	perm=null	proto=rpc
-1970-01-01 00:00:01,060 INFO FSNamesystem.audit: allowed=true	ugi=otherUser	ip=/0.0.0.0	cmd=mkdirs	src=/denied	dst=null	perm=null	proto=rpc
