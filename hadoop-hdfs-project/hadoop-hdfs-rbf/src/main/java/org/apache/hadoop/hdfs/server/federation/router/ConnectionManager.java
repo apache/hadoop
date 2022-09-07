@@ -73,6 +73,14 @@ public class ConnectionManager {
 
   /** Queue for creating new connections. */
   private final BlockingQueue<ConnectionPool> creatorQueue;
+  /**
+   * Global federated namespace context for router.
+   */
+  private final RouterStateIdContext routerStateIdContext;
+  /**
+   * Map from connection pool ID to namespace.
+   */
+  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -85,15 +93,19 @@ public class ConnectionManager {
   /** If the connection manager is running. */
   private boolean running = false;
 
+  public ConnectionManager(Configuration config) {
+    this(config, new RouterStateIdContext(config));
+  }
 
   /**
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config) {
+  public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
-
+    this.routerStateIdContext = routerStateIdContext;
+    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -160,6 +172,10 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
+      for (String nsID: connectionPoolToNamespaceMap.values()) {
+        routerStateIdContext.removeNamespaceStateId(nsID);
+      }
+      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
@@ -172,12 +188,12 @@ public class ConnectionManager {
    * @param ugi User group information.
    * @param nnAddress Namenode address for the connection.
    * @param protocol Protocol for the connection.
+   * @param nsId Nameservice identity.
    * @return Proxy client to connect to nnId as UGI.
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol) throws IOException {
-
+      String nnAddress, Class<?> protocol, String nsId) throws IOException {
     // Check if the manager is shutdown
     if (!this.running) {
       LOG.error(
@@ -205,9 +221,13 @@ public class ConnectionManager {
         if (pool == null) {
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol);
+              this.minActiveRatio, protocol,
+              new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
+          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
+        long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
+        pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
       }
@@ -430,6 +450,11 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
+            String nsID = connectionPoolToNamespaceMap.get(poolId);
+            connectionPoolToNamespaceMap.remove(poolId);
+            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
+              routerStateIdContext.removeNamespaceStateId(nsID);
+            }
           }
         } finally {
           writeLock.unlock();
