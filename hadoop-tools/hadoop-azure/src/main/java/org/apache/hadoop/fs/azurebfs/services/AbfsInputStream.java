@@ -701,6 +701,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized void close() throws IOException {
     LOG.debug("Closing {}", this);
     closed = true;
+    ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
     try {
       if (encryptionAdapter != null) encryptionAdapter.destroy();
     } catch (DestroyFailedException e) {
@@ -708,7 +709,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           "Could not destroy encryptionContext: " + e.getMessage());
     } finally {
         buffer = null; // de-reference the buffer so it can be GC'ed sooner
-        ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
       }
   }
 
