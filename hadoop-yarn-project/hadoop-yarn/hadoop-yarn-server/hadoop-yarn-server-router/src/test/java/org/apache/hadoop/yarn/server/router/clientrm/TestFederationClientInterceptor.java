@@ -1308,13 +1308,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetNewReservationResponse response = interceptor.getNewReservation(request);
     Assert.assertNotNull(response);
 
-    // allow plan follower to synchronize, manually trigger an assignment
-    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
-    for (MockRM mockRM : mockRMs.values()) {
-      ReservationSystem reservationSystem = mockRM.getReservationSystem();
-      reservationSystem.synchronizePlan("root.decided", true);
-    }
-
     // Submit Reservation
     ReservationId reservationId = response.getReservationId();
     ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
@@ -1384,13 +1377,6 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     GetNewReservationResponse response = interceptor.getNewReservation(request);
     Assert.assertNotNull(response);
 
-    // allow plan follower to synchronize, manually trigger an assignment
-    Map<SubClusterId, MockRM> mockRMs = interceptor.getMockRMs();
-    for (MockRM mockRM : mockRMs.values()) {
-      ReservationSystem reservationSystem = mockRM.getReservationSystem();
-      reservationSystem.synchronizePlan("root.decided", true);
-    }
-
     // First Submit Reservation
     ReservationId reservationId = response.getReservationId();
     ReservationDefinition rDefinition = createReservationDefinition(1024, 1);
@@ -1404,10 +1390,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertNotNull(subClusterId1);
     Assert.assertTrue(subClusters.contains(subClusterId1));
 
-    // First Retry
+    // First Retry, Repeat the submission
     ReservationSubmissionResponse submissionResponse1 =
         interceptor.submitReservation(rSubmissionRequest);
     Assert.assertNotNull(submissionResponse1);
+
+    // Expect reserved clusters to be consistent
     SubClusterId subClusterId2 = stateStoreUtil.queryReservationHomeSC(reservationId);
     Assert.assertNotNull(subClusterId2);
     Assert.assertEquals(subClusterId1, subClusterId2);
