@@ -66,5 +66,7 @@ public class ResilientTrashPolicy extends TrashPolicyDefault {
         throw e;
       }
     }
+
+    // TODO add cleanup
   }
 }
