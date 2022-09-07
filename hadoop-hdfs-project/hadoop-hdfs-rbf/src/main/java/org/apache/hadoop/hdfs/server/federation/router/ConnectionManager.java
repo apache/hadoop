@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
@@ -73,6 +74,14 @@ public class ConnectionManager {
 
   /** Queue for creating new connections. */
   private final BlockingQueue<ConnectionPool> creatorQueue;
+  /**
+   * Store for NamespaceIds to use with observer namenodes.
+   */
+  private final FederatedNamespaceIds federatedNamespaceIds;
+  /**
+   * Maps from connection pool ID to namespace.
+   */
+  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -85,15 +94,19 @@ public class ConnectionManager {
   /** If the connection manager is running. */
   private boolean running = false;
 
+  public ConnectionManager(Configuration config) {
+    this(config, new FederatedNamespaceIds());
+  }
 
   /**
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config) {
+  public ConnectionManager(Configuration config, FederatedNamespaceIds federatedNamespaceIds) {
     this.conf = config;
-
+    this.federatedNamespaceIds = federatedNamespaceIds;
+    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -160,6 +173,10 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
+      for (String nsID: connectionPoolToNamespaceMap.values()) {
+        federatedNamespaceIds.removeNamespaceId(nsID);
+      }
+      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
@@ -172,11 +189,12 @@ public class ConnectionManager {
    * @param ugi User group information.
    * @param nnAddress Namenode address for the connection.
    * @param protocol Protocol for the connection.
+   * @param nsId Nameservice identity.
    * @return Proxy client to connect to nnId as UGI.
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol) throws IOException {
+      String nnAddress, Class<?> protocol, String nsId) throws IOException {
 
     // Check if the manager is shutdown
     if (!this.running) {
@@ -205,8 +223,10 @@ public class ConnectionManager {
         if (pool == null) {
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol);
+              this.minActiveRatio, protocol,
+              new ClientGSIContext(this.federatedNamespaceIds.getNamespaceId(nsId)));
           this.pools.put(connectionId, pool);
+          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
       } finally {
         writeLock.unlock();
@@ -430,6 +450,11 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
+            String nsID = connectionPoolToNamespaceMap.get(poolId);
+            connectionPoolToNamespaceMap.remove(poolId);
+            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
+              federatedNamespaceIds.removeNamespaceId(nsID);
+            }
           }
         } finally {
           writeLock.unlock();

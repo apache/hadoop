@@ -37,7 +37,9 @@ public class RpcConstants {
   
   
   public static final int INVALID_RETRY_COUNT = -1;
-  
+  // Special state ID value to indicate client request header has routerFederatedState set.
+  public static final long REQUEST_HEADER_NAMESPACE_STATEIDS_SET = -2L;
+
  /**
   * The Rpc-connection header is as follows 
   * +----------------------------------+

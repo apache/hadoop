@@ -25,7 +25,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.LongAccumulator;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Global State Id context for the client.
@@ -37,8 +37,17 @@ import java.util.concurrent.atomic.LongAccumulator;
 @InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
-  private final LongAccumulator lastSeenStateId =
-      new LongAccumulator(Math::max, Long.MIN_VALUE);
+  private final NamespaceStateId lastSeenStateId;
+  private ByteString routerFederatedState;
+
+  public ClientGSIContext() {
+    this(new NamespaceStateId());
+  }
+
+  public ClientGSIContext(NamespaceStateId lastSeenStateId) {
+    this.lastSeenStateId = lastSeenStateId;
+    routerFederatedState = null;
+  }
 
   @Override
   public long getLastSeenStateId() {
@@ -66,7 +75,11 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcResponseHeaderProto header) {
-    lastSeenStateId.accumulate(header.getStateId());
+    if (header.hasRouterFederatedState()) {
+      routerFederatedState = header.getRouterFederatedState();
+    } else {
+      lastSeenStateId.update(header.getStateId());
+    }
   }
 
   /**
@@ -74,7 +87,12 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcRequestHeaderProto.Builder header) {
-    header.setStateId(lastSeenStateId.longValue());
+    if (lastSeenStateId.get() != NamespaceStateId.DEFAULT) {
+      header.setStateId(lastSeenStateId.get());
+    }
+    if (routerFederatedState != null) {
+      header.setRouterFederatedState(routerFederatedState);
+    }
   }
 
   /**
