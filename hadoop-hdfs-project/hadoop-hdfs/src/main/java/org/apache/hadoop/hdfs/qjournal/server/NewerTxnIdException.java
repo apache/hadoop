@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,9 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.qjournal.server;
+
+import java.io.IOException;
 
 /**
- * Resource handling plugins used internal to the Hadoop build.
- * IA.Private (build structure encourages not using the actual annotations)
+ * Exception when no edits are available.
  */
-package org.apache.hadoop.maven.plugin.shade.resource;
+public class NewerTxnIdException extends IOException {
+  private static final long serialVersionUID = 0L;
+
+  public NewerTxnIdException(String msgFormat, Object... msgArgs) {
+    super(String.format(msgFormat, msgArgs));
+  }
+}

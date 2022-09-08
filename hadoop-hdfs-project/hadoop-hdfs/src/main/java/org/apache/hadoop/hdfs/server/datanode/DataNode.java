@@ -160,6 +160,7 @@ import org.apache.hadoop.hdfs.server.datanode.checker.StorageLocationChecker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.BlockPoolSlice;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -1439,7 +1440,7 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     // Try to get the ugi in the RPC call.
-    UserGroupInformation callerUgi = ipcServer.getRemoteUser();
+    UserGroupInformation callerUgi = Server.getRemoteUser();
     if (callerUgi == null) {
       // This is not from RPC.
       callerUgi = UserGroupInformation.getCurrentUser();
