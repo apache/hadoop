@@ -27,33 +27,29 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class SampleStat {
   private final MinMax minmax = new MinMax();
   private long numSamples = 0;
-  private double a0, a1, s0, s1, total;
+  private double mean, s;
 
   /**
    * Construct a new running sample stat
    */
   public SampleStat() {
-    a0 = s0 = 0.0;
-    total = 0.0;
+    mean = 0.0;
+    s = 0.0;
   }
 
   public void reset() {
     numSamples = 0;
-    a0 = s0 = 0.0;
-    total = 0.0;
+    mean = 0.0;
+    s = 0.0;
     minmax.reset();
   }
 
   // We want to reuse the object, sometimes.
-  void reset(long numSamples, double a0, double a1, double s0, double s1,
-      double total, MinMax minmax) {
-    this.numSamples = numSamples;
-    this.a0 = a0;
-    this.a1 = a1;
-    this.s0 = s0;
-    this.s1 = s1;
-    this.total = total;
-    this.minmax.reset(minmax);
+  void reset(long numSamples1, double mean1, double s1, MinMax minmax1) {
+    numSamples = numSamples1;
+    mean = mean1;
+    s = s1;
+    minmax.reset(minmax1);
   }
 
   /**
@@ -61,7 +57,7 @@ public class SampleStat {
    * @param other the destination to hold our values
    */
   public void copyTo(SampleStat other) {
-    other.reset(numSamples, a0, a1, s0, s1, total, minmax);
+    other.reset(numSamples, mean, s, minmax);
   }
 
   /**
@@ -78,24 +74,22 @@ public class SampleStat {
    * Add some sample and a partial sum to the running stat.
    * Note, min/max is not evaluated using this method.
    * @param nSamples  number of samples
-   * @param x the partial sum
+   * @param xTotal the partial sum
    * @return  self
    */
-  public SampleStat add(long nSamples, double x) {
+  public SampleStat add(long nSamples, double xTotal) {
     numSamples += nSamples;
-    total += x;
 
-    if (numSamples == 1) {
-      a0 = a1 = x;
-      s0 = 0.0;
-    }
-    else {
-      // The Welford method for numerical stability
-      a1 = a0 + (x - a0) / numSamples;
-      s1 = s0 + (x - a0) * (x - a1);
-      a0 = a1;
-      s0 = s1;
-    }
+    // use the weighted incremental version of Welford's algorithm to get
+    // numerical stability while treating the samples as being weighted
+    // by nSamples
+    // see https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+
+    double x = xTotal / nSamples;
+    double meanOld = mean;
+
+    mean += ((double) nSamples / numSamples) * (x - meanOld);
+    s += nSamples * (x - meanOld) * (x - mean);
     return this;
   }
 
@@ -110,21 +104,21 @@ public class SampleStat {
    * @return the total of all samples added
    */
   public double total() {
-    return total;
+    return mean * numSamples;
   }
 
   /**
    * @return  the arithmetic mean of the samples
    */
   public double mean() {
-    return numSamples > 0 ? (total / numSamples) : 0.0;
+    return numSamples > 0 ? mean : 0.0;
   }
 
   /**
    * @return  the variance of the samples
    */
   public double variance() {
-    return numSamples > 1 ? s1 / (numSamples - 1) : 0.0;
+    return numSamples > 1 ? s / (numSamples - 1) : 0.0;
   }
 
   /**
