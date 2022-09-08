@@ -17,16 +17,13 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -269,6 +266,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
     SubClusterId requestSC = request.getSubClusterId();
     List<ApplicationHomeSubCluster> result = applications.keySet().stream()
         .map(applicationId -> generateAppHomeSC(applicationId))
+        .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
         .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
         .limit(maxAppsInStateStore)
         .collect(Collectors.toList());
@@ -279,7 +277,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
     SubClusterId subClusterId = applications.get(applicationId);
-    return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), subClusterId);
   }
 
   private boolean filterHomeSubCluster(SubClusterId filterSubCluster,

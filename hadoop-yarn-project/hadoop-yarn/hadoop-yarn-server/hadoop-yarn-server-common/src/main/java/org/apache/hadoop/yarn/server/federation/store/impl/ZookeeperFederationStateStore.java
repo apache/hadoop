@@ -20,14 +20,12 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -272,6 +270,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       List<String> children = zkManager.getChildren(appsZNode);
       List<ApplicationHomeSubCluster> result =
           children.stream().map(child -> generateAppHomeSC(child))
+          .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
           .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
           .limit(maxAppsInStateStore)
           .collect(Collectors.toList());
@@ -292,7 +291,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       ApplicationId applicationId = ApplicationId.fromString(appId);
       SubClusterId homeSubCluster = getApp(applicationId);
       ApplicationHomeSubCluster app =
-          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
+          ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), homeSubCluster);
       return app;
     } catch (Exception ex) {
       LOG.error("get homeSubCluster by appId = {}.", appId);
