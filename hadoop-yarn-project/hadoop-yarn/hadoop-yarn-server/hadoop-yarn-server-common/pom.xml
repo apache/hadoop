@@ -169,6 +169,7 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>copy-site</id>
             <phase>pre-site</phase>
             <goals>
               <goal>run</goal>
@@ -176,6 +177,18 @@
             <configuration>
               <tasks>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-sql</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreDatabase.sql" todir="src/test/resources"/>
               </tasks>
             </configuration>
           </execution>
