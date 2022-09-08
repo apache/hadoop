@@ -188,10 +188,10 @@ public class TestableFederationClientInterceptor
     } catch (TimeoutException | InterruptedException e) {
       throw new YarnException(e);
     }
- }
- 
- @Override
- public void shutdown() {
+  }
+
+  @Override
+  public void shutdown() {
     if (mockRMs != null && !mockRMs.isEmpty()) {
       for (Map.Entry<SubClusterId, MockRM> item : mockRMs.entrySet()) {
         SubClusterId subClusterId = item.getKey();
