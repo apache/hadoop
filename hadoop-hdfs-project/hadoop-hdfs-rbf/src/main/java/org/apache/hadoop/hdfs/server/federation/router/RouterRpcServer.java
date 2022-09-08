@@ -255,18 +255,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param conf HDFS Configuration.
    * @param router A router using this RPC server.
    * @param nnResolver The NN resolver instance to determine active NNs in HA.
-   * @param fResolver File resolver to resolve file paths to subclusters.
+   * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
   public RouterRpcServer(Configuration conf, Router router,
-      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fResolver)
+      ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
     this.conf = conf;
     this.router = router;
     this.namenodeResolver = nnResolver;
-    this.subclusterResolver = fResolver;
+    this.subclusterResolver = fileResolver;
 
     // RPC server settings
     int handlerCount = this.conf.getInt(DFS_ROUTER_HANDLER_COUNT_KEY,
@@ -321,7 +321,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
-    FederatedNamespaceIds federatedNamespaceIds = new FederatedNamespaceIds();
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -332,7 +332,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
-        .setAlignmentContext(new RouterStateIdContext(conf, federatedNamespaceIds))
+        .setAlignmentContext(routerStateIdContext)
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
@@ -386,7 +386,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router,
-        this.namenodeResolver, this.rpcMonitor, federatedNamespaceIds);
+        this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
 
     // Initialize modules
     this.quotaCall = new Quota(this.router, this);

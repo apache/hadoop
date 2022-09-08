@@ -19,17 +19,25 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashSet;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 
 /**
@@ -41,14 +49,16 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 class RouterStateIdContext implements AlignmentContext {
 
   private final HashSet<String> coordinatedMethods;
-  private final FederatedNamespaceIds federatedNamespaceIds;
   /**
-   * Size limit for the map of state Ids to send to clients.
+   * Collection of last-seen namespace state Ids for a set of namespaces.
+   * Each value is globally shared by all outgoing connections to a particular namespace,
+   * so updates should only be performed using reliable responses from NameNodes.
    */
+  private final ConcurrentHashMap<String, LongAccumulator> namespaceIdMap;
+  // Size limit for the map of state Ids to send to clients.
   private final int maxSizeOfFederatedStateToPropagate;
 
-  RouterStateIdContext(Configuration conf, FederatedNamespaceIds federatedNamespaceIds) {
-    this.federatedNamespaceIds = federatedNamespaceIds;
+  RouterStateIdContext(Configuration conf) {
     this.coordinatedMethods = new HashSet<>();
     // For now, only ClientProtocol methods can be coordinated, so only checking
     // against ClientProtocol.
@@ -59,15 +69,68 @@ class RouterStateIdContext implements AlignmentContext {
       }
     }
 
+    namespaceIdMap = new ConcurrentHashMap<>();
+
     maxSizeOfFederatedStateToPropagate =
         conf.getInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE,
         RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT);
   }
 
+  /**
+   * Adds the {@link #namespaceIdMap} to the response header that will be sent to a client.
+   */
+  public void setResponseHeaderState(RpcResponseHeaderProto.Builder headerBuilder) {
+    if (namespaceIdMap.isEmpty()) {
+      return;
+    }
+    HdfsServerFederationProtos.RouterFederatedStateProto.Builder federatedStateBuilder =
+        HdfsServerFederationProtos.RouterFederatedStateProto.newBuilder();
+    namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
+    headerBuilder.setRouterFederatedState(federatedStateBuilder.build().toByteString());
+  }
+
+  public LongAccumulator getNamespaceStateId(String nsId) {
+    return namespaceIdMap.computeIfAbsent(nsId, key -> new LongAccumulator(Math::max, Long.MIN_VALUE));
+  }
+
+  public void removeNamespaceStateId(String nsId) {
+    namespaceIdMap.remove(nsId);
+  }
+
+  /**
+   * Utility function to parse routerFederatedState field in RPC headers.
+   */
+  public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
+    if (byteString != null) {
+      HdfsServerFederationProtos.RouterFederatedStateProto federatedState;
+      try {
+        federatedState = HdfsServerFederationProtos.RouterFederatedStateProto.parseFrom(byteString);
+      } catch (InvalidProtocolBufferException e) {
+        throw new RuntimeException(e);
+      }
+      return federatedState.getNamespaceStateIdsMap();
+    } else {
+      return Collections.emptyMap();
+    }
+  }
+
+  public static long getClientStateIdFromCurrentCall(String nsId) {
+    Long clientStateID = Long.MIN_VALUE;
+    Server.Call call = Server.getCurCall().get();
+    if (call != null) {
+      ByteString callFederatedNamespaceState = call.getFederatedNamespaceState();
+      if (callFederatedNamespaceState != null) {
+        Map<String, Long> clientFederatedStateIds = getRouterFederatedStateMap(callFederatedNamespaceState);
+        clientStateID = clientFederatedStateIds.getOrDefault(nsId, Long.MIN_VALUE);
+      }
+    }
+    return clientStateID;
+  }
+
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
-    if (federatedNamespaceIds.size() <= maxSizeOfFederatedStateToPropagate) {
-      federatedNamespaceIds.setResponseHeaderState(header);
+    if (namespaceIdMap.size() <= maxSizeOfFederatedStateToPropagate) {
+      setResponseHeaderState(header);
     }
   }
 

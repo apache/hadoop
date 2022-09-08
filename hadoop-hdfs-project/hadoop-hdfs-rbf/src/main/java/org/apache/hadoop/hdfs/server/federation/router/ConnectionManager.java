@@ -74,9 +74,9 @@ public class ConnectionManager {
   /** Queue for creating new connections. */
   private final BlockingQueue<ConnectionPool> creatorQueue;
   /**
-   * Store for NamespaceIds to use with observer namenodes.
+   * Global federated namespace context for router.
    */
-  private final FederatedNamespaceIds federatedNamespaceIds;
+  private final RouterStateIdContext routerStateIdContext;
   /**
    * Maps from connection pool ID to namespace.
    */
@@ -94,7 +94,7 @@ public class ConnectionManager {
   private boolean running = false;
 
   public ConnectionManager(Configuration config) {
-    this(config, new FederatedNamespaceIds());
+    this(config, new RouterStateIdContext(config));
   }
 
   /**
@@ -102,9 +102,9 @@ public class ConnectionManager {
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config, FederatedNamespaceIds federatedNamespaceIds) {
+  public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
-    this.federatedNamespaceIds = federatedNamespaceIds;
+    this.routerStateIdContext = routerStateIdContext;
     this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
@@ -173,7 +173,7 @@ public class ConnectionManager {
       }
       this.pools.clear();
       for (String nsID: connectionPoolToNamespaceMap.values()) {
-        federatedNamespaceIds.removeNamespaceId(nsID);
+        routerStateIdContext.removeNamespaceStateId(nsID);
       }
       connectionPoolToNamespaceMap.clear();
     } finally {
@@ -193,9 +193,7 @@ public class ConnectionManager {
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol, String nsId,
-      Long clientStateId) throws IOException {
-
+      String nnAddress, Class<?> protocol, String nsId) throws IOException {
     // Check if the manager is shutdown
     if (!this.running) {
       LOG.error(
@@ -224,10 +222,11 @@ public class ConnectionManager {
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
               this.minActiveRatio, protocol,
-              new PoolAlignmentContext(this.federatedNamespaceIds.getNamespaceId(nsId)));
+              new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
           this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
+        long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
         pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
@@ -454,7 +453,7 @@ public class ConnectionManager {
             String nsID = connectionPoolToNamespaceMap.get(poolId);
             connectionPoolToNamespaceMap.remove(poolId);
             if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
-              federatedNamespaceIds.removeNamespaceId(nsID);
+              routerStateIdContext.removeNamespaceStateId(nsID);
             }
           }
         } finally {

@@ -19,18 +19,32 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
-import org.apache.hadoop.hdfs.NamespaceStateId;
+import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 
 
+/**
+ * An alignment context shared by all connections in a {@link ConnectionPool}.
+ * There is a distinct connection pool for each [namespace,UGI] pairing.
+ * <p>
+ * {@link #sharedGlobalStateId} is a reference to a
+ * shared {@link LongAccumulator} object in the {@link RouterStateIdContext}.
+ * {@link #poolLocalStateId} is specific to each PoolAlignmentContext.
+ * <p>
+ * The shared {@link #sharedGlobalStateId} is updated only using
+ * responses from NameNodes, so clients cannot poison it.
+ * {@link #poolLocalStateId} is used to propagate client observed
+ * state into NameNode requests. A misbehaving client can poison this but the effect is only
+ * visible to other clients with the same UGI and accessing the same namespace.
+ */
 public class PoolAlignmentContext implements AlignmentContext {
-  private NamespaceStateId sharedGlobalStateId;
-  private NamespaceStateId poolLocalStateId;
+  private LongAccumulator sharedGlobalStateId;
+  private LongAccumulator poolLocalStateId;
 
-  PoolAlignmentContext(NamespaceStateId namespaceStateId) {
-    sharedGlobalStateId = namespaceStateId;
-    poolLocalStateId = new NamespaceStateId();
+  PoolAlignmentContext(RouterStateIdContext routerStateIdContext, String namespaceId) {
+    sharedGlobalStateId = routerStateIdContext.getNamespaceStateId(namespaceId);
+    poolLocalStateId = new LongAccumulator(Math::max, Long.MIN_VALUE);
   }
 
   /**
@@ -43,12 +57,12 @@ public class PoolAlignmentContext implements AlignmentContext {
   }
 
   /**
-   * Router update globally shared namespaceStateId value using response from
+   * Router updates a globally shared value using response from
    * namenodes.
    */
   @Override
   public void receiveResponseState(RpcHeaderProtos.RpcResponseHeaderProto header) {
-    sharedGlobalStateId.update(header.getStateId());
+    sharedGlobalStateId.accumulate(header.getStateId());
   }
 
   /**
@@ -84,6 +98,6 @@ public class PoolAlignmentContext implements AlignmentContext {
   }
 
   public void advanceClientStateId(Long clientStateId) {
-    poolLocalStateId.update(clientStateId);
+    poolLocalStateId.accumulate(clientStateId);
   }
 }

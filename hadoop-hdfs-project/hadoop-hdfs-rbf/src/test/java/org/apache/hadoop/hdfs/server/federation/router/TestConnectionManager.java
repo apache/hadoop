@@ -325,7 +325,7 @@ public class TestConnectionManager {
 
     // Create one new connection pool
     tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS,
-        NamenodeProtocol.class, "ns0", 0L);
+        NamenodeProtocol.class, "ns0");
 
     Map<ConnectionPoolId, ConnectionPool> poolMap = tmpConnManager.getPools();
     ConnectionPoolId connectionPoolId = new ConnectionPoolId(TEST_USER1,

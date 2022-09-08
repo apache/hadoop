@@ -80,7 +80,6 @@ import org.apache.hadoop.ipc.Server.Call;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.util.StringUtils;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.slf4j.Logger;
@@ -148,7 +147,7 @@ public class RouterRpcClient {
    */
   public RouterRpcClient(Configuration conf, Router router,
       ActiveNamenodeResolver resolver, RouterRpcMonitor monitor,
-      FederatedNamespaceIds federatedNamespaceIds) {
+      RouterStateIdContext routerStateIdContext) {
     this.router = router;
 
     this.namenodeResolver = resolver;
@@ -157,7 +156,7 @@ public class RouterRpcClient {
     this.contextFieldSeparator =
         clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
-    this.connectionManager = new ConnectionManager(clientConf, federatedNamespaceIds);
+    this.connectionManager = new ConnectionManager(clientConf, routerStateIdContext);
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
@@ -370,20 +369,8 @@ public class RouterRpcClient {
         connUGI = UserGroupInformation.createProxyUser(
             ugi.getUserName(), routerUser);
       }
-
-      Long clientStateID = Long.MIN_VALUE;
-      Call call = Server.getCurCall().get();
-      if (call != null) {
-        ByteString callFederatedNamespaceState = call.getFederatedNamespaceState();
-        if (callFederatedNamespaceState != null) {
-          Map<String, Long> clientFederatedStateIds =
-              FederatedNamespaceIds.getRouterFederatedStateMap(callFederatedNamespaceState);
-          clientStateID = clientFederatedStateIds.getOrDefault(nsId, Long.MIN_VALUE);
-        }
-      }
-
       connection = this.connectionManager.getConnection(
-          connUGI, rpcAddress, proto, nsId, clientStateID);
+          connUGI, rpcAddress, proto, nsId);
       LOG.debug("User {} NN {} is using connection {}",
           ugi.getUserName(), rpcAddress, connection);
     } catch (Exception ex) {
