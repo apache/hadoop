@@ -46,9 +46,4 @@ public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
      super.setConf(conf);
      return new MySQLFederationStateStore();
   }
-
-  @Test
-  public void xxx(){
-
-  }
 }
