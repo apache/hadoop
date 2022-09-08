@@ -1488,4 +1488,13 @@ public final class S3ATestUtils {
       throw new AssertionError("Not an S3AInputStream: " + inner);
     }
   }
+
+  /**
+   * Disable Prefetching streams from S3AFileSystem in tests.
+   * @param conf Configuration to remove the prefetch property from.
+   */
+  public static void disablePrefetching(Configuration conf) {
+    // TODO: Reinstate once HADOOP-18028 is merged.
+    // removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
 }
