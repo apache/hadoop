@@ -526,13 +526,13 @@ public class TestZKDelegationTokenSecretManager {
 
     // When the init method is called,
     // the ZKDelegationTokenSecretManager#startThread method will be called,
-    // and the creatingParentContainersIfNeeded will be called to create the nameSpace
+    // and the creatingParentContainersIfNeeded will be called to create the nameSpace.
     tm1.init();
 
     String workingPath = "/" + conf.get(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH,
         ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH_DEAFULT) + "/ZKDTSMRoot";
 
-    // Check if the created NameSpace exists
+    // Check if the created NameSpace exists.
     Stat stat = curatorFramework.checkExists().forPath(workingPath);
     Assert.assertNotNull(stat);
   }
