@@ -429,14 +429,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
      * In case of CheckSum FS, we already have calculated
      * fileLength so failing fast here.
      * @param ranges requested ranges.
-     * @param fileLen length of file.
+     * @param fileLength length of file.
      * @throws EOFException end of file exception.
      */
     private void validateRangeRequest(List<? extends FileRange> ranges,
-                                      long fileLen) throws EOFException {
+                                      final long fileLength) throws EOFException {
       for (FileRange range : ranges) {
         VectoredReadUtils.validateRangeRequest(range);
-        if (range.getOffset() + range.getLength() > fileLen) {
+        if (range.getOffset() + range.getLength() > fileLength) {
           final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
                   range.getOffset(), range.getLength(), file);
           LOG.warn(errMsg);
