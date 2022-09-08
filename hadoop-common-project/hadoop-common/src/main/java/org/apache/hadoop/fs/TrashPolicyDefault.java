@@ -66,7 +66,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   /** Format of checkpoint directories used prior to Hadoop 0.23. */
   private static final DateFormat OLD_CHECKPOINT =
       new SimpleDateFormat("yyMMddHHmm");
-  private static final int MSECS_PER_MINUTE = 60*1000;
+  private static final int MSECS_PER_MINUTE = 60_000;
 
   private long emptierInterval;
 
@@ -151,7 +151,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     for (int i = 0; i < 2; i++) {
       try {
         if (!fs.mkdirs(baseTrashPath, PERMISSION)) {      // create current
-          LOG.warn("Can't create(mkdir) trash directory: " + baseTrashPath);
+          LOG.warn("Can't create(mkdir) trash directory: {}", baseTrashPath);
           return false;
         }
       } catch (FileAlreadyExistsException e) {
@@ -169,7 +169,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         --i;
         continue;
       } catch (IOException e) {
-        LOG.warn("Can't create trash directory: " + baseTrashPath, e);
+        LOG.warn("Can't create trash directory: {}", baseTrashPath, e);
         cause = e;
         break;
       }
@@ -185,7 +185,7 @@ public class TrashPolicyDefault extends TrashPolicy {
         // move to current trash
         fs.rename(path, trashPath,
             Rename.TO_TRASH);
-        LOG.info("Moved: '" + path + "' to trash at: " + trashPath);
+        LOG.info("Moved: '{}' to trash at: {}", path, trashPath);
         return true;
       } catch (IOException e) {
         cause = e;
@@ -224,7 +224,7 @@ public class TrashPolicyDefault extends TrashPolicy {
   private void deleteCheckpoint(boolean deleteImmediately) throws IOException {
     Collection<FileStatus> trashRoots = fs.getTrashRoots(false);
     for (FileStatus trashRoot : trashRoots) {
-      LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " +
+      LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: {}",
           trashRoot.getPath());
       deleteCheckpoint(trashRoot.getPath(), deleteImmediately);
     }
@@ -245,6 +245,12 @@ public class TrashPolicyDefault extends TrashPolicy {
     return new Emptier(getConf(), emptierInterval);
   }
 
+  /**
+   * The emptier of this trash.
+   * This thread is expected to be run on HDFS namenodes.. After being interrupted, it
+   * will close the filesystem the trash policy was bonded to; see HADOOP-2337.
+   * If used elsewhere, it *must* be given its own instance of the target filesystem.
+   */
   protected class Emptier implements Runnable {
 
     private Configuration conf;
@@ -254,17 +260,16 @@ public class TrashPolicyDefault extends TrashPolicy {
       this.conf = conf;
       this.emptierInterval = emptierInterval;
       if (emptierInterval > deletionInterval || emptierInterval <= 0) {
-        LOG.info("The configured checkpoint interval is " +
-                 (emptierInterval / MSECS_PER_MINUTE) + " minutes." +
-                 " Using an interval of " +
-                 (deletionInterval / MSECS_PER_MINUTE) +
-                 " minutes that is used for deletion instead");
+        LOG.info("The configured checkpoint interval is {} minutes."
+                + " Using an interval of {} minutes that is used for deletion instead",
+            emptierInterval / MSECS_PER_MINUTE,
+            deletionInterval / MSECS_PER_MINUTE);
         this.emptierInterval = deletionInterval;
       }
-      LOG.info("Namenode trash configuration: Deletion interval = "
-          + (deletionInterval / MSECS_PER_MINUTE)
-          + " minutes, Emptier interval = "
-          + (this.emptierInterval / MSECS_PER_MINUTE) + " minutes.");
+      LOG.info("Namenode trash configuration: Deletion interval = {} minutes."
+              + " Emptier interval = {} minutes.",
+          deletionInterval / MSECS_PER_MINUTE,
+          emptierInterval / MSECS_PER_MINUTE);
     }
 
     @Override
@@ -288,16 +293,18 @@ public class TrashPolicyDefault extends TrashPolicy {
             trashRoots = fs.getTrashRoots(true);      // list all trash dirs
 
             for (FileStatus trashRoot : trashRoots) {   // dump each trash
-              if (!trashRoot.isDirectory())
+              if (!trashRoot.isDirectory()) {
+                LOG.debug("Trash root {} is not a directory: {}",
+                    trashRoot.getPath(), trashRoot);
                 continue;
+              }
               try {
                 TrashPolicyDefault trash = new TrashPolicyDefault(fs, conf);
                 trash.deleteCheckpoint(trashRoot.getPath(), false);
                 trash.createCheckpoint(trashRoot.getPath(), new Date(now));
               } catch (IOException e) {
-                LOG.warn("Trash caught: "+e+". Skipping " +
-                    trashRoot.getPath() + ".");
-              } 
+                LOG.warn("Trash caught:{} Skipping {}", e, trashRoot.getPath());
+              }
             }
           }
         } catch (Exception e) {
@@ -324,7 +331,7 @@ public class TrashPolicyDefault extends TrashPolicy {
     }
   }
 
-  private void createCheckpoint(Path trashRoot, Date date) throws IOException {
+  protected void createCheckpoint(Path trashRoot, Date date) throws IOException {
     if (!fs.exists(new Path(trashRoot, CURRENT))) {
       return;
     }
@@ -339,31 +346,42 @@ public class TrashPolicyDefault extends TrashPolicy {
     while (true) {
       try {
         fs.rename(current, checkpoint, Rename.NONE);
-        LOG.info("Created trash checkpoint: " + checkpoint.toUri().getPath());
+        LOG.info("Created trash checkpoint: {}", checkpoint.toUri().getPath());
         break;
       } catch (FileAlreadyExistsException e) {
         if (++attempt > 1000) {
-          throw new IOException("Failed to checkpoint trash: " + checkpoint);
+          throw new IOException("Failed to checkpoint trash: " + checkpoint, e);
         }
         checkpoint = checkpointBase.suffix("-" + attempt);
       }
     }
   }
 
-  private void deleteCheckpoint(Path trashRoot, boolean deleteImmediately)
+  /**
+   * Delete trash directories under a checkpoint older than the interval,
+   * or, if {@code deleteImmediately} is true, all entries.
+   * It is not an error if invoked on a trash root which doesn't exist.
+   * @param trashRoot trash root.
+   * @param deleteImmediately should all entries be deleted
+   * @return the number of entries deleted.
+   * @throws IOException failure in listing or delete() calls
+   */
+  protected int deleteCheckpoint(Path trashRoot, boolean deleteImmediately)
       throws IOException {
-    LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: " + trashRoot);
+    LOG.info("TrashPolicyDefault#deleteCheckpoint for trashRoot: {}", trashRoot);
 
-    FileStatus[] dirs = null;
+    RemoteIterator<FileStatus> dirs;
     try {
-      dirs = fs.listStatus(trashRoot); // scan trash sub-directories
+      dirs = fs.listStatusIterator(trashRoot); // scan trash sub-directories
     } catch (FileNotFoundException fnfe) {
-      return;
+      return 0;
     }
 
     long now = Time.now();
-    for (int i = 0; i < dirs.length; i++) {
-      Path path = dirs[i].getPath();
+    int counter = 0;
+    while (dirs.hasNext()) {
+      counter++;
+      Path path = dirs.next().getPath();
       String dir = path.toUri().getPath();
       String name = path.getName();
       if (name.equals(CURRENT.getName())) {         // skip current
@@ -374,21 +392,39 @@ public class TrashPolicyDefault extends TrashPolicy {
       try {
         time = getTimeFromCheckpoint(name);
       } catch (ParseException e) {
-        LOG.warn("Unexpected item in trash: "+dir+". Ignoring.");
+        LOG.warn("Unexpected item in trash {}. Ignoring.", dir);
         continue;
       }
 
       if (((now - deletionInterval) > time) || deleteImmediately) {
-        if (fs.delete(path, true)) {
-          LOG.info("Deleted trash checkpoint: "+dir);
-        } else {
-          LOG.warn("Couldn't delete checkpoint: " + dir + " Ignoring.");
-        }
+        deleteCheckpoint(path);
       }
+    }
+    return counter;
+  }
+
+  /**
+   * Delete a checkpoint
+   * @param path path to delete
+   * @throws IOException IO exception raised in delete call.
+   */
+  protected void deleteCheckpoint(final Path path) throws IOException {
+    String dir = path.toUri().getPath();
+    if (getFileSystem().delete(path, true)) {
+      LOG.info("Deleted trash checkpoint: {}", path);
+    } else {
+      LOG.warn("Couldn't delete checkpoint: {}. Ignoring.", path);
     }
   }
 
-  private long getTimeFromCheckpoint(String name) throws ParseException {
+  /**
+   * parse the name of a checkpoint to extgact its timestamp.
+   * Uses the Hadoop 0.23 checkpoint as well as the older version (!).
+   * @param name filename
+   * @return the timestamp
+   * @throws ParseException the filename is not a timestamp.
+   */
+  protected long getTimeFromCheckpoint(String name) throws ParseException {
     long time;
 
     try {

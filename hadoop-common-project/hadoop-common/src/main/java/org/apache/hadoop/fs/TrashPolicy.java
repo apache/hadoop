@@ -49,9 +49,20 @@ public abstract class TrashPolicy extends Configured {
    */
   public static final String FS_TRASH_SCHEMA_CLASSNAME = "fs.%s.trash.classname";
 
-  protected FileSystem fs; // the FileSystem
-  protected Path trash; // path to trash directory
-  protected long deletionInterval; // deletion interval for Emptier
+  /**
+   * The FileSystem.
+   */
+  protected FileSystem fs;
+
+  /**
+   * The path to trash directory.
+   */
+  protected Path trash;
+
+  /**
+   * The deletion interval for Emptier.
+   */
+  protected long deletionInterval;
 
   /**
    * Used to setup the trash policy. Must be implemented by all TrashPolicy
@@ -72,7 +83,7 @@ public abstract class TrashPolicy extends Configured {
    * @param fs the filesystem to be used
    */
   public void initialize(Configuration conf, FileSystem fs) {
-    throw new UnsupportedOperationException();
+    throw new UnsupportedOperationException("TrashPolicy");
   }
 
   /**
@@ -144,6 +155,30 @@ public abstract class TrashPolicy extends Configured {
   public abstract Runnable getEmptier() throws IOException;
 
   /**
+   * Get the filesystem
+   * @return the FS
+   */
+  public FileSystem getFileSystem() {
+    return fs;
+  }
+
+  /**
+   * Get the path to trash directory.
+   * @return The path to trash directory.
+   */
+  public Path getTrash() {
+    return trash;
+  }
+
+  /**
+   * The deletion interval for Emptier.
+   * @return The deletion interval for Emptier.
+   */
+  public long getDeletionInterval() {
+    return deletionInterval;
+  }
+
+  /**
    * Get an instance of the configured TrashPolicy based on the value
    * of the configuration parameter fs.trash.classname.
    *
@@ -163,10 +198,15 @@ public abstract class TrashPolicy extends Configured {
   }
 
   /**
-   * Get an instance of the configured TrashPolicy based on the value
-   * of the configuration parameter fs.trash.classname.
-   *
-   * @param conf the configuration to be used
+   * Get an instance of the configured TrashPolicy based on the value of
+   * the configuration parameter
+   * <ol>
+   *   <li>{@code fs.${fs.getUri().getScheme()}.trash.classname}</li>
+   *   <li>{@code fs.trash.classname}</li>
+   * </ol>
+   * The configuration passed in is used to look up both values and load
+   * in the policy class, not that of the FileSystem instance.
+   * @param conf the configuration to be used for lookup and classloading
    * @param fs the file system to be used
    * @return an instance of TrashPolicy
    */
@@ -182,6 +222,8 @@ public abstract class TrashPolicy extends Configured {
     LOG.debug("Looking up trash policy from configuration key {}", key);
     Class<? extends TrashPolicy> trashClass = conf.getClass(
         key, TrashPolicyDefault.class, TrashPolicy.class);
+    LOG.debug("Trash policy class: {}", trashClass);
+
     TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
     trash.initialize(conf, fs); // initialize TrashPolicy
     return trash;

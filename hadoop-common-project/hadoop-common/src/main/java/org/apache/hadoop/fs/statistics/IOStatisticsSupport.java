@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.statistics;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.impl.StubDurationTracker;
@@ -105,4 +107,35 @@ public final class IOStatisticsSupport {
   public static DurationTracker stubDurationTracker() {
     return StubDurationTracker.STUB_DURATION_TRACKER;
   }
+
+  /**
+   * Retrieve a DurationTrackerFactory for the source.
+   * This will be, in order
+   * <ol>
+   *   <li>The object itself, it is a factory</li>
+   *   <li>if the object is an IOStatisticsSource, any provided by the IOStatistics.
+   *   <li>A stub duration tracker</li>
+   * </ol>
+   *
+   * As singletons are returned, this is very low-cost to use.
+   * @return a duration tracker factory.
+   */
+  public static DurationTrackerFactory bindToDurationTrackerFactory(
+      @Nullable Object source) {
+
+    if (source instanceof DurationTrackerFactory) {
+      // the object is a factory
+      return (DurationTrackerFactory) source;
+    } else if (source instanceof IOStatisticsSource) {
+      // the object may provide a factory in its IOStatistics; extract and recurse.
+      // the value may actually be null; rely on the recursion call to handle
+      // this
+      return bindToDurationTrackerFactory(
+          ((IOStatisticsSource) source).getIOStatistics());
+    } else {
+      // object is null, not a duration tracker factory or doesn't provide a statistics source.
+      return StubDurationTrackerFactory.STUB_DURATION_TRACKER_FACTORY;
+    }
+  }
+
 }

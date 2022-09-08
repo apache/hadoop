@@ -287,6 +287,21 @@ public final class StoreStatisticNames {
       "object_select_requests";
 
   /**
+   * Trash statistic: {@value}.
+   */
+  public static final String TRASH_CREATE_CHECKPOINT = "trash.create.checkpoint";
+
+  /**
+   * Trash statistic: {@value}.
+   */
+  public static final String TRASH_DELETE_CHECKPOINT = "trash.delete.checkpoint";
+
+  /**
+   * Trash statistic: {@value}.
+   */
+  public static final String TRASH_MOVE_TO_TRASH = "trash.move.to.trash";
+
+  /**
    * Suffix to use for a minimum value when
    * the same key is shared across min/mean/max
    * statistics.
