@@ -94,6 +94,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
+
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
  * use the {@code RouterClientRMService} pipeline test cases for testing the
@@ -1080,9 +1082,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // Call the listReservation method
     String applyReservationId = reservationId.toString();
-    Response listReservationResponse =
-        interceptor.listReservation(MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL,
-        applyReservationId, -1, -1, false, null);
+    Response listReservationResponse = interceptor.listReservation(
+        QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
     Assert.assertNotNull(listReservationResponse);
     Assert.assertNotNull(listReservationResponse.getStatus());
     Status status = Status.fromStatusCode(listReservationResponse.getStatus());

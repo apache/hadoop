@@ -142,6 +142,8 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 import com.sun.jersey.api.client.WebResource.Builder;
 
 import net.jcip.annotations.NotThreadSafe;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -157,6 +159,8 @@ public class TestRouterWebServicesREST {
   /** The number of concurrent submissions for multi-thread test. */
   private static final int NUM_THREADS_TESTS = 100;
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterWebServicesREST.class);
 
   private static String userName = "test";
 
@@ -198,6 +202,7 @@ public class TestRouterWebServicesREST {
         }
       }, 1000, 10 * 1000);
     } catch (Exception e) {
+      LOG.error("Web app not running", e);
       fail("Web app not running");
     }
   }
