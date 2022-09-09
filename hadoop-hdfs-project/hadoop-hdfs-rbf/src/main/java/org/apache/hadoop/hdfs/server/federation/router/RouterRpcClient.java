@@ -22,6 +22,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
+import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -130,6 +132,8 @@ public class RouterRpcClient {
   private static final String CLIENT_IP_STR = "clientIp";
   private static final String CLIENT_PORT_STR = "clientPort";
 
+  private final boolean enableProxyUser;
+
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
    *
@@ -185,6 +189,8 @@ public class RouterRpcClient {
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts, maxRetryAttempts,
         failoverSleepBaseMillis, failoverSleepMaxMillis);
+    String[] ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
+    this.enableProxyUser = ipProxyUsers != null && ipProxyUsers.length > 0;
   }
 
   /**
@@ -316,7 +322,7 @@ public class RouterRpcClient {
 
       // TODO Add tokens from the federated UGI
       UserGroupInformation connUGI = ugi;
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() || this.enableProxyUser) {
         UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
         connUGI = UserGroupInformation.createProxyUser(
             ugi.getUserName(), routerUser);
