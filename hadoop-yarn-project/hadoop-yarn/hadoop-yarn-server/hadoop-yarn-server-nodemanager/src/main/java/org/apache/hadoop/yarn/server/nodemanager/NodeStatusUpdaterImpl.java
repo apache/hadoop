@@ -1130,7 +1130,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           // case where updated node attributes from NodeAttributesProvider
           // is sent to RM and RM rejected the attributes
-          LOG.error("NM node attributes {{}} were not accepted by RM and message from RM : {}." ,
+          LOG.error("NM node attributes [{}] were not accepted by RM and message from RM : {}." ,
               getPreviousValue(), response.getDiagnosticsMessage() );
         }
       }
@@ -1280,7 +1280,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         } else {
           // case where updated labels from NodeLabelsProvider is sent to RM and
           // RM rejected the labels
-          LOG.error("NM node labels {{}} were not accepted by RM and message from RM : {}.",
+          LOG.error("NM node labels [{}] were not accepted by RM and message from RM : {}.",
               StringUtils.join(",", getPreviousValue()), response.getDiagnosticsMessage());
         }
       }

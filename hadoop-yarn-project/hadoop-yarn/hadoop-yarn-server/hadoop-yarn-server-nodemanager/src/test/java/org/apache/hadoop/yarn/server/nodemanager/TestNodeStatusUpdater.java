@@ -625,7 +625,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
-      LOG.info("Got heartBeatId: [{}}]", heartBeatID);
+      LOG.info("Got heartBeatId: [{}]", heartBeatID);
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID.getAndIncrement());
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
