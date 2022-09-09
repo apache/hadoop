@@ -44,15 +44,15 @@ public abstract class FederationSQLAccuracyTest {
      stateStore.close();
   }
 
-    protected void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  protected void setConf(Configuration conf) {
+     this.conf = conf;
+  }
 
-    protected Configuration getConf() {
-        return conf;
-    }
+  protected Configuration getConf() {
+     return conf;
+  }
 
-    protected FederationStateStore getStateStore() {
-        return stateStore;
-    }
+  protected FederationStateStore getStateStore() {
+     return stateStore;
+  }
 }

@@ -182,13 +182,14 @@
           </execution>
           <execution>
             <id>copy-sql</id>
-            <phase>package</phase>
+            <phase>test</phase>
             <goals>
               <goal>run</goal>
             </goals>
             <configuration>
               <tasks>
-                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreDatabase.sql" todir="src/test/resources"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/MySQL"/>
               </tasks>
             </configuration>
           </execution>

@@ -18,14 +18,22 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * HSQLDB implementation of {@link FederationStateStore}.
@@ -37,30 +45,45 @@ public class MySQLFederationStateStore extends SQLFederationStateStore {
 
   private Connection conn;
 
-  private static final String TABLE_APPLICATIONSHOMESUBCLUSTER =
-      " CREATE TABLE applicationsHomeSubCluster ("
-          + " applicationId varchar(64) NOT NULL,"
-          + " homeSubCluster varchar(256) NOT NULL,"
-          + " CONSTRAINT pk_applicationId PRIMARY KEY (applicationId))";
+  private String createTableScriptPath;
+
+  private static String createProcedureScriptPath;
+
+  private List<String> tables = new ArrayList<>();
+
+  private List<String> procedures = new ArrayList<>();
 
   @Override
   public void init(Configuration conf) {
     try {
       super.init(conf);
-    } catch (YarnException e1) {
-      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
-    }
-    try {
+
+      createTableScriptPath = "." + File.separator + "target" + File.separator +
+          "test-classes" + File.separator + "MySQL/FederationStateStoreTables.sql";
+      LOG.info("createTableScriptPath >> {}", createTableScriptPath);
+      String createTableSQL = FileUtils.readFileToString(new File(createTableScriptPath));
+      Pattern p = Pattern.compile("CREATE TABLE.*\\n(.*,\\n){1,10}.*\\n.*");
+      Matcher m = p.matcher(createTableSQL);
+      while(m!=null && m.find()) {
+        tables.add(m.group());
+      }
+
+      LOG.info("#####");
+      createProcedureScriptPath = "." + File.separator + "target" + File.separator +
+          "test-classes" + File.separator + "MySQL/FederationStateStoreStoredProcs.sql";
+      String createProcedureSQL = FileUtils.readFileToString(new File(createProcedureScriptPath));
+      String[] results = createProcedureSQL.split("//");
+      for (String result : results) {
+        if (StringUtils.contains(result, "CREATE PROCEDURE")) {
+          procedures.add(result);
+        }
+      }
+
+      LOG.info("tables = {}, procedures = {}", tables.size(), procedures.size());
+
       conn = super.conn;
-
-      LOG.info("Database Init: Start");
-
-      conn.prepareStatement(TABLE_APPLICATIONSHOMESUBCLUSTER).execute();
-
-
-      LOG.info("Database Init: Complete");
-    } catch (SQLException e) {
-      LOG.error("ERROR: failed to inizialize HSQLDB " + e.getMessage());
+    } catch (YarnException | IOException e1) {
+      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
     }
   }
 
@@ -71,5 +94,17 @@ public class MySQLFederationStateStore extends SQLFederationStateStore {
       LOG.error(
           "ERROR: failed to close connection to HSQLDB DB " + e.getMessage());
     }
+  }
+
+  public Connection getConn() {
+    return conn;
+  }
+
+  public List<String> getTables() {
+    return tables;
+  }
+
+  public List<String> getProcedures() {
+    return procedures;
   }
 }

@@ -24,6 +24,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.SQLException;
+import java.util.List;
+
 public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
 
   private static final Logger LOG =
@@ -36,7 +39,7 @@ public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
   private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
 
   @Override
-  protected FederationStateStore createStateStore() {
+  protected MySQLFederationStateStore createStateStore() {
      YarnConfiguration conf = new YarnConfiguration();
      conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS, HSQLDB_DRIVER);
      conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
@@ -45,5 +48,26 @@ public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
          DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY);
      super.setConf(conf);
      return new MySQLFederationStateStore();
+  }
+
+  @Test
+  public void checkMysql() throws SQLException {
+     MySQLFederationStateStore federationStateStore = this.createStateStore();
+
+     //
+     List<String> tables = federationStateStore.getTables();
+     for (String table : tables) {
+       federationStateStore.getConn().prepareStatement(table).execute();
+     }
+
+     LOG.info("federationStateStore create table.");
+
+     //
+     List<String> procedures = federationStateStore.getProcedures();
+     for (String procedure : procedures) {
+        federationStateStore.getConn().prepareStatement(procedure).execute();
+     }
+
+     LOG.info("federationStateStore create procedure.");
   }
 }
