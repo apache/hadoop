@@ -38,8 +38,10 @@ import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_DEFAULT_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMaximum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticGaugeValue;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MAX;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -130,6 +132,8 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     // Verify that once stream is closed, all memory is freed
     verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    assertThatStatisticMaximum(ioStats,
+        StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test
@@ -159,6 +163,8 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
     verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    assertThatStatisticMaximum(ioStats,
+        StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test
@@ -183,6 +189,9 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
       verifyStatisticCounterValue(ioStats, StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS, 0);
       // The buffer pool is not used
       verifyStatisticGaugeValue(ioStats, StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+      // no prefetch ops, so no action_executor_acquired
+      assertThatStatisticMaximum(ioStats,
+          StoreStatisticNames.ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isEqualTo(-1);
     }
   }
 
