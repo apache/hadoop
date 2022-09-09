@@ -128,13 +128,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-shade-plugin</artifactId>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-maven-plugins</artifactId>
-                <version>${project.version}</version>
-              </dependency>
-            </dependencies>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -397,8 +390,7 @@
     -->
                   </relocations>
                   <transformers>
-                    <!-- Needed until MSHADE-182 -->
-                    <transformer implementation="org.apache.hadoop.maven.plugin.shade.resource.ServicesResourceTransformer"/>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
                     <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
                       <resources>
