@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.AlignmentContext;
@@ -26,6 +25,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**

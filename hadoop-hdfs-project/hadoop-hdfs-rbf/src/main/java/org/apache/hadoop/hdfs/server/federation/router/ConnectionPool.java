@@ -427,7 +427,7 @@ public class ConnectionPool {
    * @param ugi User context.
    * @param proto Interface of the protocol.
    * @param enableMultiSocket Enable multiple socket or not.
-   * @param alignmentContext client alignment context.
+   * @param alignmentContext Client alignment context.
    * @return proto for the target ClientProtocol that contains the user's
    *         security context.
    * @throws IOException If it cannot be created.

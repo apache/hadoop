@@ -78,7 +78,7 @@ public class ConnectionManager {
    */
   private final RouterStateIdContext routerStateIdContext;
   /**
-   * Maps from connection pool ID to namespace.
+   * Map from connection pool ID to namespace.
    */
   private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
