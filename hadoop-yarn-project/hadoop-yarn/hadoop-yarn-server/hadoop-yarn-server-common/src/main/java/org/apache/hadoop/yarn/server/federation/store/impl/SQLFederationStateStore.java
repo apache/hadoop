@@ -774,7 +774,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       rs = cstmt.executeQuery();
       long stopTime = clock.getTime();
 
-      while (rs.next()) {
+      while (rs.next() && appsHomeSubClusters.size() <= maxAppsInStateStore) {
 
         // Extract the output for each tuple
         String applicationId = rs.getString("applicationId");
@@ -796,8 +796,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt, null, rs);
     }
-    return GetApplicationsHomeSubClusterResponse
-        .newInstance(appsHomeSubClusters);
+
+    return GetApplicationsHomeSubClusterResponse.newInstance(appsHomeSubClusters);
   }
 
   @Override
