@@ -189,7 +189,6 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("PrintEventDetailsThread #%d")
         .build();
-
     // Thread pool for async print event details,
     // to prevent wasting too much time for RM.
     int numCorePoolSizeThreads = getConfig().getInt(
