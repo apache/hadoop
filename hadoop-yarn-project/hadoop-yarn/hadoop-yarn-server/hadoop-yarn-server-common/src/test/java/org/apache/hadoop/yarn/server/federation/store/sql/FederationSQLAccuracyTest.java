@@ -53,6 +53,6 @@ public abstract class FederationSQLAccuracyTest {
   }
 
   protected FederationStateStore getStateStore() {
-     return stateStore;
+    return stateStore;
   }
 }

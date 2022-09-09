@@ -190,6 +190,8 @@
               <tasks>
                 <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/MySQL"/>
                 <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreStoreProcs.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
               </tasks>
             </configuration>
           </execution>

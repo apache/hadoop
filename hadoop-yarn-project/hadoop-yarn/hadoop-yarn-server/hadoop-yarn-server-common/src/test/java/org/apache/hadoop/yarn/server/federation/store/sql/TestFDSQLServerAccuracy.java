@@ -18,8 +18,8 @@
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MySQLFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.impl.SQLServerFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,19 +27,19 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.List;
 
-public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
+public class TestFDSQLServerAccuracy extends FederationSQLAccuracyTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFDMySQLAccuracy.class);
+      LoggerFactory.getLogger(TestFDSQLServerAccuracy.class);
 
   private static final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
   private static final String DATABASE_URL = "jdbc:hsqldb:mem:state";
   private static final String DATABASE_USERNAME = "SA";
   private static final String DATABASE_PASSWORD = "";
-  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
+  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
-  protected MySQLFederationStateStore createStateStore() {
+  protected SQLServerFederationStateStore createStateStore() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS, HSQLDB_DRIVER);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
@@ -47,12 +47,12 @@ public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
         DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY);
     super.setConf(conf);
-    return new MySQLFederationStateStore();
+    return new SQLServerFederationStateStore();
   }
 
   @Test
-  public void checkMysqlScriptAccuracy() throws SQLException {
-    MySQLFederationStateStore federationStateStore = this.createStateStore();
+  public void checkSqlServerScriptAccuracy() throws SQLException {
+    SQLServerFederationStateStore federationStateStore = this.createStateStore();
 
     // get a list of tables
     List<String> tables = federationStateStore.getTables();
@@ -60,14 +60,14 @@ public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
       federationStateStore.getConn().prepareStatement(table).execute();
     }
 
-    LOG.info("[Mysql] - federationStateStore create table.");
+    LOG.info("[SqlServer] - FederationStateStore create table.");
 
     // get a list of procedures
     List<String> procedures = federationStateStore.getProcedures();
     for (String procedure : procedures) {
-       federationStateStore.getConn().prepareStatement(procedure).execute();
+      federationStateStore.getConn().prepareStatement(procedure).execute();
     }
 
-    LOG.info("[Mysql] - federationStateStore create procedure.");
+    LOG.info("[SqlServer] - FederationStateStore create procedure.");
   }
 }

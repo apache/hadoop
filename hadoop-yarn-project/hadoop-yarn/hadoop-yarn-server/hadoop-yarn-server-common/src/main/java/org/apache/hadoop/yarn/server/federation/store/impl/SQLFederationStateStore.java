@@ -172,7 +172,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   private HikariDataSource dataSource = null;
   private final Clock clock = new MonotonicClock();
   @VisibleForTesting
-  public Connection conn = null;
+  protected Connection conn = null;
 
   @Override
   public void init(Configuration conf) throws YarnException {
@@ -1384,5 +1384,10 @@ public class SQLFederationStateStore implements FederationStateStore {
     throw new YarnException(
         "Unable to update the subCluster " + subClusterId +
         " according to reservation" + reservationId);
+  }
+
+  @VisibleForTesting
+  public Connection getConn() {
+    return conn;
   }
 }
