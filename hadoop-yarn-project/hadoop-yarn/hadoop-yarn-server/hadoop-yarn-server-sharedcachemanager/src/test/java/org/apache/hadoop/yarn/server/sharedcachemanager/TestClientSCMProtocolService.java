@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
@@ -29,8 +28,12 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
+import org.apache.hadoop.yarn.api.ClientSCMProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -84,6 +87,11 @@ public class TestClientSCMProtocolService {
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
         InMemorySCMStore.class.getName());
     conf.set(YarnConfiguration.SHARED_CACHE_ROOT, testDir.getPath());
+    conf.set(HADOOP_SECURITY_AUTHORIZATION, Boolean.toString(true));
+    startInternal(conf);
+  }
+
+  private void startInternal(Configuration conf) {
     AppChecker appChecker = spy(new DummyAppChecker());
     store = new InMemorySCMStore(appChecker);
     store.init(conf);
@@ -107,6 +115,10 @@ public class TestClientSCMProtocolService {
 
   @After
   public void cleanUp() {
+    stopInternal();
+  }
+
+  private void stopInternal() {
     if (store != null) {
       store.stop();
       store = null;
@@ -121,6 +133,20 @@ public class TestClientSCMProtocolService {
       RPC.stopProxy(clientSCMProxy);
       clientSCMProxy = null;
     }
+  }
+
+  @Test
+  public void testSecurityAuthorization() {
+    Server server = service.getServer();
+    ServiceAuthorizationManager serviceAuthorizationManager =
+        server.getServiceAuthorizationManager();
+    AccessControlList aclList =
+        serviceAuthorizationManager.getProtocolsAcls(ClientSCMProtocolPB.class);
+    assertTrue("ClientSCMProtocolPB is null!", aclList != null);
+    assertTrue(
+        "ACL List is not all allowed by default", aclList.isAllAllowed());
+    assertTrue(
+        "ACL List is not * by default", aclList.getAclString().equals("*"));
   }
 
   @Test

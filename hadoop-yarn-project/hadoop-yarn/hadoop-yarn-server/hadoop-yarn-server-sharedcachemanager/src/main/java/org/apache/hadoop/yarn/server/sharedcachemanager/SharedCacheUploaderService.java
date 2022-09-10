@@ -21,8 +21,11 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -35,6 +38,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadRes
 import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyResponse;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploaderMetrics;
+import org.apache.hadoop.yarn.server.sharedcachemanager.security.SCMPolicyProvider;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 
 /**
@@ -81,7 +85,14 @@ public class SharedCacheUploaderService extends AbstractService
             conf.getInt(YarnConfiguration.SCM_UPLOADER_SERVER_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT));
 
-    // TODO (YARN-2774): Enable service authorization
+    // TODO: dynamically load ACLs
+    // Enable service authorization
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      refreshServiceAcls(
+          conf, SCMPolicyProvider.getInstance());
+    }
 
     this.server.start();
     bindAddress =
@@ -89,6 +100,12 @@ public class SharedCacheUploaderService extends AbstractService
             server.getListenerAddress());
 
     super.serviceStart();
+  }
+
+  private void refreshServiceAcls(Configuration configuration,
+                                  PolicyProvider policyProvider) {
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   @Override
@@ -136,5 +153,10 @@ public class SharedCacheUploaderService extends AbstractService
         recordFactory.newRecordInstance(SCMUploaderCanUploadResponse.class);
     response.setUploadable(true);
     return response;
+  }
+
+  @VisibleForTesting
+  protected Server getServer() {
+    return server;
   }
 }

@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
@@ -33,7 +35,11 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
+import org.apache.hadoop.yarn.server.api.SCMAdminProtocolPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RunSharedCacheCleanerTaskResponsePBImpl;
@@ -45,9 +51,9 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
 
 /**
  * Basic unit tests for the SCM Admin Protocol Service and SCMAdmin.
@@ -68,7 +74,11 @@ public class TestSCMAdminProtocolService {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
         InMemorySCMStore.class.getName());
+    conf.set(HADOOP_SECURITY_AUTHORIZATION, Boolean.toString(true));
+    startInternal(conf);
+  }
 
+  private void startInternal(Configuration conf) {
     cleaner = mock(CleanerService.class);
 
     service = spy(new SCMAdminProtocolService(cleaner));
@@ -97,6 +107,10 @@ public class TestSCMAdminProtocolService {
 
   @After
   public void cleanUpTest() {
+    stopInternal();
+  }
+
+  private void stopInternal() {
     if (service != null) {
       service.stop();
     }
@@ -112,7 +126,7 @@ public class TestSCMAdminProtocolService {
     RunSharedCacheCleanerTaskRequest request =
         recordFactory.newRecordInstance(RunSharedCacheCleanerTaskRequest.class);
     RunSharedCacheCleanerTaskResponse response = SCMAdminProxy.runCleanerTask(request);
-    Assert.assertTrue("cleaner task request isn't accepted", response.getAccepted());
+    assertTrue("cleaner task request isn't accepted", response.getAccepted());
     verify(service, times(1)).runCleanerTask(any(RunSharedCacheCleanerTaskRequest.class));
   }
 
@@ -131,5 +145,20 @@ public class TestSCMAdminProtocolService {
     assertEquals(1, adminCLI.run(args));
     verify(mockAdmin, times(2)).runCleanerTask(
         any(RunSharedCacheCleanerTaskRequest.class));
+  }
+
+  @Test
+  public void testSecurityAuthorization() {
+    Server server = service.getServer();
+    ServiceAuthorizationManager serviceAuthorizationManager =
+        server.getServiceAuthorizationManager();
+    AccessControlList aclList = serviceAuthorizationManager.getProtocolsAcls(
+        SCMAdminProtocolPB.class);
+    assertTrue(
+        "SCMAdminProtocolPB is null!", aclList != null);
+    assertTrue(
+        "ACL List is not all allowed by default", aclList.isAllAllowed());
+    assertTrue(
+        "ACL List is not * by default", aclList.getAclString().equals("*"));
   }
 }

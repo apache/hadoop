@@ -21,12 +21,15 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequest;
@@ -41,6 +44,7 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.ClientSCMMetrics;
+import org.apache.hadoop.yarn.server.sharedcachemanager.security.SCMPolicyProvider;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
 import org.slf4j.Logger;
@@ -105,7 +109,13 @@ public class ClientProtocolService extends AbstractService implements
             conf.getInt(YarnConfiguration.SCM_CLIENT_SERVER_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_SCM_CLIENT_SERVER_THREAD_COUNT));
 
-    // TODO (YARN-2774): Enable service authorization
+    // TODO: dynamically load ACLs
+    // Enable service authorization
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      refreshServiceAcls(conf, SCMPolicyProvider.getInstance());
+    }
 
     this.server.start();
     clientBindAddress =
@@ -113,6 +123,12 @@ public class ClientProtocolService extends AbstractService implements
             server.getListenerAddress());
 
     super.serviceStart();
+  }
+
+  private void refreshServiceAcls(Configuration configuration,
+                                               PolicyProvider policyProvider) {
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   @Override
@@ -189,5 +205,10 @@ public class ClientProtocolService extends AbstractService implements
   private String getCacheEntryFilePath(String checksum, String filename) {
     return SharedCacheUtil.getCacheEntryPath(this.cacheDepth,
         this.cacheRoot, checksum) + Path.SEPARATOR_CHAR + filename;
+  }
+
+  @VisibleForTesting
+  protected Server getServer() {
+    return server;
   }
 }
