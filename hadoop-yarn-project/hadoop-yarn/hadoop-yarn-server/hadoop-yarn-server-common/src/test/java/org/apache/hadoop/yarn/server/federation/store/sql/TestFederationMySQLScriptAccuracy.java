@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MySQLFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -27,15 +26,11 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.List;
 
-public class TestFDMySQLAccuracy extends FederationSQLAccuracyTest {
+public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFDMySQLAccuracy.class);
+      LoggerFactory.getLogger(TestFederationMySQLScriptAccuracy.class);
 
-  private static final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
-  private static final String DATABASE_URL = "jdbc:hsqldb:mem:state";
-  private static final String DATABASE_USERNAME = "SA";
-  private static final String DATABASE_PASSWORD = "";
   private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
 
   @Override

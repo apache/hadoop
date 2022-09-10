@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.impl.MySQLFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.SQLServerFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -27,16 +26,12 @@ import org.slf4j.LoggerFactory;
 import java.sql.SQLException;
 import java.util.List;
 
-public class TestFDSQLServerAccuracy extends FederationSQLAccuracyTest {
+public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracyTest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestFDSQLServerAccuracy.class);
+      LoggerFactory.getLogger(TestFederationSQLServerScriptAccuracy.class);
 
-  private static final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
-  private static final String DATABASE_URL = "jdbc:hsqldb:mem:state";
-  private static final String DATABASE_USERNAME = "SA";
-  private static final String DATABASE_PASSWORD = "";
-  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mss=true";
+  private final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
   protected SQLServerFederationStateStore createStateStore() {
@@ -45,7 +40,7 @@ public class TestFDSQLServerAccuracy extends FederationSQLAccuracyTest {
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD, DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
-        DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY);
+        DATABASE_URL + System.currentTimeMillis() + SQLSERVER_COMPATIBILITY);
     super.setConf(conf);
     return new SQLServerFederationStateStore();
   }

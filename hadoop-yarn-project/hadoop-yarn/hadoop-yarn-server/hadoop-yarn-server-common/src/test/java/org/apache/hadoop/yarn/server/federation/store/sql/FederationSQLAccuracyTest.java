@@ -27,6 +27,11 @@ import java.io.IOException;
 
 public abstract class FederationSQLAccuracyTest {
 
+  protected final String HSQLDB_DRIVER = "org.hsqldb.jdbc.JDBCDataSource";
+  protected final String DATABASE_URL = "jdbc:hsqldb:mem:state";
+  protected final String DATABASE_USERNAME = "SA";
+  protected final String DATABASE_PASSWORD = "";
+
   private FederationStateStore stateStore;
 
   protected abstract FederationStateStore createStateStore();

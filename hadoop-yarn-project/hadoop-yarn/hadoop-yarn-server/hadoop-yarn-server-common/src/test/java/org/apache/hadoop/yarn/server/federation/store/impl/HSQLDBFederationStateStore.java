@@ -18,9 +18,18 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -301,6 +310,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
+  protected List<String> tables = new ArrayList<>();
+
+  protected List<String> procedures = new ArrayList<>();
 
   @Override
   public void init(Configuration conf) {
@@ -342,7 +354,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
 
       LOG.info("Database Init: Complete");
-    } catch (SQLException e) {
+    } catch (Exception e) {
       LOG.error("ERROR: failed to inizialize HSQLDB " + e.getMessage());
     }
   }
@@ -356,4 +368,51 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
     }
   }
 
+  /**
+   * Extract The Create Table Sql From The Script.
+   *
+   * @param dbIdentifier database identifier, Like Mysql / SqlServer
+   * @param regex the regex
+   * @throws IOException IO exception.
+   */
+  protected void extractCreateTableSQL(String dbIdentifier, String regex) throws IOException {
+    String createTableScriptPath = "." + File.separator + "target" + File.separator +
+        "test-classes" + File.separator + dbIdentifier + "/FederationStateStoreTables.sql";
+    String createTableSQL =
+        FileUtils.readFileToString(new File(createTableScriptPath), StandardCharsets.UTF_8);
+    Pattern p = Pattern.compile(regex);
+    Matcher m = p.matcher(createTableSQL);
+    while(m!=null && m.find()) {
+      tables.add(m.group());
+    }
+  }
+
+  /**
+   * Extract The Create Procedure Sql From The Script.
+   *
+   * @param dbIdentifier database identifier
+   * @param splitKeyword split keyword
+   * @throws IOException IO exception.
+   */
+  protected void extractCreateProcedureSQL(String dbIdentifier, String splitKeyword)
+      throws IOException {
+    String createProcedureScriptPath = "." + File.separator + "target" + File.separator +
+        "test-classes" + File.separator + dbIdentifier + "/FederationStateStoreStoredProcs.sql";
+    String createProcedureSQL =
+        FileUtils.readFileToString(new File(createProcedureScriptPath), StandardCharsets.UTF_8);
+    String[] procedureSQLs = createProcedureSQL.split(splitKeyword);
+    for (String procedureSQL : procedureSQLs) {
+      if (StringUtils.contains(procedureSQL, "CREATE PROCEDURE")) {
+        procedures.add(procedureSQL);
+      }
+    }
+  }
+
+  public List<String> getTables() {
+    return tables;
+  }
+
+  public List<String> getProcedures() {
+    return procedures;
+  }
 }
