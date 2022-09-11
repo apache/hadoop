@@ -28,13 +28,16 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -43,11 +46,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Extends the FederationClientInterceptor and overrides methods to provide a
@@ -55,6 +62,9 @@ import org.junit.Assert;
  */
 public class TestableFederationClientInterceptor
     extends FederationClientInterceptor {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestableFederationClientInterceptor.class);
 
   private ConcurrentHashMap<SubClusterId, MockRM> mockRMs =
       new ConcurrentHashMap<>();
@@ -90,6 +100,7 @@ public class TestableFederationClientInterceptor
         mockRMs.put(subClusterId, mockRM);
       }
       initNodeAttributes(subClusterId, mockRM);
+      initReservationSystem(mockRM);
       return mockRM.getClientRMService();
     }
   }
@@ -160,5 +171,49 @@ public class TestableFederationClientInterceptor
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void initReservationSystem(MockRM mockRM) throws YarnException {
+    try {
+      // Ensure that the reserved resources of the RM#Reservation System are allocated
+      String planName = "root.decided";
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan(planName, true);
+
+      GenericTestUtils.waitFor(() -> {
+        Plan plan = reservationSystem.getPlan(planName);
+        Resource resource = plan.getTotalCapacity();
+        return (resource.getMemorySize() > 0 && resource.getVirtualCores() > 0);
+      }, 100, 2000);
+    } catch (TimeoutException | InterruptedException e) {
+      throw new YarnException(e);
+    }
+  }
+
+  @Override
+  public void shutdown() {
+    if (mockRMs != null && !mockRMs.isEmpty()) {
+      for (Map.Entry<SubClusterId, MockRM> item : mockRMs.entrySet()) {
+        SubClusterId subClusterId = item.getKey();
+
+        // close mockNM
+        MockNM mockNM = mockNMs.getOrDefault(subClusterId, null);
+        try {
+          mockNM.unRegisterNode();
+          mockNM = null;
+        } catch (Exception e) {
+          LOG.error("mockNM unRegisterNode error.", e);
+        }
+
+        // close mockRM
+        MockRM mockRM = item.getValue();
+        if (mockRM != null) {
+          mockRM.stop();
+        }
+      }
+    }
+    mockNMs.clear();
+    mockRMs.clear();
+    super.shutdown();
   }
 }
