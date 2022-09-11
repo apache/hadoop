@@ -30,6 +30,7 @@ import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -252,6 +253,10 @@ public class LdapGroupsMapping
   public static final String POSIX_GID_ATTR_KEY = LDAP_CONFIG_PREFIX + ".posix.attr.gid.name";
   public static final String POSIX_GID_ATTR_DEFAULT = "gidNumber";
 
+  public static final String GROUP_SEARCH_FILTER_PATTERN =
+      LDAP_CONFIG_PREFIX + ".group.search.filter.pattern";
+  public static final String GROUP_SEARCH_FILTER_PATTERN_DEFAULT = "";
+
   /*
    * Posix attributes
    */
@@ -337,6 +342,7 @@ public class LdapGroupsMapping
   private int numAttempts;
   private volatile int numAttemptsBeforeFailover;
   private volatile String ldapCtxFactoryClassName;
+  private volatile String[] groupSearchFilterParams;
 
   /**
    * Returns list of groups for a user.
@@ -437,8 +443,14 @@ public class LdapGroupsMapping
     Set<String> groupDNs = new HashSet<>();
 
     NamingEnumeration<SearchResult> groupResults;
-    // perform the second LDAP query
-    if (isPosix) {
+
+    String[] resolved = resolveCustomGroupFilterArgs(result);
+    // If custom group filter argument is supplied, use that!!!
+    if (resolved != null) {
+      groupResults =
+          c.search(groupbaseDN, groupSearchFilter, resolved, SEARCH_CONTROLS);
+    } else if (isPosix) {
+      // perform the second LDAP query
       groupResults = lookupPosixGroup(result, c);
     } else {
       String userDn = result.getNameInNamespace();
@@ -460,6 +472,25 @@ public class LdapGroupsMapping
       }
     }
     return groups;
+  }
+
+  private String[] resolveCustomGroupFilterArgs(SearchResult result)
+      throws NamingException {
+    if (groupSearchFilterParams != null) {
+      String[] filterElems = new String[groupSearchFilterParams.length];
+      for (int i = 0; i < groupSearchFilterParams.length; i++) {
+        // Specific handling for userDN.
+        if (groupSearchFilterParams[i].equalsIgnoreCase("userDN")) {
+          filterElems[i] = result.getNameInNamespace();
+        } else {
+          filterElems[i] =
+              result.getAttributes().get(groupSearchFilterParams[i]).get()
+                  .toString();
+        }
+      }
+      return filterElems;
+    }
+    return null;
   }
 
   /**
@@ -781,6 +812,12 @@ public class LdapGroupsMapping
         conf.get(POSIX_UID_ATTR_KEY, POSIX_UID_ATTR_DEFAULT);
     posixGidAttr =
         conf.get(POSIX_GID_ATTR_KEY, POSIX_GID_ATTR_DEFAULT);
+    String groupSearchFilterParamCSV = conf.get(GROUP_SEARCH_FILTER_PATTERN,
+        GROUP_SEARCH_FILTER_PATTERN_DEFAULT);
+    if(groupSearchFilterParamCSV!=null && !groupSearchFilterParamCSV.isEmpty()) {
+      LOG.debug("Using custom group search filters: {}", groupSearchFilterParamCSV);
+      groupSearchFilterParams = groupSearchFilterParamCSV.split(",");
+    }
 
     int dirSearchTimeout = conf.getInt(DIRECTORY_SEARCH_TIMEOUT,
         DIRECTORY_SEARCH_TIMEOUT_DEFAULT);
@@ -795,7 +832,16 @@ public class LdapGroupsMapping
       returningAttributes = new String[] {
           groupNameAttr, posixUidAttr, posixGidAttr};
     }
-    SEARCH_CONTROLS.setReturningAttributes(returningAttributes);
+
+    // If custom group filter is being used, fetch attributes in the filter
+    // as well.
+    ArrayList<String> customAttributes = new ArrayList<>();
+    if (groupSearchFilterParams != null) {
+      customAttributes.addAll(Arrays.asList(groupSearchFilterParams));
+    }
+    customAttributes.addAll(Arrays.asList(returningAttributes));
+    SEARCH_CONTROLS
+        .setReturningAttributes(customAttributes.toArray(new String[0]));
 
     // LDAP_CTX_FACTORY_CLASS_DEFAULT is not open to unnamed modules
     // in Java 11+, so the default value is set to null to avoid

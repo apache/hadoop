@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.ipc.AlignmentContext;
@@ -38,16 +37,22 @@ public class TestRouterFederatedState {
   @Test
   public void testRpcRouterFederatedState() throws InvalidProtocolBufferException {
     byte[] uuid = ClientId.getClientId();
-    Map<String, Long> expectedStateIds = new HashMap<String, Long>() {{
-      put("namespace1", 11L );
-      put("namespace2", 22L);
-    }};
+    Map<String, Long> expectedStateIds = new HashMap<String, Long>() {
+      {
+        put("namespace1", 11L);
+        put("namespace2", 22L);
+      }
+    };
 
     AlignmentContext alignmentContext = new AlignmentContextWithRouterState(expectedStateIds);
 
     RpcHeaderProtos.RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
-        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcHeaderProtos.RpcRequestHeaderProto.OperationProto.RPC_FINAL_PACKET, 0,
-        RpcConstants.INVALID_RETRY_COUNT, uuid, alignmentContext);
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RpcHeaderProtos.RpcRequestHeaderProto.OperationProto.RPC_FINAL_PACKET,
+        0,
+        RpcConstants.INVALID_RETRY_COUNT,
+        uuid,
+        alignmentContext);
 
     Map<String, Long> stateIdsFromHeader =
         RouterFederatedStateProto.parseFrom(
@@ -59,9 +64,9 @@ public class TestRouterFederatedState {
 
   private static class AlignmentContextWithRouterState implements AlignmentContext {
 
-    Map<String, Long> routerFederatedState;
+    private Map<String, Long> routerFederatedState;
 
-    public AlignmentContextWithRouterState(Map<String, Long> namespaceStates) {
+    AlignmentContextWithRouterState(Map<String, Long> namespaceStates) {
       this.routerFederatedState = namespaceStates;
     }
 
@@ -82,7 +87,7 @@ public class TestRouterFederatedState {
     public void receiveResponseState(RpcHeaderProtos.RpcResponseHeaderProto header) {}
 
     @Override
-    public long receiveRequestState(RpcHeaderProtos.RpcRequestHeaderProto header, long threshold) throws IOException {
+    public long receiveRequestState(RpcHeaderProtos.RpcRequestHeaderProto header, long threshold) {
       return 0;
     }
 
