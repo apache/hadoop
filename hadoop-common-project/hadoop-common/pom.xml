@@ -842,6 +842,36 @@
             </executions>
           </plugin>
           <plugin>
+            <!--Sets the skip.platformToolsetDetection to true if use.platformToolsetVersion is specified.
+            This implies that the automatic detection of which platform toolset to use will be skipped
+            and the one specified with use.platformToolsetVersion will be used.-->
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.8</version>
+            <executions>
+              <execution>
+                <phase>validate</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <exportAntProperties>true</exportAntProperties>
+                  <target>
+                    <condition property="skip.platformToolsetDetection" value="true" else="false">
+                      <isset property="use.platformToolsetVersion"/>
+                    </condition>
+                    <!--Unfortunately, Maven doesn't have a way to negate a flag, thus we declare a
+                     property which holds the negated value of skip.platformToolsetDetection.-->
+                    <condition property="skip.platformToolsetDetection.negated" value="false" else="true">
+                      <isset property="use.platformToolsetVersion"/>
+                    </condition>
+                    <echo>Skip platform toolset version detection = ${skip.platformToolsetDetection}</echo>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
@@ -852,6 +882,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
+                  <skip>${skip.platformToolsetDetection}</skip>
                   <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
                   <arguments>
                     <argument>${basedir}\src\main\winutils</argument>
@@ -866,6 +897,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
+                  <skip>${skip.platformToolsetDetection}</skip>
                   <executable>msbuild</executable>
                   <arguments>
                     <argument>${basedir}/src/main/winutils/winutils.sln</argument>
@@ -879,12 +911,34 @@
                 </configuration>
               </execution>
               <execution>
+                <id>compile-ms-winutils-using-build-tools</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.platformToolsetDetection.negated}</skip>
+                  <executable>msbuild</executable>
+                  <arguments>
+                    <argument>${basedir}/src/main/winutils/winutils.sln</argument>
+                    <argument>/nologo</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:OutDir=${project.build.directory}/bin/</argument>
+                    <argument>/p:IntermediateOutputPath=${project.build.directory}/winutils/</argument>
+                    <argument>/p:WsceConfigDir=${wsce.config.dir}</argument>
+                    <argument>/p:WsceConfigFile=${wsce.config.file}</argument>
+                    <argument>/p:PlatformToolset=${use.platformToolsetVersion}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
                 <id>convert-ms-native-dll</id>
                 <phase>generate-sources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
                 <configuration>
+                  <skip>${skip.platformToolsetDetection}</skip>
                   <executable>${basedir}\..\..\dev-support\bin\win-vs-upgrade.cmd</executable>
                   <arguments>
                     <argument>${basedir}\src\main\native</argument>
@@ -899,6 +953,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
+                  <skip>${skip.platformToolsetDetection}</skip>
                   <executable>msbuild</executable>
                   <arguments>
                     <argument>${basedir}/src/main/native/native.sln</argument>
@@ -916,6 +971,35 @@
                     <argument>/p:RequireIsal=${require.isal}</argument>
                     <argument>/p:CustomIsalPrefix=${isal.prefix}</argument>
                     <argument>/p:CustomIsalLib=${isal.lib}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>compile-ms-native-dll-using-build-tools</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${skip.platformToolsetDetection.negated}</skip>
+                  <executable>msbuild</executable>
+                  <arguments>
+                    <argument>${basedir}/src/main/native/native.sln</argument>
+                    <argument>/nologo</argument>
+                    <argument>/p:Configuration=Release</argument>
+                    <argument>/p:OutDir=${project.build.directory}/bin/</argument>
+                    <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
+                    <argument>/p:CustomZstdLib=${zstd.lib}</argument>
+                    <argument>/p:CustomZstdInclude=${zstd.include}</argument>
+                    <argument>/p:RequireZstd=${require.zstd}</argument>
+                    <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
+                    <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
+                    <argument>/p:CustomOpensslInclude=${openssl.include}</argument>
+                    <argument>/p:RequireOpenssl=${require.openssl}</argument>
+                    <argument>/p:RequireIsal=${require.isal}</argument>
+                    <argument>/p:CustomIsalPrefix=${isal.prefix}</argument>
+                    <argument>/p:CustomIsalLib=${isal.lib}</argument>
+                    <argument>/p:PlatformToolset=${use.platformToolsetVersion}</argument>
                   </arguments>
                 </configuration>
               </execution>

@@ -386,17 +386,31 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 100),
         FileRange.createFileRange(100_000, 100),
         FileRange.createFileRange(200_000, 100));
+    runAndValidateVectoredRead(input);
+  }
+
+  @Test
+  public void testReadVectoredZeroBytes() throws Exception {
+    List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 0),
+            FileRange.createFileRange(100_000, 100),
+            FileRange.createFileRange(200_000, 0));
+    runAndValidateVectoredRead(input);
+  }
+
+
+  private void runAndValidateVectoredRead(List<FileRange> input)
+          throws Exception {
     Stream stream = Mockito.mock(Stream.class);
     Mockito.doAnswer(invocation -> {
       fillBuffer(invocation.getArgument(1));
       return null;
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(ByteBuffer.class));
+            ArgumentMatchers.any(ByteBuffer.class));
     // should not merge the ranges
     VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate);
     Mockito.verify(stream, Mockito.times(3))
-        .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
-    for(int b=0; b < input.size(); ++b) {
+            .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
+    for (int b = 0; b < input.size(); ++b) {
       validateBuffer("buffer " + b, input.get(b).getData().get(), 0);
     }
   }

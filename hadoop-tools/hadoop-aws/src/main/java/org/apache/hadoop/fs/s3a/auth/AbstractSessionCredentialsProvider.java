@@ -35,8 +35,12 @@ import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * Base class for session credential support.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
+@Deprecated
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 

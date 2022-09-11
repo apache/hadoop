@@ -272,6 +272,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
+  /**
+   * Test to validate EOF ranges. Default implementation fails with EOFException
+   * while reading the ranges. Some implementation like s3, checksum fs fail fast
+   * as they already have the file length calculated.
+   */
   @Test
   public void testEOFRanges()  throws Exception {
     FileSystem fs = getFileSystem();

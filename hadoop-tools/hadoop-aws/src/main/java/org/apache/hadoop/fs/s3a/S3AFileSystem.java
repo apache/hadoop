@@ -54,6 +54,8 @@ import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
@@ -70,6 +72,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.SelectObjectContentRequest;
+import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
@@ -127,6 +131,7 @@ import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -761,9 +766,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         DEFAULT_KEEPALIVE_TIME, 0);
     int numPrefetchThreads = this.prefetchEnabled ? this.prefetchBlockCount : 0;
 
+    int activeTasksForBoundedThreadPool = maxThreads;
+    int waitingTasksForBoundedThreadPool = maxThreads + totalTasks + numPrefetchThreads;
     boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-        maxThreads,
-        maxThreads + totalTasks + numPrefetchThreads,
+        activeTasksForBoundedThreadPool,
+        waitingTasksForBoundedThreadPool,
         keepAliveTime, TimeUnit.SECONDS,
         name + "-bounded");
     unboundedThreadPool = new ThreadPoolExecutor(
@@ -775,8 +782,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
-    if (this.prefetchEnabled) {
-      this.futurePool = new ExecutorServiceFuturePool(boundedThreadPool);
+    if (prefetchEnabled) {
+      final S3AInputStreamStatistics s3AInputStreamStatistics =
+          statisticsContext.newInputStreamStatistics();
+      futurePool = new ExecutorServiceFuturePool(
+          new SemaphoredDelegatingExecutor(
+              boundedThreadPool,
+              activeTasksForBoundedThreadPool + waitingTasksForBoundedThreadPool,
+              true,
+              s3AInputStreamStatistics));
     }
   }
 
@@ -882,6 +896,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param dtEnabled are delegation tokens enabled?
    * @throws IOException failure.
    */
+  @SuppressWarnings("deprecation")
   private void bindAWSClient(URI name, boolean dtEnabled) throws IOException {
     Configuration conf = getConf();
     credentials = null;
@@ -894,6 +909,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // with it if so.
 
       LOG.debug("Using delegation tokens");
+      V2Migration.v1DelegationTokenCredentialProvidersUsed();
       S3ADelegationTokens tokens = new S3ADelegationTokens();
       this.delegationTokens = Optional.of(tokens);
       tokens.bindToFileSystem(getCanonicalUri(),
@@ -1221,7 +1237,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This is for internal use within the S3A code itself.
    * @return AmazonS3Client
    */
-  AmazonS3 getAmazonS3Client() {
+  private AmazonS3 getAmazonS3Client() {
     return s3;
   }
 
@@ -1235,6 +1251,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
+    V2Migration.v1S3ClientRequested();
     return s3;
   }
 
@@ -1611,13 +1628,35 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       CompletableFuture<T> result = new CompletableFuture<>();
       unboundedThreadPool.submit(() ->
           LambdaUtils.eval(result, () -> {
+            LOG.debug("Starting submitted operation in {}", auditSpan.getSpanId());
             try (AuditSpan span = auditSpan.activate()) {
               return operation.apply();
+            } finally {
+              LOG.debug("Completed submitted operation in {}", auditSpan.getSpanId());
             }
           }));
       return result;
     }
   }
+
+  /**
+   * Callbacks for WriteOperationHelper.
+   */
+  private final class WriteOperationHelperCallbacksImpl
+      implements WriteOperationHelper.WriteOperationHelperCallbacks {
+
+    @Override
+    public SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request) {
+      return s3.selectObjectContent(request);
+    }
+
+    @Override
+    public CompleteMultipartUploadResult completeMultipartUpload(
+        CompleteMultipartUploadRequest request) {
+      return s3.completeMultipartUpload(request);
+    }
+  }
+
 
   /**
    * Create the read context for reading from the referenced file,
@@ -1843,7 +1882,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         getConf(),
         statisticsContext,
         getAuditSpanSource(),
-        auditSpan);
+        auditSpan,
+        new WriteOperationHelperCallbacksImpl());
   }
 
   /**
@@ -2324,6 +2364,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    V2Migration.v1GetObjectMetadataCalled();
     return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
         getObjectMetadata(makeQualified(path), null, invoker,
             "getObjectMetadata"));

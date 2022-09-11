@@ -28,7 +28,11 @@ import org.apache.hadoop.conf.Configuration;
 /**
  * Base class for AWS credential providers which
  * take a URI and config in their constructor.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
+@Deprecated
 public abstract class AbstractAWSCredentialProvider
     implements AWSCredentialsProvider {
 

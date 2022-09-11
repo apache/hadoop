@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,9 +15,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-/**
- * Resource handling plugins used internal to the Hadoop build.
- * IA.Private (build structure encourages not using the actual annotations)
- */
-package org.apache.hadoop.maven.plugin.shade.resource;
+package org.apache.hadoop.yarn.server.router.webapp.cache;
