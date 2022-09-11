@@ -38,6 +38,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
@@ -145,7 +146,6 @@ public class MockDefaultRequestInterceptorREST
   private static final String QUEUE_DEDICATED = "dedicated";
   public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
       CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
-  private MockRM mockRM;
 
   // duration(milliseconds), 1mins
   public static final long DURATION = 60*1000;
@@ -156,16 +156,6 @@ public class MockDefaultRequestInterceptorREST
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
       throw new ConnectException("RM is stopped");
-    }
-  }
-
-  public MockDefaultRequestInterceptorREST(){
-    super();
-    try {
-      mockRM = setupResourceManager();
-    } catch (Exception ex) {
-      mockRM = null;
-      LOG.error("mockRM init failed", ex);
     }
   }
 
@@ -840,6 +830,8 @@ public class MockDefaultRequestInterceptorREST
           " Please try again with a valid reservable queue.");
     }
 
+    MockRM mockRM = setupResourceManager();
+
     ReservationId reservationID = ReservationId.parseReservationId(reservationId);
     ReservationSystem reservationSystem = mockRM.getReservationSystem();
     reservationSystem.synchronizePlan(QUEUE_DEDICATED_FULL, true);
@@ -870,10 +862,17 @@ public class MockDefaultRequestInterceptorREST
     ReservationListResponse resRespInfo = clientService.listReservations(request);
     ReservationListInfo resResponse =
         new ReservationListInfo(resRespInfo, includeResourceAllocations);
+
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
     return Response.status(Status.OK).entity(resResponse).build();
   }
 
   private MockRM setupResourceManager() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     // Define default queue
@@ -890,12 +889,5 @@ public class MockDefaultRequestInterceptorREST
     rm.start();
     rm.registerNode("127.0.0.1:5678", 100*1024, 100);
     return rm;
-  }
-
-  @Override
-  public void shutdown() {
-    if (mockRM != null) {
-      mockRM.stop();
-    }
   }
 }

@@ -200,9 +200,8 @@ public class TestRouterWebServicesREST {
           }
           return false;
         }
-      }, 1000, 10 * 1000);
+      }, 1000, 20 * 1000);
     } catch (Exception e) {
-      LOG.error("Web app not running", e);
       fail("Web app not running");
     }
   }
