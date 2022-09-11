@@ -949,7 +949,13 @@ public class FederationClientInterceptor
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
         Boolean exists = existsReservationHomeSubCluster(reservationId);
-        if (!exists) {
+
+        // We may encounter the situation of repeated submission of Reservation,
+        // at this time we should try to use the reservation that has been allocated
+        // !exists indicates that the reservation does not exist and needs to be added
+        // i==0, mainly to consider repeated submissions,
+        // so the first time to apply for reservation, try to use the original reservation
+        if (!exists || i == 0) {
           addReservationHomeSubCluster(reservationId, reservationHomeSubCluster);
         } else {
           updateReservationHomeSubCluster(subClusterId, reservationId, reservationHomeSubCluster);

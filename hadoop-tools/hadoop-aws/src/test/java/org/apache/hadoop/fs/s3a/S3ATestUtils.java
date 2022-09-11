@@ -1499,8 +1499,11 @@ public final class S3ATestUtils {
     }
   }
 
-
-
-
-
+  /**
+   * Disable Prefetching streams from S3AFileSystem in tests.
+   * @param conf Configuration to remove the prefetch property from.
+   */
+  public static void disablePrefetching(Configuration conf) {
+    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
 }

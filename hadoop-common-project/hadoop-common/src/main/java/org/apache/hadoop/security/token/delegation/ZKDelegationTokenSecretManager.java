@@ -42,7 +42,6 @@ import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.curator.retry.RetryNTimes;
-import org.apache.curator.utils.EnsurePath;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -132,6 +131,11 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
 
   public static void setCurator(CuratorFramework curator) {
     CURATOR_TL.set(curator);
+  }
+
+  @VisibleForTesting
+  protected static CuratorFramework getCurator() {
+    return CURATOR_TL.get();
   }
 
   private final boolean isExternalClient;
@@ -260,10 +264,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // If namespace parents are implicitly created, they won't have ACLs.
       // So, let's explicitly create them.
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
-      EnsurePath ensureNs =
-        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
       try {
-        ensureNs.ensure(nullNsFw.getZookeeperClient());
+        nullNsFw.create().creatingParentContainersIfNeeded().forPath("/" + zkClient.getNamespace());
       } catch (Exception e) {
         throw new IOException("Could not create namespace", e);
       }

@@ -191,8 +191,21 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
         .build();
     // Thread pool for async print event details,
     // to prevent wasting too much time for RM.
+    int numCorePoolSizeThreads = getConfig().getInt(
+        YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE,
+        YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE);
+
+    int numMaximumPoolSizeThreads = getConfig().getInt(
+        YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+
+    long keepAliveTime =
+         conf.getTimeDuration(YarnConfiguration.YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME,
+         YarnConfiguration.DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME,
+         TimeUnit.SECONDS);
+
     printEventDetailsExecutor = new ThreadPoolExecutor(
-        1, 5, 10, TimeUnit.SECONDS,
+        numCorePoolSizeThreads, numMaximumPoolSizeThreads, keepAliveTime, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(), threadFactory);
   }
 

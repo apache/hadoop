@@ -31,6 +31,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.qjournal.server.NewerTxnIdException;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -522,6 +523,9 @@ public class QuorumJournalManager implements JournalManager {
         Collection<EditLogInputStream> rpcStreams = new ArrayList<>();
         selectRpcInputStreams(rpcStreams, fromTxnId, onlyDurableTxns);
         streams.addAll(rpcStreams);
+        return;
+      } catch (NewerTxnIdException ntie) {
+        // normal situation, we requested newer IDs than any journal has. no new streams
         return;
       } catch (IOException ioe) {
         LOG.warn("Encountered exception while tailing edits >= " + fromTxnId +
