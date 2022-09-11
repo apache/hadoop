@@ -384,7 +384,8 @@ public final class FederationTestUtils {
           invocation.getMock());
       throw new IOException("Simulate connectionManager throw IOException");
     }).when(spyConnectionManager).getConnection(
-        any(UserGroupInformation.class), any(String.class), any(Class.class));
+        any(UserGroupInformation.class), any(String.class), any(Class.class),
+        any(String.class));
 
     Whitebox.setInternalState(rpcClient, "connectionManager",
         spyConnectionManager);

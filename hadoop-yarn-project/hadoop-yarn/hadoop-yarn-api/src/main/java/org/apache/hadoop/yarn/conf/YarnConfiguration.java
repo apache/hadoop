@@ -2988,6 +2988,51 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN = 60;
 
   /**
+   * Resource manager dispatcher has a thread pool that prints EventQueue,
+   * configure the corePoolSize of this thread pool,
+   * the meaning of corePoolSize is the number of threads to keep in the pool.
+   */
+  public static final String YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE =
+      YARN_PREFIX + "dispatcher.print-thread-pool.core-pool-size";
+
+  /**
+   * The minimum number of core threads for the
+   * Resource manager dispatcher is 1.
+   */
+  public static final int DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_CORE_POOL_SIZE = 1;
+
+  /**
+   * Resource manager dispatcher has a thread pool that prints EventQueue,
+   * configure the maximumPoolSize of this thread pool,
+   * the meaning of maximumPoolSize is the maximum number of threads to allow in the pool.
+   */
+  public static final String YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE =
+      YARN_PREFIX + "dispatcher.print-thread-pool.maximum-pool-size";
+
+  /**
+   * The maximum number of core threads for the
+   * Resource manager dispatcher is 5.
+   */
+  public static final int DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_MAXIMUM_POOL_SIZE = 5;
+
+  /**
+   * Resource manager dispatcher has a thread pool that prints EventQueue,
+   * configure the keepAliveTime of this thread pool,
+   * The meaning of keepAliveTime is as follows
+   * when the number of threads is greater than the core,
+   * this is the maximum time that excess idle threads will wait for new tasks before terminating.
+   */
+  public static final String YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME =
+      YARN_PREFIX + "dispatcher.print-thread-pool.keep-alive-time";
+
+  /**
+   * The keep alive time of core threads for the
+   * Resource manager dispatcher is 10s.
+   */
+  public static final long DEFAULT_YARN_DISPATCHER_PRINT_THREAD_POOL_KEEP_ALIVE_TIME =
+      10*1000; // 10s
+
+  /**
    * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
    * entries
    */
