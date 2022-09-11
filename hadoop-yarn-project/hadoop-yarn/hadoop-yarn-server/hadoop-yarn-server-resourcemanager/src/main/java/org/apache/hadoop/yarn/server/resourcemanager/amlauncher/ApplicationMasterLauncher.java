@@ -40,6 +40,7 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private static final Logger LOG = LoggerFactory.getLogger(
       ApplicationMasterLauncher.class);
   private ThreadPoolExecutor launcherPool;
+  private ThreadPoolExecutor cleanerPool;
   private LauncherThread launcherHandlingThread;
   
   private final BlockingQueue<Runnable> masterEvents
@@ -65,6 +66,12 @@ public class ApplicationMasterLauncher extends AbstractService implements
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
     launcherPool.setThreadFactory(tf);
 
+    ThreadFactory tf1 = new ThreadFactoryBuilder()
+            .setNameFormat("ApplicationMasterCleaner #%d")
+            .build();
+    cleanerPool = new ThreadPoolExecutor(threadCount, threadCount, 1,
+            TimeUnit.HOURS, new LinkedBlockingQueue<>());
+    cleanerPool.setThreadFactory(tf1);
     Configuration newConf = new YarnConfiguration(conf);
     newConf.setInt(CommonConfigurationKeysPublic.
             IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
@@ -103,6 +110,7 @@ public class ApplicationMasterLauncher extends AbstractService implements
       LOG.info(launcherHandlingThread.getName() + " interrupted during join ", 
           ie);    }
     launcherPool.shutdown();
+    cleanerPool.shutdown();
   }
 
   private class LauncherThread extends Thread {
@@ -114,10 +122,14 @@ public class ApplicationMasterLauncher extends AbstractService implements
     @Override
     public void run() {
       while (!this.isInterrupted()) {
-        Runnable toLaunch;
+        AMLauncher toLaunch;
         try {
-          toLaunch = masterEvents.take();
-          launcherPool.execute(toLaunch);
+          toLaunch = (AMLauncher) masterEvents.take();
+          if (toLaunch.getEventType().equals(AMLauncherEventType.LAUNCH)) {
+            launcherPool.execute(toLaunch);
+          } else {
+            cleanerPool.execute(toLaunch);
+          }
         } catch (InterruptedException e) {
           LOG.warn(this.getClass().getName() + " interrupted. Returning.");
           return;
