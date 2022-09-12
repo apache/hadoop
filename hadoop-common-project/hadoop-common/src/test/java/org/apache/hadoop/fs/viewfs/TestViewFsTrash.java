@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.TrashPolicyDefault;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,6 +78,7 @@ public class TestViewFsTrash {
   @Test
   public void testLocalizedTrashInMoveToAppropriateTrash() throws IOException {
     Configuration conf2 = new Configuration(conf);
+    Path testFile = new Path("/data/testfile.txt");
 
     // Enable moveToTrash and add a mount point for /data
     conf2.setLong(FS_TRASH_INTERVAL_KEY, 1);
@@ -84,28 +86,25 @@ public class TestViewFsTrash {
 
     // Default case. file should be moved to fsTarget.getTrashRoot()/resolvedPath
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, false);
-    FileSystem fsView2 = FileSystem.get(conf2);
-    Path f = new Path("/data/testfile.txt");
-    DataOutputStream out = fsView2.create(f);
-    out.writeBytes("testfile.txt:" + f);
-    out.close();
-    Path resolvedFile = fsView2.resolvePath(f);
+    try (FileSystem fsView2 = FileSystem.get(conf2)) {
+      FileSystemTestHelper.createFile(fsView2, testFile);
+      Path resolvedFile = fsView2.resolvePath(testFile);
 
-    Trash.moveToAppropriateTrash(fsView2, f, conf2);
-    Trash trash = new Trash(fsTarget, conf2);
-    Path movedPath = Path.mergePaths(trash.getCurrentTrashDir(f), resolvedFile);
-    assertTrue("File not in trash", fsTarget.exists(movedPath));
+      Trash.moveToAppropriateTrash(fsView2, testFile, conf2);
+      Trash trash = new Trash(fsTarget, conf2);
+      Path movedPath = Path.mergePaths(trash.getCurrentTrashDir(testFile), resolvedFile);
+      ContractTestUtils.assertPathExists(fsTarget, "File not in trash", movedPath);
+    }
 
     // Turn on localized trash. File should be moved to viewfs:/data/.Trash/{user}/Current.
     conf2.setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
-    fsView2 = FileSystem.get(conf2);
-    out = fsView2.create(f);
-    out.writeBytes("testfile.txt:" + f);
-    out.close();
+    try (FileSystem fsView2 = FileSystem.get(conf2)) {
+      FileSystemTestHelper.createFile(fsView2, testFile);
 
-    Trash.moveToAppropriateTrash(fsView2, f, conf2);
-    trash = new Trash(fsView2, conf2);
-    movedPath = Path.mergePaths(trash.getCurrentTrashDir(f), f);
-    assertTrue("File not in localized trash", fsView2.exists(movedPath));
+      Trash.moveToAppropriateTrash(fsView2, testFile, conf2);
+      Trash trash = new Trash(fsView2, conf2);
+      Path movedPath = Path.mergePaths(trash.getCurrentTrashDir(testFile), testFile);
+      ContractTestUtils.assertPathExists(fsView2, "File not in localized trash", movedPath);
+    }
   }
 }

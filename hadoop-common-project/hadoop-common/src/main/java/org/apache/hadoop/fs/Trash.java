@@ -97,9 +97,16 @@ public class Trash extends Configured {
       throw new IOException("Failed to get server trash configuration", e);
     }
 
-    // Directly use viewfs if localized trash is enabled
-    if (fs instanceof ViewFileSystem &&
-        conf.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
+    /*
+     * In HADOOP-18144, we fixed the logical path vs. target path bug of getTrashRoot() in ViewFileSystem.
+     * moveToTrash works for ViewFileSystem now. ViewFileSystem will do path resolution internally by itself.
+     *
+     * When localized trash flag is enabled:
+     *    1). if fs is a ViewFileSystem, we can initialize Trash() with this ViewFileSystem object;
+     *    2). When fs is not a ViewFileSystem, the only place we would need to resolve a path is for symbolic links.
+     *        However, symlink is not enabled in Hadoop due to the complexity to support it (HADOOP-10019).
+     */
+    if (conf.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
         CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
       // Save the original config in savedValue for localized trash config.
       String savedValue = fs.getConf().get(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT);
