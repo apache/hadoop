@@ -189,7 +189,7 @@ public class TestableFederationClientInterceptor
       throw new YarnException(e);
     }
   }
-  
+
   @Override
   public void shutdown() {
     if (mockRMs != null && !mockRMs.isEmpty()) {

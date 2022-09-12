@@ -126,22 +126,22 @@ CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubClu
 BEGIN
    SELECT
        applicationId,
-   	   homeSubCluster,
-   	   createTime
+	   homeSubCluster,
+ 	   createTime
    FROM
     (SELECT
         applicationId,
-   		 homeSubCluster,
-   		 createTime,
-   		 @app_rank := IF(@home_sc = homeSubCluster, @app_rank + 1, 1) AS app_rank,
-   		 @home_sc := homeSubCluster
-   	 FROM applicationshomesubcluster
-   	 ORDER BY createTime DESC
+ 		homeSubCluster,
+  		createTime,
+ 		@app_rank := IF(@home_sc = homeSubCluster, @app_rank + 1, 1) AS app_rank,
+ 		@home_sc := homeSubCluster
+  	 FROM applicationshomesubcluster
+  	 ORDER BY createTime DESC
     ) ranked
    WHERE app_rank <= limit_IN
      AND (CASE WHEN t.homeSubCluster_IN IS NULL THEN 1 = 1
-   	           WHEN t.homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN
-   	      END);
+	           WHEN t.homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN
+ 	      END);
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(
