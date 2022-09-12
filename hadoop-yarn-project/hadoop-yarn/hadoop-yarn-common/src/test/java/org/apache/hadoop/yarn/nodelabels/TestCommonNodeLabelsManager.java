@@ -21,15 +21,10 @@ package org.apache.hadoop.yarn.nodelabels;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -62,14 +57,14 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   public void testAddRemovelabel() throws Exception {
     // Add some label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("hello"));
-    verifyNodeLabelAdded(Sets.newHashSet("hello"), mgr.lastAddedlabels);
+    verifyNodeLabelAdded(new HashSet<>(Collections.singletonList("hello")), mgr.lastAddedlabels);
 
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("world"));
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("hello1", "world1"));
-    verifyNodeLabelAdded(Sets.newHashSet("hello1", "world1"), mgr.lastAddedlabels);
+    verifyNodeLabelAdded(new HashSet<>(Arrays.asList("hello1", "world1")), mgr.lastAddedlabels);
 
     Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
-        Sets.newHashSet("hello", "world", "hello1", "world1")));
+            new HashSet<>(Arrays.asList("hello", "world", "hello1", "world1"))));
     try {
       mgr.addToCluserNodeLabels(Arrays.asList(NodeLabel.newInstance("hello1",
           false)));
@@ -99,15 +94,15 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
     }
 
     // Remove some label
-    mgr.removeFromClusterNodeLabels(Arrays.asList("hello"));
-    assertCollectionEquals(Sets.newHashSet("hello"), mgr.lastRemovedlabels);
+    mgr.removeFromClusterNodeLabels(Collections.singletonList("hello"));
+    assertCollectionEquals(new HashSet<>(Collections.singletonList("hello")), mgr.lastRemovedlabels);
     Assert.assertTrue(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("world", "hello1", "world1")));
 
     mgr.removeFromClusterNodeLabels(Arrays
         .asList("hello1", "world1", "world"));
-    Assert.assertTrue(mgr.lastRemovedlabels.containsAll(Sets.newHashSet(
-        "hello1", "world1", "world")));
+    Assert.assertTrue(mgr.lastRemovedlabels.containsAll(new HashSet<>(Arrays.asList(
+        "hello1", "world1", "world"))));
     Assert.assertTrue(mgr.getClusterNodeLabelNames().isEmpty());
   }
 
@@ -115,7 +110,7 @@ public class TestCommonNodeLabelsManager extends NodeLabelTestBase {
   public void testAddlabelWithCase() throws Exception {
     // Add some label, case will not ignore here
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("HeLlO"));
-    verifyNodeLabelAdded(Sets.newHashSet("HeLlO"), mgr.lastAddedlabels);
+    verifyNodeLabelAdded(new HashSet<>(Collections.singletonList("HeLlO")), mgr.lastAddedlabels);
     Assert.assertFalse(mgr.getClusterNodeLabelNames().containsAll(
         Arrays.asList("hello")));
   }

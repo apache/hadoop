@@ -28,7 +28,6 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -61,7 +60,9 @@ import javax.ws.rs.core.Response.Status;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ACCESSIBLE_NODE_LABELS;
@@ -885,9 +886,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
-    assertEquals(Sets.newHashSet("*"),
+    assertEquals(new HashSet<>(Arrays.asList("*")),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT.getFullPath()));
-    assertEquals(Sets.newHashSet(LABEL_1),
+    assertEquals(new HashSet<>(Arrays.asList(LABEL_1)),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT_A.getFullPath()));
 
     // 4. Set partition capacities to queues as below
@@ -984,7 +985,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
                 SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
-    assertEquals(Sets.newHashSet("*"),
+    assertEquals(new HashSet<>(Arrays.asList("*")),
         cs.getConfiguration().getAccessibleNodeLabels(ROOT.getFullPath()));
     assertNull(cs.getConfiguration().getAccessibleNodeLabels(ROOT_A.getFullPath()));
 

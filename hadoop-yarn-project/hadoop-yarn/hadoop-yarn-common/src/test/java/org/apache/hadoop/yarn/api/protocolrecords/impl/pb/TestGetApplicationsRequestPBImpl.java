@@ -22,10 +22,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,7 +42,7 @@ public class TestGetApplicationsRequestPBImpl {
 
   @Test
   public void testAppTagsLowerCaseConversionDefault() {
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    impl.setApplicationTags(new HashSet<>(Arrays.asList("ABcd", "efgH")));
     impl.getApplicationTags().forEach(s ->
         assertEquals(s, s.toLowerCase()));
   }
@@ -49,7 +50,7 @@ public class TestGetApplicationsRequestPBImpl {
   @Test
   public void testAppTagsLowerCaseConversionDisabled() {
     GetApplicationsRequestPBImpl.setForceLowerCaseTags(false);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    impl.setApplicationTags(new HashSet<>(Arrays.asList("ABcd", "efgH")));
     impl.getApplicationTags().forEach(s ->
         assertNotEquals(s, s.toLowerCase()));
   }
@@ -57,7 +58,7 @@ public class TestGetApplicationsRequestPBImpl {
   @Test
   public void testAppTagsLowerCaseConversionEnabled() {
     GetApplicationsRequestPBImpl.setForceLowerCaseTags(true);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    impl.setApplicationTags(new HashSet<>(Arrays.asList("ABcd", "efgH")));
     impl.getApplicationTags().forEach(s ->
         assertEquals(s, s.toLowerCase()));
   }

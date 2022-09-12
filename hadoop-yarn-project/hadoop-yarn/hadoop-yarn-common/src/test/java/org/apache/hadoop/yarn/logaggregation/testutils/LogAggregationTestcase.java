@@ -115,7 +115,7 @@ public class LogAggregationTestcase {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     Set<String> availableControllers = fileControllers != null ?
-            new HashSet<>(this.fileControllers) : Sets.newHashSet();
+            new HashSet<>(this.fileControllers) : new HashSet<>();
     Set<String> difference = Sets.difference(controllers, availableControllers);
     if (!difference.isEmpty()) {
       throw new IllegalStateException(String.format("Invalid controller defined!" +

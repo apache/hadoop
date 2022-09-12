@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.api;
 
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 
@@ -116,7 +115,7 @@ public class BasePBImplRecordsTest {
       } if (rawType.equals(List.class)) {
         ret = Lists.newArrayList(genTypeValue(params[0]));
       } else if (rawType.equals(Set.class)) {
-        ret = Sets.newHashSet(genTypeValue(params[0]));
+        ret = new HashSet<>(Collections.singletonList(genTypeValue(params[0])));
       } else if (rawType.equals(Map.class)) {
         Map<Object, Object> map = Maps.newHashMap();
         map.put(genTypeValue(params[0]), genTypeValue(params[1]));

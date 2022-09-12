@@ -66,7 +66,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionMatcher;
 import org.apache.hadoop.yarn.server.nodemanager.executor.LocalizerStartContext;
@@ -1396,8 +1395,8 @@ public class TestResourceLocalizationService {
     verify(containerBus).handle(argThat(successContainerLoc));
 
     Set<Path> paths =
-        Sets.newHashSet(new Path(locPath1), new Path(locPath1 + "_tmp"),
-            new Path(locPath2), new Path(locPath2 + "_tmp"));
+        new HashSet<>(Arrays.asList(new Path(locPath1), new Path(locPath1 + "_tmp"),
+            new Path(locPath2), new Path(locPath2 + "_tmp")));
     // Wait for localizer runner thread for container c1 to finish.
     while (locC1.getState() != Thread.State.TERMINATED) {
       Thread.sleep(50);
@@ -1543,8 +1542,8 @@ public class TestResourceLocalizationService {
     verify(containerBus).handle(argThat(successContainerLoc));
 
     Set<Path> paths =
-        Sets.newHashSet(new Path(locPath1), new Path(locPath1 + "_tmp"),
-            new Path(locPath2), new Path(locPath2 + "_tmp"));
+        new HashSet<>(Arrays.asList(new Path(locPath1), new Path(locPath1 + "_tmp"),
+            new Path(locPath2), new Path(locPath2 + "_tmp")));
     // Wait for localizer runner thread for container c1 to finish.
     while (locC2.getState() != Thread.State.TERMINATED) {
       Thread.sleep(50);

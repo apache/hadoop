@@ -24,6 +24,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -32,7 +34,6 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 
@@ -61,8 +62,8 @@ public class HamletGen {
 
   int bytes = 0;
   PrintWriter out;
-  final Set<String> endTagOptional = Sets.newHashSet();
-  final Set<String> inlineElements = Sets.newHashSet();
+  final Set<String> endTagOptional = new HashSet<>();
+  final Set<String> inlineElements = new HashSet<>();
   Class<?> top; // html top-level interface
   String hamlet; // output class simple name;
   boolean topMode;

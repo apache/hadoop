@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.documentstore.reader.cosmosdb;
 
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.cosmosdb.FeedOptions;
 import com.microsoft.azure.cosmosdb.FeedResponse;
 import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.NoDocumentFoundException;
@@ -36,6 +36,8 @@ import rx.Observable;
 import rx.Scheduler;
 import rx.schedulers.Schedulers;
 
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -115,7 +117,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
     LOG.debug("Querying Collection : {} , with query {}", collectionName,
         sqlQuery);
 
-    return Sets.newHashSet(client.queryDocuments(
+    Iterator<String> itr = client.queryDocuments(
         String.format(COLLECTION_LINK, databaseName, collectionName),
         sqlQuery, new FeedOptions())
         .map(FeedResponse::getResults) // Map the page to the list of documents
@@ -124,7 +126,8 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
         .toList()
         .subscribeOn(schedulerForBlockingWork)
         .toBlocking()
-        .single());
+        .single().iterator();
+    return new HashSet<>(IteratorUtils.toList(itr));
   }
 
   @Override

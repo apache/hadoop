@@ -35,6 +35,9 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefi
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
+
 public class TestTimelineReaderWebServicesUtils {
   private static void verifyFilterList(String expr, TimelineFilterList list,
       TimelineFilterList expectedList) throws Exception {
@@ -733,16 +736,16 @@ public class TestTimelineReaderWebServicesUtils {
     expectedList = new TimelineFilterList(Operator.OR,
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11")),
+                "type1",new HashSet<>(Arrays.asList((Object)"entity11"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type2", Sets.newHashSet((Object)"entity21", "entity22"))
+                "type2", new HashSet<>(Arrays.asList((Object)"entity21", "entity22")))
         ),
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type3", Sets.newHashSet(
-                    (Object)"entity31", "entity32", "entity33")),
+                "type3", new HashSet<>(Arrays.asList(
+                    (Object)"entity31", "entity32", "entity33"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11", "entity12"))
+                "type1", new HashSet<>(Arrays.asList((Object)"entity11", "entity12")))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
@@ -754,18 +757,18 @@ public class TestTimelineReaderWebServicesUtils {
     expectedList = new TimelineFilterList(Operator.OR,
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11")),
+                "type1", new HashSet<>(Arrays.asList((Object)"entity11"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type2", Sets.newHashSet((Object)"entity21", "entity22")),
+                "type2", new HashSet<>(Arrays.asList((Object)"entity21", "entity22"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                "type5", Sets.newHashSet((Object)"entity51"))
+                "type5", new HashSet<>(Arrays.asList((Object)"entity51")))
         ),
         new TimelineFilterList(
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type3", Sets.newHashSet(
-                    (Object)"entity31", "entity32", "entity33")),
+                "type3", new HashSet<>(Arrays.asList(
+                    (Object)"entity31", "entity32", "entity33"))),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                "type1", Sets.newHashSet((Object)"entity11", "entity12"))
+                "type1", new HashSet<>(Arrays.asList((Object)"entity11", "entity12")))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.
@@ -780,45 +783,45 @@ public class TestTimelineReaderWebServicesUtils {
             new TimelineFilterList(Operator.OR,
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type1", Sets.newHashSet((Object)"entity11")),
+                        "type1", new HashSet<>(Arrays.asList((Object)"entity11"))),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type2", Sets.newHashSet(
-                            (Object)"entity21", "entity22")),
+                        "type2", new HashSet<>(Arrays.asList(
+                            (Object)"entity21", "entity22"))),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type5", Sets.newHashSet((Object)"entity51"))
+                        "type5", new HashSet<>(Arrays.asList((Object)"entity51")))
                 ),
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                        "type3", Sets.newHashSet(
-                            (Object)"entity31", "entity32", "entity33")),
+                        "type3", new HashSet<>(Arrays.asList(
+                            (Object)"entity31", "entity32", "entity33"))),
                     new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                        "type1", Sets.newHashSet(
-                            (Object)"entity11", "entity12"))
+                        "type1", new HashSet<>(Arrays.asList(
+                            (Object)"entity11", "entity12")))
                 )
             ),
             new TimelineFilterList(Operator.OR,
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type11", Sets.newHashSet((Object)"entity111"))
+                        "type11", new HashSet<>(Arrays.asList((Object)"entity111")))
                 ),
                 new TimelineFilterList(
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type4", Sets.newHashSet((Object)"entity43", "entity44",
-                            "entity47", "entity49")),
+                        "type4", new HashSet<>(Arrays.asList((Object)"entity43", "entity44",
+                            "entity47", "entity49"))),
                     new TimelineKeyValuesFilter(TimelineCompareOp.NOT_EQUAL,
-                        "type7", Sets.newHashSet((Object)"entity71"))
+                        "type7", new HashSet<>(Arrays.asList((Object)"entity71")))
                 )
             )
         ),
         new TimelineFilterList(
             new TimelineFilterList(
                 new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                    "type2", Sets.newHashSet((Object)"entity2")),
+                    "type2", new HashSet<>(Arrays.asList((Object)"entity2"))),
                 new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL,
-                    "type8", Sets.newHashSet((Object)"entity88"))
-            ),
+                    "type8", new HashSet<>(Arrays.asList((Object)"entity88"))
+            )),
             new TimelineKeyValuesFilter(TimelineCompareOp.EQUAL, "t9",
-                Sets.newHashSet((Object)"e", "e1"))
+                new HashSet<>(Arrays.asList((Object)"e", "e1")))
         )
     );
     verifyFilterList(expr, TimelineReaderWebServicesUtils.

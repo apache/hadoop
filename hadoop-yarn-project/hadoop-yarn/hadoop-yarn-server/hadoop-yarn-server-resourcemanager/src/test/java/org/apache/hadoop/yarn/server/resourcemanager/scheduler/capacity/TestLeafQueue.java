@@ -44,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -53,7 +54,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -5286,7 +5286,7 @@ public class TestLeafQueue {
 
     ParentQueue rootQueue = (ParentQueue) cs.getRootQueue();
 
-    Assert.assertEquals(Sets.newHashSet("", "test", "test2"),
+    Assert.assertEquals(new HashSet<>(Arrays.asList("", "test", "test2")),
         rootQueue.queueNodeLabelsSettings.getConfiguredNodeLabels());
   }
 

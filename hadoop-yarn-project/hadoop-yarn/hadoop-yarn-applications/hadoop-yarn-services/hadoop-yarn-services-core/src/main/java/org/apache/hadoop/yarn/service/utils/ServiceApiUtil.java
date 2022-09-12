@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.registry.client.api.RegistryConstants;
 import org.apache.hadoop.registry.client.binding.RegistryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.ComponentState;
@@ -622,7 +621,7 @@ public class ServiceApiUtil {
   public static List<Container> validateAndResolveCompsUpgrade(
       Service liveService, Collection<String> compNames) throws YarnException {
     Preconditions.checkNotNull(compNames);
-    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    HashSet<String> requestedComps = new HashSet<>(compNames);
     List<Container> containerNeedUpgrade = new ArrayList<>();
     for (Component liveComp : liveService.getComponents()) {
       if (requestedComps.contains(liveComp.getName())) {
@@ -648,7 +647,7 @@ public class ServiceApiUtil {
   public static List<Container> validateAndResolveCompsStable(
       Service liveService, Collection<String> compNames) throws YarnException {
     Preconditions.checkNotNull(compNames);
-    HashSet<String> requestedComps = Sets.newHashSet(compNames);
+    HashSet<String> requestedComps = new HashSet<>(compNames);
     List<Container> containerNeedUpgrade = new ArrayList<>();
     for (Component liveComp : liveService.getComponents()) {
       if (requestedComps.contains(liveComp.getName())) {

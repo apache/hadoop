@@ -21,20 +21,21 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.Principal;
+import java.util.Random;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -47,7 +48,6 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1284,7 +1284,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("getClusterNodeLabels", argsClasses, args);
       Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
-      Set<NodeLabel> hashSets = Sets.newHashSet();
+      Set<NodeLabel> hashSets = new HashSet<>();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       return new NodeLabelsInfo(hashSets);
     } catch (NotFoundException e) {
@@ -1318,7 +1318,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       ClientMethod remoteMethod = new ClientMethod("getLabelsOnNode", argsClasses, args);
       Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
            invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
-      Set<NodeLabel> hashSets = Sets.newHashSet();
+      Set<NodeLabel> hashSets = new HashSet<>();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       return new NodeLabelsInfo(hashSets);
     } catch (NotFoundException e) {

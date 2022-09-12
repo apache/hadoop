@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -31,6 +30,8 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
+
 
 import static junit.framework.TestCase.assertTrue;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase.toXml;
@@ -83,7 +84,7 @@ public class ResourceRequestsXmlVerifications {
         (Element) requestInfo.getElementsByTagName("capability").item(0);
 
     return extractCustomResorceTypes(capability,
-        Sets.newHashSet(expectedResourceTypes));
+            new HashSet<>(expectedResourceTypes));
   }
 
   private static Map<String, Long> extractCustomResorceTypes(Element capability,

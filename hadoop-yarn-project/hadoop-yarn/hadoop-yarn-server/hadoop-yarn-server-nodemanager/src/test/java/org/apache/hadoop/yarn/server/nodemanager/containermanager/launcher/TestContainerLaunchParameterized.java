@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -146,6 +147,6 @@ public class TestContainerLaunchParameterized {
   }
 
   private static Set<String> asSet(String... str) {
-    return Sets.newHashSet(str);
+    return new HashSet<>(Arrays.asList(str));
   }
 }

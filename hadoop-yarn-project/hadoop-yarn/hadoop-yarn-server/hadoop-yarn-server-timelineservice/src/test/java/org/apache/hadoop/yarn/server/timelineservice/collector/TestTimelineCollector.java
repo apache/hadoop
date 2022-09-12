@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.timelineservice.collector;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineDomain;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetricOperation;
@@ -39,6 +38,7 @@ import org.mockito.internal.stubbing.answers.AnswersWithDelay;
 import org.mockito.internal.stubbing.answers.Returns;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -365,7 +365,7 @@ public class TestTimelineCollector {
     // Aggregate the entities.
     Map<String, AggregationStatusTable> aggregationGroups
         = collector.getAggregationGroups();
-    assertEquals(Sets.newHashSet("type"), aggregationGroups.keySet());
+    assertEquals(new HashSet<>(Collections.singleton("type")), aggregationGroups.keySet());
     TimelineEntity aggregatedEntity = TimelineCollector.
         aggregateWithoutGroupId(aggregationGroups, currContext.getAppId(),
             TimelineEntityType.YARN_APPLICATION.toString());

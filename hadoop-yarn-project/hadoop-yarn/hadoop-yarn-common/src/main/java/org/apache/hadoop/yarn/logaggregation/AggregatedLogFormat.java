@@ -45,6 +45,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Pattern;
+
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.output.WriterOutputStream;
 import org.apache.commons.math3.util.Pair;
@@ -66,7 +68,6 @@ import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
@@ -363,7 +364,7 @@ public class AggregatedLogFormat {
       Iterable<File> mask = Iterables.filter(candidates, (input) ->
           !alreadyUploadedLogFiles
               .contains(getLogFileMetaData(input)));
-      return Sets.newHashSet(mask);
+      return new HashSet<File>(IteratorUtils.toList(mask.iterator()));
     }
 
     private void filterFiles(String pattern, Set<File> candidates,

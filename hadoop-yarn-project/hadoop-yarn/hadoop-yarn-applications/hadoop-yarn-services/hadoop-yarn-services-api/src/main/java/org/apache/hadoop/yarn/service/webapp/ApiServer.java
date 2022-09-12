@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -372,7 +371,7 @@ public class ApiServer {
         LOG.info("PUT: upgrade component {} for service {} " +
             "user = {}", component.getName(), appName, ugi);
         return processComponentsUpgrade(ugi, appName,
-            Sets.newHashSet(componentName));
+            new HashSet<>(Collections.singleton(componentName)));
       }
 
       if (component.getNumberOfContainers() == null) {
