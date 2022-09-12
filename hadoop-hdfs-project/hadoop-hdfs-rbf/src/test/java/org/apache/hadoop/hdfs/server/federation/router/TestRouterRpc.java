@@ -1549,6 +1549,24 @@ public class TestRouterRpc {
   }
 
   @Test
+  public void testMkdirWithDisableNameService() throws Exception {
+    MockResolver resolver = (MockResolver)router.getRouter().getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    resolver.addLocation("/mnt", ns0, "/");
+    MockResolver activeNamenodeResolver = (MockResolver)router.getRouter().getNamenodeResolver();
+    activeNamenodeResolver.disableNamespace(ns0);
+
+    try {
+      FsPermission permission = new FsPermission("777");
+      RouterRpcServer rpcServer = router.getRouter().getRpcServer();
+      LambdaTestUtils.intercept(NoLocationException.class,
+          () -> rpcServer.mkdirs("/mnt/folder0/folder1", permission, true));
+    } finally {
+      activeNamenodeResolver.clearDisableNamespaces();
+    }
+  }
+
+  @Test
   public void testProxyExceptionMessages() throws IOException {
 
     // Install a mount point to a different path to check

@@ -608,6 +608,7 @@ public final class S3ATestUtils {
    * @return a set of credentials
    * @throws IOException on a failure
    */
+  @SuppressWarnings("deprecation")
   public static AWSCredentialsProvider buildAwsCredentialsProvider(
       final Configuration conf)
       throws IOException {
@@ -1498,8 +1499,11 @@ public final class S3ATestUtils {
     }
   }
 
-
-
-
-
+  /**
+   * Disable Prefetching streams from S3AFileSystem in tests.
+   * @param conf Configuration to remove the prefetch property from.
+   */
+  public static void disablePrefetching(Configuration conf) {
+    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
 }

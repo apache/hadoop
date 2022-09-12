@@ -28,22 +28,29 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestNameNodeRpcServer {
 
@@ -90,6 +97,66 @@ public class TestNameNodeRpcServer {
   // Because of the randomness of the NN assigning DN, we run multiple
   // trials. 1/3^20=3e-10, so that should be good enough.
   static final int ITERATIONS_TO_USE = 20;
+
+  @Test
+  @Timeout(30000)
+  public void testNamenodeRpcClientIpProxyWithFailBack() throws Exception {
+    // Make 3 nodes & racks so that we have a decent shot of detecting when
+    // our change overrides the random choice of datanode.
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFS_NAMENODE_IP_PROXY_USERS, "fake_joe");
+    final CallerContext original = CallerContext.getCurrent();
+
+    MiniQJMHACluster qjmhaCluster = null;
+    try {
+      String baseDir = GenericTestUtils.getRandomizedTempPath();
+      MiniQJMHACluster.Builder builder = new MiniQJMHACluster.Builder(conf);
+      builder.getDfsBuilder().numDataNodes(3);
+      qjmhaCluster = builder.baseDir(baseDir).build();
+      MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
+      dfsCluster.waitActive();
+      dfsCluster.transitionToActive(0);
+
+      // Set the caller context to set the ip address
+      CallerContext.setCurrent(
+          new CallerContext.Builder("test", conf)
+              .build());
+
+      dfsCluster.getFileSystem(0).setPermission(
+          new Path("/"), FsPermission.getDirDefault());
+
+      // Run as fake joe to authorize the test
+      UserGroupInformation joe =
+          UserGroupInformation.createUserForTesting("fake_joe",
+              new String[]{"fake_group"});
+
+      FileSystem joeFs = joe.doAs((PrivilegedExceptionAction<FileSystem>) () ->
+          FileSystem.get(dfsCluster.getURI(0), conf));
+
+      Path testPath = new Path("/foo");
+      // Write a sample file
+      FSDataOutputStream stream = joeFs.create(testPath);
+      stream.write("Hello world!\n".getBytes(StandardCharsets.UTF_8));
+      stream.close();
+
+      qjmhaCluster.getDfsCluster().transitionToStandby(0);
+      qjmhaCluster.getDfsCluster().transitionToActive(1);
+
+      DistributedFileSystem nn1 = dfsCluster.getFileSystem(1);
+      assertNotNull(nn1.getFileStatus(testPath));
+    } finally {
+      CallerContext.setCurrent(original);
+      if (qjmhaCluster != null) {
+        try {
+          qjmhaCluster.shutdown();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+      // Reset the config
+      conf.unset(DFS_NAMENODE_IP_PROXY_USERS);
+    }
+  }
 
   /**
    * A test to make sure that if an authorized user adds "clientIp:" to their

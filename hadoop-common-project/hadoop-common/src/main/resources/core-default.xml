@@ -586,6 +586,18 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.group.search.filter.pattern</name>
+  <value></value>
+  <description>
+    Comma separated values that needs to be substituted in the group search
+    filter during group lookup. The values are substituted in the order they
+    appear in the list, the first value will replace {0} the second {1} and
+    so on.
+  </description>
+</property>
+
+
+<property>
   <name>hadoop.security.group.mapping.providers</name>
   <value></value>
   <description>
