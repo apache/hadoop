@@ -66,11 +66,13 @@ public interface RpcEngine {
    * @param connId input ConnectionId.
    * @param conf input Configuration.
    * @param factory input factory.
+   * @param alignmentContext Alignment context
    * @throws IOException raised on errors performing I/O.
    * @return ProtocolProxy.
    */
   <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
-      Client.ConnectionId connId, Configuration conf, SocketFactory factory)
+      Client.ConnectionId connId, Configuration conf, SocketFactory factory,
+      AlignmentContext alignmentContext)
       throws IOException;
 
   /**
