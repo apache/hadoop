@@ -1967,4 +1967,8 @@ public final class HttpServer2 implements FilterContainer {
     return metrics;
   }
 
+  @VisibleForTesting
+  List<ServerConnector> getListeners() {
+    return listeners;
+  }
 }

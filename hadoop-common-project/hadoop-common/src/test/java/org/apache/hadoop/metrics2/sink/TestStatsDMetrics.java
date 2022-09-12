@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.metrics2.impl;
+package org.apache.hadoop.metrics2.sink;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -35,9 +35,9 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
-import org.apache.hadoop.metrics2.sink.StatsDSink;
+import org.apache.hadoop.metrics2.impl.MetricsRecordImpl;
+import org.apache.hadoop.metrics2.impl.MsInfo;
 import org.apache.hadoop.metrics2.sink.StatsDSink.StatsD;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Test;
 
 public class TestStatsDMetrics {
@@ -52,7 +52,7 @@ public class TestStatsDMetrics {
   }
 
   @Test(timeout=3000)
-  public void testPutMetrics() throws IOException, InterruptedException {
+  public void testPutMetrics() throws IOException, IllegalAccessException {
     final StatsDSink sink = new StatsDSink();
     List<MetricsTag> tags = new ArrayList<MetricsTag>();
     tags.add(new MetricsTag(MsInfo.Hostname, "host"));
@@ -69,7 +69,7 @@ public class TestStatsDMetrics {
       final StatsDSink.StatsD mockStatsD =
           new StatsD(sock.getLocalAddress().getHostName(),
               sock.getLocalPort());
-      Whitebox.setInternalState(sink, "statsd", mockStatsD);
+      sink.setStatsd(mockStatsD);
       final DatagramPacket p = new DatagramPacket(new byte[8192], 8192);
       sink.putMetrics(record);
       sock.receive(p);
@@ -87,7 +87,7 @@ public class TestStatsDMetrics {
   }
 
   @Test(timeout=3000)
-  public void testPutMetrics2() throws IOException {
+  public void testPutMetrics2() throws IOException, IllegalAccessException {
     StatsDSink sink = new StatsDSink();
     List<MetricsTag> tags = new ArrayList<MetricsTag>();
     tags.add(new MetricsTag(MsInfo.Hostname, null));
@@ -104,7 +104,7 @@ public class TestStatsDMetrics {
       final StatsDSink.StatsD mockStatsD =
           new StatsD(sock.getLocalAddress().getHostName(),
               sock.getLocalPort());
-      Whitebox.setInternalState(sink, "statsd", mockStatsD);
+      sink.setStatsd(mockStatsD);
       final DatagramPacket p = new DatagramPacket(new byte[8192], 8192);
       sink.putMetrics(record);
       sock.receive(p);
