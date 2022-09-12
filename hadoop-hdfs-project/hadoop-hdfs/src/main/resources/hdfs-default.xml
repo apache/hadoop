@@ -6454,4 +6454,12 @@
       frequently than this time, the client will give up waiting.
     </description>
   </property>
+  <property>
+    <name>dfs.client.output.stream.uniq.default.key</name>
+    <value>DEFAULT</value>
+    <description>
+      The default prefix key to construct the uniqKey for one DFSOutputStream.
+      If the namespace is DEFAULT, it's best to change this conf to other value.
+    </description>
+  </property>
 </configuration>

@@ -26,6 +26,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAccumulator;
+import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
 /**
  * Global State Id context for the client.
@@ -37,8 +38,17 @@ import java.util.concurrent.atomic.LongAccumulator;
 @InterfaceStability.Evolving
 public class ClientGSIContext implements AlignmentContext {
 
-  private final LongAccumulator lastSeenStateId =
-      new LongAccumulator(Math::max, Long.MIN_VALUE);
+  private final LongAccumulator lastSeenStateId;
+  private ByteString routerFederatedState;
+
+  public ClientGSIContext() {
+    this(new LongAccumulator(Math::max, Long.MIN_VALUE));
+  }
+
+  public ClientGSIContext(LongAccumulator lastSeenStateId) {
+    this.lastSeenStateId = lastSeenStateId;
+    routerFederatedState = null;
+  }
 
   @Override
   public long getLastSeenStateId() {
@@ -65,16 +75,25 @@ public class ClientGSIContext implements AlignmentContext {
    * in responses.
    */
   @Override
-  public void receiveResponseState(RpcResponseHeaderProto header) {
-    lastSeenStateId.accumulate(header.getStateId());
+  public synchronized void receiveResponseState(RpcResponseHeaderProto header) {
+    if (header.hasRouterFederatedState()) {
+      routerFederatedState = header.getRouterFederatedState();
+    } else {
+      lastSeenStateId.accumulate(header.getStateId());
+    }
   }
 
   /**
    * Client side implementation for providing state alignment info in requests.
    */
   @Override
-  public void updateRequestState(RpcRequestHeaderProto.Builder header) {
-    header.setStateId(lastSeenStateId.longValue());
+  public synchronized void updateRequestState(RpcRequestHeaderProto.Builder header) {
+    if (lastSeenStateId.get() != Long.MIN_VALUE) {
+      header.setStateId(lastSeenStateId.get());
+    }
+    if (routerFederatedState != null) {
+      header.setRouterFederatedState(routerFederatedState);
+    }
   }
 
   /**

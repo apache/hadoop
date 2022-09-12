@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.junit.jupiter.api.Test;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
+import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
+
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -26,17 +38,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
-import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
-import org.junit.Test;
 
 public class TestCleanerTask {
   private static final String ROOT =
@@ -47,7 +48,7 @@ public class TestCleanerTask {
       YarnConfiguration.DEFAULT_SHARED_CACHE_NESTED_LEVEL;
 
   @Test
-  public void testNonExistentRoot() throws Exception {
+  void testNonExistentRoot() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
@@ -64,7 +65,7 @@ public class TestCleanerTask {
   }
 
   @Test
-  public void testProcessFreshResource() throws Exception {
+  void testProcessFreshResource() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
@@ -89,7 +90,7 @@ public class TestCleanerTask {
   }
 
   @Test
-  public void testProcessEvictableResource() throws Exception {
+  void testProcessEvictableResource() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
@@ -125,7 +126,7 @@ public class TestCleanerTask {
   }
 
   @Test
-  public void testResourceIsInUseHasAnActiveApp() throws Exception {
+  void testResourceIsInUseHasAnActiveApp() throws Exception {
     FileSystem fs = mock(FileSystem.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
