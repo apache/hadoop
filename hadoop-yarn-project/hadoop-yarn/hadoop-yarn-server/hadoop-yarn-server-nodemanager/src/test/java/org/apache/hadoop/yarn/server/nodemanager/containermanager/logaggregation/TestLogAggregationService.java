@@ -245,9 +245,15 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
+      int count = 0;
+      int maxAttempts = 50;
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        Thread.sleep(5000);
+        count = 0;
+        while ((f.exists()) && (count < maxAttempts)) {
+          count++;
+          Thread.sleep(100);
+        }
         Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
       }
       Assert.assertFalse("Directory [" + app1LogDir + "] was not deleted",
@@ -260,9 +266,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
+      Thread.sleep(5000);
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        Thread.sleep(5000);
         Assert.assertTrue("File [" + f + "] was not deleted", f.exists());
       }
       Assert.assertTrue("Directory [" + app1LogDir + "] was not deleted",
