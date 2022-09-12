@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.secure;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -107,6 +109,8 @@ public abstract class AbstractSecureRouterTest {
     // Router Kerberos KeyTab configuration
     conf.set(YarnConfiguration.ROUTER_PRINCIPAL, ROUTER_LOCALHOST_REALM);
     conf.set(YarnConfiguration.ROUTER_KEYTAB, routerKeytab.getAbsolutePath());
+
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   /**
@@ -214,6 +218,12 @@ public abstract class AbstractSecureRouterTest {
   public static void afterSecureRouterTest() throws Exception {
     LOG.info("teardown of kdc instance.");
     teardownKDC();
+    if (mockRMs != null && mockRMs.isEmpty()) {
+      for (MockRM mockRM : mockRMs.values()) {
+        mockRM.close();
+      }
+    }
+    mockRMs.clear();
   }
 
   public static MiniKdc getKdc() {

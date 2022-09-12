@@ -22,6 +22,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_C
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_SEPARATOR_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_IP_PROXY_USERS;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 
 import java.io.EOFException;
@@ -137,6 +138,8 @@ public class RouterRpcClient {
   private Map<String, LongAdder> rejectedPermitsPerNs = new ConcurrentHashMap<>();
   private Map<String, LongAdder> acceptedPermitsPerNs = new ConcurrentHashMap<>();
 
+  private final boolean enableProxyUser;
+
   /**
    * Create a router RPC client to manage remote procedure calls to NNs.
    *
@@ -146,7 +149,8 @@ public class RouterRpcClient {
    * @param monitor Optional performance monitor.
    */
   public RouterRpcClient(Configuration conf, Router router,
-      ActiveNamenodeResolver resolver, RouterRpcMonitor monitor) {
+      ActiveNamenodeResolver resolver, RouterRpcMonitor monitor,
+      RouterStateIdContext routerStateIdContext) {
     this.router = router;
 
     this.namenodeResolver = resolver;
@@ -155,7 +159,7 @@ public class RouterRpcClient {
     this.contextFieldSeparator =
         clientConf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
-    this.connectionManager = new ConnectionManager(clientConf);
+    this.connectionManager = new ConnectionManager(clientConf, routerStateIdContext);
     this.connectionManager.start();
     this.routerRpcFairnessPolicyController =
         FederationUtil.newFairnessPolicyController(conf);
@@ -194,6 +198,8 @@ public class RouterRpcClient {
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts, maxRetryAttempts,
         failoverSleepBaseMillis, failoverSleepMaxMillis);
+    String[] ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
+    this.enableProxyUser = ipProxyUsers != null && ipProxyUsers.length > 0;
   }
 
   /**
@@ -363,13 +369,13 @@ public class RouterRpcClient {
 
       // TODO Add tokens from the federated UGI
       UserGroupInformation connUGI = ugi;
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() || this.enableProxyUser) {
         UserGroupInformation routerUser = UserGroupInformation.getLoginUser();
         connUGI = UserGroupInformation.createProxyUser(
             ugi.getUserName(), routerUser);
       }
       connection = this.connectionManager.getConnection(
-          connUGI, rpcAddress, proto);
+          connUGI, rpcAddress, proto, nsId);
       LOG.debug("User {} NN {} is using connection {}",
           ugi.getUserName(), rpcAddress, connection);
     } catch (Exception ex) {
@@ -1636,7 +1642,7 @@ public class RouterRpcClient {
 
   /**
    * Refreshes/changes the fairness policy controller implementation if possible
-   * and returns the controller class name
+   * and returns the controller class name.
    * @param conf Configuration
    * @return New controller class name if successfully refreshed, else old controller class name
    */

@@ -834,4 +834,15 @@
       (delete the source path directly) and skip (skip both trash and deletion).
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.federated.state.propagation.maxsize</name>
+    <value>5</value>
+    <description>
+      The maximum size of the federated state to send in the RPC header. Sending the federated
+      state removes the need to msync on every read call, but at the expense of having a larger
+      header. The cost tradeoff between the larger header and always msync'ing depends on the number
+      of namespaces in use and the latency of the msync requests.
+    </description>
+  </property>
 </configuration>

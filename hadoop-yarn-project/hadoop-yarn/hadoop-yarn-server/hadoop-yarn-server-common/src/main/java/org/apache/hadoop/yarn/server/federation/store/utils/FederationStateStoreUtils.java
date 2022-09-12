@@ -146,6 +146,22 @@ public final class FederationStateStoreUtils {
   }
 
   /**
+   * Throws an <code>FederationStateStoreException</code> due to an error in
+   * <code>FederationStateStore</code>.
+   *
+   * @param log the logger interface
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowStoreException(Logger log, String errMsgFormat, Object... args)
+      throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    log.error(errMsg);
+    throw new FederationStateStoreException(errMsg);
+  }
+
+  /**
    * Throws an <code>FederationStateStoreInvalidInputException</code> due to an
    * error in <code>FederationStateStore</code>.
    *
@@ -177,6 +193,44 @@ public final class FederationStateStoreUtils {
       log.error(errMsg);
       throw new FederationStateStoreRetriableException(errMsg);
     }
+  }
+
+  /**
+   * Throws an <code>FederationStateStoreRetriableException</code> due to an
+   * error in <code>FederationStateStore</code>.
+   *
+   * @param t the throwable raised in the called class.
+   * @param log the logger interface.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowRetriableException(
+      Throwable t, Logger log, String errMsgFormat, Object... args) throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    if (t != null) {
+      log.error(errMsg, t);
+      throw new FederationStateStoreRetriableException(errMsg, t);
+    } else {
+      log.error(errMsg);
+      throw new FederationStateStoreRetriableException(errMsg);
+    }
+  }
+
+  /**
+   * Throws an <code>FederationStateStoreRetriableException</code> due to an
+   * error in <code>FederationStateStore</code>.
+   *
+   * @param log the logger interface.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowRetriableException(
+      Logger log, String errMsgFormat, Object... args) throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    log.error(errMsg);
+    throw new FederationStateStoreRetriableException(errMsg);
   }
 
   /**
