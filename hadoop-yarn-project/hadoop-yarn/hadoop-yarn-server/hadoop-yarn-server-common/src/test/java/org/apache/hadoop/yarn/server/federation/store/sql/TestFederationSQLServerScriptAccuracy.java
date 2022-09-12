@@ -31,6 +31,7 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationSQLServerScriptAccuracy.class);
 
+  private final String DATABASE_URL_SQLSERVER = "jdbc:hsqldb:mem-sqlserver:state-sqlserver";
   private final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
@@ -40,7 +41,7 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD, DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
-        DATABASE_URL + System.currentTimeMillis() + SQLSERVER_COMPATIBILITY);
+        DATABASE_URL_SQLSERVER + System.currentTimeMillis() + SQLSERVER_COMPATIBILITY);
     super.setConf(conf);
     return new SQLServerFederationStateStore();
   }
@@ -48,6 +49,7 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
   @Test
   public void checkSqlServerScriptAccuracy() throws SQLException {
     SQLServerFederationStateStore federationStateStore = this.createStateStore();
+    federationStateStore.init(getConf());
 
     // get a list of tables
     List<String> tables = federationStateStore.getTables();
@@ -56,13 +58,5 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
     }
 
     LOG.info("[SqlServer] - FederationStateStore create table.");
-
-    // get a list of procedures
-    List<String> procedures = federationStateStore.getProcedures();
-    for (String procedure : procedures) {
-      federationStateStore.getConn().prepareStatement(procedure).execute();
-    }
-
-    LOG.info("[SqlServer] - FederationStateStore create procedure.");
   }
 }

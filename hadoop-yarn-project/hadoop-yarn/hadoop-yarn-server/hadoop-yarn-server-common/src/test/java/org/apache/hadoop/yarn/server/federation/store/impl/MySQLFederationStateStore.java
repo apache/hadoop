@@ -36,13 +36,11 @@ public class MySQLFederationStateStore extends HSQLDBFederationStateStore {
   @Override
   public void init(Configuration conf) {
     try {
-      super.init(conf);
+      super.initConnection(conf);
       // get the sql that creates the table
       extractCreateTableSQL("MySQL","CREATE TABLE.*\\n(.*,\\n){1,10}.*\\n.*");
-      // get the sql that creates the stored procedure
-      extractCreateProcedureSQL("MySQL", "//");
       // print log
-      LOG.info("Mysql - tables = {}, procedures = {}", tables.size(), procedures.size());
+      LOG.info("Mysql - tables = {}.", tables.size());
     } catch (IOException e) {
       LOG.error("ERROR: failed to init HSQLDB {}", e.getMessage());
     }

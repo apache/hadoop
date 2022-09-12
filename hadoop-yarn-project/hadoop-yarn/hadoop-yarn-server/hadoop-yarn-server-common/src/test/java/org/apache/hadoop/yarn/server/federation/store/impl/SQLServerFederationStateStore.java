@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 /**
  * SQLServerFederationStateStore implementation of {@link FederationStateStore}.
@@ -36,13 +37,24 @@ public class SQLServerFederationStateStore extends HSQLDBFederationStateStore {
   @Override
   public void init(Configuration conf) {
     try {
-      super.init(conf);
+      super.initConnection(conf);
       // get the sql that creates the table
-      extractCreateTableSQL("SQLServer","IF NOT EXISTS.*\\n(.*\\n){0,50}.*GO");
-      // get the sql that creates the stored procedure
-      extractCreateProcedureSQL("SQLServer", "GO");
+      extractCreateTableSQL("SQLServer","CREATE TABLE .*\\n(.*,\\n){1,5}.*(\\n.*){1,15}\\)");
+
+      // replacing some incompatible syntaxes
+      if (tables != null && !tables.isEmpty()) {
+        tables = tables.stream().map(table -> {
+          String newTable = table.replace("COLLATE Latin1_General_100_BIN2", "").
+                  replace("DEFAULT GETUTCDATE()", "").
+                  replace("[dbo].", "").
+                  replace("[", "").
+                  replace("]", "");
+          return newTable;
+        }).collect(Collectors.toList());
+      }
+
       // print log
-      LOG.info("SqlServer - tables = {}, procedures = {}", tables.size(), procedures.size());
+      LOG.info("SqlServer - tables = {}.", tables.size());
     } catch (IOException e) {
       LOG.error("ERROR: failed to init HSQLDB {}.", e.getMessage());
     }

@@ -29,7 +29,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -312,15 +311,15 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
   protected List<String> tables = new ArrayList<>();
 
-  protected List<String> procedures = new ArrayList<>();
-
   @Override
   public void init(Configuration conf) {
+
     try {
       super.init(conf);
     } catch (YarnException e1) {
       LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
     }
+
     try {
       conn = super.conn;
 
@@ -359,6 +358,15 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
     }
   }
 
+  public void initConnection(Configuration conf) {
+    try {
+      super.init(conf);
+      conn = super.conn;
+    } catch (YarnException e1) {
+      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
+    }
+  }
+
   public void closeConnection() {
     try {
       conn.close();
@@ -383,36 +391,12 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
     Pattern p = Pattern.compile(regex);
     Matcher m = p.matcher(createTableSQL);
     while(m!=null && m.find()) {
-      tables.add(m.group());
-    }
-  }
-
-  /**
-   * Extract The Create Procedure Sql From The Script.
-   *
-   * @param dbIdentifier database identifier
-   * @param splitKeyword split keyword
-   * @throws IOException IO exception.
-   */
-  protected void extractCreateProcedureSQL(String dbIdentifier, String splitKeyword)
-      throws IOException {
-    String createProcedureScriptPath = "." + File.separator + "target" + File.separator +
-        "test-classes" + File.separator + dbIdentifier + "/FederationStateStoreStoredProcs.sql";
-    String createProcedureSQL =
-        FileUtils.readFileToString(new File(createProcedureScriptPath), StandardCharsets.UTF_8);
-    String[] procedureSQLs = createProcedureSQL.split(splitKeyword);
-    for (String procedureSQL : procedureSQLs) {
-      if (StringUtils.contains(procedureSQL, "CREATE PROCEDURE")) {
-        procedures.add(procedureSQL);
-      }
+      String group = m.group();
+      tables.add(group);
     }
   }
 
   public List<String> getTables() {
     return tables;
-  }
-
-  public List<String> getProcedures() {
-    return procedures;
   }
 }

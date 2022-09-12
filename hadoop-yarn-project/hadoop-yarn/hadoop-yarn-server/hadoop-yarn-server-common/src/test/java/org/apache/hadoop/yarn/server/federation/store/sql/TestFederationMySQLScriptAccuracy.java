@@ -48,6 +48,7 @@ public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest
   @Test
   public void checkMysqlScriptAccuracy() throws SQLException {
     MySQLFederationStateStore federationStateStore = this.createStateStore();
+    federationStateStore.initConnection(this.getConf());
 
     // get a list of tables
     List<String> tables = federationStateStore.getTables();
@@ -56,13 +57,5 @@ public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest
     }
 
     LOG.info("[Mysql] - federationStateStore create table.");
-
-    // get a list of procedures
-    List<String> procedures = federationStateStore.getProcedures();
-    for (String procedure : procedures) {
-       federationStateStore.getConn().prepareStatement(procedure).execute();
-    }
-
-    LOG.info("[Mysql] - federationStateStore create procedure.");
   }
 }
