@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -79,7 +80,7 @@ public class TestAppReportFetcher {
     try {
       testHelper(false);
     } catch (ApplicationNotFoundException e) {
-      assertTrue(e.getMessage() == appNotFoundExceptionMsg);
+      assertEquals(appNotFoundExceptionMsg, e.getMessage());
       /* RM will not know of the app and Application History Service is disabled
        * So we will not try to get the report from AHS and RM will throw
        * ApplicationNotFoundException

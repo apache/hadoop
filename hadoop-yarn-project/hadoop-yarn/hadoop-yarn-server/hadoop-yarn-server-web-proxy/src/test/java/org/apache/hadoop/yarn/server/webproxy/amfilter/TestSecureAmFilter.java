@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test AmIpFilter. Requests to a no declared hosts should has way through
@@ -89,7 +90,7 @@ public class TestSecureAmFilter {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), TEST_ROOT_DIR);
       setupKDC();
     } catch (Exception e) {
-      assertTrue(false, "Couldn't create MiniKDC");
+      fail("Couldn't create MiniKDC");
     }
   }
 
