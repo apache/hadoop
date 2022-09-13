@@ -751,7 +751,11 @@ public class Journal implements Closeable {
           "it via " + DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY);
     }
     long highestTxId = getHighestWrittenTxId();
-    if (sinceTxId > highestTxId) {
+    if (sinceTxId == highestTxId + 1) {
+      // Requested edits that don't exist yet; short-circuit the cache here
+      metrics.rpcEmptyResponses.incr();
+      return GetJournaledEditsResponseProto.newBuilder().setTxnCount(0).build();
+    } else if (sinceTxId > highestTxId + 1) {
       // Requested edits that don't exist yet and is newer than highestTxId.
       metrics.rpcEmptyResponses.incr();
       throw new NewerTxnIdException(

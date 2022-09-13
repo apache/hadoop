@@ -524,9 +524,6 @@ public class QuorumJournalManager implements JournalManager {
         selectRpcInputStreams(rpcStreams, fromTxnId, onlyDurableTxns);
         streams.addAll(rpcStreams);
         return;
-      } catch (NewerTxnIdException ntie) {
-        // normal situation, we requested newer IDs than any journal has. no new streams
-        return;
       } catch (IOException ioe) {
         LOG.warn("Encountered exception while tailing edits >= " + fromTxnId +
             " via RPC; falling back to streaming.", ioe);
