@@ -55,7 +55,7 @@ public class TestObserverWithRouter {
   public void startUpCluster(int numberOfObserver, Configuration confOverrides) throws Exception {
     int numberOfNamenode = 2 + numberOfObserver;
     Configuration conf = new Configuration(false);
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE, true);
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
     if (confOverrides != null) {
@@ -168,7 +168,7 @@ public class TestObserverWithRouter {
   public void testDisablingObserverReadUsingNameserviceOverride() throws Exception {
     // Disable observer reads using per-nameservice override
     Configuration confOverrides = new Configuration(false);
-    confOverrides.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE + ".ns0", false);
+    confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(1, confOverrides);
 
     RouterContext routerContext = cluster.getRandomRouter();
@@ -319,7 +319,7 @@ public class TestObserverWithRouter {
       sb.append(suffix);
     }
     routerConf.set(DFS_ROUTER_MONITOR_NAMENODE, sb.toString());
-    routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE, true);
+    routerConf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     routerConf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     routerConf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
 

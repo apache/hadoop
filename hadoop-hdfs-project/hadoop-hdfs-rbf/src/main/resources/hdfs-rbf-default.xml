@@ -836,12 +836,21 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.observer.read.enable</name>
+    <name>dfs.federation.router.observer.read.default</name>
     <value>false</value>
     <description>
-      Enable observer read in router. This value is used across all nameservices
-      except when overridden by dfs.federation.router.observer.read.enable.EXAMPLENAMESERVICE
-      for a particular nameservice.
+      Whether observer reads are enabled. This is a default for all nameservices.
+      The default can be inverted for individual namespace by adding them to
+      dfs.federation.router.observer.read.overrides.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.overrides</name>
+    <value/>
+    <description>
+      Commas separated list of namespaces for which to invert the default configuration,
+      dfs.federation.router.observer.read.default, for whether to enable observer reads.
     </description>
   </property>
 

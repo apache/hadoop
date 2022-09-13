@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -132,9 +133,9 @@ public class RouterRpcClient {
   /** Field separator of CallerContext. */
   private final String contextFieldSeparator;
   /** Observer read enabled. Default for all nameservices. */
-  private final boolean observerReadEnabled;
-  /** Nameservice specific override for enabling or disabling observer read. */
-  private Map<String, Boolean> nsObserverReadEnabled = new ConcurrentHashMap<>();
+  private final boolean observerReadEnabledDefault;
+  /** Nameservice specific overrides of the default setting for enabling observer reads. */
+  private HashSet<String> observerReadEnabledOverrides = new HashSet<>();
 
   /** Pattern to parse a stack trace line. */
   private static final Pattern STACK_TRACE_PATTERN =
@@ -207,15 +208,14 @@ public class RouterRpcClient {
         failoverSleepBaseMillis, failoverSleepMaxMillis);
     String[] ipProxyUsers = conf.getStrings(DFS_NAMENODE_IP_PROXY_USERS);
     this.enableProxyUser = ipProxyUsers != null && ipProxyUsers.length > 0;
-    this.observerReadEnabled = conf.getBoolean(
-        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE,
-        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE_DEFAULT);
-    Map<String, String> observerReadOverrides = conf
-        .getPropsWithPrefix(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_ENABLE + ".");
-    observerReadOverrides
-        .forEach((nsId, readEnabled) ->
-            nsObserverReadEnabled.put(nsId, Boolean.valueOf(readEnabled)));
-    if (this.observerReadEnabled) {
+    this.observerReadEnabledDefault = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY,
+        RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_VALUE);
+    String[] observerReadOverrides = conf.getStrings(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES);
+    if (observerReadOverrides != null) {
+      observerReadEnabledOverrides.addAll(Arrays.asList(observerReadOverrides));
+    }
+    if (this.observerReadEnabledDefault) {
       LOG.info("Observer read is enabled for router.");
     }
   }
@@ -469,8 +469,8 @@ public class RouterRpcClient {
    * @param ugi User group information.
    * @param namenodes A prioritized list of namenodes within the same
    *                  nameservice.
+   * @param useObserver Whether to use observer namenodes.
    * @param method Remote ClientProtocol method to invoke.
-   * @param skipObserver Skip observer namenodes.
    * @param params Variable list of parameters matching the method.
    * @return The result of invoking the method.
    * @throws ConnectException If it cannot connect to any Namenode.
@@ -481,8 +481,8 @@ public class RouterRpcClient {
   public Object invokeMethod(
       final UserGroupInformation ugi,
       final List<? extends FederationNamenodeContext> namenodes,
-      final Class<?> protocol, final Method method, boolean skipObserver,
-      final Object... params)
+      boolean useObserver,
+      final Class<?> protocol, final Method method, final Object... params)
           throws ConnectException, StandbyException, IOException {
 
     if (namenodes == null || namenodes.isEmpty()) {
@@ -498,11 +498,10 @@ public class RouterRpcClient {
       rpcMonitor.proxyOp();
     }
     boolean failover = false;
-    boolean tryActive = false;
+    boolean shouldUseObserver = useObserver;
     Map<FederationNamenodeContext, IOException> ioes = new LinkedHashMap<>();
     for (FederationNamenodeContext namenode : namenodes) {
-      if ((tryActive || skipObserver)
-          && namenode.getState() == FederationNamenodeServiceState.OBSERVER) {
+      if (!shouldUseObserver && (namenode.getState() == FederationNamenodeServiceState.OBSERVER)) {
         continue;
       }
       ConnectionContext connection = null;
@@ -531,8 +530,8 @@ public class RouterRpcClient {
         ioes.put(namenode, ioe);
         if (ioe instanceof ObserverRetryOnActiveException) {
           LOG.info("Encountered ObserverRetryOnActiveException from {}."
-                  + " Retry active namenode directly.");
-          tryActive = true;
+                  + " Retry active namenode directly.", namenode);
+          shouldUseObserver = false;
         } else if (ioe instanceof StandbyException) {
           // Fail over indicated by retry policy and/or NN
           if (this.rpcMonitor != null) {
@@ -881,7 +880,7 @@ public class RouterRpcClient {
       Class<?> proto = method.getProtocol();
       Method m = method.getMethod();
       Object[] params = method.getParams(loc);
-      return invokeMethod(ugi, nns, proto, m, !isObserverRead, params);
+      return invokeMethod(ugi, nns, isObserverRead, proto, m, params);
     } finally {
       releasePermit(nsId, ugi, method, controller);
     }
@@ -1050,7 +1049,7 @@ public class RouterRpcClient {
         Class<?> proto = remoteMethod.getProtocol();
         Object[] params = remoteMethod.getParams(loc);
         Object result = invokeMethod(
-            ugi, namenodes, proto, m, !isObserverRead, params);
+            ugi, namenodes, isObserverRead, proto, m, params);
         // Check if the result is what we expected
         if (isExpectedClass(expectedResultClass, result) &&
             isExpectedValue(expectedResultValue, result)) {
@@ -1413,7 +1412,7 @@ public class RouterRpcClient {
         Class<?> proto = method.getProtocol();
         Object[] paramList = method.getParams(location);
         R result = (R) invokeMethod(
-            ugi, namenodes, proto, m, !isObserverRead, paramList);
+            ugi, namenodes, isObserverRead, proto, m, paramList);
         RemoteResult<T, R> remoteResult = new RemoteResult<>(location, result);
         return Collections.singletonList(remoteResult);
       } catch (IOException ioe) {
@@ -1451,7 +1450,7 @@ public class RouterRpcClient {
               () -> {
                 transferThreadLocalContext(originCall, originContext);
                 return invokeMethod(
-                    ugi, nnList, proto, m, !isObserverRead, paramList);
+                    ugi, nnList, isObserverRead, proto, m, paramList);
               });
         }
       } else {
@@ -1461,7 +1460,7 @@ public class RouterRpcClient {
             () -> {
               transferThreadLocalContext(originCall, originContext);
               return invokeMethod(
-                  ugi, namenodes, proto, m, !isObserverRead, paramList);
+                  ugi, namenodes, isObserverRead, proto, m, paramList);
             });
       }
     }
@@ -1717,8 +1716,8 @@ public class RouterRpcClient {
   }
 
   private boolean isObserverReadEligible(String nsId, Method method) {
-    return nsObserverReadEnabled.getOrDefault(nsId, observerReadEnabled)
-        && isReadCall(method);
+    boolean isReadEnabledForNamespace = observerReadEnabledDefault != observerReadEnabledOverrides.contains(nsId);
+    return isReadEnabledForNamespace && isReadCall(method);
   }
 
   /**

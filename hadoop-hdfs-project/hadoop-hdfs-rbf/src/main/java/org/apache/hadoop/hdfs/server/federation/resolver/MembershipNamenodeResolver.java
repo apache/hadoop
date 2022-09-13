@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -74,13 +75,11 @@ public class MembershipNamenodeResolver
   /** Parent router ID. */
   private String routerId;
 
-  /** Cached lookup of NN for nameservice with active state ranked first.
+  /** Cached lookup of namenodes for nameservice. The keys are a pair of the nameservice
+   * name and a boolean indicating if observer namenodes should be listed first.
+   * If true, observer namenodes are listed first. If false, active namenodes are listed first.
    *  Invalidated on cache refresh. */
-  private Map<String, List<? extends FederationNamenodeContext>> cacheNS;
-  /** Cached lookup of NN for nameservice with observer state ranked first.
-   *  Invalidated on cache refresh. */
-  private Map<String, List<? extends FederationNamenodeContext>>
-      observerFirstCacheNS;
+  private Map<Pair<String,Boolean>, List<? extends FederationNamenodeContext>> cacheNS;
   /** Cached lookup of NN for block pool. Invalidated on cache refresh. */
   private Map<String, List<? extends FederationNamenodeContext>> cacheBP;
 
@@ -90,7 +89,6 @@ public class MembershipNamenodeResolver
     this.stateStore = store;
 
     this.cacheNS = new ConcurrentHashMap<>();
-    this.observerFirstCacheNS = new ConcurrentHashMap<>();
     this.cacheBP = new ConcurrentHashMap<>();
 
     if (this.stateStore != null) {
@@ -140,7 +138,6 @@ public class MembershipNamenodeResolver
     // Force refresh of active NN cache
     cacheBP.clear();
     cacheNS.clear();
-    observerFirstCacheNS.clear();
     return true;
   }
 
@@ -181,8 +178,8 @@ public class MembershipNamenodeResolver
                 record.getNameserviceId(), record.getNamenodeId(), state);
         membership.updateNamenodeRegistration(updateRequest);
 
-        cacheNS.remove(nsId);
-        observerFirstCacheNS.remove(nsId);
+        cacheNS.remove(Pair.of(nsId, Boolean.TRUE));
+        cacheNS.remove(Pair.of(nsId, Boolean.FALSE));
         // Invalidating the full cacheBp since getting the blockpool id from
         // namespace id is quite costly.
         cacheBP.clear();
@@ -195,10 +192,8 @@ public class MembershipNamenodeResolver
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
       final String nsId, boolean listObserversFirst) throws IOException {
-    Map<String, List<? extends FederationNamenodeContext>> cache
-        = listObserversFirst ? observerFirstCacheNS : cacheNS;
 
-    List<? extends FederationNamenodeContext> ret = cache.get(nsId);
+    List<? extends FederationNamenodeContext> ret = cacheNS.get(Pair.of(nsId, listObserversFirst));
     if (ret != null) {
       return ret;
     }
@@ -240,7 +235,7 @@ public class MembershipNamenodeResolver
 
     // Cache the response
     ret = Collections.unmodifiableList(result);
-    cache.put(nsId, result);
+    cacheNS.put(Pair.of(nsId, listObserversFirst), result);
     return ret;
   }
 
@@ -378,7 +373,7 @@ public class MembershipNamenodeResolver
    *
    * If observer read,
    * return registrations matching the query in this preference:
-   * 1) Most recently updated Observer registration
+   * 1) Observer registrations, shuffled to disperse queries.
    * 2) Most recently updated ACTIVE registration
    * 3) Most recently updated STANDBY registration (if showStandby)
    * 4) Most recently updated UNAVAILABLE registration (if showUnavailable).
@@ -419,23 +414,20 @@ public class MembershipNamenodeResolver
       }
     }
 
-    if(!observerRead) {
-      Collections.sort(memberships, new NamenodePriorityComparator());
-      LOG.debug("Selected most recent NN {} for query", memberships);
-      return  memberships;
-    } else {
+    memberships.sort(new NamenodePriorityComparator());
+    if(observerRead) {
       List<MembershipState> ret = new ArrayList<>(
           memberships.size() + observerMemberships.size());
-      Collections.sort(memberships, new NamenodePriorityComparator());
       if(observerMemberships.size() > 1) {
         Collections.shuffle(observerMemberships);
       }
       ret.addAll(observerMemberships);
       ret.addAll(memberships);
-
-      LOG.debug("Selected most recent NN {} for query", ret);
-      return ret;
+      memberships = ret;
     }
+
+    LOG.debug("Selected most recent NN {} for query", memberships);
+    return memberships;
   }
 
   @Override
