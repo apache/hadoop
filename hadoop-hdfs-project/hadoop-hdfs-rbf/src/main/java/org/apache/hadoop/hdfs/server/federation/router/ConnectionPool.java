@@ -218,7 +218,7 @@ public class ConnectionPool {
   }
 
   /**
-   * Get the alignment context for this pool
+   * Get the alignment context for this pool.
    * @return Alignment context
    */
   public PoolAlignmentContext getPoolAlignmentContext() {

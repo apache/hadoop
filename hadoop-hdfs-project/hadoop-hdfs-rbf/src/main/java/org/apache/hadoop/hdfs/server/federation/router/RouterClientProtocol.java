@@ -1918,7 +1918,10 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public void msync() throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    RemoteMethod method = new RemoteMethod("msync");
+    rpcClient.invokeConcurrent(nss, method);
   }
 
   @Override

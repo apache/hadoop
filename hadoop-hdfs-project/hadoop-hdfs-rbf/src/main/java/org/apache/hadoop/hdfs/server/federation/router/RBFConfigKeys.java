@@ -191,6 +191,14 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "enable";
   public static final boolean DFS_ROUTER_STORE_ENABLE_DEFAULT = true;
 
+  public static final String DFS_ROUTER_OBSERVER_READ_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "observer.read.enable";
+  public static final boolean DFS_ROUTER_OBSERVER_READ_ENABLE_DEFAULT = false;
+
+  public static final String DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD =
+      FEDERATION_ROUTER_PREFIX + "observer.auto-msync-period";
+  public static final long DFS_ROUTER_OBSERVER_AUTO_MSYNC_PERIOD_DEFAULT = 0;
+
   public static final String DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE =
       FEDERATION_ROUTER_PREFIX + "observer.federated.state.propagation.maxsize";
   public static final int DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE_DEFAULT = 5;

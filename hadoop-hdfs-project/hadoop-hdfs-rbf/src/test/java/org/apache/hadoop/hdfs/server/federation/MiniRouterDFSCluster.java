@@ -806,6 +806,7 @@ public class MiniRouterDFSCluster {
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
+          .checkExitOnShutdown(false)
           .storageTypes(storageTypes)
           .racks(racks)
           .build();
@@ -1035,6 +1036,27 @@ public class MiniRouterDFSCluster {
       }
     } catch (Throwable e) {
       LOG.error("Cannot transition to standby", e);
+    }
+  }
+
+  /**
+   * Switch a namenode in a nameservice to be the observer.
+   * @param nsId Nameservice identifier.
+   * @param nnId Namenode identifier.
+   */
+  public void switchToObserver(String nsId, String nnId) {
+    try {
+      int total = cluster.getNumNameNodes();
+      NameNodeInfo[] nns = cluster.getNameNodeInfos();
+      for (int i = 0; i < total; i++) {
+        NameNodeInfo nn = nns[i];
+        if (nn.getNameserviceId().equals(nsId) &&
+            nn.getNamenodeId().equals(nnId)) {
+          cluster.transitionToObserver(i);
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Cannot transition to active", e);
     }
   }
 
