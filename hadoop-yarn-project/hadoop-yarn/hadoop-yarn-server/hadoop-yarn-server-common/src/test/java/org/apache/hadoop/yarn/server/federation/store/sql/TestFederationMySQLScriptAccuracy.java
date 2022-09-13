@@ -17,9 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.impl.MySQLFederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.impl.SQLServerFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

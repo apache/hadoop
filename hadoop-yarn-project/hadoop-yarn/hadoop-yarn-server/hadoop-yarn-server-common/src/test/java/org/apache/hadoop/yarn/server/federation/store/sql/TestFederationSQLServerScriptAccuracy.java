@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.impl.SQLServerFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -31,7 +30,7 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationSQLServerScriptAccuracy.class);
 
-  private String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
+  private final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
   protected SQLServerFederationStateStore createStateStore() {

@@ -58,11 +58,11 @@ public abstract class FederationSQLAccuracyTest {
   protected abstract String getSQLURL();
 
   protected void setConf(Configuration conf) {
-     this.conf = conf;
+    this.conf = conf;
   }
 
   protected Configuration getConf() {
-     return conf;
+    return conf;
   }
 
   protected FederationStateStore getStateStore() {

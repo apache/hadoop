@@ -40,7 +40,7 @@ public class MySQLFederationStateStore extends HSQLDBFederationStateStore {
       // get the sql that creates the table
       extractCreateTableSQL("MySQL","CREATE TABLE.*\\n(.*,\\n){1,10}.*\\n.*");
       // print log
-      LOG.info("Mysql - tables = {}.", tables.size());
+      LOG.info("Mysql - tables = {}.", getTables().size());
     } catch (IOException e) {
       LOG.error("ERROR: failed to init HSQLDB {}", e.getMessage());
     }

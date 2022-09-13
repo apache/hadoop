@@ -309,7 +309,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
-  protected List<String> tables = new ArrayList<>();
+  private List<String> tables = new ArrayList<>();
 
   @Override
   public void init(Configuration conf) {
@@ -398,5 +398,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
   public List<String> getTables() {
     return tables;
+  }
+
+  public void setTables(List<String> tables) {
+    this.tables = tables;
   }
 }

@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -39,7 +40,9 @@ public class SQLServerFederationStateStore extends HSQLDBFederationStateStore {
     try {
       super.initConnection(conf);
       // get the sql that creates the table
-      extractCreateTableSQL("SQLServer","CREATE TABLE .*\\n(.*,\\n){1,5}.*(\\n.*){1,15}\\)");
+      extractCreateTableSQL("SQLServer", "CREATE TABLE .*\\n(.*,\\n){1,5}.*(\\n.*){1,15}\\)");
+
+      List<String> tables = getTables();
 
       // replacing some incompatible syntaxes
       if (tables != null && !tables.isEmpty()) {
@@ -51,6 +54,7 @@ public class SQLServerFederationStateStore extends HSQLDBFederationStateStore {
                   replace("]", "");
           return newTable;
         }).collect(Collectors.toList());
+        setTables(tables);
       }
 
       // print log
