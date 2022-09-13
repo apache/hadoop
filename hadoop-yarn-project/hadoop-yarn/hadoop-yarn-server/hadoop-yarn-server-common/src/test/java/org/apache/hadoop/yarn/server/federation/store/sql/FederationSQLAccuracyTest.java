@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.federation.store.sql;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.junit.After;
@@ -40,14 +41,21 @@ public abstract class FederationSQLAccuracyTest {
 
   @Before
   public void before() throws IOException, YarnException {
-     stateStore = createStateStore();
-     stateStore.init(conf);
+    stateStore = createStateStore();
+    conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS, HSQLDB_DRIVER);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD, DATABASE_PASSWORD);
+    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL, getSQLURL());
+    stateStore.init(conf);
   }
 
   @After
   public void after() throws Exception {
-     stateStore.close();
+    stateStore.close();
   }
+
+  protected abstract String getSQLURL();
 
   protected void setConf(Configuration conf) {
      this.conf = conf;

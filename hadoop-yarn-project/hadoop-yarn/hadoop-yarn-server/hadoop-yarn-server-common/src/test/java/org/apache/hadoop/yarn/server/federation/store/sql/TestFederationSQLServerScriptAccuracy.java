@@ -31,19 +31,16 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationSQLServerScriptAccuracy.class);
 
-  private final String DATABASE_URL_SQLSERVER = "jdbc:hsqldb:mem-sqlserver:state-sqlserver";
-  private final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
+  private String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
   protected SQLServerFederationStateStore createStateStore() {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS, HSQLDB_DRIVER);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD, DATABASE_PASSWORD);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
-        DATABASE_URL_SQLSERVER + System.currentTimeMillis() + SQLSERVER_COMPATIBILITY);
-    super.setConf(conf);
     return new SQLServerFederationStateStore();
+  }
+
+  @Override
+  protected String getSQLURL() {
+    return DATABASE_URL + System.currentTimeMillis() + SQLSERVER_COMPATIBILITY;
   }
 
   @Test
@@ -57,6 +54,6 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
       federationStateStore.getConn().prepareStatement(table).execute();
     }
 
-    LOG.info("[SqlServer] - FederationStateStore create table.");
+    LOG.info("FederationStateStore create {} tables.", tables.size());
   }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.store.sql;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.impl.MySQLFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.impl.SQLServerFederationStateStore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,18 +32,16 @@ public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationMySQLScriptAccuracy.class);
 
-  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
+  private final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
 
   @Override
   protected MySQLFederationStateStore createStateStore() {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_JDBC_CLASS, HSQLDB_DRIVER);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_USERNAME, DATABASE_USERNAME);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD, DATABASE_PASSWORD);
-    conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
-        DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY);
-    super.setConf(conf);
     return new MySQLFederationStateStore();
+  }
+
+  @Override
+  protected String getSQLURL() {
+    return DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY;
   }
 
   @Test
@@ -56,6 +55,6 @@ public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest
       federationStateStore.getConn().prepareStatement(table).execute();
     }
 
-    LOG.info("[Mysql] - federationStateStore create table.");
+    LOG.info("FederationStateStore create {} tables.", tables.size());
   }
 }
