@@ -901,7 +901,8 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
     }
   }
 
-  private Credentials getAdditionalDockerClientCredentials(String clientConfig, String containerIdStr) {
+  private Credentials getAdditionalDockerClientCredentials(String clientConfig,
+      String containerIdStr) {
     Credentials additionalDockerCredentials = null;
     if (clientConfig != null && !clientConfig.isEmpty()) {
       try {
