@@ -85,12 +85,12 @@ public interface ActiveNamenodeResolver {
    * </ul>
    *
    * @param nameserviceId Nameservice identifier.
-   * @param observerRead Observer read case, observer NN will be ranked first
+   * @param listObserversFirst Observer read case, observer NN will be ranked first
    * @return Prioritized list of namenode contexts.
    * @throws IOException If the state store cannot be accessed.
    */
   List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
-      String nameserviceId, boolean observerRead) throws IOException;
+      String nameserviceId, boolean listObserversFirst) throws IOException;
 
   /**
    * Returns a prioritized list of the most recent cached registration entries

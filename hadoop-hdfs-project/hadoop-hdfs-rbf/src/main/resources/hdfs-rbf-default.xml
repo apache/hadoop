@@ -846,12 +846,6 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.observer.auto-msync-period</name>
-    <value>0</value>
-    <description>Observer auto msync period</description>
-  </property>
-
-  <property>
     <name>dfs.federation.router.observer.federated.state.propagation.maxsize</name>
     <value>5</value>
     <description>

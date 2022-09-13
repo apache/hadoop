@@ -194,9 +194,9 @@ public class MembershipNamenodeResolver
 
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
-      final String nsId, boolean observerRead) throws IOException {
+      final String nsId, boolean listObserversFirst) throws IOException {
     Map<String, List<? extends FederationNamenodeContext>> cache
-        = observerRead ? observerFirstCacheNS : cacheNS;
+        = listObserversFirst ? observerFirstCacheNS : cacheNS;
 
     List<? extends FederationNamenodeContext> ret = cache.get(nsId);
     if (ret != null) {
@@ -211,7 +211,7 @@ public class MembershipNamenodeResolver
       GetNamenodeRegistrationsRequest request =
           GetNamenodeRegistrationsRequest.newInstance(partial);
       result = getRecentRegistrationForQuery(request, true,
-          false, observerRead);
+          false, listObserversFirst);
     } catch (StateStoreUnavailableException e) {
       LOG.error("Cannot get active NN for {}, State Store unavailable", nsId);
       return null;
