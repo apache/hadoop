@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.junit.After;
@@ -135,16 +136,14 @@ public class TestObserverNode {
     ScheduledExecutorService interruptor =
         Executors.newScheduledThreadPool(1);
 
-    EditLogTailer observerEditlogTailer = dfsCluster.getNameNode(2)
-        .getNamesystem().getEditLogTailer();
+    FSNamesystem observerFsNS = dfsCluster.getNamesystem(2);
     RpcMetrics obRpcMetrics = ((NameNodeRpcServer)dfsCluster
         .getNameNodeRpc(2)).getClientRpcServer().getRpcMetrics();
 
     // Stop EditlogTailer of Observer NameNode.
-    observerEditlogTailer.stop();
+    observerFsNS.getEditLogTailer().stop();
 
     long oldRequeueNum = obRpcMetrics.getRpcRequeueCalls();
-
     ScheduledFuture<FileStatus> scheduledFuture = interruptor.schedule(
         () -> {
           Path tmpTestPath = new Path("/TestObserverRequeue");
@@ -156,14 +155,17 @@ public class TestObserverNode {
           assertSentTo(2);
           return fileStatus;
         }, 0, TimeUnit.SECONDS);
-    Thread.sleep(1000);
-    observerEditlogTailer.doTailEdits();
-    FileStatus fileStatus = scheduledFuture.get(1000, TimeUnit.MILLISECONDS);
+
+    GenericTestUtils.waitFor(() -> obRpcMetrics.getRpcRequeueCalls() > oldRequeueNum,
+        50, 10000);
+
+    observerFsNS.getEditLogTailer().doTailEdits();
+    FileStatus fileStatus = scheduledFuture.get(10000, TimeUnit.MILLISECONDS);
     assertNotNull(fileStatus);
 
-    assertTrue(obRpcMetrics.getRpcRequeueCalls() > oldRequeueNum);
-    dfsCluster.getNameNode(2).getNamesystem()
-        .startNewEditLogTailer(dfsCluster.getConfiguration(2));
+    EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
+    observerFsNS.setEditLogTailerForTests(editLogTailer);
+    editLogTailer.start();
   }
 
   @Test

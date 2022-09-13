@@ -6997,16 +6997,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;
   }
-
-  @VisibleForTesting
-  public void startNewEditLogTailer(Configuration conf) throws IOException {
-    if (this.editLogTailer != null) {
-      this.editLogTailer.stop();
-    }
-
-    this.editLogTailer = new EditLogTailer(this, conf);
-    this.editLogTailer.start();
-  }
   
   @VisibleForTesting
   public void setEditLogTailerForTests(EditLogTailer tailer) {
