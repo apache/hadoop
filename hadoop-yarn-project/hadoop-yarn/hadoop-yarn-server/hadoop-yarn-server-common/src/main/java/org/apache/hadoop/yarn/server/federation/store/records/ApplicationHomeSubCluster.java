@@ -55,8 +55,7 @@ public abstract class ApplicationHomeSubCluster {
   @Unstable
   public static ApplicationHomeSubCluster newInstance(ApplicationId appId, long createTime,
       SubClusterId homeSubCluster) {
-    ApplicationHomeSubCluster appMapping =
-        Records.newRecord(ApplicationHomeSubCluster.class);
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
     appMapping.setApplicationId(appId);
     appMapping.setHomeSubCluster(homeSubCluster);
     appMapping.setCreateTime(createTime);

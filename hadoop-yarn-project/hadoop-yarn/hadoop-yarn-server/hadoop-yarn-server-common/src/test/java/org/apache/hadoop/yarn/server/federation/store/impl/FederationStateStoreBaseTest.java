@@ -83,8 +83,8 @@ public abstract class FederationStateStoreBaseTest {
 
   private static final MonotonicClock CLOCK = new MonotonicClock();
   private FederationStateStore stateStore;
-  private static final int TEN_ROUNDS = 10;
-  private static final int TWENTY_ROUNDS = 20;
+  private static final int NUM_APPS_10 = 10;
+  private static final int NUM_APPS_20 = 20;
 
   protected abstract FederationStateStore createStateStore();
 
@@ -428,7 +428,7 @@ public abstract class FederationStateStoreBaseTest {
 
     Set<ApplicationHomeSubCluster> appHomeSubClusters = new HashSet<>();
 
-    for (int i = 0; i < TEN_ROUNDS; i++) {
+    for (int i = 0; i < NUM_APPS_10; i++) {
       ApplicationId appId = ApplicationId.newInstance(now, i);
       SubClusterId subClusterId = SubClusterId.newInstance("SC1");
       addApplicationHomeSC(appId, subClusterId);
@@ -438,7 +438,7 @@ public abstract class FederationStateStoreBaseTest {
     }
 
     // Add ApplicationHomeSC - SC2
-    for (int i = TEN_ROUNDS; i < TWENTY_ROUNDS; i++) {
+    for (int i = 10; i < NUM_APPS_20; i++) {
       ApplicationId appId = ApplicationId.newInstance(now, i);
       SubClusterId subClusterId = SubClusterId.newInstance("SC2");
       addApplicationHomeSC(appId, subClusterId);
