@@ -128,20 +128,15 @@ BEGIN
        applicationId,
        homeSubCluster,
        createTime
-   FROM
-    (SELECT
-       applicationId,
-       homeSubCluster,
-       createTime,
-       @app_rank := IF(@home_sc = homeSubCluster, @app_rank + 1, 1) AS app_rank,
-       @home_sc := homeSubCluster
-  	 FROM applicationshomesubcluster
-  	 ORDER BY createTime DESC
-    ) ranked
-   WHERE app_rank <= limit_IN
-     AND (CASE WHEN t.homeSubCluster_IN IS NULL THEN 1 = 1
-               WHEN t.homeSubCluster_IN IS NOT NULL THEN homeSubCluster = homeSubCluster_IN
- 	      END);
+    FROM
+        (SELECT
+             *,
+             @rownum := 0,
+             IF(homeSubCluster_IN = '', 1, (homeSubCluster = homeSubCluster_IN)) AS filter_result
+         FROM applicationshomesubcluster
+         ORDER BY createTime DESC) AS app_home_sc
+    WHERE filter_result = 1
+      AND (@rownum := @rownum + 1) <= limit_IN;
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(
