@@ -2059,29 +2059,4 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
   }
-
-  /**
-   * get the HomeSubCluster according to ReservationId.
-   *
-   * @param resId reservationId
-   * @return HomeSubCluster
-   * @throws YarnException on failure
-   */
-  private SubClusterInfo getHomeSubClusterInfoByReservationId(String resId)
-      throws YarnException {
-    try {
-      ReservationId reservationId = ReservationId.parseReservationId(resId);
-      SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
-      if (subClusterId == null) {
-        RouterServerUtil.logAndThrowException(null,
-            "Can't get HomeSubCluster by reservationId %s", resId);
-      }
-      SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
-      return subClusterInfo;
-    } catch (YarnException | IOException e) {
-      RouterServerUtil.logAndThrowException(e,
-          "Get HomeSubClusterInfo by reservationId %s failed.", resId);
-    }
-    throw new YarnException("Unable to get subCluster by reservationId = " + resId);
-  }
 }

@@ -880,8 +880,8 @@ public class MockDefaultRequestInterceptorREST
     // TODO: Need to simulate the ResourseManager for Reservation allocation
     // Wait for YARN-7614 to finish
     return Response.status(Status.OK).build();
-  } 
-  
+  }
+
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext, HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
@@ -905,14 +905,14 @@ public class MockDefaultRequestInterceptorREST
     // Wait for YARN-7614 to finish
     return Response.status(Status.OK).build();
   }
-  
+
   public Response listReservation(String queue, String reservationId, long startTime, long endTime,
       boolean includeResourceAllocations, HttpServletRequest hsr) throws Exception {
-      
+
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
     }
-     
+
     if (!StringUtils.equals(queue, QUEUE_DEDICATED_FULL)) {
       throw new RuntimeException("The specified queue: " + queue +
           " is not managed by reservation system." +
