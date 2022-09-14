@@ -129,10 +129,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.server.router.webapp.RouterWebServiceUtil;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
@@ -949,7 +949,8 @@ public class FederationClientInterceptor
 
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
-        Boolean exists = RouterServerUtil.existsReservationHomeSubCluster(federationFacade, reservationId);
+        Boolean exists =
+            RouterServerUtil.existsReservationHomeSubCluster(federationFacade, reservationId);
 
         // We may encounter the situation of repeated submission of Reservation,
         // at this time we should try to use the reservation that has been allocated

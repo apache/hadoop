@@ -1483,8 +1483,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       SubClusterId subClusterId = null;
       try {
         subClusterId = getRandomActiveSubCluster(subClustersActive, blacklist);
-        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterId,
-            subClustersActive.get(subClusterId).getRMWebServiceAddress());
+        SubClusterInfo subClusterInfo = subClustersActive.get(subClusterId);
+        DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
+            subClusterId, subClusterInfo.getRMWebServiceAddress());
         Response response = interceptor.createNewReservation(hsr);
         LOG.info("createNewReservation try #{} on SubCluster {}.", i, subClusterId);
         if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
@@ -1529,7 +1530,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
         // First, Get SubClusterId according to specific strategy.
         ReservationSubmissionRequest request =
-            ReservationSubmissionRequest.newInstance(definition, resContext.getQueue(), reservationId);
+            ReservationSubmissionRequest.newInstance(definition,
+                resContext.getQueue(), reservationId);
         SubClusterId subClusterId = policyFacade.getReservationHomeSubCluster(request);
 
         LOG.info("submitReservation ReservationId {} try #{} on SubCluster {}.",
@@ -1572,7 +1574,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new YarnRuntimeException(msg);
   }
 
-  private ReservationDefinition convertReservationDefinition(ReservationDefinitionInfo definitionInfo) {
+  private ReservationDefinition convertReservationDefinition(
+      ReservationDefinitionInfo definitionInfo) {
 
     // basic variable
     long arrival = definitionInfo.getArrival();
@@ -1587,13 +1590,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     List<ReservationRequest> reservationRequestList = new ArrayList<>();
 
     ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
-    List<ReservationRequestInfo> reservationRequestInfos = reservationRequestsInfo.getReservationRequest();
+    List<ReservationRequestInfo> reservationRequestInfos =
+        reservationRequestsInfo.getReservationRequest();
     for (ReservationRequestInfo resRequestInfo : reservationRequestInfos) {
       ResourceInfo resourceInfo = resRequestInfo.getCapability();
       Resource capability =
           Resource.newInstance(resourceInfo.getMemorySize(), resourceInfo.getvCores());
       ReservationRequest reservationRequest = ReservationRequest.newInstance(capability,
-          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(), resRequestInfo.getDuration());
+          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(),
+          resRequestInfo.getDuration());
       reservationRequestList.add(reservationRequest);
     }
 

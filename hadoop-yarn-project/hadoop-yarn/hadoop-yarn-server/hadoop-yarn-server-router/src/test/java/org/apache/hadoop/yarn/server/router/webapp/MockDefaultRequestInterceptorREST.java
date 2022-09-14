@@ -792,8 +792,8 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @Override
-  public Response submitReservation(ReservationSubmissionRequestInfo resContext, HttpServletRequest hsr)
-      throws AuthorizationException, IOException, InterruptedException {
+  public Response submitReservation(ReservationSubmissionRequestInfo resContext,
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
 
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
