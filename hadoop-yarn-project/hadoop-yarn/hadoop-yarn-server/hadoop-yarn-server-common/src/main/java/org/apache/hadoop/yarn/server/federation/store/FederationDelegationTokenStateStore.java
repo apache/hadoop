@@ -27,7 +27,6 @@ import java.io.IOException;
 /**
  * FederationDelegationTokenStateStore maintains the state of all
  * <em>DelegationToken</em> that have been submitted to the federated cluster.
- *
  */
 @Private
 @Unstable
