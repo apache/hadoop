@@ -117,31 +117,18 @@ AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
-        IF @homeSubCluster = ''
-            SELECT
-                [applicationId],
-                [homeSubCluster],
-                [createTime]
-            FROM(SELECT
-                     [applicationId],
-                     [homeSubCluster],
-                     [createTime],
-                     row_number() over(order by [createTime] desc) AS app_rank
-                 FROM [dbo].[applicationsHomeSubCluster]) AS t
-            WHERE app_rank <= @limit;
-        ELSE
-            SELECT
-                [applicationId],
-                [homeSubCluster],
-                [createTime]
-            FROM(SELECT
-                     [applicationId],
-                     [homeSubCluster],
-                     [createTime],
-                     row_number() over(partition by [homeSubCluster] order by [createTime] desc) AS app_rank
-                 FROM [dbo].[applicationsHomeSubCluster]
-                 WHERE [homeSubCluster] = @homeSubCluster) AS t
-            WHERE app_rank <= @limit;
+        SELECT
+            [applicationId],
+            [homeSubCluster],
+            [createTime]
+        FROM(SELECT
+                 [applicationId],
+                 [homeSubCluster],
+                 [createTime],
+                 row_number() over(order by [createTime] desc) AS app_rank
+             FROM [dbo].[applicationsHomeSubCluster]
+             WHERE [homeSubCluster] = @homeSubCluster OR @homeSubCluster = '') AS t
+        WHERE app_rank <= @limit;
     END TRY
 
     BEGIN CATCH
