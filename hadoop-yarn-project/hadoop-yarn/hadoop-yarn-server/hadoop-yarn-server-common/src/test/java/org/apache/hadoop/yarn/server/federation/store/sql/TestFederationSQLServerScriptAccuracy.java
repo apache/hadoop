@@ -30,7 +30,7 @@ public class TestFederationSQLServerScriptAccuracy extends FederationSQLAccuracy
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationSQLServerScriptAccuracy.class);
 
-  private final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
+  private static final String SQLSERVER_COMPATIBILITY = ";sql.syntax_mss=true";
 
   @Override
   protected SQLServerFederationStateStore createStateStore() {

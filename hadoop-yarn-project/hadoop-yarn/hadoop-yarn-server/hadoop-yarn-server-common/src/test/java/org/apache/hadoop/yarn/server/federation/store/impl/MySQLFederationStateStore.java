@@ -38,7 +38,7 @@ public class MySQLFederationStateStore extends HSQLDBFederationStateStore {
     try {
       super.initConnection(conf);
       // get the sql that creates the table
-      extractCreateTableSQL("MySQL","CREATE TABLE.*\\n(.*,\\n){1,10}.*\\n.*");
+      extractCreateTableSQL("MySQL", "CREATE TABLE.*\\n(.*,\\n){1,10}.*\\n.*");
       // print log
       LOG.info("Mysql - tables = {}.", getTables().size());
     } catch (IOException e) {

@@ -30,7 +30,7 @@ public class TestFederationMySQLScriptAccuracy extends FederationSQLAccuracyTest
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationMySQLScriptAccuracy.class);
 
-  private final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
+  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
 
   @Override
   protected MySQLFederationStateStore createStateStore() {

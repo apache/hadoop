@@ -445,7 +445,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER2).execute();
 
