@@ -70,6 +70,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
+import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
@@ -2255,6 +2257,37 @@ public class DFSTestUtil {
       return proto.getStatus() == opStatus;
     } finally {
       sock.close();
+    }
+  }
+
+  /**
+   * Copy the source block of the sourceDN across the namespace to
+   * the target block of the target DN.
+   * @param sourceBlock the block to copy.
+   * @param sourceDN the datanode that source block belongs to.
+   * @param targetBlock the block to copy to.
+   * @param targetDN the datanode that target block belongs to.
+   * @throws IOException
+   */
+  public static void copyBlockCrossNamespace(
+      ExtendedBlock sourceBlock, DatanodeInfo sourceDN,
+      ExtendedBlock targetBlock, DatanodeInfo targetDN) throws IOException {
+    try (Socket sock = new Socket()) {
+      sock.connect(NetUtils.createSocketAddr(sourceDN.getXferAddr()),
+          HdfsConstants.READ_TIMEOUT);
+      sock.setKeepAlive(true);
+      // sendRequest
+      DataOutputStream out = new DataOutputStream(sock.getOutputStream());
+      new Sender(out).copyBlockCrossNamespace(sourceBlock,
+          BlockTokenSecretManager.DUMMY_TOKEN,
+          targetBlock, BlockTokenSecretManager.DUMMY_TOKEN, targetDN);
+      out.flush();
+      // receiveResponse
+      DataInputStream reply = new DataInputStream(sock.getInputStream());
+      BlockOpResponseProto proto = BlockOpResponseProto.parseFrom(
+          PBHelperClient.vintPrefixed(reply));
+      DataTransferProtoUtil.checkBlockOpStatus(proto, "copyBlockCrossNamespace "
+          + sourceBlock + " to " + targetBlock + " from " + sourceDN + " to " + targetDN);
     }
   }
 

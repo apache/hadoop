@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -204,6 +205,57 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return null;
       }
       return new Block(blkid, r.getBytesOnDisk(), r.getGenerationStamp());
+    }
+  }
+
+  @Override
+  public void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock targetBlock)
+      throws IOException {
+    // Do some verification for the source block.
+    ReplicaInfo srcReplicaInfo = getReplicaInfo(srcBlock);
+    if (srcReplicaInfo.getState() != ReplicaState.FINALIZED) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.UNFINALIZED_REPLICA + srcBlock);
+    }
+    if (srcReplicaInfo.getNumBytes() != srcBlock.getNumBytes()) {
+      throw new IOException("Corrupted replica " + srcReplicaInfo
+          + " with a length of " + srcReplicaInfo.getNumBytes()
+          + " expected length is " + srcBlock.getNumBytes());
+    }
+
+    FsVolumeImpl volume = getVolume(srcBlock);
+    try (FsVolumeReference ref = volume.obtainReference()) {
+      if (volume.getAvailable() < targetBlock.getNumBytes()) {
+        throw new DiskOutOfSpaceException("Insufficient space for hardlink block " + srcBlock);
+      }
+
+      BlockPoolSlice targetBP = volume.getBlockPoolSlice(targetBlock.getBlockPoolId());
+      targetBlock.setNumBytes(srcBlock.getNumBytes());
+
+      // Create one LocalReplicaInPipeline for target block.
+      LocalReplicaInPipeline replica = new ReplicaBuilder(ReplicaState.TEMPORARY)
+          .setBlockId(targetBlock.getBlockId())
+          .setGenerationStamp(targetBlock.getGenerationStamp())
+          .setDirectoryToUse(targetBP.getTmpDir())
+          .setBytesToReserve(targetBlock.getLocalBlock().getNumBytes())
+          .setFsVolume(volume)
+          .buildLocalReplicaInPipeline();
+
+      // hard link source block path to tmp dest block path
+      // hard link source block meta path to tmp dest block meta path
+      hardLinkBlockFiles(srcReplicaInfo, replica.getMetaFile(), replica.getBlockFile());
+
+      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME,
+          targetBlock.getBlockPoolId(), replica.getStorageUuid())) {
+        // Finalize the target block.
+        File targetBlockFile = targetBP.addFinalizedBlock(targetBlock.getLocalBlock(), replica);
+        ReplicaInfo finalizedReplica = new FinalizedReplica(targetBlock.getLocalBlock(),
+            volume, targetBlockFile.getParentFile());
+        volumeMap.add(targetBlock.getBlockPoolId(), finalizedReplica);
+      }
+
+      datanode.notifyNamenodeReceivedBlock(targetBlock, null,
+          replica.getStorageUuid(), replica.isOnTransientStorage());
     }
   }
 

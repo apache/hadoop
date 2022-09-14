@@ -1596,6 +1596,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock targetBlock) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
     Set<BInfo> replicas = new HashSet<>();

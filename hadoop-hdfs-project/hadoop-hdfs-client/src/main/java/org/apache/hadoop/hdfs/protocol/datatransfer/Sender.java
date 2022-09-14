@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferTrac
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockGroupChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockCrossNamespaceProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
@@ -302,5 +303,21 @@ public class Sender implements DataTransferProtocol {
         .build();
 
     send(out, Op.BLOCK_GROUP_CHECKSUM, proto);
+  }
+
+  @Override
+  public void copyBlockCrossNamespace(
+      final ExtendedBlock srcBlk,
+      final Token<BlockTokenIdentifier> srcBlockToken,
+      final ExtendedBlock targetBlk,
+      final Token<BlockTokenIdentifier> targetBlockToken,
+      final DatanodeInfo targetDN) throws IOException {
+    OpCopyBlockCrossNamespaceProto proto = OpCopyBlockCrossNamespaceProto.newBuilder()
+        .setHeader(DataTransferProtoUtil.buildBaseHeader(srcBlk, srcBlockToken))
+        .setTargetBlock(PBHelperClient.convert(targetBlk))
+        .setTargetBlockToken(PBHelperClient.convert(targetBlockToken))
+        .setTargetDatanode(PBHelperClient.convert(targetDN))
+        .build();
+    send(out, Op.COPY_BLOCK_CROSS_NAMESPACE, proto);
   }
 }
