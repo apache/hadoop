@@ -180,9 +180,8 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " SELECT applicationId, homeSubCluster, createTime"
           + " FROM applicationsHomeSubCluster "
           + " WHERE ROWNUM() <= limit_IN AND "
-          + " CASE WHEN homeSubCluster_IN IS NULL THEN 1 = 1 "
-          + " WHEN homeSubCluster_IN IS NOT NULL "
-          + " THEN homeSubCluster = homeSubCluster_IN END ORDER BY createTime desc; "
+          + " (homeSubCluster_IN = '' OR homeSubCluster = homeSubCluster_IN) "
+          + " ORDER BY createTime desc; "
           + " OPEN result; END";
 
   private static final String SP_DELETEAPPLICATIONHOMESUBCLUSTER =

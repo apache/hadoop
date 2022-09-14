@@ -762,7 +762,7 @@ public class SQLFederationStateStore implements FederationStateStore {
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER);
       cstmt.setInt("limit_IN", maxAppsInStateStore);
-      String homeSubClusterIN = null;
+      String homeSubClusterIN = StringUtils.EMPTY;
       SubClusterId subClusterId = request.getSubClusterId();
       if (subClusterId != null) {
         homeSubClusterIN = subClusterId.toString();
