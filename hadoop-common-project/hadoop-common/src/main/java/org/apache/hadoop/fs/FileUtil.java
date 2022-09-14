@@ -649,7 +649,7 @@ public class FileUtil {
   }
 
   /**
-   * Convert a os-native filename to a path that works for the shell.
+   * Convert an os-native filename to a path that works for the shell.
    * @param filename The filename to convert
    * @return The unix pathname
    * @throws IOException on windows, there can be problems with the subprocess
@@ -659,7 +659,7 @@ public class FileUtil {
   }
 
   /**
-   * Convert a os-native filename to a path that works for the shell.
+   * Convert an os-native filename to a path that works for the shell.
    * @param file The filename to convert
    * @return The unix pathname
    * @throws IOException on windows, there can be problems with the subprocess
@@ -669,7 +669,7 @@ public class FileUtil {
   }
 
   /**
-   * Convert a os-native filename to a path that works for the shell
+   * Convert an os-native filename to a path that works for the shell
    * and avoids script injection attacks.
    * @param file The filename to convert
    * @return The unix pathname
@@ -685,7 +685,7 @@ public class FileUtil {
   }
 
   /**
-   * Convert a os-native filename to a path that works for the shell.
+   * Convert an os-native filename to a path that works for the shell.
    * @param file The filename to convert
    * @param makeCanonicalPath
    *          Whether to make canonical path for the file passed
