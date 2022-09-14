@@ -172,7 +172,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   private HikariDataSource dataSource = null;
   private final Clock clock = new MonotonicClock();
   @VisibleForTesting
-  Connection conn = null;
+  protected Connection conn = null;
 
   @Override
   public void init(Configuration conf) throws YarnException {
