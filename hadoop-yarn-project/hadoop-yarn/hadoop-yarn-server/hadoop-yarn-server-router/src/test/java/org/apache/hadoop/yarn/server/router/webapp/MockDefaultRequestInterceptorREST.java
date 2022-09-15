@@ -892,6 +892,7 @@ public class MockDefaultRequestInterceptorREST
 
       conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
       conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+      conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
 
       MockRM rm = new MockRM(conf);
       rm.start();
@@ -931,6 +932,7 @@ public class MockDefaultRequestInterceptorREST
     ReservationDefinition definition = RouterServerUtil.convertReservationDefinition(definitionInfo);
     ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
         definition, resContext.getQueue(), reservationId);
+    submitReservation(request);
 
     LOG.info("Reservation submitted: {}.", reservationId);
 
@@ -1011,7 +1013,7 @@ public class MockDefaultRequestInterceptorREST
 
       ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
       ReservationRequestInterpreter requestInterpreter =
-              values[resReqsInfo.getReservationRequestsInterpreter()];
+          values[resReqsInfo.getReservationRequestsInterpreter()];
       List<ReservationRequest> list = new ArrayList<>();
 
       for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
@@ -1027,9 +1029,9 @@ public class MockDefaultRequestInterceptorREST
 
       ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
       ReservationDefinition rDef = ReservationDefinition.newInstance(
-              resInfo.getArrival(), resInfo.getDeadline(), reqs,
-              resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
-              Priority.newInstance(resInfo.getPriority()));
+          resInfo.getArrival(), resInfo.getDeadline(), reqs,
+          resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+          Priority.newInstance(resInfo.getPriority()));
       ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
               rDef, ReservationId.parseReservationId(resContext.getReservationId()));
 

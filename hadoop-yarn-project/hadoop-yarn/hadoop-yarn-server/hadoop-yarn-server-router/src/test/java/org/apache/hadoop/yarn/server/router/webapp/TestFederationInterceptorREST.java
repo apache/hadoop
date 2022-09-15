@@ -1080,7 +1080,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testListReservation() throws Exception {
 
     // submitReservation
-    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 3);
     submitReservation(reservationId);
 
     // Call the listReservation method
@@ -1178,7 +1178,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testUpdateReservation() throws Exception {
     // submit reservation
-    ReservationId reservationId = ReservationId.newInstance(Time.now(), 2);
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     Response response = submitReservation(reservationId);
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());

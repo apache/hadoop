@@ -1525,32 +1525,32 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
         // First, Get SubClusterId according to specific strategy.
         ReservationSubmissionRequest request =
-                ReservationSubmissionRequest.newInstance(definition,
-                        resContext.getQueue(), reservationId);
+            ReservationSubmissionRequest.newInstance(definition,
+                resContext.getQueue(), reservationId);
         SubClusterId subClusterId = policyFacade.getReservationHomeSubCluster(request);
 
         LOG.info("submitReservation ReservationId {} try #{} on SubCluster {}.",
-                reservationId, i, subClusterId);
+            reservationId, i, subClusterId);
 
         ReservationHomeSubCluster reservationHomeSubCluster =
-                ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
+            ReservationHomeSubCluster.newInstance(reservationId, subClusterId);
 
         // Second, determine whether the current ReservationId has a corresponding subCluster.
         // If it does not exist, add it. If it exists, update it.
         Boolean exists = RouterServerUtil.existsReservationHomeSubCluster(
-                federationFacade, reservationId);
+            federationFacade, reservationId);
         if (!exists) {
           RouterServerUtil.addReservationHomeSubCluster(federationFacade,
-                  reservationId, reservationHomeSubCluster);
+              reservationId, reservationHomeSubCluster);
         } else {
           RouterServerUtil.updateReservationHomeSubCluster(federationFacade,
-                  subClusterId, reservationId, reservationHomeSubCluster);
+              subClusterId, reservationId, reservationHomeSubCluster);
         }
 
         // Third, Submit a Reservation request to the subCluster
         SubClusterInfo subClusterInfo = federationFacade.getSubCluster(subClusterId);
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
-                subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
+            subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
         HttpServletRequest hsrCopy = clone(hsr);
         Response response = interceptor.submitReservation(resContext, hsrCopy);
         if (response != null) {
