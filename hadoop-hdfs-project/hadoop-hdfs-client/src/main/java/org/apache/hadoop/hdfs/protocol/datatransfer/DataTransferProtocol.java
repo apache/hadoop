@@ -239,7 +239,6 @@ public interface DataTransferProtocol {
           long requestedNumBytes,
           BlockChecksumOptions blockChecksumOptions) throws IOException;
 
-
   /**
    * Copy a block cross namespace. It is used for fast copy purpose.
    *
@@ -249,10 +248,9 @@ public interface DataTransferProtocol {
    * @param targetBlockToken security token for accessing the target block.
    * @param targetDN the target block belongs to.
    */
-   void copyBlockCrossNamespace(
-       final ExtendedBlock srcBlk,
-       final Token<BlockTokenIdentifier> srcBlockToken,
-       final ExtendedBlock targetBlk,
-       final Token<BlockTokenIdentifier> targetBlockToken,
-       final DatanodeInfo targetDN) throws IOException;
+  void copyBlockCrossNamespace(final ExtendedBlock srcBlk,
+      final Token<BlockTokenIdentifier> srcBlockToken,
+      final ExtendedBlock targetBlk,
+      final Token<BlockTokenIdentifier> targetBlockToken,
+      final DatanodeInfo targetDN) throws IOException;
 }

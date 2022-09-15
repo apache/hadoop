@@ -2931,8 +2931,8 @@ public class DataNode extends ReconfigurableBase
     final DatanodeInfo[] targets;
     final StorageType[] targetStorageTypes;
     final private String[] targetStorageIds;
-    final ExtendedBlock sourceBlock;
-    final ExtendedBlock targetBlock;
+    final private ExtendedBlock sourceBlock;
+    final private ExtendedBlock targetBlock;
     final BlockConstructionStage stage;
     final private DatanodeRegistration bpReg;
     final String clientname;
@@ -3005,10 +3005,9 @@ public class DataNode extends ReconfigurableBase
                             HdfsConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
         InputStream unbufIn = NetUtils.getInputStream(sock);
-        DataEncryptionKeyFactory keyFactory =
-          getDataEncryptionKeyFactoryForBlock(targetBlock);
+        DataEncryptionKeyFactory keyFactory = getDataEncryptionKeyFactoryForBlock(targetBlock);
         IOStreamPair saslStreams = saslClient.socketSend(sock, unbufOut,
-          unbufIn, keyFactory, accessToken, targets[0]);
+            unbufIn, keyFactory, accessToken, targets[0]);
         unbufOut = saslStreams.out;
         unbufIn = saslStreams.in;
         

@@ -345,9 +345,9 @@ public abstract class Receiver implements DataTransferProtocol {
   }
 
   /** Receive {@link Op#COPY_BLOCK_CROSS_NAMESPACE}. */
-  private void opCopyBlockCrossNamespace(DataInputStream in) throws IOException {
+  private void opCopyBlockCrossNamespace(DataInputStream inputStream) throws IOException {
     OpCopyBlockCrossNamespaceProto proto =
-        OpCopyBlockCrossNamespaceProto.parseFrom(vintPrefixed(in));
+        OpCopyBlockCrossNamespaceProto.parseFrom(vintPrefixed(inputStream));
     try (TraceScope ignored = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName())) {
       copyBlockCrossNamespace(

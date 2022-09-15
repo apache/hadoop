@@ -667,9 +667,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   DataNodeLockManager<? extends AutoCloseDataSetLock> acquireDatasetLockManager();
 
   /**
-   * Copies over a block from a block file via hard link technology
-   * @param srcBlock the block to copy
-   * @param targetBlock the block to copy to
+   * Copies over a block from a block file via hard link technology.
+   * @param srcBlock the block to copy.
+   * @param targetBlock the block to copy to.
    * @throws IOException
    */
   void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock targetBlock) throws IOException;
