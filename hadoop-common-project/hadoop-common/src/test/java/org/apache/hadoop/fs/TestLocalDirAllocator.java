@@ -534,7 +534,7 @@ public class TestLocalDirAllocator {
   }
 
   /**
-   * Test to check the LocalDirAllocation for the less space HADOOP-16769.
+   * Test to verify LocalDirAllocator log details to provide diagnostics when file creation fails
    *
    * @throws Exception
    */
