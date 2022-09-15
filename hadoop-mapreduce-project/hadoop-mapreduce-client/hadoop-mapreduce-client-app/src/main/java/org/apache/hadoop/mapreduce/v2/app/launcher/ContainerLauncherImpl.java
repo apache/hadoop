@@ -379,7 +379,7 @@ public class ContainerLauncherImpl extends AbstractService implements
 
     @Override
     public void run() {
-      LOG.info("Processing the event {}", event.toString());
+      LOG.info("Processing the event {}", event);
 
       // Load ContainerManager tokens before creating a connection.
       // TODO: Do it only once per NodeManager.
