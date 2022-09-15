@@ -1021,7 +1021,7 @@ the YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG must reference the config.json
 file containing the credentials used to authenticate.
 
 ```
-DOCKER_IMAGE_NAME=hadoop-docker 
+DOCKER_IMAGE_NAME=hadoop-docker
 DOCKER_CLIENT_CONFIG=hdfs:///user/hadoop/config.json
 spark-submit --master yarn \
 --deploy-mode cluster \
