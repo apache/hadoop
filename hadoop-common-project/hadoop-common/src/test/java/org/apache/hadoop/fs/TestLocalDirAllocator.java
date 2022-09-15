@@ -532,4 +532,23 @@ public class TestLocalDirAllocator {
     }
   }
 
+  /**
+   * Test to check the LocalDirAllocation for the less space HADOOP-16769
+   *
+   * @throws Exception
+   */
+  @Test(timeout = 30000)
+  public void testGetLocalPathForWriteForLessSpace() throws Exception {
+    String dir0 = buildBufferDir(ROOT, 0);
+    String dir1 = buildBufferDir(ROOT, 1);
+    conf.set(CONTEXT, dir0 + "," + dir1);
+    try {
+      dirAllocator.getLocalPathForWrite("p1/x", 3_000_000_000_000L, conf);
+      fail("not throwing the exception");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().matches("Could not find any valid local directory for p1/x with requested " +
+          "size 3000000000000 as the max capacity in any directory is [0-9]*"));
+    }
+  }
+
 }
