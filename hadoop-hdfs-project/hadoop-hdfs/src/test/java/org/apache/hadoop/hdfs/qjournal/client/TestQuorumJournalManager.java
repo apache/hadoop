@@ -42,8 +42,10 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.net.MockDomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.SettableFuture;
@@ -1262,5 +1264,40 @@ public class TestQuorumJournalManager {
       fail("Did not find a quorum of finalized logs starting at " +
           segmentTxId);
     }
+  }
+
+  @Test
+  public void testSelectLatestEditsWithoutStreaming() throws Exception {
+    EditLogOutputStream stm = qjm.startLogSegment(
+        1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    // Successfully write these edits to JN0 ~ JN2
+    writeTxns(stm, 1, 10);
+
+    AtomicInteger atomicInteger = new AtomicInteger(0);
+    spyGetEditLogManifest(0, 11, true, atomicInteger::incrementAndGet);
+    spyGetEditLogManifest(1, 11, true, atomicInteger::incrementAndGet);
+    spyGetEditLogManifest(2, 11, true, atomicInteger::incrementAndGet);
+
+    List<EditLogInputStream> streams = new ArrayList<>();
+    qjm.selectInputStreams(streams, 1, true, true);
+    assertEquals(1, streams.size());
+    assertEquals(1, streams.get(0).getFirstTxId());
+    assertEquals(10, streams.get(0).getLastTxId());
+
+    streams.clear();
+    qjm.selectInputStreams(streams, 11, true, true);
+    assertEquals(0, streams.size());
+    assertEquals(0, atomicInteger.get());
+  }
+
+  private void spyGetEditLogManifest(int jnSpyIdx, long fromTxId,
+      boolean inProgressOk, Runnable preHook) {
+    Mockito.doAnswer((Answer<ListenableFuture<RemoteEditLogManifest>>) invocation -> {
+      preHook.run();
+      @SuppressWarnings("unchecked")
+      ListenableFuture<RemoteEditLogManifest> result =
+          (ListenableFuture<RemoteEditLogManifest>) invocation.callRealMethod();
+      return result;
+    }).when(spies.get(jnSpyIdx)).getEditLogManifest(fromTxId, inProgressOk);
   }
 }

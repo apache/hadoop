@@ -115,6 +115,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
         .build();
 
     this.server.addTerseExceptions(NewerTxnIdException.class);
+    this.server.addTerseExceptions(JournaledEditsCache.CacheMissException.class);
 
     //Adding InterQJournalProtocolPB to server
     InterQJournalProtocolServerSideTranslatorPB
