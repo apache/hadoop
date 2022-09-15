@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -313,14 +314,8 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
   @Override
   public void init(Configuration conf) {
-
     try {
       super.init(conf);
-    } catch (YarnException e1) {
-      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
-    }
-
-    try {
       conn = super.conn;
 
       LOG.info("Database Init: Start");
@@ -354,7 +349,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {
-      LOG.error("ERROR: failed to inizialize HSQLDB " + e.getMessage());
+      LOG.error("ERROR: failed to initialize HSQLDB {}.", e.getMessage());
     }
   }
 
@@ -363,7 +358,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       super.init(conf);
       conn = super.conn;
     } catch (YarnException e1) {
-      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
+      LOG.error("ERROR: failed open connection to HSQLDB DB {}.", e1.getMessage());
     }
   }
 
@@ -371,8 +366,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
     try {
       conn.close();
     } catch (SQLException e) {
-      LOG.error(
-          "ERROR: failed to close connection to HSQLDB DB " + e.getMessage());
+      LOG.error("ERROR: failed to close connection to HSQLDB DB {}.", e.getMessage());
     }
   }
 
@@ -384,13 +378,16 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
    * @throws IOException IO exception.
    */
   protected void extractCreateTableSQL(String dbIdentifier, String regex) throws IOException {
-    String createTableScriptPath = "." + File.separator + "target" + File.separator +
-        "test-classes" + File.separator + dbIdentifier + "/FederationStateStoreTables.sql";
+
+    String[] createTableScriptPathItems = new String[] {
+        ".", "target", "test-classes", dbIdentifier, "FederationStateStoreTables.sql" };
+    String createTableScriptPath = StringUtils.join(createTableScriptPathItems, File.separator);
+
     String createTableSQL =
         FileUtils.readFileToString(new File(createTableScriptPath), StandardCharsets.UTF_8);
     Pattern p = Pattern.compile(regex);
     Matcher m = p.matcher(createTableSQL);
-    while(m!=null && m.find()) {
+    while (m != null && m.find()) {
       String group = m.group();
       tables.add(group);
     }
