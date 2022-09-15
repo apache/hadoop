@@ -85,6 +85,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
+
 /**
  * In-memory implementation of {@link FederationStateStore}.
  */
@@ -283,24 +285,6 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
     SubClusterId subClusterId = applications.get(applicationId);
     return ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), subClusterId);
-  }
-
-  private boolean filterHomeSubCluster(SubClusterId filterSubCluster,
-      SubClusterId homeSubCluster) {
-
-    // If the filter condition is empty,
-    // it means that homeSubCluster needs to be added
-    if (filterSubCluster == null) {
-      return true;
-    }
-
-    // If the filter condition filterSubCluster is not empty,
-    // and filterSubCluster is equal to homeSubCluster, it needs to be added
-    if (filterSubCluster.equals(homeSubCluster)) {
-      return true;
-    }
-
-    return false;
   }
 
   @Override

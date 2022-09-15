@@ -98,6 +98,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
+
 /**
  * ZooKeeper implementation of {@link FederationStateStore}.
  *
@@ -272,8 +274,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       long start = clock.getTime();
       SubClusterId requestSC = request.getSubClusterId();
       List<String> children = zkManager.getChildren(appsZNode);
-      List<ApplicationHomeSubCluster> result =
-          children.stream().map(child -> generateAppHomeSC(child))
+      List<ApplicationHomeSubCluster> result = children.stream()
+          .map(child -> generateAppHomeSC(child))
           .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
           .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
           .limit(maxAppsInStateStore)
@@ -301,16 +303,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       LOG.error("get homeSubCluster by appId = {}.", appId);
     }
     return null;
-  }
-
-  private boolean filterHomeSubCluster(SubClusterId filterSubCluster,
-      SubClusterId homeSubCluster) {
-    if (filterSubCluster == null) {
-      return true;
-    } else if (filterSubCluster.equals(homeSubCluster)) {
-      return true;
-    }
-    return false;
   }
 
   @Override
