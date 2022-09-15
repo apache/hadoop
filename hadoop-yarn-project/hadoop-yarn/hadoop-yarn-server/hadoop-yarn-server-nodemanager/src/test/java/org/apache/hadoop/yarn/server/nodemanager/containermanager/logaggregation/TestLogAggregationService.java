@@ -202,7 +202,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   private void verifyLocalFileDeletion(
-      LogAggregationService logAggregationService,Long clusterTimeStamp) throws Exception {
+      LogAggregationService logAggregationService, Long clusterTimeStamp) throws Exception {
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
