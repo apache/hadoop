@@ -18,59 +18,64 @@
 
 package org.apache.hadoop.yarn.server.webproxy;
 
-import static org.junit.Assert.*;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.TrackingUriPlugin;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 public class TestProxyUriUtils {
   @Test
-  public void testGetPathApplicationId() {
-    assertEquals("/proxy/application_100_0001", 
+  void testGetPathApplicationId() {
+    assertEquals("/proxy/application_100_0001",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(100l, 1)));
-    assertEquals("/proxy/application_6384623_0005", 
+    assertEquals("/proxy/application_6384623_0005",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5)));
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testGetPathApplicationIdBad() {
-    ProxyUriUtils.getPath(null);
-  }
-  
   @Test
-  public void testGetPathApplicationIdString() {
-    assertEquals("/proxy/application_6384623_0005", 
+  void testGetPathApplicationIdBad() {
+    assertThrows(IllegalArgumentException.class, () -> {
+      ProxyUriUtils.getPath(null);
+    });
+  }
+
+  @Test
+  void testGetPathApplicationIdString() {
+    assertEquals("/proxy/application_6384623_0005",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), null));
     assertEquals("/proxy/application_6384623_0005/static/app",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "/static/app"));
-    assertEquals("/proxy/application_6384623_0005/", 
+    assertEquals("/proxy/application_6384623_0005/",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "/"));
-    assertEquals("/proxy/application_6384623_0005/some/path", 
+    assertEquals("/proxy/application_6384623_0005/some/path",
         ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "some/path"));
   }
-  
-  @Test 
-  public void testGetPathAndQuery() {
+
+  @Test
+  void testGetPathAndQuery() {
     assertEquals("/proxy/application_6384623_0005/static/app?foo=bar",
-    ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app", 
-        "?foo=bar", false));
-    
+        ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app",
+            "?foo=bar", false));
+
     assertEquals("/proxy/application_6384623_0005/static/app?foo=bar&bad=good&proxyapproved=true",
-        ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app", 
+        ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app",
             "foo=bar&bad=good", true));
   }
 
   @Test
-  public void testGetProxyUri() throws Exception {
+  void testGetProxyUri() throws Exception {
     URI originalUri = new URI("http://host.com/static/foo?bar=bar");
     URI proxyUri = new URI("http://proxy.net:8080/");
     ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
@@ -79,9 +84,9 @@ public class TestProxyUriUtils {
     assertEquals(expected, result);
   }
 
-  
+
   @Test
-  public void testGetProxyUriNull() throws Exception {
+  void testGetProxyUriNull() throws Exception {
     URI originalUri = null;
     URI proxyUri = new URI("http://proxy.net:8080/");
     ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
@@ -91,7 +96,7 @@ public class TestProxyUriUtils {
   }
 
   @Test
-  public void testGetProxyUriFromPluginsReturnsNullIfNoPlugins()
+  void testGetProxyUriFromPluginsReturnsNullIfNoPlugins()
       throws URISyntaxException {
     ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
     List<TrackingUriPlugin> list =
@@ -100,7 +105,7 @@ public class TestProxyUriUtils {
   }
 
   @Test
-  public void testGetProxyUriFromPluginsReturnsValidUriWhenAble()
+  void testGetProxyUriFromPluginsReturnsValidUriWhenAble()
       throws URISyntaxException {
     ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
     List<TrackingUriPlugin> list =
@@ -119,6 +124,6 @@ public class TestProxyUriUtils {
     });
     URI result = ProxyUriUtils.getUriFromTrackingPlugins(id, list);
     assertNotNull(result);
-    
+
   }
 }

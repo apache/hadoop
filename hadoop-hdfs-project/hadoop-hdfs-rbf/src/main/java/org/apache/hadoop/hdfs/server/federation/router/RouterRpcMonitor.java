@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 
 /**
@@ -61,8 +62,9 @@ public interface RouterRpcMonitor {
   /**
    * Mark a proxy operation as completed.
    * @param success If the operation was successful.
+   * @param state proxy namenode state.
    */
-  void proxyOpComplete(boolean success, String nsId);
+  void proxyOpComplete(boolean success, String nsId, FederationNamenodeServiceState state);
 
   /**
    * Failed to proxy an operation to a Namenode because it was in standby.

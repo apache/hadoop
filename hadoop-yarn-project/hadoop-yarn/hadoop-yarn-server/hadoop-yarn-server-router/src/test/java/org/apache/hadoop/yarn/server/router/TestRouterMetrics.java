@@ -473,6 +473,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getDeleteReservationFailed call");
       metrics.incrDeleteReservationFailedRetrieved();
     }
+
+    public void getListReservationFailed() {
+      LOG.info("Mocked: failed getListReservationFailed call");
+      metrics.incrListReservationFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -642,6 +647,11 @@ public class TestRouterMetrics {
     public void getDeleteReservationRetrieved(long duration) {
       LOG.info("Mocked: successful getDeleteReservation call with duration {}", duration);
       metrics.succeededDeleteReservationRetrieved(duration);
+    }
+
+    public void getListReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getListReservation call with duration {}", duration);
+      metrics.succeededListReservationRetrieved(duration);
     }
   }
 
@@ -1200,5 +1210,28 @@ public class TestRouterMetrics {
     badSubCluster.getDeleteReservationFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getDeleteReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetListReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededListReservationRetrieved();
+    goodSubCluster.getListReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededListReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getListReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededListReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetListReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getListReservationFailedRetrieved();
+    badSubCluster.getListReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getListReservationFailedRetrieved());
   }
 }
