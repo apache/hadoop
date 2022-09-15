@@ -29,6 +29,7 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
+import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcMonitor;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -147,12 +148,13 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
-  public void proxyOpComplete(boolean success, String nsId) {
+  public void proxyOpComplete(boolean success, String nsId,
+      FederationNamenodeServiceState state) {
     if (success) {
       long proxyTime = getProxyTime();
       if (proxyTime >= 0) {
         if (metrics != null) {
-          metrics.addProxyTime(proxyTime);
+          metrics.addProxyTime(proxyTime, state);
         }
         if (nameserviceRPCMetricsMap != null &&
             nameserviceRPCMetricsMap.containsKey(nsId)) {

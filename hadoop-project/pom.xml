@@ -126,7 +126,7 @@
     <commons-net.version>3.8.0</commons-net.version>
     <commons-text.version>1.4</commons-text.version>
 
-    <kerby.version>1.0.1</kerby.version>
+    <kerby.version>2.0.2</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
@@ -1782,6 +1782,12 @@
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
           <version>${kerby.version}</version>
+          <exclusions>
+            <exclusion>
+                <groupId>org.jboss.xnio</groupId>
+                <artifactId>xnio-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.kerby</groupId>

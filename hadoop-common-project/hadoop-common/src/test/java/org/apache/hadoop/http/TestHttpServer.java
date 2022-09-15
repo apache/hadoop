@@ -744,6 +744,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
+  public void testBacklogSize2() throws Exception
+  {
+    Configuration conf = new Configuration();
+    assertEquals(500, conf.get(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_KEY));
+  }
+
+  @Test
   public void testIdleTimeout() throws Exception {
     final int idleTimeout = 1000;
     Configuration conf = new Configuration();
