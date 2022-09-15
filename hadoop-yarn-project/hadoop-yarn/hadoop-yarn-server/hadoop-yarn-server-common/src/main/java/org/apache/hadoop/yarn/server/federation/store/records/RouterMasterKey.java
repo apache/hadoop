@@ -117,15 +117,17 @@ public abstract class RouterMasterKey {
   public boolean equals(Object right) {
     if (this == right) {
       return true;
-    } else if (right == null || getClass() != right.getClass()) {
-      return false;
-    } else {
-      RouterMasterKey r = (RouterMasterKey) right;
-      return new EqualsBuilder()
-          .append(this.getKeyId().intValue(), r.getKeyId().intValue())
-          .append(this.getExpiryDate().longValue(), this.getExpiryDate().longValue())
-          .append(getKeyBytes().array(), r.getKeyBytes())
-          .isEquals();
     }
+
+    if (right == null || getClass() != right.getClass()) {
+      return false;
+    }
+
+    RouterMasterKey r = (RouterMasterKey) right;
+    return new EqualsBuilder()
+        .append(this.getKeyId().intValue(), r.getKeyId().intValue())
+        .append(this.getExpiryDate().longValue(), this.getExpiryDate().longValue())
+        .append(getKeyBytes().array(), r.getKeyBytes())
+        .isEquals();
   }
 }

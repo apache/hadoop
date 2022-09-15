@@ -776,7 +776,8 @@ public abstract class FederationStateStoreBaseTest {
 
     RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
         ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    RouterMasterKeyRequest routerMasterKeyRequest = RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
     RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
 
     Assert.assertNotNull(response);
@@ -796,7 +797,8 @@ public abstract class FederationStateStoreBaseTest {
 
     RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
         ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    RouterMasterKeyRequest routerMasterKeyRequest = RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
     RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
     Assert.assertNotNull(response);
 
@@ -821,7 +823,8 @@ public abstract class FederationStateStoreBaseTest {
 
     RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
         ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    RouterMasterKeyRequest routerMasterKeyRequest = RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
     RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
     Assert.assertNotNull(response);
 
