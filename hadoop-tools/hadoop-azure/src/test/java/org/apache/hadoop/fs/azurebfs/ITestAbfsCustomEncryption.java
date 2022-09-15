@@ -25,7 +25,6 @@ import java.util.Base64;
 import java.util.Hashtable;
 import java.util.Random;
 
-import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;

@@ -63,25 +63,25 @@ public class EncryptionAdapter implements Destroyable {
 
   public String getEncodedKey() throws IOException {
     computeKeys();
-    return getBase64EncodedString(encryptionKey.getEncoded());
+    return EncodingHelper.getBase64EncodedString(encryptionKey.getEncoded());
   }
 
   public String getEncodedKeySHA() throws IOException {
     computeKeys();
-    return getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
+    return EncodingHelper.getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
   }
 
   public String getEncodedContext() throws IOException {
     computeKeys();
-    return getBase64EncodedString(encryptionContext.getEncoded());
+    return EncodingHelper.getBase64EncodedString(encryptionContext.getEncoded());
   }
 
   public void destroy() throws DestroyFailedException {
-    if (encryptionContext != null) encryptionContext.destroy();
-    if (encryptionKey != null) encryptionKey.destroy();
-  }
-
-  public static String getBase64EncodedString(byte[] bytes) {
-    return Base64.getEncoder().encodeToString(bytes);
+    if (encryptionContext != null) {
+      encryptionContext.destroy();
+    }
+    if (encryptionKey != null) {
+      encryptionKey.destroy();
+    }
   }
 }

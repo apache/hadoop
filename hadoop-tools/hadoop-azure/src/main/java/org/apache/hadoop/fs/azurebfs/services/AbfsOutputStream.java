@@ -500,7 +500,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       throw wrapException(path, e.getMessage(), e);
     } finally {
       try {
-        if (encryptionAdapter != null) encryptionAdapter.destroy();
+        if (encryptionAdapter != null) {
+          encryptionAdapter.destroy();
+        }
       } catch (DestroyFailedException e) {
         throw new IOException(
                 "Could not destroy encryptionContext: " + e.getMessage());

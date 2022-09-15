@@ -703,7 +703,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     closed = true;
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
     try {
-      if (encryptionAdapter != null) encryptionAdapter.destroy();
+      if (encryptionAdapter != null) {
+        encryptionAdapter.destroy();
+      }
     } catch (DestroyFailedException e) {
       throw new IOException(
           "Could not destroy encryptionContext: " + e.getMessage());

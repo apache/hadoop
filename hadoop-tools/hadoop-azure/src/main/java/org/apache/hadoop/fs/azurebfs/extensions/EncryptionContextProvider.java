@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.extensions;
 
-import javax.crypto.SecretKey;
 import javax.security.auth.Destroyable;
 import java.io.IOException;
 
