@@ -284,12 +284,9 @@ public class TestContainerLauncherImpl {
       verify(mockCM).startContainers(any(StartContainersRequest.class));
 
       LOG.info("inserting cleanup event");
-      ContainerLauncherEvent mockCleanupEvent2 =
-          mock(ContainerLauncherEvent.class);
-      when(mockCleanupEvent2.getType())
-          .thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
-      when(mockCleanupEvent2.getContainerID())
-          .thenReturn(contId);
+      ContainerLauncherEvent mockCleanupEvent2 = mock(ContainerLauncherEvent.class);
+      when(mockCleanupEvent2.getType()).thenReturn(EventType.CONTAINER_REMOTE_CLEANUP);
+      when(mockCleanupEvent2.getContainerID()).thenReturn(contId);
       when(mockCleanupEvent2.getTaskAttemptID()).thenReturn(taskAttemptId);
       when(mockCleanupEvent2.getContainerMgrAddress()).thenReturn(cmAddress);
       ut.handle(mockCleanupEvent2);
