@@ -20,7 +20,13 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,11 +44,32 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
-import org.apache.hadoop.yarn.api.records.*;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -68,7 +95,37 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtil
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -909,6 +966,32 @@ public class MockDefaultRequestInterceptorREST
     return Response.status(Status.OK).entity(resResponse).build();
   }
 
+  private MockRM setupResourceManager() throws IOException {
+    try {
+      DefaultMetricsSystem.setMiniClusterMode(true);
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+      // Define default queue
+      conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+      // Define dedicated queues
+      conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+          new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED});
+      conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+      conf.setReservable(QUEUE_DEDICATED_FULL, true);
+
+      conf.setClass(YarnConfiguration.RM_SCHEDULER,
+          CapacityScheduler.class, ResourceScheduler.class);
+      conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+      MockRM rm = new MockRM(conf);
+      rm.start();
+      rm.registerNode("127.0.0.1:5678", 100 * 1024, 100);
+      return rm;
+    } catch (Exception ex) {
+      LOG.error("setupResourceManager failed.", ex);
+      throw new IOException(ex);
+    }
+  }
+
   private void submitReservation(MockRM mockRM, ReservationId reservationId) {
     try {
       // synchronize plan
@@ -939,31 +1022,6 @@ public class MockDefaultRequestInterceptorREST
     }
   }
 
-  private MockRM setupResourceManager() throws IOException {
-    try {
-      DefaultMetricsSystem.setMiniClusterMode(true);
-      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-
-      // Define default queue
-      conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
-      // Define dedicated queues
-      conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED});
-      conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
-      conf.setReservable(QUEUE_DEDICATED_FULL, true);
-
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
-      conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-      MockRM rm = new MockRM(conf);
-      rm.start();
-      rm.registerNode("127.0.0.1:5678", 100 * 1024, 100);
-      return rm;
-    } catch (Exception ex) {
-      LOG.error("setupResourceManager failed.", ex);
-      throw new IOException(ex);
-    }
-  }
-
   private void updateReservation(MockRM mockRM, ReservationUpdateRequestInfo resContext) {
 
     try {
@@ -989,7 +1047,8 @@ public class MockDefaultRequestInterceptorREST
       }
 
       ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
-      ReservationRequestInterpreter resInt = values[resReqsInfo.getReservationRequestsInterpreter()];
+      ReservationRequestInterpreter requestInterpreter =
+          values[resReqsInfo.getReservationRequestsInterpreter()];
       List<ReservationRequest> list = new ArrayList<>();
 
       for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
@@ -1003,7 +1062,7 @@ public class MockDefaultRequestInterceptorREST
         list.add(rr);
       }
 
-      ReservationRequests reqs = ReservationRequests.newInstance(list, resInt);
+      ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
       ReservationDefinition rDef = ReservationDefinition.newInstance(
           resInfo.getArrival(), resInfo.getDeadline(), reqs,
           resInfo.getReservationName(), resInfo.getRecurrenceExpression(),

@@ -1127,4 +1127,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertEquals(1, vCore);
     Assert.assertEquals(1024, memory);
   }
+
+  @Test
+  public void testUpdateReservation() throws Exception {
+
+  }
 }
