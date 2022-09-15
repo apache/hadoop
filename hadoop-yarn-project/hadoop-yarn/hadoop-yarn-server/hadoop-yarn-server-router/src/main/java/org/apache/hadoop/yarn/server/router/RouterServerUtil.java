@@ -24,6 +24,20 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.slf4j.Logger;
@@ -221,5 +235,116 @@ public final class RouterServerUtil {
       LOG.error(msg);
       throw new RuntimeException(msg);
     }
+  }
+
+  /**
+   * Save Reservation And HomeSubCluster Mapping.
+   *
+   * @param federationFacade federation facade
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public static void addReservationHomeSubCluster(FederationStateStoreFacade federationFacade,
+      ReservationId reservationId, ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // persist the mapping of reservationId and the subClusterId which has
+      // been selected as its home
+      federationFacade.addReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
+    }
+  }
+
+  /**
+   * Update Reservation And HomeSubCluster Mapping.
+   *
+   * @param federationFacade federation facade
+   * @param subClusterId subClusterId
+   * @param reservationId reservationId
+   * @param homeSubCluster homeSubCluster
+   * @throws YarnException on failure
+   */
+  public static void updateReservationHomeSubCluster(FederationStateStoreFacade federationFacade,
+      SubClusterId subClusterId, ReservationId reservationId,
+      ReservationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      // update the mapping of reservationId and the home subClusterId to
+      // the new subClusterId we have selected
+      federationFacade.updateReservationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      SubClusterId subClusterIdInStateStore =
+          federationFacade.getReservationHomeSubCluster(reservationId);
+      if (subClusterId == subClusterIdInStateStore) {
+        LOG.info("Reservation {} already submitted on SubCluster {}.", reservationId, subClusterId);
+      } else {
+        RouterServerUtil.logAndThrowException(e,
+            "Unable to update the ReservationId %s into the FederationStateStore.", reservationId);
+      }
+    }
+  }
+
+  /**
+   * Exists ReservationHomeSubCluster Mapping.
+   *
+   * @param federationFacade federation facade
+   * @param reservationId reservationId
+   * @return true - exist, false - not exist
+   */
+  public static Boolean existsReservationHomeSubCluster(FederationStateStoreFacade federationFacade,
+      ReservationId reservationId) {
+    try {
+      SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
+      if (subClusterId != null) {
+        return true;
+      }
+    } catch (YarnException e) {
+      LOG.warn("get homeSubCluster by reservationId = {} error.", reservationId, e);
+    }
+    return false;
+  }
+
+  public static ReservationDefinition convertReservationDefinition(
+      ReservationDefinitionInfo definitionInfo) {
+
+    // basic variable
+    long arrival = definitionInfo.getArrival();
+    long deadline = definitionInfo.getDeadline();
+
+    // ReservationRequests reservationRequests
+    String name = definitionInfo.getReservationName();
+    String recurrenceExpression = definitionInfo.getRecurrenceExpression();
+    Priority priority = Priority.newInstance(definitionInfo.getPriority());
+
+    // reservation requests info
+    List<ReservationRequest> reservationRequestList = new ArrayList<>();
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+
+    List<ReservationRequestInfo> reservationRequestInfos =
+        reservationRequestsInfo.getReservationRequest();
+
+    for (ReservationRequestInfo resRequestInfo : reservationRequestInfos) {
+      ResourceInfo resourceInfo = resRequestInfo.getCapability();
+      Resource capability =
+          Resource.newInstance(resourceInfo.getMemorySize(), resourceInfo.getvCores());
+      ReservationRequest reservationRequest = ReservationRequest.newInstance(capability,
+          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(),
+          resRequestInfo.getDuration());
+      reservationRequestList.add(reservationRequest);
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter reservationRequestInterpreter =
+        values[reservationRequestsInfo.getReservationRequestsInterpreter()];
+    ReservationRequests reservationRequests =
+        ReservationRequests.newInstance(reservationRequestList, reservationRequestInterpreter);
+
+    ReservationDefinition definition =
+        ReservationDefinition.newInstance(
+            arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
+
+    return definition;
   }
 }

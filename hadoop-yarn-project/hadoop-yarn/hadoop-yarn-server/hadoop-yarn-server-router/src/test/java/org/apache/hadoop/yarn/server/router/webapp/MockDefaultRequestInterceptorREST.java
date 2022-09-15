@@ -26,8 +26,10 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -60,9 +62,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -110,13 +117,23 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -153,9 +170,23 @@ public class MockDefaultRequestInterceptorREST
   // Containers 4
   public static final int NUM_CONTAINERS = 4;
 
+  private Map<ReservationId, SubClusterId> reservationMap = new HashMap<>();
+  private AtomicLong resCounter = new AtomicLong();
+  private MockRM mockRM = null;
+
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
       throw new ConnectException("RM is stopped");
+    }
+  }
+
+  public MockDefaultRequestInterceptorREST() {
+    try {
+      if (mockRM == null) {
+        mockRM = setupResourceManager();
+      }
+    } catch (Exception e) {
+      LOG.error("setupResourceManager failed.", e);
     }
   }
 
@@ -830,64 +861,183 @@ public class MockDefaultRequestInterceptorREST
           " Please try again with a valid reservable queue.");
     }
 
-    MockRM mockRM = setupResourceManager();
+    if (mockRM == null) {
+      mockRM = setupResourceManager();
+    }
 
-    ReservationId reservationID = ReservationId.parseReservationId(reservationId);
-    ReservationSystem reservationSystem = mockRM.getReservationSystem();
-    reservationSystem.synchronizePlan(QUEUE_DEDICATED_FULL, true);
-
-    // Generate reserved resources
     ClientRMService clientService = mockRM.getClientRMService();
-
-    // arrival time from which the resource(s) can be allocated.
-    long arrival = Time.now();
-
-    // deadline by when the resource(s) must be allocated.
-    // The reason for choosing 1.05 is because this gives an integer
-    // DURATION * 0.05 = 3000(ms)
-    // deadline = arrival + 3000ms
-    long deadline = (long) (arrival + 1.05 * DURATION);
-
-    // In this test of reserved resources, we will apply for 4 containers (1 core, 1GB memory)
-    // arrival = Time.now(), and make sure deadline - arrival > duration,
-    // the current setting is greater than 3000ms
-    ReservationSubmissionRequest submissionRequest =
-        ReservationSystemTestUtil.createSimpleReservationRequest(
-            reservationID, NUM_CONTAINERS, arrival, deadline, DURATION);
-    clientService.submitReservation(submissionRequest);
 
     // listReservations
     ReservationListRequest request = ReservationListRequest.newInstance(
-        queue, reservationID.toString(), startTime, endTime, includeResourceAllocations);
+        queue, reservationId, startTime, endTime, includeResourceAllocations);
     ReservationListResponse resRespInfo = clientService.listReservations(request);
     ReservationListInfo resResponse =
         new ReservationListInfo(resRespInfo, includeResourceAllocations);
 
-    if (mockRM != null) {
-      mockRM.stop();
-    }
-
     return Response.status(Status.OK).entity(resResponse).build();
   }
 
-  private MockRM setupResourceManager() throws Exception {
-    DefaultMetricsSystem.setMiniClusterMode(true);
+  private MockRM setupResourceManager() throws IOException {
+    try {
+      DefaultMetricsSystem.setMiniClusterMode(true);
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+      // Define default queue
+      conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+      // Define dedicated queues
+      conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+          new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED});
+      conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+      conf.setReservable(QUEUE_DEDICATED_FULL, true);
 
-    // Define default queue
-    conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
-    // Define dedicated queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
-    conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
-    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+      conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
 
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
-    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
-    MockRM rm = new MockRM(conf);
-    rm.start();
-    rm.registerNode("127.0.0.1:5678", 100*1024, 100);
-    return rm;
+      MockRM rm = new MockRM(conf);
+      rm.start();
+      rm.registerNode("127.0.0.1:5678", 100 * 1024, 100);
+      return rm;
+    } catch (Exception e) {
+      LOG.error("setupResourceManager failed.", e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public Response createNewReservation(HttpServletRequest hsr)
+      throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ReservationId resId = ReservationId.newInstance(Time.now(), resCounter.incrementAndGet());
+    LOG.info("Allocated new reservationId: {}.", resId);
+
+    NewReservation reservationId = new NewReservation(resId.toString());
+    return Response.status(Status.OK).entity(reservationId).build();
+  }
+
+  @Override
+  public Response submitReservation(ReservationSubmissionRequestInfo resContext,
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ReservationId reservationId = ReservationId.parseReservationId(resContext.getReservationId());
+    ReservationDefinitionInfo definitionInfo = resContext.getReservationDefinition();
+    ReservationDefinition definition = RouterServerUtil.convertReservationDefinition(definitionInfo);
+    ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
+        definition, resContext.getQueue(), reservationId);
+
+    LOG.info("Reservation submitted: {}.", reservationId);
+
+    SubClusterId subClusterId = getSubClusterId();
+    reservationMap.put(reservationId, subClusterId);
+
+    return Response.status(Status.ACCEPTED).build();
+  }
+
+  private void submitReservation(ReservationSubmissionRequest request) {
+    try {
+
+      if (mockRM == null) {
+        mockRM = setupResourceManager();
+      }
+
+      // synchronize plan
+      ReservationSystem reservationSystem = mockRM.getReservationSystem();
+      reservationSystem.synchronizePlan(QUEUE_DEDICATED_FULL, true);
+
+      // Generate reserved resources
+      ClientRMService clientService = mockRM.getClientRMService();
+      clientService.submitReservation(request);
+    } catch (IOException | YarnException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public Response updateReservation(ReservationUpdateRequestInfo resContext,
+      HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
+
+    if (resContext == null || resContext.getReservationId() == null ||
+        resContext.getReservationDefinition() == null) {
+      return Response.status(Status.BAD_REQUEST).build();
+    }
+
+    String resId = resContext.getReservationId();
+    ReservationId reservationId = ReservationId.parseReservationId(resId);
+
+    if (!reservationMap.containsKey(reservationId)) {
+      throw new NotFoundException("reservationId with id: " + reservationId + " not found");
+    }
+
+    // Generate reserved resources
+    updateReservation(resContext);
+
+    ReservationUpdateResponseInfo resRespInfo = new ReservationUpdateResponseInfo();
+    return Response.status(Status.OK).entity(resRespInfo).build();
+  }
+
+  private void updateReservation(ReservationUpdateRequestInfo resContext) {
+    try {
+
+      if (mockRM == null) {
+        mockRM = setupResourceManager();
+      }
+
+      if (resContext == null) {
+        throw new BadRequestException("Input ReservationSubmissionContext should not be null");
+      }
+
+      ReservationDefinitionInfo resInfo = resContext.getReservationDefinition();
+      if (resInfo == null) {
+        throw new BadRequestException("Input ReservationDefinition should not be null");
+      }
+
+      ReservationRequestsInfo resReqsInfo = resInfo.getReservationRequests();
+      if (resReqsInfo == null || resReqsInfo.getReservationRequest() == null
+              || resReqsInfo.getReservationRequest().size() == 0) {
+        throw new BadRequestException("The ReservationDefinition should " +
+                "contain at least one ReservationRequest");
+      }
+
+      if (resContext.getReservationId() == null) {
+        throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+      }
+
+      ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+      ReservationRequestInterpreter requestInterpreter =
+              values[resReqsInfo.getReservationRequestsInterpreter()];
+      List<ReservationRequest> list = new ArrayList<>();
+
+      for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
+        ResourceInfo rInfo = resReqInfo.getCapability();
+        Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
+        int numContainers = resReqInfo.getNumContainers();
+        int minConcurrency = resReqInfo.getMinConcurrency();
+        long duration = resReqInfo.getDuration();
+        ReservationRequest rr =
+                ReservationRequest.newInstance(capability, numContainers, minConcurrency, duration);
+        list.add(rr);
+      }
+
+      ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
+      ReservationDefinition rDef = ReservationDefinition.newInstance(
+              resInfo.getArrival(), resInfo.getDeadline(), reqs,
+              resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+              Priority.newInstance(resInfo.getPriority()));
+      ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
+              rDef, ReservationId.parseReservationId(resContext.getReservationId()));
+
+      ClientRMService clientService = mockRM.getClientRMService();
+      clientService.updateReservation(request);
+
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 }
