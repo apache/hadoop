@@ -33,6 +33,7 @@ import static org.mockito.Mockito.doThrow;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder;
 import java.nio.file.AccessDeniedException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 
 public class TestAzureBlobFileSystem extends AbstractAbfsIntegrationTest {
   public TestAzureBlobFileSystem() throws Exception {
@@ -66,7 +67,9 @@ public class TestAzureBlobFileSystem extends AbstractAbfsIntegrationTest {
         .when(abfsConfiguration)
         .getClientCorrelationId();
     Mockito.doReturn(abfsConfiguration).when(abfsStore).getAbfsConfiguration();
-    doThrow(new AccessDeniedException("Not permissible")).when(abfsStore).
+    AbfsRestOperationException exception = new AbfsRestOperationException(401,
+        "Not permissible", "Access Denied", new Exception());
+    doThrow(exception).when(abfsStore).
         getFileStatus(any(Path.class), any(TracingContext.class));
     LambdaTestUtils.intercept(AccessDeniedException.class, () -> {
       azureBlobFileSystem.initialize(FileSystem.getDefaultUri(conf), conf);
