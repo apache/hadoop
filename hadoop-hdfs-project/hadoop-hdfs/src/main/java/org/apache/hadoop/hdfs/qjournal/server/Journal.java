@@ -751,8 +751,18 @@ public class Journal implements Closeable {
           "it via " + DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY);
     }
     long highestTxId = getHighestWrittenTxId();
-    if (sinceTxId > highestTxId) {
-      // Requested edits that don't exist yet and is newer than highestTxId.
+    if (sinceTxId == highestTxId + 1) {
+      // Requested edits that don't exist yet, but this is expected,
+      // because namenode always get the journaled edits with the sinceTxId
+      // equal to image.getLastAppliedTxId() + 1. Short-circuiting the cache here
+      // and returning a response with a count of 0.
+      metrics.rpcEmptyResponses.incr();
+      return GetJournaledEditsResponseProto.newBuilder().setTxnCount(0).build();
+    } else if (sinceTxId > highestTxId + 1) {
+      // Requested edits that don't exist yet and this is unexpected. Means that there is a lag
+      // in this journal that does not contain some edits that should exist.
+      // Throw one NewerTxnIdException to make namenode treat this response as an exception.
+      // More detailed info please refer to: HDFS-16659 and HDFS-16771.
       metrics.rpcEmptyResponses.incr();
       throw new NewerTxnIdException(
           "Highest txn ID available in the journal is %d, but requested txns starting at %d.",
