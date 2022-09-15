@@ -534,7 +534,7 @@ public class TestLocalDirAllocator {
   }
 
   /**
-   * Test to verify LocalDirAllocator log details to provide diagnostics when file creation fails
+   * Test to verify LocalDirAllocator log details to provide diagnostics when file creation fails.
    *
    * @throws Exception
    */
