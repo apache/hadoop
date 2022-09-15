@@ -217,9 +217,6 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   public static final String ENV_DOCKER_CONTAINER_IMAGE =
       "YARN_CONTAINER_RUNTIME_DOCKER_IMAGE";
   @InterfaceAudience.Private
-  public static final String ENV_DOCKER_CONTAINER_IMAGE_FILE =
-      "YARN_CONTAINER_RUNTIME_DOCKER_IMAGE_FILE";
-  @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_CLIENT_CONFIG =
       "YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG";
   @InterfaceAudience.Private
