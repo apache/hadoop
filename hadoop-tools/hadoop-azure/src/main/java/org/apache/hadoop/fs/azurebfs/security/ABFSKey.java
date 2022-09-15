@@ -23,14 +23,10 @@ import java.util.Arrays;
 
 public class ABFSKey implements SecretKey {
     private byte[] bytes;
-    private String base64Encoding;
-    private byte[] sha256Hash;
 
     public ABFSKey(byte[] bytes) {
         if (bytes != null) {
             this.bytes = bytes.clone();
-            base64Encoding = EncodingHelper.getBase64EncodedString(this.bytes);
-            sha256Hash = EncodingHelper.getSHA256Hash(this.bytes);
         }
     }
 
