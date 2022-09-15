@@ -139,33 +139,33 @@ public class TestObserverNode {
     FSNamesystem observerFsNS = dfsCluster.getNamesystem(2);
     RpcMetrics obRpcMetrics = ((NameNodeRpcServer)dfsCluster
         .getNameNodeRpc(2)).getClientRpcServer().getRpcMetrics();
+    try {
+      // Stop EditlogTailer of Observer NameNode.
+      observerFsNS.getEditLogTailer().stop();
+      long oldRequeueNum = obRpcMetrics.getRpcRequeueCalls();
+      ScheduledFuture<FileStatus> scheduledFuture = interruptor.schedule(
+          () -> {
+            Path tmpTestPath = new Path("/TestObserverRequeue");
+            dfs.create(tmpTestPath, (short)1).close();
+            assertSentTo(0);
+            // This operation will be blocked in ObserverNameNode
+            // until EditlogTailer tailed edits from journalNode.
+            FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
+            assertSentTo(2);
+            return fileStatus;
+          }, 0, TimeUnit.SECONDS);
 
-    // Stop EditlogTailer of Observer NameNode.
-    observerFsNS.getEditLogTailer().stop();
+      GenericTestUtils.waitFor(() -> obRpcMetrics.getRpcRequeueCalls() > oldRequeueNum,
+          50, 10000);
 
-    long oldRequeueNum = obRpcMetrics.getRpcRequeueCalls();
-    ScheduledFuture<FileStatus> scheduledFuture = interruptor.schedule(
-        () -> {
-          Path tmpTestPath = new Path("/TestObserverRequeue");
-          dfs.create(tmpTestPath, (short)1).close();
-          assertSentTo(0);
-          // This operation will be blocked in ObserverNameNode
-          // until EditlogTailer tailed edits from journalNode.
-          FileStatus fileStatus = dfs.getFileStatus(tmpTestPath);
-          assertSentTo(2);
-          return fileStatus;
-        }, 0, TimeUnit.SECONDS);
-
-    GenericTestUtils.waitFor(() -> obRpcMetrics.getRpcRequeueCalls() > oldRequeueNum,
-        50, 10000);
-
-    observerFsNS.getEditLogTailer().doTailEdits();
-    FileStatus fileStatus = scheduledFuture.get(10000, TimeUnit.MILLISECONDS);
-    assertNotNull(fileStatus);
-
-    EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
-    observerFsNS.setEditLogTailerForTests(editLogTailer);
-    editLogTailer.start();
+      observerFsNS.getEditLogTailer().doTailEdits();
+      FileStatus fileStatus = scheduledFuture.get(10000, TimeUnit.MILLISECONDS);
+      assertNotNull(fileStatus);
+    } finally {
+      EditLogTailer editLogTailer = new EditLogTailer(observerFsNS, conf);
+      observerFsNS.setEditLogTailerForTests(editLogTailer);
+      editLogTailer.start();
+    }
   }
 
   @Test

@@ -354,7 +354,7 @@ public class RpcMetrics {
   }
 
   /**
-   * Returns the number of requeue calls;
+   * Returns the number of requeue calls.
    * @return long
    */
   @VisibleForTesting
