@@ -746,7 +746,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
             DEFAULT_USER_LIMIT_ENABLE);
     return userLimitEnabled;
   }
-  
+
   public float getUserLimitFactor(String queue) {
     float defaultUserLimitFactor = getFloat(PREFIX + USER_LIMIT_FACTOR, DEFAULT_USER_LIMIT_FACTOR);
     float userLimitFactor =
