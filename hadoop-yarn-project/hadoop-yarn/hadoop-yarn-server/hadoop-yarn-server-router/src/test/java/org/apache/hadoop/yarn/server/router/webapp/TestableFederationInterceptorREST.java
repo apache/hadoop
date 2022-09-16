@@ -82,8 +82,8 @@ public class TestableFederationInterceptorREST
       // Define default queue
       conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
       // Define dedicated queues
-      conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED});
+      String[] queues = new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED};
+      conf.setQueues(CapacitySchedulerConfiguration.ROOT, queues);
       conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
       conf.setReservable(QUEUE_DEDICATED_FULL, true);
 

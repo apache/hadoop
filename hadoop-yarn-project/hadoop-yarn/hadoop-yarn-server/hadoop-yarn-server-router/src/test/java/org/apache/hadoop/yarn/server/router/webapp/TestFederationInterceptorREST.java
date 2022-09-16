@@ -162,14 +162,12 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       }
     } catch (YarnException e) {
       LOG.error(e.getMessage());
-      Assert.fail();
     }
 
     try {
       interceptor.setupResourceManager();
     } catch (Exception e) {
       LOG.error(e.getMessage());
-      Assert.fail();
     }
   }
 
