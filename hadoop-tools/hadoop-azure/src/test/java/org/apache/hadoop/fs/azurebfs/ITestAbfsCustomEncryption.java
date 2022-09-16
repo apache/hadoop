@@ -20,12 +20,11 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Hashtable;
-import java.util.Random;
+import java.util.*;
 
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -229,8 +228,12 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       }
       String path = testPath.toString();
       switch (operation) {
-      case READ: return client.read(path, 0, new byte[5], 0, 5, null,
-          null, encryptionAdapter, getTestTracingContext(fs, true));
+      case READ:
+        TracingContext tracingContext = getTestTracingContext(fs, true);
+        AbfsHttpOperation statusOp = client.getPathStatus(path, false,
+                tracingContext).getResult();
+        return client.read(path, 0, new byte[5], 0, 5, statusOp.getResponseHeader(HttpHeaderConfigurations.ETAG),
+          null, encryptionAdapter, tracingContext);
       case WRITE: return client.flush(path, 3, false, false, null,
           null, encryptionAdapter, getTestTracingContext(fs, false));
       case APPEND: return client.append(path, "val".getBytes(),
