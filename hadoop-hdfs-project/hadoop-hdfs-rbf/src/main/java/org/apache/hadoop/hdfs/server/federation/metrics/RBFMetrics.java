@@ -50,6 +50,7 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -113,6 +114,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
   /** Prevent holding the page from load too long. */
   private final long timeOut;
 
+  /** Enable/Disable getNodeUsage. **/
+  private boolean enableGetDNUsage;
 
   /** Router interface. */
   private final Router router;
@@ -175,6 +178,8 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     Configuration conf = router.getConfig();
     this.timeOut = conf.getTimeDuration(RBFConfigKeys.DN_REPORT_TIME_OUT,
         RBFConfigKeys.DN_REPORT_TIME_OUT_MS_DEFAULT, TimeUnit.MILLISECONDS);
+    this.enableGetDNUsage = conf.getBoolean(RBFConfigKeys.DFS_ROUTER_ENABLE_GET_DN_USAGE_KEY,
+        RBFConfigKeys.DFS_ROUTER_ENABLE_GET_DN_USAGE_DEFAULT);
     this.topTokenRealOwners = conf.getInt(
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY,
         RBFConfigKeys.DFS_ROUTER_METRICS_TOP_NUM_TOKEN_OWNERS_KEY_DEFAULT);
@@ -182,6 +187,11 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
     registry.tag(ProcessName, "Router");
     MetricsSystem ms = DefaultMetricsSystem.instance();
     ms.register(RBFMetrics.class.getName(), "RBFActivity Metrics", this);
+  }
+
+  @VisibleForTesting
+  public void setEnableGetDNUsage(boolean enableGetDNUsage) {
+    this.enableGetDNUsage = enableGetDNUsage;
   }
 
   /**
@@ -537,35 +547,34 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
 
   @Override // NameNodeMXBean
   public String getNodeUsage() {
-    float median = 0;
-    float max = 0;
-    float min = 0;
-    float dev = 0;
+    double median = 0;
+    double max = 0;
+    double min = 0;
+    double dev = 0;
 
     final Map<String, Map<String, Object>> info = new HashMap<>();
     try {
-      RouterRpcServer rpcServer = this.router.getRpcServer();
-      DatanodeInfo[] live = rpcServer.getDatanodeReport(
-          DatanodeReportType.LIVE, false, timeOut);
+      DatanodeInfo[] live = null;
+      if (this.enableGetDNUsage) {
+        RouterRpcServer rpcServer = this.router.getRpcServer();
+        live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+      } else {
+        LOG.debug("Getting node usage is disabled.");
+      }
 
-      if (live.length > 0) {
-        float totalDfsUsed = 0;
-        float[] usages = new float[live.length];
+      if (live != null && live.length > 0) {
+        double[] usages = new double[live.length];
         int i = 0;
         for (DatanodeInfo dn : live) {
           usages[i++] = dn.getDfsUsedPercent();
-          totalDfsUsed += dn.getDfsUsedPercent();
         }
-        totalDfsUsed /= live.length;
         Arrays.sort(usages);
         median = usages[usages.length / 2];
         max = usages[usages.length - 1];
         min = usages[0];
 
-        for (i = 0; i < usages.length; i++) {
-          dev += (usages[i] - totalDfsUsed) * (usages[i] - totalDfsUsed);
-        }
-        dev = (float) Math.sqrt(dev / usages.length);
+        StandardDeviation deviation = new StandardDeviation();
+        dev = deviation.evaluate(usages);
       }
     } catch (IOException e) {
       LOG.error("Cannot get the live nodes: {}", e.getMessage());
@@ -877,7 +886,7 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       // Fetch the most recent namenode registration
       String nsId = nsInfo.getNameserviceId();
       List<? extends FederationNamenodeContext> nns =
-          namenodeResolver.getNamenodesForNameserviceId(nsId);
+          namenodeResolver.getNamenodesForNameserviceId(nsId, false);
       if (nns != null) {
         FederationNamenodeContext nn = nns.get(0);
         if (nn instanceof MembershipState) {

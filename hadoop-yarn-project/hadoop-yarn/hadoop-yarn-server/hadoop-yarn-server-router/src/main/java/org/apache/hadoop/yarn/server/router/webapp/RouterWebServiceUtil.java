@@ -57,6 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -539,5 +541,39 @@ public final class RouterWebServiceUtil {
     });
 
     return new NodeToLabelsInfo(nodeToLabels);
+  }
+
+  public static ApplicationStatisticsInfo mergeApplicationStatisticsInfo(
+      Collection<ApplicationStatisticsInfo> appStatistics) {
+    ApplicationStatisticsInfo result = new ApplicationStatisticsInfo();
+    Map<String, StatisticsItemInfo> statisticsItemMap = new HashMap<>();
+
+    appStatistics.stream().forEach(appStatistic -> {
+      List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
+      for (StatisticsItemInfo statisticsItemInfo : statisticsItemInfos) {
+
+        String statisticsItemKey =
+            statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
+
+        StatisticsItemInfo statisticsItemValue;
+        if (statisticsItemMap.containsKey(statisticsItemKey)) {
+          statisticsItemValue = statisticsItemMap.get(statisticsItemKey);
+          long statisticsItemValueCount = statisticsItemValue.getCount();
+          long statisticsItemInfoCount = statisticsItemInfo.getCount();
+          long newCount = statisticsItemValueCount + statisticsItemInfoCount;
+          statisticsItemValue.setCount(newCount);
+        } else {
+          statisticsItemValue = new StatisticsItemInfo(statisticsItemInfo);
+        }
+
+        statisticsItemMap.put(statisticsItemKey, statisticsItemValue);
+      }
+    });
+
+    if (!statisticsItemMap.isEmpty()) {
+      result.getStatItems().addAll(statisticsItemMap.values());
+    }
+
+    return result;
   }
 }

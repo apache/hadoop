@@ -34,6 +34,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
@@ -124,9 +125,13 @@ public class TestClientRMTokens {
     long initialInterval = 10000l;
     long maxLifetime= 20000l;
     long renewInterval = 10000l;
+    long delegationTokenRemoverScanInterval =
+        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     RMDelegationTokenSecretManager rmDtSecretManager = createRMDelegationTokenSecretManager(
-        initialInterval, maxLifetime, renewInterval);
+        initialInterval, maxLifetime, renewInterval, delegationTokenRemoverScanInterval);
     rmDtSecretManager.startThreads();
     LOG.info("Creating DelegationTokenSecretManager with initialInterval: "
         + initialInterval + ", maxLifetime: " + maxLifetime
@@ -574,7 +579,8 @@ public class TestClientRMTokens {
 
   private static RMDelegationTokenSecretManager
       createRMDelegationTokenSecretManager(long secretKeyInterval,
-          long tokenMaxLifetime, long tokenRenewInterval) {
+          long tokenMaxLifetime, long tokenRenewInterval,
+          long delegationTokenRemoverScanInterval) {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
@@ -583,7 +589,7 @@ public class TestClientRMTokens {
 
     RMDelegationTokenSecretManager rmDtSecretManager =
         new RMDelegationTokenSecretManager(secretKeyInterval, tokenMaxLifetime,
-          tokenRenewInterval, 3600000, rmContext);
+          tokenRenewInterval, delegationTokenRemoverScanInterval, rmContext);
     return rmDtSecretManager;
   }
 }

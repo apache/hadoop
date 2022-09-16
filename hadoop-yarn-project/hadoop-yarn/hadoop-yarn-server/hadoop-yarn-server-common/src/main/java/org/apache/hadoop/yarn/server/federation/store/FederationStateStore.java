@@ -25,12 +25,13 @@ import org.apache.hadoop.yarn.server.records.Version;
 /**
  * FederationStore extends the three interfaces used to coordinate the state of
  * a federated cluster: {@link FederationApplicationHomeSubClusterStore},
- * {@link FederationMembershipStateStore}, and {@link FederationPolicyStore}.
+ * {@link FederationMembershipStateStore}, {@link FederationPolicyStore}, and
+ * {@link FederationReservationHomeSubClusterStore}.
  *
  */
-public interface FederationStateStore
-    extends FederationApplicationHomeSubClusterStore,
-    FederationMembershipStateStore, FederationPolicyStore {
+public interface FederationStateStore extends
+    FederationApplicationHomeSubClusterStore, FederationMembershipStateStore,
+    FederationPolicyStore, FederationReservationHomeSubClusterStore {
 
   /**
    * Initialize the FederationStore.

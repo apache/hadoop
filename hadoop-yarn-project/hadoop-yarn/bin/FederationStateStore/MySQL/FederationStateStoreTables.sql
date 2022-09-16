@@ -46,3 +46,9 @@ CREATE TABLE policies(
    params varbinary(32768),
    CONSTRAINT pk_queue PRIMARY KEY (queue)
 );
+
+CREATE TABLE reservationsHomeSubCluster (
+   reservationId varchar(128) NOT NULL,
+   homeSubCluster varchar(256) NOT NULL,
+   CONSTRAINT pk_reservationId PRIMARY KEY (reservationId)
+);

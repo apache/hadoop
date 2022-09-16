@@ -21,8 +21,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.NodePublishVolumeReque
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos.VolumeCapability.AccessMode;
 import org.apache.hadoop.yarn.proto.CsiAdaptorProtos.VolumeCapability.VolumeType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * UT for NodePublishVolumeRequest.
@@ -30,7 +32,7 @@ import org.junit.Test;
 public class TestNodePublishVolumeRequest {
 
   @Test
-  public void testPBRecord() {
+  void testPBRecord() {
     CsiAdaptorProtos.VolumeCapability capability =
         CsiAdaptorProtos.VolumeCapability.newBuilder()
             .setAccessMode(AccessMode.MULTI_NODE_READER_ONLY)
@@ -47,9 +49,9 @@ public class TestNodePublishVolumeRequest {
 
     NodePublishVolumeRequestPBImpl pbImpl =
         new NodePublishVolumeRequestPBImpl(proto);
-    Assert.assertEquals("test-vol-000001", pbImpl.getVolumeId());
-    Assert.assertEquals("/mnt/data", pbImpl.getTargetPath());
-    Assert.assertEquals("/mnt/staging", pbImpl.getStagingPath());
-    Assert.assertFalse(pbImpl.getReadOnly());
+    assertEquals("test-vol-000001", pbImpl.getVolumeId());
+    assertEquals("/mnt/data", pbImpl.getTargetPath());
+    assertEquals("/mnt/staging", pbImpl.getStagingPath());
+    assertFalse(pbImpl.getReadOnly());
   }
 }
