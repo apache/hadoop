@@ -30,6 +30,7 @@ import java.util.Collections;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -41,6 +42,10 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -56,51 +61,20 @@ import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.DURATION;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.NUM_CONTAINERS;
 
@@ -150,6 +124,23 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       Assert.fail();
     }
 
+    try {
+      for (SubClusterId subCluster : subClusters) {
+        SubClusterInfo subClusterInfo = stateStoreUtil.querySubClusterInfo(subCluster);
+        interceptor.getOrCreateInterceptorForSubCluster(
+            subCluster, subClusterInfo.getRMWebServiceAddress());
+      }
+    } catch (YarnException e) {
+      LOG.error(e.getMessage());
+      Assert.fail();
+    }
+
+    try {
+      interceptor.setupResourceManager();
+    } catch (Exception e) {
+      LOG.error(e.getMessage());
+      Assert.fail();
+    }
   }
 
   @Override
@@ -1080,7 +1071,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testListReservation() throws Exception {
 
     // submitReservation
-    ReservationId reservationId = ReservationId.newInstance(Time.now(), 3);
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     submitReservation(reservationId);
 
     // Call the listReservation method
@@ -1178,14 +1169,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testUpdateReservation() throws Exception {
     // submit reservation
-    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 3);
     Response response = submitReservation(reservationId);
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
 
     // update reservation
     ReservationSubmissionRequest resSubRequest =
-        getReservationSubmissionRequest(reservationId, 6);
+        getReservationSubmissionRequest(reservationId, 6, 2048, 2);
     ReservationDefinition reservationDefinition = resSubRequest.getReservationDefinition();
     ReservationDefinitionInfo reservationDefinitionInfo =
         new ReservationDefinitionInfo(reservationDefinition);
@@ -1231,6 +1222,38 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ReservationRequestInfo reservationRequestInfo = reservationRequestInfoList.get(0);
     Assert.assertNotNull(reservationRequestInfo);
     Assert.assertEquals(6, reservationRequestInfo.getNumContainers());
+
+    ResourceInfo resourceInfo = reservationRequestInfo.getCapability();
+    Assert.assertNotNull(resourceInfo);
+
+    int vCore = resourceInfo.getvCores();
+    long memory = resourceInfo.getMemorySize();
+    Assert.assertEquals(2, vCore);
+    Assert.assertEquals(2048, memory);
+  }
+
+  @Test
+  public void testDeleteReservation() throws Exception {
+    // submit reservation
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 4);
+    Response response = submitReservation(reservationId);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+
+    String applyResId = reservationId.toString();
+    Response reservationResponse = interceptor.listReservation(
+        QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null);
+    Assert.assertNotNull(reservationResponse);
+
+    ReservationDeleteRequestInfo deleteRequestInfo =
+        new ReservationDeleteRequestInfo();
+    deleteRequestInfo.setReservationId(applyResId);
+    Response delResponse = interceptor.deleteReservation(deleteRequestInfo, null);
+    Assert.assertNotNull(delResponse);
+
+    LambdaTestUtils.intercept(Exception.class,
+        "reservationId with id: " + reservationId + " not found",
+         () -> interceptor.listReservation(QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null));
   }
 
   private Response submitReservation(ReservationId reservationId)
@@ -1253,7 +1276,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       ReservationId reservationId) {
 
     ReservationSubmissionRequest resSubRequest =
-        getReservationSubmissionRequest(reservationId, NUM_CONTAINERS);
+        getReservationSubmissionRequest(reservationId, NUM_CONTAINERS, 1024, 1);
     ReservationDefinition reservationDefinition = resSubRequest.getReservationDefinition();
 
     ReservationSubmissionRequestInfo resSubmissionRequestInfo =
@@ -1268,7 +1291,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   private ReservationSubmissionRequest getReservationSubmissionRequest(
-      ReservationId reservationId, int numContainers) {
+      ReservationId reservationId, int numContainers, int memory, int vcore) {
 
     // arrival time from which the resource(s) can be allocated.
     long arrival = Time.now();
@@ -1279,10 +1302,24 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // deadline = arrival + 3000ms
     long deadline = (long) (arrival + 1.05 * DURATION);
 
-    ReservationSubmissionRequest submissionRequest =
-        ReservationSystemTestUtil.createSimpleReservationRequest(
-            reservationId, numContainers, arrival, deadline, DURATION);
+    ReservationSubmissionRequest submissionRequest = createSimpleReservationRequest(
+        reservationId, numContainers, arrival, deadline, DURATION, Priority.UNDEFINED, memory, vcore);
 
     return submissionRequest;
+  }
+
+  public static ReservationSubmissionRequest createSimpleReservationRequest(
+      ReservationId reservationId, int numContainers, long arrival,
+      long deadline, long duration, Priority priority, int memory, int vcore) {
+    // create a request with a single atomic ask
+    ReservationRequest r = ReservationRequest
+        .newInstance(Resource.newInstance(memory, vcore), numContainers, 1, duration);
+    ReservationRequests reqs = ReservationRequests.newInstance(
+        Collections.singletonList(r), ReservationRequestInterpreter.R_ALL);
+    ReservationDefinition rDef = ReservationDefinition.newInstance(arrival,
+        deadline, reqs, "testClientRMService#reservation", "0", priority);
+    ReservationSubmissionRequest request = ReservationSubmissionRequest
+        .newInstance(rDef, QUEUE_DEDICATED_FULL, reservationId);
+    return request;
   }
 }

@@ -2018,4 +2018,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
   }
+
+  @VisibleForTesting
+  public Map<SubClusterId, DefaultRequestInterceptorREST> getInterceptors() {
+    return interceptors;
+  }
 }

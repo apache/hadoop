@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
@@ -73,6 +74,13 @@ public abstract class BaseRouterWebServicesTest {
 
   private Router router;
   public final static int TEST_MAX_CACHE_SIZE = 10;
+
+  public static final String QUEUE_DEFAULT = "default";
+  public static final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
+      CapacitySchedulerConfiguration.DOT + QUEUE_DEFAULT;
+  public static final String QUEUE_DEDICATED = "dedicated";
+  public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
+      CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
 
   private RouterWebServices routerWebService;
 

@@ -18,10 +18,25 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
 
 /**
  * Extends the FederationInterceptorREST and overrides methods to provide a
@@ -30,7 +45,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 public class TestableFederationInterceptorREST
     extends FederationInterceptorREST {
 
-  private List<SubClusterId> badSubCluster = new ArrayList<SubClusterId>();
+  private List<SubClusterId> badSubCluster = new ArrayList<>();
+  private MockRM mockRM = null;
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestableFederationInterceptorREST.class);
 
   /**
    * For testing purpose, some subclusters has to be down to simulate particular
@@ -51,4 +70,47 @@ public class TestableFederationInterceptorREST
     interceptor.setRunning(false);
   }
 
+  protected void setupResourceManager() throws IOException {
+    try {
+      if (mockRM != null) {
+        return;
+      }
+
+      DefaultMetricsSystem.setMiniClusterMode(true);
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+      // Define default queue
+      conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+      // Define dedicated queues
+      conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+          new String[]{QUEUE_DEFAULT, QUEUE_DEDICATED});
+      conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+      conf.setReservable(QUEUE_DEDICATED_FULL, true);
+
+      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+      conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+      conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
+
+      mockRM = new MockRM(conf);
+      mockRM.start();
+      mockRM.registerNode("127.0.0.1:5678", 100*1024, 100);
+
+      Map<SubClusterId, DefaultRequestInterceptorREST> interceptors = super.getInterceptors();
+      for (DefaultRequestInterceptorREST item : interceptors.values()) {
+        MockDefaultRequestInterceptorREST interceptor = (MockDefaultRequestInterceptorREST) item;
+        interceptor.setMockRM(mockRM);
+      }
+    } catch (Exception e) {
+      LOG.error("setupResourceManager failed.", e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void shutdown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+    super.shutdown();
+  }
 }
