@@ -34,12 +34,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.BufferedWriter;
+import java.nio.file.Path;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -48,11 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertNotNull;
-import static junit.framework.TestCase.assertNull;
-import static junit.framework.TestCase.assertTrue;
-import static junit.framework.TestCase.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -63,8 +62,8 @@ public class TestCSMappingPlacementRule {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestCSMappingPlacementRule.class);
 
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public Path folder;
 
   private Map<String, Set<String>> userGroups =
       ImmutableMap.<String, Set<String>>builder()
@@ -184,11 +183,11 @@ public class TestCSMappingPlacementRule {
       ApplicationSubmissionContext asc, String user, String expectedQueue) {
     try {
       ApplicationPlacementContext apc = engine.getPlacementForApp(asc, user);
-      assertNotNull(message, apc);
+      assertNotNull(apc, message);
       String queue = apc.getParentQueue() == null ? "" :
           (apc.getParentQueue() + DOT);
       queue += apc.getQueue();
-      assertEquals(message, expectedQueue,  queue);
+      assertEquals(expectedQueue, queue,  message);
     } catch (YarnException e) {
       LOG.error(message, e);
       fail(message);
@@ -198,7 +197,7 @@ public class TestCSMappingPlacementRule {
   private void assertNullResult(String message, CSMappingPlacementRule engine,
                         ApplicationSubmissionContext asc, String user) {
     try {
-      assertNull(message, engine.getPlacementForApp(asc, user));
+      assertNull(engine.getPlacementForApp(asc, user), message);
     } catch (YarnException e) {
       LOG.error(message, e);
       fail(message);
@@ -206,7 +205,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testLegacyPlacementToExistingQueue() throws IOException {
+  void testLegacyPlacementToExistingQueue() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(MappingRule.createLegacyRule(
         "u", "alice", "root.ambiguous.user.ambi"));
@@ -229,7 +228,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testLegacyPlacementToManagedQueues() throws IOException {
+  void testLegacyPlacementToManagedQueues() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(MappingRule.createLegacyRule(
         "u", "alice", "root.ambiguous.managed.%user"));
@@ -257,7 +256,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testLegacyPlacementShortReference() throws IOException {
+  void testLegacyPlacementShortReference() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(MappingRule.createLegacyRule(
         "u", "alice", "non-existent"));
@@ -282,7 +281,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testRuleFallbackHandling() throws IOException {
+  void testRuleFallbackHandling() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -351,7 +350,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testConfigValidation() {
+  void testConfigValidation() {
     ArrayList<MappingRule> nonExistentStatic = new ArrayList<>();
     nonExistentStatic.add(MappingRule.createLegacyRule(
         "u", "alice", "non-existent"));
@@ -401,7 +400,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testAllowCreateFlag() throws IOException {
+  void testAllowCreateFlag() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -440,7 +439,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testSpecified() throws IOException {
+  void testSpecified() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -489,7 +488,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testGroupTargetMatching() throws IOException {
+  void testGroupTargetMatching() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
 
     rules.add(
@@ -540,7 +539,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testSecondaryGroupWithoutParent() throws IOException {
+  void testSecondaryGroupWithoutParent() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
 
     rules.add(
@@ -583,7 +582,7 @@ public class TestCSMappingPlacementRule {
 
 
   @Test
-  public void testSecondaryGroupWithParent() throws IOException {
+  void testSecondaryGroupWithParent() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
 
     rules.add(
@@ -627,19 +626,19 @@ public class TestCSMappingPlacementRule {
 
 
   void assertConfigTestResult(List<MappingRule> rules) {
-    assertEquals("We only specified one rule", 1, rules.size());
+    assertEquals(1, rules.size(), "We only specified one rule");
     MappingRule rule = rules.get(0);
     String ruleStr = rule.toString();
-    assertTrue("Rule's matcher variable should be %user",
-        ruleStr.contains("variable='%user'"));
-    assertTrue("Rule's match value should be bob",
-        ruleStr.contains("value='bob'"));
-    assertTrue("Rule's action should be place to queue", ruleStr.contains(
-        "action=PlaceToQueueAction{queueName='%primary_group'"));
+    assertTrue(ruleStr.contains("variable='%user'"),
+        "Rule's matcher variable should be %user");
+    assertTrue(ruleStr.contains("value='bob'"),
+        "Rule's match value should be bob");
+    assertTrue(ruleStr.contains(
+        "action=PlaceToQueueAction{queueName='%primary_group'"), "Rule's action should be place to queue");
   }
 
   @Test
-  public void testLegacyConfiguration() throws IOException {
+  void testLegacyConfiguration() throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
         CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_LEGACY);
@@ -651,7 +650,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testJSONConfiguration() throws IOException {
+  void testJSONConfiguration() throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
         CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
@@ -669,43 +668,47 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testEmptyJSONConfiguration() throws IOException {
+  void testEmptyJSONConfiguration() throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
         CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON, "");
 
     List<MappingRule> rules = conf.getMappingRules();
-    assertEquals("We expect no rules", 0, rules.size());
-  }
-
-  @Test(expected = IOException.class)
-  public void testInvalidJSONConfiguration() throws IOException {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
-        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
-        "I'm a bad JSON, since I'm not a JSON.");
-    List<MappingRule> rules = conf.getMappingRules();
-  }
-
-  @Test(expected = IOException.class)
-  public void testMissingJSONFileConfiguration() throws IOException {
-    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
-        CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
-    conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
-        "/dev/null/nofile");
-    List<MappingRule> rules = conf.getMappingRules();
+    assertEquals(0, rules.size(), "We expect no rules");
   }
 
   @Test
-  public void testJSONFileConfiguration() throws IOException {
+  void testInvalidJSONConfiguration() throws IOException {
+    Assertions.assertThrows(IOException.class, () -> {
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+          CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
+          "I'm a bad JSON, since I'm not a JSON.");
+      List<MappingRule> rules = conf.getMappingRules();
+    });
+  }
+
+  @Test
+  void testMissingJSONFileConfiguration() throws IOException {
+    Assertions.assertThrows(IOException.class, () -> {
+      CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
+          CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
+      conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON_FILE,
+          "/dev/null/nofile");
+      List<MappingRule> rules = conf.getMappingRules();
+    });
+  }
+
+  @Test
+  void testJSONFileConfiguration() throws IOException {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.set(CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT,
         CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON);
 
-    File jsonFile = folder.newFile("testJSONFileConfiguration.json");
+    File jsonFile = folder.resolve("testJSONFileConfiguration.json").toFile();
 
     BufferedWriter writer = new BufferedWriter(new FileWriter(jsonFile));
     try {
@@ -728,7 +731,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testUserNameCleanup() throws IOException {
+  void testUserNameCleanup() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -744,7 +747,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testPrimaryGroupNameCleanup() throws IOException {
+  void testPrimaryGroupNameCleanup() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -760,7 +763,7 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testSecondaryGroupNameCleanup() throws IOException {
+  void testSecondaryGroupNameCleanup() throws IOException {
     ArrayList<MappingRule> rules = new ArrayList<>();
     rules.add(
         new MappingRule(
@@ -807,7 +810,7 @@ public class TestCSMappingPlacementRule {
    * original problem described in YARN-10597.<br>
    */
   @Test
-  public void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws IOException {
+  void testPlacementEngineSelectsCorrectConfigurationForGroupMapping() throws IOException {
     Groups.reset();
     final String user = "testuser";
 

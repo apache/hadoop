@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.converter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -64,27 +64,27 @@ public class TestLegacyMappingRuleToJson {
     List<MappingRule> jsonRules = conf.getMappingRules();
 
     //Sanity check
-    assertEquals("Number of rules should mach",
-        legacyRules.size(), jsonRules.size());
+    assertEquals(legacyRules.size(),
+        jsonRules.size(), "Number of rules should mach");
 
     //We expect ALL rules to match no matter if it was parsed from legacy format
     //or from JSON
     for (int i = 0; i < legacyRules.size(); i++) {
       assertEquals(
-          "Rule #" + i + " should match",
           legacyRules.get(i).toString(),
-          jsonRules.get(i).toString());
+          jsonRules.get(i).toString(),
+          "Rule #" + i + " should match");
 
       assertEquals(
-          "Rule #" + i + " fallback should match",
           legacyRules.get(i).getFallback().toString(),
-          jsonRules.get(i).getFallback().toString());
+          jsonRules.get(i).getFallback().toString(),
+          "Rule #" + i + " fallback should match");
     }
 
   }
 
   @Test
-  public void testApplicationNameMappingConversion() throws IOException {
+  void testApplicationNameMappingConversion() throws IOException {
     String appMapping = String.join(",",
         "namedMatch:simple",
         "namedMatch:root.deep",
@@ -99,7 +99,7 @@ public class TestLegacyMappingRuleToJson {
   }
 
   @Test
-  public void testGroupMappingConversion() throws IOException {
+  void testGroupMappingConversion() throws IOException {
     String groupMapping = String.join(",",
         "g:testers:simple",
         "g:developers:root.very.deep",
@@ -110,7 +110,7 @@ public class TestLegacyMappingRuleToJson {
   }
 
   @Test
-  public void testUserMappingConversion() throws IOException {
+  void testUserMappingConversion() throws IOException {
     String groupMapping = String.join(",",
         "u:alice:alice",
         "u:beatrix:root.beatrix",
@@ -137,7 +137,7 @@ public class TestLegacyMappingRuleToJson {
   }
 
   @Test
-  public void testTotalConversion() throws IOException {
+  void testTotalConversion() throws IOException {
     String appMapping = String.join(",",
         "namedMatch:simple",
         "namedMatch:root.deep",
@@ -179,7 +179,7 @@ public class TestLegacyMappingRuleToJson {
   }
 
   @Test
-  public void testErrorHandling() {
+  void testErrorHandling() {
     LegacyMappingRuleToJson converter = new LegacyMappingRuleToJson();
     //Empty converter should return null
     assertNull(converter.convert());

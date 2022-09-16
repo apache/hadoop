@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -29,13 +29,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestUsersManager {
   private static final Resource CLUSTER_RESOURCE =
       Resource.newInstance(16384, 16);
@@ -58,7 +58,7 @@ public class TestUsersManager {
   @Mock
   private QueueMetrics metrics;
 
-  @Before
+  @BeforeEach
   public void setup() {
     usersManager = new UsersManager(metrics,
         lQueue,
@@ -78,7 +78,7 @@ public class TestUsersManager {
   }
 
   @Test
-  public void testComputeUserLimitWithZeroCapacityQueue() {
+  void testComputeUserLimitWithZeroCapacityQueue() {
     when(lQueue.getEffectiveCapacity(anyString()))
         .thenReturn(Resources.none());
 
@@ -86,7 +86,7 @@ public class TestUsersManager {
   }
 
   @Test
-  public void testComputeUserLimitWithNonZeroCapacityQueue() {
+  void testComputeUserLimitWithNonZeroCapacityQueue() {
     when(lQueue.getEffectiveCapacity(anyString()))
         .thenReturn(NON_ZERO_CAPACITY);
 
@@ -100,6 +100,6 @@ public class TestUsersManager {
         SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY,
         true);
 
-    assertEquals("User limit", expectedLimit, limit);
+    assertEquals(expectedLimit, limit, "User limit");
   }
 }

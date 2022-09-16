@@ -25,7 +25,7 @@ import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningQuotaException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -132,7 +132,7 @@ public class TestCapacityOverTimePolicy extends BaseSharingPolicyTest {
   }
 
   @Test
-  public void testAllocation() throws IOException, PlanningException {
+  void testAllocation() throws IOException, PlanningException {
     runTest();
   }
 

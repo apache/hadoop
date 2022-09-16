@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class tests DecommissioningNodesWatcher.
@@ -48,7 +48,7 @@ public class TestDecommissioningNodesWatcher {
   private MockRM rm;
 
   @Test
-  public void testDecommissioningNodesWatcher() throws Exception {
+  void testDecommissioningNodesWatcher() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT, "40");
 
@@ -84,30 +84,30 @@ public class TestDecommissioningNodesWatcher {
     nodeStatus = createNodeStatus(id1, app, 2);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
     watcher.update(node1, nodeStatus);
-    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    Assertions.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
 
     nodeStatus = createNodeStatus(id1, app, 1);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
     watcher.update(node1, nodeStatus);
-    Assert.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER,
+    Assertions.assertEquals(DecommissioningNodeStatus.WAIT_CONTAINER,
         watcher.checkDecommissioningStatus(id1));
 
     nodeStatus = createNodeStatus(id1, app, 0);
     watcher.update(node1, nodeStatus);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
-    Assert.assertEquals(DecommissioningNodeStatus.WAIT_APP,
+    Assertions.assertEquals(DecommissioningNodeStatus.WAIT_APP,
         watcher.checkDecommissioningStatus(id1));
 
     // Set app to be FINISHED and verified DecommissioningNodeStatus is READY.
     MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
     rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
     watcher.update(node1, nodeStatus);
-    Assert.assertEquals(DecommissioningNodeStatus.READY,
+    Assertions.assertEquals(DecommissioningNodeStatus.READY,
         watcher.checkDecommissioningStatus(id1));
   }
 
   @Test
-  public void testDecommissioningNodesWatcherWithPreviousRunningApps()
+  void testDecommissioningNodesWatcherWithPreviousRunningApps()
       throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT, "40");
@@ -132,13 +132,13 @@ public class TestDecommissioningNodesWatcher {
     NodeStatus nodeStatus = createNodeStatus(id1, app, 3);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
 
-    Assert.assertEquals(1, node1.getRunningApps().size());
+    Assertions.assertEquals(1, node1.getRunningApps().size());
 
     // update node with 0 running containers
     nodeStatus = createNodeStatus(id1, app, 0);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
 
-    Assert.assertEquals(1, node1.getRunningApps().size());
+    Assertions.assertEquals(1, node1.getRunningApps().size());
 
     // Setup nm1 as DECOMMISSIONING for DecommissioningNodesWatcher. Right now
     // there is no container running on the node.
@@ -149,20 +149,20 @@ public class TestDecommissioningNodesWatcher {
     // we should still get WAIT_APP as container for a running app previously
     // ran on this node.
     watcher.update(node1, nodeStatus);
-    Assert.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
-    Assert.assertEquals(DecommissioningNodeStatus.WAIT_APP,
+    Assertions.assertFalse(watcher.checkReadyToBeDecommissioned(id1));
+    Assertions.assertEquals(DecommissioningNodeStatus.WAIT_APP,
         watcher.checkDecommissioningStatus(id1));
 
     // Set app to be FINISHED and verified DecommissioningNodeStatus is READY.
     MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
     rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
-    Assert.assertEquals(0, node1.getRunningApps().size());
+    Assertions.assertEquals(0, node1.getRunningApps().size());
     watcher.update(node1, nodeStatus);
-    Assert.assertEquals(DecommissioningNodeStatus.READY,
+    Assertions.assertEquals(DecommissioningNodeStatus.READY,
         watcher.checkDecommissioningStatus(id1));
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();

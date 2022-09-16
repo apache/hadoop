@@ -16,14 +16,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.queuemanagement;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.spy;
 
 public class TestDeactivatedLeafQueuesByLabel {
   @Test
-  public void testGetMaxLeavesToBeActivated() {
+  void testGetMaxLeavesToBeActivated() {
     DeactivatedLeafQueuesByLabel d1 = spy(DeactivatedLeafQueuesByLabel.class);
     d1.setAvailableCapacity(0.17f);
     d1.setLeafQueueTemplateAbsoluteCapacity(0.03f);

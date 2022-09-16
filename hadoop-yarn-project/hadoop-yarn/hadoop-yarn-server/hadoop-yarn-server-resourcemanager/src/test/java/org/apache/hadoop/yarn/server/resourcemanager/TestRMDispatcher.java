@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,14 +34,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestRMDispatcher {
 
   @SuppressWarnings("unchecked")
-  @Test(timeout=10000)
-  public void testSchedulerEventDispatcherForPreemptionEvents() {
+  @Timeout(10000)  @Test
+  void testSchedulerEventDispatcherForPreemptionEvents() {
     AsyncDispatcher rmDispatcher = new AsyncDispatcher();
     CapacityScheduler sched = spy(new CapacityScheduler());
     YarnConfiguration conf = new YarnConfiguration();
@@ -73,7 +74,7 @@ public class TestRMDispatcher {
       verify(sched).markContainerForPreemption(appAttemptId, container);
       verify(sched).markContainerForKillable(container);
     } catch (InterruptedException e) {
-      Assert.fail();
+      Assertions.fail();
     } finally {
       schedulerDispatcher.stop();
       rmDispatcher.stop();

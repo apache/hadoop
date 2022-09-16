@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -42,9 +42,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.sun.jersey.api.client.ClientResponse.Status;
 
@@ -71,8 +71,8 @@ public class TestRMWebServicesHttpStaticUserPermissions {
     }
   }
 
-  @BeforeClass
-  public static void setUp() {
+  @BeforeAll
+  static void setUp() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
@@ -82,8 +82,8 @@ public class TestRMWebServicesHttpStaticUserPermissions {
     }
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @AfterAll
+  static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
     }
@@ -125,7 +125,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
   // when secure mode is turned on
 
   @Test
-  public void testWebServiceAccess() throws Exception {
+  void testWebServiceAccess() throws Exception {
 
     ApplicationSubmissionContextInfo app =
         new ApplicationSubmissionContextInfo();

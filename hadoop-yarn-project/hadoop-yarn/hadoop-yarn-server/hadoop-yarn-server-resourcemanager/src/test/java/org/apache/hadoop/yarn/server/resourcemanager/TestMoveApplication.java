@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Timeout;
 
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
@@ -36,16 +37,16 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestMoveApplication {
   private ResourceManager resourceManager = null;
   private static boolean failMove;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoSchedulerWithMove.class,
@@ -59,13 +60,13 @@ public class TestMoveApplication {
     failMove = false;
   }
   
-  @After
+  @AfterEach
   public void tearDown() {
     resourceManager.stop();
   }
   
   @Test
-  public void testMoveRejectedByScheduler() throws Exception {
+  void testMoveRejectedByScheduler() throws Exception {
     failMove = true;
     
     // Submit application
@@ -91,8 +92,9 @@ public class TestMoveApplication {
     }
   }
 
-  @Test (timeout = 10000)
-  public void testMoveTooLate() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testMoveTooLate() throws Exception {
     // Submit application
     Application application = new Application("user1", resourceManager);
     ApplicationId appId = application.getApplicationId();
@@ -119,7 +121,8 @@ public class TestMoveApplication {
     }
   }
   
-  @Test (timeout = 10000)
+  @Timeout(10000)  
+  @Test
       public
       void testMoveSuccessful() throws Exception {
     MockRM rm1 = new MockRM(conf);
@@ -137,7 +140,7 @@ public class TestMoveApplication {
   }
 
   @Test
-  public void testMoveRejectedByPermissions() throws Exception {
+  void testMoveRejectedByPermissions() throws Exception {
     failMove = true;
     
     // Submit application

@@ -19,8 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,9 +47,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNo
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,7 +63,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
       "org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement."
       + "ResourceUsageMultiNodeLookupPolicy";
 
-  @Before
+  @BeforeEach
   public void setUp() {
     CapacitySchedulerConfiguration config =
         new CapacitySchedulerConfiguration();
@@ -114,8 +115,9 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 60000);
   }
 
-  @Test(timeout=60000)
-  public void testAllocateReservationFromOtherNode() throws Exception {
+  @Timeout(60000)
+  @Test
+  void testAllocateReservationFromOtherNode() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
     MockNM[] nms = new MockNM[3];
@@ -174,7 +176,7 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
           MockAM am2 = MockRM.launchAM(app2, rm, nm1);
           result.set(true);
         } catch (Exception e) {
-          Assert.fail("Failed to launch app-2");
+          Assertions.fail("Failed to launch app-2");
         }
       }
     };
@@ -226,13 +228,13 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
         .getAppAttemptId();
     FiCaSchedulerApp schedulerApp = cs.getApplicationAttempt(app2AttemptId);
 
-    assertEquals("App2 failed to get reserved container", 1,
-        schedulerApp.getReservedContainers().size());
+    assertEquals(1, schedulerApp.getReservedContainers().size(),
+        "App2 failed to get reserved container");
     LOG.info("Reserved node is: " +
         schedulerApp.getReservedContainers().get(0).getReservedNode());
-    assertNotEquals("Failed to reserve as per the Multi Node Itearor",
-        schedulerApp.getReservedContainers().get(0).getReservedNode(),
-        preemptedNode.get().getNodeId());
+    assertNotEquals(schedulerApp.getReservedContainers().get(0).getReservedNode(),
+        preemptedNode.get().getNodeId(),
+        "Failed to reserve as per the Multi Node Itearor");
 
 
     // Step 6: Okay, now preempted node is Node1 and reserved node is Node3
@@ -262,10 +264,10 @@ public class TestCapacitySchedulerMultiNodesWithPreemption {
     // Step 8: Validate if app-2 has got 1 live container and
     // released the reserved container
     schedulerApp = cs.getApplicationAttempt(app2AttemptId);
-    assertEquals("App2 failed to get Allocated", 1,
-        schedulerApp.getLiveContainers().size());
-    assertEquals("App2 failed to Unreserve", 0,
-        schedulerApp.getReservedContainers().size());
+    assertEquals(1, schedulerApp.getLiveContainers().size(),
+        "App2 failed to get Allocated");
+    assertEquals(0, schedulerApp.getReservedContainers().size(),
+        "App2 failed to Unreserve");
 
     rm.stop();
   }

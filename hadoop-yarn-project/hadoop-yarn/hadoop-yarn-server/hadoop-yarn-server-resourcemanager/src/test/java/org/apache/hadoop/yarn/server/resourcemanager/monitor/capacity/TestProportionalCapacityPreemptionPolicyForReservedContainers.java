@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 
 public class TestProportionalCapacityPreemptionPolicyForReservedContainers
     extends ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     conf.setBoolean(
@@ -42,7 +42,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testPreemptionForSimpleReservedContainer() throws IOException {
+  void testPreemptionForSimpleReservedContainer() throws IOException {
     /**
      * The simplest test of reserved container, Queue structure is:
      *
@@ -96,7 +96,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testUseReservedAndFifoSelectorTogether() throws IOException {
+  void testUseReservedAndFifoSelectorTogether() throws IOException {
     /**
      * Queue structure is:
      *
@@ -152,7 +152,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testReservedSelectorSkipsAMContainer() throws IOException {
+  void testReservedSelectorSkipsAMContainer() throws IOException {
     /**
      * Queue structure is:
      *
@@ -214,7 +214,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testPreemptionForReservedContainerRespectGuaranteedResource()
+  void testPreemptionForReservedContainerRespectGuaranteedResource()
       throws IOException {
     /**
      * Queue structure is:
@@ -266,7 +266,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testPreemptionForReservedContainerWhichHasAvailableResource()
+  void testPreemptionForReservedContainerWhichHasAvailableResource()
       throws IOException {
     /**
      * Queue structure is:
@@ -318,7 +318,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testPreemptionForReservedContainerWhichHasNondivisibleAvailableResource()
+  void testPreemptionForReservedContainerWhichHasNondivisibleAvailableResource()
       throws IOException {
     /**
      * Queue structure is:
@@ -371,7 +371,7 @@ public class TestProportionalCapacityPreemptionPolicyForReservedContainers
   }
 
   @Test
-  public void testPreemptionForReservedContainerRespectAvailableResources()
+  void testPreemptionForReservedContainerRespectAvailableResources()
       throws IOException {
     /**
      * Queue structure is:

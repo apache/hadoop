@@ -30,9 +30,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -55,7 +55,7 @@ public class TestAppNameMappingPlacementRule {
 
   private YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -108,7 +108,7 @@ public class TestAppNameMappingPlacementRule {
     asc.setApplicationName(appName);
     ApplicationPlacementContext ctx = engine.getPlacementForApp(asc,
         user);
-    Assert.assertEquals(expectedQueue,
+    Assertions.assertEquals(expectedQueue,
         ctx != null ? ctx.getQueue() : inputQueue);
   }
 
@@ -154,70 +154,70 @@ public class TestAppNameMappingPlacementRule {
   }
 
   @Test
-  public void testSpecificAppNameMappedToDefinedQueue()
+  void testSpecificAppNameMappedToDefinedQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, Q1_QUEUE),
         USER_NAME, Q1_QUEUE);
   }
 
   @Test
-  public void testPlaceholderAppSourceMappedToQueue()
+  void testPlaceholderAppSourceMappedToQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APPLICATION_PLACEHOLDER, Q2_QUEUE),
         USER_NAME, Q2_QUEUE);
   }
 
   @Test
-  public void testPlaceHolderAppSourceAndQueueMappedToAppNameQueue()
+  void testPlaceHolderAppSourceAndQueueMappedToAppNameQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APPLICATION_PLACEHOLDER,
         APPLICATION_PLACEHOLDER), USER_NAME, APP_NAME);
   }
 
   @Test
-  public void testQueueInMappingOverridesSpecifiedQueue()
+  void testQueueInMappingOverridesSpecifiedQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         Q1_QUEUE), USER_NAME, Q2_QUEUE, Q1_QUEUE, true);
   }
 
   @Test
-  public void testQueueInMappingDoesNotOverrideSpecifiedQueue()
+  void testQueueInMappingDoesNotOverrideSpecifiedQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         Q1_QUEUE), USER_NAME, Q2_QUEUE, Q2_QUEUE, false);
   }
 
   @Test
-  public void testDefaultQueueInMappingIsNotUsedWithoutOverride()
+  void testDefaultQueueInMappingIsNotUsedWithoutOverride()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         DEFAULT_QUEUE), USER_NAME, Q2_QUEUE, Q2_QUEUE, false);
   }
 
   @Test
-  public void testDefaultQueueInMappingEqualsToInputQueue()
+  void testDefaultQueueInMappingEqualsToInputQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME,
         DEFAULT_QUEUE), USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
   @Test
-  public void testMappingSourceDiffersFromInputQueue()
+  void testMappingSourceDiffersFromInputQueue()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(MAPREDUCE_APP_NAME,
         Q1_QUEUE), USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
   @Test
-  public void testMappingContainsAmbiguousLeafQueueWithoutParent()
+  void testMappingContainsAmbiguousLeafQueueWithoutParent()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, AMBIGUOUS_QUEUE),
         USER_NAME, DEFAULT_QUEUE, DEFAULT_QUEUE, false);
   }
 
   @Test
-  public void testMappingContainsAmbiguousLeafQueueWithParent()
+  void testMappingContainsAmbiguousLeafQueueWithParent()
       throws IOException, YarnException {
     verifyQueueMapping(getQueueMapping(APP_NAME, ROOT_QUEUE, AMBIGUOUS_QUEUE),
         USER_NAME, DEFAULT_QUEUE, AMBIGUOUS_QUEUE, false);

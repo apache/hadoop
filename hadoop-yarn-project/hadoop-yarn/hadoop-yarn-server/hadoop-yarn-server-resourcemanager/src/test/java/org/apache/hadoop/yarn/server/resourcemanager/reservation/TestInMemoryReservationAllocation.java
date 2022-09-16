@@ -27,10 +27,10 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestInMemoryReservationAllocation {
 
@@ -41,13 +41,13 @@ public class TestInMemoryReservationAllocation {
 
   private Random rand = new Random();
 
-  @Before
+  @BeforeEach
   public void setUp() {
     resCalc = new DefaultResourceCalculator();
     minAlloc = Resource.newInstance(1, 1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     user = null;
     planName = null;
@@ -56,7 +56,7 @@ public class TestInMemoryReservationAllocation {
   }
 
   @Test
-  public void testBlocks() {
+  void testBlocks() {
     ReservationId reservationID =
         ReservationId.newInstance(rand.nextLong(), rand.nextLong());
     int[] alloc = { 10, 10, 10, 10, 10, 10 };
@@ -71,15 +71,15 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    Assertions.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
+      Assertions.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
 
   @Test
-  public void testSteps() {
+  void testSteps() {
     ReservationId reservationID =
         ReservationId.newInstance(rand.nextLong(), rand.nextLong());
     int[] alloc = { 10, 10, 10, 10, 10, 10 };
@@ -94,16 +94,16 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    Assertions.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i)),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
 
   @Test
-  public void testSkyline() {
+  void testSkyline() {
     ReservationId reservationID =
         ReservationId.newInstance(rand.nextLong(), rand.nextLong());
     int[] alloc = { 0, 5, 10, 10, 5, 0 };
@@ -118,16 +118,16 @@ public class TestInMemoryReservationAllocation {
         new InMemoryReservationAllocation(reservationID, rDef, user, planName,
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    Assertions.assertFalse(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           Resource.newInstance(1024 * (alloc[i] + i), (alloc[i] + i)),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
 
   @Test
-  public void testZeroAlloaction() {
+  void testZeroAlloaction() {
     ReservationId reservationID =
         ReservationId.newInstance(rand.nextLong(), rand.nextLong());
     int[] alloc = {};
@@ -143,11 +143,11 @@ public class TestInMemoryReservationAllocation {
             start, start + alloc.length + 1, allocations, resCalc, minAlloc);
     doAssertions(rAllocation, reservationID, rDef, allocations, (int) start,
         alloc);
-    Assert.assertFalse(rAllocation.containsGangs());
+    Assertions.assertFalse(rAllocation.containsGangs());
   }
 
   @Test
-  public void testGangAlloaction() {
+  void testGangAlloaction() {
     ReservationId reservationID =
         ReservationId.newInstance(rand.nextLong(), rand.nextLong());
     int[] alloc = { 10, 10, 10, 10, 10, 10 };
@@ -164,9 +164,9 @@ public class TestInMemoryReservationAllocation {
             start, start + alloc.length + 1, allocations, resCalc, minAlloc,
             isGang);
     doAssertions(rAllocation, reservationID, rDef, allocations, start, alloc);
-    Assert.assertTrue(rAllocation.containsGangs());
+    Assertions.assertTrue(rAllocation.containsGangs());
     for (int i = 0; i < alloc.length; i++) {
-      Assert.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
+      Assertions.assertEquals(Resource.newInstance(1024 * (alloc[i]), (alloc[i])),
           rAllocation.getResourcesAtTime(start + i));
     }
   }
@@ -175,13 +175,13 @@ public class TestInMemoryReservationAllocation {
       ReservationId reservationID, ReservationDefinition rDef,
       Map<ReservationInterval, Resource> allocations, int start,
       int[] alloc) {
-    Assert.assertEquals(reservationID, rAllocation.getReservationId());
-    Assert.assertEquals(rDef, rAllocation.getReservationDefinition());
-    Assert.assertEquals(allocations, rAllocation.getAllocationRequests());
-    Assert.assertEquals(user, rAllocation.getUser());
-    Assert.assertEquals(planName, rAllocation.getPlanName());
-    Assert.assertEquals(start, rAllocation.getStartTime());
-    Assert.assertEquals(start + alloc.length + 1, rAllocation.getEndTime());
+    Assertions.assertEquals(reservationID, rAllocation.getReservationId());
+    Assertions.assertEquals(rDef, rAllocation.getReservationDefinition());
+    Assertions.assertEquals(allocations, rAllocation.getAllocationRequests());
+    Assertions.assertEquals(user, rAllocation.getUser());
+    Assertions.assertEquals(planName, rAllocation.getPlanName());
+    Assertions.assertEquals(start, rAllocation.getStartTime());
+    Assertions.assertEquals(start + alloc.length + 1, rAllocation.getEndTime());
   }
 
   private Map<ReservationInterval, Resource> generateAllocation(

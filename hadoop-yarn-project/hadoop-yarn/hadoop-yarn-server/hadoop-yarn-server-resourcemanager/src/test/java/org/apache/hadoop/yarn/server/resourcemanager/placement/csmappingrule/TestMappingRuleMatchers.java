@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestMappingRuleMatchers extends TestCase {
+public class TestMappingRuleMatchers {
 
   @Test
-  public void testCatchAll() {
+  void testCatchAll() {
     VariableContext variables = new VariableContext();
     MappingRuleMatcher matcher = new MappingRuleMatchers.MatchAllMatcher();
 
@@ -37,7 +37,7 @@ public class TestMappingRuleMatchers extends TestCase {
   }
 
   @Test
-  public void testVariableMatcher() {
+  void testVariableMatcher() {
     VariableContext matchingContext = new VariableContext();
     matchingContext.put("%user", "bob");
     matchingContext.put("%primary_group", "developers");
@@ -64,17 +64,17 @@ public class TestMappingRuleMatchers extends TestCase {
         new MappingRuleMatchers.VariableMatcher("%custom", "Matching string"));
 
     matchers.forEach((matcherName, matcher) -> {
-      assertTrue(matcherName + " with matchingContext should match",
-          matcher.match(matchingContext));
-      assertFalse(matcherName + " with mismatchingContext shouldn't match",
-          matcher.match(mismatchingContext));
-      assertFalse(matcherName + " with emptyContext shouldn't match",
-          matcher.match(emptyContext));
+      assertTrue(matcher.match(matchingContext),
+          matcherName + " with matchingContext should match");
+      assertFalse(matcher.match(mismatchingContext),
+          matcherName + " with mismatchingContext shouldn't match");
+      assertFalse(matcher.match(emptyContext),
+          matcherName + " with emptyContext shouldn't match");
     });
   }
 
   @Test
-  public void testVariableMatcherSubstitutions() {
+  void testVariableMatcherSubstitutions() {
     VariableContext matchingContext = new VariableContext();
     matchingContext.put("%user", "bob");
     matchingContext.put("%primary_group", "developers");
@@ -106,35 +106,35 @@ public class TestMappingRuleMatchers extends TestCase {
     MappingRuleMatcher userStatic =
         new MappingRuleMatchers.VariableMatcher("%user", "bob");
 
-    assertTrue("%custom should match %user in matching context",
-        customUser.match(matchingContext));
-    assertTrue("%user should match %custom in matching context",
-        userCustom.match(matchingContext));
-    assertTrue("%user (bob) should match %cus%tom (b + ob) in matching context",
-        userCusTom.match(matchingContext));
-    assertTrue("%user should match %user in any context",
-        userUser.match(matchingContext));
-    assertTrue("%user (bob) should match bob in in matching context",
-        userStatic.match(matchingContext));
+    assertTrue(customUser.match(matchingContext),
+        "%custom should match %user in matching context");
+    assertTrue(userCustom.match(matchingContext),
+        "%user should match %custom in matching context");
+    assertTrue(userCusTom.match(matchingContext),
+        "%user (bob) should match %cus%tom (b + ob) in matching context");
+    assertTrue(userUser.match(matchingContext),
+        "%user should match %user in any context");
+    assertTrue(userStatic.match(matchingContext),
+        "%user (bob) should match bob in in matching context");
 
     assertFalse(
-        "%custom (bob) should NOT match %user (dave) in mismatching context",
-        customUser.match(mismatchingContext));
+        customUser.match(mismatchingContext),
+        "%custom (bob) should NOT match %user (dave) in mismatching context");
     assertFalse(
-        "%user (dave) should NOT match %custom (bob) in mismatching context",
-        userCustom.match(mismatchingContext));
+        userCustom.match(mismatchingContext),
+        "%user (dave) should NOT match %custom (bob) in mismatching context");
     assertFalse(
-        "%user (dave) should NOT match %cus%tom (b+ob) in mismatching context",
-        userCusTom.match(mismatchingContext));
-    assertTrue("%user should match %user in any context",
-        userUser.match(mismatchingContext));
+        userCusTom.match(mismatchingContext),
+        "%user (dave) should NOT match %cus%tom (b+ob) in mismatching context");
+    assertTrue(userUser.match(mismatchingContext),
+        "%user should match %user in any context");
     assertFalse(
-        "%user (dave) should NOT match match bob in in matching context",
-        userStatic.match(mismatchingContext));
+        userStatic.match(mismatchingContext),
+        "%user (dave) should NOT match match bob in in matching context");
   }
 
   @Test
-  public void testVariableMatcherWithEmpties() {
+  void testVariableMatcherWithEmpties() {
     VariableContext emptyContext = new VariableContext();
     VariableContext allNull = new VariableContext();
     allNull.put("%null", null);
@@ -184,7 +184,7 @@ public class TestMappingRuleMatchers extends TestCase {
   }
 
   @Test
-  public void testBoolOperatorMatchers() {
+  void testBoolOperatorMatchers() {
     VariableContext developerBob = new VariableContext();
     developerBob.put("%user", "bob");
     developerBob.put("%primary_group", "developers");
@@ -241,7 +241,7 @@ public class TestMappingRuleMatchers extends TestCase {
   }
 
   @Test
-  public void testToStrings() {
+  void testToStrings() {
     MappingRuleMatcher var = new MappingRuleMatchers.VariableMatcher("%a", "b");
     MappingRuleMatcher all = MappingRuleMatchers.createAllMatcher();
     MappingRuleMatcher and = new MappingRuleMatchers.AndMatcher(var, all, var);
@@ -258,7 +258,7 @@ public class TestMappingRuleMatchers extends TestCase {
   }
 
   @Test
-  public void testGroupMatching() {
+  void testGroupMatching() {
     VariableContext letterGroups = new VariableContext();
     letterGroups.putExtraDataset("groups", Sets.newHashSet("a", "b", "c"));
 

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -28,6 +28,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
@@ -73,8 +74,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.Alloca
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTagsManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -83,7 +84,7 @@ import org.mockito.Mockito;
 public class TestRMContainerImpl {
 
   @Test
-  public void testReleaseWhileRunning() {
+  void testReleaseWhileRunning() {
 
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(EventHandler.class);
@@ -189,7 +190,7 @@ public class TestRMContainerImpl {
   }
 
   @Test
-  public void testExpireWhileRunning() {
+  void testExpireWhileRunning() {
 
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(EventHandler.class);
@@ -280,7 +281,7 @@ public class TestRMContainerImpl {
   }
 
   @Test
-  public void testExistenceOfResourceRequestInRMContainer() throws Exception {
+  void testExistenceOfResourceRequestInRMContainer() throws Exception {
     Configuration conf = new Configuration();
     MockRM rm1 = new MockRM(conf);
     rm1.start();
@@ -297,7 +298,7 @@ public class TestRMContainerImpl {
 
     // Verify whether list of ResourceRequest is present in RMContainer
     // while moving to ALLOCATED state
-    Assert.assertNotNull(
+    Assertions.assertNotNull(
         scheduler.getRMContainer(containerId2).getContainerRequest());
 
     // Allocate container
@@ -307,12 +308,13 @@ public class TestRMContainerImpl {
 
     // After RMContainer moving to ACQUIRED state, list of ResourceRequest will
     // be empty
-    Assert.assertNull(
+    Assertions.assertNull(
         scheduler.getRMContainer(containerId2).getContainerRequest());
   }
 
-  @Test (timeout = 180000)
-  public void testStoreAllContainerMetrics() throws Exception {
+  @Timeout(180000)
+  @Test
+  void testStoreAllContainerMetrics() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     conf.setBoolean(
@@ -351,8 +353,9 @@ public class TestRMContainerImpl {
     verify(publisher, times(2)).containerFinished(any(RMContainer.class), anyLong());
   }
 
-  @Test (timeout = 180000)
-  public void testStoreOnlyAMContainerMetrics() throws Exception {
+  @Timeout(180000)
+  @Test
+  void testStoreOnlyAMContainerMetrics() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
     conf.setBoolean(
@@ -389,7 +392,7 @@ public class TestRMContainerImpl {
   }
 
   @Test
-  public void testContainerTransitionNotifyAllocationTagsManager()
+  void testContainerTransitionNotifyAllocationTagsManager()
       throws Exception {
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(
@@ -445,50 +448,50 @@ public class TestRMContainerImpl {
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), null),
-            Long::max));
+            Long::max),
+            0);
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            1);
 
     rmContainer.handle(new RMContainerFinishedEvent(containerId, ContainerStatus
         .newInstance(containerId, ContainerState.COMPLETE, "", 0),
         RMContainerEventType.KILL));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     /* Second container: ACQUIRED -> FINISHED */
     rmContainer = new RMContainerImpl(container,
         SchedulerRequestKey.extractFrom(container), appAttemptId,
         nodeId, "user", rmContext);
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            1);
 
     rmContainer.handle(
         new RMContainerEvent(containerId, RMContainerEventType.ACQUIRED));
@@ -498,10 +501,10 @@ public class TestRMContainerImpl {
         RMContainerEventType.FINISHED));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     /* Third container: RUNNING -> FINISHED */
     rmContainer = new RMContainerImpl(container,
@@ -509,19 +512,19 @@ public class TestRMContainerImpl {
         nodeId, "user", rmContext);
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
     schedulerNode.allocateContainer(rmContainer);
 
-    Assert.assertEquals(1,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            1);
 
     rmContainer.handle(
         new RMContainerEvent(containerId, RMContainerEventType.ACQUIRED));
@@ -534,10 +537,10 @@ public class TestRMContainerImpl {
         RMContainerEventType.FINISHED));
     schedulerNode.releaseContainer(container.getId(), true);
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     /* Fourth container: NEW -> RECOVERED */
     rmContainer = new RMContainerImpl(container,
@@ -545,10 +548,10 @@ public class TestRMContainerImpl {
         "user", rmContext);
     rmContainer.setAllocationTags(ImmutableSet.of("mapper"));
 
-    Assert.assertEquals(0,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            0);
 
     NMContainerStatus containerStatus = NMContainerStatus
         .newInstance(containerId, 0, ContainerState.NEW,
@@ -558,14 +561,15 @@ public class TestRMContainerImpl {
     rmContainer
         .handle(new RMContainerRecoverEvent(containerId, containerStatus));
 
-    Assert.assertEquals(1,
-        tagsManager.getNodeCardinalityByOp(nodeId,
-            AllocationTags.createSingleAppAllocationTags(appId, null),
-            Long::max));
+    Assertions.assertEquals(tagsManager.getNodeCardinalityByOp(nodeId,
+        AllocationTags.createSingleAppAllocationTags(appId, null),
+            Long::max),
+            1);
   }
 
-  @Test(timeout = 30000)
-  public void testContainerAcquiredAtKilled() {
+  @Timeout(30000)
+  @Test
+  void testContainerAcquiredAtKilled() {
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(
         EventHandler.class);
@@ -615,7 +619,7 @@ public class TestRMContainerImpl {
         @Override
         protected void onInvalidStateTransition(
             RMContainerEventType rmContainerEventType, RMContainerState state) {
-            Assert.fail("RMContainerImpl: can't handle " + rmContainerEventType
+            Assertions.fail("RMContainerImpl: can't handle " + rmContainerEventType
                 + " at state " + state);
         }
     };

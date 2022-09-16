@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,9 +46,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -69,7 +69,7 @@ public class TestRMAuditLogger {
   private static final byte[] CALLER_SIGNATURE = "signature".getBytes();
   private static final String PARTITION = "label1";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     when(APPID.toString()).thenReturn("app_1");
     when(ATTEMPTID.toString()).thenReturn("app_attempt_1");
@@ -82,7 +82,7 @@ public class TestRMAuditLogger {
    * Test the AuditLog format with key-val pair.
    */
   @Test  
-  public void testKeyValLogFormat() throws Exception {
+  void testKeyValLogFormat() throws Exception {
     StringBuilder actLog = new StringBuilder();
     StringBuilder expLog = new StringBuilder();
     // add the first k=v pair and check
@@ -242,7 +242,7 @@ public class TestRMAuditLogger {
     } catch (UnknownHostException uhe) {
       // should not happen as long as IP address format
       // stays the same
-      Assert.fail("Check ip address being constructed");
+      Assertions.fail("Check ip address being constructed");
     }
     testSuccessLogFormatHelperWithIP(checkIP, appId, attemptId, containerId,
         addr);
@@ -387,7 +387,7 @@ public class TestRMAuditLogger {
    * Test {@link RMAuditLogger} without IP set.
    */
   @Test  
-  public void testRMAuditLoggerWithoutIP() throws Exception {
+  void testRMAuditLoggerWithoutIP() throws Exception {
     // test without ip
     testSuccessLogFormat(false);
     testFailureLogFormat(false);
@@ -404,8 +404,8 @@ public class TestRMAuditLogger {
         throws ServiceException {
       // Ensure clientId is received
       byte[] clientId = Server.getClientId();
-      Assert.assertNotNull(clientId);
-      Assert.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
+      Assertions.assertNotNull(clientId);
+      Assertions.assertEquals(ClientId.BYTE_LENGTH, clientId.length);
       // test with ip set
       testSuccessLogFormat(true);
       testFailureLogFormat(true);
@@ -417,7 +417,7 @@ public class TestRMAuditLogger {
    * Test {@link RMAuditLogger} with IP set.
    */
   @Test  
-  public void testRMAuditLoggerWithIP() throws Exception {
+  void testRMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     RPC.setProtocolEngine(conf, TestRpcService.class,
         ProtobufRpcEngine2.class);

@@ -21,16 +21,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.MockQueueHierarchyBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestMappingRuleValidationContextImpl {
   @Test
-  public void testContextVariables() throws YarnException {
+  void testContextVariables() throws YarnException {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -94,7 +94,7 @@ public class TestMappingRuleValidationContextImpl {
   }
 
   @Test
-  public void testManagedQueueValidation() {
+  void testManagedQueueValidation() {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -131,7 +131,7 @@ public class TestMappingRuleValidationContextImpl {
   }
 
   @Test
-  public void testDynamicQueueValidation() {
+  void testDynamicQueueValidation() {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -172,7 +172,7 @@ public class TestMappingRuleValidationContextImpl {
 
 
   @Test
-  public void testStaticQueueValidation() {
+  void testStaticQueueValidation() {
     //Setting up queue manager and emulated queue hierarchy
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
@@ -228,7 +228,7 @@ public class TestMappingRuleValidationContextImpl {
   }
 
   @Test
-  public void testImmutableVariablesInContext() {
+  void testImmutableVariablesInContext() {
     CapacitySchedulerQueueManager qm =
         mock(CapacitySchedulerQueueManager.class);
 

@@ -22,6 +22,7 @@ import com.google.inject.Guice;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -31,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -53,7 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.MediaType;
 
@@ -90,10 +91,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createMockRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.createWebAppDescriptor;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for scheduler/app activities.
@@ -106,7 +107,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     super(createWebAppDescriptor());
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -117,7 +118,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAssignMultipleContainersPerNodeHeartbeat()
+  void testAssignMultipleContainersPerNodeHeartbeat()
       throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
@@ -182,7 +183,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAssignWithoutAvailableResource() throws Exception {
+  void testAssignWithoutAvailableResource() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -245,7 +246,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testNoNM() throws Exception {
+  void testNoNM() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -278,7 +279,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testWrongNodeId() throws Exception {
+  void testWrongNodeId() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -334,7 +335,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testReserveNewContainer() throws Exception {
+  void testReserveNewContainer() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -474,7 +475,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testActivityJSON() throws Exception {
+  void testActivityJSON() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -532,7 +533,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAppActivityJSON() throws Exception {
+  void testAppActivityJSON() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -593,7 +594,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAppAssignMultipleContainersPerNodeHeartbeat()
+  void testAppAssignMultipleContainersPerNodeHeartbeat()
       throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
@@ -648,7 +649,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAppAssignWithoutAvailableResource() throws Exception {
+  void testAppAssignWithoutAvailableResource() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -694,7 +695,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAppNoNM() throws Exception {
+  void testAppNoNM() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -725,7 +726,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testAppReserveNewContainer() throws Exception {
+  void testAppReserveNewContainer() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -803,8 +804,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
-  public void testInsufficientResourceDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -829,9 +831,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("waiting for next allocation",
-          getFirstSubNodeFromJson(json, FN_SCHEDULER_ACT_ROOT)
-              .optString(FN_ACT_DIAGNOSTIC));
+      assertEquals(getFirstSubNodeFromJson(json,
+          FN_SCHEDULER_ACT_ROOT)
+              .optString(FN_ACT_DIAGNOSTIC), "waiting for next allocation");
 
       am1.allocate(Arrays.asList(ResourceRequest
           .newInstance(Priority.UNDEFINED, "*",
@@ -867,8 +869,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
-  public void testPlacementConstraintDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
 
@@ -902,9 +905,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("waiting for next allocation",
-          getFirstSubNodeFromJson(json, FN_SCHEDULER_ACT_ROOT)
-              .optString(FN_ACT_DIAGNOSTIC));
+      assertEquals(getFirstSubNodeFromJson(json,
+          FN_SCHEDULER_ACT_ROOT)
+              .optString(FN_ACT_DIAGNOSTIC), "waiting for next allocation");
 
       // trigger scheduling
       cs.handle(new NodeUpdateSchedulerEvent(
@@ -935,8 +938,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
-  public void testAppInsufficientResourceDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -987,8 +991,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
-  public void testAppPlacementConstraintDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppPlacementConstraintDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -1045,8 +1050,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test (timeout=30000)
-  public void testAppFilterByRequestPrioritiesAndAllocationRequestIds()
+  @Timeout(30000)
+  @Test
+  void testAppFilterByRequestPrioritiesAndAllocationRequestIds()
       throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -1129,8 +1135,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       JSONArray allocations =
           json.getJSONObject(FN_APP_ACT_ROOT).getJSONArray(FN_ACT_ALLOCATIONS);
       for (int i=0; i<allocations.length(); i++) {
-        assertEquals("-1", getFirstSubNodeFromJson(allocations.getJSONObject(i),
-            FN_APP_ACT_CHILDREN).optString(FN_ACT_REQUEST_PRIORITY));
+        assertEquals(getFirstSubNodeFromJson(allocations.getJSONObject(i), FN_APP_ACT_CHILDREN).optString(FN_ACT_REQUEST_PRIORITY),
+            "-1");
       }
 
       // query app activities with allocationRequestId=1
@@ -1141,8 +1147,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       allocations =
           json.getJSONObject(FN_APP_ACT_ROOT).getJSONArray(FN_ACT_ALLOCATIONS);
       for (int i = 0; i < allocations.length(); i++) {
-        assertEquals("1", getFirstSubNodeFromJson(allocations.getJSONObject(i),
-            FN_APP_ACT_CHILDREN).optString(FN_ACT_ALLOCATION_REQUEST_ID));
+        assertEquals(getFirstSubNodeFromJson(allocations.getJSONObject(i), FN_APP_ACT_CHILDREN).optString(FN_ACT_ALLOCATION_REQUEST_ID),
+            "1");
       }
 
       // query app activities with requestPriorities=0 and allocationRequestId=1
@@ -1168,8 +1174,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       allocations =
           json.getJSONObject(FN_APP_ACT_ROOT).getJSONArray(FN_ACT_ALLOCATIONS);
       for (int i = 0; i < allocations.length(); i++) {
-        assertEquals("-1", getFirstSubNodeFromJson(allocations.getJSONObject(i),
-            FN_APP_ACT_CHILDREN).optString(FN_ACT_REQUEST_PRIORITY));
+        assertEquals(getFirstSubNodeFromJson(allocations.getJSONObject(i), FN_APP_ACT_CHILDREN).optString(FN_ACT_REQUEST_PRIORITY),
+            "-1");
       }
 
       // query app activities with requestPriorities=-1
@@ -1184,8 +1190,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
-  public void testAppLimit() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppLimit() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
@@ -1259,8 +1266,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout = 30000)
-  public void testAppActions() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppActions() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
@@ -1363,8 +1371,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
-  public void testAppSummary() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppSummary() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -1432,7 +1441,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeSkippedBecauseOfRelaxLocality() throws Exception {
+  void testNodeSkippedBecauseOfRelaxLocality() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -1524,7 +1533,7 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
   }
 
   @Test
-  public void testQueueSkippedBecauseOfHeadroom() throws Exception {
+  void testQueueSkippedBecauseOfHeadroom() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -1608,8 +1617,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
     }
   }
 
-  @Test(timeout=30000)
-  public void testSchedulerBulkActivities() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testSchedulerBulkActivities() throws Exception {
     rm.start();
 
     MockNM nm1 = new MockNM("127.0.0.1:1234", 4 * 1024,
@@ -1634,8 +1644,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       JSONObject activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       Object activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Number of activities is wrong", expectedCount,
-          ((JSONArray) activities).length());
+      assertEquals(expectedCount, ((JSONArray) activities).length(),
+          "Number of activities is wrong");
 
 
       // Validate if response does not exceed max 500
@@ -1648,9 +1658,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       activitiesJson = restClient.getOutput().getJSONObject(
           FN_SCHEDULER_BULK_ACT_ROOT);
       activities = activitiesJson.get(FN_SCHEDULER_ACT_ROOT);
-      assertEquals("Max Activities Limit does not work",
-          RMWebServices.MAX_ACTIVITIES_COUNT,
-          ((JSONArray) activities).length());
+      assertEquals(RMWebServices.MAX_ACTIVITIES_COUNT,
+          ((JSONArray) activities).length(),
+          "Max Activities Limit does not work");
 
     } finally {
       rm.stop();

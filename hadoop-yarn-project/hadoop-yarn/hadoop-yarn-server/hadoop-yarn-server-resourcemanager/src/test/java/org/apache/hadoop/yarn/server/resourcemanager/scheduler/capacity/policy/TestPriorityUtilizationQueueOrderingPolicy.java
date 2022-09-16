@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -68,7 +68,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     int i = 0;
     while (iter.hasNext()) {
       CSQueue q = iter.next();
-      Assert.assertEquals(expectedOrder[i], q.getQueuePath());
+      Assertions.assertEquals(expectedOrder[i], q.getQueuePath());
       i++;
     }
 
@@ -76,7 +76,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
   }
 
   @Test
-  public void testUtilizationOrdering() {
+  void testUtilizationOrdering() {
     PriorityUtilizationQueueOrderingPolicy policy =
         new PriorityUtilizationQueueOrderingPolicy(false);
 
@@ -130,7 +130,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
   }
 
   @Test
-  public void testPriorityUtilizationOrdering() {
+  void testPriorityUtilizationOrdering() {
     PriorityUtilizationQueueOrderingPolicy policy =
         new PriorityUtilizationQueueOrderingPolicy(true);
 

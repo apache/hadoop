@@ -19,8 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -51,12 +52,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigConverterTestCommons;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,11 +65,9 @@ public class TestResourceManager {
 
   private ResourceManager resourceManager = null;
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
   private FSConfigConverterTestCommons converterTestCommons;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
@@ -84,7 +81,7 @@ public class TestResourceManager {
     converterTestCommons.setUp();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     resourceManager.stop();
     converterTestCommons.tearDown();
@@ -106,7 +103,7 @@ public class TestResourceManager {
   }
 
   @Test
-  public void testResourceAllocation()
+  void testResourceAllocation()
       throws IOException, YarnException, InterruptedException,
       TimeoutException {
     LOG.info("--- START: testResourceAllocation ---");
@@ -221,7 +218,7 @@ public class TestResourceManager {
   }
   
   @Test
-  public void testNodeHealthReportIsNotNull() throws Exception{
+  void testNodeHealthReportIsNotNull() throws Exception{
     String host1 = "host1";
     final int memory = 4 * 1024;
 
@@ -245,8 +242,9 @@ public class TestResourceManager {
     }
   }
 
-  @Test (timeout = 30000)
-  public void testResourceManagerInitConfigValidation() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testResourceManagerInitConfigValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.GLOBAL_RM_AM_MAX_ATTEMPTS, -1);
     try {
@@ -272,7 +270,7 @@ public class TestResourceManager {
   }
 
   @Test
-  public void testNMExpiryAndHeartbeatIntervalsValidation() throws Exception {
+  void testNMExpiryAndHeartbeatIntervalsValidation() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1000);
     conf.setLong(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, 1001);
@@ -287,8 +285,9 @@ public class TestResourceManager {
     }
   }
 
-  @Test(timeout = 50000)
-  public void testFilterOverrides() throws Exception {
+  @Timeout(50000)
+  @Test
+  void testFilterOverrides() throws Exception {
     String filterInitializerConfKey = "hadoop.http.filter.initializers";
     String[] filterInitializers =
         {
@@ -326,10 +325,10 @@ public class TestResourceManager {
         // just want to test filter settings
         String tmp = resourceManager.getConfig().get(filterInitializerConfKey);
         if (filterInitializer.contains(this.getClass().getName())) {
-          Assert.assertEquals(RMAuthenticationFilterInitializer.class.getName()
+          Assertions.assertEquals(RMAuthenticationFilterInitializer.class.getName()
               + "," + this.getClass().getName(), tmp);
         } else {
-          Assert.assertEquals(
+          Assertions.assertEquals(
             RMAuthenticationFilterInitializer.class.getName(), tmp);
         }
         resourceManager.stop();
@@ -352,10 +351,10 @@ public class TestResourceManager {
         // just want to test filter settings
         String tmp = resourceManager.getConfig().get(filterInitializerConfKey);
         if (filterInitializer.equals(StaticUserWebFilter.class.getName())) {
-          Assert.assertEquals(RMAuthenticationFilterInitializer.class.getName()
+          Assertions.assertEquals(RMAuthenticationFilterInitializer.class.getName()
               + "," + StaticUserWebFilter.class.getName(), tmp);
         } else {
-          Assert.assertEquals(
+          Assertions.assertEquals(
             RMAuthenticationFilterInitializer.class.getName(), tmp);
         }
         resourceManager.stop();
@@ -369,19 +368,26 @@ public class TestResourceManager {
    * AuthenticationMethod enum an exception is thrown.
    */
   @Test
-  public void testUserProvidedUGIConf() throws Exception {
-    thrown.expect(IllegalArgumentException.class);
-    thrown.expectMessage("Invalid attribute value for "
-        + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
-        + " of DUMMYAUTH");
+  void testUserProvidedUGIConf() throws Exception {
     Configuration dummyConf = new YarnConfiguration();
     dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "DUMMYAUTH");
     ResourceManager dummyResourceManager = new ResourceManager();
-    try {
-      dummyResourceManager.init(dummyConf);
-    } finally {
-      dummyResourceManager.stop();
-    }
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          try {
+            dummyResourceManager.init(dummyConf);
+          } finally {
+            dummyResourceManager.stop();
+          }
+        }
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Invalid attribute value for "
+        + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
+        + " of DUMMYAUTH"
+    );
   }
 }

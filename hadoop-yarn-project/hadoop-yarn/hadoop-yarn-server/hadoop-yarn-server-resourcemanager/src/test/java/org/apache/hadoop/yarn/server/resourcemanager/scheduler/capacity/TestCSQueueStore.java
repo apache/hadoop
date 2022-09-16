@@ -24,12 +24,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class TestCSQueueStore {
@@ -41,7 +41,7 @@ public class TestCSQueueStore {
   private CapacitySchedulerContext csContext;
   private CapacitySchedulerQueueContext queueContext;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
@@ -138,7 +138,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testSimpleMapping() throws IOException {
+  void testSimpleMapping() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.main
@@ -162,7 +162,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testAmbiguousMapping() throws IOException {
+  void testAmbiguousMapping() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.main
@@ -215,7 +215,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testDynamicModifications() throws IOException {
+  void testDynamicModifications() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.main
@@ -258,7 +258,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testQueueOverwrites() throws IOException {
+  void testQueueOverwrites() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.main
@@ -278,7 +278,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testQueueReferencePrecedence() throws IOException {
+  void testQueueReferencePrecedence() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.main.a.b
@@ -323,7 +323,7 @@ public class TestCSQueueStore {
   }
 
   @Test
-  public void testRootIsAlwaysAccesible() throws IOException {
+  void testRootIsAlwaysAccesible() throws IOException {
     CSQueueStore store = new CSQueueStore();
 
     //root.root

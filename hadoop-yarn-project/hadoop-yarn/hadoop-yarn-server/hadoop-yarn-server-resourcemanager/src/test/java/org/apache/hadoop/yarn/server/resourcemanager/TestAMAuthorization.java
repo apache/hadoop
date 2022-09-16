@@ -18,55 +18,17 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.*;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainersRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.protocolrecords.*;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -75,44 +37,44 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedAction;
+import java.util.*;
+
 public class TestAMAuthorization {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAMAuthorization.class);
 
-  private final Configuration conf;
   private MockRM rm;
 
   // Note : Any test case in ResourceManager package that creates a proxy has
   // to be run with enabling hadoop.security.token.service.use_ip. And reset
   // to false at the end of test class. See YARN-5208
-  @BeforeClass
-  public static void setUp() {
+  @BeforeAll
+  static void setUp() {
     Configuration conf = new Configuration();
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
     SecurityUtil.setConfiguration(conf);
   }
 
-  @AfterClass
-  public static void resetConf() {
+  @AfterAll
+  static void resetConf() {
     Configuration conf = new Configuration();
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
     SecurityUtil.setConfiguration(conf);
   }
 
-  @Parameters
   public static Collection<Object[]> configs() {
     Configuration conf = new Configuration();
     Configuration confWithSecurity = new Configuration();
@@ -122,12 +84,7 @@ public class TestAMAuthorization {
     return Arrays.asList(new Object[][] {{ conf }, { confWithSecurity} });
   }
 
-  public TestAMAuthorization(Configuration conf) {
-    this.conf = conf;
-    UserGroupInformation.setConfiguration(conf);
-  }
-
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       rm.stop();
@@ -258,8 +215,10 @@ public class TestAMAuthorization {
     }
   }
 
-  @Test
-  public void testAuthorizedAccess() throws Exception {
+  @ParameterizedTest
+  @MethodSource("configs")
+  void testAuthorizedAccess(final Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     MyContainerManager containerManager = new MyContainerManager();
     rm =
         new MockRMWithAMS(conf, containerManager);
@@ -285,15 +244,15 @@ public class TestAMAuthorization {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerTokens);
+    Assertions.assertNotNull(containerManager.containerTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
     waitForLaunchedState(attempt);
 
     // Create a client to the RM.
-    final Configuration conf = rm.getConfig();
-    final YarnRPC rpc = YarnRPC.create(conf);
+    final Configuration config = rm.getConfig();
+    final YarnRPC rpc = YarnRPC.create(config);
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
@@ -309,7 +268,7 @@ public class TestAMAuthorization {
           @Override
           public ApplicationMasterProtocol run() {
             return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class, rm
-              .getApplicationMasterService().getBindAddress(), conf);
+              .getApplicationMasterService().getBindAddress(), config);
           }
         });
 
@@ -317,17 +276,19 @@ public class TestAMAuthorization {
         .newRecord(RegisterApplicationMasterRequest.class);
     RegisterApplicationMasterResponse response =
         client.registerApplicationMaster(request);
-    Assert.assertNotNull(response.getClientToAMTokenMasterKey());
+    Assertions.assertNotNull(response.getClientToAMTokenMasterKey());
     if (UserGroupInformation.isSecurityEnabled()) {
-      Assert
+      Assertions
         .assertTrue(response.getClientToAMTokenMasterKey().array().length > 0);
     }
-    Assert.assertEquals("Register response has bad ACLs", "*",
-        response.getApplicationACLs().get(ApplicationAccessType.VIEW_APP));
+    Assertions.assertEquals("*", response.getApplicationACLs().get(ApplicationAccessType.VIEW_APP),
+        "Register response has bad ACLs");
   }
 
-  @Test
-  public void testUnauthorizedAccess() throws Exception {
+  @ParameterizedTest
+  @MethodSource("configs")
+  void testUnauthorizedAccess(final Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     MyContainerManager containerManager = new MyContainerManager();
     rm = new MockRMWithAMS(conf, containerManager);
     rm.start();
@@ -343,15 +304,15 @@ public class TestAMAuthorization {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerTokens);
+    Assertions.assertNotNull(containerManager.containerTokens);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
     waitForLaunchedState(attempt);
 
-    final Configuration conf = rm.getConfig();
-    final YarnRPC rpc = YarnRPC.create(conf);
-    final InetSocketAddress serviceAddr = conf.getSocketAddr(
+    final Configuration config = rm.getConfig();
+    final YarnRPC rpc = YarnRPC.create(config);
+    final InetSocketAddress serviceAddr = config.getSocketAddr(
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
@@ -365,7 +326,7 @@ public class TestAMAuthorization {
           @Override
           public ApplicationMasterProtocol run() {
             return (ApplicationMasterProtocol) rpc.getProxy(ApplicationMasterProtocol.class,
-                serviceAddr, conf);
+                serviceAddr, config);
           }
         });
     
@@ -373,7 +334,7 @@ public class TestAMAuthorization {
         .newRecord(RegisterApplicationMasterRequest.class);
     try {
       client.registerApplicationMaster(request);
-      Assert.fail("Should fail with authorization error");
+      Assertions.fail("Should fail with authorization error");
     } catch (Exception e) {
       if (isCause(AccessControlException.class, e)) {
         // Because there are no tokens, the request should be rejected as the
@@ -385,7 +346,7 @@ public class TestAMAuthorization {
           expectedMessage =
               "SIMPLE authentication is not enabled.  Available:[TOKEN]";
         }
-        Assert.assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
+        Assertions.assertTrue(e.getCause().getMessage().contains(expectedMessage)); 
       } else {
         throw e;
       }
@@ -441,7 +402,7 @@ public class TestAMAuthorization {
           + "Current state is " + attempt.getAppAttemptState());
       Thread.sleep(1000);
     }
-    Assert.assertEquals(attempt.getAppAttemptState(),
+    Assertions.assertEquals(attempt.getAppAttemptState(),
         RMAppAttemptState.LAUNCHED);
   }
 }

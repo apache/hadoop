@@ -38,10 +38,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.preempti
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,15 +53,16 @@ import java.util.Set;
 public class TestCapacitySchedulerLazyPreemption
     extends CapacitySchedulerPreemptionTestBase {
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     conf.setBoolean(CapacitySchedulerConfiguration.LAZY_PREEMPTION_ENABLED,
         true);
   }
 
-  @Test (timeout = 60000)
-  public void testSimplePreemption() throws Exception {
+  @Timeout(60000)
+  @Test
+  void testSimplePreemption() throws Exception {
     /**
      * Test case: Submit two application (app1/app2) to different queues, queue
      * structure:
@@ -117,7 +119,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -132,9 +134,9 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // NM1/NM2 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
         .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
@@ -158,8 +160,8 @@ public class TestCapacitySchedulerLazyPreemption
     Map<ContainerId, RMContainer> killableContainers =
         waitKillableContainersSize(
             pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
-    Assert.assertEquals(1, killableContainers.size());
-    Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
+    Assertions.assertEquals(1, killableContainers.size());
+    Assertions.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
 
     // Call CS.handle once to see if container preempted
@@ -169,22 +171,23 @@ public class TestCapacitySchedulerLazyPreemption
         am2.getApplicationAttemptId());
 
     // App1 has 6 containers, and app2 has 2 containers
-    Assert.assertEquals(6, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(6, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(2, schedulerApp2.getLiveContainers().size());
 
     // Ensure preemption metrics were recored.
-    Assert.assertEquals(
-        "Number of preempted containers incorrectly recorded:", 1,
-        cs.getQueue("a").getMetrics().getAggregatePreemptedContainers());
-    Assert.assertEquals(
-        "Number of preempted containers incorrectly recorded:", 1,
-        cs.getRootQueue().getMetrics().getAggregatePreemptedContainers());
+    Assertions.assertEquals(
+        1, cs.getQueue("a").getMetrics().getAggregatePreemptedContainers(),
+        "Number of preempted containers incorrectly recorded:");
+    Assertions.assertEquals(
+        1, cs.getRootQueue().getMetrics().getAggregatePreemptedContainers(),
+        "Number of preempted containers incorrectly recorded:");
 
     rm1.close();
   }
 
-  @Test (timeout = 60000)
-  public void testPreemptionConsidersNodeLocalityDelay()
+  @Timeout(60000)
+  @Test
+  void testPreemptionConsidersNodeLocalityDelay()
       throws Exception {
     /**
      * Test case: same as testSimplePreemption steps 1-3.
@@ -225,7 +228,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -240,9 +243,9 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // NM1/NM2 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
         .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container with unknown host and unknown rack
@@ -270,7 +273,7 @@ public class TestCapacitySchedulerLazyPreemption
     Map<ContainerId, RMContainer> killableContainers =
         waitKillableContainersSize(
             pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
-    Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
+    Assertions.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
 
     // Call CS.handle once to see if container preempted
@@ -280,21 +283,22 @@ public class TestCapacitySchedulerLazyPreemption
         am2.getApplicationAttemptId());
 
     // App1 has 7 containers, and app2 has 1 containers (no container preempted)
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(1, schedulerApp2.getLiveContainers().size());
 
     // Do allocation again, one container will be preempted
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // App1 has 6 containers, and app2 has 2 containers (new container allocated)
-    Assert.assertEquals(6, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(2, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(6, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(2, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }
 
-  @Test (timeout = 60000)
-  public void testPreemptionConsidersHardNodeLocality()
+  @Timeout(60000)
+  @Test
+  void testPreemptionConsidersHardNodeLocality()
       throws Exception {
     /**
      * Test case: same as testSimplePreemption steps 1-3.
@@ -337,7 +341,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -352,9 +356,9 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // NM1/NM2 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
         .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container for h3 with hard locality,
@@ -383,7 +387,7 @@ public class TestCapacitySchedulerLazyPreemption
     Map<ContainerId, RMContainer> killableContainers =
         waitKillableContainersSize(
             pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
-    Assert.assertEquals(killableContainers.entrySet().iterator().next().getKey()
+    Assertions.assertEquals(killableContainers.entrySet().iterator().next().getKey()
         .getApplicationAttemptId(), am1.getApplicationAttemptId());
 
     // Call CS.handle once to see if container preempted
@@ -393,21 +397,22 @@ public class TestCapacitySchedulerLazyPreemption
         am2.getApplicationAttemptId());
 
     // App1 has 7 containers, and app2 has 1 containers (no container preempted)
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(1, schedulerApp2.getLiveContainers().size());
 
     // Do allocation again, nothing will be preempted
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
 
     // App1 has 7 containers, and app2 has 1 containers (no container allocated)
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(1, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }
 
-  @Test (timeout = 60000)
-  public void testPreemptionPolicyShouldRespectAlreadyMarkedKillableContainers()
+  @Timeout(60000)
+  @Test
+  void testPreemptionPolicyShouldRespectAlreadyMarkedKillableContainers()
       throws Exception {
     /**
      * Test case:
@@ -455,7 +460,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -470,7 +475,7 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // NM1 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
     am2.allocate("*", 1 * GB, 1, new ArrayList<ContainerId>());
 
@@ -490,11 +495,11 @@ public class TestCapacitySchedulerLazyPreemption
     waitKillableContainersSize(pm, "root.a", RMNodeLabelsManager.NO_LABEL, 1);
 
     // Check killable containers and to-be-preempted containers in edit policy
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(0, editPolicy.getToPreemptContainers().size());
 
     // Run edit schedule again, confirm status doesn't changed
     editPolicy.editSchedule();
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(0, editPolicy.getToPreemptContainers().size());
 
     // Save current to kill containers
     Set<ContainerId> previousKillableContainers = new HashSet<>(
@@ -508,17 +513,17 @@ public class TestCapacitySchedulerLazyPreemption
     // Call editPolicy.editSchedule() once, we should have 1 container in to-preempt map
     // and 1 container in killable map
     editPolicy.editSchedule();
-    Assert.assertEquals(1, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(1, editPolicy.getToPreemptContainers().size());
 
     // Call editPolicy.editSchedule() once more, we should have 2 containers killable map
     editPolicy.editSchedule();
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(0, editPolicy.getToPreemptContainers().size());
 
     // Check if previous killable containers included by new killable containers
     Map<ContainerId, RMContainer> killableContainers =
         waitKillableContainersSize(
             pm, "root.a", RMNodeLabelsManager.NO_LABEL, 2);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         Sets.difference(previousKillableContainers, killableContainers.keySet())
             .isEmpty());
   }
@@ -526,9 +531,9 @@ public class TestCapacitySchedulerLazyPreemption
   /*
    * Ignore this test now because it could be a premature optimization
    */
-  @Ignore
-  @Test (timeout = 60000)
-  public void testPreemptionPolicyCleanupKillableContainersWhenNoPreemptionNeeded()
+  @Disabled 
+  @Timeout(60000)  @Test
+  void testPreemptionPolicyCleanupKillableContainersWhenNoPreemptionNeeded()
       throws Exception {
     /**
      * Test case:
@@ -575,7 +580,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -590,7 +595,7 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm1);
 
     // NM1 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
     am2.allocate("*", 3 * GB, 1, new ArrayList<ContainerId>());
 
@@ -612,17 +617,18 @@ public class TestCapacitySchedulerLazyPreemption
     // Change reqeust from 3G to 2G, now we can preempt one less container. (3->2)
     am2.allocate("*", 2 * GB, 1, new ArrayList<ContainerId>());
     editPolicy.editSchedule();
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(0, editPolicy.getToPreemptContainers().size());
     waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
 
     // Call editSchedule once more to make sure still nothing happens
     editPolicy.editSchedule();
-    Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
+    Assertions.assertEquals(0, editPolicy.getToPreemptContainers().size());
     waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
   }
 
-  @Test (timeout = 60000)
-  public void testPreemptionConsidersUserLimit()
+  @Timeout(60000)
+  @Test
+  void testPreemptionConsidersUserLimit()
       throws Exception {
     /**
      * Test case: Submit two application (app1/app2) to different queues, queue
@@ -683,7 +689,7 @@ public class TestCapacitySchedulerLazyPreemption
     // App1 should have 7 containers now, and no available resource for cluster
     FiCaSchedulerApp schedulerApp1 = cs.getApplicationAttempt(
         am1.getApplicationAttemptId());
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
 
     // Submit app2 to queue-c and asks for a 1G container for AM
     MockRMAppSubmissionData data =
@@ -698,9 +704,9 @@ public class TestCapacitySchedulerLazyPreemption
     MockAM am2 = MockRM.launchAndRegisterAM(app2, rm1, nm2);
 
     // NM1/NM2 has available resource = 0G
-    Assert.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm1.getNodeId())
         .getUnallocatedResource().getMemorySize());
-    Assert.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
+    Assertions.assertEquals(0 * GB, cs.getNode(nm2.getNodeId())
         .getUnallocatedResource().getMemorySize());
 
     // AM asks for a 1 * GB container
@@ -724,7 +730,7 @@ public class TestCapacitySchedulerLazyPreemption
     PreemptionManager pm = cs.getPreemptionManager();
     Map<ContainerId, RMContainer> killableContainers =
         waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 0);
-    Assert.assertEquals(0, killableContainers.size());
+    Assertions.assertEquals(0, killableContainers.size());
 
     // Call CS.handle once to see if container preempted
     cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
@@ -733,8 +739,8 @@ public class TestCapacitySchedulerLazyPreemption
         am2.getApplicationAttemptId());
 
     // App1 has 7 containers, and app2 has 1 containers (nothing preempted)
-    Assert.assertEquals(7, schedulerApp1.getLiveContainers().size());
-    Assert.assertEquals(1, schedulerApp2.getLiveContainers().size());
+    Assertions.assertEquals(7, schedulerApp1.getLiveContainers().size());
+    Assertions.assertEquals(1, schedulerApp2.getLiveContainers().size());
 
     rm1.close();
   }
@@ -753,7 +759,7 @@ public class TestCapacitySchedulerLazyPreemption
       wait++;
     }
 
-    Assert.assertEquals(expectedSize, killableContainers.size());
+    Assertions.assertEquals(expectedSize, killableContainers.size());
     return killableContainers;
   }
 }

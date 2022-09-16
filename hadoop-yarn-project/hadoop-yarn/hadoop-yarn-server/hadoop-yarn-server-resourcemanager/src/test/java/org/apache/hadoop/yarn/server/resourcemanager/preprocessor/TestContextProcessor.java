@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
  */
 public class TestContextProcessor {
   @Test
-  public void testContextProcessor() {
+  void testContextProcessor() {
     Map<ContextProcessor, String> contextProcessorsAndValues =
         new HashMap<>();
     contextProcessorsAndValues.put(new NodeLabelProcessor(), "foo");

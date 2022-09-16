@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServicesCapacitySched.assertJsonResponse;
@@ -56,7 +56,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponsePercentageMode()
+  void testSchedulerResponsePercentageMode()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createPercentageConfig();
@@ -73,7 +73,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponsePercentageModeLegacyAutoCreation()
+  void testSchedulerResponsePercentageModeLegacyAutoCreation()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createPercentageConfigLegacyAutoCreation();
@@ -91,7 +91,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
+  void testSchedulerResponseAbsoluteModeLegacyAutoCreation()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createAbsoluteConfigLegacyAutoCreation();
@@ -105,7 +105,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponseAbsoluteMode()
+  void testSchedulerResponseAbsoluteMode()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createAbsoluteConfig();
@@ -122,7 +122,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponseWeightMode()
+  void testSchedulerResponseWeightMode()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfig();
@@ -141,7 +141,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends
   }
 
   @Test
-  public void testSchedulerResponseWeightModeWithAutoCreatedQueues()
+  void testSchedulerResponseWeightModeWithAutoCreatedQueues()
       throws Exception {
     Configuration config = CSConfigGenerator
         .createWeightConfigWithAutoQueueCreationEnabled();

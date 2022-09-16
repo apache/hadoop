@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.PrimaryGroupPlace
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueuePlacementPolicy;
@@ -46,9 +48,9 @@ import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,11 +60,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -83,7 +84,7 @@ public class TestAllocationFileLoaderService {
   private FairScheduler scheduler;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     SystemClock clock = SystemClock.getInstance();
     PlacementManager placementManager = new PlacementManager();
@@ -99,13 +100,13 @@ public class TestAllocationFileLoaderService {
     when(scheduler.getRMContext()).thenReturn(rmContext);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     new File(ALLOC_FILE).delete();
   }
 
   @Test
-  public void testGetAllocationFileFromFileSystem()
+  void testGetAllocationFileFromFileSystem()
       throws IOException, URISyntaxException {
     File baseDir =
         new File(TEST_DIR + Path.SEPARATOR + "getAllocHDFS").getAbsoluteFile();
@@ -131,18 +132,20 @@ public class TestAllocationFileLoaderService {
     hdfsCluster.shutdown(true);
   }
 
-  @Test (expected = UnsupportedFileSystemException.class)
-  public void testDenyGetAllocationFileFromUnsupportedFileSystem()
+  @Test
+  void testDenyGetAllocationFileFromUnsupportedFileSystem()
       throws UnsupportedFileSystemException {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, "badfs:///badfile");
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
+    Assertions.assertThrows(UnsupportedFileSystemException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, "badfs:///badfile");
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
 
-    allocLoader.getAllocationFile(conf);
+      allocLoader.getAllocationFile(conf);
+    });
   }
 
   @Test
-  public void testGetAllocationFileFromClasspath() {
+  void testGetAllocationFileFromClasspath() {
     try {
       FileSystem fs = FileSystem.get(conf);
       conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
@@ -157,8 +160,9 @@ public class TestAllocationFileLoaderService {
     }
   }
 
-  @Test (timeout = 10000)
-  public void testReload() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testReload() throws Exception {
     AllocationFileWriter.create()
         .addQueue(new AllocationFileQueue.Builder("queueA")
             .maxRunningApps(1).build())
@@ -235,7 +239,7 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
-  public void testAllocationFileParsing() throws Exception {
+  void testAllocationFileParsing() throws Exception {
     CustomResourceTypesConfigurationProvider.
         initResourceTypes(A_CUSTOM_RESOURCE);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
@@ -358,23 +362,35 @@ public class TestAllocationFileLoaderService {
     assertEquals(Resources.createResource(0),
         queueConf.getMinResources("root.queueG.queueH"));
 
-    assertNull("Max child resources unexpectedly set for queue root.queueA",
-        queueConf.getMaxChildResources("root.queueA"));
-    assertNull("Max child resources unexpectedly set for queue root.queueB",
-        queueConf.getMaxChildResources("root.queueB"));
-    assertNull("Max child resources unexpectedly set for queue root.queueC",
-        queueConf.getMaxChildResources("root.queueC"));
-    assertNull("Max child resources unexpectedly set for queue root.queueD",
-        queueConf.getMaxChildResources("root.queueD"));
-    assertNull("Max child resources unexpectedly set for queue root.queueE",
-        queueConf.getMaxChildResources("root.queueE"));
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueA"),
+        "Max child resources unexpectedly set for queue root.queueA"
+    );
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueB"),
+        "Max child resources unexpectedly set for queue root.queueB"
+    );
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueC"),
+        "Max child resources unexpectedly set for queue root.queueC"
+    );
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueD"),
+        "Max child resources unexpectedly set for queue root.queueD"
+    );
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueE"),
+        "Max child resources unexpectedly set for queue root.queueE"
+    );
     assertEquals(Resources.createResource(2048, 64),
         queueConf.getMaxChildResources("root.queueF").getResource());
     assertEquals(Resources.createResource(2048, 64),
         queueConf.getMaxChildResources("root.queueG").getResource());
-    assertNull("Max child resources unexpectedly set for "
-        + "queue root.queueG.queueH",
-        queueConf.getMaxChildResources("root.queueG.queueH"));
+    Assertions.assertNull(
+        queueConf.getMaxChildResources("root.queueG.queueH"),
+        "Max child resources unexpectedly set for "
+        + "queue root.queueG.queueH"
+    );
 
     assertEquals(15, queueConf.getQueueMaxApps("root."
         + YarnConfiguration.DEFAULT_QUEUE_NAME));
@@ -482,7 +498,7 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
-  public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
+  void testBackwardsCompatibleAllocationFileParsing() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     AllocationFileLoaderService allocLoader =
         new AllocationFileLoaderService(scheduler);
@@ -599,7 +615,7 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
-  public void testSimplePlacementPolicyFromConf() throws Exception {
+  void testSimplePlacementPolicyFromConf() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.setBoolean(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, false);
@@ -616,9 +632,9 @@ public class TestAllocationFileLoaderService {
     List<PlacementRule> rules = scheduler.getRMContext()
         .getQueuePlacementManager().getPlacementRules();
     assertEquals(2, rules.size());
-    assertEquals(SpecifiedPlacementRule.class, rules.get(0).getClass());
-    assertFalse("Create flag was not set to false",
-        ((FSPlacementRule)rules.get(0)).getCreateFlag());
+    assertEquals(rules.get(0).getClass(), SpecifiedPlacementRule.class);
+    assertFalse(((FSPlacementRule)rules.get(0)).getCreateFlag(),
+        "Create flag was not set to false");
     assertEquals(DefaultPlacementRule.class, rules.get(1).getClass());
   }
 
@@ -626,65 +642,71 @@ public class TestAllocationFileLoaderService {
    * Verify that you can't place queues at the same level as the root queue in
    * the allocations file.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testQueueAlongsideRoot() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+  @Test
+  void testQueueAlongsideRoot() throws Exception {
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .addQueue(new AllocationFileQueue.Builder("root").build())
-        .addQueue(new AllocationFileQueue.Builder("other").build())
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("root").build())
+          .addQueue(new AllocationFileQueue.Builder("other").build())
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   /**
    * Verify that you can't include periods as the queue name in the allocations
    * file.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testQueueNameContainingPeriods() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+  @Test
+  void testQueueNameContainingPeriods() throws Exception {
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .addQueue(new AllocationFileQueue.Builder("parent1.child").build())
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("parent1.child").build())
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   /**
    * Verify that you can't have the queue name with whitespace only in the
    * allocations file.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testQueueNameContainingOnlyWhitespace() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+  @Test
+  void testQueueNameContainingOnlyWhitespace() throws Exception {
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .addQueue(new AllocationFileQueue.Builder("      ").build())
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("      ").build())
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   @Test
-  public void testParentTagWithReservation() throws Exception {
+  void testParentTagWithReservation() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -710,7 +732,7 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
-  public void testParentWithReservation() throws Exception {
+  void testParentWithReservation() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -741,7 +763,7 @@ public class TestAllocationFileLoaderService {
    * as dynamic queues won't be able to inherit this setting.
    */
   @Test
-  public void testParentTagWithMaxAMShare() throws Exception {
+  void testParentTagWithMaxAMShare() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -774,7 +796,7 @@ public class TestAllocationFileLoaderService {
    * maxAMShare element.
    */
   @Test
-  public void testParentWithMaxAMShare() throws Exception {
+  void testParentWithMaxAMShare() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -803,7 +825,7 @@ public class TestAllocationFileLoaderService {
   }
 
   @Test
-  public void testParentTagWithChild() throws Exception {
+  void testParentTagWithChild() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -831,43 +853,47 @@ public class TestAllocationFileLoaderService {
    * Verify that you can't have the queue name with just a non breaking
    * whitespace in the allocations file.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testQueueNameContainingNBWhitespace() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+  @Test
+  void testQueueNameContainingNBWhitespace() throws Exception {
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .addQueue(new AllocationFileQueue.Builder("\u00a0").build())
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("\u00a0").build())
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   /**
    * Verify that defaultQueueSchedulingMode can't accept FIFO as a value.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testDefaultQueueSchedulingModeIsFIFO() throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+  @Test
+  void testDefaultQueueSchedulingModeIsFIFO() throws Exception {
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .fifoDefaultQueueSchedulingPolicy()
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .fifoDefaultQueueSchedulingPolicy()
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   @Test
-  public void testReservableQueue() throws Exception {
+  void testReservableQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -893,11 +919,11 @@ public class TestAllocationFileLoaderService {
     assertTrue(allocConf.isReservable(reservableQueueName));
     Map<FSQueueType, Set<String>> configuredQueues =
         allocConf.getConfiguredQueues();
-    assertTrue("reservable queue is expected be to a parent queue",
-        configuredQueues.get(FSQueueType.PARENT).contains(reservableQueueName));
-    assertFalse("reservable queue should not be a leaf queue",
-        configuredQueues.get(FSQueueType.LEAF)
-          .contains(reservableQueueName));
+    assertTrue(configuredQueues.get(FSQueueType.PARENT).contains(reservableQueueName),
+        "reservable queue is expected be to a parent queue");
+    assertFalse(configuredQueues.get(FSQueueType.LEAF)
+              .contains(reservableQueueName),
+        "reservable queue should not be a leaf queue");
 
     assertTrue(allocConf.getMoveOnExpiry(reservableQueueName));
     assertEquals(ReservationSchedulerConfiguration.DEFAULT_RESERVATION_WINDOW,
@@ -922,24 +948,26 @@ public class TestAllocationFileLoaderService {
    * Verify that you can't have dynamic user queue and reservable queue on
    * the same queue.
    */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testReservableCannotBeCombinedWithDynamicUserQueue()
+  @Test
+  void testReservableCannotBeCombinedWithDynamicUserQueue()
       throws Exception {
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    Assertions.assertThrows(AllocationConfigurationException.class, () -> {
+      conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
-    AllocationFileWriter.create()
-        .addQueue(new AllocationFileQueue.Builder("notboth")
-            .parent(true)
-            .reservation()
-            .build())
-        .writeToFile(ALLOC_FILE);
+      AllocationFileWriter.create()
+          .addQueue(new AllocationFileQueue.Builder("notboth")
+              .parent(true)
+              .reservation()
+              .build())
+          .writeToFile(ALLOC_FILE);
 
-    AllocationFileLoaderService allocLoader =
-        new AllocationFileLoaderService(scheduler);
-    allocLoader.init(conf);
-    ReloadListener confHolder = new ReloadListener();
-    allocLoader.setReloadListener(confHolder);
-    allocLoader.reloadAllocations();
+      AllocationFileLoaderService allocLoader =
+          new AllocationFileLoaderService(scheduler);
+      allocLoader.init(conf);
+      ReloadListener confHolder = new ReloadListener();
+      allocLoader.setReloadListener(confHolder);
+      allocLoader.reloadAllocations();
+    });
   }
 
   private class ReloadListener implements AllocationFileLoaderService.Listener {

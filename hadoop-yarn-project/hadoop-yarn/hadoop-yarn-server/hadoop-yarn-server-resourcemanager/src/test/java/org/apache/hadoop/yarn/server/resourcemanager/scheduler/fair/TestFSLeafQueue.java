@@ -19,9 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,13 +51,13 @@ import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import java.util.Map;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestFSLeafQueue extends FairSchedulerTestBase {
   private final static String ALLOC_FILE = new File(TEST_DIR,
@@ -65,14 +66,14 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
   private static final float MAX_AM_SHARE = 0.5f;
   private static final String CUSTOM_RESOURCE = "test1";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = createConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
         ResourceScheduler.class);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     if (resourceManager != null) {
       resourceManager.stop();
@@ -82,7 +83,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testUpdateDemand() {
+  void testUpdateDemand() {
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
     resourceManager = new MockRM(conf);
     resourceManager.start();
@@ -105,12 +106,13 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     schedulable.updateDemand();
 
-    assertTrue("Demand is greater than max allowed ",
-        Resources.equals(schedulable.getDemand(), maxResource));
+    assertTrue(Resources.equals(schedulable.getDemand(), maxResource),
+        "Demand is greater than max allowed ");
   }
 
-  @Test (timeout = 5000)
-  public void test() {
+  @Timeout(5000)
+  @Test
+  void test() {
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
     AllocationFileWriter.create()
@@ -151,7 +153,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testConcurrentAccess() {
+  void testConcurrentAccess() {
     conf.set(FairSchedulerConfiguration.ASSIGN_MULTIPLE, "false");
     resourceManager = new MockRM(conf);
     resourceManager.start();
@@ -220,19 +222,19 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
       // start all test runners
       startBlocker.countDown();
       int testTimeout = 2;
-      assertTrue("Timeout waiting for more than " + testTimeout + " seconds",
-          allDone.await(testTimeout, TimeUnit.SECONDS));
+      assertTrue(allDone.await(testTimeout, TimeUnit.SECONDS),
+          "Timeout waiting for more than " + testTimeout + " seconds");
     } catch (InterruptedException ie) {
       exceptions.add(ie);
     } finally {
       threadPool.shutdownNow();
     }
-    assertTrue("Test failed with exception(s)" + exceptions,
-        exceptions.isEmpty());
+    assertTrue(exceptions.isEmpty(),
+        "Test failed with exception(s)" + exceptions);
   }
 
   @Test
-  public void testCanRunAppAMReturnsTrue() {
+  void testCanRunAppAMReturnsTrue() {
     conf.set(YarnConfiguration.RESOURCE_TYPES, CUSTOM_RESOURCE);
     ResourceUtils.resetResourceTypes(conf);
 
@@ -268,7 +270,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
         verifyQueueMetricsForCustomResources(queue);
 
     boolean result = queue.canRunAppAM(appAMResource);
-    assertTrue("AM should have been allocated!", result);
+    assertTrue(result, "AM should have been allocated!");
 
     verifyAMShare(queue, expectedAMShare, customResourceValues);
   }
@@ -282,7 +284,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testCanRunAppAMReturnsFalse() {
+  void testCanRunAppAMReturnsFalse() {
     conf.set(YarnConfiguration.RESOURCE_TYPES, CUSTOM_RESOURCE);
     ResourceUtils.resetResourceTypes(conf);
 
@@ -318,7 +320,7 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
         verifyQueueMetricsForCustomResources(queue);
 
     boolean result = queue.canRunAppAM(appAMResource);
-    assertFalse("AM should not have been allocated!", result);
+    assertFalse(result, "AM should not have been allocated!");
 
     verifyAMShare(queue, expectedAMShare, customResourceValues);
   }
@@ -338,8 +340,8 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
 
     //make sure to verify custom resource value explicitly!
     assertEquals(5L, customResourceValue);
-    assertEquals("AM share is not the expected!", expectedAMShare,
-        actualAMShare);
+    assertEquals(expectedAMShare, actualAMShare,
+        "AM share is not the expected!");
   }
 
   private Map<String, Long> verifyQueueMetricsForCustomResources(
@@ -348,10 +350,10 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
         schedulable.getMetrics().getCustomResources().getMaxAMShare();
     Map<String, Long> customResourceValues = maxAMShareCustomResources
         .getValues();
-    assertNotNull("Queue metrics for custom resources should not be null!",
-        maxAMShareCustomResources);
-    assertNotNull("Queue metrics for custom resources resource values " +
-        "should not be null!", customResourceValues);
+    assertNotNull(maxAMShareCustomResources,
+        "Queue metrics for custom resources should not be null!");
+    assertNotNull(customResourceValues, "Queue metrics for custom resources resource values " +
+        "should not be null!");
     return customResourceValues;
   }
 }

@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestMappingRule {
   VariableContext setupVariables(
@@ -56,7 +56,7 @@ public class TestMappingRule {
   }
 
   @Test
-  public void testMappingRuleEvaluation() {
+  void testMappingRuleEvaluation() {
     VariableContext matching = setupVariables(
         "bob", "developer", "users", "MR");
     VariableContext mismatching = setupVariables(
@@ -106,7 +106,7 @@ public class TestMappingRule {
   }
 
   @Test
-  public void testLegacyEvaluation() {
+  void testLegacyEvaluation() {
     VariableContext matching = setupVariables(
         "bob", "developer", "users", "MR");
     matching.putExtraDataset("groups", Sets.newHashSet("developer"));
@@ -134,13 +134,13 @@ public class TestMappingRule {
   }
 
   @Test
-  public void testToStrings() {
+  void testToStrings() {
     MappingRuleAction action = new MappingRuleActions.PlaceToQueueAction(
         "queue", true);
     MappingRuleMatcher matcher = MappingRuleMatchers.createUserMatcher("bob");
     MappingRule rule = new MappingRule(matcher, action);
 
-    assertEquals("MappingRule{matcher=" + matcher.toString() +
+    assertEquals("MappingRule{matcher=" + matcher +
         ", action=" + action.toString() + "}", rule.toString());
   }
 }

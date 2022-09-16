@@ -19,13 +19,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedList;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 /**
  * Base class for the persistent {@link YarnConfigurationStore}
@@ -38,7 +38,7 @@ public abstract class PersistentConfigurationStoreBaseTest extends
   abstract Version getVersion();
 
   @Test
-  public void testGetConfigurationVersion() throws Exception {
+  void testGetConfigurationVersion() throws Exception {
     confStore.initialize(conf, schedConf, rmContext);
     long v1 = confStore.getConfigVersion();
     assertEquals(1, v1);
@@ -49,7 +49,7 @@ public abstract class PersistentConfigurationStoreBaseTest extends
   }
 
   @Test
-  public void testPersistConfiguration() throws Exception {
+  void testPersistConfiguration() throws Exception {
     schedConf.set("key", "val");
     confStore.initialize(conf, schedConf, rmContext);
     assertEquals("val", confStore.retrieve().get("key"));
@@ -65,7 +65,7 @@ public abstract class PersistentConfigurationStoreBaseTest extends
   }
 
   @Test
-  public void testPersistUpdatedConfiguration() throws Exception {
+  void testPersistUpdatedConfiguration() throws Exception {
     confStore.initialize(conf, schedConf, rmContext);
     assertNull(confStore.retrieve().get("key"));
 
@@ -84,7 +84,7 @@ public abstract class PersistentConfigurationStoreBaseTest extends
 
 
   @Test
-  public void testVersion() throws Exception {
+  void testVersion() throws Exception {
     confStore.initialize(conf, schedConf, rmContext);
     assertNull(confStore.getConfStoreVersion());
     confStore.checkVersion();
@@ -94,9 +94,11 @@ public abstract class PersistentConfigurationStoreBaseTest extends
   }
 
   @Test
-  public void testMaxLogs() throws Exception {
-    assumeFalse("test should be skipped for TestFSSchedulerConfigurationStore",
-      this instanceof TestFSSchedulerConfigurationStore);
+  void testMaxLogs() throws Exception {
+    assumeFalse(
+        this instanceof TestFSSchedulerConfigurationStore,
+        "test should be skipped for TestFSSchedulerConfigurationStore"
+    );
 
     conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 2);
     confStore.initialize(conf, schedConf, rmContext);

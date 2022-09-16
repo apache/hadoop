@@ -31,18 +31,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Tests {@link LeveldbConfigurationStore}.
@@ -57,7 +59,7 @@ public class TestLeveldbConfigurationStore extends
           System.getProperty("java.io.tmpdir")),
       TestLeveldbConfigurationStore.class.getName());
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     FileUtil.fullyDelete(TEST_DIR);
@@ -66,25 +68,27 @@ public class TestLeveldbConfigurationStore extends
     conf.set(YarnConfiguration.RM_SCHEDCONF_STORE_PATH, TEST_DIR.toString());
   }
 
-  @Test(expected = YarnConfStoreVersionIncompatibleException.class)
-  public void testIncompatibleVersion() throws Exception {
-    try {
-      confStore.initialize(conf, schedConf, rmContext);
+  @Test
+  void testIncompatibleVersion() throws Exception {
+    Assertions.assertThrows(YarnConfStoreVersionIncompatibleException.class, () -> {
+      try {
+        confStore.initialize(conf, schedConf, rmContext);
 
-      Version otherVersion = Version.newInstance(1, 1);
-      ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
+        Version otherVersion = Version.newInstance(1, 1);
+        ((LeveldbConfigurationStore) confStore).storeVersion(otherVersion);
 
-      assertEquals("The configuration store should have stored the new" +
-              "version.", otherVersion,
-          confStore.getConfStoreVersion());
-      confStore.checkVersion();
-    } finally {
-      confStore.close();
-    }
+        assertEquals(otherVersion, confStore.getConfStoreVersion(),
+            "The configuration store should have stored the new" +
+                "version.");
+        confStore.checkVersion();
+      } finally {
+        confStore.close();
+      }
+    });
   }
 
   @Test
-  public void testDisableAuditLogs() throws Exception {
+  void testDisableAuditLogs() throws Exception {
     conf.setLong(YarnConfiguration.RM_SCHEDCONF_MAX_LOGS, 0);
     confStore.initialize(conf, schedConf, rmContext);
 
@@ -102,7 +106,7 @@ public class TestLeveldbConfigurationStore extends
         break;
       }
     }
-    assertFalse("Audit Log is not disabled", logKeyPresent);
+    assertFalse(logKeyPresent, "Audit Log is not disabled");
     confStore.close();
   }
 
@@ -112,7 +116,7 @@ public class TestLeveldbConfigurationStore extends
    * @throws Exception
    */
   @Test
-  public void testRestartReadsFromUpdatedStore() throws Exception {
+  void testRestartReadsFromUpdatedStore() throws Exception {
     ResourceManager rm1 = new MockRM(conf);
     rm1.start();
     assertNull(((MutableConfScheduler) rm1.getResourceScheduler())

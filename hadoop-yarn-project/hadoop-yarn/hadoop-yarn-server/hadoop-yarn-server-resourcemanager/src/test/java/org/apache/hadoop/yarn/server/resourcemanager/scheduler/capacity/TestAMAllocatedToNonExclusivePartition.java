@@ -40,9 +40,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -50,7 +50,7 @@ public class TestAMAllocatedToNonExclusivePartition {
   private Configuration conf;
   private RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -73,7 +73,7 @@ public class TestAMAllocatedToNonExclusivePartition {
    * of {@code YarnConfiguration.AM_ALLOW_NON_EXCLUSIVE_ALLOCATION} is true.
    */
   @Test
-  public void testAMAllowToNonExclusivePartition() throws Exception {
+  void testAMAllowToNonExclusivePartition() throws Exception {
     conf.setBoolean(YarnConfiguration.AM_ALLOW_NON_EXCLUSIVE_ALLOCATION, true);
 
     mgr.addToCluserNodeLabels(
@@ -116,7 +116,7 @@ public class TestAMAllocatedToNonExclusivePartition {
     // Request a container and it also should be allocated to non-partition node of h1
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
-    Assert.assertTrue(rm1.waitForState(nm1, containerId, RMContainerState.ALLOCATED));
+    Assertions.assertTrue(rm1.waitForState(nm1, containerId, RMContainerState.ALLOCATED));
 
     rm1.close();
   }

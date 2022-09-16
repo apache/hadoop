@@ -19,87 +19,87 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestWeightToWeightConverter extends WeightConverterTestBase {
   private WeightToWeightConverter converter;
   private Configuration config;
 
-  @Before
+  @BeforeEach
   public void setup() {
     converter = new WeightToWeightConverter();
     config = new Configuration(false);
   }
 
   @Test
-  public void testNoChildQueueConversion() {
+  void testNoChildQueueConversion() {
     FSQueue root = createFSQueues();
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("root weight", "1.0w",
-        config.get(PREFIX + "root.capacity"));
-    assertEquals("Converted items", 2,
-        config.getPropsWithPrefix(PREFIX).size());
+    assertEquals("1.0w", config.get(PREFIX + "root.capacity"),
+        "root weight");
+    assertEquals(2, config.getPropsWithPrefix(PREFIX).size(),
+        "Converted items");
   }
 
   @Test
-  public void testSingleWeightConversion() {
+  void testSingleWeightConversion() {
     FSQueue root = createFSQueues(1);
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("root weight", "1.0w",
-        config.get(PREFIX + "root.capacity"));
-    assertEquals("root.a weight", "1.0w",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("Number of properties", 3,
-        config.getPropsWithPrefix(PREFIX).size());
+    assertEquals("1.0w", config.get(PREFIX + "root.capacity"),
+        "root weight");
+    assertEquals("1.0w", config.get(PREFIX + "root.a.capacity"),
+        "root.a weight");
+    assertEquals(3, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
   }
 
   @Test
-  public void testMultiWeightConversion() {
+  void testMultiWeightConversion() {
     FSQueue root = createFSQueues(1, 2, 3);
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 5,
-        config.getPropsWithPrefix(PREFIX).size());
-    assertEquals("root weight", "1.0w",
-        config.get(PREFIX + "root.capacity"));
-    assertEquals("root.a weight", "1.0w",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("root.b weight", "2.0w",
-        config.get(PREFIX + "root.b.capacity"));
-    assertEquals("root.c weight", "3.0w",
-        config.get(PREFIX + "root.c.capacity"));
+    assertEquals(5, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
+    assertEquals("1.0w", config.get(PREFIX + "root.capacity"),
+        "root weight");
+    assertEquals("1.0w", config.get(PREFIX + "root.a.capacity"),
+        "root.a weight");
+    assertEquals("2.0w", config.get(PREFIX + "root.b.capacity"),
+        "root.b weight");
+    assertEquals("3.0w", config.get(PREFIX + "root.c.capacity"),
+        "root.c weight");
   }
 
   @Test
-  public void testAutoCreateV2FlagOnParent() {
+  void testAutoCreateV2FlagOnParent() {
     FSQueue root = createFSQueues(1);
     converter.convertWeightsForChildQueues(root, config);
 
-    assertTrue("root autocreate v2 enabled",
-        config.getBoolean(PREFIX + "root.auto-queue-creation-v2.enabled",
-            false));
+    assertTrue(config.getBoolean(PREFIX + "root.auto-queue-creation-v2.enabled",
+            false),
+        "root autocreate v2 enabled");
   }
 
   @Test
-  public void testAutoCreateV2FlagOnParentWithoutChildren() {
+  void testAutoCreateV2FlagOnParentWithoutChildren() {
     FSQueue root = createParent(new ArrayList<>());
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 2,
-        config.getPropsWithPrefix(PREFIX).size());
-    assertTrue("root autocreate v2 enabled",
-        config.getBoolean(PREFIX + "root.auto-queue-creation-v2.enabled",
-            false));
+    assertEquals(2, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
+    assertTrue(config.getBoolean(PREFIX + "root.auto-queue-creation-v2.enabled",
+            false),
+        "root autocreate v2 enabled");
   }
 }

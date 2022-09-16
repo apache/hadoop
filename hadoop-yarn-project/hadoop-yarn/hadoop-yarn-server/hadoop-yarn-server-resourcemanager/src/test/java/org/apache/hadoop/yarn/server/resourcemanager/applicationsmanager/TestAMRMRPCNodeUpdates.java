@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,15 +42,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestAMRMRPCNodeUpdates {
   private MockRM rm;
   private ApplicationMasterService amService;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.rm = new MockRM() {
       @Override
@@ -66,7 +66,7 @@ public class TestAMRMRPCNodeUpdates {
     amService = rm.getApplicationMasterService();
   }
   
-  @After
+  @AfterEach
   public void tearDown() {
     if (rm != null) {
       this.rm.stop();
@@ -115,7 +115,7 @@ public class TestAMRMRPCNodeUpdates {
   }
 
   @Test
-  public void testAMRMDecommissioningNodes() throws Exception {
+  void testAMRMDecommissioningNodes() throws Exception {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     rm.drainEvents();
@@ -139,16 +139,16 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response1 =
         allocate(attempt1.getAppAttemptId(), allocateRequest1);
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     NodeReport nr = updatedNodes.iterator().next();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         decommissioningTimeout, nr.getDecommissioningTimeout());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
   }
 
   @Test
-  public void testAMRMRecommissioningNodes() throws Exception {
+  void testAMRMRecommissioningNodes() throws Exception {
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
     rm.drainEvents();
@@ -173,11 +173,11 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response1 =
             allocate(attempt1.getAppAttemptId(), allocateRequest1);
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     NodeReport nr = updatedNodes.iterator().next();
-    Assert.assertEquals(
+    Assertions.assertEquals(
             decommissioningTimeout, nr.getDecommissioningTimeout());
-    Assert.assertEquals(
+    Assertions.assertEquals(
             NodeUpdateType.NODE_DECOMMISSIONING, nr.getNodeUpdateType());
 
     // Wait for nm2 to RECOMMISSION
@@ -188,14 +188,14 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response2 =
             allocate(attempt1.getAppAttemptId(), allocateRequest2);
     List<NodeReport> updatedNodes2 = response2.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes2.size());
+    Assertions.assertEquals(1, updatedNodes2.size());
     NodeReport nr2 = updatedNodes2.iterator().next();
-    Assert.assertEquals(
+    Assertions.assertEquals(
             NodeUpdateType.NODE_USABLE, nr2.getNodeUpdateType());
   }
 
   @Test
-  public void testAMRMUnusableNodes() throws Exception {
+  void testAMRMUnusableNodes() throws Exception {
     
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 10000);
     MockNM nm2 = rm.registerNode("127.0.0.2:1234", 10000);
@@ -220,7 +220,7 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response1 =
         allocate(attempt1.getAppAttemptId(), allocateRequest1);
     List<NodeReport> updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(0, updatedNodes.size());
+    Assertions.assertEquals(0, updatedNodes.size());
 
     syncNodeHeartbeat(nm4, false);
     
@@ -230,22 +230,22 @@ public class TestAMRMRPCNodeUpdates {
           null);
     response1 = allocate(attempt1.getAppAttemptId(), allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     NodeReport nr = updatedNodes.iterator().next();
-    Assert.assertEquals(nm4.getNodeId(), nr.getNodeId());
-    Assert.assertEquals(NodeState.UNHEALTHY, nr.getNodeState());
-    Assert.assertNull(nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
+    Assertions.assertEquals(nm4.getNodeId(), nr.getNodeId());
+    Assertions.assertEquals(NodeState.UNHEALTHY, nr.getNodeState());
+    Assertions.assertNull(nr.getDecommissioningTimeout());
+    Assertions.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
     
     // resending the allocate request returns the same result
     response1 = allocate(attempt1.getAppAttemptId(), allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
-    Assert.assertEquals(nm4.getNodeId(), nr.getNodeId());
-    Assert.assertEquals(NodeState.UNHEALTHY, nr.getNodeState());
-    Assert.assertNull(nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
+    Assertions.assertEquals(nm4.getNodeId(), nr.getNodeId());
+    Assertions.assertEquals(NodeState.UNHEALTHY, nr.getNodeState());
+    Assertions.assertNull(nr.getDecommissioningTimeout());
+    Assertions.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
 
     syncNodeLost(nm3);
     
@@ -255,12 +255,12 @@ public class TestAMRMRPCNodeUpdates {
           null);
     response1 = allocate(attempt1.getAppAttemptId(), allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
-    Assert.assertEquals(nm3.getNodeId(), nr.getNodeId());
-    Assert.assertEquals(NodeState.LOST, nr.getNodeState());
-    Assert.assertNull(nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
+    Assertions.assertEquals(nm3.getNodeId(), nr.getNodeId());
+    Assertions.assertEquals(NodeState.LOST, nr.getNodeState());
+    Assertions.assertNull(nr.getDecommissioningTimeout());
+    Assertions.assertEquals(NodeUpdateType.NODE_UNUSABLE, nr.getNodeUpdateType());
         
     // registering another AM gives it the complete failed list
     RMApp app2 = MockRMAppSubmitter.submitWithMemory(2000, rm);
@@ -278,7 +278,7 @@ public class TestAMRMRPCNodeUpdates {
     AllocateResponse response2 =
         allocate(attempt2.getAppAttemptId(), allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
-    Assert.assertEquals(0, updatedNodes.size());
+    Assertions.assertEquals(0, updatedNodes.size());
     
     syncNodeHeartbeat(nm4, true);
     
@@ -288,24 +288,24 @@ public class TestAMRMRPCNodeUpdates {
           null);
     response1 = allocate(attempt1.getAppAttemptId(), allocateRequest1);
     updatedNodes = response1.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
-    Assert.assertEquals(nm4.getNodeId(), nr.getNodeId());
-    Assert.assertEquals(NodeState.RUNNING, nr.getNodeState());
-    Assert.assertNull(nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_USABLE, nr.getNodeUpdateType());
+    Assertions.assertEquals(nm4.getNodeId(), nr.getNodeId());
+    Assertions.assertEquals(NodeState.RUNNING, nr.getNodeState());
+    Assertions.assertNull(nr.getDecommissioningTimeout());
+    Assertions.assertEquals(NodeUpdateType.NODE_USABLE, nr.getNodeUpdateType());
     
     allocateRequest2 =
         AllocateRequest.newInstance(response2.getResponseId(), 0F, null, null,
           null);
     response2 = allocate(attempt2.getAppAttemptId(), allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
-    Assert.assertEquals(1, updatedNodes.size());
+    Assertions.assertEquals(1, updatedNodes.size());
     nr = updatedNodes.iterator().next();
-    Assert.assertEquals(nm4.getNodeId(), nr.getNodeId());
-    Assert.assertEquals(NodeState.RUNNING, nr.getNodeState());
-    Assert.assertNull(nr.getDecommissioningTimeout());
-    Assert.assertEquals(NodeUpdateType.NODE_USABLE, nr.getNodeUpdateType());
+    Assertions.assertEquals(nm4.getNodeId(), nr.getNodeId());
+    Assertions.assertEquals(NodeState.RUNNING, nr.getNodeState());
+    Assertions.assertNull(nr.getDecommissioningTimeout());
+    Assertions.assertEquals(NodeUpdateType.NODE_USABLE, nr.getNodeUpdateType());
 
     // subsequent allocate calls should return no updated nodes
     allocateRequest2 =
@@ -313,7 +313,7 @@ public class TestAMRMRPCNodeUpdates {
           null);
     response2 = allocate(attempt2.getAppAttemptId(), allocateRequest2);
     updatedNodes = response2.getUpdatedNodes();
-    Assert.assertEquals(0, updatedNodes.size());
+    Assertions.assertEquals(0, updatedNodes.size());
     
     // how to do the above for LOST node
   

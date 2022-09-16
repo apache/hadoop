@@ -57,9 +57,10 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.rules.TestName;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
@@ -80,11 +81,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_KILLABLE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType.MARK_CONTAINER_FOR_PREEMPTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -141,9 +142,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     }
   };  
 
-  @Rule public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   @SuppressWarnings("unchecked")
   public void setup() {
     conf = new CapacitySchedulerConfiguration(new Configuration(false));
@@ -182,11 +181,15 @@ public class TestProportionalCapacityPreemptionPolicy {
     Dispatcher disp = mock(Dispatcher.class);
     when(rmContext.getDispatcher()).thenReturn(disp);
     when(disp.getEventHandler()).thenReturn(mDisp);
-    rand = new Random();
-    long seed = rand.nextLong();
-    System.out.println(name.getMethodName() + " SEED: " + seed);
-    rand.setSeed(seed);
     appAlloc = 0;
+    rand = new Random();
+  }
+
+  @BeforeEach
+  public void setup(final TestInfo name) {
+    long seed = rand.nextLong();
+    rand.setSeed(seed);
+    System.out.println(name.getDisplayName() + " SEED: " + seed);
   }
 
   private static final int[][] Q_DATA_FOR_IGNORE = new int[][]{
@@ -202,7 +205,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   };
 
   @Test
-  public void testIgnore() {
+  void testIgnore() {
     ProportionalCapacityPreemptionPolicy policy =
         buildPolicy(Q_DATA_FOR_IGNORE);
     policy.editSchedule();
@@ -211,7 +214,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testProportionalPreemption() {
+  void testProportionalPreemption() {
     int[][] qData = new int[][]{
       //  /   A   B   C  D
       { 100, 10, 40, 20, 30 },  // abs
@@ -231,7 +234,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testMaxCap() {
+  void testMaxCap() {
     int[][] qData = new int[][]{
         //  /   A   B   C
         { 100, 40, 40, 20 },  // abs
@@ -251,7 +254,7 @@ public class TestProportionalCapacityPreemptionPolicy {
 
   
   @Test
-  public void testPreemptCycle() {
+  void testPreemptCycle() {
     int[][] qData = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
@@ -270,7 +273,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testExpireKill() {
+  void testExpireKill() {
     final long killTime = 10000L;
     int[][] qData = new int[][]{
       //  /   A   B   C
@@ -310,7 +313,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testDeadzone() {
+  void testDeadzone() {
     int[][] qData = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
@@ -332,7 +335,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemption() {
+  void testPerQueueDisablePreemption() {
     int[][] qData = new int[][]{
         //  /    A    B    C
         { 100,  55,  25,  20 },  // abs
@@ -359,6 +362,7 @@ public class TestProportionalCapacityPreemptionPolicy {
     // event handler will count only events from the following test and not the
     // previous one.
     setup();
+    setup(null);
     conf.setPreemptionDisabled("root.queueB", false);
     ProportionalCapacityPreemptionPolicy policy2 = buildPolicy(qData);
 
@@ -369,7 +373,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemptionHierarchical() {
+  void testPerQueueDisablePreemptionHierarchical() {
     int[][] qData = new int[][] {
       //  /    A              D
       //            B    C         E    F
@@ -391,8 +395,8 @@ public class TestProportionalCapacityPreemptionPolicy {
     ApplicationAttemptId expectedAttemptOnQueueB = 
         ApplicationAttemptId.newInstance(
             appA.getApplicationId(), appA.getAttemptId());
-    assertTrue("appA should be running on queueB",
-        mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB));
+    assertTrue(mCS.getAppsInQueue("queueB").contains(expectedAttemptOnQueueB),
+        "appA should be running on queueB");
     verify(mDisp, times(10)).handle(argThat(new IsPreemptionRequestFor(appA)));
 
     // Need to call setup() again to reset mDisp
@@ -409,10 +413,10 @@ public class TestProportionalCapacityPreemptionPolicy {
             appC.getApplicationId(), appC.getAttemptId());
     // Now, all of queueB's (appA) over capacity is not preemptable, so neither
     // is queueA's. Verify that capacity is taken from queueE (appC).
-    assertTrue("appB should be running on queueC",
-        mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC));
-    assertTrue("appC should be running on queueE",
-        mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE));
+    assertTrue(mCS.getAppsInQueue("queueC").contains(expectedAttemptOnQueueC),
+        "appB should be running on queueC");
+    assertTrue(mCS.getAppsInQueue("queueE").contains(expectedAttemptOnQueueE),
+        "appC should be running on queueE");
     // Resources should have come from queueE (appC) and neither of queueA's
     // children.
     verify(mDisp, never()).handle(argThat(new IsPreemptionRequestFor(appA)));
@@ -420,7 +424,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemptionBroadHierarchical() {
+  void testPerQueueDisablePreemptionBroadHierarchical() {
     int[][] qData = new int[][] {
         //  /    A              D              G    
         //            B    C         E    F         H    I
@@ -471,7 +475,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemptionInheritParent() {
+  void testPerQueueDisablePreemptionInheritParent() {
     int[][] qData = new int[][] {
         //  /    A                   E          
         //            B    C    D         F    G    H
@@ -507,7 +511,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueuePreemptionNotAllUntouchable() {
+  void testPerQueuePreemptionNotAllUntouchable() {
     int[][] qData = new int[][] {
       //  /      A                       E
       //               B     C     D           F     G     H
@@ -530,7 +534,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemptionRootDisablesAll() {
+  void testPerQueueDisablePreemptionRootDisablesAll() {
     int[][] qData = new int[][] {
         //  /    A              D              G    
         //            B    C         E    F         H    I
@@ -557,7 +561,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPerQueueDisablePreemptionOverAbsMaxCapacity() {
+  void testPerQueueDisablePreemptionOverAbsMaxCapacity() {
     int[][] qData = new int[][] {
         //  /    A              D
         //            B    C         E    F
@@ -581,7 +585,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testOverCapacityImbalance() {
+  void testOverCapacityImbalance() {
     int[][] qData = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
@@ -600,7 +604,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testNaturalTermination() {
+  void testNaturalTermination() {
     int[][] qData = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
@@ -623,7 +627,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testObserveOnly() {
+  void testObserveOnly() {
     int[][] qData = new int[][]{
       //  /   A   B   C
       { 100, 40, 40, 20 },  // abs
@@ -646,7 +650,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testHierarchical() {
+  void testHierarchical() {
     int[][] qData = new int[][] {
       //  /    A   B   C    D   E   F
       { 200, 100, 50, 50, 100, 10, 90 },  // abs
@@ -666,7 +670,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testHierarchicalWithReserved() {
+  void testHierarchicalWithReserved() {
     int[][] qData = new int[][] {
         //  /    A   B   C    D   E   F
         { 200, 100, 50, 50, 100, 10, 90 },  // abs
@@ -686,7 +690,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testZeroGuar() {
+  void testZeroGuar() {
     int[][] qData = new int[][] {
       //  /    A   B   C    D   E   F
         { 200, 100, 0, 99, 100, 10, 90 },  // abs
@@ -706,7 +710,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testZeroGuarOverCap() {
+  void testZeroGuarOverCap() {
     int[][] qData = new int[][] {
       //  /    A   B   C    D   E   F
          { 200, 100, 0, 100, 0, 100, 100 },  // abs
@@ -729,7 +733,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testHierarchicalLarge() {
+  void testHierarchicalLarge() {
     int[][] qData = new int[][] {
       //  /    A              D              G        
       //            B    C         E    F         H    I
@@ -755,7 +759,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testContainerOrdering(){
+  void testContainerOrdering(){
 
     List<RMContainer> containers = new ArrayList<RMContainer>();
 
@@ -790,7 +794,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testPolicyInitializeAfterSchedulerInitialized() {
+  void testPolicyInitializeAfterSchedulerInitialized() {
     @SuppressWarnings("resource")
     MockRM rm = new MockRM(conf);
     rm.init(conf);
@@ -817,7 +821,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testSkipAMContainer() {
+  void testSkipAMContainer() {
     int[][] qData = new int[][] {
         //  /   A   B
         { 100, 50, 50 }, // abs
@@ -848,7 +852,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPreemptSkippedAMContainers() {
+  void testPreemptSkippedAMContainers() {
     int[][] qData = new int[][] {
         //  /   A   B
         { 100, 10, 90 }, // abs
@@ -881,7 +885,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
   
   @Test
-  public void testAMResourcePercentForSkippedAMContainers() {
+  void testAMResourcePercentForSkippedAMContainers() {
     int[][] qData = new int[][] {
         //  /   A   B
         { 100, 10, 90 }, // abs
@@ -918,7 +922,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPreemptionWithVCoreResource() {
+  void testPreemptionWithVCoreResource() {
     int[][] qData = new int[][]{
         // / A B
         {100, 100, 100}, // maxcap
@@ -946,7 +950,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testHierarchicalLarge3Levels() {
+  void testHierarchicalLarge3Levels() {
     int[][] qData = new int[][] {
       //  /    A                      F               I
       //            B    C                  G    H          J    K
@@ -983,7 +987,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testHierarchicalLarge3LevelsWithReserved() {
+  void testHierarchicalLarge3LevelsWithReserved() {
     int[][] qData = new int[][] {
         //  /    A                      F               I
         //            B    C                  G    H          J    K
@@ -1018,7 +1022,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testPreemptionNotHappenForSingleReservedQueue() {
+  void testPreemptionNotHappenForSingleReservedQueue() {
     /*
      * Test case to make sure, when reserved > pending, preemption will not
      * happen if there's only one demanding queue.
@@ -1044,7 +1048,7 @@ public class TestProportionalCapacityPreemptionPolicy {
 
 
   @Test
-  public void testRefreshPreemptionProperties() throws Exception {
+  void testRefreshPreemptionProperties() throws Exception {
     ProportionalCapacityPreemptionPolicy policy =
         buildPolicy(Q_DATA_FOR_IGNORE);
 
@@ -1073,7 +1077,7 @@ public class TestProportionalCapacityPreemptionPolicy {
   }
 
   @Test
-  public void testLeafQueueNameExtraction() throws Exception {
+  void testLeafQueueNameExtraction() throws Exception {
     ProportionalCapacityPreemptionPolicy policy =
         buildPolicy(Q_DATA_FOR_IGNORE);
     ParentQueue root = (ParentQueue) mCS.getRootQueue();
@@ -1109,8 +1113,8 @@ public class TestProportionalCapacityPreemptionPolicy {
 
     policy.editSchedule();
 
-    assertFalse("dynamicParent should not be a LeafQueue " +
-        "candidate", policy.getLeafQueueNames().contains("root.dynamicParent"));
+    assertFalse(policy.getLeafQueueNames().contains("root.dynamicParent"), "dynamicParent should not be a LeafQueue " +
+        "candidate");
   }
 
   static class IsPreemptionRequestFor

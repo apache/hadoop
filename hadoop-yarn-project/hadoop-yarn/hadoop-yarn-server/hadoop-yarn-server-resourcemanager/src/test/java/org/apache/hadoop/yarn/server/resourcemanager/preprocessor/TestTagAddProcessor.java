@@ -22,7 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
 
 
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.*;
  */
 public class TestTagAddProcessor {
   @Test
-  public void testTagAddProcessor() {
+  void testTagAddProcessor() {
     ContextProcessor tagAddProcessor = new TagAddProcessor();
     ApplicationId app = ApplicationId.newInstance(123456, 111);
     ApplicationSubmissionContext applicationSubmissionContext =

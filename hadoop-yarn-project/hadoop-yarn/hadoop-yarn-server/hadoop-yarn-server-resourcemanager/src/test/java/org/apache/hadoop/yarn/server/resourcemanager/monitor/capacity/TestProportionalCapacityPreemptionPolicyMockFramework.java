@@ -23,14 +23,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframew
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestProportionalCapacityPreemptionPolicyMockFramework
     extends ProportionalCapacityPreemptionPolicyMockFramework {
 
   @Test
-  public void testBuilder() throws Exception {
+  void testBuilder() throws Exception {
     /**
      * Test of test, make sure we build expected mock schedulable objects
      */
@@ -104,7 +104,7 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkAbsCapacities(cs.getQueue("a2"), "blue", 0.5f, 1f, 0f);
     checkPendingResource(cs.getQueue("a2"), "blue", 200);
     checkPriority(cs.getQueue("a2"), 2);
-    Assert.assertFalse(cs.getQueue("a2").getPreemptionDisabled());
+    Assertions.assertFalse(cs.getQueue("a2").getPreemptionDisabled());
 
     // b
     checkAbsCapacities(cs.getQueue("b"), "", 0.5f, 1f, 0f);
@@ -114,16 +114,16 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     checkAbsCapacities(cs.getQueue("b"), "blue", 0f, 0f, 0f);
     checkPendingResource(cs.getQueue("b"), "blue", 0);
     checkPriority(cs.getQueue("b"), 1);
-    Assert.assertTrue(cs.getQueue("b").getPreemptionDisabled());
+    Assertions.assertTrue(cs.getQueue("b").getPreemptionDisabled());
 
     // Check ignored partitioned containers in queue
-    Assert.assertEquals(100, ((LeafQueue) cs.getQueue("a1"))
+    Assertions.assertEquals(100, ((LeafQueue) cs.getQueue("a1"))
         .getIgnoreExclusivityRMContainers().get("blue").size());
 
     // Check applications
-    Assert.assertEquals(2, ((LeafQueue)cs.getQueue("a1")).getApplications().size());
-    Assert.assertEquals(1, ((LeafQueue)cs.getQueue("a2")).getApplications().size());
-    Assert.assertEquals(1, ((LeafQueue)cs.getQueue("b")).getApplications().size());
+    Assertions.assertEquals(2, ((LeafQueue)cs.getQueue("a1")).getApplications().size());
+    Assertions.assertEquals(1, ((LeafQueue)cs.getQueue("a2")).getApplications().size());
+    Assertions.assertEquals(1, ((LeafQueue)cs.getQueue("b")).getApplications().size());
 
     // Check #containers
     FiCaSchedulerApp app1 = getApp("a1", 1);
@@ -131,22 +131,22 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     FiCaSchedulerApp app3 = getApp("a2", 3);
     FiCaSchedulerApp app4 = getApp("b", 4);
 
-    Assert.assertEquals(50, app1.getLiveContainers().size());
+    Assertions.assertEquals(50, app1.getLiveContainers().size());
     checkContainerNodesInApp(app1, 50, "n3");
 
-    Assert.assertEquals(50, app2.getLiveContainers().size());
-    Assert.assertEquals(150, app2.getReservedContainers().size());
+    Assertions.assertEquals(50, app2.getLiveContainers().size());
+    Assertions.assertEquals(150, app2.getReservedContainers().size());
     checkContainerNodesInApp(app2, 200, "n2");
 
-    Assert.assertEquals(50, app3.getLiveContainers().size());
+    Assertions.assertEquals(50, app3.getLiveContainers().size());
     checkContainerNodesInApp(app3, 50, "n3");
 
-    Assert.assertEquals(100, app4.getLiveContainers().size());
+    Assertions.assertEquals(100, app4.getLiveContainers().size());
     checkContainerNodesInApp(app4, 100, "n1");
   }
 
   @Test
-  public void testBuilderWithReservedResource() throws Exception {
+  void testBuilderWithReservedResource() throws Exception {
     String labelsConfig =
         "=200,true;" + // default partition
             "red=100,false;" + // partition=red
@@ -200,7 +200,7 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
   }
 
   @Test
-  public void testBuilderWithSpecifiedNodeResources() throws Exception {
+  void testBuilderWithSpecifiedNodeResources() throws Exception {
     String labelsConfig =
         "=200,true;" + // default partition
             "red=100,false;" + // partition=red
@@ -236,20 +236,20 @@ public class TestProportionalCapacityPreemptionPolicyMockFramework
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
 
     // Check host resources
-    Assert.assertEquals(3, this.cs.getAllNodes().size());
+    Assertions.assertEquals(3, this.cs.getAllNodes().size());
     SchedulerNode node1 = cs.getSchedulerNode(NodeId.newInstance("n1", 1));
-    Assert.assertEquals(100, node1.getTotalResource().getMemorySize());
-    Assert.assertEquals(100, node1.getCopiedListOfRunningContainers().size());
-    Assert.assertNull(node1.getReservedContainer());
+    Assertions.assertEquals(100, node1.getTotalResource().getMemorySize());
+    Assertions.assertEquals(100, node1.getCopiedListOfRunningContainers().size());
+    Assertions.assertNull(node1.getReservedContainer());
 
     SchedulerNode node2 = cs.getSchedulerNode(NodeId.newInstance("n2", 1));
-    Assert.assertEquals(0, node2.getTotalResource().getMemorySize());
-    Assert.assertEquals(50, node2.getCopiedListOfRunningContainers().size());
-    Assert.assertNotNull(node2.getReservedContainer());
+    Assertions.assertEquals(0, node2.getTotalResource().getMemorySize());
+    Assertions.assertEquals(50, node2.getCopiedListOfRunningContainers().size());
+    Assertions.assertNotNull(node2.getReservedContainer());
 
     SchedulerNode node3 = cs.getSchedulerNode(NodeId.newInstance("n3", 1));
-    Assert.assertEquals(30, node3.getTotalResource().getMemorySize());
-    Assert.assertEquals(100, node3.getCopiedListOfRunningContainers().size());
-    Assert.assertNull(node3.getReservedContainer());
+    Assertions.assertEquals(30, node3.getTotalResource().getMemorySize());
+    Assertions.assertEquals(100, node3.getCopiedListOfRunningContainers().size());
+    Assertions.assertNull(node3.getReservedContainer());
   }
 }

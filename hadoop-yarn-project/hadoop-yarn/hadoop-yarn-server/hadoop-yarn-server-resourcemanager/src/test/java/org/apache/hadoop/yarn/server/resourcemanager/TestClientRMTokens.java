@@ -17,8 +17,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -41,8 +41,8 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
-import org.junit.AfterClass;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,9 +77,9 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 
 public class TestClientRMTokens {
@@ -90,29 +90,29 @@ public class TestClientRMTokens {
   // Note : Any test case in ResourceManager package that creates a proxy has
   // to be run with enabling hadoop.security.token.service.use_ip. And reset
   // to false at the end of test class. See YARN-5208
-  @BeforeClass
-  public static void setUp() {
+  @BeforeAll
+  static void setUp() {
     Configuration conf = new Configuration();
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, true);
     SecurityUtil.setConfiguration(conf);
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @AfterAll
+  static void tearDown() {
     Configuration conf = new Configuration();
     conf.setBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP, false);
     SecurityUtil.setConfiguration(conf);
   }
 
-  @Before
+  @BeforeEach
   public void resetSecretManager() {
     RMDelegationTokenIdentifier.Renewer.setSecretManager(null, null);
   }
   
   @Test
-  public void testDelegationToken() throws Exception {
+  void testDelegationToken() throws Exception {
     
     final YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_PRINCIPAL, "testuser/localhost@apache.org");
@@ -148,7 +148,7 @@ public class TestClientRMTokens {
       // Create a user for the renewr and fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assert.assertEquals("testrenewer", loggedInUser.getShortUserName());
+      Assertions.assertEquals("testrenewer", loggedInUser.getShortUserName());
       // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 
@@ -306,7 +306,7 @@ public class TestClientRMTokens {
   }
   
   @Test
-  public void testShortCircuitRenewCancel()
+  void testShortCircuitRenewCancel()
       throws IOException, InterruptedException {
     InetSocketAddress addr = NetUtils.createSocketAddr(
         InetAddress.getLocalHost().getHostName(), 123, null);
@@ -314,7 +314,7 @@ public class TestClientRMTokens {
   }
 
   @Test
-  public void testShortCircuitRenewCancelWildcardAddress()
+  void testShortCircuitRenewCancelWildcardAddress()
       throws IOException, InterruptedException {
     InetSocketAddress rmAddr = new InetSocketAddress(123);
     InetSocketAddress serviceAddr = NetUtils.createSocketAddr(
@@ -326,7 +326,7 @@ public class TestClientRMTokens {
   }
 
   @Test
-  public void testShortCircuitRenewCancelSameHostDifferentPort()
+  void testShortCircuitRenewCancelSameHostDifferentPort()
       throws IOException, InterruptedException {
     InetSocketAddress rmAddr = NetUtils.createSocketAddr(
         InetAddress.getLocalHost().getHostName(), 123, null);
@@ -337,7 +337,7 @@ public class TestClientRMTokens {
   }
 
   @Test
-  public void testShortCircuitRenewCancelDifferentHostSamePort()
+  void testShortCircuitRenewCancelDifferentHostSamePort()
       throws IOException, InterruptedException {
     InetSocketAddress rmAddr = NetUtils.createSocketAddr(
         InetAddress.getLocalHost().getHostName(), 123, null);
@@ -348,7 +348,7 @@ public class TestClientRMTokens {
   }
 
   @Test
-  public void testShortCircuitRenewCancelDifferentHostDifferentPort()
+  void testShortCircuitRenewCancelDifferentHostDifferentPort()
       throws IOException, InterruptedException {
     InetSocketAddress rmAddr = NetUtils.createSocketAddr(
         InetAddress.getLocalHost().getHostName(), 123, null);
@@ -359,7 +359,7 @@ public class TestClientRMTokens {
   }
 
   @Test
-  public void testReadOldFormatFields() throws IOException {
+  void testReadOldFormatFields() throws IOException {
     RMDelegationTokenIdentifier token = new RMDelegationTokenIdentifier(
         new Text("alice"), new Text("bob"), new Text("colin"));
     token.setIssueDate(123);

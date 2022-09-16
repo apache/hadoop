@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException.InvalidResourceType.GREATER_THEN_MAX_ALLOCATION;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -55,10 +55,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testing RMAppManager application submission with fair scheduler.
@@ -74,7 +74,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
   private static String allocFileName =
       GenericTestUtils.getTestDir(TEST_FOLDER).getAbsolutePath();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Basic config with one queue (override in test if needed)
     AllocationFileWriter.create()
@@ -98,14 +98,14 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         masterService, new ApplicationACLsManager(conf), conf);
   }
 
-  @After
+  @AfterEach
   public void teardown(){
     File allocFile = GenericTestUtils.getTestDir(TEST_FOLDER);
     allocFile.delete();
   }
 
   @Test
-  public void testQueueSubmitWithHighQueueContainerSize()
+  void testQueueSubmitWithHighQueueContainerSize()
       throws YarnException, IOException {
     int maxAlloc =
         YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB;
@@ -131,9 +131,9 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("limited"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assert.fail("Test should fail on too high allocation!");
+      Assertions.fail("Test should fail on too high allocation!");
     } catch (InvalidResourceRequestException e) {
-      Assert.assertEquals(GREATER_THEN_MAX_ALLOCATION,
+      Assertions.assertEquals(GREATER_THEN_MAX_ALLOCATION,
           e.getInvalidResourceType());
     }
 
@@ -144,7 +144,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
   }
 
   @Test
-  public void testQueueSubmitWithPermissionLimits()
+  void testQueueSubmitWithPermissionLimits()
       throws YarnException, IOException {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
@@ -176,10 +176,10 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("noaccess"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assert.fail("Test should have failed with access denied");
+      Assertions.fail("Test should have failed with access denied");
     } catch (YarnException e) {
-      assertTrue("Access exception not found",
-          e.getCause() instanceof AccessControlException);
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Access exception not found");
     }
     // Submit to submit access queue
     when(placementMgr.placeApplication(any(), any(), any(Boolean.class)))
@@ -194,7 +194,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
   }
 
   @Test
-  public void testQueueSubmitWithRootPermission()
+  void testQueueSubmitWithRootPermission()
       throws YarnException, IOException {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
@@ -220,7 +220,7 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
   }
 
   @Test
-  public void testQueueSubmitWithAutoCreateQueue()
+  void testQueueSubmitWithAutoCreateQueue()
       throws YarnException, IOException {
 
     conf.set(YarnConfiguration.YARN_ACL_ENABLE, "true");
@@ -249,10 +249,10 @@ public class TestAppManagerWithFairScheduler extends AppManagerTestBase {
         .thenReturn(new ApplicationPlacementContext("root.noaccess.child"));
     try {
       rmAppManager.submitApplication(asContext, "test");
-      Assert.fail("Test should have failed with access denied");
+      Assertions.fail("Test should have failed with access denied");
     } catch (YarnException e) {
-      assertTrue("Access exception not found",
-          e.getCause() instanceof AccessControlException);
+      assertTrue(e.getCause() instanceof AccessControlException,
+          "Access exception not found");
     }
     // Submit to submitonly parent with non existent child queue
     when(placementMgr.placeApplication(any(), any(), any(Boolean.class)))

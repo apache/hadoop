@@ -18,19 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.Collection;
-
+import com.sun.jersey.api.client.ClientResponse.Status;
 import javax.ws.rs.core.MediaType;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -44,21 +33,24 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import java.io.File;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Arrays;
 
-import com.sun.jersey.api.client.ClientResponse.Status;
+import static org.junit.jupiter.api.Assertions.*;
 
 /* Just a simple test class to ensure that the RM handles the static web user
  * correctly for secure and un-secure modes
  * 
  */
-@RunWith(Parameterized.class)
 public class TestRMWebappAuthentication {
 
   private static MockRM rm;
@@ -93,29 +85,25 @@ public class TestRMWebappAuthentication {
     kerberosConf.setBoolean("mockrm.webapp.enabled", true);
   }
 
-  @Parameters
-  public static Collection params() {
-    return Arrays.asList(new Object[][] { { 1, simpleConf },
-        { 2, kerberosConf } });
+  public static Iterable<Arguments> testSimpleAuth() {
+    return Arrays.asList(
+        Arguments.of(simpleConf),
+        Arguments.of(kerberosConf)
+    );
   }
 
-  public TestRMWebappAuthentication(int run, Configuration conf) {
-    super();
-    setupAndStartRM(conf);
-  }
-
-  @BeforeClass
-  public static void setUp() {
+  @BeforeAll
+  static void setUp() {
     try {
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
     } catch (Exception e) {
-      assertTrue("Couldn't create MiniKDC", false);
+      assertTrue(false, "Couldn't create MiniKDC");
     }
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @AfterAll
+  static void tearDown() {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
     }
@@ -142,8 +130,10 @@ public class TestRMWebappAuthentication {
   // ensure that in a non-secure cluster users can access
   // the web pages as earlier and submit apps as anonymous
   // user or by identifying themselves
-  @Test
-  public void testSimpleAuth() throws Exception {
+  @ParameterizedTest
+  @MethodSource
+  void testSimpleAuth(final Configuration conf) throws Exception {
+    setupAndStartRM(conf);
 
     rm.start();
 

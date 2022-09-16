@@ -33,9 +33,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -61,7 +61,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMe
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_CONTAINERS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.RESERVED_V_CORES;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -78,14 +78,14 @@ public class TestQueueMetrics {
   private static final Configuration conf = new Configuration();
   private MetricsSystem ms;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ms = new MetricsSystemImpl();
     QueueMetrics.clearQueueMetrics();
   }
   
   @Test
-  public void testDefaultSingleQueueMetrics() {
+  void testDefaultSingleQueueMetrics() {
     String queueName = "single";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
@@ -168,7 +168,7 @@ public class TestQueueMetrics {
   }
   
   @Test
-  public void testQueueAppMetricsForMultipleFailures() {
+  void testQueueAppMetricsForMultipleFailures() {
     String queueName = "single";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
@@ -248,7 +248,7 @@ public class TestQueueMetrics {
   }
 
   @Test
-  public void testQueueUnmanagedAppMetricsForMultipleFailures() {
+  void testQueueUnmanagedAppMetricsForMultipleFailures() {
     String queueName = "single";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
@@ -329,7 +329,7 @@ public class TestQueueMetrics {
   }
 
   @Test
-  public void testSingleQueueWithUserMetrics() {
+  void testSingleQueueWithUserMetrics() {
     String queueName = "single2";
 
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, true,
@@ -453,7 +453,7 @@ public class TestQueueMetrics {
   }
 
   @Test
-  public void testNodeTypeMetrics() {
+  void testNodeTypeMetrics() {
     String parentQueueName = "root";
     String leafQueueName = "root.leaf";
 
@@ -497,7 +497,7 @@ public class TestQueueMetrics {
   }
 
   @Test
-  public void testTwoLevelWithUserMetrics() {
+  void testTwoLevelWithUserMetrics() {
     AppSchedulingInfo app = mockApp(USER);
 
     QueueInfo root = new QueueInfo(null, "root", ms, conf, USER);
@@ -728,7 +728,7 @@ public class TestQueueMetrics {
   }
   
   @Test 
-  public void testMetricsCache() {
+  void testMetricsCache() {
     MetricsSystem ms = new MetricsSystemImpl("cache");
     ms.start();
     
@@ -743,22 +743,22 @@ public class TestQueueMetrics {
       QueueMetrics metrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 
-      Assert.assertNotNull("QueueMetrics for A shoudn't be null", metrics);
+      Assertions.assertNotNull(metrics, "QueueMetrics for A shoudn't be null");
 
       // Re-register to check for cache hit, shouldn't blow up metrics-system...
       // also, verify parent-metrics
       QueueMetrics alterMetrics =
           QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
 
-      Assert.assertNotNull("QueueMetrics for alterMetrics shoudn't be null", 
-          alterMetrics);
+      Assertions.assertNotNull(alterMetrics, 
+          "QueueMetrics for alterMetrics shoudn't be null");
     } finally {
       ms.shutdown();
     }
   }
 
   @Test
-  public void testMetricsInitializedOnRMInit() {
+  void testMetricsInitializedOnRMInit() {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER,
       FifoScheduler.class, ResourceScheduler.class);
@@ -773,7 +773,7 @@ public class TestQueueMetrics {
   // collect all metrics, even though they are not modified from last time they
   // are collected. If not collecting all metrics, only modified metrics will show up.
   @Test
-  public void testCollectAllMetrics() {
+  void testCollectAllMetrics() {
     String queueName = "single";
     QueueMetrics.forQueue(ms, queueName, null, false, conf);
     MetricsSource queueSource = queueSource(ms, queueName);
@@ -784,9 +784,9 @@ public class TestQueueMetrics {
       // do not collect all metrics
       AppMetricsChecker.create()
           .checkAgainst(queueSource, false);
-      Assert.fail();
+      Assertions.fail();
     } catch (AssertionError e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
               e.getMessage().contains("Expected exactly one metric for name "));
     }
     // collect all metrics

@@ -24,12 +24,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,7 +38,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
     extends ProportionalCapacityPreemptionPolicyMockFramework {
 
   @Test
-  public void testPreemptionToBalanceDisabled() throws IOException {
+  void testPreemptionToBalanceDisabled() throws IOException {
     String labelsConfig = "=100,true"; // default partition
     String nodesConfig = "n1="; // only one node
     String queuesConfig =
@@ -74,7 +74,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
   }
 
   @Test
-  public void testPreemptionToBalanceEnabled() throws IOException {
+  void testPreemptionToBalanceEnabled() throws IOException {
     String labelsConfig = "=100,true"; // default partition
     String nodesConfig = "n1="; // only one node
     String queuesConfig =
@@ -117,7 +117,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
 
 
   @Test
-  public void testPreemptionToBalanceUsedPlusPendingLessThanGuaranteed()
+  void testPreemptionToBalanceUsedPlusPendingLessThanGuaranteed()
       throws IOException{
     String labelsConfig = "=100,true"; // default partition
     String nodesConfig = "n1="; // only one node
@@ -156,7 +156,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
   }
 
   @Test
-  public void testPreemptionToBalanceWithVcoreResource() throws IOException {
+  void testPreemptionToBalanceWithVcoreResource() throws IOException {
     Logger.getRootLogger().setLevel(Level.DEBUG);
     String labelsConfig = "=100:100,true"; // default partition
     String nodesConfig = "n1="; // only one node
@@ -194,7 +194,7 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
   }
 
   @Test
-  public void testPreemptionToBalanceWithConfiguredTimeout() throws IOException {
+  void testPreemptionToBalanceWithConfiguredTimeout() throws IOException {
     Logger.getRootLogger().setLevel(Level.DEBUG);
     String labelsConfig = "=100:100,true"; // default partition
     String nodesConfig = "n1="; // only one node

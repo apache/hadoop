@@ -47,8 +47,8 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
@@ -59,7 +59,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp
         .TestRMWebServicesCustomResourceTypesCommons.verifyAppInfoJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
         .TestRMWebServicesCustomResourceTypesCommons.verifyAppsXML;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This test verifies that custom resource types are correctly serialized to XML
@@ -94,7 +94,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -115,7 +115,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   @Test
-  public void testRunningAppsXml() throws Exception {
+  void testRunningAppsXml() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmissionData data =
@@ -138,11 +138,11 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
                     new BufferedClientResponse(response));
     testCase.verify(document -> {
       NodeList apps = document.getElementsByTagName("apps");
-      assertEquals("incorrect number of apps elements", 1, apps.getLength());
+      assertEquals(1, apps.getLength(), "incorrect number of apps elements");
 
       NodeList appArray = ((Element)(apps.item(0)))
               .getElementsByTagName("app");
-      assertEquals("incorrect number of app elements", 1, appArray.getLength());
+      assertEquals(1, appArray.getLength(), "incorrect number of app elements");
 
       verifyAppsXML(appArray, app1, rm);
     });
@@ -151,7 +151,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
   }
 
   @Test
-  public void testRunningAppsJson() throws Exception {
+  void testRunningAppsJson() throws Exception {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     MockRMAppSubmissionData data =
@@ -174,11 +174,11 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
             new BufferedClientResponse(response));
     testCase.verify(json -> {
       try {
-        assertEquals("incorrect number of apps elements", 1, json.length());
+        assertEquals(1, json.length(), "incorrect number of apps elements");
         JSONObject apps = json.getJSONObject("apps");
-        assertEquals("incorrect number of app elements", 1, apps.length());
+        assertEquals(1, apps.length(), "incorrect number of app elements");
         JSONArray array = apps.getJSONArray("app");
-        assertEquals("incorrect count of app", 1, array.length());
+        assertEquals(1, array.length(), "incorrect count of app");
 
         verifyAppInfoJson(array.getJSONObject(0), app1, rm);
       } catch (JSONException e) {

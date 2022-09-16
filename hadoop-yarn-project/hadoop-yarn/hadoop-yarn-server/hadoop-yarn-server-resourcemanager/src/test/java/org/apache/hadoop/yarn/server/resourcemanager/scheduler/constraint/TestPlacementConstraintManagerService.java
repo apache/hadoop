@@ -41,9 +41,9 @@ import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.And;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link PlacementConstraintManagerService}.
@@ -61,7 +61,7 @@ public class TestPlacementConstraintManagerService {
   private Set<String> sourceTag1, sourceTag2, sourceTag3, sourceTag4;
   private Map<Set<String>, PlacementConstraint> constraintMap1, constraintMap2;
 
-  @Before
+  @BeforeEach
   public void before() {
     this.pcm = createPCM();
 
@@ -92,99 +92,99 @@ public class TestPlacementConstraintManagerService {
   }
 
   @Test
-  public void testRegisterUnregisterApps() {
-    Assert.assertEquals(0, pcm.getNumRegisteredApplications());
+  void testRegisterUnregisterApps() {
+    Assertions.assertEquals(0, pcm.getNumRegisteredApplications());
 
     // Register two applications.
     pcm.registerApplication(appId1, constraintMap1);
-    Assert.assertEquals(1, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(1, pcm.getNumRegisteredApplications());
     Map<Set<String>, PlacementConstraint> constrMap =
         pcm.getConstraints(appId1);
-    Assert.assertNotNull(constrMap);
-    Assert.assertEquals(2, constrMap.size());
-    Assert.assertNotNull(constrMap.get(sourceTag1));
-    Assert.assertNotNull(constrMap.get(sourceTag2));
+    Assertions.assertNotNull(constrMap);
+    Assertions.assertEquals(2, constrMap.size());
+    Assertions.assertNotNull(constrMap.get(sourceTag1));
+    Assertions.assertNotNull(constrMap.get(sourceTag2));
 
     pcm.registerApplication(appId2, constraintMap2);
-    Assert.assertEquals(2, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(2, pcm.getNumRegisteredApplications());
     constrMap = pcm.getConstraints(appId2);
-    Assert.assertNotNull(constrMap);
-    Assert.assertEquals(1, constrMap.size());
-    Assert.assertNotNull(constrMap.get(sourceTag3));
-    Assert.assertNull(constrMap.get(sourceTag2));
+    Assertions.assertNotNull(constrMap);
+    Assertions.assertEquals(1, constrMap.size());
+    Assertions.assertNotNull(constrMap.get(sourceTag3));
+    Assertions.assertNull(constrMap.get(sourceTag2));
 
     // Try to register the same app again.
     pcm.registerApplication(appId2, constraintMap1);
-    Assert.assertEquals(2, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(2, pcm.getNumRegisteredApplications());
 
     // Unregister appId1.
     pcm.unregisterApplication(appId1);
-    Assert.assertEquals(1, pcm.getNumRegisteredApplications());
-    Assert.assertNull(pcm.getConstraints(appId1));
-    Assert.assertNotNull(pcm.getConstraints(appId2));
+    Assertions.assertEquals(1, pcm.getNumRegisteredApplications());
+    Assertions.assertNull(pcm.getConstraints(appId1));
+    Assertions.assertNotNull(pcm.getConstraints(appId2));
   }
 
   @Test
-  public void testAddConstraint() {
+  void testAddConstraint() {
     // Cannot add constraint to unregistered app.
-    Assert.assertEquals(0, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(0, pcm.getNumRegisteredApplications());
     pcm.addConstraint(appId1, sourceTag1, c1, false);
-    Assert.assertEquals(0, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(0, pcm.getNumRegisteredApplications());
 
     // Register application.
     pcm.registerApplication(appId1, new HashMap<>());
-    Assert.assertEquals(1, pcm.getNumRegisteredApplications());
-    Assert.assertEquals(0, pcm.getConstraints(appId1).size());
+    Assertions.assertEquals(1, pcm.getNumRegisteredApplications());
+    Assertions.assertEquals(0, pcm.getConstraints(appId1).size());
 
     // Add two constraints.
     pcm.addConstraint(appId1, sourceTag1, c1, false);
     pcm.addConstraint(appId1, sourceTag2, c3, false);
-    Assert.assertEquals(2, pcm.getConstraints(appId1).size());
+    Assertions.assertEquals(2, pcm.getConstraints(appId1).size());
 
     // Constraint for sourceTag1 should not be replaced.
     pcm.addConstraint(appId1, sourceTag1, c2, false);
-    Assert.assertEquals(2, pcm.getConstraints(appId1).size());
-    Assert.assertEquals(c1, pcm.getConstraint(appId1, sourceTag1));
-    Assert.assertNotEquals(c2, pcm.getConstraint(appId1, sourceTag1));
+    Assertions.assertEquals(2, pcm.getConstraints(appId1).size());
+    Assertions.assertEquals(pcm.getConstraint(appId1, sourceTag1), c1);
+    Assertions.assertNotEquals(pcm.getConstraint(appId1, sourceTag1), c2);
 
     // Now c2 should replace c1 for sourceTag1.
     pcm.addConstraint(appId1, sourceTag1, c2, true);
-    Assert.assertEquals(2, pcm.getConstraints(appId1).size());
-    Assert.assertEquals(c2, pcm.getConstraint(appId1, sourceTag1));
+    Assertions.assertEquals(2, pcm.getConstraints(appId1).size());
+    Assertions.assertEquals(pcm.getConstraint(appId1, sourceTag1), c2);
   }
 
   @Test
-  public void testGlobalConstraints() {
-    Assert.assertEquals(0, pcm.getNumGlobalConstraints());
+  void testGlobalConstraints() {
+    Assertions.assertEquals(0, pcm.getNumGlobalConstraints());
     pcm.addGlobalConstraint(sourceTag1, c1, false);
-    Assert.assertEquals(1, pcm.getNumGlobalConstraints());
-    Assert.assertNotNull(pcm.getGlobalConstraint(sourceTag1));
+    Assertions.assertEquals(1, pcm.getNumGlobalConstraints());
+    Assertions.assertNotNull(pcm.getGlobalConstraint(sourceTag1));
 
     // Constraint for sourceTag1 should not be replaced.
     pcm.addGlobalConstraint(sourceTag1, c2, false);
-    Assert.assertEquals(1, pcm.getNumGlobalConstraints());
-    Assert.assertEquals(c1, pcm.getGlobalConstraint(sourceTag1));
-    Assert.assertNotEquals(c2, pcm.getGlobalConstraint(sourceTag1));
+    Assertions.assertEquals(1, pcm.getNumGlobalConstraints());
+    Assertions.assertEquals(c1, pcm.getGlobalConstraint(sourceTag1));
+    Assertions.assertNotEquals(c2, pcm.getGlobalConstraint(sourceTag1));
 
     // Now c2 should replace c1 for sourceTag1.
     pcm.addGlobalConstraint(sourceTag1, c2, true);
-    Assert.assertEquals(1, pcm.getNumGlobalConstraints());
-    Assert.assertEquals(c2, pcm.getGlobalConstraint(sourceTag1));
+    Assertions.assertEquals(1, pcm.getNumGlobalConstraints());
+    Assertions.assertEquals(c2, pcm.getGlobalConstraint(sourceTag1));
 
     pcm.removeGlobalConstraint(sourceTag1);
-    Assert.assertEquals(0, pcm.getNumGlobalConstraints());
+    Assertions.assertEquals(0, pcm.getNumGlobalConstraints());
   }
 
   @Test
-  public void testValidateConstraint() {
+  void testValidateConstraint() {
     // At the moment we only disallow multiple source tags to be associated with
     // a constraint. TODO: More tests to be added for YARN-6621.
-    Assert.assertTrue(pcm.validateConstraint(sourceTag1, c1));
-    Assert.assertFalse(pcm.validateConstraint(sourceTag4, c1));
+    Assertions.assertTrue(pcm.validateConstraint(sourceTag1, c1));
+    Assertions.assertFalse(pcm.validateConstraint(sourceTag4, c1));
   }
 
   @Test
-  public void testGetRequestConstraint() {
+  void testGetRequestConstraint() {
     // Request Constraint(RC), App Constraint(AC), Global Constraint(GC)
     PlacementConstraint constraint;
     And mergedConstraint;
@@ -194,10 +194,10 @@ public class TestPlacementConstraintManagerService {
     // AC = null
     // GC = null
     constraint = pcm.getMultilevelConstraint(appId1, null, c1);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assertions.assertEquals(1, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
 
     // RC = null
     // AC = tag1->c1, tag2->c2
@@ -207,17 +207,17 @@ public class TestPlacementConstraintManagerService {
     // registered constraint, we should get an empty AND constraint.
     constraint = pcm.getMultilevelConstraint(appId1,
         Sets.newHashSet("not_exist_tag"), null);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND()
-    Assert.assertEquals(0, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(0, mergedConstraint.getChildren().size());
     // if a mapping is found for a given source tag
     constraint = pcm.getMultilevelConstraint(appId1, sourceTag1, null);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1)
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assertions.assertEquals(1, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
     pcm.unregisterApplication(appId1);
 
     // RC = null
@@ -226,11 +226,11 @@ public class TestPlacementConstraintManagerService {
     pcm.addGlobalConstraint(sourceTag1, c1, true);
     constraint = pcm.getMultilevelConstraint(appId1,
         Sets.newHashSet(sourceTag1), null);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1)
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assertions.assertEquals(1, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
     pcm.removeGlobalConstraint(sourceTag1);
 
     // RC = c2
@@ -240,10 +240,10 @@ public class TestPlacementConstraintManagerService {
     pcm.registerApplication(appId1, constraintMap1);
     // both RC, AC and GC should be respected
     constraint = pcm.getMultilevelConstraint(appId1, sourceTag1, c2);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1, c2, c3)
-    Assert.assertEquals(3, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(3, mergedConstraint.getChildren().size());
     pcm.removeGlobalConstraint(sourceTag1);
     pcm.unregisterApplication(appId1);
 
@@ -254,10 +254,10 @@ public class TestPlacementConstraintManagerService {
     pcm.registerApplication(appId1, constraintMap1);
     constraint = pcm.getMultilevelConstraint(appId1,
         Sets.newHashSet(sourceTag1), c1);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
+    Assertions.assertTrue(constraint.getConstraintExpr() instanceof And);
     mergedConstraint = (And) constraint.getConstraintExpr();
     // AND(c1, c2)
-    Assert.assertEquals(2, mergedConstraint.getChildren().size());
+    Assertions.assertEquals(2, mergedConstraint.getChildren().size());
     pcm.removeGlobalConstraint(sourceTag1);
     pcm.unregisterApplication(appId1);
   }

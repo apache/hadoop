@@ -23,12 +23,12 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.ComputeFairShares;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Exercise the computeFairShares method in SchedulingAlgorithms.
@@ -36,7 +36,7 @@ import org.junit.Test;
 public class TestComputeFairShares {
   private List<Schedulable> scheds;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     scheds = new ArrayList<>();
   }
@@ -46,7 +46,7 @@ public class TestComputeFairShares {
    * fair share (of 10 slots) should each get their fair share.
    */
   @Test
-  public void testEqualSharing() {
+  void testEqualSharing() {
     scheds.add(new FakeSchedulable());
     scheds.add(new FakeSchedulable());
     scheds.add(new FakeSchedulable());
@@ -64,7 +64,7 @@ public class TestComputeFairShares {
    * so it only gets 11 slots. Pools 1 and 2 split the rest and get 13 each. 
    */
   @Test
-  public void testLowMaxShares() {
+  void testLowMaxShares() {
     scheds.add(new FakeSchedulable(0, 100));
     scheds.add(new FakeSchedulable(0, 50));
     scheds.add(new FakeSchedulable(0, 11));
@@ -84,7 +84,7 @@ public class TestComputeFairShares {
    * of 2 slots but this should not affect the outcome.
    */
   @Test
-  public void testMinShares() {
+  void testMinShares() {
     scheds.add(new FakeSchedulable(20));
     scheds.add(new FakeSchedulable(18));
     scheds.add(new FakeSchedulable(0));
@@ -99,7 +99,7 @@ public class TestComputeFairShares {
    * Each pool should get slots in proportion to its weight.
    */
   @Test
-  public void testWeightedSharing() {
+  void testWeightedSharing() {
     scheds.add(new FakeSchedulable(0, 2.0f));
     scheds.add(new FakeSchedulable(0, 1.0f));
     scheds.add(new FakeSchedulable(0, 1.0f));
@@ -117,7 +117,7 @@ public class TestComputeFairShares {
    * the 24 slots left into a 1:0.5 ratio, getting 16 and 8 slots respectively.
    */
   @Test
-  public void testWeightedSharingWithMaxShares() {
+  void testWeightedSharingWithMaxShares() {
     scheds.add(new FakeSchedulable(0, 10, 2.0f));
     scheds.add(new FakeSchedulable(0, 11, 1.0f));
     scheds.add(new FakeSchedulable(0, 30, 1.0f));
@@ -136,7 +136,7 @@ public class TestComputeFairShares {
    * getting 10 each. Pool 3's min share of 5 slots doesn't affect this.
    */
   @Test
-  public void testWeightedSharingWithMinShares() {
+  void testWeightedSharingWithMinShares() {
     scheds.add(new FakeSchedulable(20, 2.0f));
     scheds.add(new FakeSchedulable(0, 1.0f));
     scheds.add(new FakeSchedulable(5, 1.0f));
@@ -152,7 +152,7 @@ public class TestComputeFairShares {
    * Test adapted to accommodate long values for resources.
    */
   @Test
-  public void testLargeShares() {
+  void testLargeShares() {
     long giga = 1000L * 1000L * 1000L * 4L;
     scheds.add(new FakeSchedulable(0L, giga));
     scheds.add(new FakeSchedulable(0L, giga));
@@ -168,7 +168,7 @@ public class TestComputeFairShares {
    * Test overflow in the resources taken and upper bound.
    */
   @Test
-  public void testLargeMinimums() {
+  void testLargeMinimums() {
     long giga = 1000L * 1000L * 1000L * 4L;
     scheds.add(new FakeSchedulable(Long.MAX_VALUE, Long.MAX_VALUE));
     scheds.add(new FakeSchedulable(giga, giga));
@@ -182,7 +182,7 @@ public class TestComputeFairShares {
    * Test overflow in the upper bound calculation for the binary search.
    */
   @Test
-  public void testOverflowMaxShare() {
+  void testOverflowMaxShare() {
     long giga = 1000L * 1000L * 1000L;
     scheds.add(new FakeSchedulable(0L, giga));
     scheds.add(new FakeSchedulable(0L, Long.MAX_VALUE));
@@ -201,7 +201,7 @@ public class TestComputeFairShares {
    * The values in the test might not be "real" but they show the overflow.
    */
   @Test
-  public void testOverflowFixedShare() {
+  void testOverflowFixedShare() {
     long giga = 1000L * 1000L * 1000L;
     long minValue = Long.MAX_VALUE - 1L;
     scheds.add(new FakeSchedulable(giga, giga, 0));
@@ -217,7 +217,7 @@ public class TestComputeFairShares {
    * Test that being called on an empty list doesn't confuse the algorithm.
    */
   @Test
-  public void testEmptyList() {
+  void testEmptyList() {
     ComputeFairShares.computeShares(scheds,
         Resources.createResource(40), ResourceInformation.MEMORY_MB.getName());
     verifyMemoryShares();
@@ -227,7 +227,7 @@ public class TestComputeFairShares {
    * Test that CPU works as well as memory.
    */
   @Test
-  public void testCPU() {
+  void testCPU() {
     scheds.add(new FakeSchedulable(Resources.createResource(0, 20), 2.0f));
     scheds.add(new FakeSchedulable(Resources.createResource(0, 0), 1.0f));
     scheds.add(new FakeSchedulable(Resources.createResource(0, 5), 1.0f));
@@ -241,11 +241,11 @@ public class TestComputeFairShares {
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyMemoryShares(long... shares) {
-    Assert.assertEquals("Number of shares and schedulables are not consistent",
-        scheds.size(), shares.length);
+    Assertions.assertEquals(scheds.size(),
+        shares.length, "Number of shares and schedulables are not consistent");
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals("Expected share number " + i + " in list wrong",
-          shares[i], scheds.get(i).getFairShare().getMemorySize());
+      Assertions.assertEquals(shares[i],
+          scheds.get(i).getFairShare().getMemorySize(), "Expected share number " + i + " in list wrong");
     }
   }
   
@@ -253,11 +253,11 @@ public class TestComputeFairShares {
    * Check that a given list of shares have been assigned to this.scheds.
    */
   private void verifyCPUShares(int... shares) {
-    Assert.assertEquals("Number of shares and schedulables are not consistent",
-        scheds.size(), shares.length);
+    Assertions.assertEquals(scheds.size(),
+        shares.length, "Number of shares and schedulables are not consistent");
     for (int i = 0; i < shares.length; i++) {
-      Assert.assertEquals("Expected share number " + i + " in list wrong",
-          shares[i], scheds.get(i).getFairShare().getVirtualCores());
+      Assertions.assertEquals(shares[i],
+          scheds.get(i).getFairShare().getVirtualCores(), "Expected share number " + i + " in list wrong");
     }
   }
 }

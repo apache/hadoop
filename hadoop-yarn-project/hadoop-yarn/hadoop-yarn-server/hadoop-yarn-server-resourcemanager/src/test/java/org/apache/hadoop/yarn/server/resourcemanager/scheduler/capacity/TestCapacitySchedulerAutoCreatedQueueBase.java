@@ -72,9 +72,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,10 +98,10 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.FAIR_APP_ORDERING_POLICY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CapacitySchedulerConfiguration.ROOT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCapacitySchedulerAutoCreatedQueueBase {
 
@@ -206,7 +206,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     QueueMetrics.clearQueueMetrics();
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
@@ -487,7 +487,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     return conf;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mockRM != null) {
       mockRM.stop();
@@ -497,13 +497,13 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   protected void validateCapacities(AutoCreatedLeafQueue autoCreatedLeafQueue,
       float capacity, float absCapacity, float maxCapacity,
       float absMaxCapacity) {
-    assertEquals(capacity, autoCreatedLeafQueue.getCapacity(), EPSILON);
-    assertEquals(absCapacity, autoCreatedLeafQueue.getAbsoluteCapacity(),
-        EPSILON);
-    assertEquals(maxCapacity, autoCreatedLeafQueue.getMaximumCapacity(),
-        EPSILON);
-    assertEquals(absMaxCapacity,
-        autoCreatedLeafQueue.getAbsoluteMaximumCapacity(), EPSILON);
+    assertEquals(autoCreatedLeafQueue.getCapacity(), EPSILON, capacity);
+    assertEquals(autoCreatedLeafQueue.getAbsoluteCapacity(), EPSILON,
+        absCapacity);
+    assertEquals(autoCreatedLeafQueue.getMaximumCapacity(), EPSILON,
+        maxCapacity);
+    assertEquals(autoCreatedLeafQueue.getAbsoluteMaximumCapacity(),
+        EPSILON, absMaxCapacity);
   }
 
   protected void cleanupQueue(String queueName) throws YarnException {
@@ -662,7 +662,7 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
             .withAmLabel(nodeLabel)
             .build();
     RMApp app = MockRMAppSubmitter.submit(mockRM, data);
-    Assert.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
+    Assertions.assertEquals(app.getAmNodeLabelExpression(), nodeLabel);
     // check preconditions
     List<ApplicationAttemptId> appsInC = cs.getAppsInQueue(PARENT_QUEUE);
     assertEquals(1, appsInC.size());
@@ -739,10 +739,10 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
 
     for (String label : nodeLabels) {
       validateCapacitiesByLabel(autoCreateEnabledParentQueue, leafQueue, label);
-      assertEquals(true, policy.isActive(leafQueue, label));
+      assertEquals(policy.isActive(leafQueue, label), true);
 
-      assertEquals(expectedTotalChildQueueAbsCapacityByLabel.get(label),
-          policy.getAbsoluteActivatedChildQueueCapacity(label), EPSILON);
+      assertEquals(policy.getAbsoluteActivatedChildQueueCapacity(label),
+          EPSILON, expectedTotalChildQueueAbsCapacityByLabel.get(label));
 
       QueueEntitlement expectedEntitlement = new QueueEntitlement(
           cap.getCapacity(label), cap.getMaximumCapacity(label));
@@ -757,14 +757,14 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
   protected void validateCapacitiesByLabel(ManagedParentQueue
       autoCreateEnabledParentQueue, AutoCreatedLeafQueue leafQueue, String
       label) throws InterruptedException {
-    assertEquals(autoCreateEnabledParentQueue.getLeafQueueTemplate()
-            .getQueueCapacities().getCapacity(label),
-        leafQueue.getQueueCapacities()
-            .getCapacity(label), EPSILON);
-    assertEquals(autoCreateEnabledParentQueue.getLeafQueueTemplate()
-            .getQueueCapacities().getMaximumCapacity(label),
-        leafQueue.getQueueCapacities()
-            .getMaximumCapacity(label), EPSILON);
+    assertEquals(leafQueue.getQueueCapacities()
+            .getCapacity(label),
+        EPSILON, autoCreateEnabledParentQueue.getLeafQueueTemplate()
+            .getQueueCapacities().getCapacity(label));
+    assertEquals(leafQueue.getQueueCapacities()
+            .getMaximumCapacity(label),
+        EPSILON, autoCreateEnabledParentQueue.getLeafQueueTemplate()
+            .getQueueCapacities().getMaximumCapacity(label));
   }
 
   protected void validateEffectiveMinResource(ResourceManager rm,
@@ -777,8 +777,8 @@ public class TestCapacitySchedulerAutoCreatedQueueBase {
     Resource effMinCapacity = Resources.multiply(resourceByLabel,
         expectedQueueEntitlements.get(label).getCapacity()
             * parentQueue.getQueueCapacities().getAbsoluteCapacity(label));
-    assertEquals(effMinCapacity, Resources.multiply(resourceByLabel,
-        leafQueue.getQueueCapacities().getAbsoluteCapacity(label)));
+    assertEquals(Resources.multiply(resourceByLabel, leafQueue.getQueueCapacities().getAbsoluteCapacity(label)),
+        effMinCapacity);
 
     if (expectedQueueEntitlements.get(label).getCapacity() > EPSILON) {
       if (leafQueue.getCapacityConfigType().equals(ABSOLUTE_RESOURCE)) {

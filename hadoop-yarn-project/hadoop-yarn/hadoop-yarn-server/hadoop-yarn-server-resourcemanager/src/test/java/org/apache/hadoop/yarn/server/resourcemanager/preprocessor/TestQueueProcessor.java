@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.preprocessor;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.*;
  */
 public class TestQueueProcessor {
   @Test
-  public void testQueueProcessor() {
+  void testQueueProcessor() {
     ContextProcessor queueProcessor = new QueueProcessor();
     ApplicationId app = ApplicationId.newInstance(123456, 111);
     ApplicationSubmissionContext applicationSubmissionContext =

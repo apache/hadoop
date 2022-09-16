@@ -20,15 +20,15 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.policy;
 
 import java.util.*;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFifoOrderingPolicyForPendingApps {
 
   @Test
-  public void testFifoOrderingPolicyForPendingApps() {
+  void testFifoOrderingPolicyForPendingApps() {
     FifoOrderingPolicyForPendingApps<MockSchedulableEntity> policy =
         new FifoOrderingPolicyForPendingApps<MockSchedulableEntity>();
 
@@ -53,7 +53,7 @@ public class TestFifoOrderingPolicyForPendingApps {
    * Expected Iterator Output : E-3 E-2 E-1 E-5 E-4
    */
   @Test
-  public void testIterators() {
+  void testIterators() {
     OrderingPolicy<MockSchedulableEntity> schedOrder =
         new FifoOrderingPolicyForPendingApps<MockSchedulableEntity>();
 
@@ -86,7 +86,7 @@ public class TestFifoOrderingPolicyForPendingApps {
   public void checkSerials(Iterator<MockSchedulableEntity> si,
       long[] serials) {
     for (int i = 0; i < serials.length; i++) {
-      Assert.assertEquals(si.next().getSerial(), serials[i]);
+      Assertions.assertEquals(si.next().getSerial(), serials[i]);
     }
   }
 }

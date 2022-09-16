@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.Timeout;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,12 +90,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -222,7 +223,7 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testAMLaunchAndCleanup() throws Exception {
+  void testAMLaunchAndCleanup() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MyContainerManagerImpl containerManager = new MyContainerManagerImpl();
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
@@ -244,20 +245,20 @@ public class TestApplicationMasterLauncher {
     } catch (TimeoutException e) {
       fail("timed out while waiting for AM Launch to happen.");
     }
-    Assert.assertTrue(containerManager.launched);
+    Assertions.assertTrue(containerManager.launched);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId appAttemptId = attempt.getAppAttemptId();
-    Assert.assertEquals(appAttemptId.toString(),
+    Assertions.assertEquals(appAttemptId.toString(),
         containerManager.attemptIdAtContainerManager);
-    Assert.assertEquals(app.getSubmitTime(),
+    Assertions.assertEquals(app.getSubmitTime(),
         containerManager.submitTimeAtContainerManager);
-    Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
+    Assertions.assertEquals(app.getRMAppAttempt(appAttemptId)
         .getMasterContainer().getId()
         .toString(), containerManager.containerIdAtContainerManager);
-    Assert.assertEquals(nm1.getNodeId().toString(),
+    Assertions.assertEquals(nm1.getNodeId().toString(),
         containerManager.nmHostAtContainerManager);
-    Assert.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
+    Assertions.assertEquals(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS,
         containerManager.maxAppAttempts);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
@@ -278,14 +279,14 @@ public class TestApplicationMasterLauncher {
     } catch (TimeoutException e) {
       fail("timed out while waiting for AM cleanup to happen.");
     }
-    Assert.assertTrue(containerManager.cleanedup);
+    Assertions.assertTrue(containerManager.cleanedup);
 
     rm.waitForState(am.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
     rm.stop();
   }
 
   @Test
-  public void testAMCleanupBeforeLaunch() throws Exception {
+  void testAMCleanupBeforeLaunch() throws Exception {
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 5120);
@@ -312,9 +313,9 @@ public class TestApplicationMasterLauncher {
             attempt, AMLauncherEventType.LAUNCH, rm.getConfig()) {
         @Override
         public void onAMLaunchFailed(ContainerId containerId, Exception e) {
-          Assert.assertFalse("NullPointerException happens "
-                 + " while launching " + containerId,
-                   e instanceof NullPointerException);
+          Assertions.assertFalse(e instanceof NullPointerException,
+                   "NullPointerException happens "
+                 + " while launching " + containerId);
         }
         @Override
         protected ContainerManagementProtocol getContainerMgrProxy(
@@ -327,7 +328,7 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testRetriesOnFailures() throws Exception {
+  void testRetriesOnFailures() throws Exception {
     final ContainerManagementProtocol mockProxy =
         mock(ContainerManagementProtocol.class);
     final StartContainersResponse mockResponse =
@@ -378,8 +379,8 @@ public class TestApplicationMasterLauncher {
 
 
   @SuppressWarnings("unused")
-  @Test(timeout = 100000)
-  public void testallocateBeforeAMRegistration() throws Exception {
+  @Timeout(100000)  @Test
+  void testallocateBeforeAMRegistration() throws Exception {
     boolean thrown = false;
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
@@ -396,7 +397,7 @@ public class TestApplicationMasterLauncher {
     AllocateResponse ar = null;
     try {
       ar = am.allocate("h1", 1000, request, new ArrayList<ContainerId>());
-      Assert.fail();
+      Assertions.fail();
     } catch (ApplicationMasterNotRegisteredException e) {
     }
 
@@ -407,16 +408,16 @@ public class TestApplicationMasterLauncher {
     try {
       amrs = am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>());
-      Assert.fail();
+      Assertions.fail();
     } catch (ApplicationMasterNotRegisteredException e) {
     }
 
     am.registerAppAttempt();
     try {
       am.registerAppAttempt(false);
-      Assert.fail();
+      Assertions.fail();
     } catch (Exception e) {
-      Assert.assertEquals(AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE
+      Assertions.assertEquals(AMRMClientUtils.APP_ALREADY_REGISTERED_MESSAGE
           + attempt.getAppAttemptId().getApplicationId(), e.getMessage());
     }
 
@@ -430,13 +431,13 @@ public class TestApplicationMasterLauncher {
     try {
       amrs = am.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>());
-      Assert.fail();
+      Assertions.fail();
     } catch (ApplicationAttemptNotFoundException e) {
     }
   }
 
   @Test
-  public void testSetupTokensWithoutHTTPS() throws Exception {
+  void testSetupTokensWithoutHTTPS() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     // default conf
     testSetupTokens(false, conf);
@@ -445,7 +446,7 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testSetupTokensWithHTTPS() throws Exception {
+  void testSetupTokensWithHTTPS() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_APPLICATION_HTTPS_POLICY, "LENIENT");
     testSetupTokens(true, conf);
@@ -454,7 +455,7 @@ public class TestApplicationMasterLauncher {
   }
 
   @Test
-  public void testAMMasterContainerHost() throws Exception {
+  void testAMMasterContainerHost() throws Exception {
     //Test that masterContainer and its associated host are
     //set before the AM is even launched.
     MockRM rm = new MockRM();
@@ -477,7 +478,7 @@ public class TestApplicationMasterLauncher {
       fail("timed out while waiting for AM Launch to happen.");
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         app.getCurrentAppAttempt().getMasterContainer().getNodeId().getHost(),
         host);
 
@@ -531,7 +532,7 @@ public class TestApplicationMasterLauncher {
     try {
       launcher.setupTokens(amContainer, containerId);
     } catch (java.io.EOFException e) {
-      Assert.fail("EOFException should not happen.");
+      Assertions.fail("EOFException should not happen.");
     }
 
     // verify token
@@ -539,30 +540,30 @@ public class TestApplicationMasterLauncher {
     dibb.reset(amContainer.getTokens());
     Credentials credentials = new Credentials();
     credentials.readTokenStorageStream(dibb);
-    Assert.assertEquals(1, credentials.numberOfTokens());
+    Assertions.assertEquals(1, credentials.numberOfTokens());
     org.apache.hadoop.security.token.Token<? extends TokenIdentifier> token =
         credentials.getAllTokens().iterator().next();
-    Assert.assertEquals(tokenIdentifier.getKind(), token.getKind());
-    Assert.assertArrayEquals(tokenIdentifier.getBytes(), token.getIdentifier());
-    Assert.assertArrayEquals("password".getBytes(), token.getPassword());
+    Assertions.assertEquals(tokenIdentifier.getKind(), token.getKind());
+    Assertions.assertArrayEquals(tokenIdentifier.getBytes(), token.getIdentifier());
+    Assertions.assertArrayEquals("password".getBytes(), token.getPassword());
 
     // verify keystore and truststore
     if (https) {
-      Assert.assertEquals(4, credentials.numberOfSecretKeys());
-      Assert.assertArrayEquals("keystore".getBytes(),
+      Assertions.assertEquals(4, credentials.numberOfSecretKeys());
+      Assertions.assertArrayEquals("keystore".getBytes(),
           credentials.getSecretKey(
               AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE));
-      Assert.assertArrayEquals("kPassword".getBytes(),
+      Assertions.assertArrayEquals("kPassword".getBytes(),
           credentials.getSecretKey(
               AMSecretKeys.YARN_APPLICATION_AM_KEYSTORE_PASSWORD));
-      Assert.assertArrayEquals("truststore".getBytes(),
+      Assertions.assertArrayEquals("truststore".getBytes(),
           credentials.getSecretKey(
               AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE));
-      Assert.assertArrayEquals("tPassword".getBytes(),
+      Assertions.assertArrayEquals("tPassword".getBytes(),
           credentials.getSecretKey(
               AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE_PASSWORD));
     } else {
-      Assert.assertEquals(0, credentials.numberOfSecretKeys());
+      Assertions.assertEquals(0, credentials.numberOfSecretKeys());
     }
   }
 

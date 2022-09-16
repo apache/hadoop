@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.verify;
 public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     extends
     ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     conf.setBoolean(
@@ -45,7 +45,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testSimpleIntraQueuePreemptionWithTwoUsers()
+  void testSimpleIntraQueuePreemptionWithTwoUsers()
       throws IOException {
     /**
      * Queue structure is:
@@ -102,7 +102,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionWithSingleUser()
+  void testNoIntraQueuePreemptionWithSingleUser()
       throws IOException {
     /**
      * Queue structure is:
@@ -157,7 +157,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionWithTwoUserUnderUserLimit()
+  void testNoIntraQueuePreemptionWithTwoUserUnderUserLimit()
       throws IOException {
     /**
      * Queue structure is:
@@ -214,7 +214,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testSimpleIntraQueuePreemptionWithTwoUsersWithAppPriority()
+  void testSimpleIntraQueuePreemptionWithTwoUsersWithAppPriority()
       throws IOException {
     /**
      * Queue structure is:
@@ -270,7 +270,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testIntraQueuePreemptionOfUserLimitWithMultipleApps()
+  void testIntraQueuePreemptionOfUserLimitWithMultipleApps()
       throws IOException {
     /**
      * Queue structure is:
@@ -331,7 +331,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoPreemptionOfUserLimitWithMultipleAppsAndSameUser()
+  void testNoPreemptionOfUserLimitWithMultipleAppsAndSameUser()
       throws IOException {
     /**
      * Queue structure is:
@@ -401,7 +401,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testIntraQueuePreemptionOfUserLimitWitAppsOfDifferentPriority()
+  void testIntraQueuePreemptionOfUserLimitWitAppsOfDifferentPriority()
       throws IOException {
     /**
      * Queue structure is:
@@ -459,7 +459,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testIntraQueuePreemptionOfUserLimitInTwoQueues()
+  void testIntraQueuePreemptionOfUserLimitInTwoQueues()
       throws IOException {
     /**
      * Queue structure is:
@@ -519,7 +519,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testIntraQueuePreemptionWithTwoRequestingUsers()
+  void testIntraQueuePreemptionWithTwoRequestingUsers()
       throws IOException {
     /**
     * Queue structure is:
@@ -577,7 +577,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionIfBelowUserLimitAndLowPriorityExtraUsers()
+  void testNoIntraQueuePreemptionIfBelowUserLimitAndLowPriorityExtraUsers()
       throws IOException {
      /**
      * Queue structure is:
@@ -637,7 +637,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionIfBelowUserLimitAndSamePriorityExtraUsers()
+  void testNoIntraQueuePreemptionIfBelowUserLimitAndSamePriorityExtraUsers()
       throws IOException {
      /**
      * Queue structure is:
@@ -697,7 +697,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionIfBelowUserLimitAndHighPriorityExtraUsers()
+  void testNoIntraQueuePreemptionIfBelowUserLimitAndHighPriorityExtraUsers()
       throws IOException {
      /**
      * Queue structure is:
@@ -757,7 +757,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testNoIntraQueuePreemptionWithUserLimitDeadzone()
+  void testNoIntraQueuePreemptionWithUserLimitDeadzone()
       throws IOException {
     /**
     * Queue structure is:
@@ -817,7 +817,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testIntraQueuePreemptionWithUserLimitDeadzoneAndPriority()
+  void testIntraQueuePreemptionWithUserLimitDeadzoneAndPriority()
       throws IOException {
     /**
     * Queue structure is:
@@ -900,7 +900,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
   }
 
   @Test
-  public void testSimpleIntraQueuePreemptionOneUserUnderOneUserAtOneUserAbove()
+  void testSimpleIntraQueuePreemptionOneUserUnderOneUserAtOneUserAbove()
       throws IOException {
     conf.setFloat(CapacitySchedulerConfiguration.
         INTRAQUEUE_PREEMPTION_MAX_ALLOWABLE_LIMIT,

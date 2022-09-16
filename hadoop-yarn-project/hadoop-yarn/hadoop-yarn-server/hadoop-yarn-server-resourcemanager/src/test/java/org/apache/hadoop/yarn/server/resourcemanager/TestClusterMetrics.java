@@ -21,10 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.Supplier;
 
@@ -38,26 +38,26 @@ public class TestClusterMetrics {
    *  - aMContainerAllocationDelay
    */
   @Test
-  public void testAmMetrics() throws Exception {
+  void testAmMetrics() throws Exception {
     assert(metrics != null);
-    Assert.assertTrue(!metrics.aMLaunchDelay.changed());
-    Assert.assertTrue(!metrics.aMRegisterDelay.changed());
-    Assert.assertTrue(!metrics.getAMContainerAllocationDelay().changed());
+    Assertions.assertTrue(!metrics.aMLaunchDelay.changed());
+    Assertions.assertTrue(!metrics.aMRegisterDelay.changed());
+    Assertions.assertTrue(!metrics.getAMContainerAllocationDelay().changed());
     metrics.addAMLaunchDelay(1);
     metrics.addAMRegisterDelay(1);
     metrics.addAMContainerAllocationDelay(1);
-    Assert.assertTrue(metrics.aMLaunchDelay.changed());
-    Assert.assertTrue(metrics.aMRegisterDelay.changed());
-    Assert.assertTrue(metrics.getAMContainerAllocationDelay().changed());
+    Assertions.assertTrue(metrics.aMLaunchDelay.changed());
+    Assertions.assertTrue(metrics.aMRegisterDelay.changed());
+    Assertions.assertTrue(metrics.getAMContainerAllocationDelay().changed());
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     DefaultMetricsSystem.initialize("ResourceManager");
     metrics = ClusterMetrics.getMetrics();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     ClusterMetrics.destroy();
 
@@ -68,8 +68,8 @@ public class TestClusterMetrics {
   }
 
   @Test
-  public void testClusterMetrics() throws Exception {
-    Assert.assertTrue(!metrics.containerAssignedPerSecond.changed());
+  void testClusterMetrics() throws Exception {
+    Assertions.assertTrue(!metrics.containerAssignedPerSecond.changed());
     metrics.incrNumContainerAssigned();
     metrics.incrNumContainerAssigned();
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

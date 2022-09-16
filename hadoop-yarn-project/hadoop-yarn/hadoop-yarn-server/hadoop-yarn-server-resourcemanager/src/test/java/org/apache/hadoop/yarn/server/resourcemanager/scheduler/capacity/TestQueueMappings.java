@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
@@ -26,9 +27,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestQueueMappings {
 
@@ -46,7 +47,7 @@ public class TestQueueMappings {
   private CapacityScheduler cs;
   private YarnConfiguration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -72,7 +73,7 @@ public class TestQueueMappings {
   }
 
   @Test
-  public void testQueueMappingSpecifyingNotExistedQueue() {
+  void testQueueMappingSpecifyingNotExistedQueue() {
     // if the mapping specifies a queue that does not exist, reinitialize will
     // be failed
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING,
@@ -83,11 +84,11 @@ public class TestQueueMappings {
     } catch (IOException ioex) {
       fail = true;
     }
-    Assert.assertTrue("queue initialization failed for non-existent q", fail);
+    Assertions.assertTrue(fail, "queue initialization failed for non-existent q");
   }
 
   @Test
-  public void testQueueMappingTrimSpaces() throws IOException {
+  void testQueueMappingTrimSpaces() throws IOException {
     // space trimming
     conf.set(CapacitySchedulerConfiguration.QUEUE_MAPPING, "    u : a : " + Q1);
     cs.reinitialize(conf, null);
@@ -101,34 +102,35 @@ public class TestQueueMappings {
   }
 
   @Test
-  public void testQueueMappingPathParsing() {
+  void testQueueMappingPathParsing() {
     QueueMapping leafOnly = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("leaf")
         .build();
 
-    Assert.assertEquals("leaf", leafOnly.getQueue());
-    Assert.assertEquals(null, leafOnly.getParentQueue());
-    Assert.assertEquals("leaf", leafOnly.getFullPath());
+    Assertions.assertEquals("leaf", leafOnly.getQueue());
+    Assertions.assertEquals(null, leafOnly.getParentQueue());
+    Assertions.assertEquals("leaf", leafOnly.getFullPath());
 
     QueueMapping twoLevels = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.leaf")
         .build();
 
-    Assert.assertEquals("leaf", twoLevels.getQueue());
-    Assert.assertEquals("root", twoLevels.getParentQueue());
-    Assert.assertEquals("root.leaf", twoLevels.getFullPath());
+    Assertions.assertEquals("leaf", twoLevels.getQueue());
+    Assertions.assertEquals("root", twoLevels.getParentQueue());
+    Assertions.assertEquals("root.leaf", twoLevels.getFullPath());
 
     QueueMapping deep = QueueMapping.QueueMappingBuilder.create()
         .parsePathString("root.a.b.c.d.e.leaf")
         .build();
 
-    Assert.assertEquals("leaf", deep.getQueue());
-    Assert.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
-    Assert.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
+    Assertions.assertEquals("leaf", deep.getQueue());
+    Assertions.assertEquals("root.a.b.c.d.e", deep.getParentQueue());
+    Assertions.assertEquals("root.a.b.c.d.e.leaf", deep.getFullPath());
   }
 
-  @Test (timeout = 60000)
-  public void testQueueMappingParsingInvalidCases() throws Exception {
+  @Timeout(60000)
+  @Test
+  void testQueueMappingParsingInvalidCases() throws Exception {
     // configuration parsing tests - negative test cases
     checkInvalidQMapping(conf, cs, "x:a:b", "invalid specifier");
     checkInvalidQMapping(conf, cs, "u:a", "no queue specified");
@@ -152,7 +154,7 @@ public class TestQueueMappings {
     } catch (IOException ex) {
       fail = true;
     }
-    Assert.assertTrue("invalid mapping did not throw exception for " + reason,
-        fail);
+    Assertions.assertTrue(fail,
+        "invalid mapping did not throw exception for " + reason);
   }
 }

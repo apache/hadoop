@@ -24,13 +24,14 @@ import static org.apache.hadoop.yarn.exceptions
     .GREATER_THEN_MAX_ALLOCATION;
 import static org.apache.hadoop.yarn.exceptions
     .InvalidResourceRequestException.InvalidResourceType.LESS_THAN_ZERO;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -98,13 +99,11 @@ import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,14 +119,11 @@ public class TestSchedulerUtils {
 
   private static YarnConfiguration conf = new YarnConfiguration();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   private void initResourceTypes() {
     CustomResourceTypesConfigurationProvider.initResourceTypes(3, "G");
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     initResourceTypes();
     //this needs to be initialized after initResourceTypes is called
@@ -140,8 +136,9 @@ public class TestSchedulerUtils {
                     .build());
   }
 
-  @Test(timeout = 30000)
-  public void testNormalizeRequest() {
+  @Timeout(30000)
+  @Test
+  void testNormalizeRequest() {
     ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
     final int minMemory = 1024;
@@ -205,8 +202,9 @@ public class TestSchedulerUtils {
             ask.getCapability().getMemorySize());
   }
 
-  @Test(timeout = 30000)
-  public void testNormalizeRequestWithDominantResourceCalculator() {
+  @Timeout(30000)
+  @Test
+  void testNormalizeRequestWithDominantResourceCalculator() {
     ResourceCalculator resourceCalculator = new DominantResourceCalculator();
 
     Resource minResource = Resources.createResource(1024, 1);
@@ -238,8 +236,9 @@ public class TestSchedulerUtils {
     assertEquals(2048, ask.getCapability().getMemorySize());
   }
 
-  @Test(timeout = 30000)
-  public void testValidateResourceRequestWithErrorLabelsPermission()
+  @Timeout(30000)
+  @Test
+  void testValidateResourceRequestWithErrorLabelsPermission()
           throws IOException {
     // mock queue and scheduler
     ResourceScheduler scheduler = mock(ResourceScheduler.class);
@@ -411,8 +410,8 @@ public class TestSchedulerUtils {
       rmContext.getNodeLabelManager().removeFromClusterNodeLabels(
               Arrays.asList("x"));
     }
-    Assert.assertTrue("InvalidLabelResourceRequestException expected",
-            invalidlabelexception);
+    Assertions.assertTrue(invalidlabelexception,
+            "InvalidLabelResourceRequestException expected");
     // queue is "*", always succeeded
     try {
       // set queue accessible node labels to empty
@@ -535,7 +534,7 @@ public class TestSchedulerUtils {
               .newResourceRequest(mock(Priority.class), "*", resource, 1, "x");
       normalizeAndvalidateRequest(resReq1, "queue",
               scheduler, rmContext, maxResource);
-      Assert.assertEquals(RMNodeLabelsManager.NO_LABEL,
+      assertEquals(RMNodeLabelsManager.NO_LABEL,
               resReq1.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
       assertEquals("Invalid resource request, node label not enabled but "
@@ -543,8 +542,9 @@ public class TestSchedulerUtils {
     }
   }
 
-  @Test(timeout = 30000)
-  public void testValidateResourceRequest() throws IOException {
+  @Timeout(30000)
+  @Test
+  void testValidateResourceRequest() throws IOException {
     ResourceScheduler mockScheduler = mock(ResourceScheduler.class);
 
     QueueInfo queueInfo = mock(QueueInfo.class);
@@ -680,7 +680,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testValidateResourceBlacklistRequest() throws Exception {
+  void testValidateResourceBlacklistRequest() throws Exception {
 
     MyContainerManager containerManager = new MyContainerManager();
     final MockRMWithAMS rm =
@@ -747,8 +747,8 @@ public class TestSchedulerUtils {
 
     rm.stop();
 
-    Assert.assertTrue(
-            "Didn't not catch InvalidResourceBlacklistRequestException", error);
+    Assertions.assertTrue(
+            error, "Didn't not catch InvalidResourceBlacklistRequestException");
   }
 
   private void waitForLaunchedState(RMAppAttempt attempt)
@@ -760,35 +760,36 @@ public class TestSchedulerUtils {
               + "Current state is " + attempt.getAppAttemptState());
       Thread.sleep(1000);
     }
-    Assert.assertEquals(attempt.getAppAttemptState(),
+    Assertions.assertEquals(attempt.getAppAttemptState(),
             RMAppAttemptState.LAUNCHED);
   }
 
   @Test
-  public void testComparePriorities() {
+  void testComparePriorities() {
     Priority high = Priority.newInstance(1);
     Priority low = Priority.newInstance(2);
     assertTrue(high.compareTo(low) > 0);
   }
 
   @Test
-  public void testCreateAbnormalContainerStatus() {
+  void testCreateAbnormalContainerStatus() {
     ContainerStatus cd = SchedulerUtils.createAbnormalContainerStatus(
             ContainerId.newContainerId(ApplicationAttemptId.newInstance(
                     ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
-    Assert.assertEquals(ContainerExitStatus.ABORTED, cd.getExitStatus());
+    Assertions.assertEquals(ContainerExitStatus.ABORTED, cd.getExitStatus());
   }
 
   @Test
-  public void testCreatePreemptedContainerStatus() {
+  void testCreatePreemptedContainerStatus() {
     ContainerStatus cd = SchedulerUtils.createPreemptedContainerStatus(
             ContainerId.newContainerId(ApplicationAttemptId.newInstance(
                     ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
-    Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
+    Assertions.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
   }
 
-  @Test(timeout = 30000)
-  public void testNormalizeNodeLabelExpression()
+  @Timeout(30000)
+  @Test
+  void testNormalizeNodeLabelExpression()
           throws IOException {
     // mock queue and scheduler
     ResourceScheduler scheduler = mock(ResourceScheduler.class);
@@ -821,12 +822,12 @@ public class TestSchedulerUtils {
               mock(Priority.class), ResourceRequest.ANY, resource, 1);
       normalizeAndvalidateRequest(resReq, "queue",
               scheduler, rmContext, maxResource);
-      Assert.assertEquals("x", resReq.getNodeLabelExpression());
+      Assertions.assertEquals("x", resReq.getNodeLabelExpression());
 
       resReq.setNodeLabelExpression(" y ");
       normalizeAndvalidateRequest(resReq, "queue",
               scheduler, rmContext, maxResource);
-      Assert.assertEquals("y", resReq.getNodeLabelExpression());
+      Assertions.assertEquals("y", resReq.getNodeLabelExpression());
     } catch (InvalidResourceRequestException e) {
       e.printStackTrace();
       fail("Should be valid when request labels is a subset of queue labels");
@@ -837,7 +838,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsSmallerThanAvailableUnit()
+  void testCustomResourceRequestedUnitIsSmallerThanAvailableUnit()
           throws InvalidResourceRequestException {
     Resource requestedResource =
             ResourceTypesTestHelper.newResource(1, 1,
@@ -847,21 +848,23 @@ public class TestSchedulerUtils {
             ResourceTypesTestHelper.newResource(1, 1,
                     ImmutableMap.of("custom-resource-1", "0G"));
 
-    exception.expect(InvalidResourceRequestException.class);
-    exception.expectMessage(InvalidResourceRequestExceptionMessageGenerator
-            .create().withRequestedResourceType("custom-resource-1")
-            .withRequestedResource(requestedResource)
-            .withAvailableAllocation(availableResource)
-            .withMaxAllocation(configuredMaxAllocation)
-            .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION)
-            .build());
-
-    SchedulerUtils.checkResourceRequestAgainstAvailableResource(
-            requestedResource, availableResource);
+    final Exception ex = Assertions.assertThrows(
+        InvalidResourceRequestException.class,
+        () -> {
+          SchedulerUtils.checkResourceRequestAgainstAvailableResource(
+              requestedResource, availableResource);
+        }
+    );
+    Assertions.assertEquals(ex.getMessage(), InvalidResourceRequestExceptionMessageGenerator
+        .create().withRequestedResourceType("custom-resource-1")
+        .withRequestedResource(requestedResource)
+        .withAvailableAllocation(availableResource)
+        .withMaxAllocation(configuredMaxAllocation)
+        .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION).build());
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsSmallerThanAvailableUnit2() {
+  void testCustomResourceRequestedUnitIsSmallerThanAvailableUnit2() {
     Resource requestedResource =
             ResourceTypesTestHelper.newResource(1, 1,
                     ImmutableMap.of("custom-resource-1", "11"));
@@ -881,7 +884,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsGreaterThanAvailableUnit()
+  void testCustomResourceRequestedUnitIsGreaterThanAvailableUnit()
           throws InvalidResourceRequestException {
     Resource requestedResource =
             ResourceTypesTestHelper.newResource(1, 1,
@@ -892,20 +895,23 @@ public class TestSchedulerUtils {
                     "120k")
                     .build());
 
-    exception.expect(InvalidResourceRequestException.class);
-    exception.expectMessage(InvalidResourceRequestExceptionMessageGenerator
-            .create().withRequestedResourceType("custom-resource-1")
-            .withRequestedResource(requestedResource)
-            .withAvailableAllocation(availableResource)
-            .withMaxAllocation(configuredMaxAllocation)
-            .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION)
-            .build());
-    SchedulerUtils.checkResourceRequestAgainstAvailableResource(
-            requestedResource, availableResource);
+    final Exception ex = Assertions.assertThrows(
+        InvalidResourceRequestException.class,
+        () -> {
+          SchedulerUtils.checkResourceRequestAgainstAvailableResource(
+              requestedResource, availableResource);
+        }
+    );
+    Assertions.assertEquals(ex.getMessage(), InvalidResourceRequestExceptionMessageGenerator
+        .create().withRequestedResourceType("custom-resource-1")
+        .withRequestedResource(requestedResource)
+        .withAvailableAllocation(availableResource)
+        .withMaxAllocation(configuredMaxAllocation)
+        .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION).build());
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsGreaterThanAvailableUnit2() {
+  void testCustomResourceRequestedUnitIsGreaterThanAvailableUnit2() {
     Resource requestedResource = ResourceTypesTestHelper.newResource(1, 1,
             ImmutableMap.<String, String>builder().put("custom-resource-1", "11M")
                     .build());
@@ -925,7 +931,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsSameAsAvailableUnit() {
+  void testCustomResourceRequestedUnitIsSameAsAvailableUnit() {
     Resource requestedResource = ResourceTypesTestHelper.newResource(1, 1,
             ImmutableMap.of("custom-resource-1", "11M"));
 
@@ -943,7 +949,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testCustomResourceRequestedUnitIsSameAsAvailableUnit2()
+  void testCustomResourceRequestedUnitIsSameAsAvailableUnit2()
           throws InvalidResourceRequestException {
     Resource requestedResource = ResourceTypesTestHelper.newResource(1, 1,
             ImmutableMap.of("custom-resource-1", "110M"));
@@ -951,17 +957,19 @@ public class TestSchedulerUtils {
     Resource availableResource = ResourceTypesTestHelper.newResource(1, 1,
             ImmutableMap.of("custom-resource-1", "100M"));
 
-    exception.expect(InvalidResourceRequestException.class);
-    exception.expectMessage(InvalidResourceRequestExceptionMessageGenerator
-            .create().withRequestedResourceType("custom-resource-1")
-            .withRequestedResource(requestedResource)
-            .withAvailableAllocation(availableResource)
-            .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION)
-            .withMaxAllocation(configuredMaxAllocation)
-            .build());
-
-    SchedulerUtils.checkResourceRequestAgainstAvailableResource(
-            requestedResource, availableResource);
+    final Exception ex = Assertions.assertThrows(
+        InvalidResourceRequestException.class,
+        () -> {
+          SchedulerUtils.checkResourceRequestAgainstAvailableResource(
+              requestedResource, availableResource);
+        }
+    );
+    Assertions.assertEquals(ex.getMessage(), InvalidResourceRequestExceptionMessageGenerator
+        .create().withRequestedResourceType("custom-resource-1")
+        .withRequestedResource(requestedResource)
+        .withAvailableAllocation(availableResource)
+        .withInvalidResourceType(GREATER_THEN_MAX_ALLOCATION)
+        .withMaxAllocation(configuredMaxAllocation).build());
   }
 
   public static void waitSchedulerApplicationAttemptStopped(
@@ -988,7 +996,7 @@ public class TestSchedulerUtils {
   }
 
   @Test
-  public void testEnforcePartitionExclusivity() {
+  void testEnforcePartitionExclusivity() {
     String enforcedExclusiveLabel = "x";
     Set<String> enforcedExclusiveLabelSet =
         Collections.singleton(enforcedExclusiveLabel);
@@ -1000,68 +1008,68 @@ public class TestSchedulerUtils {
     // RR label unset and app label does not match. Nothing should happen.
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
 
     // RR label and app label do not match. Nothing should happen.
     rr.setNodeLabelExpression(dummyLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(dummyLabel, rr.getNodeLabelExpression());
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(dummyLabel, rr.getNodeLabelExpression());
 
     // RR label matches but app label does not. RR label should be set
     // to app label
     rr.setNodeLabelExpression(enforcedExclusiveLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
     rr.setNodeLabelExpression(enforcedExclusiveLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertEquals(appLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(appLabel, rr.getNodeLabelExpression());
 
     // RR label unset and app label matches. RR label should be set
     // to app label
     rr.setNodeLabelExpression(null);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedExclusiveLabel);
-    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
 
     // RR label does not match and app label matches. RR label should be set
     // to app label
     rr.setNodeLabelExpression(dummyLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedExclusiveLabel);
-    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
 
     // RR label and app label matches. Nothing should happen.
     rr.setNodeLabelExpression(enforcedExclusiveLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedExclusiveLabel);
-    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
 
     // Unconfigured label: nothing should happen.
     rr.setNodeLabelExpression(null);
     SchedulerUtils.enforcePartitionExclusivity(rr, null,
         appLabel);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
     rr.setNodeLabelExpression(dummyLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, null,
         appLabel);
-    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(dummyLabel, rr.getNodeLabelExpression());
     rr.setNodeLabelExpression(enforcedExclusiveLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, null,
         appLabel);
-    Assert.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedExclusiveLabel, rr.getNodeLabelExpression());
   }
 
   @Test
-  public void testEnforcePartitionExclusivityMultipleLabels() {
+  void testEnforcePartitionExclusivityMultipleLabels() {
     String enforcedLabel1 = "x";
     String enforcedLabel2 = "y";
     Set<String> enforcedExclusiveLabelSet = new HashSet<>();
@@ -1075,57 +1083,57 @@ public class TestSchedulerUtils {
     // RR label unset and app label does not match. Nothing should happen.
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
 
     // RR label and app label do not match. Nothing should happen.
     rr.setNodeLabelExpression(dummyLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(dummyLabel, rr.getNodeLabelExpression());
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertEquals(dummyLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(dummyLabel, rr.getNodeLabelExpression());
 
     // RR label matches but app label does not. RR label should be set
     // to app label
     rr.setNodeLabelExpression(enforcedLabel1);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         null);
-    Assert.assertNull(rr.getNodeLabelExpression());
+    Assertions.assertNull(rr.getNodeLabelExpression());
     rr.setNodeLabelExpression(enforcedLabel2);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         appLabel);
-    Assert.assertEquals(appLabel, rr.getNodeLabelExpression());
+    Assertions.assertEquals(appLabel, rr.getNodeLabelExpression());
 
     // RR label unset and app label matches. RR label should be set
     // to app label
     rr.setNodeLabelExpression(null);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedLabel1);
-    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
 
     // RR label does not match and app label matches. RR label should be set
     // to app label
     rr.setNodeLabelExpression(dummyLabel);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedLabel2);
-    Assert.assertEquals(enforcedLabel2, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedLabel2, rr.getNodeLabelExpression());
 
     // RR label and app label matches. Nothing should happen.
     rr.setNodeLabelExpression(enforcedLabel1);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedLabel1);
-    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
 
     // RR label and app label don't match, but they're both enforced labels.
     // RR label should be set to app label.
     rr.setNodeLabelExpression(enforcedLabel2);
     SchedulerUtils.enforcePartitionExclusivity(rr, enforcedExclusiveLabelSet,
         enforcedLabel1);
-    Assert.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
+    Assertions.assertEquals(enforcedLabel1, rr.getNodeLabelExpression());
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>
@@ -1144,13 +1152,13 @@ public class TestSchedulerUtils {
     SchedulerApplication<SchedulerApplicationAttempt> app =
             applications.get(appId);
     // verify application is added.
-    Assert.assertNotNull(app);
-    Assert.assertEquals("user", app.getUser());
+    Assertions.assertNotNull(app);
+    Assertions.assertEquals("user", app.getUser());
 
     AppRemovedSchedulerEvent appRemoveEvent =
             new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED);
     handler.handle(appRemoveEvent);
-    Assert.assertNull(applications.get(appId));
+    Assertions.assertNull(applications.get(appId));
     return app;
   }
 

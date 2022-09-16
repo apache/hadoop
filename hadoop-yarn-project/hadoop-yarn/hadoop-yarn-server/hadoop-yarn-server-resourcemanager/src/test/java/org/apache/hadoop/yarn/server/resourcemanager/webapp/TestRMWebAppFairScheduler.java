@@ -46,8 +46,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -61,7 +61,7 @@ import static org.mockito.Mockito.when;
 public class TestRMWebAppFairScheduler {
 
   @Test
-  public void testFairSchedulerWebAppPage() {
+  void testFairSchedulerWebAppPage() {
     List<RMAppState> appStates = Arrays.asList(RMAppState.NEW,
         RMAppState.NEW_SAVING, RMAppState.SUBMITTED);
     final RMContext rmContext = mockRMContext(appStates);
@@ -92,7 +92,7 @@ public class TestRMWebAppFairScheduler {
    *  RMContext#applications
    */
   @Test
-  public void testFairSchedulerWebAppPageInInconsistentState() {
+  void testFairSchedulerWebAppPageInInconsistentState() {
     List<RMAppState> appStates = Arrays.asList(
         RMAppState.NEW,
         RMAppState.NEW_SAVING,
@@ -123,7 +123,7 @@ public class TestRMWebAppFairScheduler {
     try {
       fsViewInstance.render();
     } catch (Exception e) {
-      Assert.fail("Failed to render FairSchedulerPage: " +
+      Assertions.fail("Failed to render FairSchedulerPage: " +
           StringUtils.stringifyException(e));
     }
     WebAppTests.flushOutput(injector);

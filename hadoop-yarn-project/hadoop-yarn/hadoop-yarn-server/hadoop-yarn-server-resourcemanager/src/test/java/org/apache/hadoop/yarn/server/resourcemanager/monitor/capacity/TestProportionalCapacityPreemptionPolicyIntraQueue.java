@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.verify;
 public class TestProportionalCapacityPreemptionPolicyIntraQueue
     extends
     ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     conf.setBoolean(
@@ -47,7 +47,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testSimpleIntraQueuePreemption() throws IOException {
+  void testSimpleIntraQueuePreemption() throws IOException {
     /**
      * The simplest test preemption, Queue structure is:
      *
@@ -112,7 +112,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testNoIntraQueuePreemptionWithPreemptionDisabledOnQueues()
+  void testNoIntraQueuePreemptionWithPreemptionDisabledOnQueues()
       throws IOException {
     /**
      * This test has the same configuration as testSimpleIntraQueuePreemption
@@ -167,7 +167,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testNoPreemptionForSamePriorityApps() throws IOException {
+  void testNoPreemptionForSamePriorityApps() throws IOException {
     /**
      * Queue structure is:
      *
@@ -232,7 +232,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testNoPreemptionWhenQueueIsUnderCapacityLimit()
+  void testNoPreemptionWhenQueueIsUnderCapacityLimit()
       throws IOException {
     /**
      * Queue structure is:
@@ -289,7 +289,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testLimitPreemptionWithMaxIntraQueuePreemptableLimit()
+  void testLimitPreemptionWithMaxIntraQueuePreemptableLimit()
       throws IOException {
     /**
      * Queue structure is:
@@ -345,7 +345,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testLimitPreemptionWithTotalPreemptedResourceAllowed()
+  void testLimitPreemptionWithTotalPreemptedResourceAllowed()
       throws IOException {
     /**
      * Queue structure is:
@@ -399,7 +399,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testAlreadySelectedContainerFromInterQueuePreemption()
+  void testAlreadySelectedContainerFromInterQueuePreemption()
       throws IOException {
     /**
      * Queue structure is:
@@ -459,7 +459,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testSkipAMContainersInInterQueuePreemption() throws IOException {
+  void testSkipAMContainersInInterQueuePreemption() throws IOException {
     /**
      * Queue structure is:
      *
@@ -513,7 +513,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testSkipAMContainersInInterQueuePreemptionSingleApp()
+  void testSkipAMContainersInInterQueuePreemptionSingleApp()
       throws IOException {
     /**
      * Queue structure is:
@@ -563,7 +563,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testNoPreemptionForSingleApp() throws IOException {
+  void testNoPreemptionForSingleApp() throws IOException {
     /**
      * Queue structure is:
      *
@@ -603,7 +603,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testOverutilizedQueueResourceWithInterQueuePreemption()
+  void testOverutilizedQueueResourceWithInterQueuePreemption()
       throws IOException {
     /**
      * Queue structure is:
@@ -652,7 +652,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testNodePartitionIntraQueuePreemption() throws IOException {
+  void testNodePartitionIntraQueuePreemption() throws IOException {
     /**
      * The simplest test of node label, Queue structure is:
      *
@@ -714,7 +714,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testComplexIntraQueuePreemption() throws IOException {
+  void testComplexIntraQueuePreemption() throws IOException {
     /**
      * The complex test preemption, Queue structure is:
      *
@@ -812,7 +812,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testIntraQueuePreemptionWithTwoUsers()
+  void testIntraQueuePreemptionWithTwoUsers()
       throws IOException {
     /**
      * Queue structure is:
@@ -869,7 +869,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testComplexNodePartitionIntraQueuePreemption()
+  void testComplexNodePartitionIntraQueuePreemption()
       throws IOException {
     /**
      * The simplest test of node label, Queue structure is:
@@ -946,7 +946,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
   }
 
   @Test
-  public void testIntraQueuePreemptionAfterQueueDropped()
+  void testIntraQueuePreemptionAfterQueueDropped()
       throws IOException {
     /**
      * Test intra queue preemption after under-served queue dropped,

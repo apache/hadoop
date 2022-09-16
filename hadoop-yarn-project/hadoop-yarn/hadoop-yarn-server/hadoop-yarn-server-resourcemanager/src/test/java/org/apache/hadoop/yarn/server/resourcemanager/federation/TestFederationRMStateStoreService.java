@@ -37,10 +37,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
@@ -64,7 +64,7 @@ public class TestFederationRMStateStoreService {
   private JSONJAXBContext jc;
   private JSONUnmarshaller unmarshaller;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, YarnException, JAXBException {
     conf = new YarnConfiguration();
     jc = new JSONJAXBContext(
@@ -73,14 +73,14 @@ public class TestFederationRMStateStoreService {
     unmarshaller = jc.createJSONUnmarshaller();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     unmarshaller = null;
     jc = null;
   }
 
   @Test
-  public void testFederationStateStoreService() throws Exception {
+  void testFederationStateStoreService() throws Exception {
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
     final MockRM rm = new MockRM(conf);
@@ -89,12 +89,12 @@ public class TestFederationRMStateStoreService {
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
     GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
-    Assert.assertNull(response);
+    Assertions.assertNull(response);
 
     // Validate if sub-cluster is registered
     rm.start();
     String capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assert.assertTrue(capability.isEmpty());
+    Assertions.assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     FederationStateStoreHeartbeat storeHeartbeat =
@@ -119,7 +119,7 @@ public class TestFederationRMStateStoreService {
     explicitFailover(rm);
 
     capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assert.assertTrue(capability.isEmpty());
+    Assertions.assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     storeHeartbeat =
@@ -139,10 +139,10 @@ public class TestFederationRMStateStoreService {
 
   private void explicitFailover(MockRM rm) throws IOException {
     rm.getAdminService().transitionToStandby(requestInfo);
-    Assert.assertTrue(rm.getRMContext()
+    Assertions.assertTrue(rm.getRMContext()
         .getHAServiceState() == HAServiceProtocol.HAServiceState.STANDBY);
     rm.getAdminService().transitionToActive(requestInfo);
-    Assert.assertTrue(rm.getRMContext()
+    Assertions.assertTrue(rm.getRMContext()
         .getHAServiceState() == HAServiceProtocol.HAServiceState.ACTIVE);
     lastHearbeatTS = 0;
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
@@ -152,30 +152,30 @@ public class TestFederationRMStateStoreService {
       throws JAXBException {
     ClusterMetricsInfo clusterMetricsInfo = unmarshaller.unmarshalFromJSON(
         new StringReader(capability), ClusterMetricsInfo.class);
-    Assert.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
+    Assertions.assertEquals(numNodes, clusterMetricsInfo.getTotalNodes());
   }
 
   private String checkSubClusterInfo(SubClusterState state)
       throws YarnException, UnknownHostException {
-    Assert.assertNotNull(stateStore.getSubCluster(request));
+    Assertions.assertNotNull(stateStore.getSubCluster(request));
     SubClusterInfo response =
         stateStore.getSubCluster(request).getSubClusterInfo();
-    Assert.assertEquals(state, response.getState());
-    Assert.assertTrue(response.getLastHeartBeat() >= lastHearbeatTS);
+    Assertions.assertEquals(state, response.getState());
+    Assertions.assertTrue(response.getLastHeartBeat() >= lastHearbeatTS);
     String expectedAddress =
         (response.getClientRMServiceAddress().split(":"))[0];
-    Assert.assertEquals(expectedAddress,
+    Assertions.assertEquals(expectedAddress,
         (response.getAMRMServiceAddress().split(":"))[0]);
-    Assert.assertEquals(expectedAddress,
+    Assertions.assertEquals(expectedAddress,
         (response.getRMAdminServiceAddress().split(":"))[0]);
-    Assert.assertEquals(expectedAddress,
+    Assertions.assertEquals(expectedAddress,
         (response.getRMWebServiceAddress().split(":"))[0]);
     lastHearbeatTS = response.getLastHeartBeat();
     return response.getCapability();
   }
 
   @Test
-  public void testFederationStateStoreServiceInitialHeartbeatDelay() throws Exception {
+  void testFederationStateStoreServiceInitialHeartbeatDelay() throws Exception {
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
@@ -189,12 +189,12 @@ public class TestFederationRMStateStoreService {
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
     GetSubClusterInfoResponse response = stateStore.getSubCluster(request);
-    Assert.assertNull(response);
+    Assertions.assertNull(response);
 
     // Validate if sub-cluster is registered
     rm.start();
     String capability = checkSubClusterInfo(SubClusterState.SC_NEW);
-    Assert.assertTrue(capability.isEmpty());
+    Assertions.assertTrue(capability.isEmpty());
 
     // Heartbeat to see if sub-cluster transitions to running
     FederationStateStoreHeartbeat storeHeartbeat =
@@ -203,7 +203,7 @@ public class TestFederationRMStateStoreService {
     capability = checkSubClusterInfo(SubClusterState.SC_RUNNING);
     checkClusterMetricsInfo(capability, 0);
 
-    Assert.assertTrue(logCapture.getOutput().contains(
+    Assertions.assertTrue(logCapture.getOutput().contains(
         "Started federation membership heartbeat with interval: 300 and initial delay: 10"));
     rm.stop();
   }

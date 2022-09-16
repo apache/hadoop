@@ -18,7 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -43,8 +43,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.security.AppPriorityACLsManager;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCSMaxRunningAppsEnforcer {
   private CapacitySchedulerQueueManager queueManager;
@@ -56,7 +56,7 @@ public class TestCSMaxRunningAppsEnforcer {
   private ActivitiesManager activitiesManager;
   private CapacitySchedulerConfiguration csConfig;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     csConfig = new CapacitySchedulerConfiguration();
     rmContext = mock(RMContext.class);
@@ -150,7 +150,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testRemoveDoesNotEnableAnyApp() {
+  void testRemoveDoesNotEnableAnyApp() {
     ParentQueue root =
         (ParentQueue) queueManager.getRootQueue();
     LeafQueue leaf1 = (LeafQueue) queueManager
@@ -175,7 +175,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testRemoveEnablesAppOnCousinQueue() {
+  void testRemoveEnablesAppOnCousinQueue() {
     LeafQueue leaf1 = (LeafQueue) queueManager
         .getQueueByFullName("root.queue1.subqueue1.leaf1");
     LeafQueue leaf2 = (LeafQueue) queueManager
@@ -198,7 +198,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testRemoveEnablesOneByQueueOneByUser() {
+  void testRemoveEnablesOneByQueueOneByUser() {
     LeafQueue leaf1 = (LeafQueue) queueManager
         .getQueueByFullName("root.queue1.subqueue1.leaf1");
     LeafQueue leaf2 = (LeafQueue) queueManager
@@ -223,7 +223,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testRemoveEnablingOrderedByStartTime() {
+  void testRemoveEnablingOrderedByStartTime() {
     LeafQueue leaf1 = (LeafQueue) queueManager
         .getQueueByFullName("root.queue1.subqueue1.leaf1");
     LeafQueue leaf2 = (LeafQueue) queueManager
@@ -247,7 +247,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testMultipleAppsWaitingOnCousinQueue() {
+  void testMultipleAppsWaitingOnCousinQueue() {
     LeafQueue leaf1 = (LeafQueue) queueManager
         .getQueueByFullName("root.queue1.subqueue1.leaf1");
     LeafQueue leaf2 = (LeafQueue) queueManager
@@ -269,7 +269,7 @@ public class TestCSMaxRunningAppsEnforcer {
   }
 
   @Test
-  public void testMultiListStartTimeIteratorEmptyAppLists() {
+  void testMultiListStartTimeIteratorEmptyAppLists() {
     List<List<FiCaSchedulerApp>> lists =
         new ArrayList<List<FiCaSchedulerApp>>();
     lists.add(Arrays.asList(mockAppAttempt(1)));

@@ -21,8 +21,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .queuemanagement.GuaranteedOrZeroCapacityOverTimePolicy;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -30,21 +30,21 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.CSQueueUtils.EPSILON;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestQueueManagementDynamicEditPolicy extends
     TestCapacitySchedulerAutoCreatedQueueBase {
    private QueueManagementDynamicEditPolicy policy = new
        QueueManagementDynamicEditPolicy();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     policy.init(cs.getConfiguration(), cs.getRMContext(), cs);
   }
 
   @Test
-  public void testEditSchedule() throws Exception {
+  void testEditSchedule() throws Exception {
 
     try {
       policy.editSchedule();
@@ -56,8 +56,8 @@ public class TestQueueManagementDynamicEditPolicy extends
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)
               parentQueue)
               .getAutoCreatedQueueManagementPolicy();
-      assertEquals(0f, autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
+      assertEquals(autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON, 0f);
 
       //submit app1 as USER1
       ApplicationId user1AppId = submitApp(mockRM, parentQueue, USER1, USER1, 1,
@@ -76,8 +76,8 @@ public class TestQueueManagementDynamicEditPolicy extends
           expectedAbsChildQueueCapacity, accessibleNodeLabelsOnC);
 
       //validate total activated abs capacity
-      assertEquals(0.2f, autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON);
+      assertEquals(autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), EPSILON, 0.2f);
 
       //submit user_3 app. This cant be scheduled since there is no capacity
       submitApp(mockRM, parentQueue, USER3, USER3, 3, 1);
@@ -85,8 +85,8 @@ public class TestQueueManagementDynamicEditPolicy extends
       validateCapacities((AutoCreatedLeafQueue) user3LeafQueue, 0.0f, 0.0f,
           1.0f, 1.0f);
 
-      assertEquals(autoCreatedQueueManagementPolicy
-          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL), 0.2f, EPSILON);
+      assertEquals(0.2f, EPSILON, autoCreatedQueueManagementPolicy
+          .getAbsoluteActivatedChildQueueCapacity(NO_LABEL));
 
       //deactivate USER2 queue
       cs.killAllAppsInQueue(USER2);

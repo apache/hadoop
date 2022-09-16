@@ -26,8 +26,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
     extends
     ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     conf.setBoolean(
@@ -55,7 +55,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
   }
 
   @Test
-  public void testSimpleIntraQueuePreemptionWithVCoreResource()
+  void testSimpleIntraQueuePreemptionWithVCoreResource()
       throws IOException {
     /**
      * The simplest test preemption, Queue structure is:
@@ -120,7 +120,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testIntraQueuePreemptionFairOrderingWithStrictAndRelaxedDRF()
+  void testIntraQueuePreemptionFairOrderingWithStrictAndRelaxedDRF()
       throws IOException {
     /**
      * Continue to allow intra-queue preemption when only one of the user's
@@ -194,7 +194,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testIntraQueuePreemptionFairOrdering3ResourcesWithStrictAndRelaxedDRF()
+  void testIntraQueuePreemptionFairOrdering3ResourcesWithStrictAndRelaxedDRF()
       throws IOException {
     /**
      * Continue to allow intra-queue preemption when only one of the user's
@@ -273,7 +273,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueWithDRF
   }
 
   @Test
-  public void testIntraQueuePreemptionWithDominantVCoreResource()
+  void testIntraQueuePreemptionWithDominantVCoreResource()
       throws IOException {
     /**
      * The simplest test preemption, Queue structure is:

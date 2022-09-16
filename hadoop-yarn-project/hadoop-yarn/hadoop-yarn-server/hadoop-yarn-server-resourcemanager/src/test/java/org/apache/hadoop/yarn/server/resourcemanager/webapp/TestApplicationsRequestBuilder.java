@@ -22,13 +22,29 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.webapp.WebServices.parseQueries;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -44,7 +60,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testDefaultRequest() {
+  void testDefaultRequest() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().build();
 
@@ -53,7 +69,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullStateQuery() {
+  void testRequestWithNullStateQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStateQuery(null).build();
 
@@ -62,7 +78,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyStateQuery() {
+  void testRequestWithEmptyStateQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStateQuery("").build();
 
@@ -70,14 +86,16 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidStateQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStateQuery("invalidState").build();
+  @Test
+  void testRequestWithInvalidStateQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      ApplicationsRequestBuilder.create()
+          .withStateQuery("invalidState").build();
+    });
   }
 
   @Test
-  public void testRequestWithValidStateQuery() {
+  void testRequestWithValidStateQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStateQuery(YarnApplicationState.NEW_SAVING.toString()).build();
 
@@ -91,7 +109,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyStateQueries() {
+  void testRequestWithEmptyStateQueries() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStatesQuery(Sets.newHashSet()).build();
 
@@ -100,18 +118,20 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidStateQueries() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStatesQuery(Sets.newHashSet("a1", "a2", "")).build();
+  @Test
+  void testRequestWithInvalidStateQueries() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withStatesQuery(Sets.newHashSet("a1", "a2", "")).build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
 
-    assertEquals(expectedRequest, request);
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithNullStateQueries() {
+  void testRequestWithNullStateQueries() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStatesQuery(null).build();
 
@@ -121,7 +141,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithValidStateQueries() {
+  void testRequestWithValidStateQueries() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStatesQuery(
             Sets.newHashSet(YarnApplicationState.NEW_SAVING.toString(),
@@ -139,7 +159,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullUserQuery() {
+  void testRequestWithNullUserQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withUserQuery(null).build();
 
@@ -148,7 +168,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyUserQuery() {
+  void testRequestWithEmptyUserQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withUserQuery("").build();
 
@@ -157,7 +177,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithUserQuery() {
+  void testRequestWithUserQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withUserQuery("user1").build();
 
@@ -167,7 +187,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullQueueQuery() {
+  void testRequestWithNullQueueQuery() {
     ResourceManager rm = mock(ResourceManager.class);
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withQueueQuery(rm, null).build();
@@ -177,7 +197,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyQueueQuery() {
+  void testRequestWithEmptyQueueQuery() {
     ResourceManager rm = mock(ResourceManager.class);
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withQueueQuery(rm, "").build();
@@ -187,24 +207,8 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithQueueQueryExistingQueue() {
+  void testRequestWithQueueQueryExistingQueue() {
     ResourceManager rm = mock(ResourceManager.class);
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withQueueQuery(rm, "queue1").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    expectedRequest.setQueues(Sets.newHashSet("queue1"));
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithQueueQueryNotExistingQueue() throws IOException {
-    CapacityScheduler cs = mock(CapacityScheduler.class);
-    when(cs.getQueueInfo(eq("queue1"), anyBoolean(), anyBoolean()))
-        .thenThrow(new IOException());
-    ResourceManager rm = mock(ResourceManager.class);
-    when(rm.getResourceScheduler()).thenReturn(cs);
-
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withQueueQuery(rm, "queue1").build();
 
@@ -214,7 +218,25 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullLimitQuery() {
+  void testRequestWithQueueQueryNotExistingQueue() throws IOException {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      CapacityScheduler cs = mock(CapacityScheduler.class);
+      when(cs.getQueueInfo(eq("queue1"), anyBoolean(), anyBoolean()))
+          .thenThrow(new IOException());
+      ResourceManager rm = mock(ResourceManager.class);
+      when(rm.getResourceScheduler()).thenReturn(cs);
+
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withQueueQuery(rm, "queue1").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      expectedRequest.setQueues(Sets.newHashSet("queue1"));
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithNullLimitQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withLimit(null).build();
 
@@ -223,7 +245,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyLimitQuery() {
+  void testRequestWithEmptyLimitQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withLimit("").build();
 
@@ -231,26 +253,30 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidLimitQuery() {
-    GetApplicationsRequest request =
-        ApplicationsRequestBuilder.create().withLimit("bla").build();
+  @Test
+  void testRequestWithInvalidLimitQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request =
+          ApplicationsRequestBuilder.create().withLimit("bla").build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidNegativeLimitQuery() {
-    GetApplicationsRequest request =
-        ApplicationsRequestBuilder.create().withLimit("-10").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithValidLimitQuery() {
+  void testRequestWithInvalidNegativeLimitQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request =
+          ApplicationsRequestBuilder.create().withLimit("-10").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithValidLimitQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withLimit("999").build();
 
@@ -260,7 +286,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullStartedTimeBeginQuery() {
+  void testRequestWithNullStartedTimeBeginQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStartedTimeBegin(null).build();
 
@@ -269,7 +295,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyStartedTimeBeginQuery() {
+  void testRequestWithEmptyStartedTimeBeginQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStartedTimeBegin("").build();
 
@@ -277,26 +303,30 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidStartedTimeBeginQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStartedTimeBegin("bla").build();
+  @Test
+  void testRequestWithInvalidStartedTimeBeginQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withStartedTimeBegin("bla").build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidNegativeStartedTimeBeginQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStartedTimeBegin("-1").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithValidStartedTimeBeginQuery() {
+  void testRequestWithInvalidNegativeStartedTimeBeginQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withStartedTimeBegin("-1").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithValidStartedTimeBeginQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStartedTimeBegin("999").build();
 
@@ -306,7 +336,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullStartedTimeEndQuery() {
+  void testRequestWithNullStartedTimeEndQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStartedTimeEnd(null).build();
 
@@ -315,7 +345,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptywithStartedTimeEndQuery() {
+  void testRequestWithEmptywithStartedTimeEndQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withStartedTimeEnd("").build();
 
@@ -323,26 +353,30 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidStartedTimeEndQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStartedTimeEnd("bla").build();
+  @Test
+  void testRequestWithInvalidStartedTimeEndQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withStartedTimeEnd("bla").build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidNegativeStartedTimeEndQuery() {
-    GetApplicationsRequest request =
-        ApplicationsRequestBuilder.create().withStartedTimeEnd("-1").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithValidStartedTimeEndQuery() {
+  void testRequestWithInvalidNegativeStartedTimeEndQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request =
+          ApplicationsRequestBuilder.create().withStartedTimeEnd("-1").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithValidStartedTimeEndQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStartedTimeEnd("999").build();
 
@@ -352,7 +386,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullFinishedTimeBeginQuery() {
+  void testRequestWithNullFinishedTimeBeginQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withFinishTimeBegin(null).build();
 
@@ -361,7 +395,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyFinishedTimeBeginQuery() {
+  void testRequestWithEmptyFinishedTimeBeginQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withFinishTimeBegin("").build();
 
@@ -369,26 +403,30 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidFinishedTimeBeginQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withFinishTimeBegin("bla").build();
+  @Test
+  void testRequestWithInvalidFinishedTimeBeginQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withFinishTimeBegin("bla").build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidNegativeFinishedTimeBeginQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withFinishTimeBegin("-1").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithValidFinishedTimeBeginQuery() {
+  void testRequestWithInvalidNegativeFinishedTimeBeginQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withFinishTimeBegin("-1").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithValidFinishedTimeBeginQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withFinishTimeBegin("999").build();
 
@@ -398,7 +436,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullFinishedTimeEndQuery() {
+  void testRequestWithNullFinishedTimeEndQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withFinishTimeEnd(null).build();
 
@@ -407,7 +445,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithEmptyFinishTimeEndQuery() {
+  void testRequestWithEmptyFinishTimeEndQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withFinishTimeEnd("").build();
 
@@ -415,26 +453,30 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidFinishTimeEndQuery() {
-    GetApplicationsRequest request =
-        ApplicationsRequestBuilder.create().withFinishTimeEnd("bla").build();
+  @Test
+  void testRequestWithInvalidFinishTimeEndQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request =
+          ApplicationsRequestBuilder.create().withFinishTimeEnd("bla").build();
 
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
-  }
-
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidNegativeFinishedTimeEndQuery() {
-    GetApplicationsRequest request =
-        ApplicationsRequestBuilder.create().withFinishTimeEnd("-1").build();
-
-    GetApplicationsRequest expectedRequest = getDefaultRequest();
-    assertEquals(expectedRequest, request);
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
   }
 
   @Test
-  public void testRequestWithValidFinishTimeEndQuery() {
+  void testRequestWithInvalidNegativeFinishedTimeEndQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request =
+          ApplicationsRequestBuilder.create().withFinishTimeEnd("-1").build();
+
+      GetApplicationsRequest expectedRequest = getDefaultRequest();
+      assertEquals(expectedRequest, request);
+    });
+  }
+
+  @Test
+  void testRequestWithValidFinishTimeEndQuery() {
     GetApplicationsRequest request =
         ApplicationsRequestBuilder.create().withFinishTimeEnd("999").build();
 
@@ -444,7 +486,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithValidStartTimeRangeQuery() {
+  void testRequestWithValidStartTimeRangeQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withStartedTimeBegin("1000").withStartedTimeEnd("2000").build();
 
@@ -453,14 +495,16 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidStartTimeRangeQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withStartedTimeBegin("2000").withStartedTimeEnd("1000").build();
+  @Test
+  void testRequestWithInvalidStartTimeRangeQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withStartedTimeBegin("2000").withStartedTimeEnd("1000").build();
+    });
   }
 
   @Test
-  public void testRequestWithValidFinishTimeRangeQuery() {
+  void testRequestWithValidFinishTimeRangeQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withFinishTimeBegin("1000").withFinishTimeEnd("2000").build();
 
@@ -469,20 +513,22 @@ public class TestApplicationsRequestBuilder {
     assertEquals(expectedRequest, request);
   }
 
-  @Test(expected = BadRequestException.class)
-  public void testRequestWithInvalidFinishTimeRangeQuery() {
-    GetApplicationsRequest request = ApplicationsRequestBuilder.create()
-        .withFinishTimeBegin("2000").withFinishTimeEnd("1000").build();
+  @Test
+  void testRequestWithInvalidFinishTimeRangeQuery() {
+    Assertions.assertThrows(BadRequestException.class, () -> {
+      GetApplicationsRequest request = ApplicationsRequestBuilder.create()
+          .withFinishTimeBegin("2000").withFinishTimeEnd("1000").build();
+    });
   }
 
   @Test
-  public void testRequestWithNullApplicationTypesQuery() {
+  void testRequestWithNullApplicationTypesQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTypes(null).build();
   }
 
   @Test
-  public void testRequestWithEmptyApplicationTypesQuery() {
+  void testRequestWithEmptyApplicationTypesQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTypes(Sets.newHashSet()).build();
 
@@ -492,7 +538,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithValidApplicationTypesQuery() {
+  void testRequestWithValidApplicationTypesQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTypes(Sets.newHashSet("type1")).build();
 
@@ -502,13 +548,13 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithNullApplicationTagsQuery() {
+  void testRequestWithNullApplicationTagsQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTags(null).build();
   }
 
   @Test
-  public void testRequestWithEmptyApplicationTagsQuery() {
+  void testRequestWithEmptyApplicationTagsQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTags(Sets.newHashSet()).build();
 
@@ -518,7 +564,7 @@ public class TestApplicationsRequestBuilder {
   }
 
   @Test
-  public void testRequestWithValidApplicationTagsQuery() {
+  void testRequestWithValidApplicationTagsQuery() {
     GetApplicationsRequest request = ApplicationsRequestBuilder.create()
         .withApplicationTags(Sets.newHashSet("tag1")).build();
 

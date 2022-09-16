@@ -54,7 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import java.io.File;
@@ -380,9 +380,9 @@ public class FairSchedulerTestBase {
     }
 
     // available resource
-    Assert.assertEquals(resource.getMemorySize(),
+    Assertions.assertEquals(resource.getMemorySize(),
         app.getCurrentConsumption().getMemorySize());
-    Assert.assertEquals(resource.getVirtualCores(),
+    Assertions.assertEquals(resource.getVirtualCores(),
         app.getCurrentConsumption().getVirtualCores());
   }
 

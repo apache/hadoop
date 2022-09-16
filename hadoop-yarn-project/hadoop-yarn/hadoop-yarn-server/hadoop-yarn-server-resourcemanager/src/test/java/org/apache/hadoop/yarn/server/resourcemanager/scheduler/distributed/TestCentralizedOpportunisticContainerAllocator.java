@@ -36,8 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,9 +52,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -79,7 +79,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
       ResourceBlacklistRequest.newInstance(
           new ArrayList<>(), new ArrayList<>());
 
-  @Before
+  @BeforeEach
   public void setup() {
     // creating a dummy master key to be used for creation of container.
     final MasterKey mKey = new MasterKey() {
@@ -124,7 +124,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testSimpleAllocation() throws Exception {
+  void testSimpleAllocation() throws Exception {
     List<ResourceRequest> reqs =
         Collections.singletonList(createResourceRequest(1, "*", 1));
     ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
@@ -144,7 +144,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testBlacklistRejection() throws Exception {
+  void testBlacklistRejection() throws Exception {
     ResourceBlacklistRequest blacklistRequest =
         ResourceBlacklistRequest.newInstance(
             Arrays.asList("h1", "h2"), new ArrayList<>());
@@ -166,7 +166,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testRoundRobinSimpleAllocation() throws Exception {
+  void testRoundRobinSimpleAllocation() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(1, ResourceRequest.ANY, 1),
@@ -195,7 +195,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testNodeLocalAllocation() throws Exception {
+  void testNodeLocalAllocation() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(1, ResourceRequest.ANY, 1),
@@ -229,7 +229,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testNodeLocalAllocationSameSchedulerKey() throws Exception {
+  void testNodeLocalAllocationSameSchedulerKey() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(2, "/r1", 2),
@@ -258,7 +258,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testSimpleRackLocalAllocation() throws Exception {
+  void testSimpleRackLocalAllocation() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(2, "/r1", 1),
@@ -290,7 +290,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testRoundRobinRackLocalAllocation() throws Exception {
+  void testRoundRobinRackLocalAllocation() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(1, "/r1", 1),
@@ -328,7 +328,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testRoundRobinRackLocalAllocationSameSchedulerKey()
+  void testRoundRobinRackLocalAllocationSameSchedulerKey()
       throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
@@ -363,7 +363,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testOffSwitchAllocationWhenNoNodeOrRack() throws Exception {
+  void testOffSwitchAllocationWhenNoNodeOrRack() throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
             createResourceRequest(2, "/r3", 2),
@@ -390,7 +390,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testLotsOfContainersRackLocalAllocationSameSchedulerKey()
+  void testLotsOfContainersRackLocalAllocationSameSchedulerKey()
       throws Exception {
     List<ResourceRequest> reqs =
         Arrays.asList(
@@ -428,7 +428,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testLotsOfContainersRackLocalAllocation()
+  void testLotsOfContainersRackLocalAllocation()
       throws Exception {
     List<ResourceRequest> reqs = new ArrayList<>();
     // add 100 container requests.
@@ -458,7 +458,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testMaxAllocationsPerAMHeartbeat() throws Exception {
+  void testMaxAllocationsPerAMHeartbeat() throws Exception {
     allocator.setMaxAllocationsPerAMHeartbeat(2);
     List<ResourceRequest> reqs = Arrays.asList(
         createResourceRequest(2, "/r3", 3),
@@ -489,7 +489,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testMaxAllocationsPerAMHeartbeatDifferentSchedKey()
+  void testMaxAllocationsPerAMHeartbeatDifferentSchedKey()
       throws Exception {
     allocator.setMaxAllocationsPerAMHeartbeat(2);
     List<ResourceRequest> reqs =
@@ -528,7 +528,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testMaxAllocationsPerAMHeartbeatWithNoLimit() throws Exception {
+  void testMaxAllocationsPerAMHeartbeatWithNoLimit() throws Exception {
     allocator.setMaxAllocationsPerAMHeartbeat(-1);
 
     List<ResourceRequest> reqs = new ArrayList<>();
@@ -554,7 +554,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testMaxAllocationsPerAMHeartbeatWithHighLimit()
+  void testMaxAllocationsPerAMHeartbeatWithHighLimit()
       throws Exception {
     allocator.setMaxAllocationsPerAMHeartbeat(100);
     final int numContainers = 20;
@@ -579,7 +579,7 @@ public class TestCentralizedOpportunisticContainerAllocator {
    * @throws Exception
    */
   @Test
-  public void testAllocationLatencyMetrics() throws Exception {
+  void testAllocationLatencyMetrics() throws Exception {
     oppCntxt = spy(oppCntxt);
     OpportunisticSchedulerMetrics metrics =
         mock(OpportunisticSchedulerMetrics.class);

@@ -62,9 +62,9 @@ import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
@@ -73,7 +73,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAX_PARALLEL_APPLICATIONS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
@@ -100,7 +100,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     super(createWebAppDescriptor());
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -166,7 +166,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterScheduler() throws Exception {
+  void testClusterScheduler() throws Exception {
     ClientResponse response = resource().path("ws").path("v1").path("cluster")
         .path("scheduler").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
@@ -174,7 +174,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterSchedulerSlash() throws Exception {
+  void testClusterSchedulerSlash() throws Exception {
     ClientResponse response = resource().path("ws").path("v1").path("cluster")
         .path("scheduler/").accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
@@ -182,14 +182,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterSchedulerDefault() throws Exception {
+  void testClusterSchedulerDefault() throws Exception {
     ClientResponse response = resource().path("ws").path("v1").path("cluster")
         .path("scheduler").get(ClientResponse.class);
     assertJsonResponse(response, "webapp/scheduler-response.json");
   }
 
   @Test
-  public void testClusterSchedulerXML() throws Exception {
+  void testClusterSchedulerXML() throws Exception {
     ClientResponse response = resource().path("ws").path("v1").path("cluster")
         .path("scheduler/").accept(MediaType.APPLICATION_XML)
         .get(ClientResponse.class);
@@ -197,7 +197,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testPerUserResourcesXML() throws Exception {
+  void testPerUserResourcesXML() throws Exception {
     // Start RM so that it accepts app submissions
     rm.start();
     try {
@@ -230,7 +230,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testNodeLabelDefaultAPI() throws Exception {
+  void testNodeLabelDefaultAPI() throws Exception {
     CapacitySchedulerConfiguration config =
         ((CapacityScheduler)rm.getResourceScheduler()).getConfiguration();
 
@@ -251,7 +251,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testPerUserResourcesJSON() throws Exception {
+  void testPerUserResourcesJSON() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
     try {
@@ -285,7 +285,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   @Test
-  public void testResourceInfo() {
+  void testResourceInfo() {
     Resource res = Resources.createResource(10, 1);
     // If we add a new resource (e.g. disks), then
     // CapacitySchedulerPage and these RM WebServices + docs need to be updated
@@ -381,7 +381,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
       }
     } catch (URISyntaxException | IOException e) {
       e.printStackTrace();
-      Assert.fail("overwrite should not fail " + e.getMessage());
+      Assertions.fail("overwrite should not fail " + e.getMessage());
     }
   }
 

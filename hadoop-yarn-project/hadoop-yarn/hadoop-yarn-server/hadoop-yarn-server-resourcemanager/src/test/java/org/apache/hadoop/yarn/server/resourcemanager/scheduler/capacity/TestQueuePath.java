@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -28,44 +28,44 @@ public class TestQueuePath {
   private static final String TEST_QUEUE = "root.level_1.level_2.level_3";
 
   @Test
-  public void testCreation() {
+  void testCreation() {
     QueuePath queuePath = new QueuePath(TEST_QUEUE);
 
-    Assert.assertEquals(TEST_QUEUE, queuePath.getFullPath());
-    Assert.assertEquals("root.level_1.level_2", queuePath.getParent());
-    Assert.assertEquals("level_3", queuePath.getLeafName());
+    Assertions.assertEquals(TEST_QUEUE, queuePath.getFullPath());
+    Assertions.assertEquals("root.level_1.level_2", queuePath.getParent());
+    Assertions.assertEquals("level_3", queuePath.getLeafName());
 
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
-    Assert.assertNull(rootPath.getParent());
+    Assertions.assertNull(rootPath.getParent());
 
     QueuePath appendedPath = queuePath.createNewLeaf("level_4");
-    Assert.assertEquals(TEST_QUEUE + CapacitySchedulerConfiguration.DOT
+    Assertions.assertEquals(TEST_QUEUE + CapacitySchedulerConfiguration.DOT
         + "level_4", appendedPath.getFullPath());
-    Assert.assertEquals("root.level_1.level_2.level_3", appendedPath.getParent());
-    Assert.assertEquals("level_4", appendedPath.getLeafName());
+    Assertions.assertEquals("root.level_1.level_2.level_3", appendedPath.getParent());
+    Assertions.assertEquals("level_4", appendedPath.getLeafName());
   }
 
   @Test
-  public void testEmptyPart() {
+  void testEmptyPart() {
     QueuePath queuePathWithEmptyPart = new QueuePath("root..level_2");
     QueuePath queuePathWithoutEmptyPart = new QueuePath(TEST_QUEUE);
 
-    Assert.assertTrue(queuePathWithEmptyPart.hasEmptyPart());
-    Assert.assertFalse(queuePathWithoutEmptyPart.hasEmptyPart());
+    Assertions.assertTrue(queuePathWithEmptyPart.hasEmptyPart());
+    Assertions.assertFalse(queuePathWithoutEmptyPart.hasEmptyPart());
   }
 
   @Test
-  public void testNullPath() {
+  void testNullPath() {
     QueuePath queuePathWithNullPath = new QueuePath(null);
 
-    Assert.assertNull(queuePathWithNullPath.getParent());
-    Assert.assertEquals("", queuePathWithNullPath.getLeafName());
-    Assert.assertEquals("", queuePathWithNullPath.getFullPath());
-    Assert.assertFalse(queuePathWithNullPath.isRoot());
+    Assertions.assertNull(queuePathWithNullPath.getParent());
+    Assertions.assertEquals("", queuePathWithNullPath.getLeafName());
+    Assertions.assertEquals("", queuePathWithNullPath.getFullPath());
+    Assertions.assertFalse(queuePathWithNullPath.isRoot());
   }
 
   @Test
-  public void testIterator() {
+  void testIterator() {
     QueuePath queuePath = new QueuePath(TEST_QUEUE);
     QueuePath queuePathWithEmptyPart = new QueuePath("root..level_2");
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
@@ -75,21 +75,21 @@ public class TestQueuePath {
         queuePathWithEmptyPart.iterator());
     List<String> rootPathCollection = ImmutableList.copyOf(rootPath.iterator());
 
-    Assert.assertEquals(4, queuePathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathCollection.get(0));
-    Assert.assertEquals("level_3", queuePathCollection.get(3));
+    Assertions.assertEquals(4, queuePathCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT, queuePathCollection.get(0));
+    Assertions.assertEquals("level_3", queuePathCollection.get(3));
 
-    Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    Assertions.assertEquals(3, queuePathWithEmptyPartCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathWithEmptyPartCollection.get(0));
-    Assert.assertEquals("level_2", queuePathWithEmptyPartCollection.get(2));
+    Assertions.assertEquals("level_2", queuePathWithEmptyPartCollection.get(2));
 
-    Assert.assertEquals(1, rootPathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT, rootPathCollection.get(0));
+    Assertions.assertEquals(1, rootPathCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT, rootPathCollection.get(0));
   }
 
   @Test
-  public void testReversePathIterator() {
+  void testReversePathIterator() {
     QueuePath queuePath = new QueuePath(TEST_QUEUE);
     QueuePath queuePathWithEmptyPart = new QueuePath("root..level_2");
     QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
@@ -99,31 +99,31 @@ public class TestQueuePath {
         queuePathWithEmptyPart.reverseIterator());
     List<String> rootPathCollection = ImmutableList.copyOf(rootPath.reverseIterator());
 
-    Assert.assertEquals(4, queuePathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    Assertions.assertEquals(4, queuePathCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathCollection.get(3));
-    Assert.assertEquals(TEST_QUEUE, queuePathCollection.get(0));
+    Assertions.assertEquals(TEST_QUEUE, queuePathCollection.get(0));
 
-    Assert.assertEquals(3, queuePathWithEmptyPartCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    Assertions.assertEquals(3, queuePathWithEmptyPartCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT,
         queuePathWithEmptyPartCollection.get(2));
-    Assert.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0));
+    Assertions.assertEquals("root..level_2", queuePathWithEmptyPartCollection.get(0));
 
-    Assert.assertEquals(1, rootPathCollection.size());
-    Assert.assertEquals(CapacitySchedulerConfiguration.ROOT,
+    Assertions.assertEquals(1, rootPathCollection.size());
+    Assertions.assertEquals(CapacitySchedulerConfiguration.ROOT,
         rootPathCollection.get(0));
   }
 
   @Test
-  public void testEquals() {
+  void testEquals() {
     QueuePath queuePath = new QueuePath(TEST_QUEUE);
     QueuePath queuePathSame = new QueuePath(TEST_QUEUE);
 
     QueuePath empty = new QueuePath("");
     QueuePath emptySame = new QueuePath("");
 
-    Assert.assertEquals(queuePath, queuePathSame);
-    Assert.assertEquals(empty, emptySame);
-    Assert.assertNotEquals(null, queuePath);
+    Assertions.assertEquals(queuePath, queuePathSame);
+    Assertions.assertEquals(empty, emptySame);
+    Assertions.assertNotEquals(null, queuePath);
   }
 }

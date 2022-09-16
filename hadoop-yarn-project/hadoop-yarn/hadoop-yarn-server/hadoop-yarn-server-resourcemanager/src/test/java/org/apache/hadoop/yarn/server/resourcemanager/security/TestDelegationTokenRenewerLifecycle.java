@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test replicates the condition os MAPREDUCE-3431 -a failure
@@ -35,7 +35,7 @@ import org.junit.Test;
 public class TestDelegationTokenRenewerLifecycle {
 
   @Test
-  public void testStartupFailure() throws Exception {
+  void testStartupFailure() throws Exception {
     Configuration conf = new Configuration();
     DelegationTokenRenewer delegationTokenRenewer =
         new DelegationTokenRenewer();

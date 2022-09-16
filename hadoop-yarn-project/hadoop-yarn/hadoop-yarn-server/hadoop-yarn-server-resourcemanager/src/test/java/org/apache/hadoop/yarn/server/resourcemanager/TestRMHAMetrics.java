@@ -23,9 +23,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -47,7 +48,7 @@ public class TestRMHAMetrics {
   private static final String RM2_ADDRESS = "0.0.0.0:0";
   private static final String RM2_NODE_ID = "rm2";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     configuration = new Configuration();
     UserGroupInformation.setConfiguration(configuration);
@@ -65,8 +66,9 @@ public class TestRMHAMetrics {
     DefaultMetricsSystem.shutdown();
   }
 
-  @Test(timeout = 300000)
-  public void testMetricsAfterTransitionToStandby() throws Exception {
+  @Timeout(300000)
+  @Test
+  void testMetricsAfterTransitionToStandby() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
     MockRM rm = new MockRM(conf);
@@ -76,21 +78,21 @@ public class TestRMHAMetrics {
     ObjectName mxbeanName =
         new ObjectName("Hadoop:service=ResourceManager,name=RMInfo");
 
-    Assert.assertEquals("initializing",
-        (String) mbs.getAttribute(mxbeanName, "State"));
+    Assertions.assertEquals((String) mbs.getAttribute(mxbeanName,
+        "State"), "initializing");
 
     rm.start();
-    Assert.assertEquals("standby",
-        (String) mbs.getAttribute(mxbeanName, "State"));
+    Assertions.assertEquals((String) mbs.getAttribute(mxbeanName,
+        "State"), "standby");
 
     rm.transitionToActive();
-    Assert
-        .assertEquals("active",
-            (String) mbs.getAttribute(mxbeanName, "State"));
+    Assertions
+        .assertEquals((String) mbs.getAttribute(mxbeanName,
+            "State"), "active");
 
     rm.transitionToStandby(true);
-    Assert.assertEquals("standby",
-        (String) mbs.getAttribute(mxbeanName, "State"));
+    Assertions.assertEquals((String) mbs.getAttribute(mxbeanName,
+        "State"), "standby");
 
     assertNotNull(DefaultMetricsSystem.instance().getSource("JvmMetrics"));
     assertNotNull(DefaultMetricsSystem.instance().getSource("UgiMetrics"));

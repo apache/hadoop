@@ -23,13 +23,13 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestBlacklistManager {
 
   @Test
-  public void testSimpleBlacklistBelowFailureThreshold() {
+  void testSimpleBlacklistBelowFailureThreshold() {
     final int numberOfNodeManagerHosts = 3;
     final double blacklistDisableFailureThreshold = 0.8;
     BlacklistManager manager = new SimpleBlacklistManager(
@@ -45,18 +45,18 @@ public class TestBlacklistManager {
     Collections.sort(blacklistAdditions);
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
     String[] expectedBlacklistAdditions = new String[]{anyNode2, anyNode};
-    Assert.assertArrayEquals(
-        "Blacklist additions was not as expected",
+    Assertions.assertArrayEquals(
         expectedBlacklistAdditions,
-        blacklistAdditions.toArray());
-    Assert.assertTrue(
+        blacklistAdditions.toArray(),
+        "Blacklist additions was not as expected");
+    Assertions.assertTrue(
+        blacklistRemovals.isEmpty(),
         "Blacklist removals should be empty but was " +
-            blacklistRemovals,
-        blacklistRemovals.isEmpty());
+            blacklistRemovals);
   }
 
   @Test
-  public void testSimpleBlacklistAboveFailureThreshold() {
+  void testSimpleBlacklistAboveFailureThreshold() {
     // Create a threshold of 0.5 * 3 i.e at 1.5 node failures.
     BlacklistManager manager = new SimpleBlacklistManager(3, 0.5);
     String anyNode = "foo";
@@ -69,14 +69,14 @@ public class TestBlacklistManager {
     Collections.sort(blacklistAdditions);
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
     String[] expectedBlacklistAdditions = new String[]{anyNode};
-    Assert.assertArrayEquals(
-        "Blacklist additions was not as expected",
+    Assertions.assertArrayEquals(
         expectedBlacklistAdditions,
-        blacklistAdditions.toArray());
-    Assert.assertTrue(
+        blacklistAdditions.toArray(),
+        "Blacklist additions was not as expected");
+    Assertions.assertTrue(
+        blacklistRemovals.isEmpty(),
         "Blacklist removals should be empty but was " +
-            blacklistRemovals,
-        blacklistRemovals.isEmpty());
+            blacklistRemovals);
 
     manager.addNode(anyNode2);
 
@@ -87,18 +87,18 @@ public class TestBlacklistManager {
     blacklistRemovals = blacklist.getBlacklistRemovals();
     Collections.sort(blacklistRemovals);
     String[] expectedBlacklistRemovals = new String[] {anyNode2, anyNode};
-    Assert.assertTrue(
+    Assertions.assertTrue(
+        blacklistAdditions.isEmpty(),
         "Blacklist additions should be empty but was " +
-            blacklistAdditions,
-        blacklistAdditions.isEmpty());
-    Assert.assertArrayEquals(
-        "Blacklist removals was not as expected",
+            blacklistAdditions);
+    Assertions.assertArrayEquals(
         expectedBlacklistRemovals,
-        blacklistRemovals.toArray());
+        blacklistRemovals.toArray(),
+        "Blacklist removals was not as expected");
   }
 
   @Test
-  public void testDisabledBlacklist() {
+  void testDisabledBlacklist() {
     BlacklistManager disabled = new DisabledBlacklistManager();
     String anyNode = "foo";
     disabled.addNode(anyNode);
@@ -107,13 +107,13 @@ public class TestBlacklistManager {
 
     List<String> blacklistAdditions = blacklist.getBlacklistAdditions();
     List<String> blacklistRemovals = blacklist.getBlacklistRemovals();
-    Assert.assertTrue(
+    Assertions.assertTrue(
+        blacklistAdditions.isEmpty(),
         "Blacklist additions should be empty but was " +
-            blacklistAdditions,
-        blacklistAdditions.isEmpty());
-    Assert.assertTrue(
+            blacklistAdditions);
+    Assertions.assertTrue(
+        blacklistRemovals.isEmpty(),
         "Blacklist removals should be empty but was " +
-            blacklistRemovals,
-        blacklistRemovals.isEmpty());
+            blacklistRemovals);
   }
 }

@@ -44,9 +44,9 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Element;
 import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * This class is to test response representations of queue resources,
@@ -89,14 +89,14 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     }
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
     createInjectorForWebServletModule();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     ResourceUtils.resetResourceTypes(new Configuration());
   }
@@ -106,7 +106,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
         .setInjector(Guice.createInjector(new WebServletModule()));
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     CustomResourceTypesConfigurationProvider.reset();
   }
@@ -120,7 +120,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
   }
 
   @Test
-  public void testClusterSchedulerWithCustomResourceTypesJson() {
+  void testClusterSchedulerWithCustomResourceTypesJson() {
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     QueueManager queueManager = scheduler.getQueueManager();
     // create LeafQueues
@@ -141,7 +141,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
   }
 
   @Test
-  public void testClusterSchedulerWithCustomResourceTypesXml() {
+  void testClusterSchedulerWithCustomResourceTypesXml() {
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     QueueManager queueManager = scheduler.getQueueManager();
     // create LeafQueues
@@ -162,7 +162,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
   }
 
   @Test
-  public void testClusterSchedulerWithElevenCustomResourceTypesXml() {
+  void testClusterSchedulerWithElevenCustomResourceTypesXml() {
     CustomResourceTypesConfigurationProvider.setResourceTypes(11, "k");
     createInjectorForWebServletModule();
 
@@ -186,7 +186,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
   }
 
   @Test
-  public void testClusterSchedulerElevenWithCustomResourceTypesJson() {
+  void testClusterSchedulerElevenWithCustomResourceTypesJson() {
     CustomResourceTypesConfigurationProvider.setResourceTypes(11, "k");
     createInjectorForWebServletModule();
 

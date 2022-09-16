@@ -25,16 +25,17 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -65,7 +66,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     STANDBY_TIMING
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -94,8 +95,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    *
    * The test times out if there is a deadlock.
    */
-  @Test (timeout = 10000)
-  public void testDeadlockShutdownBecomeActive() throws InterruptedException {
+  @Timeout(10000)  @Test
+  void testDeadlockShutdownBecomeActive() throws InterruptedException {
     MockRM rm = new MockRMWithElector(conf, 1000);
     rm.start();
     LOG.info("Waiting for callback");
@@ -112,7 +113,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @throws InterruptedException if interrupted
    */
   @Test
-  public void testCallbackSynchronization()
+  void testCallbackSynchronization()
       throws IOException, InterruptedException, TimeoutException {
     testCallbackSynchronization(SyncTestType.ACTIVE);
     testCallbackSynchronization(SyncTestType.STANDBY);
@@ -311,7 +312,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * to ZK fails. YARN-8409
    */
   @Test
-  public void testFailureToConnectToZookeeper() throws Exception {
+  void testFailureToConnectToZookeeper() throws Exception {
     stopServer();
     Configuration myConf = new Configuration(conf);
     ResourceManager rm = new MockRM(conf);
@@ -320,9 +321,9 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
         new ActiveStandbyElectorBasedElectorService(rm);
     try {
       ees.init(myConf);
-      Assert.fail("expect failure to connect to Zookeeper");
+      Assertions.fail("expect failure to connect to Zookeeper");
     } catch (ServiceStateException sse) {
-      Assert.assertTrue(sse.getMessage().contains("ConnectionLoss"));
+      Assertions.assertTrue(sse.getMessage().contains("ConnectionLoss"));
     }
   }
 

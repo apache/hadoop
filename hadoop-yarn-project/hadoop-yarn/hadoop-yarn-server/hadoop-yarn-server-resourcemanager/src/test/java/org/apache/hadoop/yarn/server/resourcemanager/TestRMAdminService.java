@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -91,10 +94,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_PROXY_USER_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.NODES;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.DynamicResourceConfiguration.PREFIX;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -105,7 +108,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributesManager;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.AddToClusterNodeLabelsRequestProto;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestRMAdminService {
 
@@ -122,7 +125,7 @@ public class TestRMAdminService {
         YarnConfiguration.DR_CONFIGURATION_FILE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     QueueMetrics.clearQueueMetrics();
     DefaultMetricsSystem.setMiniClusterMode(true);
@@ -147,7 +150,7 @@ public class TestRMAdminService {
     MockUnixGroupsMapping.resetGroups();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (rm != null) {
       rm.stop();
@@ -157,7 +160,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testAdminRefreshQueuesWithLocalConfigurationProvider()
+  void testAdminRefreshQueuesWithLocalConfigurationProvider()
       throws IOException, YarnException {
     rm = new MockRM(configuration);
     rm.init(configuration);
@@ -169,7 +172,7 @@ public class TestRMAdminService {
 
     try {
       rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
-      Assert.assertEquals(maxAppsBefore, cs.getConfiguration()
+      Assertions.assertEquals(maxAppsBefore, cs.getConfiguration()
           .getMaximumSystemApplications());
     } catch (Exception ex) {
       fail("Using localConfigurationProvider. Should not get any exception.");
@@ -178,7 +181,7 @@ public class TestRMAdminService {
 
 
   @Test
-  public void testFileSystemCloseWithFileSystemBasedConfigurationProvider()
+  void testFileSystemCloseWithFileSystemBasedConfigurationProvider()
       throws Exception {
     MiniDFSCluster hdfsCluster = null;
     try {
@@ -210,7 +213,7 @@ public class TestRMAdminService {
 
 
   @Test
-  public void testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider()
+  void testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -239,12 +242,12 @@ public class TestRMAdminService {
     rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
 
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
-    Assert.assertEquals(maxAppsAfter, 5000);
-    Assert.assertTrue(maxAppsAfter != maxAppsBefore);
+    Assertions.assertEquals(maxAppsAfter, 5000);
+    Assertions.assertTrue(maxAppsAfter != maxAppsBefore);
   }
 
   @Test
-  public void testAdminRefreshQueuesWithMutableSchedulerConfiguration() {
+  void testAdminRefreshQueuesWithMutableSchedulerConfiguration() {
     configuration.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
 
@@ -267,7 +270,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testAdminRefreshNodesWithoutConfiguration()
+  void testAdminRefreshNodesWithoutConfiguration()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -293,7 +296,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRefreshNodesResourceWithFileSystemBasedConfigurationProvider()
+  void testRefreshNodesResourceWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -313,7 +316,7 @@ public class TestRMAdminService {
     NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
-    Assert.assertEquals("<memory:5120, vCores:5>", resource.toString());
+    Assertions.assertEquals("<memory:5120, vCores:5>", resource.toString());
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
@@ -328,11 +331,11 @@ public class TestRMAdminService {
 
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
-    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+    Assertions.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
   }
 
   @Test
-  public void testRefreshNodesResourceWithResourceReturnInRegistration()
+  void testRefreshNodesResourceWithResourceReturnInRegistration()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -353,7 +356,7 @@ public class TestRMAdminService {
     NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
-    Assert.assertEquals("<memory:2048, vCores:2>", resource.toString());
+    Assertions.assertEquals("<memory:2048, vCores:2>", resource.toString());
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
@@ -375,14 +378,14 @@ public class TestRMAdminService {
 
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
-    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+    Assertions.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
 
-    Assert.assertEquals(4096, nm.getMemory());
-    Assert.assertEquals(4, nm.getvCores());
+    Assertions.assertEquals(4096, nm.getMemory());
+    Assertions.assertEquals(4, nm.getvCores());
   }
 
   @Test
-  public void testRefreshNodesResourceWithResourceReturnInHeartbeat()
+  void testRefreshNodesResourceWithResourceReturnInHeartbeat()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -403,7 +406,7 @@ public class TestRMAdminService {
     NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
-    Assert.assertEquals("<memory:2048, vCores:2>", resource.toString());
+    Assertions.assertEquals("<memory:2048, vCores:2>", resource.toString());
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
@@ -424,14 +427,14 @@ public class TestRMAdminService {
 
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
-    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+    Assertions.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
 
-    Assert.assertEquals(4096, nm.getMemory());
-    Assert.assertEquals(4, nm.getvCores());
+    Assertions.assertEquals(4096, nm.getMemory());
+    Assertions.assertEquals(4, nm.getvCores());
   }
 
   @Test
-  public void testResourcePersistentForNMRegistrationWithNewResource()
+  void testResourcePersistentForNMRegistrationWithNewResource()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -451,7 +454,7 @@ public class TestRMAdminService {
     NodeId nid = NodeId.fromString("h1:1234");
     RMNode ni = rm.getRMContext().getRMNodes().get(nid);
     Resource resource = ni.getTotalCapability();
-    Assert.assertEquals("<memory:5120, vCores:5>", resource.toString());
+    Assertions.assertEquals("<memory:5120, vCores:5>", resource.toString());
 
     DynamicResourceConfiguration drConf =
         new DynamicResourceConfiguration();
@@ -473,7 +476,7 @@ public class TestRMAdminService {
 
     RMNode niAfter = rm.getRMContext().getRMNodes().get(nid);
     Resource resourceAfter = niAfter.getTotalCapability();
-    Assert.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
+    Assertions.assertEquals("<memory:4096, vCores:4>", resourceAfter.toString());
 
     // Replace original dr file with an empty dr file, and validate node
     // registration with new resources will take effective now.
@@ -496,11 +499,11 @@ public class TestRMAdminService {
     resourceAfter = niAfter.getTotalCapability();
     // new resource in registration should take effective as we empty
     // dynamic resource file already.
-    Assert.assertEquals("<memory:8192, vCores:8>", resourceAfter.toString());
+    Assertions.assertEquals("<memory:8192, vCores:8>", resourceAfter.toString());
   }
 
   @Test
-  public void testAdminAclsWithLocalConfigurationProvider() {
+  void testAdminAclsWithLocalConfigurationProvider() {
     rm = new MockRM(configuration);
     rm.init(configuration);
     rm.start();
@@ -513,7 +516,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testAdminAclsWithFileSystemBasedConfigurationProvider()
+  void testAdminAclsWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -541,13 +544,13 @@ public class TestRMAdminService {
     String aclStringAfter =
         rm.adminService.getAccessControlList().getAclString().trim();
 
-    Assert.assertTrue(!aclStringAfter.equals(aclStringBefore));
-    Assert.assertEquals(aclStringAfter, "world:anyone:rwcda," +
-        UserGroupInformation.getCurrentUser().getShortUserName());
+    Assertions.assertTrue(!aclStringAfter.equals(aclStringBefore));
+    Assertions.assertEquals("world:anyone:rwcda, " +
+        UserGroupInformation.getCurrentUser().getShortUserName(),aclStringAfter);
   }
 
   @Test
-  public void testServiceAclsRefreshWithLocalConfigurationProvider() {
+  void testServiceAclsRefreshWithLocalConfigurationProvider() {
     configuration.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
     ResourceManager resourceManager = null;
@@ -568,7 +571,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testServiceAclsRefreshWithFileSystemBasedConfigurationProvider()
+  void testServiceAclsRefreshWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.setBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
@@ -643,7 +646,7 @@ public class TestRMAdminService {
       AccessControlList accessList =
           manager.getProtocolsAcls(protocolClass);
       if (protocolClass == protocol) {
-        Assert.assertEquals(accessList.getAclString(),
+        Assertions.assertEquals(accessList.getAclString(),
             aclString);
       } else {
         assertThat(accessList.getAclString()).isEqualTo("*");
@@ -652,7 +655,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void
+  void
       testRefreshSuperUserGroupsWithLocalConfigurationProvider() {
     rm = new MockRM(configuration);
     rm.init(configuration);
@@ -667,7 +670,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void
+  void
       testRefreshSuperUserGroupsWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
@@ -691,14 +694,14 @@ public class TestRMAdminService {
 
     rm.adminService.refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest.newInstance());
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").size() == 1);
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").contains("test_groups"));
 
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").size() == 1);
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
 
     Configuration yarnConf = new Configuration(false);
@@ -709,19 +712,19 @@ public class TestRMAdminService {
     // RM specific configs will overwrite the common ones
     rm.adminService.refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest.newInstance());
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").size() == 1);
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
         .get("hadoop.proxyuser.test.groups").contains("test_groups_1"));
 
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").size() == 1);
-    Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+    Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts_1"));
   }
 
   @Test
-  public void testRefreshUserToGroupsMappingsWithLocalConfigurationProvider() {
+  void testRefreshUserToGroupsMappingsWithLocalConfigurationProvider() {
     rm = new MockRM(configuration);
     rm.init(configuration);
     rm.start();
@@ -735,7 +738,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void
+  void
       testRefreshUserToGroupsMappingsWithFileSystemBasedConfigurationProvider()
           throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
@@ -772,11 +775,11 @@ public class TestRMAdminService {
     List<String> groupBefore =
         new ArrayList<String>(Groups.getUserToGroupsMappingService(
             configuration).getGroups(user));
-    Assert.assertTrue(groupBefore.contains("test_group_A")
+    Assertions.assertTrue(groupBefore.contains("test_group_A")
         && groupBefore.contains("test_group_B")
         && groupBefore.contains("test_group_C") && groupBefore.size() == 3);
-    Assert.assertTrue(groupWithInit.size() != groupBefore.size());
-    Assert.assertFalse(groupWithInit.contains("test_group_A")
+    Assertions.assertTrue(groupWithInit.size() != groupBefore.size());
+    Assertions.assertFalse(groupWithInit.contains("test_group_A")
         || groupWithInit.contains("test_group_B")
         || groupWithInit.contains("test_group_C"));
 
@@ -790,14 +793,14 @@ public class TestRMAdminService {
         Groups.getUserToGroupsMappingService(configuration).getGroups(user);
 
     // should get the updated groups
-    Assert.assertTrue(groupAfter.contains("test_group_D")
+    Assertions.assertTrue(groupAfter.contains("test_group_D")
         && groupAfter.contains("test_group_E")
         && groupAfter.contains("test_group_F") && groupAfter.size() == 3);
 
   }
 
   @Test
-  public void testRefreshNodesWithLocalConfigurationProvider() {
+  void testRefreshNodesWithLocalConfigurationProvider() {
     rm = new MockRM(configuration);
     rm.init(configuration);
     rm.start();
@@ -811,7 +814,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRefreshNodesWithFileSystemBasedConfigurationProvider()
+  void testRefreshNodesWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -832,7 +835,7 @@ public class TestRMAdminService {
       excludeHostsFile.delete();
     }
     if (!excludeHostsFile.createNewFile()) {
-      Assert.fail("Can not create " + "excludeHosts");
+      Assertions.fail("Can not create " + "excludeHosts");
     }
     PrintWriter fileWriter = new PrintWriter(excludeHostsFile);
     fileWriter.write("0.0.0.0:123");
@@ -849,12 +852,12 @@ public class TestRMAdminService {
         .newInstance(DecommissionType.NORMAL));
     Set<String> excludeHosts =
         rm.getNodesListManager().getHostsReader().getExcludedHosts();
-    Assert.assertTrue(excludeHosts.size() == 1);
-    Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
+    Assertions.assertTrue(excludeHosts.size() == 1);
+    Assertions.assertTrue(excludeHosts.contains("0.0.0.0:123"));
   }
 
   @Test
-  public void testRMHAWithFileSystemBasedConfiguration() throws IOException,
+  void testRMHAWithFileSystemBasedConfiguration() throws IOException,
       YarnException {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
@@ -873,17 +876,17 @@ public class TestRMAdminService {
       rm1 = new MockRM(conf1);
       rm1.init(conf1);
       rm1.start();
-      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+      Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
           == HAServiceState.STANDBY);
 
       rm2 = new MockRM(conf2);
       rm2.init(conf1);
       rm2.start();
-      Assert.assertTrue(rm2.getRMContext().getHAServiceState()
+      Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
           == HAServiceState.STANDBY);
 
       rm1.adminService.transitionToActive(requestInfo);
-      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+      Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
           == HAServiceState.ACTIVE);
 
       CapacitySchedulerConfiguration csConf =
@@ -897,28 +900,28 @@ public class TestRMAdminService {
       int maxApps =
           ((CapacityScheduler) rm1.getRMContext().getScheduler())
               .getConfiguration().getMaximumSystemApplications();
-      Assert.assertEquals(maxApps, 5000);
+      Assertions.assertEquals(maxApps, 5000);
 
       // Before failover happens, the maxApps is
       // still the default value on the standby rm : rm2
       int maxAppsBeforeFailOver =
           ((CapacityScheduler) rm2.getRMContext().getScheduler())
               .getConfiguration().getMaximumSystemApplications();
-      Assert.assertEquals(maxAppsBeforeFailOver, 10000);
+      Assertions.assertEquals(maxAppsBeforeFailOver, 10000);
 
       // Do the failover
       rm1.adminService.transitionToStandby(requestInfo);
       rm2.adminService.transitionToActive(requestInfo);
-      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+      Assertions.assertTrue(rm1.getRMContext().getHAServiceState()
           == HAServiceState.STANDBY);
-      Assert.assertTrue(rm2.getRMContext().getHAServiceState()
+      Assertions.assertTrue(rm2.getRMContext().getHAServiceState()
           == HAServiceState.ACTIVE);
 
       int maxAppsAfter =
           ((CapacityScheduler) rm2.getRMContext().getScheduler())
               .getConfiguration().getMaximumSystemApplications();
 
-      Assert.assertEquals(maxAppsAfter, 5000);
+      Assertions.assertEquals(maxAppsAfter, 5000);
     } finally {
       if (rm1 != null) {
         rm1.stop();
@@ -933,7 +936,7 @@ public class TestRMAdminService {
    * Test that a configuration with no leader election configured fails.
    */
   @Test
-  public void testHAConfWithoutLeaderElection() {
+  void testHAConfWithoutLeaderElection() {
     Configuration conf = new Configuration(configuration);
 
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -962,7 +965,7 @@ public class TestRMAdminService {
    * Test that a configuration with a single RM fails.
    */
   @Test
-  public void testHAConfWithSingleRMID() {
+  void testHAConfWithSingleRMID() {
     Configuration conf = new Configuration(configuration);
 
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -988,7 +991,7 @@ public class TestRMAdminService {
    * Test that a configuration with no service information fails.
    */
   @Test
-  public void testHAConfWithoutServiceInfo() {
+  void testHAConfWithoutServiceInfo() {
     Configuration conf = new Configuration(configuration);
 
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -1002,7 +1005,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRMStartsWithoutConfigurationFilesProvided() {
+  void testRMStartsWithoutConfigurationFilesProvided() {
     // enable FileSystemBasedConfigurationProvider without uploading
     // any configuration files into Remote File System.
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
@@ -1023,7 +1026,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRMInitialsWithFileSystemBasedConfigurationProvider()
+  void testRMInitialsWithFileSystemBasedConfigurationProvider()
       throws Exception {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -1034,7 +1037,7 @@ public class TestRMAdminService {
       excludeHostsFile.delete();
     }
     if (!excludeHostsFile.createNewFile()) {
-      Assert.fail("Can not create " + "excludeHosts");
+      Assertions.fail("Can not create " + "excludeHosts");
     }
     PrintWriter fileWriter = new PrintWriter(excludeHostsFile);
     fileWriter.write("0.0.0.0:123");
@@ -1085,21 +1088,21 @@ public class TestRMAdminService {
       Set<String> excludeHosts =
           resourceManager.getRMContext().getNodesListManager()
               .getHostsReader().getExcludedHosts();
-      Assert.assertTrue(excludeHosts.size() == 1);
-      Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
+      Assertions.assertTrue(excludeHosts.size() == 1);
+      Assertions.assertTrue(excludeHosts.contains("0.0.0.0:123"));
 
       // validate values for admin-acls
       String aclStringAfter =
           resourceManager.adminService.getAccessControlList()
               .getAclString().trim();
-      Assert.assertEquals(aclStringAfter, "world:anyone:rwcda," +
-          UserGroupInformation.getCurrentUser().getShortUserName());
+      Assertions.assertEquals("world:anyone:rwcda, " +
+          UserGroupInformation.getCurrentUser().getShortUserName(),aclStringAfter);
 
       // validate values for queue configuration
       CapacityScheduler cs =
           (CapacityScheduler) resourceManager.getRMContext().getScheduler();
       int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
-      Assert.assertEquals(maxAppsAfter, 5000);
+      Assertions.assertEquals(maxAppsAfter, 5000);
 
       // verify service Acls for AdminService
       ServiceAuthorizationManager adminServiceServiceManager =
@@ -1135,14 +1138,14 @@ public class TestRMAdminService {
 
       // verify ProxyUsers and ProxyHosts
       ProxyUsers.refreshSuperUserGroupsConfiguration(configuration);
-      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+      Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
           .get("hadoop.proxyuser.test.groups").size() == 1);
-      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
+      Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyGroups()
           .get("hadoop.proxyuser.test.groups").contains("test_groups"));
 
-      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+      Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
           .get("hadoop.proxyuser.test.hosts").size() == 1);
-      Assert.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
+      Assertions.assertTrue(ProxyUsers.getDefaultImpersonationProvider().getProxyHosts()
           .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
 
       // verify UserToGroupsMappings
@@ -1150,7 +1153,7 @@ public class TestRMAdminService {
       List<String> groupAfter =
           Groups.getUserToGroupsMappingService(configuration).getGroups(
               UserGroupInformation.getCurrentUser().getUserName());
-      Assert.assertTrue(groupAfter.contains("test_group_D")
+      Assertions.assertTrue(groupAfter.contains("test_group_D")
           && groupAfter.contains("test_group_E")
           && groupAfter.contains("test_group_F") && groupAfter.size() == 3);
     } finally {
@@ -1162,7 +1165,7 @@ public class TestRMAdminService {
 
   /* For verifying fix for YARN-3804 */
   @Test
-  public void testRefreshAclWithDaemonUser() throws Exception {
+  void testRefreshAclWithDaemonUser() throws Exception {
     String daemonUser =
         UserGroupInformation.getCurrentUser().getShortUserName();
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
@@ -1202,7 +1205,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testModifyLabelsOnNodesWithDistributedConfigurationDisabled()
+  void testModifyLabelsOnNodesWithDistributedConfigurationDisabled()
       throws IOException, YarnException {
     // create RM and set it's ACTIVE
     MockRM rm = new MockRM();
@@ -1219,29 +1222,31 @@ public class TestRMAdminService {
     rm.close();
   }
 
-  @Test(expected = YarnException.class)
-  public void testModifyLabelsOnNodesWithCentralizedConfigurationDisabled()
+  @Test
+  void testModifyLabelsOnNodesWithCentralizedConfigurationDisabled()
       throws IOException, YarnException {
-    // create RM and set it's ACTIVE, and set distributed node label
-    // configuration to true
-    MockRM rm = new MockRM();
-    rm.adminService.isCentralizedNodeLabelConfiguration = false;
+    Assertions.assertThrows(YarnException.class, () -> {
+      // create RM and set it's ACTIVE, and set distributed node label
+      // configuration to true
+      MockRM rm = new MockRM();
+      rm.adminService.isCentralizedNodeLabelConfiguration = false;
 
-    ((RMContextImpl) rm.getRMContext())
-        .setHAServiceState(HAServiceState.ACTIVE);
-    RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
+      ((RMContextImpl) rm.getRMContext())
+          .setHAServiceState(HAServiceState.ACTIVE);
+      RMNodeLabelsManager labelMgr = rm.rmContext.getNodeLabelManager();
 
-    // by default, distributed configuration for node label is disabled, this
-    // should pass
-    labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
-    rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
-        .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
-            (Set<String>) ImmutableSet.of("x"))));
-    rm.close();
+      // by default, distributed configuration for node label is disabled, this
+      // should pass
+      labelMgr.addToCluserNodeLabelsWithDefaultExclusivity(ImmutableSet.of("x", "y"));
+      rm.adminService.replaceLabelsOnNode(ReplaceLabelsOnNodeRequest
+          .newInstance(ImmutableMap.of(NodeId.newInstance("host", 0),
+              (Set<String>) ImmutableSet.of("x"))));
+      rm.close();
+    });
   }
 
   @Test
-  public void testModifyLabelsOnUnknownNodes() throws IOException,
+  void testModifyLabelsOnUnknownNodes() throws IOException,
       YarnException {
     // create RM and set it's ACTIVE, and set distributed node label
     // configuration to true
@@ -1327,7 +1332,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testRemoveClusterNodeLabelsWithCentralizedConfigurationDisabled()
+  void testRemoveClusterNodeLabelsWithCentralizedConfigurationDisabled()
       throws IOException, YarnException {
     // create RM and set it's ACTIVE
     MockRM rm = new MockRM();
@@ -1348,8 +1353,9 @@ public class TestRMAdminService {
     rm.close();
   }
 
-  @Test(timeout = 30000)
-  public void testAdminRefreshClusterMaxPriority() throws Exception,
+  @Timeout(30000)
+  @Test
+  void testAdminRefreshClusterMaxPriority() throws Exception,
       YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -1364,7 +1370,7 @@ public class TestRMAdminService {
     rm.start();
 
     CapacityScheduler cs = (CapacityScheduler) rm.getRMContext().getScheduler();
-    Assert.assertEquals(5, cs.getMaxClusterLevelAppPriority().getPriority());
+    Assertions.assertEquals(5, cs.getMaxClusterLevelAppPriority().getPriority());
 
     yarnConf = new YarnConfiguration();
     yarnConf
@@ -1375,7 +1381,7 @@ public class TestRMAdminService {
       rm.adminService
           .refreshClusterMaxPriority(RefreshClusterMaxPriorityRequest
               .newInstance());
-      Assert.assertEquals(10, cs.getMaxClusterLevelAppPriority().getPriority());
+      Assertions.assertEquals(10, cs.getMaxClusterLevelAppPriority().getPriority());
     } catch (Exception ex) {
       fail("Could not refresh cluster max priority.");
     }
@@ -1390,7 +1396,7 @@ public class TestRMAdminService {
         confFile.delete();
       }
       if (!confFile.createNewFile()) {
-        Assert.fail("Can not create " + confXMLName);
+        Assertions.fail("Can not create " + confXMLName);
       }
       output = new DataOutputStream(
           new FileOutputStream(confFile));
@@ -1480,7 +1486,7 @@ public class TestRMAdminService {
   }
 
   @Test
-  public void testSecureRMBecomeActive() throws IOException,
+  void testSecureRMBecomeActive() throws IOException,
       YarnException {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
@@ -1495,7 +1501,7 @@ public class TestRMAdminService {
     try {
       resourceManager.init(configuration);
       resourceManager.start();
-      Assert.assertTrue(resourceManager.getRMContext().getHAServiceState()
+      Assertions.assertTrue(resourceManager.getRMContext().getHAServiceState()
           == HAServiceState.STANDBY);
       resourceManager.adminService.transitionToActive(requestInfo);
     } finally {
@@ -1537,13 +1543,14 @@ public class TestRMAdminService {
       rm1.init(conf);
       fail("The RM allowed an invalid configuration");
     } catch (YarnRuntimeException e) {
-      assertTrue("The RM initialization threw an unexpected exception",
-          e.getMessage().startsWith(HAUtil.BAD_CONFIG_MESSAGE_PREFIX));
+      assertTrue(e.getMessage().startsWith(HAUtil.BAD_CONFIG_MESSAGE_PREFIX),
+          "The RM initialization threw an unexpected exception");
     }
   }
 
-  @Test(timeout = 30000)
-  public void testAdminAddToClusterNodeLabelsWithDeprecatedAPIs()
+  @Timeout(30000)
+  @Test
+  void testAdminAddToClusterNodeLabelsWithDeprecatedAPIs()
       throws Exception, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
@@ -1586,12 +1593,13 @@ public class TestRMAdminService {
         .getClusterNodeLabels(GetClusterNodeLabelsRequest.newInstance());
     NodeLabel labelX = NodeLabel.newInstance("a");
     NodeLabel labelY = NodeLabel.newInstance("b");
-    Assert.assertTrue(
+    Assertions.assertTrue(
         response.getNodeLabelList().containsAll(Arrays.asList(labelX, labelY)));
   }
 
-  @Test(timeout = 30000)
-  public void testMapAttributesToNodes() throws Exception, YarnException {
+  @Timeout(30000)
+  @Test
+  void testMapAttributesToNodes() throws Exception, YarnException {
     // 1. Need to test for the Invalid Node
     // 1.1. Need to test for active nodes
     // 1.2. Need to test for Inactive nodes
@@ -1655,9 +1663,9 @@ public class TestRMAdminService {
         .removeNodeAttributes(Mockito.anyMap());
 
     // Assert node to attributes mappings are empty.
-    Assert.assertTrue("Attributes of host4 should be empty",
-        rm.getRMContext().getNodeAttributesManager()
-            .getAttributesForNode("host4").isEmpty());
+    Assertions.assertTrue(rm.getRMContext().getNodeAttributesManager()
+            .getAttributesForNode("host4").isEmpty(),
+        "Attributes of host4 should be empty");
     // remove non existing attributes.
     request = NodesToAttributesMappingRequest
         .newInstance(AttributeMappingOperationType.REMOVE, ImmutableList
@@ -1669,7 +1677,7 @@ public class TestRMAdminService {
       rm.adminService.mapAttributesToNodes(request);
       fail("Should have failed for non exists attribute");
     } catch (Exception ex) {
-      assertTrue("Exception expected if attributes does not exist", true);
+      assertTrue(true, "Exception expected if attributes does not exist");
     }
 
     request =
@@ -1684,9 +1692,9 @@ public class TestRMAdminService {
       rm.adminService.mapAttributesToNodes(request);
       fail("host5 is not a valid node, It should have failed");
     } catch (YarnException ex) {
-      Assert.assertEquals("Exception Message is not as desired",
-          " Following nodes does not exist : [host5]",
-          ex.getCause().getMessage());
+      Assertions.assertEquals(" Following nodes does not exist : [host5]",
+          ex.getCause().getMessage(),
+          "Exception Message is not as desired");
     }
 
     request =
@@ -1707,9 +1715,9 @@ public class TestRMAdminService {
       rm.adminService.mapAttributesToNodes(request);
       fail("host with the port should fail as only hostnames are validated");
     } catch (YarnException ex) {
-      Assert.assertEquals("Exception Message is not as desired",
-          " Following nodes does not exist : [host4:8889, host2:8889]",
-          ex.getCause().getMessage());
+      Assertions.assertEquals(" Following nodes does not exist : [host4:8889, host2:8889]",
+          ex.getCause().getMessage(),
+          "Exception Message is not as desired");
     }
 
     request =
@@ -1743,9 +1751,9 @@ public class TestRMAdminService {
       rm.adminService.mapAttributesToNodes(request);
       fail("This operation should fail as prefix should be \"nm.yarn.io\".");
     } catch (YarnException ex) {
-      Assert.assertEquals("Exception Message is not as desired",
-          "Invalid Attribute Mapping for the node host5. Prefix should be "
-              + "rm.yarn.io", ex.getCause().getMessage());
+      Assertions.assertEquals("Invalid Attribute Mapping for the node host5. Prefix should be "
+              + "rm.yarn.io",
+          ex.getCause().getMessage(), "Exception Message is not as desired");
     }
 
     rm.close();

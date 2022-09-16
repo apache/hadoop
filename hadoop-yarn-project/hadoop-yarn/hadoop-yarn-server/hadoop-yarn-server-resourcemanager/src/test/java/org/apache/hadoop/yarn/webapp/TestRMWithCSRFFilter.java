@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -52,8 +52,8 @@ import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Used TestRMWebServices as an example of web invocations of RM and added
@@ -84,7 +84,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
     }
   };
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -101,26 +101,26 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
   }
 
   @Test
-  public void testNoCustomHeaderFromBrowser() throws Exception {
+  void testNoCustomHeaderFromBrowser() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").accept("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .get(ClientResponse.class);
-    assertTrue("Should have been rejected", response.getStatus() ==
-                                            Status.BAD_REQUEST.getStatusCode());
+    assertTrue(response.getStatus() ==
+                                            Status.BAD_REQUEST.getStatusCode(), "Should have been rejected");
   }
 
   @Test
-  public void testIncludeCustomHeaderFromBrowser() throws Exception {
+  void testIncludeCustomHeaderFromBrowser() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").accept("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .header("X-XSRF-HEADER", "")
         .get(ClientResponse.class);
-    assertTrue("Should have been accepted", response.getStatus() ==
-                                            Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+                                            Status.OK.getStatusCode(), "Should have been accepted");
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
@@ -128,24 +128,24 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
   }
 
   @Test
-  public void testAllowedMethod() throws Exception {
+  void testAllowedMethod() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").accept("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .head();
-    assertTrue("Should have been allowed", response.getStatus() ==
-                                           Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+                                           Status.OK.getStatusCode(), "Should have been allowed");
   }
 
   @Test
-  public void testAllowNonBrowserInteractionWithoutHeader() throws Exception {
+  void testAllowNonBrowserInteractionWithoutHeader() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").accept("application/xml")
         .get(ClientResponse.class);
-    assertTrue("Should have been accepted", response.getStatus() ==
-                                            Status.OK.getStatusCode());
+    assertTrue(response.getStatus() ==
+                                            Status.OK.getStatusCode(), "Should have been accepted");
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
@@ -159,7 +159,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("clusterInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
@@ -191,14 +191,14 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
                                    String resourceManagerBuildVersion,
                                    String resourceManagerVersion) {
 
-    assertEquals("clusterId doesn't match: ",
-                 ResourceManager.getClusterTimeStamp(), clusterid);
-    assertEquals("startedOn doesn't match: ",
-                 ResourceManager.getClusterTimeStamp(), startedon);
-    assertTrue("stated doesn't match: " + state,
-               state.matches(STATE.INITED.toString()));
-    assertTrue("HA state doesn't match: " + haState,
-               haState.matches("INITIALIZING"));
+    assertEquals(ResourceManager.getClusterTimeStamp(),
+                 clusterid, "clusterId doesn't match: ");
+    assertEquals(ResourceManager.getClusterTimeStamp(),
+                 startedon, "startedOn doesn't match: ");
+    assertTrue(state.matches(STATE.INITED.toString()),
+               "stated doesn't match: " + state);
+    assertTrue(haState.matches("INITIALIZING"),
+               "HA state doesn't match: " + haState);
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
                                           VersionInfo.getDate(), hadoopVersionBuiltOn);

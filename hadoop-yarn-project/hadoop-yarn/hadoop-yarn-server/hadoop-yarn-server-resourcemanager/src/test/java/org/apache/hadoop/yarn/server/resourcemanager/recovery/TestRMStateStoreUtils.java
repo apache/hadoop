@@ -23,20 +23,20 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestRMStateStoreUtils {
 
   @Test
-  public void testReadRMDelegationTokenIdentifierData()
+  void testReadRMDelegationTokenIdentifierData()
       throws Exception {
     testReadRMDelegationTokenIdentifierData(false);
   }
 
   @Test
-  public void testReadRMDelegationTokenIdentifierDataOldFormat()
+  void testReadRMDelegationTokenIdentifierDataOldFormat()
       throws Exception {
     testReadRMDelegationTokenIdentifierData(true);
   }
@@ -64,8 +64,8 @@ public class TestRMStateStoreUtils {
 
     RMDelegationTokenIdentifierData identifierData
         = RMStateStoreUtils.readRMDelegationTokenIdentifierData(inBuf);
-    assertEquals("Found unexpected data still in the InputStream",
-        -1, inBuf.read());
+    assertEquals(-1,
+        inBuf.read(), "Found unexpected data still in the InputStream");
 
     RMDelegationTokenIdentifier identifier
         = identifierData.getTokenIdentifier();

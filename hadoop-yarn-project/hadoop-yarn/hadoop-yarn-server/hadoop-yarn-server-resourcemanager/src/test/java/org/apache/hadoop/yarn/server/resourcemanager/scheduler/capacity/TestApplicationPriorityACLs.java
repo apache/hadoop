@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ACLsTestBase;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
 public class TestApplicationPriorityACLs extends ACLsTestBase {
@@ -50,7 +50,7 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
   private final int clusterMaxPriority = 10;
 
   @Test
-  public void testApplicationACLs() throws Exception {
+  void testApplicationACLs() throws Exception {
 
     /*
      * Cluster Max-priority is 10. User 'queueA_user' has permission to submit
@@ -143,9 +143,9 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
         .newInstance(appSubmissionContext);
     try {
       submitterClient.submitApplication(submitRequest);
-      Assert.fail();
+      Assertions.fail();
     } catch (YarnException ex) {
-      Assert.assertTrue(ex.getCause() instanceof RemoteException);
+      Assertions.assertTrue(ex.getCause() instanceof RemoteException);
     }
   }
 
@@ -167,10 +167,10 @@ public class TestApplicationPriorityACLs extends ACLsTestBase {
     try {
       GetApplicationReportResponse response = submitterClient
           .getApplicationReport(request);
-      Assert.assertEquals(response.getApplicationReport().getPriority(),
+      Assertions.assertEquals(response.getApplicationReport().getPriority(),
           Priority.newInstance(priority));
     } catch (YarnException e) {
-      Assert.fail("Application submission should not fail.");
+      Assertions.fail("Application submission should not fail.");
     }
   }
 

@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -38,14 +38,14 @@ import static org.mockito.Mockito.verify;
 
 public class TestProportionalCapacityPreemptionPolicyForNodePartitions
     extends ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     policy = new ProportionalCapacityPreemptionPolicy(rmContext, cs, mClock);
   }
 
   @Test
-  public void testNodePartitionPreemptionRespectGuaranteedCapacity()
+  void testNodePartitionPreemptionRespectGuaranteedCapacity()
       throws IOException {
     /**
      * The simplest test of node label, Queue structure is:
@@ -102,7 +102,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionNotHappenBetweenSatisfiedQueues()
+  void testNodePartitionPreemptionNotHappenBetweenSatisfiedQueues()
       throws IOException {
     /**
      * Queue structure is:
@@ -154,7 +154,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionOfIgnoreExclusivityAndRespectCapacity()
+  void testNodePartitionPreemptionOfIgnoreExclusivityAndRespectCapacity()
       throws IOException {
     /**
      * <pre>
@@ -203,7 +203,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionOfSkippingAMContainer()
+  void testNodePartitionPreemptionOfSkippingAMContainer()
       throws IOException {
     /**
      * <pre>
@@ -262,7 +262,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionOfAMContainer()
+  void testNodePartitionPreemptionOfAMContainer()
       throws IOException {
     /**
      * <pre>
@@ -323,7 +323,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionDisablePreemptionForSingleLevelQueue()
+  void testNodePartitionDisablePreemptionForSingleLevelQueue()
       throws IOException {
     /**
      * Queue structure is:
@@ -380,7 +380,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionNonAccessibleQueuesSharePartitionedResource()
+  void testNodePartitionNonAccessibleQueuesSharePartitionedResource()
       throws IOException {
     /**
      * Queue structure is:
@@ -439,7 +439,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testHierarchyPreemptionForMultiplePartitions()
+  void testHierarchyPreemptionForMultiplePartitions()
       throws IOException {
     /**
      * Queue structure is:
@@ -511,7 +511,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testHierarchyPreemptionForDifferenceAcessibility()
+  void testHierarchyPreemptionForDifferenceAcessibility()
       throws IOException {
     /**
      * Queue structure is:
@@ -567,7 +567,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNodePartitionPreemptionWithVCoreResource() throws IOException {
+  void testNodePartitionPreemptionWithVCoreResource() throws IOException {
     /**
      * Queue structure is:
      *
@@ -622,7 +622,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
   }
 
   @Test
-  public void testNormalizeGuaranteeWithMultipleResource() throws IOException {
+  void testNormalizeGuaranteeWithMultipleResource() throws IOException {
     // Initialize resource map
     Map<String, ResourceInformation> riMap = new HashMap<>();
     String RESOURCE_1 = "res1";

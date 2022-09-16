@@ -27,12 +27,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueDeletionPolicy;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.HashSet;
 import java.util.Set;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -40,8 +41,9 @@ import static org.mockito.Mockito.when;
 
 public class TestSchedulingMonitor {
 
-  @Test(timeout = 10000)
-  public void testRMStarts() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testRMStarts() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     conf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
@@ -60,8 +62,9 @@ public class TestSchedulingMonitor {
     rm.close();
   }
 
-  @Test(timeout = 10000)
-  public void testRMUpdateSchedulingEditPolicy() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testRMUpdateSchedulingEditPolicy() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -95,8 +98,9 @@ public class TestSchedulingMonitor {
     rm.close();
   }
 
-  @Test(timeout = 10000)
-  public void testRMUpdateAutoCreatedQueueDeletionPolicy() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testRMUpdateAutoCreatedQueueDeletionPolicy() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);

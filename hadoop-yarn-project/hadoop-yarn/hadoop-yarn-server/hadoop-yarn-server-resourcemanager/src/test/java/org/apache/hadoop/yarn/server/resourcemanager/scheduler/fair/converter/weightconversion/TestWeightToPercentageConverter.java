@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -29,114 +29,114 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestWeightToPercentageConverter
     extends WeightConverterTestBase {
   private WeightToPercentConverter converter;
   private Configuration config;
 
-  @Before
+  @BeforeEach
   public void setup() {
     converter = new WeightToPercentConverter();
     config = new Configuration(false);
   }
 
   @Test
-  public void testSingleWeightConversion() {
+  void testSingleWeightConversion() {
     FSQueue root = createFSQueues(1);
     converter.convertWeightsForChildQueues(root, config);
 
-    assertFalse("Capacity zerosum allowed",
-        config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
-            false));
-    assertEquals("root.a capacity", "100.000",
-        config.get(PREFIX + "root.a.capacity"));
+    assertFalse(config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
+            false),
+        "Capacity zerosum allowed");
+    assertEquals("100.000", config.get(PREFIX + "root.a.capacity"),
+        "root.a capacity");
   }
 
   @Test
-  public void testNoChildQueueConversion() {
+  void testNoChildQueueConversion() {
     FSQueue root = createFSQueues();
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Converted items", 0,
-        config.getPropsWithPrefix(PREFIX).size());
+    assertEquals(0, config.getPropsWithPrefix(PREFIX).size(),
+        "Converted items");
   }
 
   @Test
-  public void testMultiWeightConversion() {
+  void testMultiWeightConversion() {
     FSQueue root = createFSQueues(1, 2, 3);
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 3,
-        config.getPropsWithPrefix(PREFIX).size());
+    assertEquals(3, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
     // this is no fixing - it's the result of BigDecimal rounding
-    assertEquals("root.a capacity", "16.667",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("root.b capacity", "33.333",
-        config.get(PREFIX + "root.b.capacity"));
-    assertEquals("root.c capacity", "50.000",
-        config.get(PREFIX + "root.c.capacity"));
+    assertEquals("16.667", config.get(PREFIX + "root.a.capacity"),
+        "root.a capacity");
+    assertEquals("33.333", config.get(PREFIX + "root.b.capacity"),
+        "root.b capacity");
+    assertEquals("50.000", config.get(PREFIX + "root.c.capacity"),
+        "root.c capacity");
   }
 
   @Test
-  public void testMultiWeightConversionWhenOfThemIsZero() {
+  void testMultiWeightConversionWhenOfThemIsZero() {
     FSQueue root = createFSQueues(0, 1, 1);
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertFalse("Capacity zerosum allowed",
-        config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
-            false));
-    assertEquals("Number of properties", 3,
-        config.getPropsWithPrefix(PREFIX).size());
-    assertEquals("root.a capacity", "0.000",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("root.b capacity", "50.000",
-        config.get(PREFIX + "root.b.capacity"));
-    assertEquals("root.c capacity", "50.000",
-        config.get(PREFIX + "root.c.capacity"));
+    assertFalse(config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
+            false),
+        "Capacity zerosum allowed");
+    assertEquals(3, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
+    assertEquals("0.000", config.get(PREFIX + "root.a.capacity"),
+        "root.a capacity");
+    assertEquals("50.000", config.get(PREFIX + "root.b.capacity"),
+        "root.b capacity");
+    assertEquals("50.000", config.get(PREFIX + "root.c.capacity"),
+        "root.c capacity");
   }
 
   @Test
-  public void testMultiWeightConversionWhenAllOfThemAreZero() {
+  void testMultiWeightConversionWhenAllOfThemAreZero() {
     FSQueue root = createFSQueues(0, 0, 0);
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 4,
-        config.getPropsWithPrefix(PREFIX).size());
-    assertTrue("Capacity zerosum allowed",
-        config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
-            false));
-    assertEquals("root.a capacity", "0.000",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("root.b capacity", "0.000",
-        config.get(PREFIX + "root.b.capacity"));
-    assertEquals("root.c capacity", "0.000",
-        config.get(PREFIX + "root.c.capacity"));
+    assertEquals(4, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
+    assertTrue(config.getBoolean(PREFIX + "root.allow-zero-capacity-sum",
+            false),
+        "Capacity zerosum allowed");
+    assertEquals("0.000", config.get(PREFIX + "root.a.capacity"),
+        "root.a capacity");
+    assertEquals("0.000", config.get(PREFIX + "root.b.capacity"),
+        "root.b capacity");
+    assertEquals("0.000", config.get(PREFIX + "root.c.capacity"),
+        "root.c capacity");
   }
 
   @Test
-  public void testCapacityFixingWithThreeQueues() {
+  void testCapacityFixingWithThreeQueues() {
     FSQueue root = createFSQueues(1, 1, 1);
 
     converter.convertWeightsForChildQueues(root, config);
 
-    assertEquals("Number of properties", 3,
-        config.getPropsWithPrefix(PREFIX).size());
-    assertEquals("root.a capacity", "33.334",
-        config.get(PREFIX + "root.a.capacity"));
-    assertEquals("root.b capacity", "33.333",
-        config.get(PREFIX + "root.b.capacity"));
-    assertEquals("root.c capacity", "33.333",
-        config.get(PREFIX + "root.c.capacity"));
+    assertEquals(3, config.getPropsWithPrefix(PREFIX).size(),
+        "Number of properties");
+    assertEquals("33.334", config.get(PREFIX + "root.a.capacity"),
+        "root.a capacity");
+    assertEquals("33.333", config.get(PREFIX + "root.b.capacity"),
+        "root.b capacity");
+    assertEquals("33.333", config.get(PREFIX + "root.c.capacity"),
+        "root.c capacity");
   }
 
   @Test
-  public void testCapacityFixingWhenTotalCapacityIsGreaterThanHundred() {
+  void testCapacityFixingWhenTotalCapacityIsGreaterThanHundred() {
     Map<String, BigDecimal> capacities = new HashMap<>();
     capacities.put("root.a", new BigDecimal("50.001"));
     capacities.put("root.b", new BigDecimal("25.500"));
@@ -146,7 +146,7 @@ public class TestWeightToPercentageConverter
   }
 
   @Test
-  public void testCapacityFixWhenTotalCapacityIsLessThanHundred() {
+  void testCapacityFixWhenTotalCapacityIsLessThanHundred() {
     Map<String, BigDecimal> capacities = new HashMap<>();
     capacities.put("root.a", new BigDecimal("49.999"));
     capacities.put("root.b", new BigDecimal("25.500"));
@@ -163,12 +163,12 @@ public class TestWeightToPercentageConverter
         converter.fixCapacities(capacities,
             total);
 
-    assertFalse("Capacity zerosum allowed", needCapacityValidationRelax);
-    assertEquals("root.a capacity", new BigDecimal("50.000"),
-        capacities.get("root.a"));
-    assertEquals("root.b capacity", new BigDecimal("25.500"),
-        capacities.get("root.b"));
-    assertEquals("root.c capacity", new BigDecimal("25.500"),
-        capacities.get("root.c"));
+    assertFalse(needCapacityValidationRelax, "Capacity zerosum allowed");
+    assertEquals(new BigDecimal("50.000"), capacities.get("root.a"),
+        "root.a capacity");
+    assertEquals(new BigDecimal("25.500"), capacities.get("root.b"),
+        "root.b capacity");
+    assertEquals(new BigDecimal("25.500"), capacities.get("root.c"),
+        "root.c capacity");
   }
 }

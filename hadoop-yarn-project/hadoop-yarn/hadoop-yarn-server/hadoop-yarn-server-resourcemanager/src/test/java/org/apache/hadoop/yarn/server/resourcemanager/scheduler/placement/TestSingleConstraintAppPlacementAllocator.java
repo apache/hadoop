@@ -33,9 +33,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.Invali
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.MemoryPlacementConstraintManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.PlacementConstraintManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.HashSet;
@@ -59,7 +59,7 @@ public class TestSingleConstraintAppPlacementAllocator {
   private SchedulerRequestKey schedulerRequestKey;
   private SingleConstraintAppPlacementAllocator allocator;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     // stub app scheduling info.
     appSchedulingInfo = mock(AppSchedulingInfo.class);
@@ -108,12 +108,12 @@ public class TestSingleConstraintAppPlacementAllocator {
       // Expected
       return;
     }
-    Assert.fail(
+    Assertions.fail(
         "Expect failure for schedulingRequest=" + schedulingRequest.toString());
   }
 
   @Test
-  public void testSchedulingRequestValidation() {
+  void testSchedulingRequestValidation() {
     // Valid
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
         ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
@@ -126,7 +126,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals("", allocator.getTargetNodePartition());
+    Assertions.assertEquals("", allocator.getTargetNodePartition());
 
     // Valid (with partition)
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -140,7 +140,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             .build()).resourceSizing(
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
-    Assert.assertEquals("x", allocator.getTargetNodePartition());
+    Assertions.assertEquals("x", allocator.getTargetNodePartition());
 
     // Valid (without specifying node partition)
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -154,7 +154,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
     // Node partition is unspecified, use the default node label expression y
-    Assert.assertEquals("y", allocator.getTargetNodePartition());
+    Assertions.assertEquals("y", allocator.getTargetNodePartition());
 
     // Valid (with application Id target)
     assertValidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -168,7 +168,7 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build());
     // Allocation tags should not include application Id
-    Assert.assertEquals("y", allocator.getTargetNodePartition());
+    Assertions.assertEquals("y", allocator.getTargetNodePartition());
 
     // Invalid (without sizing)
     assertInvalidSchedulingRequest(SchedulingRequest.newBuilder().executionType(
@@ -203,7 +203,7 @@ public class TestSingleConstraintAppPlacementAllocator {
   }
 
   @Test
-  public void testSchedulingRequestUpdate() {
+  void testSchedulingRequestUpdate() {
     SchedulingRequest schedulingRequest =
         SchedulingRequest.newBuilder().executionType(
             ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
@@ -279,13 +279,13 @@ public class TestSingleConstraintAppPlacementAllocator {
             ResourceSizing.newInstance(1, Resource.newInstance(1024, 1)))
         .build();
     allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, true);
-    Assert.assertEquals(existingNumAllocations + 1,
+    Assertions.assertEquals(existingNumAllocations + 1,
         allocator.getSchedulingRequest().getResourceSizing()
             .getNumAllocations());
   }
 
   @Test
-  public void testFunctionality() throws InvalidAllocationTagsQueryException {
+  void testFunctionality() throws InvalidAllocationTagsQueryException {
     SchedulingRequest schedulingRequest =
         SchedulingRequest.newBuilder().executionType(
             ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED))
@@ -330,18 +330,18 @@ public class TestSingleConstraintAppPlacementAllocator {
     when(node1.getPartition()).thenReturn("x");
     when(node1.getNodeID()).thenReturn(NodeId.fromString("host1:123"));
 
-    Assert.assertTrue(allocator
+    Assertions.assertTrue(allocator
         .precheckNode(node1, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
 
     SchedulerNode node2 = mock(SchedulerNode.class);
     when(node1.getPartition()).thenReturn("");
     when(node1.getNodeID()).thenReturn(NodeId.fromString("host2:123"));
-    Assert.assertFalse(allocator
+    Assertions.assertFalse(allocator
         .precheckNode(node2, SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY));
   }
 
   @Test
-  public void testNodeAttributesFunctionality() {
+  void testNodeAttributesFunctionality() {
     // 1. Simple java=1.8 validation
     SchedulingRequest schedulingRequest =
         SchedulingRequest.newBuilder().executionType(
@@ -363,7 +363,7 @@ public class TestSingleConstraintAppPlacementAllocator {
     boolean result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertTrue("Allocation should be success for java=1.8", result);
+    Assertions.assertTrue(result, "Allocation should be success for java=1.8");
 
     // 2. verify python!=3 validation
     SchedulingRequest schedulingRequest2 =
@@ -387,8 +387,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertTrue("Allocation should be success as python doesn't exist",
-        result);
+    Assertions.assertTrue(result,
+        "Allocation should be success as python doesn't exist");
 
     // 3. verify python!=3 validation when node has python=2
     allocator = new SingleConstraintAppPlacementAllocator();
@@ -400,9 +400,9 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertTrue(
-        "Allocation should be success as python=3 doesn't exist in node",
-        result);
+    Assertions.assertTrue(
+        result,
+        "Allocation should be success as python=3 doesn't exist in node");
 
     // 4. verify python!=3 validation when node has python=3
     allocator = new SingleConstraintAppPlacementAllocator();
@@ -414,12 +414,12 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertFalse("Allocation should fail as python=3 exist in node",
-        result);
+    Assertions.assertFalse(result,
+        "Allocation should fail as python=3 exist in node");
   }
 
   @Test
-  public void testConjunctionNodeAttributesFunctionality() {
+  void testConjunctionNodeAttributesFunctionality() {
     // 1. verify and(python!=3:java=1.8) validation when node has python=3
     SchedulingRequest schedulingRequest1 =
         SchedulingRequest.newBuilder().executionType(
@@ -451,8 +451,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     boolean result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertFalse("Allocation should fail as python=3 exists in node",
-        result);
+    Assertions.assertFalse(result,
+        "Allocation should fail as python=3 exists in node");
 
     // 2. verify and(python!=3:java=1.8) validation when node has python=2
     // and java=1.8
@@ -467,8 +467,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertTrue("Allocation should be success as python=2 exists in node",
-        result);
+    Assertions.assertTrue(result,
+        "Allocation should be success as python=2 exists in node");
 
     // 3. verify or(python!=3:java=1.8) validation when node has python=3
     SchedulingRequest schedulingRequest2 =
@@ -501,8 +501,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert.assertTrue("Allocation should be success as java=1.8 exists in node",
-        result);
+    Assertions.assertTrue(result,
+        "Allocation should be success as java=1.8 exists in node");
 
     // 4. verify or(python!=3:java=1.8) validation when node has python=3
     // and java=1.7.
@@ -517,8 +517,8 @@ public class TestSingleConstraintAppPlacementAllocator {
     result = allocator.canAllocate(NodeType.NODE_LOCAL,
         TestUtils.getMockNodeWithAttributes("host1", "/rack1", 123, 1024,
             attributes));
-    Assert
-        .assertFalse("Allocation should fail as java=1.8 doesnt exist in node",
-            result);
+    Assertions
+        .assertFalse(result,
+            "Allocation should fail as java=1.8 doesnt exist in node");
   }
 }

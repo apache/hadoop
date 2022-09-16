@@ -33,9 +33,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.slf4j.event.Level;
 import org.apache.zookeeper.ZooKeeper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -54,7 +55,7 @@ public class TestLeaderElectorService {
   MockRM rm1;
   MockRM rm2;
   TestingCluster zkCluster;
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.INFO);
     conf = new Configuration();
@@ -73,7 +74,7 @@ public class TestLeaderElectorService {
     zkCluster.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (rm1 != null) {
       rm1.stop();
@@ -87,8 +88,8 @@ public class TestLeaderElectorService {
   // 2. rm2 standby
   // 3. stop rm1
   // 4. rm2 become active
-  @Test (timeout = 20000)
-  public void testRMShutDownCauseFailover() throws Exception {
+  @Timeout(20000)  @Test
+  void testRMShutDownCauseFailover() throws Exception {
     rm1 = startRM("rm1", HAServiceState.ACTIVE);
     rm2 = startRM("rm2", HAServiceState.STANDBY);
 
@@ -106,7 +107,7 @@ public class TestLeaderElectorService {
   // 3. submit a job to rm1 which triggers state-store failure.
   // 4. rm2 become
   @Test
-  public void testStateStoreFailureCauseFailover() throws  Exception {
+  void testStateStoreFailureCauseFailover() throws  Exception {
 
     conf.set(YarnConfiguration.RM_HA_ID, "rm1");
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
@@ -148,7 +149,7 @@ public class TestLeaderElectorService {
   // 2. restart zk cluster
   // 3. rm1 will first relinquish leadership and re-acquire leadership
   @Test
-  public void testZKClusterDown() throws Exception {
+  void testZKClusterDown() throws Exception {
     rm1 = startRM("rm1", HAServiceState.ACTIVE);
 
     // stop zk cluster
@@ -166,7 +167,7 @@ public class TestLeaderElectorService {
   // 2. kill the zk session between the rm and zk cluster.
   // 3. rm1 will first relinquish leadership and re-acquire leadership
   @Test
-  public void testExpireCurrentZKSession() throws Exception{
+  void testExpireCurrentZKSession() throws Exception{
 
     rm1 = startRM("rm1", HAServiceState.ACTIVE);
 
@@ -184,7 +185,7 @@ public class TestLeaderElectorService {
   // 1. rm1 fail to become active.
   // 2. rm1 will rejoin leader election and retry the leadership
   @Test
-  public void testRMFailToTransitionToActive() throws Exception{
+  void testRMFailToTransitionToActive() throws Exception{
     conf.set(YarnConfiguration.RM_HA_ID, "rm1");
     final AtomicBoolean throwException = new AtomicBoolean(true);
     Thread launchRM = new Thread() {
@@ -216,7 +217,7 @@ public class TestLeaderElectorService {
   // 3. kill the current connected zk instance
   // 4. either rm1 or rm2 will become active.
   @Test
-  public void testKillZKInstance() throws Exception {
+  void testKillZKInstance() throws Exception {
     rm1 = startRM("rm1", HAServiceState.ACTIVE);
     rm2 = startRM("rm2", HAServiceState.STANDBY);
 

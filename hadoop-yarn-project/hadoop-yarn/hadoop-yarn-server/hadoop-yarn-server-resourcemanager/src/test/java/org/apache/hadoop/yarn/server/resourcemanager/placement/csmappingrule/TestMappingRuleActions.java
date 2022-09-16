@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestMappingRuleActions {
   void assertRejectResult(MappingRuleResult result) {
@@ -42,7 +42,7 @@ public class TestMappingRuleActions {
   }
 
   @Test
-  public void testRejectAction() {
+  void testRejectAction() {
     VariableContext variables = new VariableContext();
     MappingRuleAction reject = new MappingRuleActions.RejectAction();
     MappingRuleAction rejectHelper = MappingRuleActions.createRejectAction();
@@ -52,7 +52,7 @@ public class TestMappingRuleActions {
   }
 
   @Test
-  public void testActionFallbacks() {
+  void testActionFallbacks() {
     MappingRuleActionBase action =
         new MappingRuleActions.PlaceToQueueAction("a", true);
 
@@ -67,7 +67,7 @@ public class TestMappingRuleActions {
   }
 
   @Test
-  public void testVariableUpdateAction() {
+  void testVariableUpdateAction() {
     VariableContext variables = new VariableContext();
     variables.put("%default", "root.default");
     variables.put("%immutable", "immutable");
@@ -113,7 +113,7 @@ public class TestMappingRuleActions {
   }
 
   @Test
-  public void testPlaceToQueueAction() {
+  void testPlaceToQueueAction() {
     VariableContext variables = new VariableContext();
     variables.put("%default", "root.default");
     variables.put("%immutable", "immutable");
@@ -160,7 +160,7 @@ public class TestMappingRuleActions {
   }
 
   @Test
-  public void testToStrings() {
+  void testToStrings() {
     MappingRuleAction place = new MappingRuleActions.PlaceToQueueAction(
         "queue", true);
     MappingRuleAction varUpdate = new MappingRuleActions.VariableUpdateAction(

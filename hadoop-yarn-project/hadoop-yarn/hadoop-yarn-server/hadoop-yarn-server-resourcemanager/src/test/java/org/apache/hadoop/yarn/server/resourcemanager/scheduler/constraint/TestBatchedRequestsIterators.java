@@ -25,8 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.processor.BatchedRequests;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test Request Iterator.
@@ -34,7 +34,7 @@ import org.junit.Test;
 public class TestBatchedRequestsIterators {
 
   @Test
-  public void testSerialIterator() throws Exception {
+  void testSerialIterator() throws Exception {
     List<SchedulingRequest> schedulingRequestList =
         Arrays.asList(schedulingRequest(1, 1, 1, 512, "foo"),
             schedulingRequest(1, 2, 1, 512, "foo"),
@@ -48,13 +48,13 @@ public class TestBatchedRequestsIterators {
     long prevAllocId = 0;
     while (requestIterator.hasNext()) {
       SchedulingRequest request = requestIterator.next();
-      Assert.assertTrue(request.getAllocationRequestId() > prevAllocId);
+      Assertions.assertTrue(request.getAllocationRequestId() > prevAllocId);
       prevAllocId = request.getAllocationRequestId();
     }
   }
 
   @Test
-  public void testPopularTagsIterator() throws Exception {
+  void testPopularTagsIterator() throws Exception {
     List<SchedulingRequest> schedulingRequestList =
         Arrays.asList(schedulingRequest(1, 1, 1, 512, "pri", "foo"),
             schedulingRequest(1, 2, 1, 512, "bar"),
@@ -71,9 +71,9 @@ public class TestBatchedRequestsIterators {
     while (requestIterator.hasNext()) {
       SchedulingRequest request = requestIterator.next();
       if (recCcount < 3) {
-        Assert.assertTrue(request.getAllocationTags().contains("pri"));
+        Assertions.assertTrue(request.getAllocationTags().contains("pri"));
       } else {
-        Assert.assertTrue(request.getAllocationTags().contains("bar")
+        Assertions.assertTrue(request.getAllocationTags().contains("bar")
             || request.getAllocationTags().contains("test"));
       }
       recCcount++;

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.util.List;
 
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 
 public class TestApplicationPriorityACLConfiguration {
@@ -41,7 +41,7 @@ public class TestApplicationPriorityACLConfiguration {
   private static final String QUEUEC = "queueC";
 
   @Test
-  public void testSimpleACLConfiguration() throws Exception {
+  void testSimpleACLConfiguration() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{QUEUEA, QUEUEB, QUEUEC});
@@ -69,7 +69,7 @@ public class TestApplicationPriorityACLConfiguration {
   }
 
   @Test
-  public void testACLConfigurationForInvalidCases() throws Exception {
+  void testACLConfigurationForInvalidCases() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
         new String[]{QUEUEA, QUEUEB, QUEUEC});
@@ -111,10 +111,10 @@ public class TestApplicationPriorityACLConfiguration {
     AppPriorityACLGroup group = pGroup.get(0);
     String aclString = queueUser + " " + queueGroup;
 
-    Assert.assertEquals(aclString.trim(),
+    Assertions.assertEquals(aclString.trim(),
         group.getACLList().getAclString().trim());
-    Assert.assertEquals(maxPriority, group.getMaxPriority().getPriority());
-    Assert.assertEquals(defaultPriority,
+    Assertions.assertEquals(maxPriority, group.getMaxPriority().getPriority());
+    Assertions.assertEquals(defaultPriority,
         group.getDefaultPriority().getPriority());
   }
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementManager;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestMaxRunningAppsEnforcer {
   private QueueManager queueManager;
@@ -45,7 +45,7 @@ public class TestMaxRunningAppsEnforcer {
   private RMContext rmContext;
   private FairScheduler scheduler;
   
-  @Before
+  @BeforeEach
   public void setup() {
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     PlacementManager placementManager = new PlacementManager();
@@ -92,7 +92,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testRemoveDoesNotEnableAnyApp() {
+  void testRemoveDoesNotEnableAnyApp() {
     FSParentQueue root = queueManager.getRootQueue();
     FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1", true);
     FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue2", true);
@@ -112,7 +112,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testRemoveEnablesAppOnCousinQueue() {
+  void testRemoveEnablesAppOnCousinQueue() {
     FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1.subqueue1.leaf1", true);
     FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue1.subqueue2.leaf2", true);
     FSParentQueue queue1 = queueManager.getParentQueue("root.queue1", true);
@@ -130,7 +130,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testRemoveEnablesOneByQueueOneByUser() {
+  void testRemoveEnablesOneByQueueOneByUser() {
     FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1.leaf1", true);
     FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue1.leaf2", true);
     leaf1.setMaxRunningApps(2);
@@ -150,7 +150,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testRemoveEnablingOrderedByStartTime() {
+  void testRemoveEnablingOrderedByStartTime() {
     FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1.subqueue1.leaf1", true);
     FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue1.subqueue2.leaf2", true);
     FSParentQueue queue1 = queueManager.getParentQueue("root.queue1", true);
@@ -171,7 +171,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testMultipleAppsWaitingOnCousinQueue() {
+  void testMultipleAppsWaitingOnCousinQueue() {
     FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1.subqueue1.leaf1", true);
     FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue1.subqueue2.leaf2", true);
     FSParentQueue queue1 = queueManager.getParentQueue("root.queue1", true);
@@ -190,7 +190,7 @@ public class TestMaxRunningAppsEnforcer {
   }
   
   @Test
-  public void testMultiListStartTimeIteratorEmptyAppLists() {
+  void testMultiListStartTimeIteratorEmptyAppLists() {
     List<List<FSAppAttempt>> lists = new ArrayList<List<FSAppAttempt>>();
     lists.add(Arrays.asList(mockAppAttempt(1)));
     lists.add(Arrays.asList(mockAppAttempt(2)));

@@ -25,16 +25,18 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.util.ControlledClock;
+import org.junit.jupiter.api.Timeout;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
 
 public class TestAMLivelinessMonitor {
 
-  @Test(timeout = 10000)
-  public void testResetTimer() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testResetTimer() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
@@ -58,7 +60,7 @@ public class TestAMLivelinessMonitor {
         dispatcher, clock) {
       @Override
       protected void expire(ApplicationAttemptId id) {
-        Assert.assertEquals(id, attemptId);
+        Assertions.assertEquals(id, attemptId);
         expired[0] = true;
       }
     };
@@ -75,7 +77,7 @@ public class TestAMLivelinessMonitor {
       Thread.sleep(100);
     }
     // expired[0] would be set to true without resetTimer
-    Assert.assertFalse(expired[0]);
+    Assertions.assertFalse(expired[0]);
     rm.stop();
   }
 }

@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -66,7 +66,7 @@ public class TestCapacitySchedulerAmbiguousLeafs {
   }
 
   @Test
-  public void testAmbiguousSubmissionWithACL() throws Exception {
+  void testAmbiguousSubmissionWithACL() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class.getName());
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);

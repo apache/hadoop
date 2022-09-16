@@ -43,9 +43,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceLimits;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ public class TestCapacitySchedulerWeightMode {
 
   RMNodeLabelsManager mgr;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -279,8 +280,8 @@ public class TestCapacitySchedulerWeightMode {
    * The only difference is, instead of using label, it uses weight mode
    * @throws Exception
    */
-  @Test(timeout = 300000)
-  public void testContainerAllocateWithComplexLabelsWeightOnly() throws Exception {
+  @Timeout(300000)  @Test
+  void testContainerAllocateWithComplexLabelsWeightOnly() throws Exception {
     internalTestContainerAllocationWithNodeLabel(
         getCSConfWithQueueLabelsWeightOnly(conf));
   }
@@ -292,8 +293,8 @@ public class TestCapacitySchedulerWeightMode {
    * Parent uses weight, child uses percent
    * @throws Exception
    */
-  @Test(timeout = 300000)
-  public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed1() throws Exception {
+  @Timeout(300000)  @Test
+  void testContainerAllocateWithComplexLabelsWeightAndPercentMixed1() throws Exception {
     internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUseWeightChildUsePct(conf));
   }
@@ -305,8 +306,8 @@ public class TestCapacitySchedulerWeightMode {
    * Parent uses percent, child uses weight
    * @throws Exception
    */
-  @Test(timeout = 300000)
-  public void testContainerAllocateWithComplexLabelsWeightAndPercentMixed2() throws Exception {
+  @Timeout(300000)  @Test
+  void testContainerAllocateWithComplexLabelsWeightAndPercentMixed2() throws Exception {
     internalTestContainerAllocationWithNodeLabel(
         getCSConfWithLabelsParentUsePctChildUseWeight(conf));
   }
@@ -315,8 +316,8 @@ public class TestCapacitySchedulerWeightMode {
    * This checks whether the parent prints the correct log about the
    * configured mode.
    */
-  @Test(timeout = 300000)
-  public void testGetCapacityOrWeightStringUsingWeights() throws IOException {
+  @Timeout(300000)  @Test
+  void testGetCapacityOrWeightStringUsingWeights() throws IOException {
     try (MockRM rm = new MockRM(
         getCSConfWithQueueLabelsWeightOnly(conf))) {
       rm.start();
@@ -340,8 +341,8 @@ public class TestCapacitySchedulerWeightMode {
    * This checks whether the parent prints the correct log about the
    * configured mode.
    */
-  @Test(timeout = 300000)
-  public void testGetCapacityOrWeightStringParentPctLeafWeights()
+  @Timeout(300000)  @Test
+  void testGetCapacityOrWeightStringParentPctLeafWeights()
       throws IOException {
     try (MockRM rm = new MockRM(
         getCSConfWithLabelsParentUseWeightChildUsePct(conf))) {
@@ -373,7 +374,7 @@ public class TestCapacitySchedulerWeightMode {
    * @throws Exception
    */
   @Test
-  public void testChildAccessibleNodeLabelsWeightMode() throws Exception {
+  void testChildAccessibleNodeLabelsWeightMode() throws Exception {
     MockRM rm = new MockRM(getCSConfWithQueueLabelsWeightOnly(conf));
     rm.start();
 
@@ -381,13 +382,13 @@ public class TestCapacitySchedulerWeightMode {
         (CapacityScheduler) rm.getRMContext().getScheduler();
     LeafQueue b1 = (LeafQueue) cs.getQueue(B1);
 
-    Assert.assertNotNull(b1);
-    Assert.assertTrue(b1.getAccessibleNodeLabels().isEmpty());
+    Assertions.assertNotNull(b1);
+    Assertions.assertTrue(b1.getAccessibleNodeLabels().isEmpty());
 
     Set<String> b1ExistingNodeLabels = ((CSQueue) b1).getQueueCapacities()
         .getExistingNodeLabels();
-    Assert.assertEquals(1, b1ExistingNodeLabels.size());
-    Assert.assertEquals("", b1ExistingNodeLabels.iterator().next());
+    Assertions.assertEquals(1, b1ExistingNodeLabels.size());
+    Assertions.assertEquals("", b1ExistingNodeLabels.iterator().next());
 
     rm.close();
   }
@@ -410,12 +411,12 @@ public class TestCapacitySchedulerWeightMode {
     try {
       cs.reinitialize(newConf, rm.getRMContext());
     } catch (Exception e) {
-      Assert.fail("Reinitialization failed with " + e);
+      Assertions.fail("Reinitialization failed with " + e);
     }
   }
 
   @Test
-  public void testQueueInfoWeight() throws Exception {
+  void testQueueInfoWeight() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.init(conf);
     rm.start();
@@ -435,17 +436,17 @@ public class TestCapacitySchedulerWeightMode {
 
     LeafQueue a = (LeafQueue)
         cs.getQueue("root.a");
-    Assert.assertNotNull(a);
-    Assert.assertEquals(a.getQueueCapacities().getWeight(),
-        a.getQueueInfo(false,
-        false).getWeight(), 1e-6);
+    Assertions.assertNotNull(a);
+    Assertions.assertEquals(a.getQueueInfo(false,
+        false).getWeight(), 1e-6,
+        a.getQueueCapacities().getWeight());
 
     LeafQueue b = (LeafQueue)
         cs.getQueue("root.b");
-    Assert.assertNotNull(b);
-    Assert.assertEquals(b.getQueueCapacities().getWeight(),
-        b.getQueueInfo(false,
-        false).getWeight(), 1e-6);
+    Assertions.assertNotNull(b);
+    Assertions.assertEquals(b.getQueueInfo(false,
+        false).getWeight(), 1e-6,
+        b.getQueueCapacities().getWeight());
     rm.close();
   }
 
@@ -526,7 +527,7 @@ public class TestCapacitySchedulerWeightMode {
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2L);
-    Assert.assertTrue(rm1.waitForState(nm2, containerId,
+    Assertions.assertTrue(rm1.waitForState(nm2, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am1.getApplicationAttemptId(), containerId, rm1,
         "h2");
@@ -549,9 +550,9 @@ public class TestCapacitySchedulerWeightMode {
     // (Maximum capacity reached)
     am2.allocate("*", 1024, 1, new ArrayList<ContainerId>());
     containerId = ContainerId.newContainerId(am2.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm4, containerId,
+    Assertions.assertFalse(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertFalse(rm1.waitForState(nm5, containerId,
+    Assertions.assertFalse(rm1.waitForState(nm5, containerId,
         RMContainerState.ALLOCATED));
 
     // launch an app to queue b2
@@ -570,9 +571,9 @@ public class TestCapacitySchedulerWeightMode {
     // y,z). Will successfully allocate on nm3
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 2);
-    Assert.assertFalse(rm1.waitForState(nm1, containerId,
+    Assertions.assertFalse(rm1.waitForState(nm1, containerId,
         RMContainerState.ALLOCATED));
-    Assert.assertTrue(rm1.waitForState(nm3, containerId,
+    Assertions.assertTrue(rm1.waitForState(nm3, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
@@ -581,7 +582,7 @@ public class TestCapacitySchedulerWeightMode {
     // Will successfully allocate on nm4 only.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "z");
     containerId = ContainerId.newContainerId(am3.getApplicationAttemptId(), 3L);
-    Assert.assertTrue(rm1.waitForState(nm4, containerId,
+    Assertions.assertTrue(rm1.waitForState(nm4, containerId,
         RMContainerState.ALLOCATED));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h4");
@@ -594,21 +595,21 @@ public class TestCapacitySchedulerWeightMode {
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
     SchedulerAppReport appReport = scheduler.getSchedulerAppInfo(attemptId);
 
-    Assert.assertTrue(appReport.getLiveContainers().size() > 0);
+    Assertions.assertTrue(appReport.getLiveContainers().size() > 0);
     for (RMContainer c : appReport.getLiveContainers()) {
       if (c.getContainerId().equals(containerId)) {
-        Assert.assertEquals(host, c.getAllocatedNode().getHost());
+        Assertions.assertEquals(host, c.getAllocatedNode().getHost());
       }
     }
   }
 
   private void validateCapacityOrWeightString(String capacityOrWeightString,
       boolean shouldContainWeight) {
-    Assert.assertEquals(shouldContainWeight,
+    Assertions.assertEquals(shouldContainWeight,
         capacityOrWeightString.contains("weight"));
-    Assert.assertEquals(shouldContainWeight,
+    Assertions.assertEquals(shouldContainWeight,
         capacityOrWeightString.contains("normalizedWeight"));
-    Assert.assertEquals(!shouldContainWeight,
+    Assertions.assertEquals(!shouldContainWeight,
         capacityOrWeightString.contains("capacity"));
 
   }

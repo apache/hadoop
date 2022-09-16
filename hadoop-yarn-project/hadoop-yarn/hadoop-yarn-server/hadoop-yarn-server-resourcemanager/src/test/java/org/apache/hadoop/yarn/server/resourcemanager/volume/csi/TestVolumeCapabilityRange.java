@@ -19,49 +19,59 @@ package org.apache.hadoop.yarn.server.resourcemanager.volume.csi;
 
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.VolumeCapabilityRange;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Test cases for volume capability.
  */
 public class TestVolumeCapabilityRange {
 
-  @Test(expected = InvalidVolumeException.class)
-  public void testInvalidMinCapability() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .minCapacity(-1L)
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
-  }
-
-  @Test(expected = InvalidVolumeException.class)
-  public void testMissingMinCapability() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .maxCapacity(5L)
-        .unit("Gi")
-        .build();
-  }
-
-  @Test(expected = InvalidVolumeException.class)
-  public void testMissingUnit() throws InvalidVolumeException {
-    VolumeCapabilityRange.newBuilder()
-        .minCapacity(0L)
-        .maxCapacity(5L)
-        .build();
+  @Test
+  void testInvalidMinCapability() throws InvalidVolumeException {
+    Assertions.assertThrows(InvalidVolumeException.class, () -> {
+      VolumeCapabilityRange.newBuilder()
+          .minCapacity(-1L)
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
+    });
   }
 
   @Test
-  public void testGetVolumeCapability() throws InvalidVolumeException {
+  void testMissingMinCapability() throws InvalidVolumeException {
+    Assertions.assertThrows(InvalidVolumeException.class, () -> {
+      VolumeCapabilityRange.newBuilder()
+          .maxCapacity(5L)
+          .unit("Gi")
+          .build();
+    });
+  }
+
+  @Test
+  void testMissingUnit() throws InvalidVolumeException {
+    Assertions.assertThrows(InvalidVolumeException.class, () -> {
+      VolumeCapabilityRange.newBuilder()
+          .minCapacity(0L)
+          .maxCapacity(5L)
+          .build();
+    });
+  }
+
+  @Test
+  void testGetVolumeCapability() throws InvalidVolumeException {
     VolumeCapabilityRange vc = VolumeCapabilityRange.newBuilder()
         .minCapacity(0L)
         .maxCapacity(5L)
         .unit("Gi")
         .build();
 
-    Assert.assertEquals(0L, vc.getMinCapacity());
-    Assert.assertEquals(5L, vc.getMaxCapacity());
-    Assert.assertEquals("Gi", vc.getUnit());
+    Assertions.assertEquals(0L, vc.getMinCapacity());
+    Assertions.assertEquals(5L, vc.getMaxCapacity());
+    Assertions.assertEquals("Gi", vc.getUnit());
   }
 }

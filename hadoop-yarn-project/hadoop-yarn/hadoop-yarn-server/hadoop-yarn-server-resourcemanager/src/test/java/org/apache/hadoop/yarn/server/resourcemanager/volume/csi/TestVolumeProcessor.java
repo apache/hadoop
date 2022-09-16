@@ -53,11 +53,12 @@ import org.apache.hadoop.yarn.server.volume.csi.VolumeId;
 import org.apache.hadoop.yarn.server.volume.csi.exception.InvalidVolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeException;
 import org.apache.hadoop.yarn.server.volume.csi.exception.VolumeProvisioningException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -90,7 +91,7 @@ public class TestVolumeProcessor {
 
   private static final String VOLUME_RESOURCE_NAME = "yarn.io/csi-volume";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = new YarnConfiguration();
     resourceTypesFile = new File(conf.getClassLoader()
@@ -126,7 +127,7 @@ public class TestVolumeProcessor {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceTypesFile != null && resourceTypesFile.exists()) {
       resourceTypesFile.delete();
@@ -146,8 +147,9 @@ public class TestVolumeProcessor {
     }
   }
 
-  @Test (timeout = 10000L)
-  public void testVolumeProvisioning() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testVolumeProvisioning() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
             .withAppName("app")
@@ -192,7 +194,7 @@ public class TestVolumeProcessor {
     am1.allocate(ar);
     VolumeStates volumeStates =
         rm.getRMContext().getVolumeManager().getVolumeStates();
-    Assert.assertNotNull(volumeStates);
+    Assertions.assertNotNull(volumeStates);
     VolumeState volumeState = VolumeState.NEW;
     while (volumeState != VolumeState.NODE_READY) {
       Volume volume = volumeStates
@@ -207,8 +209,9 @@ public class TestVolumeProcessor {
     rm.stop();
   }
 
-  @Test (timeout = 30000L)
-  public void testInvalidRequest() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testInvalidRequest() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
             .withAppName("app")
@@ -242,15 +245,16 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assert.fail("allocate should fail because invalid request received");
+      Assertions.fail("allocate should fail because invalid request received");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof InvalidVolumeException);
+      Assertions.assertTrue(e instanceof InvalidVolumeException);
     }
     rm.stop();
   }
 
-  @Test (timeout = 30000L)
-  public void testProvisioningFailures() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testProvisioningFailures() throws Exception {
     MockRMAppSubmissionData data =
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
             .withAppName("app")
@@ -293,15 +297,16 @@ public class TestVolumeProcessor {
 
     try {
       am1.allocate(ar);
-      Assert.fail("allocate should fail");
+      Assertions.fail("allocate should fail");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof VolumeProvisioningException);
+      Assertions.assertTrue(e instanceof VolumeProvisioningException);
     }
     rm.stop();
   }
 
-  @Test (timeout = 10000L)
-  public void testVolumeResourceAllocate() throws Exception {
+  @Timeout(10000)
+  @Test
+  void testVolumeResourceAllocate() throws Exception {
     RMApp app1 = MockRMAppSubmitter.submit(rm,
         MockRMAppSubmissionData.Builder.createWithMemory(1 * GB, rm)
             .withAppName("app")
@@ -347,13 +352,13 @@ public class TestVolumeProcessor {
       Thread.sleep(500);
     }
 
-    Assert.assertEquals(1, allocated.size());
+    Assertions.assertEquals(1, allocated.size());
     Container alloc = allocated.get(0);
     assertThat(alloc.getResource().getMemorySize()).isEqualTo(1024);
     assertThat(alloc.getResource().getVirtualCores()).isEqualTo(1);
     ResourceInformation allocatedVolume =
         alloc.getResource().getResourceInformation(VOLUME_RESOURCE_NAME);
-    Assert.assertNotNull(allocatedVolume);
+    Assertions.assertNotNull(allocatedVolume);
     assertThat(allocatedVolume.getValue()).isEqualTo(1024);
     assertThat(allocatedVolume.getUnits()).isEqualTo("Mi");
     rm.stop();

@@ -39,10 +39,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestTokenClientRMService {
 
@@ -69,8 +69,8 @@ public class TestTokenClientRMService {
   private static final UserGroupInformation otherKerb = UserGroupInformation
       .createRemoteUser(otherPrincipal, AuthMethod.KERBEROS);
 
-  @BeforeClass
-  public static void setupSecretManager() throws IOException {
+  @BeforeAll
+  static void setupSecretManager() throws IOException {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getStateStore()).thenReturn(new NullRMStateStore());
@@ -88,15 +88,15 @@ public class TestTokenClientRMService {
        .setAuthenticationMethod(AuthenticationMethod.KERBEROS);
   }
 
-  @AfterClass
-  public static void teardownSecretManager() {
+  @AfterAll
+  static void teardownSecretManager() {
     if (dtsm != null) {
       dtsm.stopThreads();
     }
   }
 
   @Test
-  public void testTokenCancellationByOwner() throws Exception {
+  void testTokenCancellationByOwner() throws Exception {
     // two tests required - one with a kerberos name
     // and with a short name
     RMContext rmContext = mock(RMContext.class);
@@ -119,7 +119,7 @@ public class TestTokenClientRMService {
   }
 
   @Test
-  public void testTokenRenewalWrongUser() throws Exception {
+  void testTokenRenewalWrongUser() throws Exception {
     try {
       owner.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
@@ -128,9 +128,9 @@ public class TestTokenClientRMService {
             checkTokenRenewal(owner, other);
             return null;
           } catch (YarnException ex) {
-            Assert.assertTrue(ex.getMessage().contains(
+            Assertions.assertTrue(ex.getMessage().contains(
                 owner.getUserName() + " tries to renew a token"));
-            Assert.assertTrue(ex.getMessage().contains(
+            Assertions.assertTrue(ex.getMessage().contains(
                 "with non-matching renewer " + other.getUserName()));
             throw ex;
           }
@@ -139,11 +139,11 @@ public class TestTokenClientRMService {
     } catch (Exception e) {
       return;
     }
-    Assert.fail("renew should have failed");
+    Assertions.fail("renew should have failed");
   }
 
   @Test
-  public void testTokenRenewalByLoginUser() throws Exception {
+  void testTokenRenewalByLoginUser() throws Exception {
     UserGroupInformation.getLoginUser().doAs(
         new PrivilegedExceptionAction<Void>() {
           @Override
@@ -176,7 +176,7 @@ public class TestTokenClientRMService {
   }
 
   @Test
-  public void testTokenCancellationByRenewer() throws Exception {
+  void testTokenCancellationByRenewer() throws Exception {
     // two tests required - one with a kerberos name
     // and with a short name
     RMContext rmContext = mock(RMContext.class);
@@ -199,7 +199,7 @@ public class TestTokenClientRMService {
   }
 
   @Test
-  public void testTokenCancellationByWrongUser() {
+  void testTokenCancellationByWrongUser() {
     // two sets to test -
     // 1. try to cancel tokens of short and kerberos users as a kerberos UGI
     // 2. try to cancel tokens of short and kerberos users as a simple auth UGI
@@ -219,12 +219,12 @@ public class TestTokenClientRMService {
             public Void run() throws Exception {
               try {
                 checkTokenCancellation(rmService, tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
+                Assertions.fail("We should not reach here; token owner = "
                     + tokOwner.getUserName() + ", renewer = "
                     + tokRenewer.getUserName());
                 return null;
               } catch (YarnException e) {
-                Assert.assertTrue(e.getMessage().contains(
+                Assertions.assertTrue(e.getMessage().contains(
                     testerKerb.getUserName()
                         + " is not authorized to cancel the token"));
                 return null;
@@ -232,7 +232,7 @@ public class TestTokenClientRMService {
             }
           });
         } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
+          Assertions.fail("Unexpected exception; " + e.getMessage());
         }
       }
     }
@@ -249,12 +249,12 @@ public class TestTokenClientRMService {
             public Void run() throws Exception {
               try {
                 checkTokenCancellation(tokOwner, tokRenewer);
-                Assert.fail("We should not reach here; token owner = "
+                Assertions.fail("We should not reach here; token owner = "
                     + tokOwner.getUserName() + ", renewer = "
                     + tokRenewer.getUserName());
                 return null;
               } catch (YarnException ex) {
-                Assert.assertTrue(ex.getMessage().contains(
+                Assertions.assertTrue(ex.getMessage().contains(
                     tester.getUserName()
                         + " is not authorized to cancel the token"));
                 return null;
@@ -262,7 +262,7 @@ public class TestTokenClientRMService {
             }
           });
         } catch (Exception e) {
-          Assert.fail("Unexpected exception; " + e.getMessage());
+          Assertions.fail("Unexpected exception; " + e.getMessage());
         }
       }
     }
@@ -294,7 +294,7 @@ public class TestTokenClientRMService {
   }
 
   @Test
-  public void testTokenRenewalByOwner() throws Exception {
+  void testTokenRenewalByOwner() throws Exception {
     owner.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {

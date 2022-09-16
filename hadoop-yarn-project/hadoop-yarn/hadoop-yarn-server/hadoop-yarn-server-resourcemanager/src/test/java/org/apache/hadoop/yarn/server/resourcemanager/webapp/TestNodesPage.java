@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock
 import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.google.inject.Binder;
@@ -57,7 +57,7 @@ public class TestNodesPage {
 
   private Injector injector;
   
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setUpInternal(false);
   }
@@ -82,7 +82,7 @@ public class TestNodesPage {
   }
 
   @Test
-  public void testNodesBlockRender() throws Exception {
+  void testNodesBlockRender() throws Exception {
     injector.getInstance(NodesBlock.class).render();
     PrintWriter writer = injector.getInstance(PrintWriter.class);
     WebAppTests.flushOutput(injector);
@@ -95,7 +95,7 @@ public class TestNodesPage {
   }
   
   @Test
-  public void testNodesBlockRenderForLostNodes() {
+  void testNodesBlockRenderForLostNodes() {
     NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
     nodesBlock.set("node.state", "lost");
     nodesBlock.render();
@@ -110,7 +110,7 @@ public class TestNodesPage {
   }
 
   @Test
-  public void testNodesBlockRenderForLostNodesWithGPUResources()
+  void testNodesBlockRenderForLostNodesWithGPUResources()
       throws Exception {
     Map<String, ResourceInformation> oldRtMap =
         ResourceUtils.getResourceTypes();
@@ -147,7 +147,7 @@ public class TestNodesPage {
   }
 
   @Test
-  public void testNodesBlockRenderForNodeLabelFilterWithNonEmptyLabel() {
+  void testNodesBlockRenderForNodeLabelFilterWithNonEmptyLabel() {
     NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
     nodesBlock.set("node.label", "x");
     nodesBlock.render();
@@ -159,7 +159,7 @@ public class TestNodesPage {
   }
   
   @Test
-  public void testNodesBlockRenderForNodeLabelFilterWithEmptyLabel() {
+  void testNodesBlockRenderForNodeLabelFilterWithEmptyLabel() {
     NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
     nodesBlock.set("node.label", "");
     nodesBlock.render();
@@ -171,7 +171,7 @@ public class TestNodesPage {
   }
   
   @Test
-  public void testNodesBlockRenderForNodeLabelFilterWithAnyLabel() {
+  void testNodesBlockRenderForNodeLabelFilterWithAnyLabel() {
     NodesBlock nodesBlock = injector.getInstance(NodesBlock.class);
     nodesBlock.set("node.label", "*");
     nodesBlock.render();
@@ -183,7 +183,7 @@ public class TestNodesPage {
   }
 
   @Test
-  public void testNodesBlockRenderForOpportunisticContainers() {
+  void testNodesBlockRenderForOpportunisticContainers() {
     final RMContext mockRMContext =
         TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
             8 * TestRMWebApp.GiB);

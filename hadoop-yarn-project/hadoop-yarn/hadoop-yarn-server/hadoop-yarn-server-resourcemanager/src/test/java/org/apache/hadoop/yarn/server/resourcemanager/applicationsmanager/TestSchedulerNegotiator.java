@@ -105,7 +105,7 @@ public class TestSchedulerNegotiator {
 //    }
 //  }
 //
-//  @Before
+//  @BeforeEach
 //  public void setUp() {
 //    scheduler = new DummyScheduler();
 //    schedulerNegotiator = new SchedulerNegotiator(context, scheduler);
@@ -116,7 +116,7 @@ public class TestSchedulerNegotiator {
 //    context.getDispatcher().start();
 //  }
 //
-//  @After
+//  @AfterEach
 //  public void tearDown() {
 //    schedulerNegotiator.stop();
 //  }
@@ -131,7 +131,7 @@ public class TestSchedulerNegotiator {
 //      }
 //      count++;
 //    }
-//    Assert.assertEquals(state, info.getState());
+//    Assertions.assertEquals(state, info.getState());
 //  }
 //
 //  private class DummyEventHandler implements EventHandler<ASMEvent<AMLauncherEventType>> {
@@ -159,6 +159,6 @@ public class TestSchedulerNegotiator {
 //        ApplicationEventType.ALLOCATE, submissionContext.getApplicationId()));
 //    waitForState(ApplicationState.LAUNCHING, masterInfo); // LAUNCHING because ALLOCATED automatically movesto LAUNCHING for now.
 //    Container container = masterInfo.getMasterContainer();
-//    Assert.assertTrue(container.getId().getId() == testNum);
+//    Assertions.assertTrue(container.getId().getId() == testNum);
 //  }
 }

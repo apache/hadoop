@@ -23,15 +23,15 @@ import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilter;
 import org.apache.hadoop.yarn.server.security.http
     .RMAuthenticationFilterInitializer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test RM Auth filter.
@@ -40,7 +40,7 @@ public class TestRMAuthenticationFilter {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testConfiguration() throws Exception {
+  void testConfiguration() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.http.authentication.foo", "bar");
     conf.set("hadoop.proxyuser.user.foo", "bar1");

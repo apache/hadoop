@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Helper methods for FS->CS converter testing.
@@ -62,7 +62,7 @@ public class FSConfigConverterTestCommons {
       FileUtils.deleteDirectory(d);
     }
     boolean success = d.mkdirs();
-    assertTrue("Can't create directory: " + d.getAbsolutePath(), success);
+    assertTrue(success, "Can't create directory: " + d.getAbsolutePath());
   }
 
   public void tearDown() {

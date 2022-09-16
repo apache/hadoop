@@ -31,7 +31,7 @@ import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 public abstract class ACLsTestBase {
 
@@ -56,7 +56,7 @@ public abstract class ACLsTestBase {
   YarnRPC rpc;
   InetSocketAddress rmAddress;
 
-  @Before
+  @BeforeEach
   public void setup() throws InterruptedException, IOException {
     conf = createConfiguration();
     rpc = YarnRPC.create(conf);

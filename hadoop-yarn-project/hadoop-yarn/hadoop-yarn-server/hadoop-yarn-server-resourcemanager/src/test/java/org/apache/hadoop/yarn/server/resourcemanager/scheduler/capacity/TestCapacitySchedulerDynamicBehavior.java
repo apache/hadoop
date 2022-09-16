@@ -32,9 +32,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.checkQueueStructureCapacities;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.getDefaultCapacities;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 
@@ -51,9 +51,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCapacitySchedulerDynamicBehavior {
   private static final Logger LOG = LoggerFactory
@@ -63,7 +63,7 @@ public class TestCapacitySchedulerDynamicBehavior {
 
   private MockRM rm;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupPlanQueueConfiguration(conf);
@@ -75,7 +75,7 @@ public class TestCapacitySchedulerDynamicBehavior {
   }
 
   @Test
-  public void testRefreshQueuesWithReservations() throws Exception {
+  void testRefreshQueuesWithReservations() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     //set default queue capacity to zero
@@ -110,7 +110,7 @@ public class TestCapacitySchedulerDynamicBehavior {
   }
 
   @Test
-  public void testAddQueueFailCases() throws Exception {
+  void testAddQueueFailCases() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     try {
@@ -160,7 +160,7 @@ public class TestCapacitySchedulerDynamicBehavior {
   }
 
   @Test
-  public void testRemoveQueue() throws Exception {
+  void testRemoveQueue() throws Exception {
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
     // Test add one reservation dynamically and manually modify capacity
@@ -209,7 +209,7 @@ public class TestCapacitySchedulerDynamicBehavior {
   }
 
   @Test
-  public void testMoveAppToPlanQueue() throws Exception {
+  void testMoveAppToPlanQueue() throws Exception {
     CapacityScheduler scheduler = (CapacityScheduler) rm.getResourceScheduler();
 
     // submit an app
@@ -240,7 +240,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     String queue =
         scheduler.getApplicationAttempt(appsInB1.get(0)).getQueue()
             .getQueueName();
-    Assert.assertEquals("b1", queue);
+    Assertions.assertEquals("b1", queue);
 
     List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
     assertTrue(appsInRoot.contains(appAttemptId));
@@ -266,7 +266,7 @@ public class TestCapacitySchedulerDynamicBehavior {
     queue =
         scheduler.getApplicationAttempt(appsInDefQ.get(0)).getQueue()
             .getQueueName();
-    Assert.assertTrue(queue.equals(defQName));
+    Assertions.assertTrue(queue.equals(defQName));
 
     appsInA = scheduler.getAppsInQueue("a");
     assertTrue(appsInA.contains(appAttemptId));

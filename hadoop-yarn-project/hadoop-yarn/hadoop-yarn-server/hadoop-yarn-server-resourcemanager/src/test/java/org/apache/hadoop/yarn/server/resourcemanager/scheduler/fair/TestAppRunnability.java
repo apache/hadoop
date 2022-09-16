@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,9 +48,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
     .allocationfile.AllocationFileWriter;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This class is to  test the fair scheduler functionality of
@@ -60,7 +60,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   private final static String ALLOC_FILE =
       new File(TEST_DIR, "test-queues").getAbsolutePath();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = createConfiguration();
     resourceManager = new MockRM(conf);
@@ -68,7 +68,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (resourceManager != null) {
       resourceManager.stop();
@@ -79,21 +79,21 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testUserAsDefaultQueue() throws Exception {
+  void testUserAsDefaultQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     createApplicationWithAMResource(appAttemptId, "root.user1", "user1", null);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getNumRunnableApps());
+    assertEquals(scheduler.getQueueManager().getLeafQueue("user1", true)
+        .getNumRunnableApps(), 1);
+    assertEquals(scheduler.getQueueManager().getLeafQueue("default", true)
+        .getNumRunnableApps(), 0);
     assertEquals("root.user1", resourceManager.getRMContext().getRMApps()
         .get(appAttemptId.getApplicationId()).getQueue());
   }
 
   @Test
-  public void testNotUserAsDefaultQueue() {
+  void testNotUserAsDefaultQueue() {
 
     // We need a new scheduler since we want to change the conf object. This
     // requires a new RM to propagate it . Do a proper teardown to not leak
@@ -106,14 +106,14 @@ public class TestAppRunnability extends FairSchedulerTestBase {
 
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
     createApplicationWithAMResource(appAttemptId, "default", "user1", null);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getNumRunnableApps());
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
+    assertEquals(scheduler.getQueueManager().getLeafQueue("default", true)
+        .getNumRunnableApps(), 1);
+    assertEquals(scheduler.getQueueManager().getLeafQueue("user1", true)
+        .getNumRunnableApps(), 0);
   }
 
   @Test
-  public void testAppAdditionAndRemoval() {
+  void testAppAdditionAndRemoval() {
     ApplicationAttemptId attemptId = createAppAttemptId(1, 1);
     ApplicationPlacementContext apc =
         new ApplicationPlacementContext("user1");
@@ -129,8 +129,8 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
 
     // That queue should have one app
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
+    assertEquals(scheduler.getQueueManager().getLeafQueue("user1", true)
+        .getNumRunnableApps(), 1);
 
     AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
         new AppAttemptRemovedSchedulerEvent(createAppAttemptId(1, 1),
@@ -140,12 +140,12 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     scheduler.handle(appRemovedEvent1);
 
     // Queue should have no apps
-    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getNumRunnableApps());
+    assertEquals(scheduler.getQueueManager().getLeafQueue("user1", true)
+        .getNumRunnableApps(), 0);
   }
 
   @Test
-  public void testPreemptionVariablesForQueueCreatedRuntime() throws Exception {
+  void testPreemptionVariablesForQueueCreatedRuntime() throws Exception {
 
     // Set preemption variables for the root queue
     FSParentQueue root = scheduler.getQueueManager().getRootQueue();
@@ -163,11 +163,11 @@ public class TestAppRunnability extends FairSchedulerTestBase {
     assertEquals(1, userQueue.getNumRunnableApps());
     assertEquals(10000, userQueue.getMinSharePreemptionTimeout());
     assertEquals(15000, userQueue.getFairSharePreemptionTimeout());
-    assertEquals(.6f, userQueue.getFairSharePreemptionThreshold(), 0.001);
+    assertEquals(userQueue.getFairSharePreemptionThreshold(), 0.001, .6f);
   }
 
   @Test
-  public void testDontAllowUndeclaredPools() {
+  void testDontAllowUndeclaredPools() {
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
@@ -212,7 +212,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testMoveRunnableApp() throws Exception {
+  void testMoveRunnableApp() throws Exception {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     QueueManager queueMgr = scheduler.getQueueManager();
@@ -249,7 +249,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testMoveNonRunnableApp() throws Exception {
+  void testMoveNonRunnableApp() throws Exception {
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
     FSLeafQueue targetQueue = queueMgr.getLeafQueue("queue2", true);
@@ -267,7 +267,7 @@ public class TestAppRunnability extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testMoveMakesAppRunnable() throws Exception {
+  void testMoveMakesAppRunnable() throws Exception {
     QueueManager queueMgr = scheduler.getQueueManager();
     FSLeafQueue oldQueue = queueMgr.getLeafQueue("queue1", true);
     FSLeafQueue targetQueue = queueMgr.getLeafQueue("queue2", true);

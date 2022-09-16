@@ -33,9 +33,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -49,7 +49,7 @@ import java.util.concurrent.ConcurrentMap;
 public class TestAllocationTagsManager {
   private RMContext rmContext;
 
-  @Before
+  @BeforeEach
   public void setup() {
     MockRM rm = new MockRM();
     rm.start();
@@ -63,7 +63,7 @@ public class TestAllocationTagsManager {
   }
 
   @Test
-  public void testMultipleAddRemoveContainer() {
+  void testMultipleAddRemoveContainer() {
     AllocationTagsManager atm = new AllocationTagsManager(rmContext);
 
     NodeId nodeId = NodeId.fromString("host1:123");
@@ -79,26 +79,26 @@ public class TestAllocationTagsManager {
     atm.addContainer(nodeId, cid1, tags1);
     atm.addContainer(nodeId, cid2, tags2);
     atm.addContainer(nodeId, cid3, tags3);
-    Assert.assertEquals(2L,
+    Assertions.assertEquals(2L,
         (long) atm.getAllocationTagsWithCount(nodeId).get("mapper"));
-    Assert.assertEquals(1L,
+    Assertions.assertEquals(1L,
         (long) atm.getAllocationTagsWithCount(nodeId).get("reducer"));
 
     // remove container1
     atm.removeContainer(nodeId, cid1, tags1);
-    Assert.assertEquals(1L,
+    Assertions.assertEquals(1L,
         (long) atm.getAllocationTagsWithCount(nodeId).get("mapper"));
-    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
+    Assertions.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
 
     // remove the same container again, the reducer no longer exists,
     // make sure there is no NPE here
     atm.removeContainer(nodeId, cid1, tags1);
-    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("mapper"));
-    Assert.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
+    Assertions.assertNull(atm.getAllocationTagsWithCount(nodeId).get("mapper"));
+    Assertions.assertNull(atm.getAllocationTagsWithCount(nodeId).get("reducer"));
   }
 
   @Test
-  public void testAllocationTagsManagerSimpleCases()
+  void testAllocationTagsManagerSimpleCases()
       throws InvalidAllocationTagsQueryException {
 
     AllocationTagsManager atm = new AllocationTagsManager(rmContext);
@@ -138,100 +138,100 @@ public class TestAllocationTagsManager {
         ImmutableSet.of("service"));
 
     // Get Node Cardinality of app1 on node1, with tag "mapper"
-    Assert.assertEquals(1,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper")),
-            Long::max));
+            Long::max),
+            1);
 
     // Get Rack Cardinality of app1 on rack0, with tag "mapper"
-    Assert.assertEquals(2, atm.getRackCardinality("rack0",
-        TestUtils.getMockApplicationId(1), "mapper"));
+    Assertions.assertEquals(atm.getRackCardinality("rack0", TestUtils.getMockApplicationId(1), "mapper"),
+        2);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=min
-    Assert.assertEquals(1,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::min));
+            Long::min),
+            1);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=max
-    Assert.assertEquals(2,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::max));
+            Long::max),
+            2);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=sum
-    Assert.assertEquals(3,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::sum));
+            Long::sum),
+            3);
 
     // Get Node Cardinality by passing single tag.
-    Assert.assertEquals(1,
-        atm.getNodeCardinality(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(1), "mapper"));
+    Assertions.assertEquals(atm.getNodeCardinality(NodeId.fromString("host2:123"),
+        TestUtils.getMockApplicationId(1), "mapper"),
+            1);
 
-    Assert.assertEquals(2,
-        atm.getNodeCardinality(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(1), "reducer"));
+    Assertions.assertEquals(atm.getNodeCardinality(NodeId.fromString("host2:123"),
+        TestUtils.getMockApplicationId(1), "reducer"),
+            2);
 
     // Get Node Cardinality of app1 on node2, with tag "no_existed/reducer",
     // op=min
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("no_existed", "reducer")),
-            Long::min));
+            Long::min),
+            0);
 
     // Get Node Cardinality of app1 on node2, with tag "<applicationId>", op=max
     // (Expect this returns #containers from app1 on node2)
-    Assert.assertEquals(2,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), null),
-            Long::max));
+            Long::max),
+            2);
 
     // Get Node Cardinality of app1 on node2, with empty tag set, op=max
-    Assert.assertEquals(2,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), null),
-            Long::max));
+            Long::max),
+            2);
 
     // Get Cardinality of app1 on node2, with empty tag set, op=max
-    Assert.assertEquals(2,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), ImmutableSet.of()),
-            Long::max));
+            Long::max),
+            2);
 
     // Get Node Cardinality of all apps on node2, with empty tag set, op=sum
-    Assert.assertEquals(4, atm.getNodeCardinalityByOp(
-        NodeId.fromString("host2:123"),
-        AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
-        Long::sum));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(
+        NodeId.fromString("host2:123"), AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
+        Long::sum),
+        4);
 
     // Get Node Cardinality of app_1 on node2, with empty tag set, op=sum
-    Assert.assertEquals(3,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1), ImmutableSet.of()),
-            Long::sum));
+            Long::sum),
+            3);
 
     // Get Node Cardinality of app_1 on node2, with empty tag set, op=sum
-    Assert.assertEquals(1,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(2), ImmutableSet.of()),
-            Long::sum));
+            Long::sum),
+            1);
 
     // Finish all containers:
     atm.removeContainer(NodeId.fromString("host1:123"),
@@ -253,85 +253,85 @@ public class TestAllocationTagsManager {
 
     // Expect all cardinality to be 0
     // Get Cardinality of app1 on node1, with tag "mapper"
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host1:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper")),
-            Long::max));
+            Long::max),
+            0);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=min
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::min));
+            Long::min),
+            0);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=max
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::max));
+            Long::max),
+            0);
 
     // Get Node Cardinality of app1 on node2, with tag "mapper/reducer", op=sum
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of("mapper", "reducer")),
-            Long::sum));
+            Long::sum),
+            0);
 
     // Get Node Cardinality of app1 on node2, with tag "<applicationId>", op=max
     // (Expect this returns #containers from app1 on node2)
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of(TestUtils.getMockApplicationId(1).toString())),
-            Long::max));
+            Long::max),
+            0);
 
-    Assert.assertEquals(0,
-        atm.getNodeCardinality(NodeId.fromString("host2:123"),
-            TestUtils.getMockApplicationId(1),
-            TestUtils.getMockApplicationId(1).toString()));
+    Assertions.assertEquals(atm.getNodeCardinality(NodeId.fromString("host2:123"),
+        TestUtils.getMockApplicationId(1),
+            TestUtils.getMockApplicationId(1).toString()),
+            0);
 
     // Get Node Cardinality of app1 on node2, with empty tag set, op=max
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of()),
-            Long::max));
+            Long::max),
+            0);
 
     // Get Node Cardinality of all apps on node2, with empty tag set, op=sum
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(
-        NodeId.fromString("host2:123"),
-        AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
-        Long::sum));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(
+        NodeId.fromString("host2:123"), AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
+        Long::sum),
+        0);
 
     // Get Node Cardinality of app_1 on node2, with empty tag set, op=sum
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of()),
-            Long::sum));
+            Long::sum),
+            0);
 
     // Get Node Cardinality of app_2 on node2, with empty tag set, op=sum
-    Assert.assertEquals(0,
-        atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
-            AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(NodeId.fromString("host2:123"),
+        AllocationTags.createSingleAppAllocationTags(
                 TestUtils.getMockApplicationId(1),
                 ImmutableSet.of()),
-            Long::sum));
+            Long::sum),
+            0);
   }
 
 
   @Test
-  public void testAllocationTagsManagerRackMapping()
+  void testAllocationTagsManagerRackMapping()
       throws InvalidAllocationTagsQueryException {
 
     AllocationTagsManager atm = new AllocationTagsManager(rmContext);
@@ -370,38 +370,38 @@ public class TestAllocationTagsManager {
         TestUtils.getMockContainerId(2, 3), ImmutableSet.of("service"));
 
     // Get Rack Cardinality of app1 on rack0, with tag "mapper"
-    Assert.assertEquals(1, atm.getRackCardinality("rack0",
-        TestUtils.getMockApplicationId(1), "mapper"));
+    Assertions.assertEquals(atm.getRackCardinality("rack0", TestUtils.getMockApplicationId(1), "mapper"),
+        1);
 
     // Get Rack Cardinality of app2 on rack0, with tag "reducer"
-    Assert.assertEquals(2, atm.getRackCardinality("rack0",
-        TestUtils.getMockApplicationId(2), "reducer"));
+    Assertions.assertEquals(atm.getRackCardinality("rack0", TestUtils.getMockApplicationId(2), "reducer"),
+        2);
 
     // Get Rack Cardinality of all apps on rack0, with tag "reducer"
-    Assert.assertEquals(3, atm.getRackCardinality("rack0", null, "reducer"));
+    Assertions.assertEquals(atm.getRackCardinality("rack0", null, "reducer"), 3);
 
     // Get Rack Cardinality of app_1 on rack0, with empty tag set, op=max
-    Assert.assertEquals(1, atm.getRackCardinalityByOp("rack0",
-        AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getRackCardinalityByOp("rack0", AllocationTags.createSingleAppAllocationTags(
             TestUtils.getMockApplicationId(1),
             ImmutableSet.of()),
-        Long::max));
+        Long::max),
+        1);
 
     // Get Rack Cardinality of app_1 on rack0, with empty tag set, op=min
-    Assert.assertEquals(1, atm.getRackCardinalityByOp("rack0",
-        AllocationTags.createSingleAppAllocationTags(
+    Assertions.assertEquals(atm.getRackCardinalityByOp("rack0", AllocationTags.createSingleAppAllocationTags(
             TestUtils.getMockApplicationId(1),
             ImmutableSet.of()),
-        Long::min));
+        Long::min),
+        1);
 
     // Get Rack Cardinality of all apps on rack0, with empty tag set, op=min
-    Assert.assertEquals(3, atm.getRackCardinalityByOp("rack0",
-        AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
-        Long::max));
+    Assertions.assertEquals(atm.getRackCardinalityByOp("rack0", AllocationTags.createGlobalAllocationTags(ImmutableSet.of()),
+        Long::max),
+        3);
   }
 
   @Test
-  public void testAllocationTagsManagerMemoryAfterCleanup() {
+  void testAllocationTagsManagerMemoryAfterCleanup() {
     /**
      * Make sure YARN cleans up all memory once container/app finishes.
      */
@@ -445,16 +445,16 @@ public class TestAllocationTagsManager {
         TestUtils.getMockContainerId(2, 3), ImmutableSet.of("service"));
 
     // Check internal data structure
-    Assert.assertEquals(0,
+    Assertions.assertEquals(0,
         atm.getGlobalNodeMapping().getTypeToTagsWithCount().size());
-    Assert.assertEquals(0, atm.getPerAppNodeMappings().size());
-    Assert.assertEquals(0,
+    Assertions.assertEquals(0, atm.getPerAppNodeMappings().size());
+    Assertions.assertEquals(0,
         atm.getGlobalRackMapping().getTypeToTagsWithCount().size());
-    Assert.assertEquals(0, atm.getPerAppRackMappings().size());
+    Assertions.assertEquals(0, atm.getPerAppRackMappings().size());
   }
 
   @Test
-  public void testQueryCardinalityWithIllegalParameters() {
+  void testQueryCardinalityWithIllegalParameters() {
     /**
      * Make sure YARN cleans up all memory once container/app finishes.
      */
@@ -490,8 +490,8 @@ public class TestAllocationTagsManager {
     } catch (InvalidAllocationTagsQueryException e1) {
       caughtException = true;
     }
-    Assert.assertTrue("should fail because of nodeId specified",
-        caughtException);
+    Assertions.assertTrue(caughtException,
+        "should fail because of nodeId specified");
 
     // No op
     caughtException = false;
@@ -504,12 +504,12 @@ public class TestAllocationTagsManager {
     } catch (InvalidAllocationTagsQueryException e1) {
       caughtException = true;
     }
-    Assert.assertTrue("should fail because of nodeId specified",
-        caughtException);
+    Assertions.assertTrue(caughtException,
+        "should fail because of nodeId specified");
   }
 
   @Test
-  public void testNodeAllocationTagsAggregation()
+  void testNodeAllocationTagsAggregation()
       throws InvalidAllocationTagsQueryException {
     RMContext mockContext = Mockito.spy(rmContext);
 
@@ -588,12 +588,12 @@ public class TestAllocationTagsManager {
     //********************************
     AllocationTags tags = AllocationTags
         .createSingleAppAllocationTags(app1, ImmutableSet.of("A", "C"));
-    Assert.assertEquals(2, atm.getNodeCardinalityByOp(host1, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host1, tags, Long::min));
-    Assert.assertEquals(1, atm.getNodeCardinalityByOp(host2, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host2, tags, Long::min));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::min));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::max), 2);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::min), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::max), 1);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::min), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::max), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::min), 0);
 
     //********************************
     // 2) not-self (app2, app3)
@@ -618,20 +618,20 @@ public class TestAllocationTagsManager {
     tags = AllocationTags.createOtherAppAllocationTags(app1,
         ImmutableSet.of("A", "B"));
 
-    Assert.assertEquals(4, atm.getNodeCardinalityByOp(host1, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host1, tags, Long::min));
-    Assert.assertEquals(4, atm.getNodeCardinalityByOp(host1, tags, Long::sum));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::max), 4);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::min), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::sum), 4);
 
     //********************************
     // 3) app-id/app2 (app2)
     //********************************
     tags = AllocationTags
         .createSingleAppAllocationTags(app2, ImmutableSet.of("A", "B"));
-    Assert.assertEquals(3, atm.getNodeCardinalityByOp(host1, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host1, tags, Long::min));
-    Assert.assertEquals(2, atm.getNodeCardinalityByOp(host2, tags, Long::max));
-    Assert.assertEquals(1, atm.getNodeCardinalityByOp(host2, tags, Long::min));
-    Assert.assertEquals(3, atm.getNodeCardinalityByOp(host2, tags, Long::sum));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::max), 3);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::min), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::max), 2);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::min), 1);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::sum), 3);
 
 
     //********************************
@@ -639,20 +639,20 @@ public class TestAllocationTagsManager {
     //********************************
     tags = AllocationTags
         .createGlobalAllocationTags(ImmutableSet.of("A"));
-    Assert.assertEquals(6, atm.getNodeCardinalityByOp(host1, tags, Long::sum));
-    Assert.assertEquals(1, atm.getNodeCardinalityByOp(host2, tags, Long::sum));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::sum));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::sum), 6);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::sum), 1);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::sum), 0);
 
     tags = AllocationTags
         .createGlobalAllocationTags(ImmutableSet.of("A", "B"));
-    Assert.assertEquals(7, atm.getNodeCardinalityByOp(host1, tags, Long::sum));
-    Assert.assertEquals(4, atm.getNodeCardinalityByOp(host2, tags, Long::sum));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::sum));
-    Assert.assertEquals(6, atm.getNodeCardinalityByOp(host1, tags, Long::max));
-    Assert.assertEquals(3, atm.getNodeCardinalityByOp(host2, tags, Long::max));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::max));
-    Assert.assertEquals(1, atm.getNodeCardinalityByOp(host1, tags, Long::min));
-    Assert.assertEquals(1, atm.getNodeCardinalityByOp(host2, tags, Long::min));
-    Assert.assertEquals(0, atm.getNodeCardinalityByOp(host3, tags, Long::min));
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::sum), 7);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::sum), 4);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::sum), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::max), 6);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::max), 3);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::max), 0);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host1, tags, Long::min), 1);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host2, tags, Long::min), 1);
+    Assertions.assertEquals(atm.getNodeCardinalityByOp(host3, tags, Long::min), 0);
   }
 }

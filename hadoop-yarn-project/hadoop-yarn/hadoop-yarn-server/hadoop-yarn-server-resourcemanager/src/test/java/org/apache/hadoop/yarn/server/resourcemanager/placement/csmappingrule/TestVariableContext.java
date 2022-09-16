@@ -20,18 +20,23 @@ package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.VariableContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestVariableContext {
 
   @Test
-  public void testAddAndGet() {
+  void testAddAndGet() {
     VariableContext variables = new VariableContext();
 
     assertEquals("", variables.get("%user"));
@@ -49,57 +54,65 @@ public class TestVariableContext {
     assertEquals("", variables.get("%empty"));
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testImmutablesCanOnlySetOnceFromSet() {
-    VariableContext variables = new VariableContext();
-    ImmutableSet<String> immutables =
-        ImmutableSet.of("%user", "%primary_group", "%secondary_group");
+  @Test
+  void testImmutablesCanOnlySetOnceFromSet() {
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      VariableContext variables = new VariableContext();
+      ImmutableSet<String> immutables =
+          ImmutableSet.of("%user", "%primary_group", "%secondary_group");
 
-    variables.setImmutables(immutables);
-    variables.setImmutables(immutables);
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void testImmutablesCanOnlySetOnceFromArray() {
-    VariableContext variables = new VariableContext();
-
-    variables.setImmutables("%user", "%primary_group", "%secondary_group");
-    variables.setImmutables("%user", "%primary_group", "%secondary_group");
-  }
-
-  @Test(expected = IllegalStateException.class)
-  public void testImmutablesCanOnlySetOnceFromSetAndArray() {
-    VariableContext variables = new VariableContext();
-    ImmutableSet<String> immutables =
-        ImmutableSet.of("%user", "%primary_group", "%secondary_group");
-
-    variables.setImmutables(immutables);
-    variables.setImmutables("%user", "%primary_group", "%secondary_group");
+      variables.setImmutables(immutables);
+      variables.setImmutables(immutables);
+    });
   }
 
   @Test
-  public void testImmutableVariableCanBeSetOnce() {
-    VariableContext variables = new VariableContext();
-    ImmutableSet<String> immutables =
-        ImmutableSet.of("%user", "%primary_group", "%secondary_group");
+  void testImmutablesCanOnlySetOnceFromArray() {
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      VariableContext variables = new VariableContext();
 
-    variables.setImmutables(immutables);
-    variables.put("%user", "bob");
+      variables.setImmutables("%user", "%primary_group", "%secondary_group");
+      variables.setImmutables("%user", "%primary_group", "%secondary_group");
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testImmutableVariableProtection() {
+  @Test
+  void testImmutablesCanOnlySetOnceFromSetAndArray() {
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      VariableContext variables = new VariableContext();
+      ImmutableSet<String> immutables =
+          ImmutableSet.of("%user", "%primary_group", "%secondary_group");
+
+      variables.setImmutables(immutables);
+      variables.setImmutables("%user", "%primary_group", "%secondary_group");
+    });
+  }
+
+  @Test
+  void testImmutableVariableCanBeSetOnce() {
     VariableContext variables = new VariableContext();
     ImmutableSet<String> immutables =
         ImmutableSet.of("%user", "%primary_group", "%secondary_group");
 
     variables.setImmutables(immutables);
-    variables.put("%user", "bob");
     variables.put("%user", "bob");
   }
 
   @Test
-  public void testAddAndGetWithImmutables() {
+  void testImmutableVariableProtection() {
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      VariableContext variables = new VariableContext();
+      ImmutableSet<String> immutables =
+          ImmutableSet.of("%user", "%primary_group", "%secondary_group");
+
+      variables.setImmutables(immutables);
+      variables.put("%user", "bob");
+      variables.put("%user", "bob");
+    });
+  }
+
+  @Test
+  void testAddAndGetWithImmutables() {
     VariableContext variables = new VariableContext();
     ImmutableSet<String> immutables =
         ImmutableSet.of("%user", "%primary_group", "%secondary_group");
@@ -127,7 +140,7 @@ public class TestVariableContext {
   }
 
   @Test
-  public void testPathPartReplace() {
+  void testPathPartReplace() {
     VariableContext variables = new VariableContext();
     ImmutableSet<String> immutables =
         ImmutableSet.of("%user", "%primary_group", "%secondary_group");
@@ -163,7 +176,7 @@ public class TestVariableContext {
   }
 
   @Test
-  public void testVariableReplace() {
+  void testVariableReplace() {
     VariableContext variables = new VariableContext();
     ImmutableSet<String> immutables =
         ImmutableSet.of("%user", "%primary_group", "%secondary_group");
@@ -203,7 +216,7 @@ public class TestVariableContext {
   }
 
   @Test
-  public void testCollectionStore() {
+  void testCollectionStore() {
     VariableContext variables = new VariableContext();
     Set<String> coll1 = new HashSet<>();
     Set<String> coll2 = new HashSet<>();

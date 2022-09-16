@@ -35,8 +35,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueStateManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test QueueStateManager.
@@ -57,7 +57,7 @@ public class TestQueueStateManager {
   private YarnConfiguration conf;
 
   @Test
-  public void testQueueStateManager() throws AccessControlException,
+  void testQueueStateManager() throws AccessControlException,
       YarnException {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -81,44 +81,44 @@ public class TestQueueStateManager {
         .getQueueStateManager();
 
     //by default, the state of both queues should be RUNNING
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
     // Stop Q2, and verify that Q2 transmits to STOPPED STATE
     stateManager.stopQueue(Q2);
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
 
     // Stop Q1, and verify that Q1, as well as its child: Q3,
     // transmits to STOPPED STATE
     stateManager.stopQueue(Q1);
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
 
-    Assert.assertTrue(stateManager.canDelete(Q1));
-    Assert.assertTrue(stateManager.canDelete(Q2));
-    Assert.assertTrue(stateManager.canDelete(Q3));
+    Assertions.assertTrue(stateManager.canDelete(Q1));
+    Assertions.assertTrue(stateManager.canDelete(Q2));
+    Assertions.assertTrue(stateManager.canDelete(Q3));
 
     // Active Q2, it will fail.
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
 
     // Now active Q1
     stateManager.activateQueue(Q1);
     // Q1 should be in RUNNING state. Its children: Q2 and Q3
     // should still be in STOPPED state.
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q1).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
 
     // Now active Q2 and Q3
     stateManager.activateQueue(Q2);
     stateManager.activateQueue(Q3);
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
-    Assert.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.RUNNING, cs.getQueue(Q3).getState());
 
-    Assert.assertFalse(stateManager.canDelete(Q1));
-    Assert.assertFalse(stateManager.canDelete(Q2));
-    Assert.assertFalse(stateManager.canDelete(Q3));
+    Assertions.assertFalse(stateManager.canDelete(Q1));
+    Assertions.assertFalse(stateManager.canDelete(Q2));
+    Assertions.assertFalse(stateManager.canDelete(Q3));
 
     ApplicationId appId = ApplicationId.newInstance(
         System.currentTimeMillis(), 1);
@@ -129,15 +129,15 @@ public class TestQueueStateManager {
     cs.getQueue(Q2).submitApplicationAttempt(app, userName);
     stateManager.stopQueue(Q1);
 
-    Assert.assertEquals(QueueState.DRAINING, cs.getQueue(Q1).getState());
-    Assert.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
+    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q1).getState());
+    Assertions.assertEquals(QueueState.DRAINING, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q3).getState());
 
     cs.getQueue(Q2).finishApplicationAttempt(app, Q2);
     cs.getQueue(Q2).finishApplication(appId, userName);
 
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
-    Assert.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q1).getState());
+    Assertions.assertEquals(QueueState.STOPPED, cs.getQueue(Q2).getState());
   }
 
   private FiCaSchedulerApp getMockApplication(ApplicationId appId, String user,

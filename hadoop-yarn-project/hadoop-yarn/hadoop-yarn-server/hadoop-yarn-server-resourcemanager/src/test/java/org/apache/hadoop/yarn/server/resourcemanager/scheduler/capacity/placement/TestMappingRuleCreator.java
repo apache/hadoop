@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,9 +31,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Policy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.Type;
 import org.assertj.core.util.Sets;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestMappingRuleCreator {
   private static final String MATCH_ALL = "*";
@@ -53,10 +51,7 @@ public class TestMappingRuleCreator {
   private MappingRulesDescription description;
   private Rule rule;
 
-  @org.junit.Rule
-  public ExpectedException expected = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setup() {
     ruleCreator = new MappingRuleCreator();
     prepareMappingRuleDescription();
@@ -73,7 +68,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testAllUserMatcher() {
+  void testAllUserMatcher() {
     variableContext.put("%user", USER_NAME);
     verifyPlacementSucceeds(USER_NAME);
 
@@ -82,14 +77,14 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSpecificUserMatcherPasses() {
+  void testSpecificUserMatcherPasses() {
     rule.setMatches(USER_NAME);
 
     verifyPlacementSucceeds(USER_NAME);
   }
 
   @Test
-  public void testSpecificUserMatcherFails() {
+  void testSpecificUserMatcherFails() {
     rule.setMatches(USER_NAME);
     variableContext.put("%user", "dummyuser");
 
@@ -97,7 +92,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSpecificGroupMatcher() {
+  void testSpecificGroupMatcher() {
     rule.setMatches(PRIMARY_GROUP);
     rule.setType(Type.GROUP);
 
@@ -105,18 +100,22 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testAllGroupMatcherFailsDueToMatchString() {
+  void testAllGroupMatcherFailsDueToMatchString() {
     rule.setType(Type.GROUP);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Cannot match '*' for groups");
-
     // fails because "*" is not applicable to group type
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Cannot match '*' for groups"
+    );
   }
 
   @Test
-  public void testApplicationNameMatcherPasses() {
+  void testApplicationNameMatcherPasses() {
     rule.setType(Type.APPLICATION);
     rule.setMatches(APPLICATION_NAME);
 
@@ -124,7 +123,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testApplicationNameMatcherFails() {
+  void testApplicationNameMatcherFails() {
     rule.setType(Type.APPLICATION);
     rule.setMatches("dummyApplication");
 
@@ -132,21 +131,21 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testDefaultRule() {
+  void testDefaultRule() {
     rule.setPolicy(Policy.DEFAULT_QUEUE);
 
     verifyPlacementSucceeds(DEFAULT_QUEUE, false);
   }
 
   @Test
-  public void testSpecifiedRule() {
+  void testSpecifiedRule() {
     rule.setPolicy(Policy.SPECIFIED);
 
     verifyPlacementSucceeds(SPECIFIED_QUEUE);
   }
 
   @Test
-  public void testSpecifiedRuleWithNoCreate() {
+  void testSpecifiedRuleWithNoCreate() {
     rule.setPolicy(Policy.SPECIFIED);
     rule.setCreate(false);
 
@@ -154,41 +153,45 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testRejectRule() {
+  void testRejectRule() {
     rule.setPolicy(Policy.REJECT);
 
     verifyPlacementRejected();
   }
 
   @Test
-  public void testSetDefaultRule() {
+  void testSetDefaultRule() {
     rule.setPolicy(Policy.SET_DEFAULT_QUEUE);
     rule.setValue("root.users.default");
 
     verifyNoPlacementOccurs();
-    assertEquals("Default queue", "root.users.default",
-        variableContext.get("%default"));
+    Assertions.assertEquals("root.users.default", variableContext.get("%default"),
+        "Default queue");
   }
 
   @Test
-  public void testSetDefaultRuleWithMissingQueue() {
+  void testSetDefaultRuleWithMissingQueue() {
     rule.setPolicy(Policy.SET_DEFAULT_QUEUE);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("default queue is undefined");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "default queue is undefined"
+    );
   }
 
   @Test
-  public void testPrimaryGroupRule() {
+  void testPrimaryGroupRule() {
     rule.setPolicy(Policy.PRIMARY_GROUP);
 
     verifyPlacementSucceeds(PRIMARY_GROUP);
   }
 
   @Test
-  public void testPrimaryGroupRuleWithNoCreate() {
+  void testPrimaryGroupRuleWithNoCreate() {
     rule.setPolicy(Policy.PRIMARY_GROUP);
     rule.setCreate(false);
 
@@ -196,7 +199,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testPrimaryGroupRuleWithParent() {
+  void testPrimaryGroupRuleWithParent() {
     rule.setPolicy(Policy.PRIMARY_GROUP);
     rule.setParentQueue("root");
 
@@ -204,14 +207,14 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSecondaryGroupRule() {
+  void testSecondaryGroupRule() {
     rule.setPolicy(Policy.SECONDARY_GROUP);
 
     verifyPlacementSucceeds(SECONDARY_GROUP);
   }
 
   @Test
-  public void testSecondaryGroupRuleWithNoCreate() {
+  void testSecondaryGroupRuleWithNoCreate() {
     rule.setPolicy(Policy.SECONDARY_GROUP);
     rule.setCreate(false);
 
@@ -219,7 +222,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSecondaryGroupRuleWithParent() {
+  void testSecondaryGroupRuleWithParent() {
     rule.setPolicy(Policy.SECONDARY_GROUP);
     rule.setParentQueue("root");
 
@@ -227,14 +230,14 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testUserRule() {
+  void testUserRule() {
     rule.setPolicy(Policy.USER);
 
     verifyPlacementSucceeds(USER_NAME);
   }
 
   @Test
-  public void testUserRuleWithParent() {
+  void testUserRuleWithParent() {
     rule.setPolicy(Policy.USER);
     rule.setParentQueue("root.users");
 
@@ -242,7 +245,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testCustomRule() {
+  void testCustomRule() {
     rule.setPolicy(Policy.CUSTOM);
     rule.setCustomPlacement("root.%primary_group.%secondary_group");
 
@@ -251,7 +254,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testCustomRuleWithNoCreate() {
+  void testCustomRuleWithNoCreate() {
     rule.setPolicy(Policy.CUSTOM);
     rule.setCustomPlacement("root.%primary_group.%secondary_group");
     rule.setCreate(false);
@@ -261,24 +264,28 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testCustomRuleWithMissingQueue() {
+  void testCustomRuleWithMissingQueue() {
     rule.setPolicy(Policy.CUSTOM);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("custom queue is undefined");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "custom queue is undefined"
+    );
   }
 
   @Test
-  public void testPrimaryGroupUserRule() {
+  void testPrimaryGroupUserRule() {
     rule.setPolicy(Policy.PRIMARY_GROUP_USER);
 
     verifyPlacementSucceeds("superuser.testuser");
   }
 
   @Test
-  public void testPrimaryGroupUserRuleWithNoCreate() {
+  void testPrimaryGroupUserRuleWithNoCreate() {
     rule.setPolicy(Policy.PRIMARY_GROUP_USER);
     rule.setCreate(false);
 
@@ -286,7 +293,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testPrimaryGroupNestedRuleWithParent() {
+  void testPrimaryGroupNestedRuleWithParent() {
     rule.setPolicy(Policy.PRIMARY_GROUP_USER);
     rule.setParentQueue("root");
 
@@ -294,14 +301,14 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSecondaryGroupNestedRule() {
+  void testSecondaryGroupNestedRule() {
     rule.setPolicy(Policy.SECONDARY_GROUP_USER);
 
     verifyPlacementSucceeds("users.testuser");
   }
 
   @Test
-  public void testSecondaryGroupNestedRuleWithNoCreate() {
+  void testSecondaryGroupNestedRuleWithNoCreate() {
     rule.setPolicy(Policy.SECONDARY_GROUP_USER);
     rule.setCreate(false);
 
@@ -309,7 +316,7 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testSecondaryGroupNestedRuleWithParent() {
+  void testSecondaryGroupNestedRuleWithParent() {
     rule.setPolicy(Policy.SECONDARY_GROUP_USER);
     rule.setParentQueue("root");
 
@@ -317,14 +324,14 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testApplicationNamePlacement() {
+  void testApplicationNamePlacement() {
     rule.setPolicy(Policy.APPLICATION_NAME);
 
     verifyPlacementSucceeds(APPLICATION_NAME);
   }
 
   @Test
-  public void testApplicationNamePlacementWithParent() {
+  void testApplicationNamePlacementWithParent() {
     rule.setPolicy(Policy.APPLICATION_NAME);
     rule.setParentQueue("root.applications");
 
@@ -332,21 +339,21 @@ public class TestMappingRuleCreator {
   }
 
   @Test
-  public void testDefaultQueueFallback() {
+  void testDefaultQueueFallback() {
     rule.setFallbackResult(FallbackResult.PLACE_DEFAULT);
 
     testFallback(MappingRuleResultType.PLACE_TO_DEFAULT);
   }
 
   @Test
-  public void testRejectFallback() {
+  void testRejectFallback() {
     rule.setFallbackResult(FallbackResult.REJECT);
 
     testFallback(MappingRuleResultType.REJECT);
   }
 
   @Test
-  public void testSkipFallback() {
+  void testSkipFallback() {
     rule.setFallbackResult(FallbackResult.SKIP);
 
     testFallback(MappingRuleResultType.SKIP);
@@ -356,57 +363,76 @@ public class TestMappingRuleCreator {
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
 
-    assertEquals("Fallback result",
-        expectedType, mpr.getFallback().getResult());
+    Assertions.assertEquals(
+        expectedType,
+        mpr.getFallback().getResult(),
+        "Fallback result"
+    );
   }
 
   @Test
-  public void testFallbackResultUnset() {
+  void testFallbackResultUnset() {
     rule.setFallbackResult(null);
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
     MappingRule mpr = rules.get(0);
-    assertEquals("Fallback result", MappingRuleResultType.SKIP,
-        mpr.getFallback().getResult());
+    Assertions.assertEquals(MappingRuleResultType.SKIP, mpr.getFallback().getResult(),
+        "Fallback result");
   }
 
   @Test
-  public void testTypeUnset() {
+  void testTypeUnset() {
     rule.setType(null);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Rule type is undefined");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Rule type is undefined"
+    );
   }
 
   @Test
-  public void testMatchesUnset() {
+  void testMatchesUnset() {
     rule.setMatches(null);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Match string is undefined");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Match string is undefined"
+    );
   }
 
   @Test
-  public void testMatchesEmpty() {
+  void testMatchesEmpty() {
     rule.setMatches("");
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Match string is empty");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Match string is empty"
+    );
   }
 
   @Test
-  public void testPolicyUnset() {
+  void testPolicyUnset() {
     rule.setPolicy(null);
 
-    expected.expect(IllegalArgumentException.class);
-    expected.expectMessage("Rule policy is undefined");
-
-    ruleCreator.getMappingRules(description);
+    final Exception ex = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> ruleCreator.getMappingRules(description)
+    );
+    Assertions.assertEquals(
+        ex.getMessage(),
+        "Rule policy is undefined"
+    );
   }
 
   private void prepareMappingRuleDescription() {
@@ -449,22 +475,22 @@ public class TestMappingRuleCreator {
   private void verifyPlacement(MappingRuleResultType expectedResultType,
       String expectedQueue, boolean allowCreate) {
     List<MappingRule> rules = ruleCreator.getMappingRules(description);
-    assertEquals("Number of rules", 1, rules.size());
+    Assertions.assertEquals(1, rules.size(), "Number of rules");
     MappingRule mpr = rules.get(0);
     MappingRuleResult result = mpr.evaluate(variableContext);
 
-    assertEquals("Create flag", allowCreate, result.isCreateAllowed());
+    Assertions.assertEquals(allowCreate, result.isCreateAllowed(), "Create flag");
 
     if (expectedResultType != null) {
-      assertEquals("Mapping rule result",
-          expectedResultType, result.getResult());
+      Assertions.assertEquals(expectedResultType,
+          result.getResult(), "Mapping rule result");
     } else {
-      assertEquals("Mapping rule result",
-          MappingRuleResultType.SKIP, result.getResult());
+      Assertions.assertEquals(MappingRuleResultType.SKIP,
+          result.getResult(), "Mapping rule result");
     }
 
     if (expectedQueue != null) {
-      assertEquals("Evaluated queue", expectedQueue, result.getQueue());
+      Assertions.assertEquals(expectedQueue, result.getQueue(), "Evaluated queue");
     }
   }
 }

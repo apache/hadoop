@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.preprocessor;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.*;
 public class TestNodeLabelProcessor {
 
   @Test
-  public void testNodeLabelProcessor() {
+  void testNodeLabelProcessor() {
     ContextProcessor nodeLabelProcessor = new NodeLabelProcessor();
     ApplicationId app = ApplicationId.newInstance(123456, 111);
     ApplicationSubmissionContext applicationSubmissionContext =

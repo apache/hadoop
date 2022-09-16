@@ -20,15 +20,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestCapacitySchedulerConfiguration {
 
@@ -99,7 +99,7 @@ public class TestCapacitySchedulerConfiguration {
   }
 
   @Test
-  public void testDefaultSubmitACLForRootAllAllowed() {
+  void testDefaultSubmitACLForRootAllAllowed() {
     CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     AccessControlList acl = getSubmitAcl(csConf, ROOT);
     assertTrue(acl.getUsers().isEmpty());
@@ -108,7 +108,7 @@ public class TestCapacitySchedulerConfiguration {
   }
 
   @Test
-  public void testDefaultSubmitACLForRootChildNoneAllowed() {
+  void testDefaultSubmitACLForRootChildNoneAllowed() {
     CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     AccessControlList acl = getSubmitAcl(csConf, ROOT_TEST);
     assertTrue(acl.getUsers().isEmpty());
@@ -117,27 +117,27 @@ public class TestCapacitySchedulerConfiguration {
   }
 
   @Test
-  public void testSpecifiedEmptySubmitACLForRoot() {
+  void testSpecifiedEmptySubmitACLForRoot() {
     testWithGivenAclNoOneHasAccess(ROOT, EMPTY_ACL);
   }
 
   @Test
-  public void testSpecifiedEmptySubmitACLForRootIsNotInherited() {
+  void testSpecifiedEmptySubmitACLForRootIsNotInherited() {
     testWithGivenAclNoOneHasAccess(ROOT, ROOT_TEST, EMPTY_ACL);
   }
 
   @Test
-  public void testSpecifiedSpaceSubmitACLForRoot() {
+  void testSpecifiedSpaceSubmitACLForRoot() {
     testWithGivenAclNoOneHasAccess(ROOT, SPACE_ACL);
   }
 
   @Test
-  public void testSpecifiedSpaceSubmitACLForRootIsNotInherited() {
+  void testSpecifiedSpaceSubmitACLForRootIsNotInherited() {
     testWithGivenAclNoOneHasAccess(ROOT, ROOT_TEST, SPACE_ACL);
   }
 
   @Test
-  public void testSpecifiedSubmitACLForRoot() {
+  void testSpecifiedSubmitACLForRoot() {
     Set<String> expectedUsers = Sets.newHashSet(USER1);
     Set<String> expectedGroups = Sets.newHashSet(GROUP1);
     testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, ONE_USER_ONE_GROUP_ACL, expectedUsers,
@@ -145,12 +145,12 @@ public class TestCapacitySchedulerConfiguration {
   }
 
   @Test
-  public void testSpecifiedSubmitACLForRootIsNotInherited() {
+  void testSpecifiedSubmitACLForRootIsNotInherited() {
     testWithGivenAclNoOneHasAccess(ROOT, ROOT_TEST, ONE_USER_ONE_GROUP_ACL);
   }
 
   @Test
-  public void testSpecifiedSubmitACLTwoUsersTwoGroupsForRoot() {
+  void testSpecifiedSubmitACLTwoUsersTwoGroupsForRoot() {
     Set<String> expectedUsers = Sets.newHashSet(USER1, USER2);
     Set<String> expectedGroups = Sets.newHashSet(GROUP1, GROUP2);
     testWithGivenAclCorrectUserAndGroupHasAccess(ROOT, TWO_USERS_TWO_GROUPS_ACL, expectedUsers,

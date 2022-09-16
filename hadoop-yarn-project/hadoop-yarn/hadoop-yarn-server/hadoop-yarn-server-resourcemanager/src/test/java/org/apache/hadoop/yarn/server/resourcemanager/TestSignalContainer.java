@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestSignalContainer {
 
@@ -46,7 +46,7 @@ public class TestSignalContainer {
       .getLogger(TestSignalContainer.class);
 
   @Test
-  public void testSignalRequestDeliveryToNM() throws Exception {
+  void testSignalRequestDeliveryToNM() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     FairScheduler fs = null;
@@ -85,7 +85,7 @@ public class TestSignalContainer {
         nm1.nodeHeartbeat(true);
       }
     }
-    Assert.assertEquals(request, conts.size());
+    Assertions.assertEquals(request, conts.size());
 
     for(Container container : conts) {
       rm.signalToContainer(container.getId(),
@@ -107,7 +107,7 @@ public class TestSignalContainer {
     }
 
     // Verify NM receives the expected number of signal container requests.
-    Assert.assertEquals(request, signaledConts);
+    Assertions.assertEquals(request, signaledConts);
 
     am.unregisterAppAttempt();
     nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1, ContainerState.COMPLETE);

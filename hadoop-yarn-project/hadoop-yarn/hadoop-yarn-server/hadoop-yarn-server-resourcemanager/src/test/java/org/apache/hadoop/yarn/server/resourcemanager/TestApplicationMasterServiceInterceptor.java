@@ -33,13 +33,14 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.junit.jupiter.api.Timeout;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -152,15 +153,16 @@ public class TestApplicationMasterServiceInterceptor {
   private static YarnConfiguration conf;
   private static final int GB = 1024;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
         ResourceScheduler.class);
   }
 
-  @Test(timeout = 300000)
-  public void testApplicationMasterInterceptor() throws Exception {
+  @Timeout(300000)
+  @Test
+  void testApplicationMasterInterceptor() throws Exception {
     conf.set(YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS,
         TestInterceptor1.class.getName() + ","
             + TestInterceptor2.class.getName());
@@ -201,17 +203,17 @@ public class TestApplicationMasterServiceInterceptor {
             .getContainerToken());
     am1.unregisterAppAttempt();
 
-    Assert.assertEquals(1, beforeRegCount.get());
-    Assert.assertEquals(1, afterRegCount.get());
+    Assertions.assertEquals(1, beforeRegCount.get());
+    Assertions.assertEquals(1, afterRegCount.get());
 
     // The allocate calls should be incremented twice
-    Assert.assertEquals(allocCount * 2, beforeAllocCount.get());
-    Assert.assertEquals(allocCount * 2, afterAllocCount.get());
+    Assertions.assertEquals(allocCount * 2, beforeAllocCount.get());
+    Assertions.assertEquals(allocCount * 2, afterAllocCount.get());
 
     // Finish should only be called once, since the FirstInterceptor
     // does not forward the call.
-    Assert.assertEquals(1, beforeFinishCount.get());
-    Assert.assertEquals(1, afterFinishCount.get());
+    Assertions.assertEquals(1, beforeFinishCount.get());
+    Assertions.assertEquals(1, afterFinishCount.get());
     rm.stop();
   }
 }

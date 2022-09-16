@@ -26,8 +26,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static junit.framework.TestCase.fail;
 
@@ -44,7 +45,7 @@ public class TestMetricsInvariantChecker {
   private MetricsInvariantChecker ic;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.metricsSystem = DefaultMetricsSystem.instance();
     JvmMetrics.initSingleton("ResourceManager", null);
@@ -61,8 +62,9 @@ public class TestMetricsInvariantChecker {
     ic.init(conf, null, null);
   }
 
-  @Test(timeout = 5000)
-  public void testManyRuns() {
+  @Timeout(5000)
+  @Test
+  void testManyRuns() {
 
     QueueMetrics qm =
         QueueMetrics.forQueue(metricsSystem, "root", null, false, conf);
@@ -82,7 +84,7 @@ public class TestMetricsInvariantChecker {
   }
 
   @Test
-  public void testViolation() {
+  void testViolation() {
 
     // create a "wrong" condition in which the invariants are not respected
     QueueMetrics qm =

@@ -42,7 +42,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -51,7 +51,7 @@ import java.util.Arrays;
  */
 public class TestCapacitySchedulerSchedulingRequestUpdate {
   @Test
-  public void testBasicPendingResourceUpdate() throws Exception {
+  void testBasicPendingResourceUpdate() throws Exception {
     Configuration conf = TestUtils.getConfigurationWithQueueLabels(
         new Configuration(false));
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
@@ -185,7 +185,7 @@ public class TestCapacitySchedulerSchedulingRequestUpdate {
   }
 
   @Test
-  public void testNodePartitionPendingResourceUpdate() throws Exception {
+  void testNodePartitionPendingResourceUpdate() throws Exception {
     Configuration conf = TestUtils.getConfigurationWithQueueLabels(
         new Configuration(false));
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);

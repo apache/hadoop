@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -70,8 +70,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.toSchedulerKey;
@@ -100,7 +100,7 @@ public class TestReservations {
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CapacityScheduler spyCs = new CapacityScheduler();
     cs = spy(spyCs);
@@ -543,7 +543,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testReservationNoContinueLook() throws Exception {
+  void testReservationNoContinueLook() throws Exception {
     // Test that with reservations-continue-look-all-nodes feature off
     // we don't unreserve and show we could get stuck
 
@@ -887,7 +887,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testGetAppToUnreserve() throws Exception {
+  void testGetAppToUnreserve() throws Exception {
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf);
@@ -968,7 +968,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testFindNodeToUnreserve() throws Exception {
+  void testFindNodeToUnreserve() throws Exception {
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf);
@@ -1023,7 +1023,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testAssignToQueue() throws Exception {
+  void testAssignToQueue() throws Exception {
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf);
@@ -1204,7 +1204,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testContinueLookingReservationsAfterQueueRefresh()
+  void testContinueLookingReservationsAfterQueueRefresh()
       throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf);
@@ -1216,7 +1216,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testAssignToUser() throws Exception {
+  void testAssignToUser() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     setup(csConf);
 
@@ -1377,7 +1377,7 @@ public class TestReservations {
   }
 
   @Test
-  public void testReservationsNoneAvailable() throws Exception {
+  void testReservationsNoneAvailable() throws Exception {
     // Test that we now unreserve and use a node that has space
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,9 +37,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -48,7 +48,7 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
   private YarnConfiguration conf;
   private static Map<NodeId, Set<NodeLabel>> nodeLabelsMap = Maps.newHashMap();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.NODE_LABELS_ENABLED, true);
@@ -60,22 +60,22 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
   }
 
   @Test
-  public void testRMNodeLabelsMappingProviderConfiguration() {
+  void testRMNodeLabelsMappingProviderConfiguration() {
     conf.unset(YarnConfiguration.RM_NODE_LABELS_PROVIDER_CONFIG);
     try {
       MockRM rm = new MockRM(conf);
       rm.init(conf);
       rm.start();
-      Assert.fail("Expected an exception");
+      Assertions.fail("Expected an exception");
     } catch (Exception e) {
       // expected an exception
-      Assert.assertTrue(e.getMessage().contains(
+      Assertions.assertTrue(e.getMessage().contains(
           "RMNodeLabelsMappingProvider should be configured"));
     }
   }
 
   @Test
-  public void testWithNodeLabelUpdateEnabled() throws Exception {
+  void testWithNodeLabelUpdateEnabled() throws Exception {
     conf.setLong(YarnConfiguration.RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
         1000);
     MockRM rm = new MockRM(conf);
@@ -104,7 +104,7 @@ public class TestRMDelegatedNodeLabelsUpdater extends NodeLabelTestBase {
   }
 
   @Test
-  public void testWithNodeLabelUpdateDisabled() throws Exception {
+  void testWithNodeLabelUpdateDisabled() throws Exception {
     conf.setLong(YarnConfiguration.RM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS,
         RMDelegatedNodeLabelsUpdater.DISABLE_DELEGATED_NODE_LABELS_UPDATE);
     MockRM rm = new MockRM(conf);

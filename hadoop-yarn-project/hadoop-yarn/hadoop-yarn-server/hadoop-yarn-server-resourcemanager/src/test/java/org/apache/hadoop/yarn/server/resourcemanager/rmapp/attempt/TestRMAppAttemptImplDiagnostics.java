@@ -27,11 +27,10 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.util.BoundedAppender;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,11 +39,8 @@ import static org.mockito.Mockito.when;
  */
 public class TestRMAppAttemptImplDiagnostics {
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
-  public void whenCreatedWithDefaultConfigurationSuccess() {
+  void whenCreatedWithDefaultConfigurationSuccess() {
     final Configuration configuration = new Configuration();
     configuration.setInt(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC,
         YarnConfiguration.DEFAULT_APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC);
@@ -53,17 +49,18 @@ public class TestRMAppAttemptImplDiagnostics {
   }
 
   @Test
-  public void whenCreatedWithWrongConfigurationError() {
+  void whenCreatedWithWrongConfigurationError() {
     final Configuration configuration = new Configuration();
     configuration.setInt(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC, 0);
 
-    expectedException.expect(YarnRuntimeException.class);
-
-    createRMAppAttemptImpl(configuration);
+    Assertions.assertThrows(
+        YarnRuntimeException.class,
+        () -> createRMAppAttemptImpl(configuration)
+    );
   }
 
   @Test
-  public void whenAppendedWithinLimitMessagesArePreserved() {
+  void whenAppendedWithinLimitMessagesArePreserved() {
     final Configuration configuration = new Configuration();
     configuration.setInt(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC, 1);
 
@@ -72,12 +69,12 @@ public class TestRMAppAttemptImplDiagnostics {
     final String withinLimit = RandomStringUtils.random(1024);
     appAttempt.appendDiagnostics(withinLimit);
 
-    assertEquals("messages within limit should be preserved", withinLimit,
-        appAttempt.getDiagnostics());
+    assertEquals(withinLimit, appAttempt.getDiagnostics(),
+        "messages within limit should be preserved");
   }
 
   @Test
-  public void whenAppendedBeyondLimitMessagesAreTruncated() {
+  void whenAppendedBeyondLimitMessagesAreTruncated() {
     final Configuration configuration = new Configuration();
     configuration.setInt(YarnConfiguration.APP_ATTEMPT_DIAGNOSTICS_LIMIT_KC, 1);
 
@@ -90,8 +87,8 @@ public class TestRMAppAttemptImplDiagnostics {
         BoundedAppender.TRUNCATED_MESSAGES_TEMPLATE, 1024,
         1025, beyondLimit.substring(1));
 
-    assertEquals("messages beyond limit should be truncated", truncated,
-        appAttempt.getDiagnostics());
+    assertEquals(truncated, appAttempt.getDiagnostics(),
+        "messages beyond limit should be truncated");
   }
 
   private RMAppAttemptImpl createRMAppAttemptImpl(

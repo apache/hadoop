@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 /*
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +38,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 */
 
 /**
@@ -54,7 +54,7 @@ public class TestApplicationMasterExpiry {
 //  private final RMContext context = new RMContextImpl(new MemStore());
 //  private AMLivelinessMonitor amLivelinessMonitor;
 //
-//  @Before
+//  @BeforeEach
 //  public void setUp() {
 //    new DummyApplicationTracker();
 //    new DummySN();
@@ -127,7 +127,7 @@ public class TestApplicationMasterExpiry {
 //      Thread.sleep(500);
 //      count++;
 //    }
-//    Assert.assertEquals(finalState, application.getState());
+//    Assertions.assertEquals(finalState, application.getState());
 //  }
 //
 //  @Test
@@ -169,6 +169,6 @@ public class TestApplicationMasterExpiry {
 //        expiry.wait(1000);
 //      }
 //    }
-//    Assert.assertTrue(expired);
+//    Assertions.assertTrue(expired);
 //  }
 }

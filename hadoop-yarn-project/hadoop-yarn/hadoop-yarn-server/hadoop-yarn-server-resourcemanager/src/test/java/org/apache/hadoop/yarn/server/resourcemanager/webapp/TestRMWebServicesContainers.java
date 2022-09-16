@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import javax.ws.rs.core.MediaType;
@@ -42,8 +42,8 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.eclipse.jetty.server.Response;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
@@ -89,7 +89,7 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -106,7 +106,7 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
   }
 
   @Test
-  public void testSignalContainer() throws Exception {
+  void testSignalContainer() throws Exception {
     rm.start();
     MockNM nm = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app = MockRMAppSubmitter.submit(rm,

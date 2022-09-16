@@ -26,8 +26,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /*
  * Test class for testing intra-queue preemption when the fair ordering policy
@@ -35,7 +35,7 @@ import org.junit.Test;
  */
 public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
     extends ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     conf.setBoolean(
@@ -49,7 +49,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
    * user limit.
    */
   @Test
-  public void testIntraQueuePreemptionFairOrderingPolicyEnabledOneAppPerUser()
+  void testIntraQueuePreemptionFairOrderingPolicyEnabledOneAppPerUser()
       throws IOException {
     // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
     conf.set(CapacitySchedulerConfiguration.PREFIX
@@ -97,7 +97,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
    * from next youngest app.
    */
   @Test
-  public void testIntraQueuePreemptionFifoOrderingPolicyEnabled()
+  void testIntraQueuePreemptionFifoOrderingPolicyEnabled()
       throws IOException {
     // Enable FifoOrderingPolicy for yarn.scheduler.capacity.root.a
     conf.set(CapacitySchedulerConfiguration.PREFIX
@@ -168,7 +168,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
    * user limit.
    */
   @Test
-  public void testIntraQueuePreemptionFairOrderingPolicyMulitipleAppsPerUser()
+  void testIntraQueuePreemptionFairOrderingPolicyMulitipleAppsPerUser()
       throws IOException {
     // Enable FairOrderingPolicy for yarn.scheduler.capacity.root.a
     conf.set(CapacitySchedulerConfiguration.PREFIX
@@ -219,7 +219,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueFairOrdering
    * multiple apps, preempt first from the youngest application.
    */
   @Test
-  public void testIntraQueuePreemptionFifoOrderingPolicyMultipleAppsPerUser()
+  void testIntraQueuePreemptionFifoOrderingPolicyMultipleAppsPerUser()
       throws IOException {
     // Enable FifoOrderingPolicy for yarn.scheduler.capacity.root.a
     conf.set(CapacitySchedulerConfiguration.PREFIX

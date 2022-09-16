@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.Queu
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +41,9 @@ import java.util.List;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.getQueueMapping;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.setupQueueConfiguration;
 import static org.hamcrest.CoreMatchers.hasItems;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestCapacitySchedulerQueueMappingFactory {
 
@@ -105,7 +107,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testUpdatePlacementRulesFactory() throws Exception {
+  void testUpdatePlacementRulesFactory() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -140,7 +142,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testNestedUserQueueWithStaticParentQueue() throws Exception {
+  void testNestedUserQueueWithStaticParentQueue() throws Exception {
 
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -200,11 +202,11 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "user2");
-      assertEquals("Queue", "user2", ctx2.getQueue());
-      assertEquals("Queue", "root.c", ctx2.getParentQueue());
+      assertEquals("user2", ctx2.getQueue(), "Queue");
+      assertEquals("root.c", ctx2.getParentQueue(), "Queue");
     } finally {
       if(mockRM != null) {
         mockRM.close();
@@ -213,7 +215,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testNestedUserQueueWithPrimaryGroupAsDynamicParentQueue()
+  void testNestedUserQueueWithPrimaryGroupAsDynamicParentQueue()
       throws Exception {
 
     /**
@@ -274,7 +276,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testNestedUserQueueWithSecondaryGroupAsDynamicParentQueue()
+  void testNestedUserQueueWithSecondaryGroupAsDynamicParentQueue()
       throws Exception {
 
     /**
@@ -352,14 +354,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
       CSMappingPlacementRule r =
           (CSMappingPlacementRule) rules.get(0);
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, user);
-      assertEquals("Queue", user, ctx.getQueue());
+      assertEquals(user, ctx.getQueue(), "Queue");
 
       if (primary) {
         assertEquals(
-            "Primary Group", "root." + user + "group", ctx.getParentQueue());
+            "root." + user + "group", ctx.getParentQueue(), "Primary Group");
       } else {
-        assertEquals("Secondary Group", "root." + user + "subgroup1",
-            ctx.getParentQueue());
+        assertEquals("root." + user + "subgroup1", ctx.getParentQueue(),
+            "Secondary Group");
       }
     } finally {
       if (mockRM != null) {
@@ -369,7 +371,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testDynamicPrimaryGroupQueue() throws Exception {
+  void testDynamicPrimaryGroupQueue() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -426,10 +428,10 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
-      assertEquals("Queue", "a1group", ctx1.getQueue());
+      assertEquals("a1group", ctx1.getQueue(), "Queue");
     } finally {
       if (mockRM != null) {
         mockRM.close();
@@ -438,7 +440,7 @@ public class TestCapacitySchedulerQueueMappingFactory {
   }
 
   @Test
-  public void testFixedUserWithDynamicGroupQueue() throws Exception {
+  void testFixedUserWithDynamicGroupQueue() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
@@ -503,14 +505,14 @@ public class TestCapacitySchedulerQueueMappingFactory {
           (CSMappingPlacementRule) rules.get(0);
 
       ApplicationPlacementContext ctx = r.getPlacementForApp(asc, "user1");
-      assertEquals("Queue", "b1", ctx.getQueue());
+      assertEquals("b1", ctx.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx1 = r.getPlacementForApp(asc, "a1");
-      assertEquals("Queue", "a1group", ctx1.getQueue());
+      assertEquals("a1group", ctx1.getQueue(), "Queue");
 
       ApplicationPlacementContext ctx2 = r.getPlacementForApp(asc, "b4");
-      assertEquals("Queue", "b4subgroup1", ctx2.getQueue());
-      assertEquals("Queue", "root.b", ctx2.getParentQueue());
+      assertEquals("b4subgroup1", ctx2.getQueue(), "Queue");
+      assertEquals("root.b", ctx2.getParentQueue(), "Queue");
     } finally {
       if (mockRM != null) {
         mockRM.close();

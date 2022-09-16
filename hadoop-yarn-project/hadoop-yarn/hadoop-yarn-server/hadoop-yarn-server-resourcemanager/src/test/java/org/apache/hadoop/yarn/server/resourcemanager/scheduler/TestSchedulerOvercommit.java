@@ -21,11 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -63,9 +63,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +114,7 @@ public abstract class TestSchedulerOvercommit {
    * Setup the cluster with: an RM, a NM and an application for test.
    * @throws Exception If it cannot set up the cluster.
    */
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     LOG.info("Setting up the test cluster...");
 
@@ -162,7 +162,7 @@ public abstract class TestSchedulerOvercommit {
    * Stops the default application and the RM (with the scheduler).
    * @throws Exception If it cannot stop the cluster.
    */
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     LOG.info("Cleaning up the test cluster...");
 
@@ -183,7 +183,7 @@ public abstract class TestSchedulerOvercommit {
    * but wait for the current ones without killing.
    */
   @Test
-  public void testReduceNoTimeout() throws Exception {
+  void testReduceNoTimeout() throws Exception {
 
     // New 2GB container should give 4 GB used (2+2) and 0 GB available
     Container c1 = createContainer(am, 2 * GB);
@@ -215,14 +215,14 @@ public abstract class TestSchedulerOvercommit {
     // Verify no NPE is trigger in schedule after resource is updated
     am.addRequests(new String[] {"127.0.0.1", "127.0.0.2"}, 3 * GB, 1, 1);
     AllocateResponse allocResponse2 = am.schedule();
-    assertTrue("Shouldn't have enough resource to allocate containers",
-        allocResponse2.getAllocatedContainers().isEmpty());
+    assertTrue(allocResponse2.getAllocatedContainers().isEmpty(),
+        "Shouldn't have enough resource to allocate containers");
     // Try 10 times as scheduling is an async process
     for (int i = 0; i < 10; i++) {
       Thread.sleep(INTERVAL);
       allocResponse2 = am.schedule();
-      assertTrue("Shouldn't have enough resource to allocate containers",
-          allocResponse2.getAllocatedContainers().isEmpty());
+      assertTrue(allocResponse2.getAllocatedContainers().isEmpty(),
+          "Shouldn't have enough resource to allocate containers");
     }
   }
 
@@ -231,7 +231,7 @@ public abstract class TestSchedulerOvercommit {
    * timeout.
    */
   @Test
-  public void testChangeResourcesNoTimeout() throws Exception {
+  void testChangeResourcesNoTimeout() throws Exception {
     waitMemory(scheduler, nmId, 2 * GB, 2 * GB, 100, 2 * 1000);
 
     updateNodeResource(rm, nmId, 5 * GB, 2, -1);
@@ -251,7 +251,7 @@ public abstract class TestSchedulerOvercommit {
    * Reducing the resources with 0 time out kills the container right away.
    */
   @Test
-  public void testReduceKill() throws Exception {
+  void testReduceKill() throws Exception {
 
     Container container = createContainer(am, 2 * GB);
     assertMemory(scheduler, nmId, 4 * GB, 0);
@@ -276,7 +276,7 @@ public abstract class TestSchedulerOvercommit {
    * Reducing the resources with a time out should first preempt and then kill.
    */
   @Test
-  public void testReducePreemptAndKill() throws Exception {
+  void testReducePreemptAndKill() throws Exception {
 
     Container container = createContainer(am, 2 * GB);
     assertMemory(scheduler, nmId, 4 * GB, 0);
@@ -316,7 +316,7 @@ public abstract class TestSchedulerOvercommit {
    * when the time out would have happened.
    */
   @Test
-  public void testReducePreemptAndCancel() throws Exception {
+  void testReducePreemptAndCancel() throws Exception {
 
     Container container = createContainer(am, 2 * GB);
     assertMemory(scheduler, nmId, 4 * GB, 0);
@@ -359,7 +359,7 @@ public abstract class TestSchedulerOvercommit {
    * It should kill in this order: C3, C2, C1, AM2, and AM1.
    */
   @Test
-  public void testKillMultipleContainers() throws Exception {
+  void testKillMultipleContainers() throws Exception {
 
     updateNodeResource(rm, nmId, 8 * GB, 6, -1);
     waitMemory(scheduler, nmId, 2 * GB, 6 * GB, 200, 5 * 1000);
@@ -426,7 +426,7 @@ public abstract class TestSchedulerOvercommit {
   }
 
   @Test
-  public void testEndToEnd() throws Exception {
+  void testEndToEnd() throws Exception {
 
     Container c1 = createContainer(am, 2 * GB);
     assertMemory(scheduler, nmId, 4 * GB, 0);
@@ -461,14 +461,14 @@ public abstract class TestSchedulerOvercommit {
     // verify no NPE is trigger in schedule after resource is updated
     am.addRequests(new String[] {"127.0.0.1", "127.0.0.2"}, 3 * GB, 1, 1);
     AllocateResponse allocResponse2 = am.schedule();
-    assertTrue("Shouldn't have enough resource to allocate containers",
-        allocResponse2.getAllocatedContainers().isEmpty());
+    assertTrue(allocResponse2.getAllocatedContainers().isEmpty(),
+        "Shouldn't have enough resource to allocate containers");
     // try 10 times as scheduling is an async process
     for (int i = 0; i < 10; i++) {
       Thread.sleep(100);
       allocResponse2 = am.schedule();
-      assertTrue("Shouldn't have enough resource to allocate containers",
-          allocResponse2.getAllocatedContainers().isEmpty());
+      assertTrue(allocResponse2.getAllocatedContainers().isEmpty(),
+          "Shouldn't have enough resource to allocate containers");
     }
 
     // increase the resources again to 5 GB to schedule the 3GB container
@@ -560,7 +560,7 @@ public abstract class TestSchedulerOvercommit {
       allocated = response.getAllocatedContainers();
       nm.nodeHeartbeat(true);
     }
-    assertFalse("Cannot create the container", allocated.isEmpty());
+    assertFalse(allocated.isEmpty(), "Cannot create the container");
 
     assertEquals(1, allocated.size());
     final Container c = allocated.get(0);
@@ -608,9 +608,9 @@ public abstract class TestSchedulerOvercommit {
    * @param time Actual time to check.
    */
   public static void assertTime(final long expectedTime, final long time) {
-    assertTrue("Too short: " + time + "ms", time > expectedTime);
-    assertTrue("Too long: " + time + "ms",
-        time < (expectedTime + 2 * INTERVAL));
+    assertTrue(time > expectedTime, "Too short: " + time + "ms");
+    assertTrue(time < (expectedTime + 2 * INTERVAL),
+        "Too long: " + time + "ms");
   }
 
   /**
@@ -632,7 +632,7 @@ public abstract class TestSchedulerOvercommit {
    */
   public static void assertPreemption(
       final ContainerId containerId, final PreemptionMessage msg) {
-    assertNotNull("Expected a preemption message", msg);
+    assertNotNull(msg, "Expected a preemption message");
     Set<ContainerId> preemptContainers = new HashSet<>();
     if (msg.getContract() != null) {
       for (PreemptionContainer c : msg.getContract().getContainers()) {
@@ -659,10 +659,10 @@ public abstract class TestSchedulerOvercommit {
     SchedulerNodeReport nmReport = scheduler.getNodeReport(nmId);
     assertNotNull(nmReport);
     Resource used = nmReport.getUsedResource();
-    assertEquals("Used memory", expectedUsed, used.getMemorySize());
+    assertEquals(expectedUsed, used.getMemorySize(), "Used memory");
     Resource available = nmReport.getAvailableResource();
-    assertEquals("Available memory",
-        expectedAvailable, available.getMemorySize());
+    assertEquals(expectedAvailable,
+        available.getMemorySize(), "Available memory");
   }
 
   /**

@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +35,7 @@ public class TestPeriodicRLESparseResourceAllocation {
       LoggerFactory.getLogger(TestPeriodicRLESparseResourceAllocation.class);
 
   @Test
-  public void testPeriodicCapacity() {
+  void testPeriodicCapacity() {
     int[] alloc = { 10, 7, 5, 2, 0 };
     long[] timeSteps = { 0L, 5L, 10L, 15L, 19L };
     RLESparseResourceAllocation rleSparseVector = ReservationSystemTestUtil
@@ -43,18 +43,18 @@ public class TestPeriodicRLESparseResourceAllocation {
     PeriodicRLESparseResourceAllocation periodicVector =
         new PeriodicRLESparseResourceAllocation(rleSparseVector, 20L);
     LOG.info(periodicVector.toString());
-    Assert.assertEquals(Resource.newInstance(5, 5),
+    Assertions.assertEquals(Resource.newInstance(5, 5),
         periodicVector.getCapacityAtTime(10L));
-    Assert.assertEquals(Resource.newInstance(10, 10),
+    Assertions.assertEquals(Resource.newInstance(10, 10),
         periodicVector.getCapacityAtTime(20L));
-    Assert.assertEquals(Resource.newInstance(7, 7),
+    Assertions.assertEquals(Resource.newInstance(7, 7),
         periodicVector.getCapacityAtTime(27L));
-    Assert.assertEquals(Resource.newInstance(5, 5),
+    Assertions.assertEquals(Resource.newInstance(5, 5),
         periodicVector.getCapacityAtTime(50L));
   }
 
   @Test
-  public void testMaxPeriodicCapacity() {
+  void testMaxPeriodicCapacity() {
     int[] alloc = { 2, 5, 7, 10, 3, 4, 6, 8 };
     long[] timeSteps = { 0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L };
     RLESparseResourceAllocation rleSparseVector = ReservationSystemTestUtil
@@ -62,20 +62,20 @@ public class TestPeriodicRLESparseResourceAllocation {
     PeriodicRLESparseResourceAllocation periodicVector =
         new PeriodicRLESparseResourceAllocation(rleSparseVector, 8L);
     LOG.info(periodicVector.toString());
-    Assert.assertEquals(periodicVector.getMaximumPeriodicCapacity(0, 1),
+    Assertions.assertEquals(periodicVector.getMaximumPeriodicCapacity(0, 1),
         Resource.newInstance(10, 10));
-    Assert.assertEquals(periodicVector.getMaximumPeriodicCapacity(8, 2),
+    Assertions.assertEquals(periodicVector.getMaximumPeriodicCapacity(8, 2),
         Resource.newInstance(7, 7));
-    Assert.assertEquals(periodicVector.getMaximumPeriodicCapacity(16, 3),
+    Assertions.assertEquals(periodicVector.getMaximumPeriodicCapacity(16, 3),
         Resource.newInstance(10, 10));
-    Assert.assertEquals(periodicVector.getMaximumPeriodicCapacity(17, 4),
+    Assertions.assertEquals(periodicVector.getMaximumPeriodicCapacity(17, 4),
         Resource.newInstance(5, 5));
-    Assert.assertEquals(periodicVector.getMaximumPeriodicCapacity(32, 5),
+    Assertions.assertEquals(periodicVector.getMaximumPeriodicCapacity(32, 5),
         Resource.newInstance(4, 4));
   }
 
   @Test
-  public void testMixPeriodicAndNonPeriodic() throws PlanningException {
+  void testMixPeriodicAndNonPeriodic() throws PlanningException {
     int[] alloc = { 2, 5, 0 };
     long[] timeSteps = { 1L, 2L, 3L };
     RLESparseResourceAllocation tempPeriodic = ReservationSystemTestUtil
@@ -93,28 +93,28 @@ public class TestPeriodicRLESparseResourceAllocation {
             Resource.newInstance(100 * 1024, 100), periodic, nonPeriodic,
             RLESparseResourceAllocation.RLEOperator.add, 2, 25);
 
-    Assert.assertEquals(Resource.newInstance(5, 5),
+    Assertions.assertEquals(Resource.newInstance(5, 5),
         merged.getCapacityAtTime(2L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         merged.getCapacityAtTime(3L));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         merged.getCapacityAtTime(11L));
-    Assert.assertEquals(Resource.newInstance(15, 15),
+    Assertions.assertEquals(Resource.newInstance(15, 15),
         merged.getCapacityAtTime(12L));
-    Assert.assertEquals(Resource.newInstance(10, 10),
+    Assertions.assertEquals(Resource.newInstance(10, 10),
         merged.getCapacityAtTime(13L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         merged.getCapacityAtTime(14L));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         merged.getCapacityAtTime(21L));
-    Assert.assertEquals(Resource.newInstance(5, 5),
+    Assertions.assertEquals(Resource.newInstance(5, 5),
         merged.getCapacityAtTime(22L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         merged.getCapacityAtTime(23L));
   }
 
   @Test
-  public void testSetCapacityInInterval() {
+  void testSetCapacityInInterval() {
     int[] alloc = { 2, 5, 0 };
     long[] timeSteps = { 1L, 2L, 3L };
     RLESparseResourceAllocation rleSparseVector = ReservationSystemTestUtil
@@ -123,15 +123,15 @@ public class TestPeriodicRLESparseResourceAllocation {
         new PeriodicRLESparseResourceAllocation(rleSparseVector, 10L);
     ReservationInterval interval = new ReservationInterval(5L, 10L);
     periodicVector.addInterval(interval, Resource.newInstance(8, 8));
-    Assert.assertEquals(Resource.newInstance(8, 8),
+    Assertions.assertEquals(Resource.newInstance(8, 8),
         periodicVector.getCapacityAtTime(5L));
-    Assert.assertEquals(Resource.newInstance(8, 8),
+    Assertions.assertEquals(Resource.newInstance(8, 8),
         periodicVector.getCapacityAtTime(9L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         periodicVector.getCapacityAtTime(10L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         periodicVector.getCapacityAtTime(0L));
-    // Assert.assertFalse(periodicVector.addInterval(
+    // Assertions.assertFalse(periodicVector.addInterval(
     // new ReservationInterval(7L, 12L), Resource.newInstance(8, 8)));
   }
 
@@ -143,29 +143,29 @@ public class TestPeriodicRLESparseResourceAllocation {
     PeriodicRLESparseResourceAllocation periodicVector =
         new PeriodicRLESparseResourceAllocation(rleSparseVector, 10L);
     ReservationInterval interval = new ReservationInterval(3L, 7L);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         periodicVector.removeInterval(interval, Resource.newInstance(3, 3)));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         periodicVector.getCapacityAtTime(1L));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         periodicVector.getCapacityAtTime(2L));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         periodicVector.getCapacityAtTime(3L));
-    Assert.assertEquals(Resource.newInstance(2, 2),
+    Assertions.assertEquals(Resource.newInstance(2, 2),
         periodicVector.getCapacityAtTime(4L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         periodicVector.getCapacityAtTime(5L));
-    Assert.assertEquals(Resource.newInstance(0, 0),
+    Assertions.assertEquals(Resource.newInstance(0, 0),
         periodicVector.getCapacityAtTime(6L));
-    Assert.assertEquals(Resource.newInstance(4, 4),
+    Assertions.assertEquals(Resource.newInstance(4, 4),
         periodicVector.getCapacityAtTime(7L));
 
     // invalid interval
-    Assert.assertFalse(periodicVector.removeInterval(
+    Assertions.assertFalse(periodicVector.removeInterval(
         new ReservationInterval(7L, 12L), Resource.newInstance(1, 1)));
 
     // invalid capacity
-    Assert.assertFalse(periodicVector.removeInterval(
+    Assertions.assertFalse(periodicVector.removeInterval(
         new ReservationInterval(2L, 4L), Resource.newInstance(8, 8)));
 
   }

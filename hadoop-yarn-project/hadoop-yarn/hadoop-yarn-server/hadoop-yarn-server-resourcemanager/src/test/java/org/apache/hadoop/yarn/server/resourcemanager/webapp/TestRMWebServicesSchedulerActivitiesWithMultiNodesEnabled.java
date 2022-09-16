@@ -49,9 +49,10 @@ import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
@@ -77,9 +78,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocationAttempts;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for scheduler/app activities when multi-nodes enabled.
@@ -149,7 +150,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     config.setMaximumApplicationMasterResourcePerQueuePercent(queueB, 100);
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -157,8 +158,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Test (timeout=30000)
-  public void testAssignContainer() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAssignContainer() throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
 
@@ -215,8 +217,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testSchedulingWithoutPendingRequests()
+  @Timeout(30000)
+  @Test
+  void testSchedulingWithoutPendingRequests()
       throws Exception {
     //Start RM so that it accepts app submissions
     rm.start();
@@ -257,8 +260,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testAppAssignContainer() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppAssignContainer() throws Exception {
     rm.start();
 
     MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
@@ -322,8 +326,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testInsufficientResourceDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -408,8 +413,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testAppInsufficientResourceDiagnostic() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppInsufficientResourceDiagnostic() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
 
@@ -487,8 +493,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testGroupByDiagnostics() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testGroupByDiagnostics() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
 
@@ -516,7 +523,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
        */
       params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
-      Assert.assertTrue(json.getJSONObject(FN_SCHEDULER_ACT_ROOT)
+      Assertions.assertTrue(json.getJSONObject(FN_SCHEDULER_ACT_ROOT)
           .getString(FN_ACT_DIAGNOSTIC).startsWith("Got invalid groupBy:"));
       params.remove(RMWSConsts.GROUP_BY);
 
@@ -563,7 +570,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           assertEquals("1", reqChild.getString(FN_ACT_COUNT));
           assertNotNull(reqChild.getString(FN_ACT_NODE_IDS));
         } else {
-          Assert.fail("Allocation state should be "
+          Assertions.fail("Allocation state should be "
               + AllocationState.SKIPPED.name() + " or "
               + AllocationState.RESERVED.name() + "!");
         }
@@ -573,8 +580,9 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test (timeout=30000)
-  public void testAppGroupByDiagnostics() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testAppGroupByDiagnostics() throws Exception {
     rm.start();
     CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
 
@@ -603,7 +611,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
        */
       params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
-      Assert.assertTrue(json.getJSONObject(FN_APP_ACT_ROOT)
+      Assertions.assertTrue(json.getJSONObject(FN_APP_ACT_ROOT)
           .getString(FN_ACT_DIAGNOSTIC)
           .startsWith("Got invalid groupBy:"));
       params.remove(RMWSConsts.GROUP_BY);
@@ -662,7 +670,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           assertEquals("1", allocationAttemptObj.getString(FN_ACT_COUNT));
           assertNotNull(allocationAttemptObj.getString(FN_ACT_NODE_IDS));
         } else {
-          Assert.fail("Allocation state should be "
+          Assertions.fail("Allocation state should be "
               + AllocationState.SKIPPED.name() + " or "
               + AllocationState.RESERVED.name() + "!");
         }

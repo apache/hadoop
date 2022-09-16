@@ -21,13 +21,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 import java.io.File;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestConvertedConfigValidator {
   private static final String CONFIG_DIR_PASSES =
       new File("src/test/resources/cs-validation-pass").getAbsolutePath();
@@ -36,26 +37,28 @@ public class TestConvertedConfigValidator {
 
   private ConvertedConfigValidator validator;
 
-  @Before
+  @BeforeEach
   public void setup() {
     QueueMetrics.clearQueueMetrics();
     validator = new ConvertedConfigValidator();
   }
 
-  @After
+  @AfterEach
   public void after() {
     QueueMetrics.clearQueueMetrics();
   }
 
   @Test
-  public void testValidationPassed() throws Exception {
+  void testValidationPassed() throws Exception {
     validator.validateConvertedConfig(CONFIG_DIR_PASSES);
 
     // expected: no exception
   }
 
-  @Test(expected = VerificationException.class)
-  public void testValidationFails() throws Exception {
-    validator.validateConvertedConfig(CONFIG_DIR_FAIL);
+  @Test
+  void testValidationFails() throws Exception {
+    Assertions.assertThrows(VerificationException.class, () -> {
+      validator.validateConvertedConfig(CONFIG_DIR_FAIL);
+    });
   }
 }

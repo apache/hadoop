@@ -33,9 +33,10 @@ import org.apache.hadoop.yarn.server.api.ServerRMProxy;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeToAttributes;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.NodeEventDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore;
+import org.junit.jupiter.api.Timeout;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -143,9 +144,9 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -169,8 +170,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Test RM read NM next heartBeat Interval correctly from Configuration file,
    * and NM get next heartBeat Interval from RM correctly
    */
-  @Test (timeout = 50000)
-  public void testGetNextHeartBeatInterval() throws Exception {
+  @Timeout(50000)  @Test
+  void testGetNextHeartBeatInterval() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS, "4000");
 
@@ -181,10 +182,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     MockNM nm2 = rm.registerNode("host2:5678", 10240);
 
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(4000, nodeHeartbeat.getNextHeartBeatInterval());
+    Assertions.assertEquals(4000, nodeHeartbeat.getNextHeartBeatInterval());
 
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(4000, nodeHeartbeat2.getNextHeartBeatInterval());
+    Assertions.assertEquals(4000, nodeHeartbeat2.getNextHeartBeatInterval());
 
   }
 
@@ -192,7 +193,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Decommissioning using a pre-configured include hosts file
    */
   @Test
-  public void testDecommissionWithIncludeHosts() throws Exception {
+  void testDecommissionWithIncludeHosts() throws Exception {
 
     writeToHostsFile("localhost", "host1", "host2");
     Configuration conf = new Configuration();
@@ -211,11 +212,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     int metricCount = metrics.getNumDecommisionedNMs();
 
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     // To test that IPs also work
     String ip = NetUtils.normalizeHostName("localhost");
@@ -226,17 +227,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     checkShutdownNMCount(rm, ++metricCount);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
-    Assert
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions
       .assertEquals(1, ClusterMetrics.getMetrics().getNumShutdownNMs());
 
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue("Node is not decommisioned.", NodeAction.SHUTDOWN
-        .equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.SHUTDOWN
+        .equals(nodeHeartbeat.getNodeAction()), "Node is not decommisioned.");
 
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
-    Assert.assertEquals(metricCount, ClusterMetrics.getMetrics()
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertEquals(metricCount, ClusterMetrics.getMetrics()
       .getNumShutdownNMs());
     rm.stop();
   }
@@ -245,7 +246,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Decommissioning using a pre-configured exclude hosts file
    */
   @Test
-  public void testDecommissionWithExcludeHosts() throws Exception {
+  void testDecommissionWithExcludeHosts() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
@@ -261,9 +262,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     rm.drainEvents();
 
     // To test that IPs also work
@@ -275,14 +276,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     checkDecommissionedNMCount(rm, metricCount + 2);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue("The decommisioned metrics are not updated",
-        NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()),
+        "The decommisioned metrics are not updated");
 
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue("The decommisioned metrics are not updated",
-        NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()),
+        "The decommisioned metrics are not updated");
     rm.drainEvents();
 
     writeToHostsFile("");
@@ -291,7 +292,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm3 = rm.registerNode("localhost:4433", 1024);
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     // decommissined node is 1 since 1 node is rejoined after updating exclude
     // file
     checkDecommissionedNMCount(rm, metricCount + 1);
@@ -301,7 +302,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Graceful decommission node with no running application.
    */
   @Test
-  public void testGracefulDecommissionNoApp() throws Exception {
+  void testGracefulDecommissionNoApp() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
@@ -319,9 +320,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
 
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
 
     rm.waitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.waitForState(nm3.getNodeId(), NodeState.RUNNING);
@@ -341,13 +342,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONED);
     rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONED);
 
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
-    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
-    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
+    Assertions.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat2.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat3.getNodeAction());
   }
 
   @Test
-  public void testGracefulDecommissionDefaultTimeoutResolution()
+  void testGracefulDecommissionDefaultTimeoutResolution()
       throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostXmlFile
@@ -366,11 +367,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeHeartbeatResponse nodeHeartbeat2 = nm2.nodeHeartbeat(true);
     NodeHeartbeatResponse nodeHeartbeat3 = nm3.nodeHeartbeat(true);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         NodeAction.NORMAL.equals(nodeHeartbeat1.getNodeAction()));
-    Assert.assertTrue(
+    Assertions.assertTrue(
         NodeAction.NORMAL.equals(nodeHeartbeat2.getNodeAction()));
-    Assert.assertTrue(
+    Assertions.assertTrue(
         NodeAction.NORMAL.equals(nodeHeartbeat3.getNodeAction()));
 
     rm.waitForState(nm1.getNodeId(), NodeState.RUNNING);
@@ -387,12 +388,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm1.getNodeId(), NodeState.DECOMMISSIONING);
     rm.waitForState(nm2.getNodeId(), NodeState.DECOMMISSIONING);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         nm1DecommissionTimeout, rm.getDecommissioningTimeout(nm1.getNodeId()));
     Integer defaultDecTimeout =
         conf.getInt(YarnConfiguration.RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT,
             YarnConfiguration.DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         defaultDecTimeout, rm.getDecommissioningTimeout(nm2.getNodeId()));
 
     // Graceful decommission host3 with a new default timeout
@@ -403,7 +404,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         newDefaultDecTimeout);
     rm.getNodesListManager().refreshNodes(conf, true);
     rm.waitForState(nm3.getNodeId(), NodeState.DECOMMISSIONING);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         newDefaultDecTimeout, rm.getDecommissioningTimeout(nm3.getNodeId()));
   }
 
@@ -411,7 +412,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Graceful decommission node with running application.
    */
   @Test
-  public void testGracefulDecommissionWithApp() throws Exception {
+  void testGracefulDecommissionWithApp() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
@@ -453,13 +454,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // Since the app is still RUNNING, expect NodeAction.NORMAL.
     NodeHeartbeatResponse nodeHeartbeat1 =
         nm1.nodeHeartbeat(aaid, 2, ContainerState.COMPLETE);
-    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat1.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, nodeHeartbeat1.getNodeAction());
 
     // Finish the app and verified DECOMMISSIONED.
     MockRM.finishAMAndVerifyAppState(app, rm, nm1, am);
     rm.waitForState(app.getApplicationId(), RMAppState.FINISHED);
     nodeHeartbeat1 = nm1.nodeHeartbeat(aaid, 2, ContainerState.COMPLETE);
-    Assert.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat1.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN, nodeHeartbeat1.getNodeAction());
     rm.waitForState(id1, NodeState.DECOMMISSIONED);
   }
 
@@ -467,8 +468,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Test graceful decommission of node when an AM container is scheduled on a
    * node just before it is gracefully decommissioned.
    */
-  @Test (timeout = 60000)
-  public void testGracefulDecommissionAfterAMContainerAlloc() throws Exception {
+  @Timeout(60000)  @Test
+  void testGracefulDecommissionAfterAMContainerAlloc() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
@@ -525,7 +526,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   * Decommissioning using a post-configured include hosts file
   */
   @Test
-  public void testAddNewIncludePathToConfiguration() throws Exception {
+  void testAddNewIncludePathToConfiguration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -535,11 +536,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     assert(metrics != null);
     int initialMetricCount = metrics.getNumShutdownNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     writeToHostsFile("host1");
@@ -548,21 +549,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.getNodesListManager().refreshNodes(conf);
     checkShutdownNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(
-        "Node should not have been shutdown.",
+    Assertions.assertEquals(
         NodeAction.NORMAL,
-        nodeHeartbeat.getNodeAction());
+        nodeHeartbeat.getNodeAction(),
+        "Node should not have been shutdown.");
     NodeState nodeState =
         rm.getRMContext().getInactiveRMNodes().get(nm2.getNodeId()).getState();
-    Assert.assertEquals("Node should have been shutdown but is in state" +
-            nodeState, NodeState.SHUTDOWN, nodeState);
+    Assertions.assertEquals(NodeState.SHUTDOWN, nodeState, "Node should have been shutdown but is in state" +
+            nodeState);
   }
   
   /**
    * Decommissioning using a post-configured exclude hosts file
    */
   @Test
-  public void testAddNewExcludePathToConfiguration() throws Exception {
+  void testAddNewExcludePathToConfiguration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -572,11 +573,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     assert(metrics != null);
     int initialMetricCount = metrics.getNumDecommisionedNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NodeAction.NORMAL,
         nodeHeartbeat.getNodeAction());
     writeToHostsFile("host2");
@@ -585,19 +586,19 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.getNodesListManager().refreshNodes(conf);
     checkDecommissionedNMCount(rm, ++initialMetricCount);
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(
-        "Node should not have been decommissioned.",
+    Assertions.assertEquals(
         NodeAction.NORMAL,
-        nodeHeartbeat.getNodeAction());
+        nodeHeartbeat.getNodeAction(),
+        "Node should not have been decommissioned.");
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertEquals(
-        "Node should have been decommissioned but is in state"
-            + nodeHeartbeat.getNodeAction(),
-        NodeAction.SHUTDOWN, nodeHeartbeat.getNodeAction());
+    Assertions.assertEquals(
+        NodeAction.SHUTDOWN,
+        nodeHeartbeat.getNodeAction(), "Node should have been decommissioned but is in state"
+            + nodeHeartbeat.getNodeAction());
   }
 
   @Test
-  public void testNodeRegistrationSuccess() throws Exception {
+  void testNodeRegistrationSuccess() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
@@ -617,11 +618,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // trying to register a invalid node.
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction());
   }
 
   @Test
-  public void testNodeRegistrationWithLabels() throws Exception {
+  void testNodeRegistrationWithLabels() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -642,7 +643,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -660,17 +661,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
-    Assert.assertEquals("Action should be normal on valid Node Labels",
-        NodeAction.NORMAL, response.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL,
+        response.getNodeAction(), "Action should be normal on valid Node Labels");
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
         NodeLabelsUtils.convertToStringSet(registerReq.getNodeLabels()));
-    Assert.assertTrue("Valid Node Labels were not accepted by RM",
-        response.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertTrue(response.getAreNodeLabelsAcceptedByRM(),
+        "Valid Node Labels were not accepted by RM");
     rm.stop();
   }
 
   @Test
-  public void testNodeRegistrationWithInvalidLabels() throws Exception {
+  void testNodeRegistrationWithInvalidLabels() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -691,7 +692,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -709,13 +710,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
-    Assert.assertEquals(
-        "On Invalid Node Labels action is expected to be normal",
-        NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
-    Assert.assertNotNull(response.getDiagnosticsMessage());
-    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
-        response.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertEquals(
+        NodeAction.NORMAL,
+        response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assertions.assertNotNull(response.getDiagnosticsMessage());
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
 
     if (rm != null) {
       rm.stop();
@@ -723,7 +724,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeRegistrationWithInvalidLabelsSyntax() throws Exception {
+  void testNodeRegistrationWithInvalidLabelsSyntax() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -744,7 +745,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("X", "Y", "Z"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -762,13 +763,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
 
-    Assert.assertEquals(
-        "On Invalid Node Labels action is expected to be normal",
-        NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
-    Assert.assertNotNull(response.getDiagnosticsMessage());
-    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
-        response.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertEquals(
+        NodeAction.NORMAL,
+        response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assertions.assertNotNull(response.getDiagnosticsMessage());
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
 
     if (rm != null) {
       rm.stop();
@@ -776,7 +777,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeRegistrationWithCentralLabelConfig() throws Exception {
+  void testNodeRegistrationWithCentralLabelConfig() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -796,7 +797,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
     ResourceTrackerService resourceTrackerService =
@@ -813,20 +814,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
     // registered to RM with central label config
-    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
-    Assert
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assertions
         .assertFalse(
+            response.getAreNodeLabelsAcceptedByRM(),
             "Node Labels should not accepted by RM If its configured with " +
-                "Central configuration",
-            response.getAreNodeLabelsAcceptedByRM());
+                "Central configuration");
     if (rm != null) {
       rm.stop();
     }
   }
 
   @Test
-  public void testNodeRegistrationWithAttributes() throws Exception {
+  void testNodeRegistrationWithAttributes() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -862,14 +863,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(registerReq);
 
-    Assert.assertEquals("Action should be normal on valid Node Attributes",
-        NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertTrue(NodeLabelUtil.isNodeAttributesEquals(
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction(),
+        "Action should be normal on valid Node Attributes");
+    Assertions.assertTrue(NodeLabelUtil.isNodeAttributesEquals(
         rm.getRMContext().getNodeAttributesManager()
             .getAttributesForNode(nodeId.getHost()).keySet(),
         registerReq.getNodeAttributes()));
-    Assert.assertTrue("Valid Node Attributes were not accepted by RM",
-        response.getAreNodeAttributesAcceptedByRM());
+    Assertions.assertTrue(response.getAreNodeAttributesAcceptedByRM(),
+        "Valid Node Attributes were not accepted by RM");
 
     if (rm != null) {
       rm.stop();
@@ -877,7 +878,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeRegistrationWithInvalidAttributes() throws Exception {
+  void testNodeRegistrationWithInvalidAttributes() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -917,28 +918,28 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         toSet(validNodeAttribute, invalidPrefixNodeAttribute));
     RegisterNodeManagerResponse response =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertRegisterResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .endsWith("attributes in HB must have prefix nm.yarn.io"));
 
     // check invalid name
     req.setNodeAttributes(toSet(validNodeAttribute, invalidNameNodeAttribute));
     response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertRegisterResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .startsWith("attribute name should only contains"));
 
     // check invalid value
     req.setNodeAttributes(toSet(validNodeAttribute, invalidValueNodeAttribute));
     response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertRegisterResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .startsWith("attribute value should only contains"));
 
     if (rm != null) {
@@ -948,12 +949,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
   private void assertRegisterResponseForInvalidAttributes(
       RegisterNodeManagerResponse response) {
-    Assert.assertEquals(
-        "On Invalid Node Labels action is expected to be normal",
-            NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertNotNull(response.getDiagnosticsMessage());
-    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
-        response.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertEquals(
+        NodeAction.NORMAL,
+            response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertNotNull(response.getDiagnosticsMessage());
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
   }
 
   private NodeStatus getNodeStatusObject(NodeId nodeId) {
@@ -966,7 +967,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeHeartBeatWithLabels() throws Exception {
+  void testNodeHeartBeatWithLabels() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -987,7 +988,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -1019,12 +1020,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeHeartbeatResponse nodeHeartbeatResponse =
         resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
-    Assert.assertEquals("InValid Node Labels were not accepted by RM",
-        NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL,
+        nodeHeartbeatResponse.getNodeAction(), "InValid Node Labels were not accepted by RM");
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
         NodeLabelsUtils.convertToStringSet(heartbeatReq.getNodeLabels()));
-    Assert.assertTrue("Valid Node Labels were not accepted by RM",
-        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertTrue(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM(),
+        "Valid Node Labels were not accepted by RM");
     
     // After modification of labels next heartbeat sends null informing no update
     Set<String> oldLabels = nodeLabelsMgr.getNodeLabels().get(nodeId);
@@ -1041,17 +1042,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         .getContainerTokenMasterKey());
     nodeHeartbeatResponse = resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
-    Assert.assertEquals("InValid Node Labels were not accepted by RM",
-        NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL,
+        nodeHeartbeatResponse.getNodeAction(), "InValid Node Labels were not accepted by RM");
     assertCollectionEquals(nodeLabelsMgr.getNodeLabels().get(nodeId),
         oldLabels);
-    Assert.assertFalse("Node Labels should not accepted by RM",
-        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertFalse(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM");
     rm.stop();
   }
 
   @Test
-  public void testNodeHeartbeatWithNodeAttributes() throws Exception {
+  void testNodeHeartbeatWithNodeAttributes() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -1100,11 +1101,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         rm.getRMContext().getNodeAttributesManager();
     Map<NodeAttribute, AttributeValue> attrs = attributeManager
         .getAttributesForNode(nodeId.getHost());
-    Assert.assertEquals(1, attrs.size());
+    Assertions.assertEquals(1, attrs.size());
     NodeAttribute na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
-    Assert.assertEquals("host2", na.getAttributeValue());
-    Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
+    Assertions.assertEquals("host", na.getAttributeKey().getAttributeName());
+    Assertions.assertEquals("host2", na.getAttributeValue());
+    Assertions.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
 
 
     // Send another HB to RM with updated node atrribute
@@ -1120,15 +1121,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // Make sure RM gets the updated attribute
     attrs = attributeManager.getAttributesForNode(nodeId.getHost());
-    Assert.assertEquals(1, attrs.size());
+    Assertions.assertEquals(1, attrs.size());
     na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
-    Assert.assertEquals("host3", na.getAttributeValue());
-    Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
+    Assertions.assertEquals("host", na.getAttributeKey().getAttributeName());
+    Assertions.assertEquals("host3", na.getAttributeValue());
+    Assertions.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
   }
 
   @Test
-  public void testNodeHeartbeatWithInvalidNodeAttributes() throws Exception {
+  void testNodeHeartbeatWithInvalidNodeAttributes() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -1184,10 +1185,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         toSet(validNodeAttribute, invalidPrefixNodeAttribute));
     NodeHeartbeatResponse response =
         resourceTrackerService.nodeHeartbeat(heartbeatReq);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertNodeHeartbeatResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .endsWith("attributes in HB must have prefix nm.yarn.io"));
 
     // Send another HB to RM with invalid name node attributes
@@ -1195,10 +1196,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     heartbeatReq
         .setNodeAttributes(toSet(validNodeAttribute, invalidNameNodeAttribute));
     response = resourceTrackerService.nodeHeartbeat(heartbeatReq);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertNodeHeartbeatResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .startsWith("attribute name should only contains"));
 
     // Send another HB to RM with invalid value node attributes
@@ -1206,10 +1207,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     heartbeatReq.setNodeAttributes(
         toSet(validNodeAttribute, invalidValueNodeAttribute));
     response = resourceTrackerService.nodeHeartbeat(heartbeatReq);
-    Assert.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
+    Assertions.assertEquals(0, rm.getRMContext().getNodeAttributesManager()
         .getAttributesForNode(nodeId.getHost()).size());
     assertNodeHeartbeatResponseForInvalidAttributes(response);
-    Assert.assertTrue(response.getDiagnosticsMessage()
+    Assertions.assertTrue(response.getDiagnosticsMessage()
         .startsWith("attribute value should only contains"));
 
     // Send another HB to RM with updated node attribute
@@ -1225,25 +1226,25 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         rm.getRMContext().getNodeAttributesManager();
     Map<NodeAttribute, AttributeValue> attrs =
         attributeManager.getAttributesForNode(nodeId.getHost());
-    Assert.assertEquals(1, attrs.size());
+    Assertions.assertEquals(1, attrs.size());
     NodeAttribute na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
-    Assert.assertEquals("host3", na.getAttributeValue());
-    Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
+    Assertions.assertEquals("host", na.getAttributeKey().getAttributeName());
+    Assertions.assertEquals("host3", na.getAttributeValue());
+    Assertions.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
   }
 
   private void assertNodeHeartbeatResponseForInvalidAttributes(
       NodeHeartbeatResponse response) {
-    Assert.assertEquals(
-        "On Invalid Node Labels action is expected to be normal",
-        NodeAction.NORMAL, response.getNodeAction());
-    Assert.assertNotNull(response.getDiagnosticsMessage());
-    Assert.assertFalse("Node Labels should not accepted by RM If Invalid",
-        response.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertEquals(
+        NodeAction.NORMAL,
+        response.getNodeAction(), "On Invalid Node Labels action is expected to be normal");
+    Assertions.assertNotNull(response.getDiagnosticsMessage());
+    Assertions.assertFalse(response.getAreNodeLabelsAcceptedByRM(),
+        "Node Labels should not accepted by RM If Invalid");
   }
 
   @Test
-  public void testNodeHeartbeatOnlyUpdateNodeAttributesIfNeeded()
+  void testNodeHeartbeatOnlyUpdateNodeAttributesIfNeeded()
       throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
@@ -1310,12 +1311,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     Map<NodeAttribute, AttributeValue> attrs = spyAttributeManager
         .getAttributesForNode(nodeId.getHost());
     spyAttributeManager.getNodesToAttributes(ImmutableSet.of(nodeId.getHost()));
-    Assert.assertEquals(1, attrs.size());
+    Assertions.assertEquals(1, attrs.size());
     NodeAttribute na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
-    Assert.assertEquals("host2", na.getAttributeValue());
-    Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals("host", na.getAttributeKey().getAttributeName());
+    Assertions.assertEquals("host2", na.getAttributeValue());
+    Assertions.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
+    Assertions.assertEquals(1, count.get());
 
     // Send HBs to RM with the same node attributes
     nodeStatusObject.setResponseId(++responseId);
@@ -1327,7 +1328,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
     // Make sure RM updated node attributes once
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
 
     // Send another HB to RM with updated node attributes
     nodeAttributes.clear();
@@ -1341,14 +1342,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // Make sure RM gets the updated attribute
     attrs = spyAttributeManager.getAttributesForNode(nodeId.getHost());
-    Assert.assertEquals(1, attrs.size());
+    Assertions.assertEquals(1, attrs.size());
     na = attrs.keySet().iterator().next();
-    Assert.assertEquals("host", na.getAttributeKey().getAttributeName());
-    Assert.assertEquals("host3", na.getAttributeValue());
-    Assert.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
+    Assertions.assertEquals("host", na.getAttributeKey().getAttributeName());
+    Assertions.assertEquals("host3", na.getAttributeValue());
+    Assertions.assertEquals(NodeAttributeType.STRING, na.getAttributeType());
 
     // Make sure RM updated node attributes twice
-    Assert.assertEquals(2, count.get());
+    Assertions.assertEquals(2, count.get());
 
     // Add centralized attributes
     Map<String, Set<NodeAttribute>> nodeAttributeMapping = ImmutableMap
@@ -1359,7 +1360,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         nodeAttributeMapping);
 
     // Make sure RM updated node attributes three times
-    Assert.assertEquals(3, count.get());
+    Assertions.assertEquals(3, count.get());
 
     // Send another HB to RM with non-updated node attributes
     nodeAttributes.clear();
@@ -1372,7 +1373,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
     // Make sure RM still updated node attributes three times
-    Assert.assertEquals(3, count.get());
+    Assertions.assertEquals(3, count.get());
 
     // Send another HB to RM with updated node attributes
     nodeAttributes.clear();
@@ -1386,20 +1387,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // Make sure RM gets the updated attribute
     attrs = spyAttributeManager.getAttributesForNode(nodeId.getHost());
-    Assert.assertEquals(2, attrs.size());
+    Assertions.assertEquals(2, attrs.size());
     attrs.keySet().stream().forEach(e -> {
-      Assert.assertEquals(NodeAttributeType.STRING, e.getAttributeType());
+      Assertions.assertEquals(NodeAttributeType.STRING, e.getAttributeType());
       if (e.getAttributeKey().getAttributePrefix() == NodeAttribute.PREFIX_DISTRIBUTED) {
-        Assert.assertEquals("host", e.getAttributeKey().getAttributeName());
-        Assert.assertEquals("host4", e.getAttributeValue());
+        Assertions.assertEquals("host", e.getAttributeKey().getAttributeName());
+        Assertions.assertEquals("host4", e.getAttributeValue());
       } else if (e.getAttributeKey().getAttributePrefix() == NodeAttribute.PREFIX_CENTRALIZED) {
-        Assert.assertEquals("centAttr", e.getAttributeKey().getAttributeName());
-        Assert.assertEquals("x", e.getAttributeValue());
+        Assertions.assertEquals("centAttr", e.getAttributeKey().getAttributeName());
+        Assertions.assertEquals("x", e.getAttributeValue());
       }
     });
 
     // Make sure RM updated node attributes four times
-    Assert.assertEquals(4, count.get());
+    Assertions.assertEquals(4, count.get());
 
     if (rm != null) {
       rm.stop();
@@ -1407,7 +1408,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeHeartBeatWithInvalidLabels() throws Exception {
+  void testNodeHeartBeatWithInvalidLabels() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -1428,7 +1429,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     try {
       nodeLabelsMgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("A", "B", "C"));
     } catch (IOException e) {
-      Assert.fail("Caught Exception while initializing");
+      Assertions.fail("Caught Exception while initializing");
       e.printStackTrace();
     }
 
@@ -1458,16 +1459,16 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
     // response should be NORMAL when RM heartbeat labels are rejected
-    Assert.assertEquals("Response should be NORMAL when RM heartbeat labels"
-        + " are rejected", NodeAction.NORMAL,
-        nodeHeartbeatResponse.getNodeAction());
-    Assert.assertFalse(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
-    Assert.assertNotNull(nodeHeartbeatResponse.getDiagnosticsMessage());
+    Assertions.assertEquals(NodeAction.NORMAL, nodeHeartbeatResponse.getNodeAction(),
+        "Response should be NORMAL when RM heartbeat labels"
+        + " are rejected");
+    Assertions.assertFalse(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertNotNull(nodeHeartbeatResponse.getDiagnosticsMessage());
     rm.stop();
   }
 
   @Test
-  public void testNodeHeartbeatWithCentralLabelConfig() throws Exception {
+  void testNodeHeartbeatWithCentralLabelConfig() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
@@ -1511,20 +1512,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         resourceTrackerService.nodeHeartbeat(heartbeatReq);
 
     // response should be ok but the RMacceptNodeLabelsUpdate should be false
-    Assert.assertEquals(NodeAction.NORMAL,
+    Assertions.assertEquals(NodeAction.NORMAL,
         nodeHeartbeatResponse.getNodeAction());
     // no change in the labels,
-    Assert.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
+    Assertions.assertNull(nodeLabelsMgr.getNodeLabels().get(nodeId));
     // heartbeat labels rejected
-    Assert.assertFalse("Invalid Node Labels should not accepted by RM",
-        nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM());
+    Assertions.assertFalse(nodeHeartbeatResponse.getAreNodeLabelsAcceptedByRM(),
+        "Invalid Node Labels should not accepted by RM");
     if (rm != null) {
       rm.stop();
     }
   }
 
   @Test
-  public void testNodeRegistrationVersionLessThanRM() throws Exception {
+  void testNodeRegistrationVersionLessThanRM() throws Exception {
     writeToHostsFile("host2");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
@@ -1545,16 +1546,16 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setNMVersion(nmVersion);
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
-    Assert.assertTrue("Diagnostic message did not contain: 'Disallowed NodeManager " +
-        "Version "+ nmVersion + ", is less than the minimum version'",
-        response.getDiagnosticsMessage().contains("Disallowed NodeManager Version " +
-            nmVersion + ", is less than the minimum version "));
+    Assertions.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    Assertions.assertTrue(response.getDiagnosticsMessage().contains("Disallowed NodeManager Version " +
+            nmVersion + ", is less than the minimum version "),
+        "Diagnostic message did not contain: 'Disallowed NodeManager " +
+        "Version "+ nmVersion + ", is less than the minimum version'");
 
   }
 
   @Test
-  public void testNodeRegistrationFailure() throws Exception {
+  void testNodeRegistrationFailure() throws Exception {
     writeToHostsFile("host1");
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile
@@ -1570,15 +1571,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setHttpPort(1234);
     // trying to register a invalid node.
     RegisterNodeManagerResponse response = resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
-    Assert
+    Assertions.assertEquals(NodeAction.SHUTDOWN,response.getNodeAction());
+    Assertions
       .assertEquals(
         "Disallowed NodeManager from  host2, Sending SHUTDOWN signal to the NodeManager.",
         response.getDiagnosticsMessage());
   }
 
   @Test
-  public void testSetRMIdentifierInRegistration() throws Exception {
+  void testSetRMIdentifierInRegistration() throws Exception {
 
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
@@ -1588,12 +1589,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerResponse response = nm.registerNode();
 
     // Verify the RMIdentifier is correctly set in RegisterNodeManagerResponse
-    Assert.assertEquals(ResourceManager.getClusterTimeStamp(),
+    Assertions.assertEquals(ResourceManager.getClusterTimeStamp(),
       response.getRMIdentifier());
   }
 
   @Test
-  public void testNodeRegistrationWithMinimumAllocations() throws Exception {
+  void testNodeRegistrationWithMinimumAllocations() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, "2048");
     conf.set(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES, "4");
@@ -1611,32 +1612,32 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     req.setResource(capability);
     RegisterNodeManagerResponse response1 =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response1.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN,response1.getNodeAction());
     
     capability.setMemorySize(2048);
     capability.setVirtualCores(1);
     req.setResource(capability);
     RegisterNodeManagerResponse response2 =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response2.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN,response2.getNodeAction());
     
     capability.setMemorySize(1024);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response3 =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.SHUTDOWN,response3.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN,response3.getNodeAction());
     
     capability.setMemorySize(2048);
     capability.setVirtualCores(4);
     req.setResource(capability);
     RegisterNodeManagerResponse response4 =
         resourceTrackerService.registerNodeManager(req);
-    Assert.assertEquals(NodeAction.NORMAL,response4.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL,response4.getNodeAction());
   }
 
   @Test
-  public void testReboot() throws Exception {
+  void testReboot() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -1646,18 +1647,18 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     int initialMetricCount = ClusterMetrics.getMetrics().getNumRebootedNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     nodeHeartbeat = nm2.nodeHeartbeat(
       new HashMap<ApplicationId, List<ContainerStatus>>(), true, -100);
-    Assert.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
-    Assert.assertEquals("Too far behind rm response id:0 nm response id:-100",
+    Assertions.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertEquals("Too far behind rm response id:0 nm response id:-100",
       nodeHeartbeat.getDiagnosticsMessage());
     checkRebootedNMCount(rm, ++initialMetricCount);
   }
 
   @Test
-  public void testNodeHeartbeatForAppCollectorsMap() throws Exception {
+  void testNodeHeartbeatForAppCollectorsMap() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     // set version to 2
@@ -1718,8 +1719,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         statusList, null, nodeHealth, null, null, null);
     node1.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeStatus));
 
-    Assert.assertEquals(1, node1.getRunningApps().size());
-    Assert.assertEquals(app1.getApplicationId(), node1.getRunningApps().get(0));
+    Assertions.assertEquals(1, node1.getRunningApps().size());
+    Assertions.assertEquals(app1.getApplicationId(), node1.getRunningApps().get(0));
 
     // Create a running container for app2 running on nm2
     ContainerId runningContainerId2 = BuilderUtils.newContainerId(
@@ -1733,21 +1734,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nodeStatus = NodeStatus.newInstance(nm1.getNodeId(), 0,
         statusList, null, nodeHealth, null, null, null);
     node2.handle(new RMNodeStatusEvent(nm2.getNodeId(), nodeStatus));
-    Assert.assertEquals(1, node2.getRunningApps().size());
-    Assert.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
+    Assertions.assertEquals(1, node2.getRunningApps().size());
+    Assertions.assertEquals(app2.getApplicationId(), node2.getRunningApps().get(0));
 
     nodeHeartbeat1 = nm1.nodeHeartbeat(true);
     Map<ApplicationId, AppCollectorData> map1
         = nodeHeartbeat1.getAppCollectors();
-    Assert.assertEquals(1, map1.size());
-    Assert.assertEquals(collectorAddr1,
+    Assertions.assertEquals(1, map1.size());
+    Assertions.assertEquals(collectorAddr1,
         map1.get(app1.getApplicationId()).getCollectorAddr());
 
     nodeHeartbeat2 = nm2.nodeHeartbeat(true);
     Map<ApplicationId, AppCollectorData> map2
         = nodeHeartbeat2.getAppCollectors();
-    Assert.assertEquals(1, map2.size());
-    Assert.assertEquals(collectorAddr4,
+    Assertions.assertEquals(1, map2.size());
+    Assertions.assertEquals(collectorAddr4,
         map2.get(app2.getApplicationId()).getCollectorAddr());
   }
 
@@ -1761,12 +1762,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(100);
       }
     }
-    Assert.assertEquals("The rebooted metrics are not updated", count,
-        ClusterMetrics.getMetrics().getNumRebootedNMs());
+    Assertions.assertEquals(count, ClusterMetrics.getMetrics().getNumRebootedNMs(),
+        "The rebooted metrics are not updated");
   }
 
   @Test
-  public void testUnhealthyNodeStatus() throws Exception {
+  void testUnhealthyNodeStatus() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, hostFile
         .getAbsolutePath());
@@ -1775,7 +1776,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.start();
 
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
-    Assert.assertEquals(0, ClusterMetrics.getMetrics().getUnhealthyNMs());
+    Assertions.assertEquals(0, ClusterMetrics.getMetrics().getUnhealthyNMs());
     // node healthy
     nm1.nodeHeartbeat(true);
 
@@ -1799,15 +1800,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(100);
       }
     }
-    Assert.assertFalse((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
+    Assertions.assertFalse((rm.getRMContext().getRMNodes().get(nm1.getNodeId())
         .getState() != NodeState.UNHEALTHY) == health);
-    Assert.assertEquals("Unhealthy metrics not incremented", count,
-        ClusterMetrics.getMetrics().getUnhealthyNMs());
+    Assertions.assertEquals(count, ClusterMetrics.getMetrics().getUnhealthyNMs(),
+        "Unhealthy metrics not incremented");
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   @Test
-  public void testHandleContainerStatusInvalidCompletions() throws Exception {
+  void testHandleContainerStatusInvalidCompletions() throws Exception {
     rm = new MockRM(new YarnConfiguration());
     rm.start();
 
@@ -1875,7 +1876,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testReconnectNode() throws Exception {
+  void testReconnectNode() throws Exception {
     rm = new MockRM() {
       @Override
       protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
@@ -1899,22 +1900,22 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     final int expectedNMs = ClusterMetrics.getMetrics().getNumActiveNMs();
     QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
     // TODO Metrics incorrect in case of the FifoScheduler
-    Assert.assertEquals(5120, metrics.getAvailableMB());
+    Assertions.assertEquals(5120, metrics.getAvailableMB());
 
     // reconnect of healthy node
     nm1 = rm.registerNode("host1:1234", 5120);
     NodeHeartbeatResponse response = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     rm.drainEvents();
-    Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
+    Assertions.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnhealthyNMCount(rm, nm2, true, 1);
 
     // reconnect of unhealthy node
     nm2 = rm.registerNode("host2:5678", 5120);
     response = nm2.nodeHeartbeat(false);
-    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
     rm.drainEvents();
-    Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
+    Assertions.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
     checkUnhealthyNMCount(rm, nm2, true, 1);
     
     // unhealthy node changed back to healthy
@@ -1922,14 +1923,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     response = nm2.nodeHeartbeat(true);
     response = nm2.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertEquals(5120 + 5120, metrics.getAvailableMB());
+    Assertions.assertEquals(5120 + 5120, metrics.getAvailableMB());
 
     // reconnect of node with changed capability
     nm1 = rm.registerNode("host2:5678", 10240);
     response = nm1.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
-    Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());
+    Assertions.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assertions.assertEquals(5120 + 10240, metrics.getAvailableMB());
 
     // reconnect of node with changed capability and running applications
     List<ApplicationId> runningApps = new ArrayList<ApplicationId>();
@@ -1937,8 +1938,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1 = rm.registerNode("host2:5678", 15360, 2, runningApps);
     response = nm1.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
-    Assert.assertEquals(5120 + 15360, metrics.getAvailableMB());
+    Assertions.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assertions.assertEquals(5120 + 15360, metrics.getAvailableMB());
     
     // reconnect healthy node changing http port
     nm1 = new MockNM("host1:1234", 5120, rm.getResourceTrackerService());
@@ -1948,14 +1949,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     response = nm1.nodeHeartbeat(true);
     rm.drainEvents();
     RMNode rmNode = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
-    Assert.assertEquals(3, rmNode.getHttpPort());
-    Assert.assertEquals(5120, rmNode.getTotalCapability().getMemorySize());
-    Assert.assertEquals(5120 + 15360, metrics.getAvailableMB());
+    Assertions.assertEquals(3, rmNode.getHttpPort());
+    Assertions.assertEquals(5120, rmNode.getTotalCapability().getMemorySize());
+    Assertions.assertEquals(5120 + 15360, metrics.getAvailableMB());
 
   }
 
   @Test
-  public void testNMUnregistration() throws Exception {
+  void testNMUnregistration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -1967,7 +1968,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     int shutdownNMsCount = ClusterMetrics.getMetrics()
         .getNumShutdownNMs();
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     UnRegisterNodeManagerRequest request = Records
         .newRecord(UnRegisterNodeManagerRequest.class);
@@ -1978,11 +1979,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // The RM should remove the node after unregistration, hence send a reboot
     // command.
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.RESYNC.equals(nodeHeartbeat.getNodeAction()));
   }
 
   @Test
-  public void testUnhealthyNMUnregistration() throws Exception {
+  void testUnhealthyNMUnregistration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -1990,7 +1991,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     ResourceTrackerService resourceTrackerService = rm
         .getResourceTrackerService();
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
-    Assert.assertEquals(0, ClusterMetrics.getMetrics().getUnhealthyNMs());
+    Assertions.assertEquals(0, ClusterMetrics.getMetrics().getUnhealthyNMs());
     // node healthy
     nm1.nodeHeartbeat(true);
     int shutdownNMsCount = ClusterMetrics.getMetrics().getNumShutdownNMs();
@@ -2006,7 +2007,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testInvalidNMUnregistration() throws Exception {
+  void testInvalidNMUnregistration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -2029,14 +2030,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // 4. Unregister the Node Manager
     MockNM nm1 = new MockNM("host1:1234", 5120, resourceTrackerService);
     RegisterNodeManagerResponse response = nm1.registerNode();
-    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction());
     int shutdownNMsCount = ClusterMetrics.getMetrics().getNumShutdownNMs();
     writeToHostsFile("host2");
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
         hostFile.getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
     NodeHeartbeatResponse heartbeatResponse = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.SHUTDOWN, heartbeatResponse.getNodeAction());
+    Assertions.assertEquals(NodeAction.SHUTDOWN, heartbeatResponse.getNodeAction());
     checkDecommissionedNMCount(rm, decommisionedNMsCount);
     request.setNodeId(nm1.getNodeId());
     resourceTrackerService.unRegisterNodeManager(request);
@@ -2048,7 +2049,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // 3. Unregister the Node Manager
     MockNM nm2 = new MockNM("host2:1234", 5120, resourceTrackerService);
     RegisterNodeManagerResponse response2 = nm2.registerNode();
-    Assert.assertEquals(NodeAction.NORMAL, response2.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, response2.getNodeAction());
     writeToHostsFile("host1");
     conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
         hostFile.getAbsolutePath());
@@ -2060,8 +2061,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.stop();
   }
 
-  @Test(timeout = 30000)
-  public void testInitDecommMetric() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testInitDecommMetric() throws Exception {
     testInitDecommMetricHelper(true);
     testInitDecommMetricHelper(false);
   }
@@ -2096,11 +2098,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
     rm1.drainEvents();
-    Assert.assertEquals("Number of Decommissioned nodes should be 1",
-        1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
-    Assert.assertEquals("The inactiveRMNodes should contain an entry for the" +
-        "decommissioned node",
-        1, rm1.getRMContext().getInactiveRMNodes().size());
+    Assertions.assertEquals(1,
+        ClusterMetrics.getMetrics().getNumDecommisionedNMs(), "Number of Decommissioned nodes should be 1");
+    Assertions.assertEquals(1,
+        rm1.getRMContext().getInactiveRMNodes().size(), "The inactiveRMNodes should contain an entry for the" +
+        "decommissioned node");
     writeToHostsFile(excludeHostFile, "");
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
         excludeHostFile.getAbsolutePath());
@@ -2109,19 +2111,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
     rm1.drainEvents();
-    Assert.assertEquals("The decommissioned nodes metric should have " +
-            "decremented to 0",
-        0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
-    Assert.assertEquals("The active nodes metric should be 2",
-        2, ClusterMetrics.getMetrics().getNumActiveNMs());
-    Assert.assertEquals("The inactive RMNodes entry should have been removed",
-        0, rm1.getRMContext().getInactiveRMNodes().size());
+    Assertions.assertEquals(0,
+        ClusterMetrics.getMetrics().getNumDecommisionedNMs(), "The decommissioned nodes metric should have " +
+            "decremented to 0");
+    Assertions.assertEquals(2,
+        ClusterMetrics.getMetrics().getNumActiveNMs(), "The active nodes metric should be 2");
+    Assertions.assertEquals(0,
+        rm1.getRMContext().getInactiveRMNodes().size(), "The inactive RMNodes entry should have been removed");
     rm1.drainEvents();
     rm1.stop();
   }
 
-  @Test(timeout = 30000)
-  public void testInitDecommMetricNoRegistration() throws Exception {
+  @Timeout(30000)
+  @Test
+  void testInitDecommMetricNoRegistration() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -2138,21 +2141,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         hostFile.getAbsolutePath());
     rm.getNodesListManager().refreshNodes(conf);
     rm.drainEvents();
-    Assert.assertEquals("The decommissioned nodes metric should be 1 ",
-        1, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    Assertions.assertEquals(1,
+        ClusterMetrics.getMetrics().getNumDecommisionedNMs(), "The decommissioned nodes metric should be 1 ");
     rm.stop();
 
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     rm1.getNodesListManager().refreshNodes(conf);
     rm1.drainEvents();
-    Assert.assertEquals("The decommissioned nodes metric should be 2 ",
-        2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    Assertions.assertEquals(2,
+        ClusterMetrics.getMetrics().getNumDecommisionedNMs(), "The decommissioned nodes metric should be 2 ");
     rm1.stop();
   }
 
   @Test
-  public void testIncorrectRecommission() throws Exception {
+  void testIncorrectRecommission() throws Exception {
     //Check decommissioned node not get recommissioned with graceful refresh
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
@@ -2170,17 +2173,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue("Node " + nm1.getNodeId().getHost() +
-        " should be Decommissioned", rm.getRMContext()
+    Assertions.assertTrue(rm.getRMContext()
         .getInactiveRMNodes().get(nm1.getNodeId()).getState() == NodeState
-        .DECOMMISSIONED);
+        .DECOMMISSIONED, "Node " + nm1.getNodeId().getHost() +
+        " should be Decommissioned");
     writeToHostsFile(excludeHostFile, "");
     rm.getNodesListManager().refreshNodesGracefully(conf, null);
     rm.drainEvents();
-    Assert.assertTrue("Node " + nm1.getNodeId().getHost() +
-        " should be Decommissioned", rm.getRMContext()
+    Assertions.assertTrue(rm.getRMContext()
         .getInactiveRMNodes().get(nm1.getNodeId()).getState() == NodeState
-        .DECOMMISSIONED);
+        .DECOMMISSIONED, "Node " + nm1.getNodeId().getHost() +
+        " should be Decommissioned");
     rm.stop();
   }
 
@@ -2188,7 +2191,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Remove a node from all lists and check if its forgotten.
    */
   @Test
-  public void testNodeRemovalNormally() throws Exception {
+  void testNodeRemovalNormally() throws Exception {
     testNodeRemovalUtil(false);
     testNodeRemovalUtilLost(false);
     testNodeRemovalUtilRebooted(false);
@@ -2196,7 +2199,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testNodeRemovalGracefully() throws Exception {
+  void testNodeRemovalGracefully() throws Exception {
     testNodeRemovalUtil(true);
     testNodeRemovalUtilLost(true);
     testNodeRemovalUtilRebooted(true);
@@ -2233,14 +2236,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     //check all 3 nodes joined in as NORMAL
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     rm.drainEvents();
-    Assert.assertEquals("All 3 nodes should be active",
-        metrics.getNumActiveNMs(), 3);
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        3, "All 3 nodes should be active");
 
     //Remove nm2 from include list, should now be shutdown with timer test
     String ip = NetUtils.normalizeHostName("localhost");
@@ -2254,17 +2257,17 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue("Node should not be in active node list",
-        !rmContext.getRMNodes().containsKey(nm2.getNodeId()));
+    Assertions.assertTrue(!rmContext.getRMNodes().containsKey(nm2.getNodeId()),
+        "Node should not be in active node list");
 
     RMNode rmNode = rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertEquals("Node should be in inactive node list",
-        rmNode.getState(),
-        doGraceful? NodeState.DECOMMISSIONED : NodeState.SHUTDOWN);
-    Assert.assertEquals("Active nodes should be 2",
-        metrics.getNumActiveNMs(), 2);
-    Assert.assertEquals("Shutdown nodes should be expected",
-        metrics.getNumShutdownNMs(), doGraceful? 0 : 1);
+    Assertions.assertEquals(rmNode.getState(),
+        doGraceful? NodeState.DECOMMISSIONED : NodeState.SHUTDOWN,
+        "Node should be in inactive node list");
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        2, "Active nodes should be 2");
+    Assertions.assertEquals(metrics.getNumShutdownNMs(),
+        doGraceful? 0 : 1, "Shutdown nodes should be expected");
 
     int nodeRemovalTimeout =
         conf.getInt(
@@ -2277,10 +2280,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
 
     rmNode = rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertEquals("Node should have been forgotten!",
-        rmNode, null);
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumShutdownNMs(), 0);
+    Assertions.assertEquals(rmNode,
+        null, "Node should have been forgotten!");
+    Assertions.assertEquals(metrics.getNumShutdownNMs(),
+        0, "Shutdown nodes should be 0 now");
 
     //Check node removal and re-addition before timer expires
     writeToHostsFile("host1", ip, "host2");
@@ -2294,13 +2297,13 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm2.nodeHeartbeat(true);
     rm.drainEvents();
     rmNode = rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertEquals("Node should be shutdown",
-        rmNode.getState(),
-        doGraceful? NodeState.DECOMMISSIONED : NodeState.SHUTDOWN);
-    Assert.assertEquals("Active nodes should be 2",
-        metrics.getNumActiveNMs(), 2);
-    Assert.assertEquals("Shutdown nodes should be expected",
-        metrics.getNumShutdownNMs(), doGraceful? 0 : 1);
+    Assertions.assertEquals(rmNode.getState(),
+        doGraceful? NodeState.DECOMMISSIONED : NodeState.SHUTDOWN,
+        "Node should be shutdown");
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        2, "Active nodes should be 2");
+    Assertions.assertEquals(metrics.getNumShutdownNMs(),
+        doGraceful? 0 : 1, "Shutdown nodes should be expected");
 
     //add back the node before timer expires
     latch.await(maxThreadSleeptime - 2000, TimeUnit.MILLISECONDS);
@@ -2309,11 +2312,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm2 = rm.registerNode("host2:5678", 10240);
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     rm.drainEvents();
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumShutdownNMs(), 0);
-    Assert.assertEquals("All 3 nodes should be active",
-        metrics.getNumActiveNMs(), 3);
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertEquals(metrics.getNumShutdownNMs(),
+        0, "Shutdown nodes should be 0 now");
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        3, "All 3 nodes should be active");
 
     //Decommission this node, check timer doesn't remove it
     writeToHostsFile("host1", "host2", ip);
@@ -2324,23 +2327,23 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
              rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertTrue("Node should be DECOMMISSIONED or DECOMMISSIONING",
-        (rmNode.getState() == NodeState.DECOMMISSIONED) ||
-            (rmNode.getState() == NodeState.DECOMMISSIONING));
+    Assertions.assertTrue((rmNode.getState() == NodeState.DECOMMISSIONED) ||
+            (rmNode.getState() == NodeState.DECOMMISSIONING),
+        "Node should be DECOMMISSIONED or DECOMMISSIONING");
     if (rmNode.getState() == NodeState.DECOMMISSIONED) {
-      Assert.assertEquals("Decommissioned/ing nodes should be 1 now",
-          metrics.getNumDecommisionedNMs(), 1);
+      Assertions.assertEquals(metrics.getNumDecommisionedNMs(),
+          1, "Decommissioned/ing nodes should be 1 now");
     }
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
 
     rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
              rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertTrue("Node should be DECOMMISSIONED or DECOMMISSIONING",
-        (rmNode.getState() == NodeState.DECOMMISSIONED) ||
-            (rmNode.getState() == NodeState.DECOMMISSIONING));
+    Assertions.assertTrue((rmNode.getState() == NodeState.DECOMMISSIONED) ||
+            (rmNode.getState() == NodeState.DECOMMISSIONING),
+        "Node should be DECOMMISSIONED or DECOMMISSIONING");
     if (rmNode.getState() == NodeState.DECOMMISSIONED) {
-      Assert.assertEquals("Decommissioned/ing nodes should be 1 now",
-          metrics.getNumDecommisionedNMs(), 1);
+      Assertions.assertEquals(metrics.getNumDecommisionedNMs(),
+          1, "Decommissioned/ing nodes should be 1 now");
     }
 
     //Test decommed/ing node that transitions to untracked,timer should remove
@@ -2367,11 +2370,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
     RMNode rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
              rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertNotEquals("Timer for this node was not canceled!",
-        rmNode, null);
-    Assert.assertTrue("Node should be DECOMMISSIONED or DECOMMISSIONING",
-        (rmNode.getState() == NodeState.DECOMMISSIONED) ||
-            (rmNode.getState() == NodeState.DECOMMISSIONING));
+    Assertions.assertNotEquals(rmNode,
+        null, "Timer for this node was not canceled!");
+    Assertions.assertTrue((rmNode.getState() == NodeState.DECOMMISSIONED) ||
+            (rmNode.getState() == NodeState.DECOMMISSIONING),
+        "Node should be DECOMMISSIONED or DECOMMISSIONING");
 
     writeToHostsFile("host1", ip);
     writeToHostsFile(excludeHostFile, "");
@@ -2380,14 +2383,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     latch.await(maxThreadSleeptime, TimeUnit.MILLISECONDS);
     rmNode = doGraceful ? rmContext.getRMNodes().get(nm2.getNodeId()) :
              rmContext.getInactiveRMNodes().get(nm2.getNodeId());
-    Assert.assertEquals("Node should have been forgotten!",
-        rmNode, null);
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumDecommisionedNMs(), 0);
-    Assert.assertEquals("Shutdown nodes should be 0 now",
-        metrics.getNumShutdownNMs(), 0);
-    Assert.assertEquals("Active nodes should be 2",
-        metrics.getNumActiveNMs(), 2);
+    Assertions.assertEquals(rmNode,
+        null, "Node should have been forgotten!");
+    Assertions.assertEquals(metrics.getNumDecommisionedNMs(),
+        0, "Shutdown nodes should be 0 now");
+    Assertions.assertEquals(metrics.getNumShutdownNMs(),
+        0, "Shutdown nodes should be 0 now");
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        2, "Active nodes should be 2");
   }
 
   private void testNodeRemovalUtilLost(boolean doGraceful) throws Exception {
@@ -2417,14 +2420,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     //check all 3 nodes joined in as NORMAL
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     rm.drainEvents();
-    Assert.assertEquals("All 3 nodes should be active",
-        metrics.getNumActiveNMs(), 3);
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        3, "All 3 nodes should be active");
     int waitCount = 0;
     while(waitCount++ < 20){
       synchronized (this) {
@@ -2433,15 +2436,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
       nm3.nodeHeartbeat(true);
       nm1.nodeHeartbeat(true);
     }
-    Assert.assertNotEquals("host2 should be a lost NM!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-    Assert.assertEquals("host2 should be a lost NM!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
-        NodeState.LOST);
-    Assert.assertEquals("There should be 1 Lost NM!",
-        clusterMetrics.getNumLostNMs(), 1);
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+        null, "host2 should be a lost NM!");
+    Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
+        NodeState.LOST,
+        "host2 should be a lost NM!");
+    Assertions.assertEquals(clusterMetrics.getNumLostNMs(),
+        1, "There should be 1 Lost NM!");
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
     int nodeRemovalTimeout =
         conf.getInt(
             YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC,
@@ -2465,12 +2468,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         nm2.nodeHeartbeat(true);
       }
     }
-    Assert.assertEquals("host2 should have been forgotten!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-    Assert.assertEquals("There should be no Lost NMs!",
-        clusterMetrics.getNumLostNMs(), 0);
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+        null, "host2 should have been forgotten!");
+    Assertions.assertEquals(clusterMetrics.getNumLostNMs(),
+        0, "There should be no Lost NMs!");
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
     rm.stop();
   }
 
@@ -2503,15 +2506,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     rm.drainEvents();
 
-    Assert.assertNotEquals("host2 should be a rebooted NM!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-    Assert.assertEquals("host2 should be a rebooted NM!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
-        NodeState.REBOOTED);
-    Assert.assertEquals("There should be 1 Rebooted NM!",
-        clusterMetrics.getNumRebootedNMs(), 1);
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+        null, "host2 should be a rebooted NM!");
+    Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
+        NodeState.REBOOTED,
+        "host2 should be a rebooted NM!");
+    Assertions.assertEquals(clusterMetrics.getNumRebootedNMs(),
+        1, "There should be 1 Rebooted NM!");
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
 
     int nodeRemovalTimeout =
         conf.getInt(
@@ -2535,12 +2538,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(maxThreadSleeptime);
       }
     }
-    Assert.assertEquals("host2 should have been forgotten!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-    Assert.assertEquals("There should be no Rebooted NMs!",
-        clusterMetrics.getNumRebootedNMs(), 0);
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+        null, "host2 should have been forgotten!");
+    Assertions.assertEquals(clusterMetrics.getNumRebootedNMs(),
+        0, "There should be no Rebooted NMs!");
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
     rm.stop();
   }
 
@@ -2571,14 +2574,14 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     rm.drainEvents();
     //check all 3 nodes joined in as NORMAL
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm3.nodeHeartbeat(true);
-    Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
+    Assertions.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     rm.drainEvents();
-    Assert.assertEquals("All 3 nodes should be active",
-        metrics.getNumActiveNMs(), 3);
+    Assertions.assertEquals(metrics.getNumActiveNMs(),
+        3, "All 3 nodes should be active");
     // node healthy
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(false);
@@ -2592,20 +2595,20 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     nm3.nodeHeartbeat(true);
     rm.drainEvents();
     if (!doGraceful) {
-      Assert.assertNotEquals("host2 should be a shutdown NM!",
-          rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-      Assert.assertEquals("host2 should be a shutdown NM!",
-          rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
-          NodeState.SHUTDOWN);
+      Assertions.assertNotEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+          null, "host2 should be a shutdown NM!");
+      Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()).getState(),
+          NodeState.SHUTDOWN,
+          "host2 should be a shutdown NM!");
     }
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
     if (!doGraceful) {
-      Assert.assertEquals("There should be 1 Shutdown NM!",
-          clusterMetrics.getNumShutdownNMs(), 1);
+      Assertions.assertEquals(clusterMetrics.getNumShutdownNMs(),
+          1, "There should be 1 Shutdown NM!");
     }
-    Assert.assertEquals("There should be 0 Unhealthy NM!",
-        clusterMetrics.getUnhealthyNMs(), 0);
+    Assertions.assertEquals(clusterMetrics.getUnhealthyNMs(),
+        0, "There should be 0 Unhealthy NM!");
     int nodeRemovalTimeout =
         conf.getInt(
             YarnConfiguration.RM_NODEMANAGER_UNTRACKED_REMOVAL_TIMEOUT_MSEC,
@@ -2621,12 +2624,12 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(maxThreadSleeptime);
       }
     }
-    Assert.assertEquals("host2 should have been forgotten!",
-        rmContext.getInactiveRMNodes().get(nm2.getNodeId()), null);
-    Assert.assertEquals("There should be no Shutdown NMs!",
-        clusterMetrics.getNumRebootedNMs(), 0);
-    Assert.assertEquals("There should be 2 Active NM!",
-        clusterMetrics.getNumActiveNMs(), 2);
+    Assertions.assertEquals(rmContext.getInactiveRMNodes().get(nm2.getNodeId()),
+        null, "host2 should have been forgotten!");
+    Assertions.assertEquals(clusterMetrics.getNumRebootedNMs(),
+        0, "There should be no Shutdown NMs!");
+    Assertions.assertEquals(clusterMetrics.getNumActiveNMs(),
+        2, "There should be 2 Active NM!");
     rm.stop();
   }
 
@@ -2695,10 +2698,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(100);
       }
     }
-    Assert.assertEquals(count, ClusterMetrics.getMetrics()
+    Assertions.assertEquals(count, ClusterMetrics.getMetrics()
         .getNumDecommisionedNMs());
-    Assert.assertEquals("The decommisioned metrics are not updated", count,
-        ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    Assertions.assertEquals(count, ClusterMetrics.getMetrics().getNumDecommisionedNMs(),
+        "The decommisioned metrics are not updated");
   }
 
   private void checkShutdownNMCount(MockRM rm, int count)
@@ -2710,11 +2713,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         wait(100);
       }
     }
-    Assert.assertEquals("The shutdown metrics are not updated", count,
-        ClusterMetrics.getMetrics().getNumShutdownNMs());
+    Assertions.assertEquals(count, ClusterMetrics.getMetrics().getNumShutdownNMs(),
+        "The shutdown metrics are not updated");
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (hostFile != null && hostFile.exists()) {
       hostFile.delete();
@@ -2733,7 +2736,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testHandleOpportunisticContainerStatus() throws Exception{
+  void testHandleOpportunisticContainerStatus() throws Exception{
     final DrainDispatcher dispatcher = new DrainDispatcher();
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
@@ -2766,10 +2769,10 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
 
     Resource currentConsumption = applicationAttempt.getCurrentConsumption();
-    Assert.assertEquals(Resource.newInstance(0, 0), currentConsumption);
+    Assertions.assertEquals(Resource.newInstance(0, 0), currentConsumption);
     Resource allocResources =
         applicationAttempt.getQueue().getMetrics().getAllocatedResources();
-    Assert.assertEquals(Resource.newInstance(0, 0), allocResources);
+    Assertions.assertEquals(Resource.newInstance(0, 0), allocResources);
 
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
@@ -2808,15 +2811,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     dispatcher.await();
     Thread.sleep(2000);
     dispatcher.await();
-    Assert.assertEquals(NodeAction.NORMAL, response.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction());
 
     Collection<RMContainer> liveContainers = applicationAttempt
         .getLiveContainers();
-    Assert.assertEquals(3, liveContainers.size());
+    Assertions.assertEquals(3, liveContainers.size());
     Iterator<RMContainer> iter = liveContainers.iterator();
     while (iter.hasNext()) {
       RMContainer rc = iter.next();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           rc.getContainerId().equals(c3) ?
               ExecutionType.GUARANTEED : ExecutionType.OPPORTUNISTIC,
           rc.getExecutionType());
@@ -2824,20 +2827,21 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // Should only include GUARANTEED resources
     currentConsumption = applicationAttempt.getCurrentConsumption();
-    Assert.assertEquals(Resource.newInstance(2048, 1), currentConsumption);
+    Assertions.assertEquals(Resource.newInstance(2048, 1), currentConsumption);
     allocResources =
         applicationAttempt.getQueue().getMetrics().getAllocatedResources();
-    Assert.assertEquals(Resource.newInstance(2048, 1), allocResources);
+    Assertions.assertEquals(Resource.newInstance(2048, 1), allocResources);
 
     SchedulerNode schedulerNode =
         rm.getRMContext().getScheduler().getSchedulerNode(nodeId);
-    Assert.assertNotNull(schedulerNode);
+    Assertions.assertNotNull(schedulerNode);
     Resource nodeResources = schedulerNode.getAllocatedResource();
-    Assert.assertEquals(Resource.newInstance(2048, 1), nodeResources);
+    Assertions.assertEquals(Resource.newInstance(2048, 1), nodeResources);
   }
 
-  @Test(timeout = 60000)
-  public void testNodeHeartBeatResponseForUnknownContainerCleanUp()
+  @Timeout(60000)
+  @Test
+  void testNodeHeartBeatResponseForUnknownContainerCleanUp()
       throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
@@ -2890,7 +2894,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   @Test
-  public void testResponseIdOverflow() throws Exception {
+  void testResponseIdOverflow() throws Exception {
     Configuration conf = new Configuration();
     rm = new MockRM(conf);
     rm.start();
@@ -2898,7 +2902,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
 
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
 
     // prepare the responseId that's about to overflow
     RMNode node = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
@@ -2908,16 +2912,16 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     // heartbeat twice and check responseId
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
-    Assert.assertEquals(0, nodeHeartbeat.getResponseId());
+    Assertions.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+    Assertions.assertEquals(0, nodeHeartbeat.getResponseId());
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
-    Assert.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
-    Assert.assertEquals(1, nodeHeartbeat.getResponseId());
+    Assertions.assertEquals(NodeAction.NORMAL, nodeHeartbeat.getNodeAction());
+    Assertions.assertEquals(1, nodeHeartbeat.getResponseId());
   }
 
   @Test
-  public void testNMIpHostNameResolution() throws Exception {
+  void testNMIpHostNameResolution() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         "localhost:" + ServerSocketUtil.getPort(10000, 10));
@@ -2941,11 +2945,11 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
             NodeId.newInstance("host1" + System.currentTimeMillis(), 1234),
             1236, Resource.newInstance(10000, 10), "2", new ArrayList<>(),
             new ArrayList<>()));
-    Assert
-        .assertEquals("Shutdown signal should be received", NodeAction.SHUTDOWN,
-            response.getNodeAction());
-    Assert.assertTrue("Diagnostic Message", response.getDiagnosticsMessage()
-        .contains("hostname cannot be resolved "));
+    Assertions
+        .assertEquals(NodeAction.SHUTDOWN, response.getNodeAction(),
+            "Shutdown signal should be received");
+    Assertions.assertTrue(response.getDiagnosticsMessage()
+        .contains("hostname cannot be resolved "), "Diagnostic Message");
     // Test success
     rmTracker =
         ServerRMProxy.createRMProxy(mockRM.getConfig(), ResourceTracker.class);
@@ -2953,8 +2957,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         .newInstance(NodeId.newInstance("localhost", 1234), 1236,
             Resource.newInstance(10000, 10), "2", new ArrayList<>(),
             new ArrayList<>()));
-    Assert.assertEquals("Successfull registration", NodeAction.NORMAL,
-        response.getNodeAction());
+    Assertions.assertEquals(NodeAction.NORMAL, response.getNodeAction(),
+        "Successfull registration");
     mockRM.stop();
   }
 
@@ -2988,8 +2992,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     }
   }
 
-  @Test(timeout = 5000)
-  public void testSystemCredentialsAfterTokenSequenceNoChange()
+  @Timeout(5000)
+  @Test
+  void testSystemCredentialsAfterTokenSequenceNoChange()
       throws Exception {
 
     Configuration conf = new Configuration();
@@ -3129,7 +3134,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
    * Decommissioning without pre-configured include hosts file.
    */
   @Test
-  public void testDecommissionWithoutIncludeFile() throws Exception {
+  void testDecommissionWithoutIncludeFile() throws Exception {
     // clear exclude hosts
     writeToHostsFile(excludeHostFile, "");
     // init conf:

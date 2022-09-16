@@ -32,8 +32,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsMana
 
 
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -84,8 +84,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMe
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceMetricsChecker.ResourceMetricsKey.AGGREGATE_PREEMPTED_SECONDS_CUSTOM_RES2;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestQueueMetrics.queueSource;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class TestQueueMetricsForCustomResources {
   public enum MetricsForCustomResource {
@@ -100,7 +100,7 @@ public class TestQueueMetricsForCustomResources {
   private Resource defaultResource;
   private MetricsSystem ms;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     ms = new MetricsSystemImpl();
     QueueMetrics.clearQueueMetrics();
@@ -155,14 +155,14 @@ public class TestQueueMetricsForCustomResources {
   private static void assertCustomResourceValueInternal(
       MetricsForCustomResource metricsType, String resourceName, long
       expectedValue, Long value) {
-    assertNotNull(
-            "QueueMetrics should have custom resource metrics value " +
-                "for resource: " + resourceName, value);
-    assertEquals(String.format(
+    assertNotNull(value,
+        "QueueMetrics should have custom resource metrics value " +
+                "for resource: " + resourceName);
+    assertEquals(expectedValue, value,
+            String.format(
             "QueueMetrics should have custom resource metrics value %d " +
                 "for resource: %s for metrics type %s",
-            expectedValue, resourceName, metricsType), expectedValue,
-            (long) value);
+            expectedValue, resourceName, metricsType));
   }
 
   private static Map<String, String> getCustomResourcesWithValue(long value) {
@@ -395,7 +395,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testSetAvailableResourcesToQueue1() {
+  void testSetAvailableResourcesToQueue1() {
     String queueName = "single";
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null,
         false, CONF);
@@ -423,7 +423,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testSetAvailableResourcesToQueue2() {
+  void testSetAvailableResourcesToQueue2() {
     String queueName = "single";
     QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null,
         false, CONF);
@@ -451,7 +451,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testIncreasePendingResources() {
+  void testIncreasePendingResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResourceToDecrease(
@@ -463,7 +463,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testDecreasePendingResources() {
+  void testDecreasePendingResources() {
     Resource resourceToDecrease =
         newResource(GB, 2, getCustomResourcesWithValue(2 * GB));
     int containersToDecrease = 2;
@@ -526,7 +526,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testAllocateResourcesWithoutDecreasePending() {
+  void testAllocateResourcesWithoutDecreasePending() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResources(defaultResource)
@@ -536,7 +536,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testAllocateResourcesWithDecreasePending() {
+  void testAllocateResourcesWithDecreasePending() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResourceToDecrease(
@@ -552,7 +552,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testAllocateResourcesWithoutContainer() {
+  void testAllocateResourcesWithoutContainer() {
     QueueMetricsTestData testData = createDefaultQueueMetricsTestData()
         .withLeafQueue(createBasicQueueHierarchy())
         .withResources(defaultResource)
@@ -589,7 +589,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testReleaseResources() {
+  void testReleaseResources() {
     int containers = 5;
     QueueMetricsTestData testData =
         createQueueMetricsTestDataWithContainers(containers)
@@ -616,7 +616,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testUpdatePreemptedSecondsForCustomResources() {
+  void testUpdatePreemptedSecondsForCustomResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createFourLevelQueueHierarchy())
         .withResources(defaultResource)
@@ -627,7 +627,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testUpdatePreemptedSecondsForCustomResourcesMoreSeconds() {
+  void testUpdatePreemptedSecondsForCustomResourcesMoreSeconds() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createFourLevelQueueHierarchy())
         .withResources(defaultResource)
@@ -638,7 +638,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testReserveResources() {
+  void testReserveResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResources(defaultResource)
@@ -648,7 +648,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testUnreserveResources() {
+  void testUnreserveResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResources(defaultResource)
@@ -673,7 +673,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testGetAllocatedResourcesWithCustomResources() {
+  void testGetAllocatedResourcesWithCustomResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withLeafQueue(createBasicQueueHierarchy())
         .withResources(defaultResource)
@@ -683,7 +683,7 @@ public class TestQueueMetricsForCustomResources {
   }
 
   @Test
-  public void testGetAllocatedResourcesWithoutCustomResources() {
+  void testGetAllocatedResourcesWithoutCustomResources() {
     QueueMetricsTestData testData = createQueueMetricsTestDataWithContainers(5)
         .withResources(newResource(4 * GB, 4, Collections.emptyMap()))
         .withLeafQueue(createBasicQueueHierarchy())

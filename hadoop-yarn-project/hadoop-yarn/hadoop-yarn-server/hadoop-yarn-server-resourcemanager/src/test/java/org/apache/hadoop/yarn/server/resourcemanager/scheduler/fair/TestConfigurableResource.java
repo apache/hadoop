@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * To test class {@link ConfigurableResource}.
@@ -33,7 +33,7 @@ public class TestConfigurableResource {
   private final Resource clusterResource = Resources.createResource(2048, 2);
 
   @Test
-  public void testGetResourceWithPercentage() {
+  void testGetResourceWithPercentage() {
     ConfigurableResource configurableResource =
         new ConfigurableResource(new double[] {0.5, 0.5});
     assertEquals(
@@ -42,15 +42,15 @@ public class TestConfigurableResource {
     assertEquals(
         configurableResource.getResource(clusterResource).getVirtualCores(), 1);
 
-    assertNull("The absolute resource should be null since object"
-            + " configurableResource is initialized with percentages",
-        configurableResource.getResource());
-    assertNull("The absolute resource should be null since cluster resource"
-        + " is null", configurableResource.getResource(null));
+    assertNull(configurableResource.getResource(),
+        "The absolute resource should be null since object"
+            + " configurableResource is initialized with percentages");
+    assertNull(configurableResource.getResource(null), "The absolute resource should be null since cluster resource"
+        + " is null");
   }
 
   @Test
-  public void testGetResourceWithAbsolute() {
+  void testGetResourceWithAbsolute() {
     ConfigurableResource configurableResource =
         new ConfigurableResource(Resources.createResource(3072, 3));
     assertThat(configurableResource.getResource().getMemorySize()).

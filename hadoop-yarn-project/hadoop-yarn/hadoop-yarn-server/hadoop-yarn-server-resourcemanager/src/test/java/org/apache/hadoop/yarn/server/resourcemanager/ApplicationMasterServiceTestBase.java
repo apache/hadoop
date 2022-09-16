@@ -52,9 +52,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,7 +67,7 @@ import java.util.Map;
 import static java.lang.Thread.sleep;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Base class for Application Master test classes.
@@ -122,15 +123,16 @@ public abstract class ApplicationMasterServiceTestBase {
         .build()), null);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
         ResourceScheduler.class);
   }
 
-  @Test(timeout = 3000000)
-  public void testRMIdentifierOnContainerAllocation() throws Exception {
+  @Timeout(3000000)
+  @Test
+  void testRMIdentifierOnContainerAllocation() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
 
@@ -163,13 +165,14 @@ public abstract class ApplicationMasterServiceTestBase {
     ContainerTokenIdentifier tokenId =
         BuilderUtils.newContainerTokenIdentifier(allocatedContainer
             .getContainerToken());
-    Assert.assertEquals(MockRM.getClusterTimeStamp(),
+    Assertions.assertEquals(MockRM.getClusterTimeStamp(),
             tokenId.getRMIdentifier());
     rm.stop();
   }
 
-  @Test(timeout = 3000000)
-  public void testAllocateResponseIdOverflow() throws Exception {
+  @Timeout(3000000)
+  @Test
+  void testAllocateResponseIdOverflow() throws Exception {
     MockRM rm = new MockRM(conf);
 
     try {
@@ -188,22 +191,23 @@ public abstract class ApplicationMasterServiceTestBase {
       am1.registerAppAttempt();
 
       // Set the last responseId to be Integer.MAX_VALUE
-      Assert.assertTrue(am1.setApplicationLastResponseId(Integer.MAX_VALUE));
+      Assertions.assertTrue(am1.setApplicationLastResponseId(Integer.MAX_VALUE));
 
       // Both allocate should succeed
       am1.schedule(); // send allocate with responseId = Integer.MAX_VALUE
-      Assert.assertEquals(0, am1.getResponseId());
+      Assertions.assertEquals(0, am1.getResponseId());
 
       am1.schedule(); // send allocate with responseId = 0
-      Assert.assertEquals(1, am1.getResponseId());
+      Assertions.assertEquals(1, am1.getResponseId());
 
     } finally {
       rm.stop();
     }
   }
 
-  @Test(timeout=600000)
-  public void testInvalidContainerReleaseRequest() throws Exception {
+  @Timeout(600000)
+  @Test
+  void testInvalidContainerReleaseRequest() throws Exception {
     MockRM rm = new MockRM(conf);
 
     try {
@@ -232,7 +236,7 @@ public abstract class ApplicationMasterServiceTestBase {
         alloc1Response = am1.schedule();
       }
 
-      Assert.assertTrue(alloc1Response.getAllocatedContainers().size() > 0);
+      Assertions.assertTrue(alloc1Response.getAllocatedContainers().size() > 0);
 
       RMApp app2 = MockRMAppSubmitter.submitWithMemory(1024, rm);
 
@@ -252,15 +256,16 @@ public abstract class ApplicationMasterServiceTestBase {
         sb.append(cId.toString());
         sb.append(" not belonging to this application attempt : ");
         sb.append(attempt2.getAppAttemptId().toString());
-        Assert.assertTrue(e.getMessage().contains(sb.toString()));
+        Assertions.assertTrue(e.getMessage().contains(sb.toString()));
       }
     } finally {
       rm.stop();
     }
   }
 
-  @Test(timeout=1200000)
-  public void testProgressFilter() throws Exception{
+  @Timeout(1200000)
+  @Test
+  void testProgressFilter() throws Exception{
     MockRM rm = new MockRM(conf);
     rm.start();
 
@@ -324,8 +329,9 @@ public abstract class ApplicationMasterServiceTestBase {
     }
   }
 
-  @Test(timeout=1200000)
-  public void testFinishApplicationMasterBeforeRegistering() throws Exception {
+  @Timeout(1200000)
+  @Test
+  void testFinishApplicationMasterBeforeRegistering() throws Exception {
     MockRM rm = new MockRM(conf);
 
     try {
@@ -342,9 +348,9 @@ public abstract class ApplicationMasterServiceTestBase {
         am1.unregisterAppAttempt(req, false);
         fail("ApplicationMasterNotRegisteredException should be thrown");
       } catch (ApplicationMasterNotRegisteredException e) {
-        Assert.assertNotNull(e);
-        Assert.assertNotNull(e.getMessage());
-        Assert.assertTrue(e.getMessage().contains(
+        Assertions.assertNotNull(e);
+        Assertions.assertNotNull(e.getMessage());
+        Assertions.assertTrue(e.getMessage().contains(
             "Application Master is trying to unregister before registering for:"
         ));
       } catch (Exception e) {
@@ -361,8 +367,9 @@ public abstract class ApplicationMasterServiceTestBase {
     }
   }
 
-  @Test(timeout = 1200000)
-  public void testRepeatedFinishApplicationMaster() throws Exception {
+  @Timeout(1200000)
+  @Test
+  void testRepeatedFinishApplicationMaster() throws Exception {
 
     CountingDispatcher dispatcher = new CountingDispatcher();
     MockRM rm = new MockRM(conf) {
@@ -387,8 +394,8 @@ public abstract class ApplicationMasterServiceTestBase {
         am1.unregisterAppAttempt(req, false);
       }
       rm.drainEvents();
-      Assert.assertEquals("Expecting only one event", 1,
-          dispatcher.getEventCount());
+      Assertions.assertEquals(1, dispatcher.getEventCount(),
+          "Expecting only one event");
     } finally {
       rm.stop();
     }
@@ -412,8 +419,9 @@ public abstract class ApplicationMasterServiceTestBase {
     }
   }
 
-  @Test(timeout = 3000000)
-  public void testResourceTypes() throws Exception {
+  @Timeout(3000000)
+  @Test
+  void testResourceTypes() throws Exception {
     HashMap<YarnConfiguration,
         EnumSet<YarnServiceProtos.SchedulerResourceTypes>> driver =
         new HashMap<>();
@@ -464,13 +472,14 @@ public abstract class ApplicationMasterServiceTestBase {
       EnumSet<YarnServiceProtos.SchedulerResourceTypes> types =
               resp.getSchedulerResourceTypes();
       LOG.info("types = " + types.toString());
-      Assert.assertEquals(expectedValue, types);
+      Assertions.assertEquals(expectedValue, types);
       rm.stop();
     }
   }
 
-  @Test(timeout=1200000)
-  public void  testAllocateAfterUnregister() throws Exception {
+  @Timeout(1200000)
+  @Test
+  void  testAllocateAfterUnregister() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
     // Register node1
@@ -495,11 +504,12 @@ public abstract class ApplicationMasterServiceTestBase {
     nm1.nodeHeartbeat(true);
     rm.drainEvents();
     alloc1Response = am1.schedule();
-    Assert.assertEquals(0, alloc1Response.getAllocatedContainers().size());
+    Assertions.assertEquals(0, alloc1Response.getAllocatedContainers().size());
   }
 
-  @Test(timeout = 300000)
-  public void testUpdateTrackingUrl() throws Exception {
+  @Timeout(300000)
+  @Test
+  void testUpdateTrackingUrl() throws Exception {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
     MockRM rm = new MockRM(conf);
@@ -514,7 +524,7 @@ public abstract class ApplicationMasterServiceTestBase {
     RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
     MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
     am1.registerAppAttempt();
-    Assert.assertEquals("N/A", rm.getRMContext().getRMApps().get(
+    Assertions.assertEquals("N/A", rm.getRMContext().getRMApps().get(
         app1.getApplicationId()).getOriginalTrackingUrl());
 
     AllocateRequestPBImpl allocateRequest = new AllocateRequestPBImpl();
@@ -526,18 +536,19 @@ public abstract class ApplicationMasterServiceTestBase {
     // wait until RMAppAttemptEventType.STATUS_UPDATE is handled
     rm.drainEvents();
 
-    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+    Assertions.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
         app1.getApplicationId()).getOriginalTrackingUrl());
 
     // Send it again
     am1.allocate(allocateRequest);
-    Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
+    Assertions.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
         app1.getApplicationId()).getOriginalTrackingUrl());
     rm.stop();
   }
 
-  @Test(timeout = 300000)
-  public void testValidateRequestCapacityAgainstMinMaxAllocation()
+  @Timeout(300000)
+  @Test
+  void testValidateRequestCapacityAgainstMinMaxAllocation()
       throws Exception {
     Map<String, ResourceInformation> riMap =
         initializeMandatoryResources();
@@ -582,7 +593,7 @@ public abstract class ApplicationMasterServiceTestBase {
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
-    Assert.assertTrue(exception);
+    Assertions.assertTrue(exception);
 
     exception = false;
     try {
@@ -595,13 +606,14 @@ public abstract class ApplicationMasterServiceTestBase {
     } catch (InvalidResourceRequestException e) {
       exception = true;
     }
-    Assert.assertTrue(exception);
+    Assertions.assertTrue(exception);
 
     rm.close();
   }
 
-  @Test(timeout = 300000)
-  public void testRequestCapacityMinMaxAllocationForResourceTypes()
+  @Timeout(300000)
+  @Test
+  void testRequestCapacityMinMaxAllocationForResourceTypes()
       throws Exception {
     Map<String, ResourceInformation> riMap = initializeMandatoryResources();
     ResourceInformation res1 = ResourceInformation.newInstance(CUSTOM_RES,
@@ -637,25 +649,25 @@ public abstract class ApplicationMasterServiceTestBase {
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-    Assert.assertEquals(Resource.newInstance(GB, 1),
+    Assertions.assertEquals(Resource.newInstance(GB, 1),
         getResourceUsageForQueue(rm, getDefaultQueueName()));
 
     // Request memory > allowed
     try {
       requestResources(am1, 9 * GB, 1, ImmutableMap.of());
-      Assert.fail("Should throw InvalidResourceRequestException");
+      Assertions.fail("Should throw InvalidResourceRequestException");
     } catch (InvalidResourceRequestException ignored) {}
 
     try {
       // Request vcores > allowed
       requestResources(am1, GB, 18, ImmutableMap.of());
-      Assert.fail("Should throw InvalidResourceRequestException");
+      Assertions.fail("Should throw InvalidResourceRequestException");
     } catch (InvalidResourceRequestException ignored) {}
 
     try {
       // Request custom resource 'res_1' > allowed
       requestResources(am1, GB, 2, ImmutableMap.of(CUSTOM_RES, 100));
-      Assert.fail("Should throw InvalidResourceRequestException");
+      Assertions.fail("Should throw InvalidResourceRequestException");
     } catch (InvalidResourceRequestException ignored) {}
 
     rm.close();

@@ -25,8 +25,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 
 public class TestPreemptionForQueueWithPriorities
     extends ProportionalCapacityPreemptionPolicyMockFramework {
-  @Before
+  @BeforeEach
   public void setup() {
     resourceCalculator = new DefaultResourceCalculator();
     super.setup();
@@ -46,7 +46,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPreemptionForHighestPriorityUnderutilizedQueue()
+  void testPreemptionForHighestPriorityUnderutilizedQueue()
       throws IOException {
     /**
      * The simplest test of queue with priorities, Queue structure is:
@@ -95,7 +95,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPreemptionForLowestPriorityUnderutilizedQueue()
+  void testPreemptionForLowestPriorityUnderutilizedQueue()
       throws IOException {
     /**
      * Similar to above, make sure we can still make sure less utilized queue
@@ -148,7 +148,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPreemptionWontHappenBetweenSatisfiedQueues()
+  void testPreemptionWontHappenBetweenSatisfiedQueues()
       throws IOException {
     /**
      * No preemption happen if a queue is already satisfied, regardless of
@@ -195,7 +195,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPreemptionForMultipleQueuesInTheSamePriorityBuckets()
+  void testPreemptionForMultipleQueuesInTheSamePriorityBuckets()
       throws IOException {
     /**
      * When a cluster has different priorities, each priority has multiple
@@ -252,7 +252,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPreemptionForPriorityAndDisablePreemption()
+  void testPreemptionForPriorityAndDisablePreemption()
       throws IOException {
     /**
      * When a cluster has different priorities, each priority has multiple
@@ -311,7 +311,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPriorityPreemptionForHierarchicalOfQueues()
+  void testPriorityPreemptionForHierarchicalOfQueues()
       throws IOException {
     /**
      * When a queue has multiple hierarchy and different priorities:
@@ -368,7 +368,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPriorityPreemptionWithMandatoryResourceForHierarchicalOfQueues()
+  void testPriorityPreemptionWithMandatoryResourceForHierarchicalOfQueues()
       throws Exception {
     /**
      * Queue structure is:
@@ -424,7 +424,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPriorityPreemptionWithMultipleResource()
+  void testPriorityPreemptionWithMultipleResource()
       throws Exception {
     String RESOURCE_1 = "res1";
 
@@ -489,7 +489,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void test3ResourceTypesInterQueuePreemption() throws IOException {
+  void test3ResourceTypesInterQueuePreemption() throws IOException {
     resourceCalculator = new DominantResourceCalculator();
     when(cs.getResourceCalculator()).thenReturn(resourceCalculator);
 
@@ -542,7 +542,7 @@ public class TestPreemptionForQueueWithPriorities
   }
 
   @Test
-  public void testPriorityPreemptionForBalanceBetweenSatisfiedQueues()
+  void testPriorityPreemptionForBalanceBetweenSatisfiedQueues()
       throws IOException {
     /**
      * All queues are beyond guarantee, c has higher priority than b.

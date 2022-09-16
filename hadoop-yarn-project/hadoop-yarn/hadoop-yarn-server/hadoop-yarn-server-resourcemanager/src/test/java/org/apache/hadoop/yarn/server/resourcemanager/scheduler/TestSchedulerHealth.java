@@ -40,13 +40,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestSchedulerHealth {
 
@@ -74,7 +74,7 @@ public class TestSchedulerHealth {
   }
 
   @Test
-  public void testCounts() {
+  void testCounts() {
 
     SchedulerHealth sh = new SchedulerHealth();
     int value = 1;
@@ -84,92 +84,92 @@ public class TestSchedulerHealth {
       sh.updateSchedulerReservationCounts(value);
       sh.updateSchedulerReleaseCounts(value);
 
-      Assert.assertEquals(value, sh.getAllocationCount().longValue());
-      Assert.assertEquals(value, sh.getReleaseCount().longValue());
-      Assert.assertEquals(value, sh.getReservationCount().longValue());
-      Assert.assertEquals(value, sh.getPreemptionCount().longValue());
+      Assertions.assertEquals(value, sh.getAllocationCount().longValue());
+      Assertions.assertEquals(value, sh.getReleaseCount().longValue());
+      Assertions.assertEquals(value, sh.getReservationCount().longValue());
+      Assertions.assertEquals(value, sh.getPreemptionCount().longValue());
 
-      Assert.assertEquals(value * (i + 1), sh.getAggregateAllocationCount()
+      Assertions.assertEquals(value * (i + 1), sh.getAggregateAllocationCount()
         .longValue());
-      Assert.assertEquals(value * (i + 1), sh.getAggregateReleaseCount()
+      Assertions.assertEquals(value * (i + 1), sh.getAggregateReleaseCount()
         .longValue());
-      Assert.assertEquals(value * (i + 1), sh.getAggregateReservationCount()
+      Assertions.assertEquals(value * (i + 1), sh.getAggregateReservationCount()
         .longValue());
-      Assert.assertEquals(value * (i + 1), sh.getAggregatePreemptionCount()
+      Assertions.assertEquals(value * (i + 1), sh.getAggregatePreemptionCount()
         .longValue());
 
     }
   }
 
   @Test
-  public void testOperationDetails() {
+  void testOperationDetails() {
 
     SchedulerHealth sh = new SchedulerHealth();
     long now = Time.now();
     sh.updateRelease(now, NodeId.newInstance("testhost", 1234),
       ContainerId.fromString("container_1427562107907_0002_01_000001"),
       "testqueue");
-    Assert.assertEquals("container_1427562107907_0002_01_000001", sh
+    Assertions.assertEquals("container_1427562107907_0002_01_000001", sh
       .getLastReleaseDetails().getContainerId().toString());
-    Assert.assertEquals("testhost:1234", sh.getLastReleaseDetails().getNodeId()
+    Assertions.assertEquals("testhost:1234", sh.getLastReleaseDetails().getNodeId()
       .toString());
-    Assert.assertEquals("testqueue", sh.getLastReleaseDetails().getQueue());
-    Assert.assertEquals(now, sh.getLastReleaseDetails().getTimestamp());
-    Assert.assertEquals(0, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals("testqueue", sh.getLastReleaseDetails().getQueue());
+    Assertions.assertEquals(now, sh.getLastReleaseDetails().getTimestamp());
+    Assertions.assertEquals(0, sh.getLastSchedulerRunTime());
 
     now = Time.now();
     sh.updateReservation(now, NodeId.newInstance("testhost1", 1234),
       ContainerId.fromString("container_1427562107907_0003_01_000001"),
       "testqueue1");
-    Assert.assertEquals("container_1427562107907_0003_01_000001", sh
+    Assertions.assertEquals("container_1427562107907_0003_01_000001", sh
       .getLastReservationDetails().getContainerId().toString());
-    Assert.assertEquals("testhost1:1234", sh.getLastReservationDetails()
+    Assertions.assertEquals("testhost1:1234", sh.getLastReservationDetails()
       .getNodeId().toString());
-    Assert
+    Assertions
       .assertEquals("testqueue1", sh.getLastReservationDetails().getQueue());
-    Assert.assertEquals(now, sh.getLastReservationDetails().getTimestamp());
-    Assert.assertEquals(0, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals(now, sh.getLastReservationDetails().getTimestamp());
+    Assertions.assertEquals(0, sh.getLastSchedulerRunTime());
 
     now = Time.now();
     sh.updateAllocation(now, NodeId.newInstance("testhost2", 1234),
       ContainerId.fromString("container_1427562107907_0004_01_000001"),
       "testqueue2");
-    Assert.assertEquals("container_1427562107907_0004_01_000001", sh
+    Assertions.assertEquals("container_1427562107907_0004_01_000001", sh
       .getLastAllocationDetails().getContainerId().toString());
-    Assert.assertEquals("testhost2:1234", sh.getLastAllocationDetails()
+    Assertions.assertEquals("testhost2:1234", sh.getLastAllocationDetails()
       .getNodeId().toString());
-    Assert.assertEquals("testqueue2", sh.getLastAllocationDetails().getQueue());
-    Assert.assertEquals(now, sh.getLastAllocationDetails().getTimestamp());
-    Assert.assertEquals(0, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals("testqueue2", sh.getLastAllocationDetails().getQueue());
+    Assertions.assertEquals(now, sh.getLastAllocationDetails().getTimestamp());
+    Assertions.assertEquals(0, sh.getLastSchedulerRunTime());
 
     now = Time.now();
     sh.updatePreemption(now, NodeId.newInstance("testhost3", 1234),
       ContainerId.fromString("container_1427562107907_0005_01_000001"),
       "testqueue3");
-    Assert.assertEquals("container_1427562107907_0005_01_000001", sh
+    Assertions.assertEquals("container_1427562107907_0005_01_000001", sh
       .getLastPreemptionDetails().getContainerId().toString());
-    Assert.assertEquals("testhost3:1234", sh.getLastPreemptionDetails()
+    Assertions.assertEquals("testhost3:1234", sh.getLastPreemptionDetails()
       .getNodeId().toString());
-    Assert.assertEquals("testqueue3", sh.getLastPreemptionDetails().getQueue());
-    Assert.assertEquals(now, sh.getLastPreemptionDetails().getTimestamp());
-    Assert.assertEquals(0, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals("testqueue3", sh.getLastPreemptionDetails().getQueue());
+    Assertions.assertEquals(now, sh.getLastPreemptionDetails().getTimestamp());
+    Assertions.assertEquals(0, sh.getLastSchedulerRunTime());
   }
 
   @Test
-  public void testResourceUpdate() {
+  void testResourceUpdate() {
     SchedulerHealth sh = new SchedulerHealth();
     long now = Time.now();
     sh.updateSchedulerRunDetails(now, Resource.newInstance(1024, 1),
       Resource.newInstance(2048, 1));
-    Assert.assertEquals(now, sh.getLastSchedulerRunTime());
-    Assert.assertEquals(Resource.newInstance(1024, 1),
+    Assertions.assertEquals(now, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals(Resource.newInstance(1024, 1),
       sh.getResourcesAllocated());
-    Assert.assertEquals(Resource.newInstance(2048, 1),
+    Assertions.assertEquals(Resource.newInstance(2048, 1),
       sh.getResourcesReserved());
     now = Time.now();
     sh.updateSchedulerReleaseDetails(now, Resource.newInstance(3072, 1));
-    Assert.assertEquals(now, sh.getLastSchedulerRunTime());
-    Assert.assertEquals(Resource.newInstance(3072, 1),
+    Assertions.assertEquals(now, sh.getLastSchedulerRunTime());
+    Assertions.assertEquals(Resource.newInstance(3072, 1),
       sh.getResourcesReleased());
   }
 
@@ -195,14 +195,14 @@ public class TestSchedulerHealth {
   }
 
   @Test
-  public void testCapacitySchedulerAllocation() throws Exception {
+  void testCapacitySchedulerAllocation() throws Exception {
 
     setup();
 
     boolean isCapacityScheduler =
         resourceManager.getResourceScheduler() instanceof CapacityScheduler;
-    assumeTrue("This test is only supported on Capacity Scheduler",
-      isCapacityScheduler);
+    assumeTrue(isCapacityScheduler,
+        "This test is only supported on Capacity Scheduler");
 
     NodeStatus mockNodeStatus = createMockNodeStatus();
 
@@ -246,13 +246,13 @@ public class TestSchedulerHealth {
           .getSchedulerHealth();
     // Now SchedulerHealth records last container allocated, aggregated
     // allocation account will not be changed
-    Assert.assertEquals(1, sh.getAllocationCount().longValue());
-    Assert.assertEquals(Resource.newInstance(1 * 1024, 1),
+    Assertions.assertEquals(1, sh.getAllocationCount().longValue());
+    Assertions.assertEquals(Resource.newInstance(1 * 1024, 1),
       sh.getResourcesAllocated());
-    Assert.assertEquals(2, sh.getAggregateAllocationCount().longValue());
-    Assert.assertEquals("host_0:1234", sh.getLastAllocationDetails()
+    Assertions.assertEquals(2, sh.getAggregateAllocationCount().longValue());
+    Assertions.assertEquals("host_0:1234", sh.getLastAllocationDetails()
       .getNodeId().toString());
-    Assert.assertEquals("root.default", sh.getLastAllocationDetails()
+    Assertions.assertEquals("root.default", sh.getLastAllocationDetails()
       .getQueue());
 
     Task task_0_2 =
@@ -261,25 +261,25 @@ public class TestSchedulerHealth {
     application_0.schedule();
 
     nodeUpdate(nm_0);
-    Assert.assertEquals(1, sh.getAllocationCount().longValue());
-    Assert.assertEquals(Resource.newInstance(2 * 1024, 1),
+    Assertions.assertEquals(1, sh.getAllocationCount().longValue());
+    Assertions.assertEquals(Resource.newInstance(2 * 1024, 1),
       sh.getResourcesAllocated());
-    Assert.assertEquals(3, sh.getAggregateAllocationCount().longValue());
-    Assert.assertEquals("host_0:1234", sh.getLastAllocationDetails()
+    Assertions.assertEquals(3, sh.getAggregateAllocationCount().longValue());
+    Assertions.assertEquals("host_0:1234", sh.getLastAllocationDetails()
       .getNodeId().toString());
-    Assert.assertEquals("root.default", sh.getLastAllocationDetails()
+    Assertions.assertEquals("root.default", sh.getLastAllocationDetails()
       .getQueue());
   }
 
   @Test
-  public void testCapacitySchedulerReservation() throws Exception {
+  void testCapacitySchedulerReservation() throws Exception {
 
     setup();
 
     boolean isCapacityScheduler =
         resourceManager.getResourceScheduler() instanceof CapacityScheduler;
-    assumeTrue("This test is only supported on Capacity Scheduler",
-      isCapacityScheduler);
+    assumeTrue(isCapacityScheduler,
+        "This test is only supported on Capacity Scheduler");
 
     NodeStatus mockNodeStatus = createMockNodeStatus();
 
@@ -325,13 +325,13 @@ public class TestSchedulerHealth {
     SchedulerHealth sh =
         ((CapacityScheduler) resourceManager.getResourceScheduler())
           .getSchedulerHealth();
-    Assert.assertEquals(1, sh.getAllocationCount().longValue());
-    Assert.assertEquals(Resource.newInstance(1024, 1),
+    Assertions.assertEquals(1, sh.getAllocationCount().longValue());
+    Assertions.assertEquals(Resource.newInstance(1024, 1),
       sh.getResourcesAllocated());
-    Assert.assertEquals(1, sh.getAggregateAllocationCount().longValue());
-    Assert.assertEquals("host_0:1234", sh.getLastAllocationDetails()
+    Assertions.assertEquals(1, sh.getAggregateAllocationCount().longValue());
+    Assertions.assertEquals("host_0:1234", sh.getLastAllocationDetails()
       .getNodeId().toString());
-    Assert.assertEquals("root.default", sh.getLastAllocationDetails()
+    Assertions.assertEquals("root.default", sh.getLastAllocationDetails()
       .getQueue());
 
     Task task_0_1 =
@@ -340,14 +340,14 @@ public class TestSchedulerHealth {
     application_0.schedule();
 
     nodeUpdate(nm_0);
-    Assert.assertEquals(0, sh.getAllocationCount().longValue());
-    Assert.assertEquals(1, sh.getReservationCount().longValue());
-    Assert.assertEquals(Resource.newInstance(2 * 1024, 1),
+    Assertions.assertEquals(0, sh.getAllocationCount().longValue());
+    Assertions.assertEquals(1, sh.getReservationCount().longValue());
+    Assertions.assertEquals(Resource.newInstance(2 * 1024, 1),
       sh.getResourcesReserved());
-    Assert.assertEquals(1, sh.getAggregateAllocationCount().longValue());
-    Assert.assertEquals("host_0:1234", sh.getLastAllocationDetails()
+    Assertions.assertEquals(1, sh.getAggregateAllocationCount().longValue());
+    Assertions.assertEquals("host_0:1234", sh.getLastAllocationDetails()
       .getNodeId().toString());
-    Assert.assertEquals("root.default", sh.getLastAllocationDetails()
+    Assertions.assertEquals("root.default", sh.getLastAllocationDetails()
       .getQueue());
   }
 }

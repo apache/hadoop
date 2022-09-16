@@ -16,9 +16,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -34,17 +34,15 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,13 +50,10 @@ import org.slf4j.LoggerFactory;
  * Unit tests for FSConfigToCSConfigArgumentHandler.
  *
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestFSConfigToCSConfigArgumentHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFSConfigToCSConfigArgumentHandler.class);
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Mock
   private FSConfigToCSConfigConverter mockConverter;
@@ -71,7 +66,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
   private FSConfigConverterTestCommons fsTestCommons;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fsTestCommons = new FSConfigConverterTestCommons();
     fsTestCommons.setUp();
@@ -79,7 +74,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
     conversionOptions = new ConversionOptions(dryRunResultHolder, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     QueueMetrics.clearQueueMetrics();
     fsTestCommons.tearDown();
@@ -144,7 +139,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testMissingYarnSiteXmlArgument() throws Exception {
+  void testMissingYarnSiteXmlArgument() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -154,14 +149,14 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.OUTPUT_DIR};
 
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
+    assertEquals(-1, retVal, "Return value");
 
-    assertTrue("Error content missing", fsTestCommons.getErrContent()
-        .toString().contains("Missing yarn-site.xml parameter"));
+    assertTrue(fsTestCommons.getErrContent()
+        .toString().contains("Missing yarn-site.xml parameter"), "Error content missing");
   }
 
   @Test
-  public void testMissingFairSchedulerXmlArgument() throws Exception {
+  void testMissingFairSchedulerXmlArgument() throws Exception {
     setupFSConfigConversionFiles(true);
     FSConfigToCSConfigArgumentHandler argumentHandler =
         createArgumentHandler();
@@ -170,7 +165,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testMissingOutputDirArgument() throws Exception {
+  void testMissingOutputDirArgument() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -180,15 +175,15 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.YARN_SITE_XML};
 
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
+    assertEquals(-1, retVal, "Return value");
 
-    assertTrue("Error content missing", fsTestCommons.getErrContent()
+    assertTrue(fsTestCommons.getErrContent()
         .toString()
-        .contains("Output directory or console mode was not defined"));
+        .contains("Output directory or console mode was not defined"), "Error content missing");
   }
 
   @Test
-  public void testMissingRulesConfiguration() throws Exception {
+  void testMissingRulesConfiguration() throws Exception {
     setupFSConfigConversionFiles(true);
     FSConfigToCSConfigArgumentHandler argumentHandler =
         createArgumentHandler();
@@ -197,7 +192,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testInvalidRulesConfigFile() throws Exception {
+  void testInvalidRulesConfigFile() throws Exception {
     FSConfigConverterTestCommons.configureYarnSiteXmlWithFsAllocFileDefined();
     FSConfigConverterTestCommons.configureFairSchedulerXml();
     FSConfigConverterTestCommons.configureInvalidConversionRulesFile();
@@ -210,7 +205,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testInvalidOutputDir() throws Exception {
+  void testInvalidOutputDir() throws Exception {
     FSConfigConverterTestCommons.configureYarnSiteXmlWithFsAllocFileDefined();
     FSConfigConverterTestCommons.configureFairSchedulerXml();
     FSConfigConverterTestCommons.configureDummyConversionRulesFile();
@@ -223,15 +218,15 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.YARN_SITE_XML);
 
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
-    assertTrue("Error content missing", fsTestCommons.getErrContent()
+    assertEquals(-1, retVal, "Return value");
+    assertTrue(fsTestCommons.getErrContent()
         .toString()
         .contains("Cannot start FS config conversion due to the following " +
-            "precondition error"));
+            "precondition error"), "Error content missing");
   }
 
   @Test
-  public void testVerificationException() throws Exception {
+  void testVerificationException() throws Exception {
     setupFSConfigConversionFiles(true);
     ConversionOptions mockOptions = Mockito.mock(ConversionOptions.class);
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -253,7 +248,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testFairSchedulerXmlIsNotDefinedIfItsDefinedInYarnSiteXml()
+  void testFairSchedulerXmlIsNotDefinedIfItsDefinedInYarnSiteXml()
       throws Exception {
     setupFSConfigConversionFiles(true);
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -262,7 +257,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testEmptyYarnSiteXmlSpecified() throws Exception {
+  void testEmptyYarnSiteXmlSpecified() throws Exception {
     FSConfigConverterTestCommons.configureFairSchedulerXml();
     FSConfigConverterTestCommons.configureEmptyYarnSiteXml();
     FSConfigConverterTestCommons.configureDummyConversionRulesFile();
@@ -276,7 +271,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testEmptyFairSchedulerXmlSpecified() throws Exception {
+  void testEmptyFairSchedulerXmlSpecified() throws Exception {
     FSConfigConverterTestCommons.configureEmptyFairSchedulerXml();
     FSConfigConverterTestCommons.configureEmptyYarnSiteXml();
     FSConfigConverterTestCommons.configureDummyConversionRulesFile();
@@ -290,7 +285,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testEmptyRulesConfigurationSpecified() throws Exception {
+  void testEmptyRulesConfigurationSpecified() throws Exception {
     FSConfigConverterTestCommons.configureEmptyFairSchedulerXml();
     FSConfigConverterTestCommons.configureEmptyYarnSiteXml();
     FSConfigConverterTestCommons.configureEmptyConversionRulesFile();
@@ -305,7 +300,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testConvertFSConfigurationDefaults() throws Exception {
+  void testConvertFSConfigurationDefaults() throws Exception {
     setupFSConfigConversionFiles(true);
 
     ArgumentCaptor<FSConfigToCSConfigConverterParams> conversionParams =
@@ -324,19 +319,19 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = conversionParams.getValue();
     LOG.info("FS config converter parameters: " + params);
 
-    assertEquals("Yarn site config",
-        FSConfigConverterTestCommons.YARN_SITE_XML,
-        params.getYarnSiteXmlConfig());
-    assertEquals("FS xml", FSConfigConverterTestCommons.FS_ALLOC_FILE,
-        params.getFairSchedulerXmlConfig());
-    assertEquals("Conversion rules config",
-        FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
-        params.getConversionRulesConfig());
-    assertFalse("Console mode", params.isConsole());
+    assertEquals(FSConfigConverterTestCommons.YARN_SITE_XML,
+        params.getYarnSiteXmlConfig(),
+        "Yarn site config");
+    assertEquals(FSConfigConverterTestCommons.FS_ALLOC_FILE, params.getFairSchedulerXmlConfig(),
+        "FS xml");
+    assertEquals(FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
+        params.getConversionRulesConfig(),
+        "Conversion rules config");
+    assertFalse(params.isConsole(), "Console mode");
   }
 
   @Test
-  public void testConvertFSConfigurationWithConsoleParam()
+  void testConvertFSConfigurationWithConsoleParam()
       throws Exception {
     setupFSConfigConversionFiles(true);
 
@@ -356,19 +351,19 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = conversionParams.getValue();
     LOG.info("FS config converter parameters: " + params);
 
-    assertEquals("Yarn site config",
-        FSConfigConverterTestCommons.YARN_SITE_XML,
-        params.getYarnSiteXmlConfig());
-    assertEquals("FS xml", FSConfigConverterTestCommons.FS_ALLOC_FILE,
-        params.getFairSchedulerXmlConfig());
-    assertEquals("Conversion rules config",
-        FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
-        params.getConversionRulesConfig());
-    assertTrue("Console mode", params.isConsole());
+    assertEquals(FSConfigConverterTestCommons.YARN_SITE_XML,
+        params.getYarnSiteXmlConfig(),
+        "Yarn site config");
+    assertEquals(FSConfigConverterTestCommons.FS_ALLOC_FILE, params.getFairSchedulerXmlConfig(),
+        "FS xml");
+    assertEquals(FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
+        params.getConversionRulesConfig(),
+        "Conversion rules config");
+    assertTrue(params.isConsole(), "Console mode");
   }
 
   @Test
-  public void testConvertFSConfigurationClusterResource()
+  void testConvertFSConfigurationClusterResource()
       throws Exception {
     setupFSConfigConversionFiles(true);
 
@@ -389,22 +384,22 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = conversionParams.getValue();
     LOG.info("FS config converter parameters: " + params);
 
-    assertEquals("Yarn site config",
-        FSConfigConverterTestCommons.YARN_SITE_XML,
-        params.getYarnSiteXmlConfig());
-    assertEquals("FS xml",
-        FSConfigConverterTestCommons.FS_ALLOC_FILE,
-        params.getFairSchedulerXmlConfig());
-    assertEquals("Conversion rules config",
-        FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
-        params.getConversionRulesConfig());
-    assertEquals("Cluster resource", "vcores=20, memory-mb=240",
-        params.getClusterResource());
-    assertTrue("Console mode", params.isConsole());
+    assertEquals(FSConfigConverterTestCommons.YARN_SITE_XML,
+        params.getYarnSiteXmlConfig(),
+        "Yarn site config");
+    assertEquals(FSConfigConverterTestCommons.FS_ALLOC_FILE,
+        params.getFairSchedulerXmlConfig(),
+        "FS xml");
+    assertEquals(FSConfigConverterTestCommons.CONVERSION_RULES_FILE,
+        params.getConversionRulesConfig(),
+        "Conversion rules config");
+    assertEquals("vcores=20, memory-mb=240",
+        params.getClusterResource(), "Cluster resource");
+    assertTrue(params.isConsole(), "Console mode");
   }
 
   @Test
-  public void testConvertFSConfigurationErrorHandling() throws Exception {
+  void testConvertFSConfigurationErrorHandling() throws Exception {
     setupFSConfigConversionFiles(true);
 
     String[] args = getArgumentsAsArrayWithDefaults("-f",
@@ -417,13 +412,13 @@ public class TestFSConfigToCSConfigArgumentHandler {
       .when(mockConverter)
       .convert(ArgumentMatchers.any(FSConfigToCSConfigConverterParams.class));
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
-    assertTrue("Error content missing", fsTestCommons.getErrContent()
-        .toString().contains("Unsupported property/setting encountered"));
+    assertEquals(-1, retVal, "Return value");
+    assertTrue(fsTestCommons.getErrContent()
+        .toString().contains("Unsupported property/setting encountered"), "Error content missing");
   }
 
   @Test
-  public void testConvertFSConfigurationErrorHandling2() throws Exception {
+  void testConvertFSConfigurationErrorHandling2() throws Exception {
     setupFSConfigConversionFiles(true);
 
     String[] args = getArgumentsAsArrayWithDefaults("-f",
@@ -435,33 +430,33 @@ public class TestFSConfigToCSConfigArgumentHandler {
     Mockito.doThrow(ConversionException.class).when(mockConverter)
       .convert(ArgumentMatchers.any(FSConfigToCSConfigConverterParams.class));
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
-    assertTrue("Error content missing", fsTestCommons.getErrContent()
-        .toString().contains("Fatal error during FS config conversion"));
+    assertEquals(-1, retVal, "Return value");
+    assertTrue(fsTestCommons.getErrContent()
+        .toString().contains("Fatal error during FS config conversion"), "Error content missing");
   }
 
   @Test
-  public void testDryRunWhenPreconditionExceptionOccurs() throws Exception {
+  void testDryRunWhenPreconditionExceptionOccurs() throws Exception {
     testDryRunWithException(new PreconditionException("test"),
         "Cannot start FS config conversion");
   }
 
   @Test
-  public void testDryRunWhenUnsupportedPropertyExceptionExceptionOccurs()
+  void testDryRunWhenUnsupportedPropertyExceptionExceptionOccurs()
       throws Exception {
     testDryRunWithException(new UnsupportedPropertyException("test"),
         "Unsupported property/setting encountered");
   }
 
   @Test
-  public void testDryRunWhenConversionExceptionExceptionOccurs()
+  void testDryRunWhenConversionExceptionExceptionOccurs()
       throws Exception {
     testDryRunWithException(new ConversionException("test"),
         "Fatal error during FS config conversion");
   }
 
   @Test
-  public void testDryRunWhenIllegalArgumentExceptionExceptionOccurs()
+  void testDryRunWhenIllegalArgumentExceptionExceptionOccurs()
       throws Exception {
     testDryRunWithException(new IllegalArgumentException("test"),
         "Fatal error during FS config conversion");
@@ -483,15 +478,15 @@ public class TestFSConfigToCSConfigArgumentHandler {
       .convert(ArgumentMatchers.any(FSConfigToCSConfigConverterParams.class));
 
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
-    assertEquals("Number of errors", 1, dryRunResultHolder.getErrors().size());
+    assertEquals(-1, retVal, "Return value");
+    assertEquals(1, dryRunResultHolder.getErrors().size(), "Number of errors");
     String error = dryRunResultHolder.getErrors().iterator().next();
-    assertTrue("Unexpected error message",
-        error.contains(expectedErrorMessage));
+    assertTrue(error.contains(expectedErrorMessage),
+        "Unexpected error message");
   }
 
   @Test
-  public void testDisabledTerminalRuleCheck() throws Exception {
+  void testDisabledTerminalRuleCheck() throws Exception {
     setupFSConfigConversionFiles(true);
 
     String[] args = getArgumentsAsArrayWithDefaults("-f",
@@ -505,12 +500,12 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     argumentHandler.parseAndConvert(args);
 
-    assertTrue("-t switch had no effect",
-        conversionOptions.isNoRuleTerminalCheck());
+    assertTrue(conversionOptions.isNoRuleTerminalCheck(),
+        "-t switch had no effect");
   }
 
   @Test
-  public void testEnabledTerminalRuleCheck() throws Exception {
+  void testEnabledTerminalRuleCheck() throws Exception {
     setupFSConfigConversionFiles(true);
 
     String[] args = getArgumentsAsArrayWithDefaults("-f",
@@ -523,12 +518,12 @@ public class TestFSConfigToCSConfigArgumentHandler {
 
     argumentHandler.parseAndConvert(args);
 
-    assertFalse("No terminal rule check was enabled",
-        conversionOptions.isNoRuleTerminalCheck());
+    assertFalse(conversionOptions.isNoRuleTerminalCheck(),
+        "No terminal rule check was enabled");
   }
 
   @Test
-  public void testYarnSiteOptionInOutputFolder() throws Exception {
+  void testYarnSiteOptionInOutputFolder() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -539,7 +534,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
         "-o", FSConfigConverterTestCommons.TEST_DIR};
 
     int retVal = argumentHandler.parseAndConvert(args);
-    assertEquals("Return value", -1, retVal);
+    assertEquals(-1, retVal, "Return value");
 
     assertTrue(fsTestCommons.getErrContent()
         .toString().contains("contains the yarn-site.xml"));
@@ -561,7 +556,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
           "-e"};
 
       int retVal = argumentHandler.parseAndConvert(args);
-      assertEquals("Return value", -1, retVal);
+      assertEquals(-1, retVal, "Return value");
 
       String expectedMessage = String.format(
           "already contains a file or directory named %s", file);
@@ -576,32 +571,32 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testYarnSiteExistsInOutputFolder() throws Exception {
+  void testYarnSiteExistsInOutputFolder() throws Exception {
     testFileExistsInOutputFolder(
         YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
   }
 
   @Test
-  public void testCapacitySchedulerXmlExistsInOutputFolder()
+  void testCapacitySchedulerXmlExistsInOutputFolder()
       throws Exception {
     testFileExistsInOutputFolder(
         YarnConfiguration.CS_CONFIGURATION_FILE);
   }
 
   @Test
-  public void testMappingRulesJsonExistsInOutputFolder()
+  void testMappingRulesJsonExistsInOutputFolder()
       throws Exception {
     testFileExistsInOutputFolder(
         "mapping-rules.json");
   }
 
   @Test
-  public void testPlacementRulesConversionEnabled() throws Exception {
+  void testPlacementRulesConversionEnabled() throws Exception {
     testPlacementRuleConversion(true);
   }
 
   @Test
-  public void testPlacementRulesConversionDisabled() throws Exception {
+  void testPlacementRulesConversionDisabled() throws Exception {
     testPlacementRuleConversion(false);
   }
 
@@ -631,11 +626,11 @@ public class TestFSConfigToCSConfigArgumentHandler {
     FSConfigToCSConfigConverterParams params = captor.getValue();
 
     if (enabled) {
-      assertTrue("Conversion should be enabled by default",
-          params.isConvertPlacementRules());
+      assertTrue(params.isConvertPlacementRules(),
+          "Conversion should be enabled by default");
     } else {
-      assertFalse("-sp switch had no effect",
-          params.isConvertPlacementRules());
+      assertFalse(params.isConvertPlacementRules(),
+          "-sp switch had no effect");
     }
   }
 
@@ -654,7 +649,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testValidationSkippedWhenCmdLineSwitchIsDefined()
+  void testValidationSkippedWhenCmdLineSwitchIsDefined()
       throws Exception {
     setupFSConfigConversionFiles(true);
 
@@ -670,7 +665,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testValidationSkippedWhenOutputIsConsole() throws Exception {
+  void testValidationSkippedWhenOutputIsConsole() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -685,7 +680,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
   }
 
   @Test
-  public void testEnabledAsyncScheduling() throws Exception {
+  void testEnabledAsyncScheduling() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -696,12 +691,12 @@ public class TestFSConfigToCSConfigArgumentHandler {
             "-a");
     argumentHandler.parseAndConvert(args);
 
-    assertTrue("-a switch had no effect",
-            conversionOptions.isEnableAsyncScheduler());
+    assertTrue(conversionOptions.isEnableAsyncScheduler(),
+            "-a switch had no effect");
   }
 
   @Test
-  public void testDisabledAsyncScheduling() throws Exception {
+  void testDisabledAsyncScheduling() throws Exception {
     setupFSConfigConversionFiles(true);
 
     FSConfigToCSConfigArgumentHandler argumentHandler =
@@ -711,17 +706,17 @@ public class TestFSConfigToCSConfigArgumentHandler {
             FSConfigConverterTestCommons.FS_ALLOC_FILE, "-p");
     argumentHandler.parseAndConvert(args);
 
-    assertFalse("-a switch wasn't provided but async scheduling option is true",
-            conversionOptions.isEnableAsyncScheduler());
+    assertFalse(conversionOptions.isEnableAsyncScheduler(),
+            "-a switch wasn't provided but async scheduling option is true");
   }
 
   @Test
-  public void testUsePercentages() throws Exception {
+  void testUsePercentages() throws Exception {
     testUsePercentages(true);
   }
 
   @Test
-  public void testUseWeights() throws Exception {
+  void testUseWeights() throws Exception {
     testUsePercentages(false);
   }
 
@@ -749,6 +744,6 @@ public class TestFSConfigToCSConfigArgumentHandler {
     verify(mockConverter).convert(captor.capture());
     FSConfigToCSConfigConverterParams params = captor.getValue();
 
-    assertEquals("Use percentages", enabled, params.isUsePercentages());
+    assertEquals(enabled, params.isUsePercentages(), "Use percentages");
   }
 }

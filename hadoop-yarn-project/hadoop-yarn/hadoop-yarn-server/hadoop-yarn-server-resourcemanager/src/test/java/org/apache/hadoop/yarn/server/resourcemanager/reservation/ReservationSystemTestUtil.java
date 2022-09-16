@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSec
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -98,13 +98,13 @@ public class ReservationSystemTestUtil {
   public static void validateReservationQueue(
       AbstractReservationSystem reservationSystem, String planQName) {
     Plan plan = reservationSystem.getPlan(planQName);
-    Assert.assertNotNull(plan);
-    Assert.assertTrue(plan instanceof InMemoryPlan);
-    Assert.assertEquals(planQName, plan.getQueueName());
-    Assert.assertEquals(8192, plan.getTotalCapacity().getMemorySize());
-    Assert.assertTrue(
+    Assertions.assertNotNull(plan);
+    Assertions.assertTrue(plan instanceof InMemoryPlan);
+    Assertions.assertEquals(planQName, plan.getQueueName());
+    Assertions.assertEquals(8192, plan.getTotalCapacity().getMemorySize());
+    Assertions.assertTrue(
         plan.getReservationAgent() instanceof AlignedPlannerWithGreedy);
-    Assert
+    Assertions
         .assertTrue(plan.getSharingPolicy() instanceof CapacityOverTimePolicy);
   }
 
@@ -242,7 +242,7 @@ public class ReservationSystemTestUtil {
     try {
       cs.serviceInit(conf);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
 
     initializeRMContext(numContainers, cs, mockRmContext);

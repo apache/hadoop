@@ -23,10 +23,11 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -63,9 +64,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -91,7 +92,7 @@ public class TestRMHA {
   private static final String RM3_ADDRESS = "2.2.2.2:2";
   private static final String RM3_NODE_ID = "rm3";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     configuration = new Configuration();
     UserGroupInformation.setConfiguration(configuration);
@@ -123,21 +124,21 @@ public class TestRMHA {
   }
 
   private void checkStandbyRMFunctionality() throws IOException {
-    assertEquals(STATE_ERR, HAServiceState.STANDBY,
-        rm.adminService.getServiceStatus().getState());
-    assertFalse("Active RM services are started",
-        rm.areActiveServicesRunning());
-    assertTrue("RM is not ready to become active",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.STANDBY, rm.adminService.getServiceStatus().getState(),
+        STATE_ERR);
+    assertFalse(rm.areActiveServicesRunning(),
+        "Active RM services are started");
+    assertTrue(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is not ready to become active");
   }
 
   private void checkActiveRMFunctionality() throws Exception {
-    assertEquals(STATE_ERR, HAServiceState.ACTIVE,
-        rm.adminService.getServiceStatus().getState());
-    assertTrue("Active RM services aren't started",
-        rm.areActiveServicesRunning());
-    assertTrue("RM is not ready to become active",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.ACTIVE, rm.adminService.getServiceStatus().getState(),
+        STATE_ERR);
+    assertTrue(rm.areActiveServicesRunning(),
+        "Active RM services aren't started");
+    assertTrue(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is not ready to become active");
 
     try {
       rm.getNewAppId();
@@ -173,7 +174,7 @@ public class TestRMHA {
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject appJson = json.getJSONObject("app");
     assertEquals("ACCEPTED", appJson.getString("state"));
     // Other stuff is verified in the regular web-services related tests
@@ -190,8 +191,8 @@ public class TestRMHA {
    * 6. Stop the RM: All services should stop and RM should not be ready to
    * become Active
    */
-  @Test(timeout = 30000)
-  public void testFailoverAndTransitions() throws Exception {
+  @Timeout(30000)  @Test
+  void testFailoverAndTransitions() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
 
@@ -200,10 +201,10 @@ public class TestRMHA {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
-    assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
-        rm.adminService.getServiceStatus().getState());
-    assertFalse("RM is ready to become active before being started",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.INITIALIZING, rm.adminService.getServiceStatus().getState(),
+        STATE_ERR);
+    assertFalse(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is ready to become active before being started");
     checkMonitorHealth();
 
     rm.start();
@@ -244,17 +245,17 @@ public class TestRMHA {
     // 6. Stop the RM. All services should stop and RM should not be ready to
     // become active
     rm.stop();
-    assertEquals(STATE_ERR, HAServiceState.STOPPING,
-        rm.adminService.getServiceStatus().getState());
-    assertFalse("RM is ready to become active even after it is stopped",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
-    assertFalse("Active RM services are started",
-        rm.areActiveServicesRunning());
+    assertEquals(HAServiceState.STOPPING, rm.adminService.getServiceStatus().getState(),
+        STATE_ERR);
+    assertFalse(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is ready to become active even after it is stopped");
+    assertFalse(rm.areActiveServicesRunning(),
+        "Active RM services are started");
     checkMonitorHealth();
   }
 
   @Test
-  public void testTransitionsWhenAutomaticFailoverEnabled() throws Exception {
+  void testTransitionsWhenAutomaticFailoverEnabled() throws Exception {
     final String ERR_UNFORCED_REQUEST = "User request succeeded even when " +
         "automatic failover is enabled";
 
@@ -312,7 +313,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testRMDispatcherForHA() throws IOException {
+  void testRMDispatcherForHA() throws IOException {
     String errorMessageForEventHandler =
         "Expect to get the same number of handlers";
     String errorMessageForService = "Expect to get the same number of services";
@@ -334,10 +335,10 @@ public class TestRMHA {
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
-    assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
-        rm.adminService.getServiceStatus().getState());
-    assertFalse("RM is ready to become active before being started",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.INITIALIZING, rm.adminService.getServiceStatus().getState(),
+        STATE_ERR);
+    assertFalse(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is ready to become active before being started");
     rm.start();
 
     //call transitions to standby and active a couple of times
@@ -352,11 +353,11 @@ public class TestRMHA {
     assertTrue(!dispatcher.isStopped());
 
     rm.adminService.transitionToActive(requestInfo);
-    assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
-        ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
-            .getEventHandlerCount());
-    assertEquals(errorMessageForService, expectedServiceCount,
-        rm.getServices().size());
+    assertEquals(expectedEventHandlerCount, ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
+            .getEventHandlerCount(),
+        errorMessageForEventHandler);
+    assertEquals(expectedServiceCount, rm.getServices().size(),
+        errorMessageForService);
 
 
     // Keep the dispatcher reference before transitioning to standby
@@ -364,11 +365,11 @@ public class TestRMHA {
 
 
     rm.adminService.transitionToStandby(requestInfo);
-    assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
-        ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
-            .getEventHandlerCount());
-    assertEquals(errorMessageForService, expectedServiceCount,
-        rm.getServices().size());
+    assertEquals(expectedEventHandlerCount, ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
+            .getEventHandlerCount(),
+        errorMessageForEventHandler);
+    assertEquals(expectedServiceCount, rm.getServices().size(),
+        errorMessageForService);
 
     assertTrue(dispatcher.isStopped());
 
@@ -376,7 +377,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testHAIDLookup() {
+  void testHAIDLookup() {
     //test implicitly lookup HA-ID
     Configuration conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf);
@@ -401,21 +402,22 @@ public class TestRMHA {
       rm.init(conf);
       fail("Should get an exception here.");
     } catch (Exception ex) {
-      Assert.assertTrue(ex.getMessage().contains(
+      Assertions.assertTrue(ex.getMessage().contains(
           "Invalid configuration! Can not find valid RM_HA_ID."));
     }
   }
 
   @Test
-  public void testHAWithRMHostName() throws Exception {
+  void testHAWithRMHostName() throws Exception {
     innerTestHAWithRMHostName(false);
     configuration.clear();
     setUp();
     innerTestHAWithRMHostName(true);
   }
 
-  @Test(timeout = 30000)
-  public void testFailoverWhenTransitionToActiveThrowException()
+  @Timeout(30000)
+  @Test
+  void testFailoverWhenTransitionToActiveThrowException()
       throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
@@ -440,10 +442,10 @@ public class TestRMHA {
         new StateChangeRequestInfo(
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
-    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
-        .getServiceStatus().getState());
-    assertFalse("RM is ready to become active before being started",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.INITIALIZING, rm.adminService
+        .getServiceStatus().getState(), STATE_ERR);
+    assertFalse(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is ready to become active before being started");
     checkMonitorHealth();
 
     rm.start();
@@ -453,7 +455,7 @@ public class TestRMHA {
     // 2. Try Transition to active, throw exception
     try {
       rm.adminService.transitionToActive(requestInfo);
-      Assert.fail("Transitioned to Active should throw exception.");
+      Assertions.fail("Transitioned to Active should throw exception.");
     } catch (Exception e) {
       assertTrue("Error when transitioning to Active mode".contains(e
           .getMessage()));
@@ -466,7 +468,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testTransitionedToStandbyShouldNotHang() throws Exception {
+  void testTransitionedToStandbyShouldNotHang() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
 
@@ -493,10 +495,10 @@ public class TestRMHA {
         new StateChangeRequestInfo(
             HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
-    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
-        .getServiceStatus().getState());
-    assertFalse("RM is ready to become active before being started",
-        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    assertEquals(HAServiceState.INITIALIZING, rm.adminService
+        .getServiceStatus().getState(), STATE_ERR);
+    assertFalse(rm.adminService.getServiceStatus().isReadyToBecomeActive(),
+        "RM is ready to become active before being started");
     checkMonitorHealth();
 
     rm.start();
@@ -531,7 +533,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testFailoverClearsRMContext() throws Exception {
+  void testFailoverClearsRMContext() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     Configuration conf = new YarnConfiguration(configuration);
@@ -555,7 +557,7 @@ public class TestRMHA {
     verifyClusterMetrics(1, 1, 1, 1, 2048, 1);
     assertEquals(1, rm.getRMContext().getRMNodes().size());
     assertEquals(1, rm.getRMContext().getRMApps().size());
-    Assert.assertNotNull("Node not registered", nm);
+    Assertions.assertNotNull(nm, "Node not registered");
 
     rm.adminService.transitionToStandby(requestInfo);
     checkMonitorHealth();
@@ -590,7 +592,7 @@ public class TestRMHA {
     // 4. Try Transition to active, throw exception
     try {
       rm.adminService.transitionToActive(requestInfo);
-      Assert.fail("Transitioned to Active should throw exception.");
+      Assertions.fail("Transitioned to Active should throw exception.");
     } catch (Exception e) {
       assertTrue("Error when transitioning to Active mode".contains(e
           .getMessage()));
@@ -601,8 +603,9 @@ public class TestRMHA {
     assertEquals(0, rm.getRMContext().getRMApps().size());
   }
 
-  @Test(timeout = 9000000)
-  public void testTransitionedToActiveRefreshFail() throws Exception {
+  @Timeout(9000000)
+  @Test
+  void testTransitionedToActiveRefreshFail() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     rm = new MockRM(configuration) {
       @Override
@@ -641,21 +644,21 @@ public class TestRMHA {
         ((FailFastDispatcher) rm.rmContext.getDispatcher());
     // Verify transition to transitionToStandby
     rm.adminService.transitionToStandby(requestInfo);
-    assertEquals("Fatal Event should be 0", 0, dispatcher.getEventCount());
-    assertEquals("HA state should be in standBy State", HAServiceState.STANDBY,
-        rm.getRMContext().getHAServiceState());
+    assertEquals(0, dispatcher.getEventCount(), "Fatal Event should be 0");
+    assertEquals(HAServiceState.STANDBY, rm.getRMContext().getHAServiceState(),
+        "HA state should be in standBy State");
     try {
       // Verify refreshAll call failure and check fail Event is dispatched
       rm.adminService.transitionToActive(requestInfo);
-      Assert.fail("Transition to Active should have failed for refreshAll()");
+      Assertions.fail("Transition to Active should have failed for refreshAll()");
     } catch (Exception e) {
-      assertTrue("Service fail Exception expected",
-          e instanceof ServiceFailedException);
+      assertTrue(e instanceof ServiceFailedException,
+          "Service fail Exception expected");
     }
     // Since refreshAll failed we are expecting fatal event to be send
     // Then fatal event is send RM will shutdown
     dispatcher.await();
-    assertEquals("Fatal Event to be received", 1, dispatcher.getEventCount());
+    assertEquals(1, dispatcher.getEventCount(), "Fatal Event to be received");
     // Check of refreshAll success HA can be active
     rm.adminService.transitionToActive(requestInfo);
     assertEquals(HAServiceState.ACTIVE, rm.getRMContext().getHAServiceState());
@@ -664,7 +667,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testOpportunisticAllocatorAfterFailover() throws Exception {
+  void testOpportunisticAllocatorAfterFailover() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     Configuration conf = new YarnConfiguration(configuration);
@@ -699,12 +702,12 @@ public class TestRMHA {
       }
     }, 100, 3000);
     rm.stop();
-    Assert.assertEquals(1, appMaster.getLeastLoadedNodes().size());
+    Assertions.assertEquals(1, appMaster.getLeastLoadedNodes().size());
 
   }
 
   @Test
-  public void testResourceProfilesManagerAfterRMWentStandbyThenBackToActive()
+  void testResourceProfilesManagerAfterRMWentStandbyThenBackToActive()
       throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     configuration.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
@@ -737,9 +740,9 @@ public class TestRMHA {
     checkActiveRMFunctionality();
 
     // 5. Check ResourceProfilesManager
-    Assert.assertNotNull(
-        "ResourceProfilesManager should not be null!",
-        rm.getRMContext().getResourceProfilesManager());
+    Assertions.assertNotNull(
+        rm.getRMContext().getResourceProfilesManager(),
+        "ResourceProfilesManager should not be null!");
   }
 
   public void innerTestHAWithRMHostName(boolean includeBindHost) {
@@ -761,20 +764,20 @@ public class TestRMHA {
       rm = new MockRM(conf);
       rm.init(conf);
       for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
-        assertEquals("RPC address not set for " + confKey,
-            RM1_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)));
-        assertEquals("RPC address not set for " + confKey,
-            RM2_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)));
-        assertEquals("RPC address not set for " + confKey,
-            RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)));
+        assertEquals(RM1_ADDRESS,
+            conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)), "RPC address not set for " + confKey);
+        assertEquals(RM2_ADDRESS,
+            conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)), "RPC address not set for " + confKey);
+        assertEquals(RM3_ADDRESS,
+            conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)), "RPC address not set for " + confKey);
         if (includeBindHost) {
-          assertEquals("Web address misconfigured WITH bind-host",
-                       rm.webAppAddress.substring(0, 7), "9.9.9.9");
+          assertEquals(rm.webAppAddress.substring(0,
+                       7), "9.9.9.9", "Web address misconfigured WITH bind-host");
         } else {
           //YarnConfiguration tries to figure out which rm host it's on by binding to it,
           //which doesn't happen for any of these fake addresses, so we end up with 0.0.0.0
-          assertEquals("Web address misconfigured WITHOUT bind-host",
-                       rm.webAppAddress.substring(0, 7), "0.0.0.0");
+          assertEquals(rm.webAppAddress.substring(0,
+                       7), "0.0.0.0", "Web address misconfigured WITHOUT bind-host");
         }
       }
     } catch (YarnRuntimeException e) {
@@ -794,12 +797,12 @@ public class TestRMHA {
       Configuration conf = new YarnConfiguration(configuration);
       rm = new MockRM(conf);
       rm.init(conf);
-      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
-          "1.1.1.1:8032",
-          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)));
-      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
-          "0.0.0.0:8032",
-          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)));
+      assertEquals("1.1.1.1:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)),
+          "RPC address not set for " + YarnConfiguration.RM_ADDRESS);
+      assertEquals("0.0.0.0:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)),
+          "RPC address not set for " + YarnConfiguration.RM_ADDRESS);
 
     } catch (YarnRuntimeException e) {
       fail("Should not throw any exceptions.");
@@ -835,11 +838,11 @@ public class TestRMHA {
         Thread.sleep(1000);
       }
     }
-    assertTrue(message, isAllMetricAssertionDone);
+    assertTrue(isAllMetricAssertionDone, message);
   }
 
   private void assertMetric(String metricName, long expected, long actual) {
-    assertEquals("Incorrect value for metric " + metricName, expected, actual);
+    assertEquals(expected, actual, "Incorrect value for metric " + metricName);
   }
 
   @SuppressWarnings("rawtypes")

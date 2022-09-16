@@ -28,8 +28,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.metrics.TimelineServiceV2Pu
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests that the RM creates timeline services (v1/v2) as specified by the
@@ -41,7 +41,7 @@ public class TestRMTimelineService {
   private void setup(boolean v1Enabled, boolean v2Enabled,
                      boolean systemMetricEnabled) {
     Configuration conf = new YarnConfiguration(new Configuration(false));
-    Assert.assertFalse(YarnConfiguration.timelineServiceEnabled(conf));
+    Assertions.assertFalse(YarnConfiguration.timelineServiceEnabled(conf));
 
     conf.setBoolean(YarnConfiguration.SYSTEM_METRICS_PUBLISHER_ENABLED,
         systemMetricEnabled);
@@ -87,11 +87,11 @@ public class TestRMTimelineService {
     }
 
     if(systemMetricEnabled) {
-      Assert.assertEquals(v1Enabled, v1PublisherServiceFound);
-      Assert.assertEquals(v2Enabled, v2PublisherServiceFound);
+      Assertions.assertEquals(v1Enabled, v1PublisherServiceFound);
+      Assertions.assertEquals(v2Enabled, v2PublisherServiceFound);
     } else {
-      Assert.assertEquals(false, v1PublisherServiceFound);
-      Assert.assertEquals(false, v2PublisherServiceFound);
+      Assertions.assertEquals(false, v1PublisherServiceFound);
+      Assertions.assertEquals(false, v2PublisherServiceFound);
     }
   }
 
@@ -110,46 +110,46 @@ public class TestRMTimelineService {
   }
 
   @Test
-  public void testTimelineServiceV1V2Enabled() throws Exception {
+  void testTimelineServiceV1V2Enabled() throws Exception {
     runTest(true, true, true);
   }
 
   @Test
-  public void testTimelineServiceV1Enabled() throws Exception {
+  void testTimelineServiceV1Enabled() throws Exception {
     runTest(true, false, true);
   }
 
   @Test
-  public void testTimelineServiceV2Enabled() throws Exception {
+  void testTimelineServiceV2Enabled() throws Exception {
     runTest(false, true, true);
   }
 
   @Test
-  public void testTimelineServiceDisabled() throws Exception {
+  void testTimelineServiceDisabled() throws Exception {
     runTest(false, false, true);
   }
 
 
   @Test
-  public void testTimelineServiceV1V2EnabledSystemMetricDisable()
+  void testTimelineServiceV1V2EnabledSystemMetricDisable()
       throws Exception {
     runTest(true, true, false);
   }
 
   @Test
-  public void testTimelineServiceV1EnabledSystemMetricDisable()
+  void testTimelineServiceV1EnabledSystemMetricDisable()
       throws Exception {
     runTest(true, false, false);
   }
 
   @Test
-  public void testTimelineServiceV2EnabledSystemMetricDisable()
+  void testTimelineServiceV2EnabledSystemMetricDisable()
       throws Exception {
     runTest(false, true, false);
   }
 
   @Test
-  public void testTimelineServiceDisabledSystemMetricDisable()
+  void testTimelineServiceDisabledSystemMetricDisable()
       throws Exception {
     runTest(false, false, false);
   }

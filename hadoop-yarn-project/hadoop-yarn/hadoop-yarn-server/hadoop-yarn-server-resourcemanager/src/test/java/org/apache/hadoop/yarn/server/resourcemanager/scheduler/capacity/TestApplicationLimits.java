@@ -18,14 +18,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -73,8 +74,8 @@ import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -97,7 +98,7 @@ public class TestApplicationLimits {
   RMContext rmContext = null;
 
   
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
@@ -182,7 +183,7 @@ public class TestApplicationLimits {
   }
   
   @Test
-  public void testAMResourceLimit() throws Exception {
+  void testAMResourceLimit() throws Exception {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
     
@@ -266,7 +267,7 @@ public class TestApplicationLimits {
   }
   
   @Test
-  public void testLimitsComputation() throws Exception {
+  void testLimitsComputation() throws Exception {
     final float epsilon = 1e-5f;
 
     CapacitySchedulerConfiguration csConf = 
@@ -342,9 +343,9 @@ public class TestApplicationLimits {
     assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
 
     // should default to global setting if per queue setting not set
-    assertEquals(CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
-        csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath()), epsilon);
+    assertEquals(csConf.getMaximumApplicationMasterResourcePerQueuePercent(
+            queue.getQueuePath()),
+        epsilon, CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -362,9 +363,9 @@ public class TestApplicationLimits {
 
     queue = (LeafQueue)queues.get(A);
 
-    assertEquals(0.5f,
-        csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath()), epsilon);
+    assertEquals(csConf.getMaximumApplicationMasterResourcePerQueuePercent(
+          queue.getQueuePath()),
+        epsilon, 0.5f);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
@@ -393,7 +394,7 @@ public class TestApplicationLimits {
   }
   
   @Test
-  public void testActiveApplicationLimits() throws Exception {
+  void testActiveApplicationLimits() throws Exception {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
     final String user_2 = "user_2";
@@ -484,7 +485,7 @@ public class TestApplicationLimits {
   }
   
   @Test
-  public void testActiveLimitsWithKilledApps() throws Exception {
+  void testActiveLimitsWithKilledApps() throws Exception {
     final String user_0 = "user_0";
 
     int APPLICATION_ID = 0;
@@ -566,7 +567,7 @@ public class TestApplicationLimits {
   }
 
   @Test
-  public void testHeadroom() throws Exception {
+  void testHeadroom() throws Exception {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
     csConf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 25);
@@ -769,8 +770,9 @@ public class TestApplicationLimits {
     return set;
   }
 
-  @Test(timeout = 120000)
-  public void testApplicationLimitSubmit() throws Exception {
+  @Timeout(120000)
+  @Test
+  void testApplicationLimitSubmit() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -923,7 +925,7 @@ public class TestApplicationLimits {
   // Test that max AM limit is correct in the case where one resource is
   // depleted but the other is not. Use DominantResourceCalculator.
   @Test
-  public void testAMResourceLimitWithDRCAndFullParent() throws Exception {
+  void testAMResourceLimitWithDRCAndFullParent() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
@@ -973,14 +975,14 @@ public class TestApplicationLimits {
     Resource expectedAmLimit = Resources.multiply(capacity,
         queueA.getMaxAMResourcePerQueuePercent());
     Resource amLimit = queueA.calculateAndGetAMResourceLimit();
-    assertTrue("AM memory limit is less than expected: Expected: " +
-        expectedAmLimit.getMemorySize() + "; Computed: "
-        + amLimit.getMemorySize(),
-        amLimit.getMemorySize() >= expectedAmLimit.getMemorySize());
-    assertTrue("AM vCore limit is less than expected: Expected: " +
-        expectedAmLimit.getVirtualCores() + "; Computed: "
-        + amLimit.getVirtualCores(),
-        amLimit.getVirtualCores() >= expectedAmLimit.getVirtualCores());
+    assertTrue(amLimit.getMemorySize() >= expectedAmLimit.getMemorySize(),
+        "AM memory limit is less than expected: Expected: " +
+            expectedAmLimit.getMemorySize() + "; Computed: "
+            + amLimit.getMemorySize());
+    assertTrue(amLimit.getVirtualCores() >= expectedAmLimit.getVirtualCores(),
+        "AM vCore limit is less than expected: Expected: " +
+            expectedAmLimit.getVirtualCores() + "; Computed: "
+            + amLimit.getVirtualCores());
   }
 
   private CapacitySchedulerContext createCSContext(CapacitySchedulerConfiguration csConf,

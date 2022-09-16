@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerUtilities.trimQueueName;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link FairSchedulerUtilities}.
@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
 public class TestFairSchedulerUtilities {
 
   @Test
-  public void testTrimQueueNameEquals() throws Exception {
+  void testTrimQueueNameEquals() throws Exception {
     final String[] equalsStrings = {
         // no spaces
         "a",
@@ -56,7 +56,7 @@ public class TestFairSchedulerUtilities {
   }
 
   @Test
-  public void testTrimQueueNamesEmpty() throws Exception {
+  void testTrimQueueNamesEmpty() throws Exception {
     assertNull(trimQueueName(null));
     final String spaces = "\u2002\u3000\r\u0085\u200A\u2005\u2000\u3000"
         + "\u2029\u000B\u3000\u2008\u2003\u205F\u3000\u1680"

@@ -40,12 +40,12 @@ import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import javax.ws.rs.core.MediaType;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests RM Webservices fair scheduler resources.
@@ -74,7 +74,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
         .setInjector(Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -91,7 +91,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterScheduler() throws JSONException {
+  void testClusterScheduler() throws JSONException {
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("scheduler")
@@ -103,7 +103,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterSchedulerSlash() throws JSONException {
+  void testClusterSchedulerSlash() throws JSONException {
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("scheduler/")
@@ -115,7 +115,7 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   @Test
-  public void testClusterSchedulerWithSubQueues()
+  void testClusterSchedulerWithSubQueues()
       throws JSONException {
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     QueueManager queueManager = scheduler.getQueueManager();
@@ -148,11 +148,11 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
   }
 
   private void verifyClusterScheduler(JSONObject json) throws JSONException {
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject info = json.getJSONObject("scheduler");
-    assertEquals("incorrect number of elements", 1, info.length());
+    assertEquals(1, info.length(), "incorrect number of elements");
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
     JSONObject rootQueue = info.getJSONObject("rootQueue");
     assertEquals("root", rootQueue.getString("queueName"));
   }

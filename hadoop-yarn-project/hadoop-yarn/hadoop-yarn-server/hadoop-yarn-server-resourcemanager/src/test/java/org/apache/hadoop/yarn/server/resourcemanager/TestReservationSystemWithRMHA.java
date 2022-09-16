@@ -39,8 +39,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.UTCClock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -59,7 +59,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
   }
 
   @Test
-  public void testSubmitReservationAndCheckAfterFailover() throws Exception {
+  void testSubmitReservationAndCheckAfterFailover() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -75,10 +75,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
 
     // Do the failover
@@ -89,12 +89,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     RMState state = rm2.getRMContext().getStateStore().loadState();
     Map<ReservationId, ReservationAllocationStateProto> reservationStateMap =
         state.getReservationState().get(ReservationSystemTestUtil.reservationQ);
-    Assert.assertNotNull(reservationStateMap);
-    Assert.assertNotNull(reservationStateMap.get(reservationID));
+    Assertions.assertNotNull(reservationStateMap);
+    Assertions.assertNotNull(reservationStateMap.get(reservationID));
   }
 
   @Test
-  public void testUpdateReservationAndCheckAfterFailover() throws Exception {
+  void testUpdateReservationAndCheckAfterFailover() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -111,10 +111,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
@@ -135,15 +135,15 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     RMState state = rm2.getRMContext().getStateStore().loadState();
     Map<ReservationId, ReservationAllocationStateProto> reservationStateMap =
         state.getReservationState().get(ReservationSystemTestUtil.reservationQ);
-    Assert.assertNotNull(reservationStateMap);
+    Assertions.assertNotNull(reservationStateMap);
     ReservationAllocationStateProto reservationState =
         reservationStateMap.get(reservationID);
-    Assert.assertEquals(newDeadline,
+    Assertions.assertEquals(newDeadline,
         reservationState.getReservationDefinition().getDeadline());
   }
 
   @Test
-  public void testDeleteReservationAndCheckAfterFailover() throws Exception {
+  void testDeleteReservationAndCheckAfterFailover() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -160,10 +160,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
 
     // Delete the reservation
     ReservationDeleteRequest deleteRequest =
@@ -176,7 +176,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     rm2.registerNode("127.0.0.1:1", 102400, 100);
 
     RMState state = rm2.getRMContext().getStateStore().loadState();
-    Assert.assertNull(state.getReservationState()
+    Assertions.assertNull(state.getReservationState()
         .get(ReservationSystemTestUtil.reservationQ));
   }
 
@@ -197,12 +197,12 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
         Thread.sleep(1000);
       } while (attempts-- > 0);
       if (attempts <= 0) {
-        Assert.fail("Exhausted attempts in checking if node capacity was "
+        Assertions.fail("Exhausted attempts in checking if node capacity was "
             + "added to the plan");
       }
 
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
   }
 
@@ -219,13 +219,13 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
   private void validateReservation(Plan plan, ReservationId resId,
       ReservationDefinition rDef) {
     ReservationAllocation reservation = plan.getReservationById(resId);
-    Assert.assertNotNull(reservation);
-    Assert.assertEquals(rDef.getDeadline(),
+    Assertions.assertNotNull(reservation);
+    Assertions.assertEquals(rDef.getDeadline(),
         reservation.getReservationDefinition().getDeadline());
   }
 
   @Test
-  public void testSubmitReservationFailoverAndDelete() throws Exception {
+  void testSubmitReservationFailoverAndDelete() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -242,10 +242,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
@@ -268,14 +268,14 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       deleteResponse = clientService.deleteReservation(deleteRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(deleteResponse);
-    Assert.assertNull(plan.getReservationById(reservationID));
+    Assertions.assertNotNull(deleteResponse);
+    Assertions.assertNull(plan.getReservationById(reservationID));
   }
 
   @Test
-  public void testFailoverAndSubmitReservation() throws Exception {
+  void testFailoverAndSubmitReservation() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -296,10 +296,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
@@ -311,7 +311,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
   }
 
   @Test
-  public void testSubmitReservationFailoverAndUpdate() throws Exception {
+  void testSubmitReservationFailoverAndUpdate() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -328,10 +328,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
@@ -356,14 +356,14 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       updateResponse = clientService.updateReservation(updateRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(updateResponse);
+    Assertions.assertNotNull(updateResponse);
     validateReservation(plan, reservationID, reservationDefinition);
   }
 
   @Test
-  public void testSubmitUpdateReservationFailoverAndDelete() throws Exception {
+  void testSubmitUpdateReservationFailoverAndDelete() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -380,10 +380,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(reservationID);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(reservationID);
     LOG.info("Submit reservation response: " + reservationID);
     ReservationDefinition reservationDefinition =
         request.getReservationDefinition();
@@ -402,9 +402,9 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       updateResponse = clientService.updateReservation(updateRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(updateResponse);
+    Assertions.assertNotNull(updateResponse);
     validateReservation(plan, reservationID, reservationDefinition);
 
     // Do the failover
@@ -425,14 +425,14 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       deleteResponse = clientService.deleteReservation(deleteRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(deleteResponse);
-    Assert.assertNull(plan.getReservationById(reservationID));
+    Assertions.assertNotNull(deleteResponse);
+    Assertions.assertNull(plan.getReservationById(reservationID));
   }
 
   @Test
-  public void testReservationResizeAfterFailover() throws Exception {
+  void testReservationResizeAfterFailover() throws Exception {
     startRMs();
 
     addNodeCapacityToPlan(rm1, 102400, 100);
@@ -451,10 +451,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(resID1);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(resID1);
     LOG.info("Submit reservation response: " + resID1);
 
     ReservationId resID2 = getNewReservation(clientService)
@@ -463,10 +463,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(resID2);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(resID2);
     LOG.info("Submit reservation response: " + resID2);
 
     ReservationId resID3 = getNewReservation(clientService)
@@ -475,10 +475,10 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     try {
       response = clientService.submitReservation(request);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
-    Assert.assertNotNull(response);
-    Assert.assertNotNull(resID3);
+    Assertions.assertNotNull(response);
+    Assertions.assertNotNull(resID3);
     LOG.info("Submit reservation response: " + resID3);
 
     // allow the reservations to become active
@@ -493,11 +493,11 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     validateReservation(plan, resID3, reservationDefinition);
     ResourceScheduler scheduler = rm1.getResourceScheduler();
     QueueInfo resQ1 = scheduler.getQueueInfo(resID1.toString(), false, false);
-    Assert.assertEquals(0.05, resQ1.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ1.getCapacity(), 0.001f, 0.05);
     QueueInfo resQ2 = scheduler.getQueueInfo(resID2.toString(), false, false);
-    Assert.assertEquals(0.05, resQ2.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ2.getCapacity(), 0.001f, 0.05);
     QueueInfo resQ3 = scheduler.getQueueInfo(resID3.toString(), false, false);
-    Assert.assertEquals(0.05, resQ3.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ3.getCapacity(), 0.001f, 0.05);
 
     // Do the failover
     explicitFailover();
@@ -513,11 +513,11 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
     // verify if the reservations have been resized
     scheduler = rm2.getResourceScheduler();
     resQ1 = scheduler.getQueueInfo(resID1.toString(), false, false);
-    Assert.assertEquals(1f / 3f, resQ1.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ1.getCapacity(), 0.001f, 1f / 3f);
     resQ2 = scheduler.getQueueInfo(resID2.toString(), false, false);
-    Assert.assertEquals(1f / 3f, resQ2.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ2.getCapacity(), 0.001f, 1f / 3f);
     resQ3 = scheduler.getQueueInfo(resID3.toString(), false, false);
-    Assert.assertEquals(1f / 3f, resQ3.getCapacity(), 0.001f);
+    Assertions.assertEquals(resQ3.getCapacity(), 0.001f, 1f / 3f);
   }
 
   private void waitForReservationActivation(MockRM rm,
@@ -536,11 +536,11 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
         Thread.sleep(100);
       } while (attempts-- > 0);
       if (attempts <= 0) {
-        Assert
+        Assertions
             .fail("Exceeded attempts in waiting for reservation to be active");
       }
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
   }
 
@@ -553,7 +553,7 @@ public class TestReservationSystemWithRMHA extends RMHATestBase {
       getNewReservationResponse = clientRMService.getNewReservation(
         newReservationRequest);
     } catch (Exception e) {
-      Assert.fail(e.getMessage());
+      Assertions.fail(e.getMessage());
     }
     return getNewReservationResponse;
   }

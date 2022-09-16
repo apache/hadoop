@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -44,16 +45,17 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.slf4j.event.Level;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 
 public class TestNodesListManager {
   private boolean isRMAppEvent;
   private boolean isNodesListEvent;
 
-  @Test(timeout = 300000)
-  public void testNodeUsableEvent() throws Exception {
+  @Timeout(300000)
+  @Test
+  void testNodeUsableEvent() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     final Dispatcher dispatcher = getDispatcher();
     YarnConfiguration conf = new YarnConfiguration();
@@ -87,14 +89,14 @@ public class TestNodesListManager {
     // Should not have RMAppNodeUpdateEvent to AsyncDispatcher.
     dispatcher.getEventHandler().handle(new NodesListManagerEvent(
         NodesListManagerEventType.NODE_USABLE, rmnode));
-    Assert.assertFalse("Got unexpected RM app event",
-        getIsRMAppEvent());
-    Assert.assertTrue("Received no NodesListManagerEvent",
-        getIsNodesListEvent());
+    Assertions.assertFalse(getIsRMAppEvent(),
+        "Got unexpected RM app event");
+    Assertions.assertTrue(getIsNodesListEvent(),
+        "Received no NodesListManagerEvent");
   }
 
   @Test
-  public void testCachedResolver() throws Exception {
+  void testCachedResolver() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
@@ -104,33 +106,33 @@ public class TestNodesListManager {
     resolver.init(new YarnConfiguration());
     resolver.start();
     resolver.addToCache("testCachedResolverHost1", "1.1.1.1");
-    Assert.assertEquals("1.1.1.1",
+    Assertions.assertEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
 
     resolver.addToCache("testCachedResolverHost2", "1.1.1.2");
-    Assert.assertEquals("1.1.1.1",
+    Assertions.assertEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertEquals("1.1.1.2",
+    Assertions.assertEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
 
     // test removeFromCache
     resolver.removeFromCache("testCachedResolverHost1");
-    Assert.assertNotEquals("1.1.1.1",
+    Assertions.assertNotEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertEquals("1.1.1.2",
+    Assertions.assertEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
 
     // test expiry
     clock.tickMsec(CACHE_EXPIRY_INTERVAL_SECS * 1000 + 1);
     resolver.getExpireChecker().run();
-    Assert.assertNotEquals("1.1.1.1",
+    Assertions.assertNotEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertNotEquals("1.1.1.2",
+    Assertions.assertNotEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
   }
 
   @Test
-  public void testDefaultResolver() throws Exception {
+  void testDefaultResolver() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     YarnConfiguration conf = new YarnConfiguration();
@@ -140,12 +142,12 @@ public class TestNodesListManager {
     NodesListManager nodesListManager = rm.getNodesListManager();
 
     NodesListManager.Resolver resolver = nodesListManager.getResolver();
-    Assert.assertTrue("default resolver should be DirectResolver",
-        resolver instanceof NodesListManager.DirectResolver);
+    Assertions.assertTrue(resolver instanceof NodesListManager.DirectResolver,
+        "default resolver should be DirectResolver");
   }
 
   @Test
-  public void testCachedResolverWithEvent() throws Exception {
+  void testCachedResolverWithEvent() throws Exception {
     GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     YarnConfiguration conf = new YarnConfiguration();
@@ -162,9 +164,9 @@ public class TestNodesListManager {
 
     resolver.addToCache("testCachedResolverHost1", "1.1.1.1");
     resolver.addToCache("testCachedResolverHost2", "1.1.1.2");
-    Assert.assertEquals("1.1.1.1",
+    Assertions.assertEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertEquals("1.1.1.2",
+    Assertions.assertEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
 
     RMNode rmnode1 = MockNodes.newNodeInfo(1, Resource.newInstance(28000, 8),
@@ -175,17 +177,17 @@ public class TestNodesListManager {
     nodesListManager.handle(
         new NodesListManagerEvent(NodesListManagerEventType.NODE_USABLE,
             rmnode1));
-    Assert.assertNotEquals("1.1.1.1",
+    Assertions.assertNotEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertEquals("1.1.1.2",
+    Assertions.assertEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
 
     nodesListManager.handle(
         new NodesListManagerEvent(NodesListManagerEventType.NODE_USABLE,
             rmnode2));
-    Assert.assertNotEquals("1.1.1.1",
+    Assertions.assertNotEquals("1.1.1.1",
         resolver.resolve("testCachedResolverHost1"));
-    Assert.assertNotEquals("1.1.1.2",
+    Assertions.assertNotEquals("1.1.1.2",
         resolver.resolve("testCachedResolverHost2"));
 
   }

@@ -42,14 +42,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.PrimaryGroupMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SimpleGroupsMapping;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestUserGroupMappingPlacementRule {
   private final YarnConfiguration conf = new YarnConfiguration();
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
@@ -94,11 +94,11 @@ public class TestUserGroupMappingPlacementRule {
         ApplicationSubmissionContext.class);
     asc.setQueue(inputQueue);
     ApplicationPlacementContext ctx = engine.getPlacementForApp(asc, inputUser);
-    Assert.assertEquals("Queue", expectedQueue,
-        ctx != null ? ctx.getQueue() : inputQueue);
+    Assertions.assertEquals(expectedQueue, ctx != null ? ctx.getQueue() : inputQueue,
+        "Queue");
     if (ctx != null && expectedParentQueue != null) {
-      Assert.assertEquals("Parent Queue", expectedParentQueue,
-          ctx.getParentQueue());
+      Assertions.assertEquals(expectedParentQueue, ctx.getParentQueue(),
+          "Parent Queue");
     }
   }
 
@@ -130,7 +130,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSecondaryGroupMapping() throws IOException, YarnException {
+  void testSecondaryGroupMapping() throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
             .queueMapping(QueueMappingBuilder.create()
@@ -158,7 +158,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testNullGroupMapping() throws IOException, YarnException {
+  void testNullGroupMapping() throws IOException, YarnException {
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         NullGroupsMapping.class, GroupMappingServiceProvider.class);
     verifyQueueMapping(
@@ -174,7 +174,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSimpleUserMappingToSpecificQueue()
+  void testSimpleUserMappingToSpecificQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -189,7 +189,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSimpleGroupMappingToSpecificQueue()
+  void testSimpleGroupMappingToSpecificQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -204,7 +204,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToSpecificQueueForEachUser()
+  void testUserMappingToSpecificQueueForEachUser()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -219,7 +219,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToQueueNamedAsUsername()
+  void testUserMappingToQueueNamedAsUsername()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -234,7 +234,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToQueueNamedGroupOfTheUser()
+  void testUserMappingToQueueNamedGroupOfTheUser()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -250,7 +250,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToQueueNamedAsUsernameWithPrimaryGroupAsParentQueue()
+  void testUserMappingToQueueNamedAsUsernameWithPrimaryGroupAsParentQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -267,7 +267,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToPrimaryGroupInvalidNestedPlaceholder()
+  void testUserMappingToPrimaryGroupInvalidNestedPlaceholder()
       throws IOException, YarnException {
     // u:%user:%primary_group.%random, no matching queue
     verifyQueueMapping(
@@ -284,7 +284,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToSecondaryGroupInvalidNestedPlaceholder()
+  void testUserMappingToSecondaryGroupInvalidNestedPlaceholder()
       throws IOException, YarnException {
     // u:%user:%secondary_group.%random, no matching queue
     verifyQueueMapping(
@@ -301,7 +301,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingDiffersFromSubmitterQueueDoesNotExist()
+  void testUserMappingDiffersFromSubmitterQueueDoesNotExist()
       throws IOException, YarnException {
     // u:a:%random, submitter: xyz, no matching queue
     verifyQueueMapping(
@@ -317,7 +317,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSpecificUserMappingToPrimaryGroup()
+  void testSpecificUserMappingToPrimaryGroup()
       throws IOException, YarnException {
     // u:a:%primary_group
     verifyQueueMapping(
@@ -333,7 +333,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSpecificUserMappingToSecondaryGroup()
+  void testSpecificUserMappingToSecondaryGroup()
       throws IOException, YarnException {
     // u:a:%secondary_group
     verifyQueueMapping(
@@ -349,7 +349,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testSpecificUserMappingWithNoSecondaryGroup()
+  void testSpecificUserMappingWithNoSecondaryGroup()
       throws IOException, YarnException {
     // u:nosecondarygroupuser:%secondary_group, no matching queue
     verifyQueueMapping(
@@ -365,7 +365,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGenericUserMappingWithNoSecondaryGroup()
+  void testGenericUserMappingWithNoSecondaryGroup()
       throws IOException, YarnException {
     // u:%user:%user, no matching queue
     verifyQueueMapping(
@@ -382,7 +382,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToNestedUserPrimaryGroupWithAmbiguousQueues()
+  void testUserMappingToNestedUserPrimaryGroupWithAmbiguousQueues()
       throws IOException, YarnException {
     // u:%user:%user, submitter nosecondarygroupuser, queue is ambiguous
     verifyQueueMapping(
@@ -399,7 +399,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testResolvedQueueIsNotManaged()
+  void testResolvedQueueIsNotManaged()
       throws IOException, YarnException {
     // u:%user:%primary_group.%user, "admins" group will be "root",
     // resulting parent queue will be "root" which is not managed
@@ -417,7 +417,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToPrimaryGroupWithAmbiguousQueues()
+  void testUserMappingToPrimaryGroupWithAmbiguousQueues()
       throws IOException, YarnException {
     // u:%user:%primary_group, submitter nosecondarygroupuser,
     // queue is ambiguous
@@ -434,7 +434,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToQueueNamedAsUsernameWithSecondaryGroupAsParentQueue()
+  void testUserMappingToQueueNamedAsUsernameWithSecondaryGroupAsParentQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -451,7 +451,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMappingToStaticQueue()
+  void testGroupMappingToStaticQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -466,7 +466,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToQueueNamedAsGroupNameWithRootAsParentQueue()
+  void testUserMappingToQueueNamedAsGroupNameWithRootAsParentQueue()
       throws IOException, YarnException {
     verifyQueueMapping(
         QueueMappingTestDataBuilder.create()
@@ -483,7 +483,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToPrimaryGroupQueueDoesNotExistUnmanagedParent()
+  void testUserMappingToPrimaryGroupQueueDoesNotExistUnmanagedParent()
       throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %primary_group queue, not managed parent
     verifyQueueMapping(
@@ -500,7 +500,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToPrimaryGroupQueueDoesNotExistManagedParent()
+  void testUserMappingToPrimaryGroupQueueDoesNotExistManagedParent()
       throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %primary_group queue, managed parent
     verifyQueueMapping(
@@ -518,7 +518,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToSecondaryGroupQueueDoesNotExist()
+  void testUserMappingToSecondaryGroupQueueDoesNotExist()
       throws IOException, YarnException {
     // "abcgroup" queue doesn't exist, %secondary_group queue
     verifyQueueMapping(
@@ -535,7 +535,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToSecondaryGroupQueueUnderParent()
+  void testUserMappingToSecondaryGroupQueueUnderParent()
       throws IOException, YarnException {
     // "asubgroup2" queue exists, %secondary_group queue
     verifyQueueMapping(
@@ -553,7 +553,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
+  void testUserMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
       throws IOException, YarnException {
     // specify overwritten, and see if user specified a queue, and it will be
     // overridden
@@ -572,7 +572,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testUserMappingToExplicitlySpecifiedQueue()
+  void testUserMappingToExplicitlySpecifiedQueue()
       throws IOException, YarnException {
     // if overwritten not specified, it should be which user specified
     verifyQueueMapping(
@@ -589,7 +589,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMappingToExplicitlySpecifiedQueue()
+  void testGroupMappingToExplicitlySpecifiedQueue()
       throws IOException, YarnException {
     // if overwritten not specified, it should be which user specified
     verifyQueueMapping(
@@ -607,7 +607,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
+  void testGroupMappingToSpecifiedQueueOverwritesInputQueueFromMapping()
       throws IOException, YarnException {
     // if overwritten not specified, it should be which user specified
     verifyQueueMapping(
@@ -626,7 +626,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMappingToSpecifiedQueueUnderAGivenParentQueue()
+  void testGroupMappingToSpecifiedQueueUnderAGivenParentQueue()
       throws IOException, YarnException {
     // If user specific queue is enabled for a specified group under a given
     // parent queue
@@ -644,7 +644,7 @@ public class TestUserGroupMappingPlacementRule {
   }
 
   @Test
-  public void testGroupMappingToSpecifiedQueueWithoutParentQueue()
+  void testGroupMappingToSpecifiedQueueWithoutParentQueue()
       throws IOException, YarnException {
     // If user specific queue is enabled for a specified group without parent
     // queue

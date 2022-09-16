@@ -32,16 +32,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,7 +60,7 @@ public class TestMutableCSConfigurationProvider {
   private static final UserGroupInformation TEST_USER = UserGroupInformation
       .createUserForTesting("testUser", new String[] {});
 
-  @Before
+  @BeforeEach
   public void setUp() {
     cs = mock(CapacityScheduler.class);
     rmContext = mock(RMContext.class);
@@ -86,7 +86,7 @@ public class TestMutableCSConfigurationProvider {
   }
 
   @Test
-  public void testInMemoryBackedProvider() throws Exception {
+  void testInMemoryBackedProvider() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
@@ -112,7 +112,7 @@ public class TestMutableCSConfigurationProvider {
   }
 
   @Test
-  public void testRemoveQueueConfig() throws Exception {
+  void testRemoveQueueConfig() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
@@ -141,15 +141,15 @@ public class TestMutableCSConfigurationProvider {
 
     log = confProvider.logAndApplyMutation(TEST_USER, updateInfo);
     confProvider.confirmPendingMutation(log, true);
-    assertNull("Failed to remove config",
-        confProvider.loadConfiguration(conf)
-        .get("yarn.scheduler.capacity.root.a.testkey1"));
+    assertNull(confProvider.loadConfiguration(conf)
+        .get("yarn.scheduler.capacity.root.a.testkey1"),
+        "Failed to remove config");
     assertEquals("testval2", confProvider.loadConfiguration(conf)
         .get("yarn.scheduler.capacity.root.a.testkey2"));
   }
 
   @Test
-  public void testMultipleUpdatesNotLost() throws Exception {
+  void testMultipleUpdatesNotLost() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
@@ -181,7 +181,7 @@ public class TestMutableCSConfigurationProvider {
   }
 
   @Test
-  public void testHDFSBackedProvider() throws Exception {
+  void testHDFSBackedProvider() throws Exception {
     File testSchedulerConfigurationDir = new File(
         TestMutableCSConfigurationProvider.class.getResource("").getPath()
             + TestMutableCSConfigurationProvider.class.getSimpleName());
@@ -218,7 +218,7 @@ public class TestMutableCSConfigurationProvider {
   }
 
   @Test
-  public void testAddRemoveQueueWithSpacesInConfig() throws Exception {
+  void testAddRemoveQueueWithSpacesInConfig() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
