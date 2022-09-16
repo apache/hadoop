@@ -87,7 +87,8 @@ public class TestableFederationInterceptorREST
       conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
       conf.setReservable(QUEUE_DEDICATED_FULL, true);
 
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+      conf.setClass(YarnConfiguration.RM_SCHEDULER,
+          CapacityScheduler.class, ResourceScheduler.class);
       conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
       conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
 

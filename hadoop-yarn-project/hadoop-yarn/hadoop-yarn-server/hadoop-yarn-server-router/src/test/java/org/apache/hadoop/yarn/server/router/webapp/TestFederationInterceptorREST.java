@@ -1283,7 +1283,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     LambdaTestUtils.intercept(Exception.class,
         "reservationId with id: " + reservationId + " not found",
-         () -> interceptor.listReservation(QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null));
+        () -> interceptor.listReservation(QUEUE_DEDICATED_FULL, applyResId, -1, -1, false, null));
   }
 
   private Response submitReservation(ReservationId reservationId)
@@ -1333,21 +1333,21 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     long deadline = (long) (arrival + 1.05 * DURATION);
 
     ReservationSubmissionRequest submissionRequest = createSimpleReservationRequest(
-        reservationId, numContainers, arrival, deadline, DURATION, Priority.UNDEFINED, memory, vcore);
+        reservationId, numContainers, arrival, deadline, DURATION, memory, vcore);
 
     return submissionRequest;
   }
 
   public static ReservationSubmissionRequest createSimpleReservationRequest(
       ReservationId reservationId, int numContainers, long arrival,
-      long deadline, long duration, Priority priority, int memory, int vcore) {
+      long deadline, long duration, int memory, int vcore) {
     // create a request with a single atomic ask
     ReservationRequest r = ReservationRequest
         .newInstance(Resource.newInstance(memory, vcore), numContainers, 1, duration);
     ReservationRequests reqs = ReservationRequests.newInstance(
         Collections.singletonList(r), ReservationRequestInterpreter.R_ALL);
     ReservationDefinition rDef = ReservationDefinition.newInstance(arrival,
-        deadline, reqs, "testClientRMService#reservation", "0", priority);
+        deadline, reqs, "testClientRMService#reservation", "0", Priority.UNDEFINED);
     ReservationSubmissionRequest request = ReservationSubmissionRequest
         .newInstance(rDef, QUEUE_DEDICATED_FULL, reservationId);
     return request;

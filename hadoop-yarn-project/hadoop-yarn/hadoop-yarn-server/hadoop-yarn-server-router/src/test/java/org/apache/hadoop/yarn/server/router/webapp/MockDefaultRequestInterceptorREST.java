@@ -888,7 +888,8 @@ public class MockDefaultRequestInterceptorREST
 
     ReservationId reservationId = ReservationId.parseReservationId(resContext.getReservationId());
     ReservationDefinitionInfo definitionInfo = resContext.getReservationDefinition();
-    ReservationDefinition definition = RouterServerUtil.convertReservationDefinition(definitionInfo);
+    ReservationDefinition definition =
+        RouterServerUtil.convertReservationDefinition(definitionInfo);
     ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
         definition, resContext.getQueue(), reservationId);
     submitReservation(request);
