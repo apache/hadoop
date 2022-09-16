@@ -56,6 +56,6 @@ public class TestProcessingDetails {
 
     assertEquals("enqueueTime=10 queueTime=20000 handlerTime=0 " +
         "processingTime=0 lockfreeTime=0 lockwaitTime=0 locksharedTime=0 " +
-        "lockexclusiveTime=0 responseTime=0", details.toString());
+        "lockexclusiveTime=0 responseTime=0 requeueTime=0", details.toString());
   }
 }

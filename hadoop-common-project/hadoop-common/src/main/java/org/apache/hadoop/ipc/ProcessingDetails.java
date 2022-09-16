@@ -48,7 +48,8 @@ public class ProcessingDetails {
     LOCKWAIT,         // processing while waiting for lock.
     LOCKSHARED,       // processing with a read lock.
     LOCKEXCLUSIVE,    // processing with a write lock.
-    RESPONSE;         // time to encode and send response.
+    RESPONSE,         // time to encode and send response.
+    REQUEUE;          // time in the call queue, but was requeuqed
   }
 
   private long[] timings = new long[Timing.values().length];
