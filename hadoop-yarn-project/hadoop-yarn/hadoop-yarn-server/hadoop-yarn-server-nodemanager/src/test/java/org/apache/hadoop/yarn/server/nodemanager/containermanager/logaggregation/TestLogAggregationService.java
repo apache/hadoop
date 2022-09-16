@@ -203,10 +203,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   }
 
   private void verifyLocalFileDeletion(
-      LogAggregationService logAggregationService, Long clusterTimeStamp) throws Exception {
+      LogAggregationService logAggregationService) throws Exception {
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
+    Random random = new Random(System.currentTimeMillis());
+    long clusterTimeStamp = random.nextLong();
     ApplicationId application1 = BuilderUtils.newApplicationId(clusterTimeStamp, 1);
 
     // AppLogDir should be created
@@ -246,15 +248,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
-      int count = 0;
-      int maxAttempts = 50;
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        count = 0;
-        while ((f.exists()) && (count < maxAttempts)) {
-          count++;
-          Thread.sleep(1000);
-        }
+        GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
         Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
       }
       Assert.assertFalse("Directory [" + app1LogDir + "] was not deleted",
@@ -311,7 +307,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
                                   super.dirsHandler));
-    verifyLocalFileDeletion(logAggregationService, 1234L);
+    verifyLocalFileDeletion(logAggregationService);
   }
 
   @Test
@@ -325,7 +321,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc, super.dirsHandler));
-    verifyLocalFileDeletion(logAggregationService, 4321L);
+    verifyLocalFileDeletion(logAggregationService);
   }
 
   @Test
@@ -345,7 +341,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
             dirsHandler));
-    verifyLocalFileDeletion(logAggregationService, 5678L);
+    verifyLocalFileDeletion(logAggregationService);
   }
 
   /* Test to verify fix for YARN-3793 */
