@@ -2870,7 +2870,7 @@ public class DataNode extends ReconfigurableBase
    * @param srcBlock Block to copy.
    * @param destBlock Block to copy to.
    * @param targetDatanodeInfo Target block belongs to.
-   * @return Future<?> One future object
+   * @return the future of the submitted task.
    */
   public Future<?> internalCopyBlockCrossNamespace(
       final ExtendedBlock srcBlock, final ExtendedBlock destBlock,

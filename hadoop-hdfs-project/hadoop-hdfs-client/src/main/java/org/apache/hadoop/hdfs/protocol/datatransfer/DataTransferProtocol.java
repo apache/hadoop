@@ -248,9 +248,7 @@ public interface DataTransferProtocol {
    * @param targetBlockToken security token for accessing the target block.
    * @param targetDN the target block belongs to.
    */
-  void copyBlockCrossNamespace(final ExtendedBlock srcBlk,
-      final Token<BlockTokenIdentifier> srcBlockToken,
-      final ExtendedBlock targetBlk,
-      final Token<BlockTokenIdentifier> targetBlockToken,
-      final DatanodeInfo targetDN) throws IOException;
+  void copyBlockCrossNamespace(ExtendedBlock srcBlk, Token<BlockTokenIdentifier> srcBlockToken,
+      ExtendedBlock targetBlk, Token<BlockTokenIdentifier> targetBlockToken, DatanodeInfo targetDN)
+      throws IOException;
 }
