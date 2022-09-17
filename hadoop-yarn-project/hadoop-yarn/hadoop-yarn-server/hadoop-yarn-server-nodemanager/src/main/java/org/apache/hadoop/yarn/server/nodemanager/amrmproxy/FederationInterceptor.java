@@ -526,11 +526,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     return uamMap;
   }
 
-  private void destroySubClusterInfo(String subClusterId) {
-    this.secondaryRelayers.remove(subClusterId);
-
-  }
-
   /**
    * Sends the application master's registration request to the home RM.
    *
