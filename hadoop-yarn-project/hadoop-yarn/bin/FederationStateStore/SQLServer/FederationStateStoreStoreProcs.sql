@@ -127,7 +127,7 @@ AS BEGIN
                  [createTime],
                  row_number() over(order by [createTime] desc) AS app_rank
              FROM [dbo].[applicationsHomeSubCluster]
-             WHERE [homeSubCluster] = @homeSubCluster OR @homeSubCluster = '') AS t
+             WHERE [homeSubCluster] = @homeSubCluster OR @homeSubCluster = '') AS applicationsHomeSubCluster
         WHERE app_rank <= @limit;
     END TRY
 
