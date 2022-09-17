@@ -119,6 +119,7 @@ abstract class StripedReconstructor {
   private ErasureCodingWorker erasureCodingWorker;
   private final CachingStrategy cachingStrategy;
   private long maxTargetLength = 0L;
+  private int liveIndiceNum = 0;
   private final BitSet liveBitSet;
   private final BitSet excludeBitSet;
 
@@ -136,6 +137,9 @@ abstract class StripedReconstructor {
     liveBitSet = new BitSet(
         ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
     for (int i = 0; i < stripedReconInfo.getLiveIndices().length; i++) {
+      if(!liveBitSet.get(stripedReconInfo.getLiveIndices()[i])){
+        liveIndiceNum++;
+      }
       liveBitSet.set(stripedReconInfo.getLiveIndices()[i]);
     }
     excludeBitSet = new BitSet(
@@ -286,6 +290,10 @@ abstract class StripedReconstructor {
 
   RawErasureDecoder getDecoder() {
     return decoder;
+  }
+
+  int getIndicesNum(){
+    return liveIndiceNum;
   }
 
   void cleanup() {
