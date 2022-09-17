@@ -453,6 +453,31 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getNodesToAttributesFailed call");
       metrics.incrGetNodesToAttributesFailedRetrieved();
     }
+
+    public void getNewReservationFailed() {
+      LOG.info("Mocked: failed getNewReservationFailed call");
+      metrics.incrGetNewReservationFailedRetrieved();
+    }
+
+    public void getSubmitReservationFailed() {
+      LOG.info("Mocked: failed getSubmitReservationFailed call");
+      metrics.incrSubmitReservationFailedRetrieved();
+    }
+
+    public void getUpdateReservationFailed() {
+      LOG.info("Mocked: failed getUpdateReservationFailed call");
+      metrics.incrUpdateReservationFailedRetrieved();
+    }
+
+    public void getDeleteReservationFailed() {
+      LOG.info("Mocked: failed getDeleteReservationFailed call");
+      metrics.incrDeleteReservationFailedRetrieved();
+    }
+
+    public void getListReservationFailed() {
+      LOG.info("Mocked: failed getListReservationFailed call");
+      metrics.incrListReservationFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -602,6 +627,31 @@ public class TestRouterMetrics {
     public void getNodesToAttributesRetrieved(long duration) {
       LOG.info("Mocked: successful getNodesToAttributes call with duration {}", duration);
       metrics.succeededGetNodesToAttributesRetrieved(duration);
+    }
+
+    public void getNewReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getNewReservation call with duration {}", duration);
+      metrics.succeededGetNewReservationRetrieved(duration);
+    }
+
+    public void getSubmitReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getSubmitReservation call with duration {}", duration);
+      metrics.succeededSubmitReservationRetrieved(duration);
+    }
+
+    public void getUpdateReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getUpdateReservation call with duration {}", duration);
+      metrics.succeededUpdateReservationRetrieved(duration);
+    }
+
+    public void getDeleteReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getDeleteReservation call with duration {}", duration);
+      metrics.succeededDeleteReservationRetrieved(duration);
+    }
+
+    public void getListReservationRetrieved(long duration) {
+      LOG.info("Mocked: successful getListReservation call with duration {}", duration);
+      metrics.succeededListReservationRetrieved(duration);
     }
   }
 
@@ -1068,5 +1118,120 @@ public class TestRouterMetrics {
     badSubCluster.getNodesToAttributesFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getNodesToAttributesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetNewReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetNewReservationRetrieved();
+    goodSubCluster.getNewReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetNewReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetNewReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getNewReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetNewReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetNewReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetNewReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getNewReservationFailedRetrieved();
+    badSubCluster.getNewReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getNewReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetSubmitReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededSubmitReservationRetrieved();
+    goodSubCluster.getSubmitReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededSubmitReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededSubmitReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getSubmitReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededSubmitReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededSubmitReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetSubmitReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getSubmitReservationFailedRetrieved();
+    badSubCluster.getSubmitReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getSubmitReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetUpdateReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededUpdateReservationRetrieved();
+    goodSubCluster.getUpdateReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededUpdateReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededUpdateReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getUpdateReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededUpdateReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededUpdateReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetUpdateReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getUpdateReservationFailedRetrieved();
+    badSubCluster.getUpdateReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getUpdateReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetDeleteReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededDeleteReservationRetrieved();
+    goodSubCluster.getDeleteReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededDeleteReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededDeleteReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getDeleteReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededDeleteReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededDeleteReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetDeleteReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getDeleteReservationFailedRetrieved();
+    badSubCluster.getDeleteReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDeleteReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetListReservationRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededListReservationRetrieved();
+    goodSubCluster.getListReservationRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededListReservationRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getListReservationRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededListReservationRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededListReservationRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetListReservationRetrievedFailed() {
+    long totalBadBefore = metrics.getListReservationFailedRetrieved();
+    badSubCluster.getListReservationFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getListReservationFailedRetrieved());
   }
 }

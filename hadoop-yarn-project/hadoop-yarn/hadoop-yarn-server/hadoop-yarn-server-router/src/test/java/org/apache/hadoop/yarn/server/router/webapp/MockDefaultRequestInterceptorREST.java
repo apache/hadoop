@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,9 +38,12 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -55,9 +60,33 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivitiesLogger;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
@@ -78,12 +107,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -100,6 +139,19 @@ public class MockDefaultRequestInterceptorREST
   private boolean isRunning = true;
   private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
+
+  private static final String QUEUE_DEFAULT = "default";
+  private static final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
+      CapacitySchedulerConfiguration.DOT + QUEUE_DEFAULT;
+  private static final String QUEUE_DEDICATED = "dedicated";
+  public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
+      CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
+
+  // duration(milliseconds), 1mins
+  public static final long DURATION = 60*1000;
+
+  // Containers 4
+  public static final int NUM_CONTAINERS = 4;
 
   private void validateRunning() throws ConnectException {
     if (!isRunning) {
@@ -132,8 +184,9 @@ public class MockDefaultRequestInterceptorREST
     // Initialize appReport
     ApplicationReport appReport = ApplicationReport.newInstance(
         appId, ApplicationAttemptId.newInstance(appId, 1), null, newApp.getQueue(), null, null, 0,
-        null, YarnApplicationState.ACCEPTED, "", null, 0, 0, null, null, null, 0, null, null, null,
-        false, Priority.newInstance(newApp.getPriority()), null, null);
+        null, YarnApplicationState.ACCEPTED, "", null, 0, 0, null, null, null, 0,
+        newApp.getApplicationType(), null, null, false, Priority.newInstance(newApp.getPriority()),
+        null, null);
 
     // Initialize appTimeoutsMap
     HashMap<ApplicationTimeoutType, ApplicationTimeout> appTimeoutsMap = new HashMap<>();
@@ -660,5 +713,181 @@ public class MockDefaultRequestInterceptorREST
 
     AppQueue targetAppQueue = new AppQueue(targetQueue.getQueue());
     return Response.status(Status.OK).entity(targetAppQueue).build();
+  }
+
+  public void updateApplicationState(YarnApplicationState appState, String appId)
+      throws AuthorizationException, YarnException, InterruptedException, IOException {
+    validateRunning();
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+    ApplicationReport appReport = applicationMap.get(applicationId);
+    appReport.setYarnApplicationState(appState);
+  }
+
+  @Override
+  public ApplicationStatisticsInfo getAppStatistics(
+      HttpServletRequest hsr, Set<String> stateQueries, Set<String> typeQueries) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    Map<String, StatisticsItemInfo> itemInfoMap = new HashMap<>();
+
+    for (ApplicationReport appReport : applicationMap.values()) {
+
+      YarnApplicationState appState = appReport.getYarnApplicationState();
+      String appType = appReport.getApplicationType();
+
+      if (stateQueries.contains(appState.name()) && typeQueries.contains(appType)) {
+        String itemInfoMapKey = appState.toString() + "_" + appType;
+        StatisticsItemInfo itemInfo = itemInfoMap.getOrDefault(itemInfoMapKey, null);
+        if (itemInfo == null) {
+          itemInfo = new StatisticsItemInfo(appState, appType, 1);
+        } else {
+          long newCount = itemInfo.getCount() + 1;
+          itemInfo.setCount(newCount);
+        }
+        itemInfoMap.put(itemInfoMapKey, itemInfo);
+      }
+    }
+
+    return new ApplicationStatisticsInfo(itemInfoMap.values());
+  }
+
+  @Override
+  public AppActivitiesInfo getAppActivities(
+      HttpServletRequest hsr, String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds, String groupBy, String limit, Set<String> actions,
+      boolean summarize) {
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    ApplicationId applicationId = ApplicationId.fromString(appId);
+    if (!applicationMap.containsKey(applicationId)) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    SchedulerNode schedulerNode = TestUtils.getMockNode("host0", "rack", 1, 10240);
+
+    RMContext rmContext = Mockito.mock(RMContext.class);
+    Mockito.when(rmContext.getYarnConfiguration()).thenReturn(this.getConf());
+    ResourceScheduler scheduler = Mockito.mock(ResourceScheduler.class);
+    Mockito.when(scheduler.getMinimumResourceCapability()).thenReturn(Resources.none());
+    Mockito.when(rmContext.getScheduler()).thenReturn(scheduler);
+    LeafQueue mockQueue = Mockito.mock(LeafQueue.class);
+    Map<ApplicationId, RMApp> rmApps = new ConcurrentHashMap<>();
+    Mockito.doReturn(rmApps).when(rmContext).getRMApps();
+
+    FiCaSchedulerNode node = (FiCaSchedulerNode) schedulerNode;
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(applicationId, 0);
+    RMApp mockApp = Mockito.mock(RMApp.class);
+    Mockito.doReturn(appAttemptId.getApplicationId()).when(mockApp).getApplicationId();
+    Mockito.doReturn(FinalApplicationStatus.UNDEFINED).when(mockApp).getFinalApplicationStatus();
+    rmApps.put(appAttemptId.getApplicationId(), mockApp);
+    FiCaSchedulerApp app = new FiCaSchedulerApp(appAttemptId, "user", mockQueue,
+        mock(ActiveUsersManager.class), rmContext);
+
+    ActivitiesManager newActivitiesManager = new ActivitiesManager(rmContext);
+    newActivitiesManager.turnOnAppActivitiesRecording(app.getApplicationId(), 3);
+
+    int numActivities = 10;
+    for (int i = 0; i < numActivities; i++) {
+      ActivitiesLogger.APP.startAppAllocationRecording(newActivitiesManager, node,
+          SystemClock.getInstance().getTime(), app);
+      ActivitiesLogger.APP.recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
+          new SchedulerRequestKey(Priority.newInstance(0), 0, null),
+          ActivityDiagnosticConstant.NODE_IS_BLACKLISTED, ActivityState.REJECTED,
+          ActivityLevel.NODE);
+      ActivitiesLogger.APP.finishSkippedAppAllocationRecording(newActivitiesManager,
+          app.getApplicationId(), ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
+    }
+
+    Set<Integer> prioritiesInt =
+        requestPriorities.stream().map(pri -> Integer.parseInt(pri)).collect(Collectors.toSet());
+    Set<Long> allocationReqIds =
+        allocationRequestIds.stream().map(id -> Long.parseLong(id)).collect(Collectors.toSet());
+    AppActivitiesInfo appActivitiesInfo = newActivitiesManager.
+        getAppActivitiesInfo(app.getApplicationId(), prioritiesInt, allocationReqIds, null,
+        Integer.parseInt(limit), summarize, 3);
+
+    return appActivitiesInfo;
+  }
+
+  @Override
+  public Response listReservation(String queue, String reservationId, long startTime, long endTime,
+      boolean includeResourceAllocations, HttpServletRequest hsr) throws Exception {
+
+    if (!isRunning) {
+      throw new RuntimeException("RM is stopped");
+    }
+
+    if (!StringUtils.equals(queue, QUEUE_DEDICATED_FULL)) {
+      throw new RuntimeException("The specified queue: " + queue +
+          " is not managed by reservation system." +
+          " Please try again with a valid reservable queue.");
+    }
+
+    MockRM mockRM = setupResourceManager();
+
+    ReservationId reservationID = ReservationId.parseReservationId(reservationId);
+    ReservationSystem reservationSystem = mockRM.getReservationSystem();
+    reservationSystem.synchronizePlan(QUEUE_DEDICATED_FULL, true);
+
+    // Generate reserved resources
+    ClientRMService clientService = mockRM.getClientRMService();
+
+    // arrival time from which the resource(s) can be allocated.
+    long arrival = Time.now();
+
+    // deadline by when the resource(s) must be allocated.
+    // The reason for choosing 1.05 is because this gives an integer
+    // DURATION * 0.05 = 3000(ms)
+    // deadline = arrival + 3000ms
+    long deadline = (long) (arrival + 1.05 * DURATION);
+
+    // In this test of reserved resources, we will apply for 4 containers (1 core, 1GB memory)
+    // arrival = Time.now(), and make sure deadline - arrival > duration,
+    // the current setting is greater than 3000ms
+    ReservationSubmissionRequest submissionRequest =
+        ReservationSystemTestUtil.createSimpleReservationRequest(
+            reservationID, NUM_CONTAINERS, arrival, deadline, DURATION);
+    clientService.submitReservation(submissionRequest);
+
+    // listReservations
+    ReservationListRequest request = ReservationListRequest.newInstance(
+        queue, reservationID.toString(), startTime, endTime, includeResourceAllocations);
+    ReservationListResponse resRespInfo = clientService.listReservations(request);
+    ReservationListInfo resResponse =
+        new ReservationListInfo(resRespInfo, includeResourceAllocations);
+
+    if (mockRM != null) {
+      mockRM.stop();
+    }
+
+    return Response.status(Status.OK).entity(resResponse).build();
+  }
+
+  private MockRM setupResourceManager() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    // Define default queue
+    conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+    // Define dedicated queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
+    conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("127.0.0.1:5678", 100*1024, 100);
+    return rm;
   }
 }

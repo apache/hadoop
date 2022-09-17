@@ -134,6 +134,41 @@
   </property>
 
   <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the corePoolSize of this thread pool,
+      the meaning of corePoolSize is the number of threads to keep in the pool.
+      the default value is 1.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.core-pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the maximumPoolSize of this thread pool,
+      the meaning of maximumPoolSize is the maximum number of threads to allow in the pool.
+      the default value is 5.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the keepAliveTime of this thread pool,
+      The meaning of keepAliveTime is as follows
+      when the number of threads is greater than the core,
+      this is the maximum time that excess idle threads will wait for new tasks before terminating.
+      the default value is 10s.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.keep-alive-time</name>
+    <value>10s</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -1079,6 +1114,18 @@
 
   <property>
     <description>
+      This configuration is used for
+      how often the tokens are scanned for expired tokens in milliseconds.
+      the background thread(delegation token remover thread)
+      will delete expired tokens after the configured time.
+      the default value is 1h.
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
     RM DelegationTokenRenewer thread timeout
     </description>
     <name>yarn.resourcemanager.delegation-token-renewer.thread-timeout</name>
@@ -1546,6 +1593,15 @@
     </description>
     <name>yarn.log-aggregation-status.time-out.ms</name>
     <value>600000</value>
+  </property>
+
+  <property>
+    <description>Whether to clean up nodemanager logs when log aggregation is enabled. Setting to
+      false disables the cleanup nodemanager logging, and it causes disk full in the long run. Users
+      can set to false for test-only purpose.
+    </description>
+    <name>yarn.log-aggregation.enable-local-cleanup</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -4928,6 +4984,26 @@
       The hostname for the Router containing this
       configuration file. Will be different for each machine.
       Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-enabled</name>
+    <value>false</value>
+    <description>
+      This configuration is used to enable the cache of AppsInfo.
+      If it is set to true, the cache is enabled.
+      If it is set to false, the cache is not enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-cached-count</name>
+    <value>100</value>
+    <description>
+      When yarn.router.appsinfo-enabled is set to true,
+      the number of cached appsInfo.
+      Default is 100
     </description>
   </property>
 

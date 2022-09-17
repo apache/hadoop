@@ -166,7 +166,7 @@ public class TestRouterRPCClientRetries {
   private void registerInvalidNameReport() throws IOException {
     String ns0 = cluster.getNameservices().get(0);
     List<? extends FederationNamenodeContext> origin = resolver
-        .getNamenodesForNameserviceId(ns0);
+        .getNamenodesForNameserviceId(ns0, false);
     FederationNamenodeContext nnInfo = origin.get(0);
     NamenodeStatusReport report = new NamenodeStatusReport(ns0,
         nnInfo.getNamenodeId(), nnInfo.getRpcAddress(),

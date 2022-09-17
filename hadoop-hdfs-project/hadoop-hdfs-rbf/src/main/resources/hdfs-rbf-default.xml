@@ -834,4 +834,34 @@
       (delete the source path directly) and skip (skip both trash and deletion).
     </description>
   </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.default</name>
+    <value>false</value>
+    <description>
+      Whether observer reads are enabled. This is a default for all nameservices.
+      The default can be inverted for individual namespace by adding them to
+      dfs.federation.router.observer.read.overrides.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.overrides</name>
+    <value/>
+    <description>
+      Commas separated list of namespaces for which to invert the default configuration,
+      dfs.federation.router.observer.read.default, for whether to enable observer reads.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.federated.state.propagation.maxsize</name>
+    <value>5</value>
+    <description>
+      The maximum size of the federated state to send in the RPC header. Sending the federated
+      state removes the need to msync on every read call, but at the expense of having a larger
+      header. The cost tradeoff between the larger header and always msync'ing depends on the number
+      of namespaces in use and the latency of the msync requests.
+    </description>
+  </property>
 </configuration>
