@@ -1318,10 +1318,6 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       // SC-1 out of service
       deRegisterSubCluster(sc1);
       secondaries.get("SC-1").setRunningMode(false);
-      Set<String> allUAMIds2 = unmanagedAMPoolManager.getAllUAMIds();
-      Assert.assertNotNull(allUAMIds2);
-      Assert.assertTrue(allUAMIds2.size() == 1);
-      Assert.assertTrue(allUAMIds.contains(sc2.getId()));
 
       // Prepare for Federation Interceptor restart and recover
       Map<String, byte[]> recoveredDataMap =
@@ -1335,6 +1331,11 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       // Because of SC-1 failure, only SC-2 returns to normal,
       // at this time UnmanagedAMPoolSize=1
       Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+      UnmanagedAMPoolManager unmanagedAMPoolManager2 = interceptor.getUnmanagedAMPool();
+      Set<String> allUAMIds2 = unmanagedAMPoolManager2.getAllUAMIds();
+      Assert.assertNotNull(allUAMIds2);
+      Assert.assertTrue(allUAMIds2.size() == 1);
+      Assert.assertTrue(allUAMIds2.contains(sc2.getId()));
 
       // SC1 should be initialized to be timed out
       Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
