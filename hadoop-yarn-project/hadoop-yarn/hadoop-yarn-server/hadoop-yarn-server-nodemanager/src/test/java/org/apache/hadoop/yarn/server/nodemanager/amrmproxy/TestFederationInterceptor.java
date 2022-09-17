@@ -20,7 +20,13 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -1297,6 +1303,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       UnmanagedAMPoolManager unmanagedAMPoolManager = interceptor.getUnmanagedAMPool();
       Set<String> allUAMIds = unmanagedAMPoolManager.getAllUAMIds();
       Assert.assertNotNull(allUAMIds);
+      Assert.assertTrue(allUAMIds.size() == 2);
       Assert.assertTrue(allUAMIds.contains(sc1.getId()));
       Assert.assertTrue(allUAMIds.contains(sc2.getId()));
 
@@ -1311,6 +1318,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       // SC-1 out of service
       deRegisterSubCluster(sc1);
       secondaries.get("SC-1").setRunningMode(false);
+      Set<String> allUAMIds2 = unmanagedAMPoolManager.getAllUAMIds();
+      Assert.assertNotNull(allUAMIds2);
+      Assert.assertTrue(allUAMIds2.size() == 1);
+      Assert.assertTrue(allUAMIds.contains(sc2.getId()));
 
       // Prepare for Federation Interceptor restart and recover
       Map<String, byte[]> recoveredDataMap =
@@ -1321,6 +1332,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       interceptor.init(appContext);
       interceptor.recover(recoveredDataMap);
 
+      // Because of SC-1 failure, only SC-2 returns to normal,
+      // at this time UnmanagedAMPoolSize=1
       Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
 
       // SC1 should be initialized to be timed out

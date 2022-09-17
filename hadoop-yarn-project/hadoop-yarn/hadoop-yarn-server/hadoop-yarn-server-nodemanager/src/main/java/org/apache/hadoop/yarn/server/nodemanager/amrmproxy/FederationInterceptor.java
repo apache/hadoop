@@ -201,8 +201,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * that all the {@link AMRMClientRelayer} will be re-populated with all
    * pending requests.
    *
-   * TODO: When split-merge is not idempotent, this can lead to some
-   * over-allocation without a full cancel to RM.
    */
   private volatile boolean justRecovered;
 
