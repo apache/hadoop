@@ -487,7 +487,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       LOG.info("In all {} UAMs {} running containers including AM recovered for {}.",
           uamMap.size(), containers, this.attemptId);
 
-      if (this.amRegistrationResponse != null) {
+      if (queue != null) {
         // Initialize the AMRMProxyPolicy
         queue = this.amRegistrationResponse.getQueue();
         this.policyInterpreter = FederationPolicyUtils.loadAMRMPolicy(queue, this.policyInterpreter,
