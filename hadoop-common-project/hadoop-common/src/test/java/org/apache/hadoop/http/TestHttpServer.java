@@ -747,7 +747,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public void testBacklogSize2() throws Exception
   {
     Configuration conf = new Configuration();
-    HttpServer2 srv = createServer("test1", conf);
+    HttpServer2 srv = createServer("test", conf);
     List<ServerConnector> listeners = srv.getListeners();
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(500, listener.getAcceptQueueSize());
