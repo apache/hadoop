@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
 
@@ -232,6 +234,36 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   @Test
+  public void testValidateOverlappingRanges()  throws Exception {
+    List<FileRange> input = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(200, 100),
+            FileRange.createFileRange(250, 100)
+    );
+
+    intercept(UnsupportedOperationException.class,
+        () -> validateNonOverlappingAndReturnSortedRanges(input));
+
+    List<FileRange> input1 = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(500, 100),
+            FileRange.createFileRange(1000, 100),
+            FileRange.createFileRange(1000, 100)
+    );
+
+    intercept(UnsupportedOperationException.class,
+        () -> validateNonOverlappingAndReturnSortedRanges(input1));
+
+    List<FileRange> input2 = Arrays.asList(
+            FileRange.createFileRange(100, 100),
+            FileRange.createFileRange(200, 100),
+            FileRange.createFileRange(300, 100)
+    );
+    // consecutive ranges should pass.
+    validateNonOverlappingAndReturnSortedRanges(input2);
+  }
+
+  @Test
   public void testMaxSizeZeroDisablesMering() throws Exception {
     List<FileRange> randomRanges = Arrays.asList(
             FileRange.createFileRange(3000, 110),
@@ -354,17 +386,31 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 100),
         FileRange.createFileRange(100_000, 100),
         FileRange.createFileRange(200_000, 100));
+    runAndValidateVectoredRead(input);
+  }
+
+  @Test
+  public void testReadVectoredZeroBytes() throws Exception {
+    List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 0),
+            FileRange.createFileRange(100_000, 100),
+            FileRange.createFileRange(200_000, 0));
+    runAndValidateVectoredRead(input);
+  }
+
+
+  private void runAndValidateVectoredRead(List<FileRange> input)
+          throws Exception {
     Stream stream = Mockito.mock(Stream.class);
     Mockito.doAnswer(invocation -> {
       fillBuffer(invocation.getArgument(1));
       return null;
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
-        ArgumentMatchers.any(ByteBuffer.class));
+            ArgumentMatchers.any(ByteBuffer.class));
     // should not merge the ranges
     VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate);
     Mockito.verify(stream, Mockito.times(3))
-        .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
-    for(int b=0; b < input.size(); ++b) {
+            .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
+    for (int b = 0; b < input.size(); ++b) {
       validateBuffer("buffer " + b, input.get(b).getData().get(), 0);
     }
   }

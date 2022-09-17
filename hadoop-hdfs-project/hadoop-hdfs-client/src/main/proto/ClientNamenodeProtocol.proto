@@ -332,6 +332,7 @@ message GetSnapshotDiffReportListingResponseProto {
 }
 message RenewLeaseRequestProto {
   required string clientName = 1;
+  repeated string namespaces = 2;
 }
 
 message RenewLeaseResponseProto { //void response

@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-#include "mock_connection.h"
-
-#include "datatransfer.pb.h"
-#include "common/util.h"
-#include "common/cancel_tracker.h"
 #include "reader/block_reader.h"
 #include "reader/datatransfer.h"
+
+#include "mock_connection.h"
+
+#include "common/util.h"
+#include "common/cancel_tracker.h"
 #include "reader/fileinfo.h"
 
 #include <google/protobuf/io/coded_stream.h>
@@ -124,11 +124,11 @@ static inline string ToDelimitedString(const pb::MessageLite *msg) {
   return res;
 }
 
-static inline std::pair<error_code, string> Produce(const std::string &s) {
-  return make_pair(error_code(), s);
+static inline std::pair<boost::system::error_code, string> Produce(const std::string &s) {
+  return make_pair(boost::system::error_code(), s);
 }
 
-static inline std::pair<error_code, string> ProducePacket(
+static inline std::pair<boost::system::error_code, string> ProducePacket(
     const std::string &data, const std::string &checksum, int offset_in_block,
     int seqno, bool last_packet) {
   PacketHeaderProto proto;
@@ -148,7 +148,7 @@ static inline std::pair<error_code, string> ProducePacket(
   proto.AppendToString(&payload);
   payload += checksum;
   payload += data;
-  return std::make_pair(error_code(), std::move(payload));
+  return std::make_pair(boost::system::error_code(), std::move(payload));
 }
 
 TEST(RemoteBlockReaderTest, TestReadSingleTrunk) {

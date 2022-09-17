@@ -237,12 +237,8 @@ public class MiniRouterDFSCluster {
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to router at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public RouterClient getAdminClient() throws IOException {
@@ -384,12 +380,8 @@ public class MiniRouterDFSCluster {
         throws IOException, URISyntaxException, InterruptedException {
 
       LOG.info("Connecting to namenode at {}", fileSystemUri);
-      return user.doAs(new PrivilegedExceptionAction<DFSClient>() {
-        @Override
-        public DFSClient run() throws IOException {
-          return new DFSClient(fileSystemUri, conf);
-        }
-      });
+      return user.doAs((PrivilegedExceptionAction<DFSClient>)
+          () -> new DFSClient(fileSystemUri, conf));
     }
 
     public DFSClient getClient() throws IOException, URISyntaxException {
@@ -814,6 +806,7 @@ public class MiniRouterDFSCluster {
           .numDataNodes(numDNs)
           .nnTopology(topology)
           .dataNodeConfOverlays(dnConfs)
+          .checkExitOnShutdown(false)
           .storageTypes(storageTypes)
           .racks(racks)
           .build();
@@ -1043,6 +1036,27 @@ public class MiniRouterDFSCluster {
       }
     } catch (Throwable e) {
       LOG.error("Cannot transition to standby", e);
+    }
+  }
+
+  /**
+   * Switch a namenode in a nameservice to be the observer.
+   * @param nsId Nameservice identifier.
+   * @param nnId Namenode identifier.
+   */
+  public void switchToObserver(String nsId, String nnId) {
+    try {
+      int total = cluster.getNumNameNodes();
+      NameNodeInfo[] nns = cluster.getNameNodeInfos();
+      for (int i = 0; i < total; i++) {
+        NameNodeInfo nn = nns[i];
+        if (nn.getNameserviceId().equals(nsId) &&
+            nn.getNamenodeId().equals(nnId)) {
+          cluster.transitionToObserver(i);
+        }
+      }
+    } catch (Throwable e) {
+      LOG.error("Cannot transition to active", e);
     }
   }
 

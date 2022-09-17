@@ -37,6 +37,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -50,12 +51,14 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.fs.VectoredReadUtils;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
+import org.apache.hadoop.fs.s3a.impl.InternalConstants;
+import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
@@ -64,7 +67,6 @@ import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -96,10 +98,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_OPEN = "open";
   public static final String OPERATION_REOPEN = "re-open";
 
-  /**
-   * size of a buffer to create when draining the stream.
-   */
-  private static final int DRAIN_BUFFER_SIZE = 16384;
   /**
    * This is the maximum temporary buffer size we use while
    * populating the data in direct byte buffers during a vectored IO
@@ -187,6 +185,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private long asyncDrainThreshold;
 
+  /** Aggregator used to aggregate per thread IOStatistics. */
+  private final IOStatisticsAggregator threadIOStatistics;
+
   /**
    * Create the stream.
    * This does not attempt to open it; that is only done on the first
@@ -225,6 +226,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
     this.unboundedThreadPool = unboundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
+    this.threadIOStatistics = requireNonNull(ctx.getIOStatisticsAggregator());
   }
 
   /**
@@ -235,6 +237,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void setInputPolicy(S3AInputPolicy inputPolicy) {
     this.inputPolicy = inputPolicy;
     streamStatistics.inputPolicySet(inputPolicy.ordinal());
+  }
+
+  /**
+   * Get the current input policy.
+   * @return input policy.
+   */
+  @VisibleForTesting
+  public S3AInputPolicy getInputPolicy() {
+    return inputPolicy;
   }
 
   /**
@@ -599,8 +610,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       try {
         stopVectoredIOOperations.set(true);
         // close or abort the stream; blocking
-        awaitFuture(closeStream("close() operation", false, true));
-        LOG.debug("Statistics of stream {}\n{}", key, streamStatistics);
+        closeStream("close() operation", false, true);
         // end the client+audit span.
         client.close();
         // this is actually a no-op
@@ -608,8 +618,21 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       } finally {
         // merge the statistics back into the FS statistics.
         streamStatistics.close();
+        // Collect ThreadLevel IOStats
+        mergeThreadIOStatistics(streamStatistics.getIOStatistics());
       }
     }
+  }
+
+  /**
+   * Merging the current thread's IOStatistics with the current IOStatistics
+   * context.
+   *
+   * @param streamIOStats Stream statistics to be merged into thread
+   *                      statistics aggregator.
+   */
+  private void mergeThreadIOStatistics(IOStatistics streamIOStats) {
+    threadIOStatistics.aggregate(streamIOStats);
   }
 
   /**
@@ -647,18 +670,25 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         forceAbort ? "abort" : "soft");
     boolean shouldAbort = forceAbort || remaining > readahead;
     CompletableFuture<Boolean> operation;
+    SDKStreamDrainer drainer = new SDKStreamDrainer(
+        uri,
+        object,
+        wrappedStream,
+        shouldAbort,
+        (int) remaining,
+        streamStatistics,
+        reason);
 
     if (blocking || shouldAbort || remaining <= asyncDrainThreshold) {
-      // don't bother with async io.
-      operation = CompletableFuture.completedFuture(
-          drain(shouldAbort, reason, remaining, object, wrappedStream));
+      // don't bother with async IO if the caller plans to wait for
+      // the result, there's an abort (which is fast), or
+      // there is not much data to read.
+      operation = CompletableFuture.completedFuture(drainer.apply());
 
     } else {
       LOG.debug("initiating asynchronous drain of {} bytes", remaining);
-      // schedule an async drain/abort with references to the fields so they
-      // can be reused
-      operation = client.submit(
-          () -> drain(false, reason, remaining, object, wrappedStream));
+      // schedule an async drain/abort
+      operation = client.submit(drainer);
     }
 
     // either the stream is closed in the blocking call or the async call is
@@ -666,117 +696,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     wrappedStream = null;
     object = null;
     return operation;
-  }
-
-  /**
-   * drain the stream. This method is intended to be
-   * used directly or asynchronously, and measures the
-   * duration of the operation in the stream statistics.
-   * @param shouldAbort force an abort; used if explicitly requested.
-   * @param reason reason for stream being closed; used in messages
-   * @param remaining remaining bytes
-   * @param requestObject http request object; needed to avoid GC issues.
-   * @param inner stream to close.
-   * @return was the stream aborted?
-   */
-  private boolean drain(
-      final boolean shouldAbort,
-      final String reason,
-      final long remaining,
-      final S3Object requestObject,
-      final S3ObjectInputStream inner) {
-
-    try {
-      return invokeTrackingDuration(
-          streamStatistics.initiateInnerStreamClose(shouldAbort),
-          () -> drainOrAbortHttpStream(
-              shouldAbort,
-              reason,
-              remaining,
-              requestObject,
-              inner));
-    } catch (IOException e) {
-      // this is only here because invokeTrackingDuration() has it in its
-      // signature
-      return shouldAbort;
-    }
-  }
-
-  /**
-   * Drain or abort the inner stream.
-   * Exceptions are swallowed.
-   * If a close() is attempted and fails, the operation escalates to
-   * an abort.
-   *
-   * This does not set the {@link #closed} flag.
-   *
-   * A reference to the stream is passed in so that the instance
-   * {@link #wrappedStream} field can be reused as soon as this
-   * method is submitted;
-   * @param shouldAbort force an abort; used if explicitly requested.
-   * @param reason reason for stream being closed; used in messages
-   * @param remaining remaining bytes
-   * @param requestObject http request object; needed to avoid GC issues.
-   * @param inner stream to close.
-   * @return was the stream aborted?
-   */
-  private boolean drainOrAbortHttpStream(
-      boolean shouldAbort,
-      final String reason,
-      final long remaining,
-      final S3Object requestObject,
-      final S3ObjectInputStream inner) {
-    // force a use of the request object so IDEs don't warn of
-    // lack of use.
-    requireNonNull(requestObject);
-
-    if (!shouldAbort) {
-      try {
-        // clean close. This will read to the end of the stream,
-        // so, while cleaner, can be pathological on a multi-GB object
-
-        // explicitly drain the stream
-        long drained = 0;
-        byte[] buffer = new byte[DRAIN_BUFFER_SIZE];
-        while (true) {
-          final int count = inner.read(buffer);
-          if (count < 0) {
-            // no more data is left
-            break;
-          }
-          drained += count;
-        }
-        LOG.debug("Drained stream of {} bytes", drained);
-
-        // now close it
-        inner.close();
-        // this MUST come after the close, so that if the IO operations fail
-        // and an abort is triggered, the initial attempt's statistics
-        // aren't collected.
-        streamStatistics.streamClose(false, drained);
-      } catch (Exception e) {
-        // exception escalates to an abort
-        LOG.debug("When closing {} stream for {}, will abort the stream",
-            uri, reason, e);
-        shouldAbort = true;
-      }
-    }
-    if (shouldAbort) {
-      // Abort, rather than just close, the underlying stream.  Otherwise, the
-      // remaining object payload is read from S3 while closing the stream.
-      LOG.debug("Aborting stream {}", uri);
-      try {
-        inner.abort();
-      } catch (Exception e) {
-        LOG.warn("When aborting {} stream after failing to close it for {}",
-            uri, reason, e);
-      }
-      streamStatistics.streamClose(true, remaining);
-    }
-    LOG.debug("Stream {} {}: {}; remaining={}",
-        uri, (shouldAbort ? "aborted" : "closed"), reason,
-        remaining);
-    return shouldAbort;
   }
 
   /**
@@ -946,7 +865,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
-
     LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
@@ -961,6 +879,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), sortedRanges.size());
       for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
         unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
@@ -970,6 +889,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(sortedRanges,
               1, minSeekForVectorReads(),
               maxReadSizeForVectorReads());
+      streamStatistics.readVectoredOperationStarted(sortedRanges.size(), combinedFileRanges.size());
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
@@ -1062,8 +982,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     int drainBytes = 0;
     int readCount;
     while (drainBytes < drainQuantity) {
-      if (drainBytes + DRAIN_BUFFER_SIZE <= drainQuantity) {
-        byte[] drainBuffer = new byte[DRAIN_BUFFER_SIZE];
+      if (drainBytes + InternalConstants.DRAIN_BUFFER_SIZE <= drainQuantity) {
+        byte[] drainBuffer = new byte[InternalConstants.DRAIN_BUFFER_SIZE];
         readCount = objectContent.read(drainBuffer);
       } else {
         byte[] drainBuffer = new byte[(int) (drainQuantity - drainBytes)];
@@ -1071,6 +991,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       }
       drainBytes += readCount;
     }
+    streamStatistics.readVectoredBytesDiscarded(drainBytes);
     LOG.debug("{} bytes drained from stream ", drainBytes);
   }
 
@@ -1084,10 +1005,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void validateRangeRequest(FileRange range) throws EOFException {
     VectoredReadUtils.validateRangeRequest(range);
     if(range.getOffset() + range.getLength() > contentLength) {
-      LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+      final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
               range.getOffset(), range.getLength(), pathStr);
-      throw new EOFException("Requested range [" + range.getOffset() +", "
-              + range.getLength() + ") is beyond EOF for path " + pathStr);
+      LOG.warn(errMsg);
+      throw new EOFException(errMsg);
     }
   }
 
@@ -1133,25 +1054,21 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void populateBuffer(int length,
                               ByteBuffer buffer,
                               S3ObjectInputStream objectContent) throws IOException {
+
     if (buffer.isDirect()) {
-      int readBytes = 0;
-      int offset = 0;
-      byte[] tmp = new byte[TMP_BUFFER_MAX_SIZE];
-      while (readBytes < length) {
-        checkIfVectoredIOStopped();
-        int currentLength = readBytes + TMP_BUFFER_MAX_SIZE < length ?
-                TMP_BUFFER_MAX_SIZE
-                : length - readBytes;
-        readByteArray(objectContent, tmp, 0, currentLength);
-        buffer.put(tmp, 0, currentLength);
-        offset = offset + currentLength;
-        readBytes = readBytes + currentLength;
-      }
+      VectoredReadUtils.readInDirectBuffer(length, buffer,
+          (position, tmp, offset, currentLength) -> {
+            readByteArray(objectContent, tmp, offset, currentLength);
+            return null;
+          });
       buffer.flip();
     } else {
       readByteArray(objectContent, buffer.array(), 0, length);
     }
+    // update io stats.
+    incrementBytesRead(length);
   }
+
 
   /**
    * Read data into destination buffer from s3 object content.
@@ -1324,6 +1241,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       closeStream("unbuffer()", false, false);
     } finally {
       streamStatistics.unbuffered();
+      if (inputPolicy.isAdaptive()) {
+        S3AInputPolicy policy = S3AInputPolicy.Random;
+        LOG.debug("Switching to seek policy {} after unbuffer() invoked", policy);
+        setInputPolicy(policy);
+      }
     }
   }
 
@@ -1331,6 +1253,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public boolean hasCapability(String capability) {
     switch (toLowerCase(capability)) {
     case StreamCapabilities.IOSTATISTICS:
+    case StreamCapabilities.IOSTATISTICS_CONTEXT:
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.UNBUFFER:
     case StreamCapabilities.VECTOREDIO:

@@ -143,7 +143,7 @@ public class NumaResourceAllocator {
   }
 
   @VisibleForTesting
-  String executeNGetCmdOutput(Configuration conf) throws YarnException {
+  public String executeNGetCmdOutput(Configuration conf) throws YarnException {
     String numaCtlCmd = conf.get(
         YarnConfiguration.NM_NUMA_AWARENESS_NUMACTL_CMD,
         YarnConfiguration.DEFAULT_NM_NUMA_AWARENESS_NUMACTL_CMD);
@@ -231,7 +231,7 @@ public class NumaResourceAllocator {
   }
 
   private NumaResourceAllocation allocate(ContainerId containerId,
-      Resource resource) {
+      Resource resource) throws ResourceHandlerException {
     for (int index = 0; index < numaNodesList.size(); index++) {
       NumaNodeResource numaNode = numaNodesList
           .get((currentAssignNode + index) % numaNodesList.size());
@@ -306,11 +306,19 @@ public class NumaResourceAllocator {
    * Release assigned NUMA resources for the container.
    *
    * @param containerId the container ID
+   * @throws ResourceHandlerException when failed to release numa resource
    */
-  public synchronized void releaseNumaResource(ContainerId containerId) {
+  public synchronized void releaseNumaResource(ContainerId containerId)
+      throws ResourceHandlerException {
     LOG.info("Releasing the assigned NUMA resources for " + containerId);
     for (NumaNodeResource numaNode : numaNodesList) {
       numaNode.releaseResources(containerId);
+    }
+    // delete from NM State store
+    try {
+      context.getNMStateStore().releaseAssignedResources(containerId, NUMA_RESOURCE_TYPE);
+    } catch (IOException e){
+      throw new ResourceHandlerException(e);
     }
   }
 

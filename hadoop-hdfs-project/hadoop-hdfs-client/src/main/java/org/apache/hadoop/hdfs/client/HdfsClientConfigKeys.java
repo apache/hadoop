@@ -281,6 +281,10 @@ public interface HdfsClientConfigKeys {
       "dfs.client.fsck.read.timeout";
   int DFS_CLIENT_FSCK_READ_TIMEOUT_DEFAULT = 60 * 1000;
 
+  String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY =
+      "dfs.client.output.stream.uniq.default.key";
+  String DFS_OUTPUT_STREAM_UNIQ_DEFAULT_KEY_DEFAULT = "DEFAULT";
+
   /**
    * These are deprecated config keys to client code.
    */

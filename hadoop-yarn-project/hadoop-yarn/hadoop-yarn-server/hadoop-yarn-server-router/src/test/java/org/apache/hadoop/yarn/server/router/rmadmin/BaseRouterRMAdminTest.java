@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -91,7 +92,7 @@ public abstract class BaseRouterRMAdminTest {
     String mockPassThroughInterceptorClass =
         PassThroughRMAdminRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
+    // Create a request interceptor pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     this.conf.set(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
@@ -106,6 +107,8 @@ public abstract class BaseRouterRMAdminTest {
     this.dispatcher.init(conf);
     this.dispatcher.start();
     this.rmAdminService = createAndStartRouterRMAdminService();
+
+    DefaultMetricsSystem.setMiniClusterMode(true);
   }
 
   @After

@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * use the {@code RouterClientRMService} pipeline test cases for testing the
  * {@code FederationInterceptor} class. The tests for
  * {@code RouterClientRMService} has been written cleverly so that it can be
- * reused to validate different request intercepter chains.
+ * reused to validate different request interceptor chains.
  *
  * It tests the case with SubClusters down and the Router logic of retries. We
  * have 1 good SubCluster and 2 bad ones for all the tests.
@@ -137,8 +137,8 @@ public class TestFederationClientInterceptorRetry
     String mockPassThroughInterceptorClass =
         PassThroughClientRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,

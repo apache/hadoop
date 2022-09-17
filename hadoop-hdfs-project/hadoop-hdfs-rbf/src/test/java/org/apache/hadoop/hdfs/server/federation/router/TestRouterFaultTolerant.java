@@ -168,7 +168,7 @@ public class TestRouterFaultTolerant {
     }
     namenodes.clear();
 
-    routers.forEach(router ->  router.stop());
+    routers.forEach(Router::stop);
     routers.clear();
 
     if (service != null) {

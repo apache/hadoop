@@ -94,6 +94,12 @@ public interface StreamCapabilities {
   String ABORTABLE_STREAM =  CommonPathCapabilities.ABORTABLE_STREAM;
 
   /**
+   * Streams that support IOStatistics context and capture thread-level
+   * IOStatistics.
+   */
+  String IOSTATISTICS_CONTEXT = "fs.capability.iocontext.supported";
+
+  /**
    * Capabilities that a stream can support and be queried for.
    */
   @Deprecated
