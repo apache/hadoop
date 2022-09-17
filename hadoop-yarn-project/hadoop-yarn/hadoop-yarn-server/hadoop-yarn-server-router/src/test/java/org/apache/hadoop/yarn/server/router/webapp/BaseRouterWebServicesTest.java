@@ -85,7 +85,7 @@ public abstract class BaseRouterWebServicesTest {
   private RouterWebServices routerWebService;
 
   @Before
-  public void setUp() {
+  public void setUp() throws YarnException, IOException {
     this.conf = createConfiguration();
 
     router = spy(new Router());
