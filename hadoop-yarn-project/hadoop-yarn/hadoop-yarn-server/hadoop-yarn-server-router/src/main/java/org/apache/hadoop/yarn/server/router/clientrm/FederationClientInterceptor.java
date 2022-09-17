@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
@@ -702,28 +703,26 @@ public class FederationClientInterceptor
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
-  <R> Map<SubClusterId, R> invokeConcurrent(ArrayList<SubClusterId> clusterIds,
+  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
       ClientMethod request, Class<R> clazz) throws YarnException, IOException {
     List<Callable<Object>> callables = new ArrayList<>();
     List<Future<Object>> futures = new ArrayList<>();
     Map<SubClusterId, IOException> exceptions = new TreeMap<>();
     for (SubClusterId subClusterId : clusterIds) {
-      callables.add(new Callable<Object>() {
-        @Override
-        public Object call() throws Exception {
-          ApplicationClientProtocol protocol =
-              getClientRMProxyForSubCluster(subClusterId);
-          Method method = ApplicationClientProtocol.class
-              .getMethod(request.getMethodName(), request.getTypes());
-          return method.invoke(protocol, request.getParams());
-        }
+      callables.add(() -> {
+        ApplicationClientProtocol protocol =
+            getClientRMProxyForSubCluster(subClusterId);
+        Method method = ApplicationClientProtocol.class
+            .getMethod(request.getMethodName(), request.getTypes());
+        return method.invoke(protocol, request.getParams());
       });
     }
     Map<SubClusterId, R> results = new TreeMap<>();
     try {
       futures.addAll(executorService.invokeAll(callables));
       for (int i = 0; i < futures.size(); i++) {
-        SubClusterId subClusterId = clusterIds.get(i);
+        Object clusterObj = CollectionUtils.get(clusterIds, i);
+        SubClusterId subClusterId = SubClusterId.class.cast(clusterObj);
         try {
           Future<Object> future = futures.get(i);
           Object result = future.get();
@@ -747,7 +746,8 @@ public class FederationClientInterceptor
         }
       }
       if (results.isEmpty() && !clusterIds.isEmpty()) {
-        SubClusterId subClusterId = clusterIds.get(0);
+        Object clusterObj = CollectionUtils.get(clusterIds, 0);
+        SubClusterId subClusterId = SubClusterId.class.cast(clusterObj);
         IOException ioe = exceptions.get(subClusterId);
         if (ioe != null) {
           throw ioe;
@@ -757,12 +757,6 @@ public class FederationClientInterceptor
       throw new YarnException(e);
     }
     return results;
-  }
-
-  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
-      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
-    ArrayList<SubClusterId> clusterIdList = new ArrayList<>(clusterIds);
-    return invokeConcurrent(clusterIdList, request, clazz);
   }
 
   @Override
