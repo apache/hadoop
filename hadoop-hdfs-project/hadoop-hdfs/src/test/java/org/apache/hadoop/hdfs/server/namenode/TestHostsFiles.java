@@ -183,14 +183,14 @@ public class TestHostsFiles {
 
     HostsFileWriter writer1 = new HostsFileWriter();
     writer1.initialize(conf, "old_temp/decommission");
-    writer1.initIncludeHosts(new String[]{"localhost:52","127.0.0.1:7777"});
+    writer1.initIncludeHosts(new String[]{"localhost:52", "127.0.0.1:7777"});
 
     // Write all hosts to a new dfs.hosts file.
     HostsFileWriter writer2 = new HostsFileWriter();
     Configuration newConf = new Configuration(getConf());
     writer2.initialize(newConf, "new_temp/decommission");
     writer2.initIncludeHosts(new String[]{
-        "localhost:52","127.0.0.1:7777","localhost:100"});
+        "localhost:52", "127.0.0.1:7777", "localhost:100"});
 
     MiniDFSCluster cluster = null;
     try {
