@@ -38,5 +38,4 @@ ProducerResult SharedMockConnection::Produce() {
 }
 
 std::weak_ptr<SharedConnectionData> SharedMockConnection::shared_connection_data_;
-
 }
