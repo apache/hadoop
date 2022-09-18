@@ -2310,10 +2310,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       throws IOException {
     final List<String> errors = new ArrayList<String>();
     for (int i = 0; i < invalidBlks.length; i++) {
-      final ReplicaInfo removing;
+      final ReplicaInfo info;
       final FsVolumeImpl v;
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
-        final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
+      try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
+        info = volumeMap.get(bpid, invalidBlks[i]);
         if (info == null) {
           ReplicaInfo infoByBlockId =
               volumeMap.get(bpid, invalidBlks[i].getBlockId());
@@ -2347,34 +2347,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           LOG.warn("Parent directory check failed; replica {} is " +
               "not backed by a local file", info);
         }
-        removing = volumeMap.remove(bpid, invalidBlks[i]);
-        addDeletingBlock(bpid, removing.getBlockId());
-        LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
-        datanode.getMetrics().incrBlocksRemoved(1);
-        if (removing instanceof ReplicaInPipeline) {
-          ((ReplicaInPipeline) removing).releaseAllBytesReserved();
-        }
       }
-
-      if (v.isTransientStorage()) {
-        RamDiskReplica replicaInfo =
-          ramDiskReplicaTracker.getReplica(bpid, invalidBlks[i].getBlockId());
-        if (replicaInfo != null) {
-          if (!replicaInfo.getIsPersisted()) {
-            datanode.getMetrics().incrRamDiskBlocksDeletedBeforeLazyPersisted();
-          }
-          ramDiskReplicaTracker.discardReplica(replicaInfo.getBlockPoolId(),
-            replicaInfo.getBlockId(), true);
-        }
-      }
-
-      // If a DFSClient has the replica in its cache of short-circuit file
-      // descriptors (and the client is using ShortCircuitShm), invalidate it.
-      datanode.getShortCircuitRegistry().processBlockInvalidation(
-                new ExtendedBlockId(invalidBlks[i].getBlockId(), bpid));
-
-      // If the block is cached, start uncaching it.
-      cacheManager.uncacheBlock(bpid, invalidBlks[i].getBlockId());
 
       try {
         if (async) {
@@ -2382,13 +2355,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           // enough.
           // It's ok to unlink the block file before the uncache operation
           // finishes.
-          asyncDiskService.deleteAsync(v.obtainReference(), removing,
+          asyncDiskService.deleteAsync(v.obtainReference(), info,
               new ExtendedBlock(bpid, invalidBlks[i]),
-              dataStorage.getTrashDirectoryForReplica(bpid, removing));
+              dataStorage.getTrashDirectoryForReplica(bpid, info));
         } else {
-          asyncDiskService.deleteSync(v.obtainReference(), removing,
+          asyncDiskService.deleteSync(v.obtainReference(), info,
               new ExtendedBlock(bpid, invalidBlks[i]),
-              dataStorage.getTrashDirectoryForReplica(bpid, removing));
+              dataStorage.getTrashDirectoryForReplica(bpid, info));
         }
       } catch (ClosedChannelException e) {
         LOG.warn("Volume {} is closed, ignore the deletion task for " +
@@ -3633,8 +3606,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
   }
-  
-  private void addDeletingBlock(String bpid, Long blockId) {
+
+  protected void addDeletingBlock(String bpid, Long blockId) {
     synchronized(deletingBlock) {
       Set<Long> s = deletingBlock.get(bpid);
       if (s == null) {
