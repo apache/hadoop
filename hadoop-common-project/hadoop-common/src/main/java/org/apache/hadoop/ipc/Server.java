@@ -3156,6 +3156,7 @@ public abstract class Server {
         throws IOException, InterruptedException {
       try {
         internalQueueCall(call, false);
+        rpcMetrics.incrRequeueCalls();
       } catch (RpcServerException rse) {
         call.doResponse(rse.getCause(), rse.getRpcStatusProto());
       }
@@ -4111,4 +4112,18 @@ public abstract class Server {
     }
   }
 
+  @VisibleForTesting
+  CallQueueManager<Call> getCallQueue() {
+    return callQueue;
+  }
+
+  @VisibleForTesting
+  void setCallQueue(CallQueueManager<Call> callQueue) {
+    this.callQueue = callQueue;
+  }
+
+  @VisibleForTesting
+  void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
+    this.rpcRequestClass = rpcRequestClass;
+  }
 }

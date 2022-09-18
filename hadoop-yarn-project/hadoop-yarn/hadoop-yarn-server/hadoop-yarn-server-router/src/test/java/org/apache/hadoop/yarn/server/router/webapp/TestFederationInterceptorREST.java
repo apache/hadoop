@@ -28,9 +28,11 @@ import java.util.HashSet;
 import java.util.Collections;
 
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -48,6 +50,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -71,10 +75,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
@@ -84,6 +93,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
@@ -1055,5 +1066,65 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(appActivitiesInfo);
     Assert.assertEquals(appId.toString(), appActivitiesInfo.getApplicationId());
     Assert.assertEquals(10, appActivitiesInfo.getAllocations().size());
+  }
+
+  @Test
+  public void testListReservation() throws Exception {
+
+    // Add ReservationId In stateStore
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId homeSubClusterId = subClusters.get(0);
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, homeSubClusterId);
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(request);
+
+    // Call the listReservation method
+    String applyReservationId = reservationId.toString();
+    Response listReservationResponse = interceptor.listReservation(
+        QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
+    Assert.assertNotNull(listReservationResponse);
+    Assert.assertNotNull(listReservationResponse.getStatus());
+    Status status = Status.fromStatusCode(listReservationResponse.getStatus());
+    Assert.assertEquals(Status.OK, status);
+
+    Object entity = listReservationResponse.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertNotNull(entity instanceof ReservationListInfo);
+
+    ReservationListInfo listInfo = (ReservationListInfo) entity;
+    Assert.assertNotNull(listInfo);
+
+    List<ReservationInfo> reservationInfoList = listInfo.getReservations();
+    Assert.assertNotNull(reservationInfoList);
+    Assert.assertEquals(1, reservationInfoList.size());
+
+    ReservationInfo reservationInfo = reservationInfoList.get(0);
+    Assert.assertNotNull(reservationInfo);
+    Assert.assertEquals(applyReservationId, reservationInfo.getReservationId());
+
+    ReservationDefinitionInfo definitionInfo = reservationInfo.getReservationDefinition();
+    Assert.assertNotNull(definitionInfo);
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+    Assert.assertNotNull(reservationRequestsInfo);
+
+    ArrayList<ReservationRequestInfo> reservationRequestInfoList =
+        reservationRequestsInfo.getReservationRequest();
+    Assert.assertNotNull(reservationRequestInfoList);
+    Assert.assertEquals(1, reservationRequestInfoList.size());
+
+    ReservationRequestInfo reservationRequestInfo = reservationRequestInfoList.get(0);
+    Assert.assertNotNull(reservationRequestInfo);
+    Assert.assertEquals(4, reservationRequestInfo.getNumContainers());
+
+    ResourceInfo resourceInfo = reservationRequestInfo.getCapability();
+    Assert.assertNotNull(resourceInfo);
+
+    int vCore = resourceInfo.getvCores();
+    long memory = resourceInfo.getMemorySize();
+    Assert.assertEquals(1, vCore);
+    Assert.assertEquals(1024, memory);
   }
 }
