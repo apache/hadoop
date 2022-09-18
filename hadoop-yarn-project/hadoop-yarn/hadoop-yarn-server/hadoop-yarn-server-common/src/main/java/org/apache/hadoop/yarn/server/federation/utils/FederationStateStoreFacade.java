@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -719,5 +720,16 @@ public final class FederationStateStoreFacade {
   @VisibleForTesting
   public FederationStateStore getStateStore() {
     return stateStore;
+  }
+
+  /**
+   * Get Active's SubClusterIds{@link SubClusterId}.
+   *
+   * @return SubClusterId Collection.
+   */
+  public Collection<SubClusterId> getActiveSubClusterIds() throws YarnException {
+    Map<SubClusterId, SubClusterInfo> activeSubClusters =
+        getSubClusters(true);
+    return activeSubClusters.keySet();
   }
 }
