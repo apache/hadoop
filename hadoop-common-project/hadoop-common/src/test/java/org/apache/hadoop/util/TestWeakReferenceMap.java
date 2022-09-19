@@ -25,10 +25,13 @@ import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
 /**
- * Test {@link WeakReferenceMap}.
+ * Test {@link WeakReferenceMap} and {@link WeakReferenceThreadMap}.
  * There's no attempt to force GC here, so the tests are
  * more about the basic behavior not the handling of empty references.
  */
@@ -126,10 +129,66 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
   }
 
   /**
+   * It is an error to have a factory which returns null.
+   */
+  @Test
+  public void testFactoryReturningNull() throws Throwable {
+    referenceMap = new WeakReferenceMap<>(
+        (k) -> null,
+            null);
+    intercept(NullPointerException.class, () ->
+        referenceMap.get(0));
+  }
+
+  /**
+   * Test the WeakReferenceThreadMap extension.
+   */
+  @Test
+  public void testWeakReferenceThreadMapRejectsNullAssignment()
+      throws Throwable {
+    WeakReferenceThreadMap<String> threadMap = new WeakReferenceThreadMap<>(
+        id -> "Entry for thread ID " + id,
+        null);
+
+    Assertions.assertThat(threadMap.setForCurrentThread("hello"))
+        .describedAs("current thread map value on first set")
+        .isNull();
+
+    // second attempt returns itself
+    Assertions.assertThat(threadMap.setForCurrentThread("hello"))
+        .describedAs("current thread map value on second set")
+        .isEqualTo("hello");
+
+    // it is forbidden to explictly set to null via the set() call.
+    intercept(NullPointerException.class, () ->
+        threadMap.setForCurrentThread(null));
+
+    // the map is unchanged
+    Assertions.assertThat(threadMap.getForCurrentThread())
+        .describedAs("current thread map value")
+        .isEqualTo("hello");
+
+    // remove the value and assert what the removed entry was
+    Assertions.assertThat(threadMap.removeForCurrentThread())
+        .describedAs("removed thread map value")
+        .isEqualTo("hello");
+
+    // remove the value again; this time the removed value is null
+    Assertions.assertThat(threadMap.removeForCurrentThread())
+        .describedAs("removed thread map value on second call")
+        .isNull();
+
+    // lookup will return a new instance created by the factory
+    Assertions.assertThat(threadMap.getForCurrentThread())
+        .describedAs("dynamically created thread map value")
+        .startsWith("Entry for thread ID");
+  }
+
+  /**
    * Assert that the value of a map entry is as expected.
    * Will trigger entry creation if the key is absent.
    * @param key key
-   * @param val expected valued
+   * @param val expected value
    */
   private void assertMapEntryEquals(int key, String val) {
     Assertions.assertThat(referenceMap.get(key))
@@ -147,7 +206,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         .isTrue();
   }
 
-  /**
+  /**y
    * Assert that a map entry is not present.
    * @param key key
    */
