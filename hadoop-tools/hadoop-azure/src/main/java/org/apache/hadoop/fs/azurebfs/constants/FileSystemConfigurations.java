@@ -33,7 +33,6 @@ public final class FileSystemConfigurations {
 
   public static final String DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "";
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
-  public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_SINGLETON_ENABLED = false;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
   private static final int SIXTY_SECONDS = 60 * 1000;

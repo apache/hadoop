@@ -46,20 +46,6 @@ public final class AbfsClientThrottlingIntercept {
   private AbfsClientThrottlingAnalyzer readThrottler = null;
   private AbfsClientThrottlingAnalyzer writeThrottler = null;
   private static boolean isAutoThrottlingEnabled = false;
-  private String accountName = "";
-
-  private synchronized void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
-    isAutoThrottlingEnabled = autoThrottlingEnabled;
-  }
-
-  // Hide default constructor
-  public AbfsClientThrottlingIntercept(String accountName) {
-    setIsAutoThrottlingEnabled(true);
-    LOG.debug("Client-side throttling is enabled for the ABFS file system.");
-    this.readThrottler = new AbfsClientThrottlingAnalyzer("read");
-    this.writeThrottler = new AbfsClientThrottlingAnalyzer("write");
-    this.accountName = accountName;
-  }
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept() {
@@ -67,19 +53,18 @@ public final class AbfsClientThrottlingIntercept {
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
   }
 
-  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(boolean enableAutoThrottling) {
+  public static synchronized void initializeSingleton(boolean enableAutoThrottling) {
     if (!enableAutoThrottling) {
-      return null;
+      return;
     }
     if (singleton == null) {
       singleton = new AbfsClientThrottlingIntercept();
       isAutoThrottlingEnabled = true;
       LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     }
-    return singleton;
   }
 
-  void updateMetrics(AbfsRestOperationType operationType,
+  static void updateMetrics(AbfsRestOperationType operationType,
                             AbfsHttpOperation abfsHttpOperation) {
     if (!isAutoThrottlingEnabled || abfsHttpOperation == null) {
       return;
@@ -97,7 +82,7 @@ public final class AbfsClientThrottlingIntercept {
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
         if (contentLength > 0) {
-          this.writeThrottler.addBytesTransferred(contentLength,
+          singleton.writeThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -105,7 +90,7 @@ public final class AbfsClientThrottlingIntercept {
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
-          this.readThrottler.addBytesTransferred(contentLength,
+          singleton.readThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -119,7 +104,7 @@ public final class AbfsClientThrottlingIntercept {
    * uses this to suspend the request, if necessary, to minimize errors and
    * maximize throughput.
    */
-  void sendingRequest(AbfsRestOperationType operationType,
+  static void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters) {
     if (!isAutoThrottlingEnabled) {
       return;
@@ -127,13 +112,13 @@ public final class AbfsClientThrottlingIntercept {
 
     switch (operationType) {
       case ReadFile:
-        if (this.readThrottler.suspendIfNecessary()
+        if (singleton.readThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
         }
         break;
       case Append:
-        if (this.writeThrottler.suspendIfNecessary()
+        if (singleton.writeThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
         }

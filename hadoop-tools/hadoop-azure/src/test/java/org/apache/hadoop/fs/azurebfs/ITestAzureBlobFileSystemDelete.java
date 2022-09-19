@@ -223,8 +223,8 @@ public class ITestAzureBlobFileSystemDelete extends
   public void testDeleteIdempotencyTriggerHttp404() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient client = TestAbfsClient.createTestClientFromCurrentContext(
-            fs.getAbfsStore().getClient(),
-            this.getConfiguration());
+        fs.getAbfsStore().getClient(),
+        this.getConfiguration());
 
     // Case 1: Not a retried case should throw error back
     // Add asserts at AzureBlobFileSystemStore and AbfsClient levels

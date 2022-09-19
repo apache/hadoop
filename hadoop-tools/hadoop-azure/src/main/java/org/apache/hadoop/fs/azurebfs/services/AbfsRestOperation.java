@@ -242,10 +242,6 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
-    String accountName = this.client.getAbfsConfiguration().getAccountName();
-    boolean isAutoThrottlingEnabled = this.client.getAbfsConfiguration().isAutoThrottlingEnabled();
-    boolean isSingletonEnabled = this.client.getAbfsConfiguration().isSingletonEnabled();
-    AbfsClientThrottlingIntercept intercept;
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
@@ -282,8 +278,7 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      intercept = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
-      intercept.sendingRequest(operationType, abfsCounters);
+      AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
@@ -322,8 +317,7 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      AbfsClientThrottlingIntercept instance = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
-      instance.updateMetrics(operationType, httpOperation);
+      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
