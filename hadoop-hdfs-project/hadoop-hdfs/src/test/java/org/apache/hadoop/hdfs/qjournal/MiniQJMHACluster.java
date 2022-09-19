@@ -17,23 +17,23 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
-import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
-
 import java.io.IOException;
 import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 
 public class MiniQJMHACluster implements AutoCloseable {
   private MiniDFSCluster cluster;
@@ -172,8 +172,7 @@ public class MiniQJMHACluster implements AutoCloseable {
     }
 
     // use standard failover configurations
-    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE, nns,
-        ConfiguredFailoverProxyProvider.class);
+    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE, "RequestHedgingProxyProvider", nns);
     return conf;
   }
 
