@@ -287,11 +287,8 @@ public abstract class Server {
       throw new IllegalArgumentException("ReRegistration of rpcKind: " +
           rpcKind);      
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("rpcKind=" + rpcKind +
-          ", rpcRequestWrapperClass=" + rpcRequestWrapperClass +
-          ", rpcInvoker=" + rpcInvoker);
-    }
+    LOG.debug("rpcKind={}, rpcRequestWrapperClass={}, rpcInvoker={}.",
+        rpcKind, rpcRequestWrapperClass, rpcInvoker);
   }
   
   public Class<? extends Writable> getRpcRequestWrapper(
@@ -928,7 +925,7 @@ public abstract class Server {
     private volatile String detailedMetricsName = "";
     final int callId;            // the client's call id
     final int retryCount;        // the retry count of the call
-    long timestampNanos;         // time the call was received
+    private final long timestampNanos; // time the call was received
     long responseTimestampNanos; // time the call was served
     private AtomicInteger responseWaitCount = new AtomicInteger(1);
     final RPC.RpcKind rpcKind;
@@ -940,6 +937,9 @@ public abstract class Server {
     // the priority level assigned by scheduler, 0 by default
     private long clientStateId;
     private boolean isCallCoordinated;
+    // Serialized RouterFederatedStateProto message to
+    // store last seen states for multiple namespaces.
+    private ByteString federatedNamespaceState;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -995,6 +995,14 @@ public abstract class Server {
 
     public ProcessingDetails getProcessingDetails() {
       return processingDetails;
+    }
+
+    public void setFederatedNamespaceState(ByteString federatedNamespaceState) {
+      this.federatedNamespaceState = federatedNamespaceState;
+    }
+
+    public ByteString getFederatedNamespaceState() {
+      return this.federatedNamespaceState;
     }
 
     @Override
@@ -1110,6 +1118,10 @@ public abstract class Server {
 
     public void setDeferredError(Throwable t) {
     }
+
+    public long getTimestampNanos() {
+      return timestampNanos;
+    }
   }
 
   /** A RPC extended call queued for handling. */
@@ -1191,7 +1203,7 @@ public abstract class Server {
 
       try {
         value = call(
-            rpcKind, connection.protocolName, rpcRequest, timestampNanos);
+            rpcKind, connection.protocolName, rpcRequest, getTimestampNanos());
       } catch (Throwable e) {
         populateResponseParamsOnError(e, responseParams);
       }
@@ -1212,9 +1224,7 @@ public abstract class Server {
         deltaNanos = Time.monotonicNowNanos() - startNanos;
         details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Deferring response for callId: " + this.callId);
-        }
+        LOG.debug("Deferring response for callId: {}", this.callId);
       }
       return null;
     }
@@ -1711,9 +1721,7 @@ public abstract class Server {
           // If there were some calls that have not been sent out for a
           // long time, discard them.
           //
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("Checking for old call responses.");
-          }
+          LOG.debug("Checking for old call responses.");
           ArrayList<RpcCall> calls;
           
           // get the list of channels from list of keys.
@@ -1813,9 +1821,8 @@ public abstract class Server {
           //
           call = responseQueue.removeFirst();
           SocketChannel channel = call.connection.channel;
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(Thread.currentThread().getName() + ": responding to " + call);
-          }
+
+          LOG.debug("{}: responding to {}.", Thread.currentThread().getName(), call);
           //
           // Send as much data as we can in the non-blocking fashion
           //
@@ -1832,10 +1839,8 @@ public abstract class Server {
             } else {
               done = false;            // more calls pending to be sent.
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(Thread.currentThread().getName() + ": responding to " + call
-                  + " Wrote " + numBytes + " bytes.");
-            }
+            LOG.debug("{}: responding to {} Wrote {} bytes.",
+                Thread.currentThread().getName(), call, numBytes);
           } else {
             //
             // If we were unable to write the entire response out, then 
@@ -1860,10 +1865,8 @@ public abstract class Server {
                 decPending();
               }
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(Thread.currentThread().getName() + ": responding to " + call
-                  + " Wrote partial " + numBytes + " bytes.");
-            }
+            LOG.debug("{}: responding to {} Wrote partial {} bytes.",
+                Thread.currentThread().getName(), call, numBytes);
           }
           error = false;              // everything went off well
         }
@@ -2209,13 +2212,11 @@ public abstract class Server {
         
         if (saslServer != null && saslServer.isComplete()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("SASL server context established. Negotiated QoP is "
-                + saslServer.getNegotiatedProperty(Sasl.QOP));
+            LOG.debug("SASL server context established. Negotiated QoP is {}.",
+                saslServer.getNegotiatedProperty(Sasl.QOP));
           }
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("SASL server successfully authenticated client: " + user);
-          }
+          LOG.debug("SASL server successfully authenticated client: {}.", user);
           rpcMetrics.incrAuthenticationSuccesses();
           AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user + " from " + toString());
           saslContextEstablished = true;
@@ -2320,10 +2321,8 @@ public abstract class Server {
         throw new SaslException("Client did not send a token");
       }
       byte[] saslToken = saslMessage.getToken().toByteArray();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Have read input token of size " + saslToken.length
-            + " for processing by saslServer.evaluateResponse()");
-      }
+      LOG.debug("Have read input token of size {} for processing by saslServer.evaluateResponse()",
+          saslToken.length);
       saslToken = saslServer.evaluateResponse(saslToken);
       return buildSaslResponse(
           saslServer.isComplete() ? SaslState.SUCCESS : SaslState.CHALLENGE,
@@ -2338,9 +2337,8 @@ public abstract class Server {
 
     private RpcSaslProto buildSaslResponse(SaslState state, byte[] replyToken) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Will send " + state + " token of size "
-            + ((replyToken != null) ? replyToken.length : null)
-            + " from saslServer.");
+        LOG.debug("Will send {} token of size {} from saslServer.", state,
+            ((replyToken != null) ? replyToken.length : null));
       }
       RpcSaslProto.Builder response = RpcSaslProto.newBuilder();
       response.setState(state);
@@ -2664,10 +2662,8 @@ public abstract class Server {
      */    
     private void unwrapPacketAndProcessRpcs(byte[] inBuf)
         throws IOException, InterruptedException {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Have read input token of size " + inBuf.length
-            + " for processing by saslServer.unwrap()");
-      }
+      LOG.debug("Have read input token of size {} for processing by saslServer.unwrap()",
+          inBuf.length);
       inBuf = saslServer.unwrap(inBuf, 0, inBuf.length);
       ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(
           inBuf));
@@ -2729,9 +2725,7 @@ public abstract class Server {
             getMessage(RpcRequestHeaderProto.getDefaultInstance(), buffer);
         callId = header.getCallId();
         retry = header.getRetryCount();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(" got #" + callId);
-        }
+        LOG.debug(" got #{}", callId);
         checkRpcHeaders(header);
 
         if (callId < 0) { // callIds typically used during connection setup
@@ -2746,11 +2740,8 @@ public abstract class Server {
       } catch (RpcServerException rse) {
         // inform client of error, but do not rethrow else non-fatal
         // exceptions will close connection!
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() +
-              ": processOneRpc from client " + this +
-              " threw exception [" + rse + "]");
-        }
+        LOG.debug("{}: processOneRpc from client {} threw exception [{}]",
+            Thread.currentThread().getName(), this, rse);
         // use the wrapped exception if there is one.
         Throwable t = (rse.getCause() != null) ? rse.getCause() : rse;
         final RpcCall call = new RpcCall(this, callId, retry);
@@ -2888,6 +2879,9 @@ public abstract class Server {
             stateId = alignmentContext.receiveRequestState(
                 header, getMaxIdleTime());
             call.setClientStateId(stateId);
+            if (header.hasRouterFederatedState()) {
+              call.setFederatedNamespaceState(header.getRouterFederatedState());
+            }
           }
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
@@ -2962,9 +2956,7 @@ public abstract class Server {
           ProxyUsers.authorize(user, this.getHostAddress());
         }
         authorize(user, protocolName, getHostInetAddress());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Successfully authorized " + connectionContext);
-        }
+        LOG.debug("Successfully authorized {}.", connectionContext);
         rpcMetrics.incrAuthorizationSuccesses();
       } catch (AuthorizationException ae) {
         LOG.info("Connection from " + this
@@ -3081,7 +3073,7 @@ public abstract class Server {
 
     @Override
     public void run() {
-      LOG.debug(Thread.currentThread().getName() + ": starting");
+      LOG.debug("{}: starting", Thread.currentThread().getName());
       SERVER.set(Server.this);
       while (running) {
         TraceScope traceScope = null;
@@ -3115,9 +3107,7 @@ public abstract class Server {
             call = null;
             continue;
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(Thread.currentThread().getName() + ": " + call + " for RpcKind " + call.rpcKind);
-          }
+          LOG.debug("{}: {} for RpcKind {}.", Thread.currentThread().getName(), call, call.rpcKind);
           CurCall.set(call);
           if (call.span != null) {
             traceScope = tracer.activateSpan(call.span);
@@ -3152,21 +3142,21 @@ public abstract class Server {
           IOUtils.cleanupWithLogger(LOG, traceScope);
           if (call != null) {
             updateMetrics(call, startTimeNanos, connDropped);
-            ProcessingDetails.LOG.debug(
-                "Served: [{}]{} name={} user={} details={}",
+            ProcessingDetails.LOG.debug("Served: [{}]{} name={} user={} details={}",
                 call, (call.isResponseDeferred() ? ", deferred" : ""),
                 call.getDetailedMetricsName(), call.getRemoteUser(),
                 call.getProcessingDetails());
           }
         }
       }
-      LOG.debug(Thread.currentThread().getName() + ": exiting");
+      LOG.debug("{}: exiting", Thread.currentThread().getName());
     }
 
     private void requeueCall(Call call)
         throws IOException, InterruptedException {
       try {
         internalQueueCall(call, false);
+        rpcMetrics.incrRequeueCalls();
       } catch (RpcServerException rse) {
         call.doResponse(rse.getCause(), rse.getRpcStatusProto());
       }
@@ -3389,14 +3379,13 @@ public abstract class Server {
             " authentication requires a secret manager");
       } 
     } else if (secretManager != null) {
-      LOG.debug(AuthenticationMethod.TOKEN +
-          " authentication enabled for secret manager");
+      LOG.debug("{} authentication enabled for secret manager", AuthenticationMethod.TOKEN);
       // most preferred, go to the front of the line!
       authMethods.add(AuthenticationMethod.TOKEN.getAuthMethod());
     }
     authMethods.add(confAuthenticationMethod.getAuthMethod());        
     
-    LOG.debug("Server accepts auth methods:" + authMethods);
+    LOG.debug("Server accepts auth methods:{}", authMethods);
     return authMethods;
   }
   
@@ -3556,9 +3545,7 @@ public abstract class Server {
       synchronized (call.connection.saslServer) {
         token = call.connection.saslServer.wrap(token, 0, token.length);
       }
-      if (LOG.isDebugEnabled())
-        LOG.debug("Adding saslServer wrapped token of size " + token.length
-            + " as call response.");
+      LOG.debug("Adding saslServer wrapped token of size {} as call response.", token.length);
       // rebuild with sasl header and payload
       RpcResponseHeaderProto saslHeader = RpcResponseHeaderProto.newBuilder()
           .setCallId(AuthProtocol.SASL.callId)
@@ -4004,11 +3991,8 @@ public abstract class Server {
       Connection connection = new Connection(channel, Time.now(),
           ingressPort, isOnAuxiliaryPort);
       add(connection);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Server connection from " + connection +
-            "; # active connections: " + size() +
-            "; # queued calls: " + callQueue.size());
-      }      
+      LOG.debug("Server connection from {}; # active connections: {}; # queued calls: {}.",
+          connection, size(), callQueue.size());
       return connection;
     }
     
@@ -4016,9 +4000,8 @@ public abstract class Server {
       boolean exists = remove(connection);
       if (exists) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() +
-              ": disconnecting client " + connection +
-              ". Number of active connections: "+ size());
+          LOG.debug("{}: disconnecting client {}. Number of active connections: {}.",
+              Thread.currentThread().getName(), connection, size());
         }
         // only close if actually removed to avoid double-closing due
         // to possible races
@@ -4080,9 +4063,7 @@ public abstract class Server {
           if (!running) {
             return;
           }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(Thread.currentThread().getName()+": task running");
-          }
+          LOG.debug("{}: task running", Thread.currentThread().getName());
           try {
             closeIdle(false);
           } finally {
@@ -4131,4 +4112,18 @@ public abstract class Server {
     }
   }
 
+  @VisibleForTesting
+  CallQueueManager<Call> getCallQueue() {
+    return callQueue;
+  }
+
+  @VisibleForTesting
+  void setCallQueue(CallQueueManager<Call> callQueue) {
+    this.callQueue = callQueue;
+  }
+
+  @VisibleForTesting
+  void setRpcRequestClass(Class<? extends Writable> rpcRequestClass) {
+    this.rpcRequestClass = rpcRequestClass;
+  }
 }

@@ -103,6 +103,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
@@ -416,7 +417,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private void logAuditEvent(boolean succeeded, String cmd, String src,
       String dst, FileStatus stat) throws IOException {
     if (isAuditEnabled() && isExternalInvocation()) {
-      logAuditEvent(succeeded, Server.getRemoteUser(), Server.getRemoteIp(),
+      logAuditEvent(succeeded, NameNode.getRemoteUser(), Server.getRemoteIp(),
           cmd, src, dst, stat);
     }
   }
@@ -1407,8 +1408,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("NameNode metadata after re-processing " +
-              "replication and invalidation queues during failover:\n" +
+          LOG.debug("NameNode metadata after re-processing {}"
+              + "replication and invalidation queues during failover:\n",
               metaSaveAsString());
         }
 
@@ -2202,14 +2203,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               }
             }
           }
-        } else if (haEnabled && haContext != null &&
-            haContext.getState().getServiceState() == OBSERVER) {
-          for (LocatedBlock b : res.blocks.getLocatedBlocks()) {
-            if (b.getLocations() == null || b.getLocations().length == 0) {
-              throw new ObserverRetryOnActiveException("Zero blocklocations "
-                  + "for " + srcArg);
-            }
-          }
+        } else if (isObserver()) {
+          checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
       } finally {
         readUnlock(operationName, getLockReportInfoSupplier(srcArg));
@@ -2675,8 +2670,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     for (CryptoProtocolVersion c : supportedVersions) {
       if (c.equals(CryptoProtocolVersion.UNKNOWN)) {
-        LOG.debug("Ignoring unknown CryptoProtocolVersion provided by " +
-            "client: {}", c.getUnknownValue());
+        LOG.debug("Ignoring unknown CryptoProtocolVersion provided by client: {}",
+            c.getUnknownValue());
         continue;
       }
       if (c.equals(required)) {
@@ -2987,8 +2982,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       requireEffectiveLayoutVersionForFeature(Feature.APPEND_NEW_BLOCK);
     }
 
-    NameNode.stateChangeLog.debug(
-        "DIR* NameSystem.appendFile: src={}, holder={}, clientMachine={}",
+    NameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: src={}, holder={}, clientMachine={}",
         srcArg, holder, clientMachine);
     try {
       boolean skipSync = false;
@@ -3045,8 +3039,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       DatanodeInfo[] excludedNodes, String[] favoredNodes,
       EnumSet<AddBlockFlag> flags) throws IOException {
     final String operationName = "getAdditionalBlock";
-    NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {}  inodeId {}" +
-        " for {}", src, fileId, clientName);
+    NameNode.stateChangeLog.debug("BLOCK* getAdditionalBlock: {}  inodeId {} for {}",
+        src, fileId, clientName);
 
     LocatedBlock[] onRetryBlock = new LocatedBlock[1];
     FSDirWriteFileOp.ValidateAddBlockResult r;
@@ -3148,8 +3142,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
-    NameNode.stateChangeLog.debug(
-        "BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
+    NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(null);
@@ -3158,8 +3151,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot abandon block " + b + " for file" + src);
       FSDirWriteFileOp.abandonBlock(dir, pc, b, fileId, src, holder);
-      NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} is " +
-          "removed from pendingCreates", b);
+      NameNode.stateChangeLog.debug(
+          "BLOCK* NameSystem.abandonBlock: {} is removed from pendingCreates", b);
     } finally {
       writeUnlock("abandonBlock");
     }
@@ -3471,6 +3464,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
+    }
+    if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
+      LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
+      checkBlockLocationsWhenObserver(lbs, src);
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4016,9 +4013,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if ((!iFile.isUnderConstruction() || storedBlock.isComplete()) &&
           iFile.getLastBlock().isComplete()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unexpected block (={}) since the file (={}) is not "
-                + "under construction", oldBlock, iFile.getLocalName());
+          LOG.debug("Unexpected block (={}) since the file (={}) is not under construction",
+              oldBlock, iFile.getLocalName());
         }
+
         return;
       }
 
@@ -4175,6 +4173,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, src);
       throw e;
+    }
+    if (needLocation && isObserver()) {
+      for (HdfsFileStatus fs : dl.getPartialListing()) {
+        if (fs instanceof HdfsLocatedFileStatus) {
+          LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
+          checkBlockLocationsWhenObserver(lbs, fs.toString());
+        }
+      }
     }
     logAuditEvent(true, operationName, src);
     return dl;
@@ -4478,8 +4484,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     assert hasWriteLock();
     // file is closed
     getEditLog().logCloseFile(path, file);
-    NameNode.stateChangeLog.debug("closeFile: {} with {} blocks is persisted" +
-        " to the file system", path, file.getBlocks().length);
+    NameNode.stateChangeLog.debug("closeFile: {} with {} blocks is persisted to the file system",
+        path, file.getBlocks().length);
   }
 
   /**
@@ -6107,9 +6113,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (cookieTab[0] == null) {
         cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("there are no corrupt file blocks.");
-      }
+      LOG.debug("there are no corrupt file blocks.");
       return corruptFiles;
     }
 
@@ -9021,6 +9025,19 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         NameNodeLayoutVersion.Feature.ERASURE_CODING,
         getEffectiveLayoutVersion())) {
       throw new UnsupportedActionException(operationName + " not supported.");
+    }
+  }
+
+  private boolean isObserver() {
+    return haEnabled && haContext != null && haContext.getState().getServiceState() == OBSERVER;
+  }
+
+  private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
+      throws ObserverRetryOnActiveException {
+    for (LocatedBlock b : blocks.getLocatedBlocks()) {
+      if (b.getLocations() == null || b.getLocations().length == 0) {
+        throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+      }
     }
   }
 }

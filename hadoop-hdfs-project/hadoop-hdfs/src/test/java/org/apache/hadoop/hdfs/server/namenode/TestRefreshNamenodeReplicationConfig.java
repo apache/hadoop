@@ -49,6 +49,9 @@ public class TestRefreshNamenodeReplicationConfig {
     config.setInt(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
         12);
+    config.setInt(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+        300);
 
     cluster = new MiniDFSCluster.Builder(config)
         .nnTopology(MiniDFSNNTopology.simpleSingleNN(0, 0))
@@ -72,6 +75,7 @@ public class TestRefreshNamenodeReplicationConfig {
     assertEquals(8, bm.getMaxReplicationStreams());
     assertEquals(10, bm.getReplicationStreamsHardLimit());
     assertEquals(12, bm.getBlocksReplWorkMultiplier());
+    assertEquals(300, bm.getReconstructionPendingTimeout());
 
     cluster.getNameNode().reconfigurePropertyImpl(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, "20");
@@ -81,10 +85,14 @@ public class TestRefreshNamenodeReplicationConfig {
     cluster.getNameNode().reconfigurePropertyImpl(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
         "24");
+    cluster.getNameNode().reconfigurePropertyImpl(
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+        "180");
 
     assertEquals(20, bm.getMaxReplicationStreams());
     assertEquals(22, bm.getReplicationStreamsHardLimit());
     assertEquals(24, bm.getBlocksReplWorkMultiplier());
+    assertEquals(180, bm.getReconstructionPendingTimeout());
   }
 
   /**
@@ -96,7 +104,8 @@ public class TestRefreshNamenodeReplicationConfig {
     String[] keys = new String[]{
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY,
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
+        DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY
     };
 
     // Ensure we cannot set any of the parameters negative
@@ -112,6 +121,7 @@ public class TestRefreshNamenodeReplicationConfig {
     assertEquals(8, bm.getMaxReplicationStreams());
     assertEquals(10, bm.getReplicationStreamsHardLimit());
     assertEquals(12, bm.getBlocksReplWorkMultiplier());
+    assertEquals(300, bm.getReconstructionPendingTimeout());
 
     for (String key : keys) {
       ReconfigurationException e =
@@ -126,6 +136,7 @@ public class TestRefreshNamenodeReplicationConfig {
     assertEquals(8, bm.getMaxReplicationStreams());
     assertEquals(10, bm.getReplicationStreamsHardLimit());
     assertEquals(12, bm.getBlocksReplWorkMultiplier());
+    assertEquals(300, bm.getReconstructionPendingTimeout());
 
     // Ensure none of the parameters can be set to a string value
     for (String key : keys) {
@@ -139,5 +150,6 @@ public class TestRefreshNamenodeReplicationConfig {
     assertEquals(8, bm.getMaxReplicationStreams());
     assertEquals(10, bm.getReplicationStreamsHardLimit());
     assertEquals(12, bm.getBlocksReplWorkMultiplier());
+    assertEquals(300, bm.getReconstructionPendingTimeout());
   }
 }

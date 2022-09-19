@@ -5366,6 +5366,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.remove.dead.datanode.batchnum</name>
+  <value>10</value>
+  <description>
+    Maximum number of datanodes removed by HeartbeatManager per scan.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.snapshot.capture.openfiles</name>
   <value>false</value>
   <description>
@@ -6444,6 +6452,14 @@
       The amount of time the fsck client will wait to read from the namenode
       before timing out. If the namenode does not report progress more
       frequently than this time, the client will give up waiting.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.output.stream.uniq.default.key</name>
+    <value>DEFAULT</value>
+    <description>
+      The default prefix key to construct the uniqKey for one DFSOutputStream.
+      If the namespace is DEFAULT, it's best to change this conf to other value.
     </description>
   </property>
 </configuration>

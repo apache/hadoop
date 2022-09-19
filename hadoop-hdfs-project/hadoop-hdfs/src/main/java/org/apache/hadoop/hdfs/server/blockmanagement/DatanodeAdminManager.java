@@ -152,10 +152,12 @@ public class DatanodeAdminManager {
     executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
-    LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
-            "{} max blocks per interval, " +
-            "{} max concurrently tracked nodes.", intervalSecs,
-        blocksPerInterval, maxConcurrentTrackedNodes);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Activating DatanodeAdminManager with interval {} seconds, " +
+              "{} max blocks per interval, " +
+              "{} max concurrently tracked nodes.", intervalSecs,
+          blocksPerInterval, maxConcurrentTrackedNodes);
+    }
   }
 
   /**

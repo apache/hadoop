@@ -29,8 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_THREAD_LEVEL_ENABLED;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_THREAD_LEVEL_ENABLED_DEFAULT;
 
 /**
  * A Utility class for IOStatisticsContext, which helps in creating and
@@ -76,8 +76,17 @@ public final class IOStatisticsContextIntegration {
     // Work out if the current context has thread level IOStatistics enabled.
     final Configuration configuration = new Configuration();
     isThreadIOStatsEnabled =
-        configuration.getBoolean(THREAD_LEVEL_IOSTATISTICS_ENABLED,
-            THREAD_LEVEL_IOSTATISTICS_ENABLED_DEFAULT);
+        configuration.getBoolean(IOSTATISTICS_THREAD_LEVEL_ENABLED,
+            IOSTATISTICS_THREAD_LEVEL_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Static probe to check if the thread-level IO statistics enabled.
+   *
+   * @return if the thread-level IO statistics enabled.
+   */
+  public static boolean isIOStatisticsThreadLevelEnabled() {
+    return isThreadIOStatsEnabled;
   }
 
   /**

@@ -181,7 +181,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         IOException {
       NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
-      LOG.info("Registering " + nodeId.toString());
+      LOG.info("Registering {}.", nodeId.toString());
       // NOTE: this really should be checking against the config value
       InetSocketAddress expected = NetUtils.getConnectAddress(
           conf.getSocketAddr(YarnConfiguration.NM_ADDRESS, null, -1));
@@ -217,7 +217,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
       NodeStatus nodeStatus = request.getNodeStatus();
-      LOG.info("Got heartbeat number " + heartBeatID);
+      LOG.info("Got heartbeat number {}.", heartBeatID);
       NodeManagerMetrics mockMetrics = mock(NodeManagerMetrics.class);
       Dispatcher mockDispatcher = mock(Dispatcher.class);
       @SuppressWarnings("unchecked")
@@ -625,7 +625,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
     @Override
     public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
         throws YarnException, IOException {
-      LOG.info("Got heartBeatId: [" + heartBeatID +"]");
+      LOG.info("Got heartBeatId: [{}]", heartBeatID);
       NodeStatus nodeStatus = request.getNodeStatus();
       nodeStatus.setResponseId(heartBeatID.getAndIncrement());
       NodeHeartbeatResponse nhResponse = YarnServerBuilderUtils.
@@ -644,7 +644,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
         }
       }
       if (heartBeatID.get() == 2) {
-        LOG.info("Sending FINISH_APP for application: [" + appId + "]");
+        LOG.info("Sending FINISH_APP for application: [{}]", appId);
         this.context.getApplications().put(appId, mock(Application.class));
         nhResponse.addAllApplicationsToCleanup(Collections.singletonList(appId));
       }
@@ -1528,7 +1528,7 @@ public class TestNodeStatusUpdater extends NodeManagerTestBase {
       rt.context.getApplications().remove(rt.appId);
       Assert.assertEquals(1, rt.keepAliveRequests.size());
       int numKeepAliveRequests = rt.keepAliveRequests.get(rt.appId).size();
-      LOG.info("Number of Keep Alive Requests: [" + numKeepAliveRequests + "]");
+      LOG.info("Number of Keep Alive Requests: [{}]", numKeepAliveRequests);
       Assert.assertTrue(numKeepAliveRequests == 2 || numKeepAliveRequests == 3);
       GenericTestUtils.waitFor(
           () -> nm.getServiceState() != STATE.STARTED
