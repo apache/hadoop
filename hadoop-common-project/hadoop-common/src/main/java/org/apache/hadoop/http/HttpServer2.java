@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Timer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Collection;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -213,6 +214,12 @@ public final class HttpServer2 implements FilterContainer {
 
   private StatisticsHandler statsHandler;
   private HttpServer2Metrics metrics;
+
+  private static final String MASK = "******";
+  public static final String FEDERATION_STATESTORE_SQL_USERNAME =
+      "yarn.federation.state-store.sql.username";
+  public static final String FEDERATION_STATESTORE_SQL_PASSWROD =
+      "yarn.federation.state-store.sql.password";
 
   /**
    * Class to construct instances of HTTP server with specific options.
@@ -1970,5 +1977,17 @@ public final class HttpServer2 implements FilterContainer {
   @VisibleForTesting
   List<ServerConnector> getListeners() {
     return listeners;
+  }
+
+  public static void secretPropValueReplaceMask(Configuration conf, Collection<String> props) {
+    if (props == null || props.isEmpty() || conf == null) {
+      return;
+    }
+    for (String prop : props) {
+      String value = conf.get(prop);
+      if (value != null) {
+        conf.set(prop, MASK);
+      }
+    }
   }
 }

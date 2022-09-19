@@ -19,6 +19,8 @@ package org.apache.hadoop.conf;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -32,6 +34,9 @@ import org.apache.hadoop.http.HttpServer2;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.http.HttpServer2.FEDERATION_STATESTORE_SQL_PASSWROD;
+import static org.apache.hadoop.http.HttpServer2.FEDERATION_STATESTORE_SQL_USERNAME;
+
 /**
  * A servlet to print out the running configuration data.
  */
@@ -43,6 +48,7 @@ public class ConfServlet extends HttpServlet {
   protected static final String FORMAT_JSON = "json";
   protected static final String FORMAT_XML = "xml";
 
+
   /**
    * Return the Configuration of the daemon hosting this servlet.
    * This is populated when the HttpServer starts.
@@ -50,6 +56,10 @@ public class ConfServlet extends HttpServlet {
   private Configuration getConfFromContext() {
     Configuration conf = (Configuration)getServletContext().getAttribute(
         HttpServer2.CONF_CONTEXT_ATTRIBUTE);
+    List<String> props = new ArrayList<>();
+    props.add(FEDERATION_STATESTORE_SQL_USERNAME);
+    props.add(FEDERATION_STATESTORE_SQL_PASSWROD);
+    HttpServer2.secretPropValueReplaceMask(conf, props);
     assert conf != null;
     return conf;
   }
