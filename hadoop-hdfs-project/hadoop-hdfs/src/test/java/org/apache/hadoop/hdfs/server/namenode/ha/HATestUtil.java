@@ -67,15 +67,15 @@ import java.util.function.Supplier;
  */
 public abstract class HATestUtil {
   private static final Logger LOG = LoggerFactory.getLogger(HATestUtil.class);
-  
+
   private static final String LOGICAL_HOSTNAME = "ha-nn-uri-%d";
-  
+
   /**
    * Trigger an edits log roll on the active and then wait for the standby to
    * catch up to all the edits done by the active. This method will check
    * repeatedly for up to NN_LAG_TIMEOUT milliseconds, and then fail throwing
    * {@link CouldNotCatchUpException}
-   * 
+   *
    * @param active active NN
    * @param standby standby NN which should catch up to active
    * @throws IOException if an error occurs rolling the edit log
@@ -120,7 +120,7 @@ public abstract class HATestUtil {
         return true;
       }
     }, 1000, 10000);
-    
+
   }
 
   /**
@@ -145,7 +145,7 @@ public abstract class HATestUtil {
       super(message);
     }
   }
-  
+
   /** Gets the filesystem instance by setting the failover configurations */
   public static DistributedFileSystem configureFailoverFs(
       MiniDFSCluster cluster, Configuration conf)
@@ -153,7 +153,7 @@ public abstract class HATestUtil {
     return configureFailoverFs(cluster, conf, 0);
   }
 
-  /** 
+  /**
    * Gets the filesystem instance by setting the failover configurations
    * @param cluster the single process DFS cluster
    * @param conf cluster configuration
@@ -265,13 +265,13 @@ public abstract class HATestUtil {
       Configuration conf) {
     setFailoverConfigurations(cluster, conf, getLogicalHostname(cluster));
   }
-  
+
   /** Sets the required configurations for performing failover of default namespace. */
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf, String logicalName) {
     setFailoverConfigurations(cluster, conf, logicalName, null, 0);
   }
-  
+
   /** Sets the required configurations for performing failover.  */
   public static void setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf, String logicalName, String proxyProvider, int nsIndex) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
