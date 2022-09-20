@@ -335,6 +335,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     private boolean isSubHeaderStripped = false;
     private READ_MODE readMode = READ_MODE.CONTINUOUS;
     private long startingPos = 0L;
+    private boolean didInitialRead;
 
     // Following state machine handles different states of compressed stream
     // position
@@ -480,24 +481,42 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
     */
 
     public int read(byte[] b, int off, int len) throws IOException {
+      if (b == null) {
+        throw new NullPointerException();
+      }
+      if (off < 0 || len < 0 || len > b.length - off) {
+        throw new IndexOutOfBoundsException();
+      }
+      if (len == 0) {
+        return 0;
+      }
       if (needsReset) {
         internalReset();
       }
-
-      int result = 0;
-      result = this.input.read(b, off, len);
+      // When startingPos > 0, the stream should be initialized at the end of
+      // one block (which would correspond to be the start of another block).
+      // Thus, the initial read would technically be reading one byte passed a
+      // BZip2 end of block marker. To be consistent, we should also be
+      // updating the position to be one byte after the end of an block on the
+      // initial read.
+      boolean initializedAtEndOfBlock =
+          !didInitialRead && startingPos > 0 && readMode == READ_MODE.BYBLOCK;
+      int result = initializedAtEndOfBlock
+          ? BZip2Constants.END_OF_BLOCK
+          : this.input.read(b, off, len);
       if (result == BZip2Constants.END_OF_BLOCK) {
         this.posSM = POS_ADVERTISEMENT_STATE_MACHINE.ADVERTISE;
       }
 
       if (this.posSM == POS_ADVERTISEMENT_STATE_MACHINE.ADVERTISE) {
-        result = this.input.read(b, off, off + 1);
+        result = this.input.read(b, off, 1);
         // This is the precise time to update compressed stream position
         // to the client of this code.
         this.updatePos(true);
         this.posSM = POS_ADVERTISEMENT_STATE_MACHINE.HOLD;
       }
 
+      didInitialRead = true;
       return result;
 
     }
@@ -513,6 +532,7 @@ public class BZip2Codec implements Configurable, SplittableCompressionCodec {
         needsReset = false;
         BufferedInputStream bufferedIn = readStreamHeader();
         input = new CBZip2InputStream(bufferedIn, this.readMode);
+        didInitialRead = false;
       }
     }    
     

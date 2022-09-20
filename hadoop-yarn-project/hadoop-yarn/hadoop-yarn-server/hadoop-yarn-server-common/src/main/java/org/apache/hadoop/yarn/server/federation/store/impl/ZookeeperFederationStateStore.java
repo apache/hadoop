@@ -25,6 +25,7 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
@@ -77,6 +78,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -850,5 +853,23 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     long end = clock.getTime();
     opDurations.addUpdateReservationHomeSubClusterDuration(start, end);
     return UpdateReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
   }
 }
