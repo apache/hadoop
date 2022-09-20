@@ -47,6 +47,9 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterRegisterResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyResponseProto;
@@ -81,6 +84,10 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateAppl
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterStoreTokenPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenResponsePBImpl;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -99,6 +106,8 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(ApplicationHomeSubCluster.class);
     generateByNewInstance(SubClusterPolicyConfiguration.class);
     generateByNewInstance(RouterMasterKey.class);
+    generateByNewInstance(YARNDelegationTokenIdentifier.class);
+    generateByNewInstance(RouterStoreToken.class);
   }
 
   @Test
@@ -283,5 +292,20 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   @Test
   public void testRouterMasterKeyResponse() throws Exception {
     validatePBImplRecord(RouterMasterKeyResponsePBImpl.class, RouterMasterKeyResponseProto.class);
+  }
+
+  @Test
+  public void testRouterStoreToken() throws Exception {
+    validatePBImplRecord(RouterStoreTokenPBImpl.class, RouterStoreTokenProto.class);
+  }
+
+  @Test
+  public void testRouterRMTokenRequest() throws Exception {
+    validatePBImplRecord(RouterRMTokenRequestPBImpl.class, RouterRMTokenRequestProto.class);
+  }
+
+  @Test
+  public void testRouterRMTokenResponse() throws Exception {
+    validatePBImplRecord(RouterRMTokenResponsePBImpl.class, RouterRMTokenResponseProto.class);
   }
 }

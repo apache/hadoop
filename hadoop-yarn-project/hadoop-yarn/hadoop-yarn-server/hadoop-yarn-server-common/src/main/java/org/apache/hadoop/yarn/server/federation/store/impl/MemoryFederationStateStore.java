@@ -31,55 +31,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterHeartbeatResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
@@ -457,6 +414,71 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterMasterKey resultRouterMasterKey = RouterMasterKey.newInstance(delegationKey.getKeyId(),
         ByteBuffer.wrap(delegationKey.getEncodedKey()), delegationKey.getExpiryDate());
     return RouterMasterKeyResponse.newInstance(resultRouterMasterKey);
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier =
+            (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    Long renewDate = storeToken.getRenewDate();
+    storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, false);
+    return RouterRMTokenResponse.newInstance(storeToken);
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    Long renewDate = storeToken.getRenewDate();
+    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    rmDTState.remove(tokenIdentifier);
+    storeOrUpdateRouterRMDT(tokenIdentifier, renewDate, true);
+    return RouterRMTokenResponse.newInstance(storeToken);
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    rmDTState.remove(tokenIdentifier);
+    return RouterRMTokenResponse.newInstance(storeToken);
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    RouterStoreToken storeToken = request.getRouterStoreToken();
+    RMDelegationTokenIdentifier tokenIdentifier =
+        (RMDelegationTokenIdentifier) storeToken.getTokenIdentifier();
+    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    if (!rmDTState.containsKey(tokenIdentifier)) {
+      LOG.info("RMDelegationToken: {} does not exist.", tokenIdentifier);
+      throw new IOException("RMDelegationToken: " + tokenIdentifier + " does not exist.");
+    }
+    RouterStoreToken resultToken =
+        RouterStoreToken.newInstance(tokenIdentifier, rmDTState.get(tokenIdentifier));
+    return RouterRMTokenResponse.newInstance(resultToken);
+  }
+
+  private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
+      Long renewDate, boolean isUpdate) throws IOException {
+    Map<RMDelegationTokenIdentifier, Long> rmDTState = routerRMSecretManagerState.getTokenState();
+    if (rmDTState.containsKey(rmDTIdentifier)) {
+      LOG.info("Error storing info for RMDelegationToken: {}.", rmDTIdentifier);
+      throw new IOException("RMDelegationToken: " + rmDTIdentifier + "is already stored.");
+    }
+    rmDTState.put(rmDTIdentifier, renewDate);
+    if(!isUpdate) {
+      routerRMSecretManagerState.setDtSequenceNumber(rmDTIdentifier.getSequenceNumber());
+    }
+    LOG.info("Store RM-RMDT with sequence number {}.", rmDTIdentifier.getSequenceNumber());
   }
 
   /**
