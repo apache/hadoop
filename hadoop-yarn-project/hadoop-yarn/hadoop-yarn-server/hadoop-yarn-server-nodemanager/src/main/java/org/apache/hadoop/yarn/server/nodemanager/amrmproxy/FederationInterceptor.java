@@ -104,7 +104,7 @@ import org.apache.hadoop.util.Preconditions;
  * Extends the AbstractRequestInterceptor and provides an implementation for
  * federation of YARN RM and scaling an application across multiple YARN
  * sub-clusters. All the federation specific implementation is encapsulated in
- * this class. This is always the last intercepter in the chain.
+ * this class. This is always the last interceptor in the chain.
  */
 public class FederationInterceptor extends AbstractRequestInterceptor {
   private static final Logger LOG =
@@ -654,7 +654,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       if (AMRMClientUtils.getNextResponseId(
           request.getResponseId()) == this.lastAllocateResponse
               .getResponseId()) {
-        // heartbeat one step old, simply return lastReponse
+        // heartbeat one step old, simply return lastResponse
         return this.lastAllocateResponse;
       } else if (request.getResponseId() != this.lastAllocateResponse
           .getResponseId()) {
@@ -1572,7 +1572,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   /**
    * Check to see if an AllocateRequest exists in the Map for the specified sub
    * cluster. If not found, create a new one, copy the value of responseId and
-   * progress from the orignialAMRequest, save it in the specified Map and
+   * progress from the originalAMRequest, save it in the specified Map and
    * return the new instance. If found, just return the old instance.
    */
   private static AllocateRequest findOrCreateAllocateRequestForSubCluster(
