@@ -65,21 +65,21 @@ public class WeakReferenceThreadMap<V> extends WeakReferenceMap<Long, V> {
   /**
    * Set the new value for the current thread.
    * @param newVal new reference to set for the active thread.
-   * @return any old value, possibly null
+   * @return the previously set value, possibly null
    */
   public V setForCurrentThread(V newVal) {
     requireNonNull(newVal);
     long id = currentThreadId();
 
     // if the same object is already in the map, just return it.
-    WeakReference<V> ref = lookup(id);
+    WeakReference<V> existingWeakRef = lookup(id);
 
     // The looked up reference could be one of
     // 1. null: nothing there
     // 2. valid but get() == null : reference lost by GC.
     // 3. different from the new value
     // 4. the same as the old value
-    if (resolve(ref) == newVal) {
+    if (resolve(existingWeakRef) == newVal) {
       // case 4: do nothing, return the new value
       return newVal;
     } else {

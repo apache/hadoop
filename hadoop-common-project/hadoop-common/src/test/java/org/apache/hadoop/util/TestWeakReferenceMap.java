@@ -159,7 +159,7 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         .describedAs("current thread map value on second set")
         .isEqualTo("hello");
 
-    // it is forbidden to explictly set to null via the set() call.
+    // it is forbidden to explicitly set to null via the set() call.
     intercept(NullPointerException.class, () ->
         threadMap.setForCurrentThread(null));
 
@@ -179,9 +179,15 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         .isNull();
 
     // lookup will return a new instance created by the factory
-    Assertions.assertThat(threadMap.getForCurrentThread())
+    String dynamicValue = threadMap.getForCurrentThread();
+    Assertions.assertThat(dynamicValue)
         .describedAs("dynamically created thread map value")
         .startsWith("Entry for thread ID");
+
+    // and we can overwrite that
+    Assertions.assertThat(threadMap.setForCurrentThread("hello2"))
+        .describedAs("value before the thread entry is changed")
+        .isEqualTo(dynamicValue);
   }
 
   /**
@@ -202,11 +208,11 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    */
   private void assertMapContainsKey(int key) {
     Assertions.assertThat(referenceMap.containsKey(key))
-        .describedAs("map enty of key %d should be present", key)
+        .describedAs("map entry of key %d should be present", key)
         .isTrue();
   }
 
-  /**y
+  /**
    * Assert that a map entry is not present.
    * @param key key
    */

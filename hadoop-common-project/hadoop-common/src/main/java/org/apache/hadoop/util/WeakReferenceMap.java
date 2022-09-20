@@ -204,7 +204,8 @@ public class WeakReferenceMap<K, V> {
       computation from any live thread."
     */
 
-    final V strongRef = requireNonNull(factory.apply(key));
+    final V strongRef = requireNonNull(factory.apply(key),
+        "factory returned a null instance");
     V resolvedStrongRef;
     do {
       WeakReference<V> newWeakRef = new WeakReference<>(strongRef);
