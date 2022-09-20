@@ -815,7 +815,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateApplicationPriority(AppPriority, HttpServletRequest, String)} inside Router.
+   * {@link RMWebServiceProtocol#updateApplicationPriority(
+   *     AppPriority, HttpServletRequest, String)} inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateAppPriorityXML() throws Exception {
@@ -994,8 +995,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#submitReservation(ReservationSubmissionRequestInfo, HttpServletRequest)}
-   * inside Router.
+   * {@link RMWebServiceProtocol#submitReservation(
+   *     ReservationSubmissionRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testSubmitReservationXML() throws Exception {
@@ -1023,8 +1024,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#updateReservation(ReservationUpdateRequestInfo, HttpServletRequest)}
-   * inside Router.
+   * {@link RMWebServiceProtocol#updateReservation(
+   *     ReservationUpdateRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testUpdateReservationXML() throws Exception {
@@ -1050,7 +1051,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#deleteReservation(ReservationDeleteRequestInfo, HttpServletRequest)} inside Router.
+   * {@link RMWebServiceProtocol#deleteReservation(
+   *     ReservationDeleteRequestInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testDeleteReservationXML() throws Exception {
@@ -1164,7 +1166,7 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String)} inside Router.
+   * {@link RMWebServiceProtocol#getLabelsToNodes(Set<String>)} inside Router.
    */
   @Test(timeout = 2000)
   public void testGetLabelsMappingXML() throws Exception {
@@ -1186,7 +1188,8 @@ public class TestRouterWebServicesREST {
 
   /**
    * This test validates the correctness of
-   * {@link RMWebServiceProtocol#addToClusterNodeLabels(NodeLabelsInfo, HttpServletRequest)} inside Router.
+   * {@link RMWebServiceProtocol#addToClusterNodeLabels(
+   *     NodeLabelsInfo, HttpServletRequest)} inside Router.
    */
   @Test(timeout = 2000)
   public void testAddToClusterNodeLabelsXML() throws Exception {
