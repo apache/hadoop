@@ -23,6 +23,9 @@ import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Implementation of {@link BlockOutputStreamStatistics}.
+ */
 public class OutputStreamStatistics implements BlockOutputStreamStatistics {
   private final AtomicInteger blocksAllocated = new AtomicInteger(0);
   private final AtomicInteger blocksReleased = new AtomicInteger(0);

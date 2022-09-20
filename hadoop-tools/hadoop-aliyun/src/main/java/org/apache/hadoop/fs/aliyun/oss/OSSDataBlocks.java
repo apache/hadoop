@@ -84,21 +84,21 @@ final class OSSDataBlocks {
   static BlockFactory createFactory(AliyunOSSFileSystem owner,
       String name) {
     switch (name) {
-      case Constants.FAST_UPLOAD_BUFFER_ARRAY:
-        return new ArrayBlockFactory(owner);
-      case Constants.FAST_UPLOAD_BUFFER_DISK:
-        return new DiskBlockFactory(owner);
-      case Constants.FAST_UPLOAD_BYTEBUFFER:
-        return new ByteBufferBlockFactory(owner);
-      case Constants.FAST_UPLOAD_BUFFER_ARRAY_DISK:
-        return new MemoryAndDiskBlockFactory(
-            owner, new ArrayBlockFactory(owner));
-      case Constants.FAST_UPLOAD_BYTEBUFFER_DISK:
-        return new MemoryAndDiskBlockFactory(
-            owner, new ByteBufferBlockFactory(owner));
-      default:
-        throw new IllegalArgumentException("Unsupported block buffer" +
-            " \"" + name + '"');
+    case Constants.FAST_UPLOAD_BUFFER_ARRAY:
+      return new ArrayBlockFactory(owner);
+    case Constants.FAST_UPLOAD_BUFFER_DISK:
+      return new DiskBlockFactory(owner);
+    case Constants.FAST_UPLOAD_BYTEBUFFER:
+      return new ByteBufferBlockFactory(owner);
+    case Constants.FAST_UPLOAD_BUFFER_ARRAY_DISK:
+      return new MemoryAndDiskBlockFactory(
+          owner, new ArrayBlockFactory(owner));
+    case Constants.FAST_UPLOAD_BYTEBUFFER_DISK:
+      return new MemoryAndDiskBlockFactory(
+          owner, new ByteBufferBlockFactory(owner));
+    default:
+      throw new IllegalArgumentException("Unsupported block buffer" +
+          " \"" + name + '"');
     }
   }
 
@@ -213,7 +213,7 @@ final class OSSDataBlocks {
     enum DestState {Writing, Upload, Closed}
 
     private volatile DestState state = DestState.Writing;
-    protected final long index;
+    private final long index;
     private final BlockOutputStreamStatistics statistics;
 
     protected DataBlock(long index,
@@ -255,6 +255,13 @@ final class OSSDataBlocks {
      */
     final DestState getState() {
       return state;
+    }
+
+    /**
+     * Get index, used by subclasses.
+     */
+    final long getIndex() {
+      return index;
     }
 
     /**
@@ -489,7 +496,7 @@ final class OSSDataBlocks {
       }
     }
 
-    class OSSByteArrayOutputStream extends ByteArrayOutputStream {
+    static class OSSByteArrayOutputStream extends ByteArrayOutputStream {
 
       OSSByteArrayOutputStream(int size) {
         super(size);
@@ -583,7 +590,7 @@ final class OSSDataBlocks {
       @Override
       public String toString() {
         return "ByteArrayBlock{"
-            + "index=" + index +
+            + "index=" + getIndex() +
             ", state=" + getState() +
             ", limit=" + limit +
             ", dataSize=" + dataSize +
@@ -729,7 +736,7 @@ final class OSSDataBlocks {
       @Override
       public String toString() {
         return "ByteBufferBlock{"
-            + "index=" + index +
+            + "index=" + getIndex() +
             ", state=" + getState() +
             ", dataSize=" + dataSize() +
             ", limit=" + bufferSize +
@@ -988,27 +995,27 @@ final class OSSDataBlocks {
       final DestState state = getState();
       LOG.debug("Closing {}", this);
       switch (state) {
-        case Writing:
-          if (bufferFile.exists()) {
-            // file was not uploaded
-            LOG.debug("Block[{}]: Deleting buffer file as upload did not start",
-                index);
-            closeBlock();
-          }
-          break;
-
-        case Upload:
-          LOG.debug("Block[{}]: Buffer file {} exists —close upload stream",
-              index, bufferFile);
-          break;
-
-        case Closed:
+      case Writing:
+        if (bufferFile.exists()) {
+          // file was not uploaded
+          LOG.debug("Block[{}]: Deleting buffer file as upload did not start",
+              getIndex());
           closeBlock();
-          break;
+        }
+        break;
 
-        default:
-          // this state can never be reached, but checkstyle complains, so
-          // it is here.
+      case Upload:
+        LOG.debug("Block[{}]: Buffer file {} exists —close upload stream",
+            getIndex(), bufferFile);
+        break;
+
+      case Closed:
+        closeBlock();
+        break;
+
+      default:
+        // this state can never be reached, but checkstyle complains, so
+        // it is here.
       }
     }
 
@@ -1025,7 +1032,7 @@ final class OSSDataBlocks {
     @Override
     public String toString() {
       String sb = "FileBlock{"
-          + "index=" + index
+          + "index=" + getIndex()
           + ", destFile=" + bufferFile +
           ", state=" + getState() +
           ", dataSize=" + dataSize() +
@@ -1040,7 +1047,7 @@ final class OSSDataBlocks {
      * not previously been closed.
      */
     void closeBlock() {
-      LOG.debug("block[{}]: closeBlock()", index);
+      LOG.debug("block[{}]: closeBlock()", getIndex());
       if (!closed.getAndSet(true)) {
         blockReleased();
         diskBlockReleased();
@@ -1049,7 +1056,7 @@ final class OSSDataBlocks {
               bufferFile.getAbsoluteFile());
         }
       } else {
-        LOG.debug("block[{}]: skipping re-entrant closeBlock()", index);
+        LOG.debug("block[{}]: skipping re-entrant closeBlock()", getIndex());
       }
     }
   }

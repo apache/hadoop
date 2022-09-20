@@ -430,7 +430,8 @@ public class AliyunOSSFileSystemStore {
    * @param size size of the input stream.
    * @throws IOException if failed to upload object.
    */
-  public void uploadObject(String key, InputStream in, long size) {
+  public void uploadObject(String key, InputStream in, long size)
+      throws IOException {
     ObjectMetadata meta = new ObjectMetadata();
     meta.setContentLength(size);
 
@@ -712,7 +713,6 @@ public class AliyunOSSFileSystemStore {
         LOG.debug("Failed to upload " + key + ", part " + idx +
             "try again.", e);
         caught = e;
-      } finally {
       }
       tries--;
     }
@@ -724,6 +724,8 @@ public class AliyunOSSFileSystemStore {
 
   /**
    * Initiate multipart upload.
+   * @param key object key.
+   * @return upload id.
    */
   public String getUploadId(String key) {
     InitiateMultipartUploadRequest initiateMultipartUploadRequest =
@@ -735,6 +737,10 @@ public class AliyunOSSFileSystemStore {
 
   /**
    * Complete the specific multipart upload.
+   * @param key object key.
+   * @param uploadId upload id of this multipart upload.
+   * @param partETags part etags need to be completed.
+   * @return CompleteMultipartUploadResult.
    */
   public CompleteMultipartUploadResult completeMultipartUpload(String key,
       String uploadId, List<PartETag> partETags) {
@@ -747,6 +753,8 @@ public class AliyunOSSFileSystemStore {
 
   /**
    * Abort the specific multipart upload.
+   * @param key object key.
+   * @param uploadId upload id of this multipart upload.
    */
   public void abortMultipartUpload(String key, String uploadId) {
     AbortMultipartUploadRequest request = new AbortMultipartUploadRequest(

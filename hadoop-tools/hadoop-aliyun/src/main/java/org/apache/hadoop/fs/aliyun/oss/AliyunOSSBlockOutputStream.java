@@ -206,7 +206,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
     return activeBlock;
   }
 
-  private synchronized void uploadCurrentBlock()
+  private void uploadCurrentBlock()
       throws IOException {
     if (uploadId == null) {
       uploadId = store.getUploadId(key);

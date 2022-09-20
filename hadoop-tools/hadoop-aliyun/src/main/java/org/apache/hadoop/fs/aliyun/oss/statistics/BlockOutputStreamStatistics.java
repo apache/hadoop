@@ -48,11 +48,13 @@ public interface BlockOutputStreamStatistics {
 
   /**
    * Memory bytes has been allocated.
+   * @param size allocated size.
    */
   void bytesAllocated(long size);
 
   /**
    * Memory bytes has been released.
+   * @param size released size.
    */
   void bytesReleased(long size);
 
