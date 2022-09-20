@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -582,9 +583,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = interceptor.
-        invokeConcurrent(new ArrayList<>(), remoteMethod, GetClusterMetricsResponse.class);
-    Assert.assertTrue(clusterMetrics.isEmpty());
+    Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.
+        invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
+    Assert.assertTrue(!clusterMetrics.isEmpty());
   }
 
   /**
