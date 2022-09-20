@@ -19,17 +19,13 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -662,14 +658,11 @@ public class FederationClientInterceptor
       RouterServerUtil.logAndThrowException("Missing getApplications request.", null);
     }
     long startTime = clock.getTime();
-    Map<SubClusterId, SubClusterInfo> subclusters =
-        federationFacade.getSubClusters(true);
     ClientMethod remoteMethod = new ClientMethod("getApplications",
         new Class[] {GetApplicationsRequest.class}, new Object[] {request});
     Map<SubClusterId, GetApplicationsResponse> applications = null;
     try {
-      applications = invokeConcurrent(subclusters.keySet(), remoteMethod,
-          GetApplicationsResponse.class);
+      applications = invokeConcurrent(remoteMethod, GetApplicationsResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get applications due to exception.", ex);
@@ -703,59 +696,51 @@ public class FederationClientInterceptor
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
-  <R> Map<SubClusterId, R> invokeConcurrent(Collection<SubClusterId> clusterIds,
-      ClientMethod request, Class<R> clazz) throws YarnException, IOException {
-    List<Callable<Object>> callables = new ArrayList<>();
-    List<Future<Object>> futures = new ArrayList<>();
-    Map<SubClusterId, IOException> exceptions = new TreeMap<>();
-    for (SubClusterId subClusterId : clusterIds) {
+  <R> Map<SubClusterId, R> invokeConcurrent(ClientMethod request, Class<R> clazz)
+      throws YarnException {
+
+    Collection<SubClusterId> subClusterIds = federationFacade.getActiveSubClusterIds();
+
+    List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
+    List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
+    Map<SubClusterId, Exception> exceptions = new TreeMap<>();
+
+    // Generate parallel Callable tasks
+    for (SubClusterId subClusterId : subClusterIds) {
       callables.add(() -> {
         ApplicationClientProtocol protocol =
             getClientRMProxyForSubCluster(subClusterId);
         Method method = ApplicationClientProtocol.class
             .getMethod(request.getMethodName(), request.getTypes());
-        return method.invoke(protocol, request.getParams());
+        Object result = method.invoke(protocol, request.getParams());
+        return Pair.of(subClusterId, result);
       });
     }
+
+    // Get results from multiple threads
     Map<SubClusterId, R> results = new TreeMap<>();
     try {
       futures.addAll(executorService.invokeAll(callables));
-      for (int i = 0; i < futures.size(); i++) {
-        Object clusterObj = CollectionUtils.get(clusterIds, i);
-        SubClusterId subClusterId = SubClusterId.class.cast(clusterObj);
+      futures.stream().forEach(future -> {
+        SubClusterId subClusterId = null;
         try {
-          Future<Object> future = futures.get(i);
-          Object result = future.get();
+          Pair<SubClusterId, Object> mapFuture = future.get();
+          subClusterId = mapFuture.getKey();
+          Object result = mapFuture.getValue();
           results.put(subClusterId, clazz.cast(result));
-        } catch (ExecutionException ex) {
-          Throwable cause = ex.getCause();
-          LOG.debug("Cannot execute {} on {}: {}", request.getMethodName(),
-              subClusterId.getId(), cause.getMessage());
-          IOException ioe;
-          if (cause instanceof IOException) {
-            ioe = (IOException) cause;
-          } else if (cause instanceof YarnException) {
-            throw (YarnException) cause;
-          } else {
-            ioe = new IOException(
-                "Unhandled exception while calling " + request.getMethodName()
-                    + ": " + cause.getMessage(), cause);
-          }
-          // Store the exceptions
-          exceptions.put(subClusterId, ioe);
+        } catch (InterruptedException | ExecutionException e) {
+          Throwable cause = e.getCause();
+          LOG.error("Cannot execute {} on {}: {}", request.getMethodName(),
+             subClusterId.getId(), cause.getMessage());
+          exceptions.put(subClusterId, e);
         }
-      }
-      if (results.isEmpty() && !clusterIds.isEmpty()) {
-        Object clusterObj = CollectionUtils.get(clusterIds, 0);
-        SubClusterId subClusterId = SubClusterId.class.cast(clusterObj);
-        IOException ioe = exceptions.get(subClusterId);
-        if (ioe != null) {
-          throw ioe;
-        }
-      }
+      });
     } catch (InterruptedException e) {
       throw new YarnException(e);
     }
+
+
+
     return results;
   }
 
