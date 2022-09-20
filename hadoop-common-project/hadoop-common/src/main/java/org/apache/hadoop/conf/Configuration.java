@@ -3593,6 +3593,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </ul>
    * @param propertyName xml property name.
    * @param out the writer to write to.
+   * @param config configuration.
    * @throws IOException raised on errors performing I/O.
    */
   public void writeXml(@Nullable String propertyName, Writer out, Configuration config)
@@ -3618,8 +3619,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(@Nullable String propertyName, ConfigRedactor redactor)
-      throws IOException, IllegalArgumentException {
+  private synchronized Document asXmlDocument(@Nullable String propertyName,
+      ConfigRedactor redactor) throws IOException, IllegalArgumentException {
     Document doc;
     try {
       doc = DocumentBuilderFactory
