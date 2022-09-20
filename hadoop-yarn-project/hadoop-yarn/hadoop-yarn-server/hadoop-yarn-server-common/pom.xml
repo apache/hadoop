@@ -196,6 +196,9 @@
                 <additionalProtoPathElement>
                   ${basedir}/../../hadoop-yarn-api/src/main/proto
                 </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-common/src/main/proto
+                </additionalProtoPathElement>
               </additionalProtoPathElements>
             </configuration>
           </execution>

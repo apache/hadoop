@@ -21,9 +21,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.TimeZone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -68,6 +71,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -759,5 +765,76 @@ public abstract class FederationStateStoreBaseTest {
     LambdaTestUtils.intercept(YarnException.class,
         "Reservation " + reservationId + " does not exist",
         () -> stateStore.updateReservationHomeSubCluster(updateReservationRequest));
+  }
+
+  @Test
+  public void testStoreNewMasterKey() throws Exception {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+
+    Assert.assertNotNull(response);
+    RouterMasterKey routerMasterKeyResp = response.getRouterMasterKey();
+    Assert.assertNotNull(routerMasterKeyResp);
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+  }
+
+  @Test
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(5678, 8765, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(response);
+
+    RouterMasterKeyResponse routerMasterKeyResponse =
+        stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
+
+    Assert.assertNotNull(routerMasterKeyResponse);
+
+    RouterMasterKey routerMasterKeyResp = routerMasterKeyResponse.getRouterMasterKey();
+    Assert.assertNotNull(routerMasterKeyResp);
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+  }
+
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(response);
+
+    RouterMasterKeyResponse masterKeyResponse =
+        stateStore.removeStoredMasterKey(routerMasterKeyRequest);
+    Assert.assertNotNull(masterKeyResponse);
+
+    RouterMasterKey routerMasterKeyResp = masterKeyResponse.getRouterMasterKey();
+    Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
+    Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
+    Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
   }
 }

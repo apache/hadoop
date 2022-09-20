@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -74,6 +77,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -719,5 +725,57 @@ public final class FederationStateStoreFacade {
   @VisibleForTesting
   public FederationStateStore getStateStore() {
     return stateStore;
+  }
+
+  /**
+   * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
+   *
+   * @param newKey Key used for generating and verifying delegation tokens
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
+   * @return RouterMasterKeyResponse
+   */
+  public RouterMasterKeyResponse storeNewMasterKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    return stateStore.storeNewMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router Supports Remove MasterKey (RouterMasterKey{@link RouterMasterKey}).
+   *
+   * @param newKey Key used for generating and verifying delegation tokens
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
+   */
+  public void removeStoredMasterKey(DelegationKey newKey) throws YarnException, IOException {
+    LOG.info("Removing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    stateStore.removeStoredMasterKey(keyRequest);
+  }
+
+  /**
+   * The Router Supports GetMasterKeyByDelegationKey.
+   *
+   * @param newKey Key used for generating and verifying delegation tokens
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
+   * @return RouterMasterKeyResponse
+   */
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(DelegationKey newKey)
+      throws YarnException, IOException {
+    LOG.info("Storing master key with keyID {}.", newKey.getKeyId());
+    ByteBuffer keyBytes = ByteBuffer.wrap(newKey.getEncodedKey());
+    RouterMasterKey masterKey = RouterMasterKey.newInstance(newKey.getKeyId(),
+        keyBytes, newKey.getExpiryDate());
+    RouterMasterKeyRequest keyRequest = RouterMasterKeyRequest.newInstance(masterKey);
+    return stateStore.getMasterKeyByDelegationKey(keyRequest);
   }
 }
