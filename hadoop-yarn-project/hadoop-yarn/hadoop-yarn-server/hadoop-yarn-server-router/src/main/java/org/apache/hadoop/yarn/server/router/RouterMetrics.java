@@ -71,7 +71,7 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetContainerReportFailedRetrieved;
   @Metric("# of getContainers failed to be retrieved")
   private MutableGaugeInt numGetContainersFailedRetrieved;
-  @Metric("# of getContainers failed to be retrieved")
+  @Metric("# of listReservations failed to be retrieved")
   private MutableGaugeInt numListReservationsFailedRetrieved;
   @Metric("# of getResourceTypeInfo failed to be retrieved")
   private MutableGaugeInt numGetResourceTypeInfo;
@@ -105,6 +105,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numUpdateReservationFailedRetrieved;
   @Metric("# of deleteReservation failed to be retrieved")
   private MutableGaugeInt numDeleteReservationFailedRetrieved;
+  @Metric("# of listReservation failed to be retrieved")
+  private MutableGaugeInt numListReservationFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -171,6 +173,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededUpdateReservationRetrieved;
   @Metric("Total number of successful Retrieved DeleteReservation and latency(ms)")
   private MutableRate totalSucceededDeleteReservationRetrieved;
+  @Metric("Total number of successful Retrieved ListReservation and latency(ms)")
+  private MutableRate totalSucceededListReservationRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -207,6 +211,7 @@ public final class RouterMetrics {
   private MutableQuantiles submitReservationLatency;
   private MutableQuantiles updateReservationLatency;
   private MutableQuantiles deleteReservationLatency;
+  private MutableQuantiles listReservationLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -333,6 +338,10 @@ public final class RouterMetrics {
     deleteReservationLatency =
         registry.newQuantiles("deleteReservationLatency",
             "latency of delete reservation timeouts", "ops", "latency", 10);
+
+    listReservationLatency =
+        registry.newQuantiles("listReservationLatency",
+            "latency of list reservation timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -515,6 +524,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededListReservationRetrieved() {
+    return totalSucceededListReservationRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -675,6 +689,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededListReservationRetrieved() {
+    return totalSucceededListReservationRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -821,6 +840,10 @@ public final class RouterMetrics {
 
   public int getDeleteReservationFailedRetrieved() {
     return numDeleteReservationFailedRetrieved.value();
+  }
+
+  public int getListReservationFailedRetrieved() {
+    return numListReservationFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -983,6 +1006,11 @@ public final class RouterMetrics {
     deleteReservationLatency.add(duration);
   }
 
+  public void succeededListReservationRetrieved(long duration) {
+    totalSucceededListReservationRetrieved.add(duration);
+    listReservationLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1109,5 +1137,9 @@ public final class RouterMetrics {
 
   public void incrDeleteReservationFailedRetrieved() {
     numDeleteReservationFailedRetrieved.incr();
+  }
+
+  public void incrListReservationFailedRetrieved() {
+    numListReservationFailedRetrieved.incr();
   }
 }
