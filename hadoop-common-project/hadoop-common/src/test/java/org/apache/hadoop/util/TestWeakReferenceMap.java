@@ -20,6 +20,8 @@ package org.apache.hadoop.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.IntStream;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -144,11 +146,16 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
    * Test the WeakReferenceThreadMap extension.
    */
   @Test
-  public void testWeakReferenceThreadMapRejectsNullAssignment()
+  public void testWeakReferenceThreadMapAssignment()
       throws Throwable {
+
+    // counters foor the callbacks
+    final AtomicLong created = new AtomicLong();
+    final AtomicLong lost = new AtomicLong();
+
     WeakReferenceThreadMap<String> threadMap = new WeakReferenceThreadMap<>(
-        id -> "Entry for thread ID " + id,
-        null);
+        id -> "Entry for thread ID " + id + " (" + created.incrementAndGet() + ")",
+        id -> lost.incrementAndGet());
 
     Assertions.assertThat(threadMap.setForCurrentThread("hello"))
         .describedAs("current thread map value on first set")
@@ -179,15 +186,29 @@ public class TestWeakReferenceMap extends AbstractHadoopTestBase {
         .isNull();
 
     // lookup will return a new instance created by the factory
+    long c1 = created.get();
     String dynamicValue = threadMap.getForCurrentThread();
     Assertions.assertThat(dynamicValue)
         .describedAs("dynamically created thread map value")
-        .startsWith("Entry for thread ID");
+        .startsWith("Entry for thread ID")
+        .contains("(" + (c1 + 1) + ")");
 
     // and we can overwrite that
     Assertions.assertThat(threadMap.setForCurrentThread("hello2"))
         .describedAs("value before the thread entry is changed")
         .isEqualTo(dynamicValue);
+
+    // simulate a weak gc
+    long threadId = threadMap.currentThreadId();
+    threadMap.put(threadId, null);
+    String updated = threadMap.getForCurrentThread();
+    Assertions.assertThat(lost.get())
+        .describedAs("lost count")
+        .isEqualTo(1);
+    Assertions.assertThat(updated)
+        .describedAs("dynamically created thread map value")
+        .startsWith("Entry for thread ID")
+        .contains("(" + (c1 + 2) + ")");
   }
 
   /**
