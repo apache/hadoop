@@ -283,7 +283,9 @@ public class AbfsRestOperation {
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
       intercept = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
-      intercept.sendingRequest(operationType, abfsCounters);
+      if (intercept != null) {
+        intercept.sendingRequest(operationType, abfsCounters);
+      }
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -322,7 +324,9 @@ public class AbfsRestOperation {
       return false;
     } finally {
       AbfsClientThrottlingIntercept instance = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
-      instance.updateMetrics(operationType, httpOperation);
+      if (instance != null) {
+        instance.updateMetrics(operationType, httpOperation);
+      }
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
