@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import java.io.IOException;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -167,5 +168,20 @@ public class TestZookeeperFederationStateStore
     MetricsRecords.assertMetric(record, "GetReservationsHomeSubClusterNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "DeleteReservationHomeSubClusterNumOps",  expectOps);
     MetricsRecords.assertMetric(record, "UpdateReservationHomeSubClusterNumOps",  expectOps);
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewMasterKey() throws Exception {
+    super.testStoreNewMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+    super.testGetMasterKeyByDelegationKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    super.testRemoveStoredMasterKey();
   }
 }

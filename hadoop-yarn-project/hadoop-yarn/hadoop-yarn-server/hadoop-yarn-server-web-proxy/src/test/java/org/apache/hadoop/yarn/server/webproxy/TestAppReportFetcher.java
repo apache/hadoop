@@ -20,6 +20,10 @@ package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
@@ -29,10 +33,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestAppReportFetcher {
 
@@ -42,7 +45,7 @@ public class TestAppReportFetcher {
   private static AppReportFetcher fetcher;
   private final String appNotFoundExceptionMsg = "APP NOT FOUND";
 
-  @After
+  @AfterEach
   public void cleanUp() {
     historyManager = null;
     appManager = null;
@@ -63,29 +66,29 @@ public class TestAppReportFetcher {
   }
 
   @Test
-  public void testFetchReportAHSEnabled() throws YarnException, IOException {
+  void testFetchReportAHSEnabled() throws YarnException, IOException {
     testHelper(true);
     Mockito.verify(historyManager, Mockito.times(1))
-    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     Mockito.verify(appManager, Mockito.times(1))
-    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
   }
 
   @Test
-  public void testFetchReportAHSDisabled() throws YarnException, IOException {
+  void testFetchReportAHSDisabled() throws YarnException, IOException {
     try {
       testHelper(false);
     } catch (ApplicationNotFoundException e) {
-      Assert.assertTrue(e.getMessage() == appNotFoundExceptionMsg);
+      assertEquals(appNotFoundExceptionMsg, e.getMessage());
       /* RM will not know of the app and Application History Service is disabled
        * So we will not try to get the report from AHS and RM will throw
        * ApplicationNotFoundException
        */
     }
     Mockito.verify(appManager, Mockito.times(1))
-    .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
+        .getApplicationReport(Mockito.any(GetApplicationReportRequest.class));
     if (historyManager != null) {
-      Assert.fail("HistoryManager should be null as AHS is disabled");
+      fail("HistoryManager should be null as AHS is disabled");
     }
   }
 
