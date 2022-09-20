@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import static org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState.ACTIVE;
 import static org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState.EXPIRED;
+import static org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState.OBSERVER;
 import static org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState.UNAVAILABLE;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -73,8 +75,11 @@ public class MembershipNamenodeResolver
   /** Parent router ID. */
   private String routerId;
 
-  /** Cached lookup of NN for nameservice. Invalidated on cache refresh. */
-  private Map<String, List<? extends FederationNamenodeContext>> cacheNS;
+  /** Cached lookup of namenodes for nameservice. The keys are a pair of the nameservice
+   * name and a boolean indicating if observer namenodes should be listed first.
+   * If true, observer namenodes are listed first. If false, active namenodes are listed first.
+   *  Invalidated on cache refresh. */
+  private Map<Pair<String,Boolean>, List<? extends FederationNamenodeContext>> cacheNS;
   /** Cached lookup of NN for block pool. Invalidated on cache refresh. */
   private Map<String, List<? extends FederationNamenodeContext>> cacheBP;
 
@@ -136,11 +141,21 @@ public class MembershipNamenodeResolver
     return true;
   }
 
+  @Override public void updateUnavailableNamenode(String nsId,
+      InetSocketAddress address) throws IOException {
+    updateNameNodeState(nsId, address, UNAVAILABLE);
+  }
+
   @Override
   public void updateActiveNamenode(
       final String nsId, final InetSocketAddress address) throws IOException {
+    updateNameNodeState(nsId, address, ACTIVE);
+  }
 
-    // Called when we have an RPC miss and successful hit on an alternate NN.
+
+  private void updateNameNodeState(final String nsId,
+      final InetSocketAddress address, FederationNamenodeServiceState state)
+      throws IOException {
     // Temporarily update our cache, it will be overwritten on the next update.
     try {
       MembershipState partial = MembershipState.newInstance();
@@ -160,10 +175,11 @@ public class MembershipNamenodeResolver
         MembershipState record = records.get(0);
         UpdateNamenodeRegistrationRequest updateRequest =
             UpdateNamenodeRegistrationRequest.newInstance(
-                record.getNameserviceId(), record.getNamenodeId(), ACTIVE);
+                record.getNameserviceId(), record.getNamenodeId(), state);
         membership.updateNamenodeRegistration(updateRequest);
 
-        cacheNS.remove(nsId);
+        cacheNS.remove(Pair.of(nsId, Boolean.TRUE));
+        cacheNS.remove(Pair.of(nsId, Boolean.FALSE));
         // Invalidating the full cacheBp since getting the blockpool id from
         // namespace id is quite costly.
         cacheBP.clear();
@@ -175,9 +191,9 @@ public class MembershipNamenodeResolver
 
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
-      final String nsId) throws IOException {
+      final String nsId, boolean listObserversFirst) throws IOException {
 
-    List<? extends FederationNamenodeContext> ret = cacheNS.get(nsId);
+    List<? extends FederationNamenodeContext> ret = cacheNS.get(Pair.of(nsId, listObserversFirst));
     if (ret != null) {
       return ret;
     }
@@ -189,7 +205,8 @@ public class MembershipNamenodeResolver
       partial.setNameserviceId(nsId);
       GetNamenodeRegistrationsRequest request =
           GetNamenodeRegistrationsRequest.newInstance(partial);
-      result = getRecentRegistrationForQuery(request, true, false);
+      result = getRecentRegistrationForQuery(request, true,
+          false, listObserversFirst);
     } catch (StateStoreUnavailableException e) {
       LOG.error("Cannot get active NN for {}, State Store unavailable", nsId);
       return null;
@@ -218,7 +235,7 @@ public class MembershipNamenodeResolver
 
     // Cache the response
     ret = Collections.unmodifiableList(result);
-    cacheNS.put(nsId, result);
+    cacheNS.put(Pair.of(nsId, listObserversFirst), result);
     return ret;
   }
 
@@ -235,7 +252,7 @@ public class MembershipNamenodeResolver
             GetNamenodeRegistrationsRequest.newInstance(partial);
 
         final List<MembershipState> result =
-            getRecentRegistrationForQuery(request, true, false);
+            getRecentRegistrationForQuery(request, true, false, false);
         if (result == null || result.isEmpty()) {
           LOG.error("Cannot locate eligible NNs for {}", bpId);
         } else {
@@ -346,22 +363,34 @@ public class MembershipNamenodeResolver
   }
 
   /**
-   * Picks the most relevant record registration that matches the query. Return
-   * registrations matching the query in this preference: 1) Most recently
-   * updated ACTIVE registration 2) Most recently updated STANDBY registration
-   * (if showStandby) 3) Most recently updated UNAVAILABLE registration (if
-   * showUnavailable). EXPIRED registrations are ignored.
+   * Picks the most relevant record registration that matches the query.
+   * If not observer read,
+   * return registrations matching the query in this preference:
+   * 1) Most recently updated ACTIVE registration
+   * 2) Most recently updated Observer registration
+   * 3) Most recently updated STANDBY registration (if showStandby)
+   * 4) Most recently updated UNAVAILABLE registration (if showUnavailable).
+   *
+   * If observer read,
+   * return registrations matching the query in this preference:
+   * 1) Observer registrations, shuffled to disperse queries.
+   * 2) Most recently updated ACTIVE registration
+   * 3) Most recently updated STANDBY registration (if showStandby)
+   * 4) Most recently updated UNAVAILABLE registration (if showUnavailable).
+   *
+   * EXPIRED registrations are ignored.
    *
    * @param request The select query for NN registrations.
    * @param addUnavailable include UNAVAILABLE registrations.
    * @param addExpired include EXPIRED registrations.
+   * @param observerRead  Observer read case, observer NN will be ranked first
    * @return List of memberships or null if no registrations that
    *         both match the query AND the selected states.
    * @throws IOException
    */
   private List<MembershipState> getRecentRegistrationForQuery(
       GetNamenodeRegistrationsRequest request, boolean addUnavailable,
-      boolean addExpired) throws IOException {
+      boolean addExpired, boolean observerRead) throws IOException {
 
     // Retrieve a list of all registrations that match this query.
     // This may include all NN records for a namespace/blockpool, including
@@ -371,24 +400,34 @@ public class MembershipNamenodeResolver
         membershipStore.getNamenodeRegistrations(request);
 
     List<MembershipState> memberships = response.getNamenodeMemberships();
-    if (!addExpired || !addUnavailable) {
-      Iterator<MembershipState> iterator = memberships.iterator();
-      while (iterator.hasNext()) {
-        MembershipState membership = iterator.next();
-        if (membership.getState() == EXPIRED && !addExpired) {
-          iterator.remove();
-        } else if (membership.getState() == UNAVAILABLE && !addUnavailable) {
-          iterator.remove();
-        }
+    List<MembershipState> observerMemberships = new ArrayList<>();
+    Iterator<MembershipState> iterator = memberships.iterator();
+    while (iterator.hasNext()) {
+      MembershipState membership = iterator.next();
+      if (membership.getState() == EXPIRED && !addExpired) {
+        iterator.remove();
+      } else if (membership.getState() == UNAVAILABLE && !addUnavailable) {
+        iterator.remove();
+      } else if (membership.getState() == OBSERVER && observerRead) {
+        iterator.remove();
+        observerMemberships.add(membership);
       }
     }
 
-    List<MembershipState> priorityList = new ArrayList<>();
-    priorityList.addAll(memberships);
-    Collections.sort(priorityList, new NamenodePriorityComparator());
+    memberships.sort(new NamenodePriorityComparator());
+    if(observerRead) {
+      List<MembershipState> ret = new ArrayList<>(
+          memberships.size() + observerMemberships.size());
+      if(observerMemberships.size() > 1) {
+        Collections.shuffle(observerMemberships);
+      }
+      ret.addAll(observerMemberships);
+      ret.addAll(memberships);
+      memberships = ret;
+    }
 
-    LOG.debug("Selected most recent NN {} for query", priorityList);
-    return priorityList;
+    LOG.debug("Selected most recent NN {} for query", memberships);
+    return memberships;
   }
 
   @Override

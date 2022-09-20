@@ -196,6 +196,17 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void readVectoredOperationStarted(int numIncomingRanges,
+                                             int numCombinedRanges) {
+
+    }
+
+    @Override
+    public void readVectoredBytesDiscarded(int discarded) {
+
+    }
+
+    @Override
     public void close() {
 
     }
@@ -207,6 +218,41 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
 
     @Override
     public void unbuffered() {
+
+    }
+
+    @Override
+    public DurationTracker prefetchOperationStarted() {
+      return stubDurationTracker();
+    }
+
+    @Override
+    public void prefetchOperationCompleted() {
+
+    }
+
+    @Override
+    public void blockAddedToFileCache() {
+
+    }
+
+    @Override
+    public void blockRemovedFromFileCache() {
+
+    }
+
+    @Override
+    public void executorAcquired(Duration timeInQueue) {
+
+    }
+
+    @Override
+    public void memoryAllocated(int size) {
+
+    }
+
+    @Override
+    public void memoryFreed(int size) {
 
     }
 
@@ -343,6 +389,7 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     public DurationTracker initiateInnerStreamClose(final boolean abort) {
       return stubDurationTracker();
     }
+
   }
 
   /**

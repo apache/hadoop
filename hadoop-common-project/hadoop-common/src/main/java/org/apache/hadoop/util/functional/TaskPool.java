@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
@@ -135,6 +136,15 @@ public final class TaskPool {
     private Task<I, ?> abortTask = null;
     private boolean stopAbortsOnFailure = false;
     private int sleepInterval = SLEEP_INTERVAL_AWAITING_COMPLETION;
+
+    /**
+     * IOStatisticsContext to switch to in all threads
+     * taking part in the commit operation.
+     * This ensures that the IOStatistics collected in the
+     * worker threads will be aggregated into the total statistics
+     * of the thread calling the committer commit/abort methods.
+     */
+    private IOStatisticsContext ioStatisticsContext = null;
 
     /**
      * Create the builder.
@@ -242,7 +252,7 @@ public final class TaskPool {
      * @param value new value
      * @return the builder
      */
-    public Builder sleepInterval(final int value) {
+    public Builder<I> sleepInterval(final int value) {
       sleepInterval = value;
       return this;
     }
@@ -364,6 +374,8 @@ public final class TaskPool {
 
     /**
      * Parallel execution.
+     * All tasks run within the same IOStatisticsContext as the
+     * thread calling this method.
      * @param task task to execute
      * @param <E> exception which may be raised in execution.
      * @return true if the operation executed successfully
@@ -379,64 +391,70 @@ public final class TaskPool {
       final AtomicBoolean revertFailed = new AtomicBoolean(false);
 
       List<Future<?>> futures = new ArrayList<>();
+      ioStatisticsContext = IOStatisticsContext.getCurrentIOStatisticsContext();
 
       IOException iteratorIOE = null;
       final RemoteIterator<I> iterator = this.items;
       try {
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
           final I item = iterator.next();
           // submit a task for each item that will either run or abort the task
           futures.add(service.submit(() -> {
-            if (!(stopOnFailure && taskFailed.get())) {
-              // run the task
-              boolean threw = true;
-              try {
-                LOG.debug("Executing task");
-                task.run(item);
-                succeeded.add(item);
-                LOG.debug("Task succeeded");
+            setStatisticsContext();
+            try {
+              if (!(stopOnFailure && taskFailed.get())) {
+                // prepare and run the task
+                boolean threw = true;
+                try {
+                  LOG.debug("Executing task");
+                  task.run(item);
+                  succeeded.add(item);
+                  LOG.debug("Task succeeded");
 
-                threw = false;
+                  threw = false;
 
-              } catch (Exception e) {
-                taskFailed.set(true);
-                exceptions.add(e);
-                LOG.info("Task failed {}", e.toString());
-                LOG.debug("Task failed", e);
+                } catch (Exception e) {
+                  taskFailed.set(true);
+                  exceptions.add(e);
+                  LOG.info("Task failed {}", e.toString());
+                  LOG.debug("Task failed", e);
 
-                if (onFailure != null) {
-                  try {
-                    onFailure.run(item, e);
-                  } catch (Exception failException) {
-                    LOG.warn("Failed to clean up on failure", e);
-                    // swallow the exception
+                  if (onFailure != null) {
+                    try {
+                      onFailure.run(item, e);
+                    } catch (Exception failException) {
+                      LOG.warn("Failed to clean up on failure", e);
+                      // swallow the exception
+                    }
+                  }
+                } finally {
+                  if (threw) {
+                    taskFailed.set(true);
                   }
                 }
-              } finally {
-                if (threw) {
-                  taskFailed.set(true);
+
+              } else if (abortTask != null) {
+                // abort the task instead of running it
+                if (stopAbortsOnFailure && abortFailed.get()) {
+                  return;
+                }
+
+                boolean failed = true;
+                try {
+                  LOG.info("Aborting task");
+                  abortTask.run(item);
+                  failed = false;
+                } catch (Exception e) {
+                  LOG.error("Failed to abort task", e);
+                  // swallow the exception
+                } finally {
+                  if (failed) {
+                    abortFailed.set(true);
+                  }
                 }
               }
-
-            } else if (abortTask != null) {
-              // abort the task instead of running it
-              if (stopAbortsOnFailure && abortFailed.get()) {
-                return;
-              }
-
-              boolean failed = true;
-              try {
-                LOG.info("Aborting task");
-                abortTask.run(item);
-                failed = false;
-              } catch (Exception e) {
-                LOG.error("Failed to abort task", e);
-                // swallow the exception
-              } finally {
-                if (failed) {
-                  abortFailed.set(true);
-                }
-              }
+            } finally {
+              resetStatisticsContext();
             }
           }));
         }
@@ -447,7 +465,6 @@ public final class TaskPool {
         // mark as a task failure so all submitted tasks will halt/abort
         taskFailed.set(true);
       }
-
       // let the above tasks complete (or abort)
       waitFor(futures, sleepInterval);
       int futureCount = futures.size();
@@ -464,6 +481,7 @@ public final class TaskPool {
             }
 
             boolean failed = true;
+            setStatisticsContext();
             try {
               revertTask.run(item);
               failed = false;
@@ -474,6 +492,7 @@ public final class TaskPool {
               if (failed) {
                 revertFailed.set(true);
               }
+              resetStatisticsContext();
             }
           }));
         }
@@ -497,6 +516,26 @@ public final class TaskPool {
 
       // return true if all tasks succeeded.
       return !taskFailed.get();
+    }
+
+    /**
+     * Set the statistics context for this thread.
+     */
+    private void setStatisticsContext() {
+      if (ioStatisticsContext != null) {
+        IOStatisticsContext.setThreadIOStatisticsContext(ioStatisticsContext);
+      }
+    }
+
+    /**
+     * Reset the statistics context if it was set earlier.
+     * This unbinds the current thread from any statistics
+     * context.
+     */
+    private void resetStatisticsContext() {
+      if (ioStatisticsContext != null) {
+        IOStatisticsContext.setThreadIOStatisticsContext(null);
+      }
     }
   }
 

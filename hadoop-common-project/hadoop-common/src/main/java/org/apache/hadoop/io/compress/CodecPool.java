@@ -205,6 +205,7 @@ public class CodecPool {
     }
     // if the compressor can't be reused, don't pool it.
     if (compressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      compressor.end();
       return;
     }
     compressor.reset();
@@ -225,6 +226,7 @@ public class CodecPool {
     }
     // if the decompressor can't be reused, don't pool it.
     if (decompressor.getClass().isAnnotationPresent(DoNotPool.class)) {
+      decompressor.end();
       return;
     }
     decompressor.reset();

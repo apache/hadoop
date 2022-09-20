@@ -22,8 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -33,6 +36,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSub
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,6 +44,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import javax.cache.Cache;
 
 /**
  * Unit tests for FederationStateStoreFacade.
@@ -64,12 +70,14 @@ public class TestFederationStateStoreFacade {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade =
       FederationStateStoreFacade.getInstance();
+  private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
     conf = new Configuration();
     if (!(isCachingEnabled.booleanValue())) {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
+    this.isCachingEnabled = isCachingEnabled;
   }
 
   @Before
@@ -206,4 +214,59 @@ public class TestFederationStateStoreFacade {
     Assert.assertEquals(subClusterId1, result);
   }
 
+  @Test
+  public void testGetApplicationHomeSubClusterCache() throws YarnException {
+    ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
+
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, subClusterId1);
+    SubClusterId subClusterIdAdd = facade.addApplicationHomeSubCluster(appHomeSubCluster);
+
+    SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
+    Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);
+    Assert.assertEquals(subClusterId1, subClusterIdAdd);
+
+    if (isCachingEnabled.booleanValue()) {
+      Cache<Object, Object> cache = facade.getCache();
+      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId);
+      Object subClusterIdByCache = cache.get(cacheKey);
+      Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
+      Assert.assertEquals(subClusterId1, subClusterIdByCache);
+    }
+  }
+
+  @Test
+  public void testStoreNewMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(4567, 7654, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    // check to delete delegationKey
+    facade.removeStoredMasterKey(key);
+    keySet.clear();
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
 }

@@ -57,6 +57,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.impl.StoreImplementationUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
+import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.BufferedIOStatisticsOutputStream;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -156,11 +158,19 @@ public class RawLocalFileSystem extends FileSystem {
     /** Reference to the bytes read counter for slightly faster counting. */
     private final AtomicLong bytesRead;
 
+    /**
+     * Thread level IOStatistics aggregator to update in close().
+     */
+    private final IOStatisticsAggregator
+        ioStatisticsAggregator;
+
     public LocalFSFileInputStream(Path f) throws IOException {
       name = pathToFile(f);
       fis = new FileInputStream(name);
       bytesRead = ioStatistics.getCounterReference(
           STREAM_READ_BYTES);
+      ioStatisticsAggregator =
+          IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator();
     }
     
     @Override
@@ -193,9 +203,13 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public void close() throws IOException {
-      fis.close();
-      if (asyncChannel != null) {
-        asyncChannel.close();
+      try {
+        fis.close();
+        if (asyncChannel != null) {
+          asyncChannel.close();
+        }
+      } finally {
+        ioStatisticsAggregator.aggregate(ioStatistics);
       }
     }
 
@@ -278,6 +292,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
       case StreamCapabilities.VECTOREDIO:
         return true;
       default:
@@ -407,9 +422,19 @@ public class RawLocalFileSystem extends FileSystem {
             STREAM_WRITE_EXCEPTIONS)
         .build();
 
+    /**
+     * Thread level IOStatistics aggregator to update in close().
+     */
+    private final IOStatisticsAggregator
+        ioStatisticsAggregator;
+
     private LocalFSFileOutputStream(Path f, boolean append,
         FsPermission permission) throws IOException {
       File file = pathToFile(f);
+      // store the aggregator before attempting any IO.
+      ioStatisticsAggregator =
+          IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator();
+
       if (!append && permission == null) {
         permission = FsPermission.getFileDefault();
       }
@@ -436,10 +461,17 @@ public class RawLocalFileSystem extends FileSystem {
     }
 
     /*
-     * Just forward to the fos
+     * Close the fos; update the IOStatisticsContext.
      */
     @Override
-    public void close() throws IOException { fos.close(); }
+    public void close() throws IOException {
+      try {
+        fos.close();
+      } finally {
+        ioStatisticsAggregator.aggregate(ioStatistics);
+      }
+    }
+
     @Override
     public void flush() throws IOException { fos.flush(); }
     @Override
@@ -485,6 +517,7 @@ public class RawLocalFileSystem extends FileSystem {
       // new capabilities.
       switch (capability.toLowerCase(Locale.ENGLISH)) {
       case StreamCapabilities.IOSTATISTICS:
+      case StreamCapabilities.IOSTATISTICS_CONTEXT:
         return true;
       default:
         return StoreImplementationUtils.isProbeForSyncable(capability);
@@ -1292,5 +1325,10 @@ public class RawLocalFileSystem extends FileSystem {
     default:
       return super.hasPathCapability(path, capability);
     }
+  }
+
+  @VisibleForTesting
+  static void setUseDeprecatedFileStatus(boolean useDeprecatedFileStatus) {
+    RawLocalFileSystem.useDeprecatedFileStatus = useDeprecatedFileStatus;
   }
 }

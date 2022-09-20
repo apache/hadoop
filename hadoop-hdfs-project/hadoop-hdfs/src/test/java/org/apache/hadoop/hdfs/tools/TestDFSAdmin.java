@@ -438,7 +438,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(19, outs.size());
+    assertEquals(20, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));

@@ -69,11 +69,11 @@ public class TestUpgradeDomainBlockPlacementPolicy {
   static final Set<DatanodeID> expectedDatanodeIDs = new HashSet<>();
   private MiniDFSCluster cluster = null;
   private HostsFileWriter hostsFileWriter = new HostsFileWriter();
+  private Configuration conf = new HdfsConfiguration();
 
   @Before
   public void setup() throws IOException {
     StaticMapping.resetMap();
-    Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE / 2);
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
@@ -130,7 +130,7 @@ public class TestUpgradeDomainBlockPlacementPolicy {
     datanodes[0].setAdminState(DatanodeInfo.AdminStates.DECOMMISSIONED);
     datanodes[5].setAdminState(DatanodeInfo.AdminStates.DECOMMISSIONED);
     hostsFileWriter.initIncludeHosts(datanodes);
-    cluster.getFileSystem().refreshNodes();
+    cluster.getNamesystem(0).getBlockManager().getDatanodeManager().refreshNodes(conf);
 
     expectedDatanodeIDs.clear();
     expectedDatanodeIDs.add(cluster.getDataNodes().get(2).getDatanodeId());
@@ -169,7 +169,7 @@ public class TestUpgradeDomainBlockPlacementPolicy {
     datanodes[2].setAdminState(DatanodeInfo.AdminStates.DECOMMISSIONED);
     datanodes[3].setAdminState(DatanodeInfo.AdminStates.DECOMMISSIONED);
     hostsFileWriter.initIncludeHosts(datanodes);
-    cluster.getFileSystem().refreshNodes();
+    cluster.getNamesystem(0).getBlockManager().getDatanodeManager().refreshNodes(conf);
 
     expectedDatanodeIDs.clear();
     expectedDatanodeIDs.add(cluster.getDataNodes().get(0).getDatanodeId());

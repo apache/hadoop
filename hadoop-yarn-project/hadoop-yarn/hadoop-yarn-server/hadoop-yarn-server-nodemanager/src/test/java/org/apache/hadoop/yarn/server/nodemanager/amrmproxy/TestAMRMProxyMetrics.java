@@ -42,11 +42,19 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert.assertEquals(0, metrics.getFailedRegisterAMRequests());
     Assert.assertEquals(0, metrics.getFailedFinishAMRequests());
     Assert.assertEquals(0, metrics.getFailedAllocateRequests());
+    Assert.assertEquals(0, metrics.getFailedAppRecoveryCount());
+    Assert.assertEquals(0, metrics.getFailedAppStopRequests());
+    Assert.assertEquals(0, metrics.getFailedUpdateAMRMTokenRequests());
+    Assert.assertEquals(0, metrics.getAllocateCount());
+    Assert.assertEquals(0, metrics.getRequestCount());
 
     Assert.assertEquals(0, metrics.getNumSucceededAppStartRequests());
     Assert.assertEquals(0, metrics.getNumSucceededRegisterAMRequests());
     Assert.assertEquals(0, metrics.getNumSucceededFinishAMRequests());
     Assert.assertEquals(0, metrics.getNumSucceededAllocateRequests());
+    Assert.assertEquals(0, metrics.getNumSucceededRecoverRequests());
+    Assert.assertEquals(0, metrics.getNumSucceededAppStopRequests());
+    Assert.assertEquals(0, metrics.getNumSucceededUpdateAMRMTokenRequests());
 
     LOG.info("Test: aggregate metrics are updated correctly");
   }
@@ -57,37 +65,36 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     long failedRegisterAMRequests = metrics.getFailedRegisterAMRequests();
     long failedFinishAMRequests = metrics.getFailedFinishAMRequests();
     long failedAllocateRequests = metrics.getFailedAllocateRequests();
+    long failedAppRecoveryRequests = metrics.getFailedAppRecoveryCount();
+    long failedAppStopRequests = metrics.getFailedAppStopRequests();
+    long failedUpdateAMRMTokenRequests = metrics.getFailedUpdateAMRMTokenRequests();
 
     long succeededAppStartRequests = metrics.getNumSucceededAppStartRequests();
-    long succeededRegisterAMRequests =
-        metrics.getNumSucceededRegisterAMRequests();
+    long succeededRegisterAMRequests = metrics.getNumSucceededRegisterAMRequests();
     long succeededFinishAMRequests = metrics.getNumSucceededFinishAMRequests();
     long succeededAllocateRequests = metrics.getNumSucceededAllocateRequests();
 
     int testAppId = 1;
-    RegisterApplicationMasterResponse registerResponse =
-        registerApplicationMaster(testAppId);
+    RegisterApplicationMasterResponse registerResponse = registerApplicationMaster(testAppId);
     Assert.assertNotNull(registerResponse);
-    Assert
-        .assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
+    Assert.assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
 
     AllocateResponse allocateResponse = allocate(testAppId);
     Assert.assertNotNull(allocateResponse);
 
-    FinishApplicationMasterResponse finshResponse =
+    FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finshResponse);
-    Assert.assertEquals(true, finshResponse.getIsUnregistered());
+    Assert.assertNotNull(finishResponse);
+    Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
-    Assert.assertEquals(failedAppStartRequests,
-        metrics.getFailedAppStartRequests());
-    Assert.assertEquals(failedRegisterAMRequests,
-        metrics.getFailedRegisterAMRequests());
-    Assert.assertEquals(failedFinishAMRequests,
-        metrics.getFailedFinishAMRequests());
-    Assert.assertEquals(failedAllocateRequests,
-        metrics.getFailedAllocateRequests());
+    Assert.assertEquals(failedAppStartRequests, metrics.getFailedAppStartRequests());
+    Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
+    Assert.assertEquals(failedFinishAMRequests, metrics.getFailedFinishAMRequests());
+    Assert.assertEquals(failedAllocateRequests, metrics.getFailedAllocateRequests());
+    Assert.assertEquals(failedAppRecoveryRequests, metrics.getFailedAppRecoveryCount());
+    Assert.assertEquals(failedAppStopRequests, metrics.getFailedAppStopRequests());
+    Assert.assertEquals(failedUpdateAMRMTokenRequests, metrics.getFailedUpdateAMRMTokenRequests());
 
     Assert.assertEquals(succeededAppStartRequests,
         metrics.getNumSucceededAppStartRequests());
@@ -119,10 +126,10 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert
         .assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
 
-    FinishApplicationMasterResponse finshResponse =
+    FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.FAILED);
 
-    Assert.assertNotNull(finshResponse);
+    Assert.assertNotNull(finishResponse);
 
     try {
       // Try to finish an application master that is already finished.

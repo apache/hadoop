@@ -24,11 +24,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -43,13 +42,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
-import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 
 @RunWith(Parameterized.class)
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
@@ -82,6 +82,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   public IntFunction<ByteBuffer> getAllocate() {
     return allocate;
+  }
+
+  public WeakReferencedElasticByteBufferPool getPool() {
+    return pool;
   }
 
   @Override
@@ -268,6 +272,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
+  /**
+   * Test to validate EOF ranges. Default implementation fails with EOFException
+   * while reading the ranges. Some implementation like s3, checksum fs fail fast
+   * as they already have the file length calculated.
+   */
   @Test
   public void testEOFRanges()  throws Exception {
     FileSystem fs = getFileSystem();
@@ -277,16 +286,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readVectored(fileRanges, allocate);
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
-        try {
-          ByteBuffer buffer = data.get();
-          // Shouldn't reach here.
-          Assert.fail("EOFException must be thrown while reading EOF");
-        } catch (ExecutionException ex) {
-          // ignore as expected.
-        } catch (Exception ex) {
-          LOG.error("Exception while running vectored read ", ex);
-          Assert.fail("Exception while running vectored read " + ex);
-        }
+        interceptFuture(EOFException.class,
+                "",
+                ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+                TimeUnit.SECONDS,
+                data);
       }
     }
   }
@@ -382,6 +386,13 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     return fileRanges;
   }
 
+  protected List<FileRange> getConsecutiveRanges() {
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(100, 500));
+    fileRanges.add(FileRange.createFileRange(600, 500));
+    return fileRanges;
+  }
+
   /**
    * Validate that exceptions must be thrown during a vectored
    * read operation with specific input ranges.
@@ -399,7 +410,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
             fs.openFile(path(VECTORED_READ_FILE_NAME))
                     .build();
     try (FSDataInputStream in = builder.get()) {
-      LambdaTestUtils.intercept(clazz,
+      intercept(clazz,
           () -> in.readVectored(fileRanges, allocate));
     }
   }

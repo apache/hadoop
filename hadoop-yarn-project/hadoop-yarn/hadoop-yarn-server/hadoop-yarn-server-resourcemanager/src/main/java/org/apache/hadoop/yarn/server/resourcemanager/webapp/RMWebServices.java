@@ -2748,25 +2748,25 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (isConfigurationMutable(scheduler)) {
+    if (!(scheduler instanceof MutableConfScheduler)) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by MutableConfScheduler.").build();
+    } else if (!((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by mutable configuration store.").build();
+    } else {
       try {
         callerUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
-          MutableConfigurationProvider provider = ((MutableConfScheduler)
-              scheduler).getMutableConfProvider();
+          MutableConfigurationProvider provider =
+              ((MutableConfScheduler) scheduler).getMutableConfProvider();
           LogMutation logMutation = applyMutation(provider, callerUGI, mutationInfo);
           return refreshQueues(provider, logMutation);
         });
       } catch (IOException e) {
         LOG.error("Exception thrown when modifying configuration.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
-            .build();
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
       return Response.status(Status.OK).entity("Configuration change successfully applied.")
-          .build();
-    } else {
-      return Response.status(Status.BAD_REQUEST)
-          .entity(String.format("Configuration change only supported by " +
-              "%s.", MutableConfScheduler.class.getSimpleName()))
           .build();
     }
   }
