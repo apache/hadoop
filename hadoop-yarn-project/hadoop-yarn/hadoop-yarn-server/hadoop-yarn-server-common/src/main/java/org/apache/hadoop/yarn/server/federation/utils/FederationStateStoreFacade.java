@@ -732,6 +732,7 @@ public final class FederationStateStoreFacade {
    * Get Active's SubClusterIds{@link SubClusterId}.
    *
    * @return SubClusterId Collection.
+   * @throws YarnException if the call to get active subClusterIds is unsuccessful
    */
   public Collection<SubClusterId> getActiveSubClusterIds() throws YarnException {
     Map<SubClusterId, SubClusterInfo> activeSubClusters =

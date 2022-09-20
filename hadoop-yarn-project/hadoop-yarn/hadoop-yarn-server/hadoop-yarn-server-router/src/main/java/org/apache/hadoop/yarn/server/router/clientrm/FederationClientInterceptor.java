@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,7 +40,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -1603,7 +1600,8 @@ public class FederationClientInterceptor
         new Class[] {GetAttributesToNodesRequest.class}, new Object[] {request});
     Collection<GetAttributesToNodesResponse> attributesToNodesResponses = null;
     try {
-      attributesToNodesResponses = invokeConcurrent(remoteMethod, GetAttributesToNodesResponse.class);
+      attributesToNodesResponses =
+          invokeConcurrent(remoteMethod, GetAttributesToNodesResponse.class);
     } catch (Exception ex) {
       routerMetrics.incrGetAttributesToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get attributes to nodes due to exception.",
