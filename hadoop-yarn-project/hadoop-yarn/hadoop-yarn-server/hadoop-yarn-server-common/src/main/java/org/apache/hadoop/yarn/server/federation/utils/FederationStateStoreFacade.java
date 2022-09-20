@@ -738,7 +738,7 @@ public final class FederationStateStoreFacade {
         getSubClusters(true);
     return activeSubClusters.keySet();
   }
-   
+
   /*
    * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
