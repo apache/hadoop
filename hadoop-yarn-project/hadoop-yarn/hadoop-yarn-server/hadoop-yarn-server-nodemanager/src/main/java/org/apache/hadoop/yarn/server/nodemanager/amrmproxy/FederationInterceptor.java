@@ -390,7 +390,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       // Recover UAM amrmTokens from registry or NMSS
       Map<String, Token<AMRMTokenIdentifier>> uamMap =
-          getSCAMRMTokenIdentifierMap(recoveredDataMap);
+          recoverSubClusterAMRMTokenIdentifierMap(recoveredDataMap);
 
       // Re-attach the UAMs
       int containers = 0;
@@ -496,30 +496,54 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     }
   }
 
-  private Map<String, Token<AMRMTokenIdentifier>> getSCAMRMTokenIdentifierMap(
+  /**
+   * recover SubClusterAMRMTokenIdentifierMap.
+   *
+   * If registryClient is not empty, restore directly from registryClient,
+   * otherwise restore from NMSS.
+   *
+   * @param recoveredDataMap recoveredDataMap.
+   * @return subClusterAMRMTokenIdentifierMap.
+   * @throws IOException IO Exception occurs.
+   */
+  private Map<String, Token<AMRMTokenIdentifier>> recoverSubClusterAMRMTokenIdentifierMap(
       Map<String, byte[]> recoveredDataMap) throws IOException {
-    Map<String, Token<AMRMTokenIdentifier>> uamMap = new HashMap<>();
+    Map<String, Token<AMRMTokenIdentifier>> uamMap;
     ApplicationId applicationId = this.attemptId.getApplicationId();
     if (this.registryClient != null) {
       uamMap = this.registryClient.loadStateFromRegistry(applicationId);
       LOG.info("Found {} existing UAMs for application {} in Yarn Registry.",
           uamMap.size(), applicationId);
     } else {
-      for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
-        String key = entry.getKey();
-        byte[] value = entry.getValue();
-
-        if (key.startsWith(NMSS_SECONDARY_SC_PREFIX)) {
-          // entry for subClusterId -> UAM AMRMTokenIdentifier
-          String scId = key.substring(NMSS_SECONDARY_SC_PREFIX.length());
-          Token<AMRMTokenIdentifier> aMRMTokenIdentifier = new Token<>();
-          aMRMTokenIdentifier.decodeFromUrlString(new String(value, STRING_TO_BYTE_FORMAT));
-          uamMap.put(scId, aMRMTokenIdentifier);
-          LOG.debug("Recovered UAM in {} from NMSS.", scId);
-        }
-      }
+      uamMap = recoverSubClusterAMRMTokenIdentifierMapFromNMSS(recoveredDataMap);
       LOG.info("Found {} existing UAMs for application {} in NMStateStore.",
           uamMap.size(), applicationId);
+    }
+    return uamMap;
+  }
+
+  /**
+   * recover SubClusterAMRMTokenIdentifierMap From NMSS.
+   *
+   * @param recoveredDataMap recoveredDataMap
+   * @return subClusterAMRMTokenIdentifierMap.
+   * @throws IOException IO Exception occurs.
+   */
+  private Map<String, Token<AMRMTokenIdentifier>> recoverSubClusterAMRMTokenIdentifierMapFromNMSS(
+      Map<String, byte[]> recoveredDataMap) throws IOException {
+    Map<String, Token<AMRMTokenIdentifier>> uamMap = new HashMap<>();
+    for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
+      String key = entry.getKey();
+      byte[] value = entry.getValue();
+
+      if (key.startsWith(NMSS_SECONDARY_SC_PREFIX)) {
+        // entry for subClusterId -> UAM AMRMTokenIdentifier
+        String scId = key.substring(NMSS_SECONDARY_SC_PREFIX.length());
+        Token<AMRMTokenIdentifier> aMRMTokenIdentifier = new Token<>();
+        aMRMTokenIdentifier.decodeFromUrlString(new String(value, STRING_TO_BYTE_FORMAT));
+        uamMap.put(scId, aMRMTokenIdentifier);
+        LOG.debug("Recovered UAM in {} from NMSS.", scId);
+      }
     }
     return uamMap;
   }
