@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.commons.lang3.Range;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
@@ -80,6 +81,8 @@ public class BasePBImplRecordsTest {
           'a' + rand.nextInt(26));
     } else if (type.equals(Float.class)) {
       return rand.nextFloat();
+    } else if (type.equals(Text.class)) {
+      return new Text('a' + String.valueOf(rand.nextInt(1000000)));
     } else if (type instanceof Class) {
       Class clazz = (Class)type;
       if (clazz.isArray()) {
@@ -167,7 +170,7 @@ public class BasePBImplRecordsTest {
           " does not have newInstance method");
     }
     Object [] args = new Object[paramTypes.length];
-    for (int i=0;i<args.length;i++) {
+    for (int i = 0; i < args.length; i++) {
       args[i] = genTypeValue(paramTypes[i]);
     }
     ret = newInstance.invoke(null, args);
