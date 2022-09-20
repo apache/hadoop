@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
 /**
  * Implements the RequestInterceptor interface and provides common functionality
- * which can can be used and/or extended by other concrete intercepter classes.
+ * which can can be used and/or extended by other concrete interceptor classes.
  *
  */
 public abstract class AbstractRequestInterceptor implements
