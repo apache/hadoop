@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -26,23 +27,20 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MI
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
+
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import java.net.URI;
 
 import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Test;
-import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
-import org.apache.hadoop.fs.FileSystem;
 
 /**
  * Unit test TestExponentialRetryPolicy.
@@ -79,8 +77,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testCreateMultipleAccountThrottling() throws Throwable {
-    Configuration config = new Configuration(this.getRawConfiguration());
+  public void testCreateMultipleAccountThrottling() {
+    Configuration config = new Configuration(getRawConfiguration());
     String accountName = config.get(FS_AZURE_ACCOUNT_NAME);
     if (accountName == null) {
       // check if accountName is set using different config key

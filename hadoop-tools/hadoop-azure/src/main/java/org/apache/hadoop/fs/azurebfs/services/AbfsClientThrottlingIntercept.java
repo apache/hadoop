@@ -55,10 +55,10 @@ public final class AbfsClientThrottlingIntercept {
   // Hide default constructor
   public AbfsClientThrottlingIntercept(String accountName) {
     setIsAutoThrottlingEnabled(true);
-    LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     this.readThrottler = new AbfsClientThrottlingAnalyzer("read");
     this.writeThrottler = new AbfsClientThrottlingAnalyzer("write");
     this.accountName = accountName;
+    LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : " + "{}", accountName);
   }
 
   // Hide default constructor
@@ -97,7 +97,7 @@ public final class AbfsClientThrottlingIntercept {
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
         if (contentLength > 0) {
-          this.writeThrottler.addBytesTransferred(contentLength,
+          writeThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -105,7 +105,7 @@ public final class AbfsClientThrottlingIntercept {
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
-          this.readThrottler.addBytesTransferred(contentLength,
+          readThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -127,13 +127,13 @@ public final class AbfsClientThrottlingIntercept {
 
     switch (operationType) {
       case ReadFile:
-        if (this.readThrottler.suspendIfNecessary()
+        if (readThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
         }
         break;
       case Append:
-        if (this.writeThrottler.suspendIfNecessary()
+        if (writeThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
         }
