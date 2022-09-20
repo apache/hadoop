@@ -59,8 +59,7 @@ public class TestConfServlet {
       new HashMap<String, String>();
   private static final Map<String, String> TEST_FORMATS =
       new HashMap<String, String>();
-  private static final Map<String, String> MASK_PROPERTIES =
-      new HashMap<>();
+  private static final Map<String, String> MASK_PROPERTIES = new HashMap<>();
 
   @BeforeClass
   public static void initTestProperties() {
@@ -265,16 +264,12 @@ public class TestConfServlet {
       ServletConfig servletConf = mock(ServletConfig.class);
       ServletContext context = mock(ServletContext.class);
       service.init(servletConf);
-      when(context.getAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE))
-          .thenReturn(conf);
-      when(service.getServletContext())
-          .thenReturn(context);
+      when(context.getAttribute(HttpServer2.CONF_CONTEXT_ATTRIBUTE)).thenReturn(conf);
+      when(service.getServletContext()).thenReturn(context);
 
       HttpServletRequest request = mock(HttpServletRequest.class);
-      when(request.getHeader(HttpHeaders.ACCEPT))
-          .thenReturn(TEST_FORMATS.get(format));
-      when(request.getParameter("name"))
-          .thenReturn(propertyName);
+      when(request.getHeader(HttpHeaders.ACCEPT)).thenReturn(TEST_FORMATS.get(format));
+      when(request.getParameter("name")).thenReturn(propertyName);
 
       HttpServletResponse response = mock(HttpServletResponse.class);
       sw = new StringWriter();
@@ -291,8 +286,8 @@ public class TestConfServlet {
       // MASK_PROPERTIES.get("property yarn.federation.state-store.sql.username")
       // is the value before replacement, test-user
       // result contains the replaced value, which should be ******
-      assertTrue(result.contains(propertyName) &&
-          !result.contains(MASK_PROPERTIES.get(propertyName)));
+      assertTrue(result.contains(propertyName));
+      assertTrue(!result.contains(MASK_PROPERTIES.get(propertyName)));
 
     } finally {
       if (sw != null) {

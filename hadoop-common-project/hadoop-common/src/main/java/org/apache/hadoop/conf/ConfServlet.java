@@ -34,9 +34,6 @@ import org.apache.hadoop.http.HttpServer2;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.http.HttpServer2.FEDERATION_STATESTORE_SQL_PASSWROD;
-import static org.apache.hadoop.http.HttpServer2.FEDERATION_STATESTORE_SQL_USERNAME;
-
 /**
  * A servlet to print out the running configuration data.
  */
@@ -56,10 +53,6 @@ public class ConfServlet extends HttpServlet {
   private Configuration getConfFromContext() {
     Configuration conf = (Configuration)getServletContext().getAttribute(
         HttpServer2.CONF_CONTEXT_ATTRIBUTE);
-    List<String> props = new ArrayList<>();
-    props.add(FEDERATION_STATESTORE_SQL_USERNAME);
-    props.add(FEDERATION_STATESTORE_SQL_PASSWROD);
-    HttpServer2.secretPropValueReplaceMask(conf, props);
     assert conf != null;
     return conf;
   }
