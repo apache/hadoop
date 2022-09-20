@@ -3568,7 +3568,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   public void writeXml(Writer out) throws IOException {
-    writeXml(null, out);
+    writeXml(null, out, null);
   }
 
   /**
@@ -3595,9 +3595,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param out the writer to write to.
    * @throws IOException raised on errors performing I/O.
    */
-  public void writeXml(@Nullable String propertyName, Writer out)
+  public void writeXml(@Nullable String propertyName, Writer out, Configuration config)
       throws IOException, IllegalArgumentException {
-    ConfigRedactor redactor = new ConfigRedactor(this);
+    ConfigRedactor redactor = config != null ? new ConfigRedactor(this) : null;
     Document doc = asXmlDocument(propertyName, redactor);
 
     try {

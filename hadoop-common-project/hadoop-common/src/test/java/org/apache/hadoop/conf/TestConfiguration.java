@@ -1961,7 +1961,7 @@ public class TestConfiguration {
 
       // test xml format
       outWriter = new StringWriter();
-      testConf.writeXml("test.key2", outWriter);
+      testConf.writeXml("test.key2", outWriter, null);
       xmlStr = outWriter.toString();
       outWriter.close();
       Configuration actualConf1 = getActualConf(xmlStr);
@@ -1986,7 +1986,7 @@ public class TestConfiguration {
       // test xml format
       try {
         outWriter = new StringWriter();
-        testConf.writeXml("test.unknown.key", outWriter);
+        testConf.writeXml("test.unknown.key", outWriter, null);
         outWriter.close();
       } catch (Exception e) {
         assertTrue(e instanceof IllegalArgumentException);
@@ -2004,7 +2004,7 @@ public class TestConfiguration {
       assertEquals(3, jconf3.getProperties().length);
 
       outWriter = new StringWriter();
-      testConf.writeXml(null, outWriter);
+      testConf.writeXml(null, outWriter, null);
       xmlStr = outWriter.toString();
       outWriter.close();
       Configuration actualConf3 = getActualConf(xmlStr);
@@ -2023,7 +2023,7 @@ public class TestConfiguration {
       assertEquals(3, jconf4.getProperties().length);
 
       outWriter = new StringWriter();
-      testConf.writeXml("", outWriter);
+      testConf.writeXml("", outWriter, null);
       xmlStr = outWriter.toString();
       outWriter.close();
       Configuration actualConf4 = getActualConf(xmlStr);
