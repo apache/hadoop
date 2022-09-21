@@ -1301,7 +1301,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
       UnmanagedAMPoolManager unmanagedAMPoolManager = interceptor.getUnmanagedAMPool();
       Set<String> allUAMIds = unmanagedAMPoolManager.getAllUAMIds();
       Assert.assertNotNull(allUAMIds);
-      Assert.assertTrue(allUAMIds.size() == 1);
+      Assert.assertEquals(1, allUAMIds.size());
       Assert.assertTrue(allUAMIds.contains(sc2.getId()));
 
       // Step6. The first allocate call expects a fail-over exception and re-register.
@@ -1359,7 +1359,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     UnmanagedAMPoolManager unmanagedAMPoolManager = interceptor.getUnmanagedAMPool();
     Set<String> allUAMIds = unmanagedAMPoolManager.getAllUAMIds();
     Assert.assertNotNull(allUAMIds);
-    Assert.assertTrue(allUAMIds.size() == 2);
+    Assert.assertEquals(2, allUAMIds.size());
     Assert.assertTrue(allUAMIds.contains("SC-1"));
     Assert.assertTrue(allUAMIds.contains("SC-2"));
 
@@ -1405,7 +1405,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     // Get the Container list of SC-1
     MockResourceManagerFacade sc1Facade = secondaries.get("SC-1");
     HashMap<ApplicationId, List<ContainerId>> appContainerMap =
-            sc1Facade.getApplicationContainerIdMap();
+        sc1Facade.getApplicationContainerIdMap();
     Assert.assertNotNull(appContainerMap);
     ApplicationId applicationId = attemptId.getApplicationId();
     Assert.assertNotNull(applicationId);
@@ -1430,6 +1430,6 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     FinishApplicationMasterResponse finishResponse =
         interceptor.finishApplicationMaster(finishReq);
     Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    Assert.assertTrue(finishResponse.getIsUnregistered());
   }
 }
