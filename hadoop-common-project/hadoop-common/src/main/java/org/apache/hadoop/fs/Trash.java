@@ -98,30 +98,24 @@ public class Trash extends Configured {
     }
 
     /*
-     * In HADOOP-18144, we fixed the logical path vs. target path bug of getTrashRoot() in ViewFileSystem.
-     * moveToTrash works for ViewFileSystem now. ViewFileSystem will do path resolution internally by itself.
+     * In HADOOP-18144, we changed getTrashRoot() in ViewFileSystem to return a
+     * viewFS path, instead of a targetFS path. moveToTrash works for
+     * ViewFileSystem now. ViewFileSystem will do path resolution internally by
+     * itself.
      *
      * When localized trash flag is enabled:
-     *    1). if fs is a ViewFileSystem, we can initialize Trash() with this ViewFileSystem object;
-     *    2). When fs is not a ViewFileSystem, the only place we would need to resolve a path is for symbolic links.
-     *        However, symlink is not enabled in Hadoop due to the complexity to support it (HADOOP-10019).
+     *    1). if fs is a ViewFileSystem, we can initialize Trash() with a
+     *        ViewFileSystem object;
+     *    2). When fs is not a ViewFileSystem, the only place we would need to
+     *        resolve a path is for symbolic links. However, symlink is not
+     *        enabled in Hadoop due to the complexity to support it
+     *        (HADOOP-10019).
      */
     if (conf.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
         CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
-      // Save the original config in savedValue for localized trash config.
-      String savedValue = fs.getConf().get(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT);
-      fs.getConf().setBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, true);
+      //TODO: Create a new FS object, to ensure the latest conf is used.
       Trash trash = new Trash(fs, conf);
-      boolean res = trash.moveToTrash(p);
-
-      // Restore the original value of localized trash config
-      if (savedValue != null) {
-        fs.getConf().set(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT, savedValue);
-      } else {
-        fs.getConf().unset(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT);
-      }
-
-      return res;
+      return trash.moveToTrash(p);
     }
 
     Trash trash = new Trash(fullyResolvedFs, conf);
