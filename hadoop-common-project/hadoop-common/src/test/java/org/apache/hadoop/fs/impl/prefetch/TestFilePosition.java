@@ -43,6 +43,7 @@ public class TestFilePosition extends AbstractHadoopTestBase {
     new FilePosition(10, 5);
     new FilePosition(5, 10);
     new FilePosition(10, 5).setData(data, 3, 4);
+    new FilePosition(10, 10).setData(data, 3, 13);
 
     // Verify it throws correctly.
 
@@ -94,11 +95,11 @@ public class TestFilePosition extends AbstractHadoopTestBase {
         "'readOffset' must not be negative", () -> pos.setData(data, 4, -4));
 
     intercept(IllegalArgumentException.class,
-        "'readOffset' (15) must be within the range [4, 13]",
+        "'readOffset' (15) must be within the range [4, 14]",
         () -> pos.setData(data, 4, 15));
 
     intercept(IllegalArgumentException.class,
-        "'readOffset' (3) must be within the range [4, 13]",
+        "'readOffset' (3) must be within the range [4, 14]",
         () -> pos.setData(data, 4, 3));
 
   }
@@ -191,5 +192,24 @@ public class TestFilePosition extends AbstractHadoopTestBase {
       pos.incrementBytesRead(1);
     }
     assertTrue(pos.bufferFullyRead());
+  }
+
+  @Test
+  public void testBounds() {
+    int bufferSize = 8;
+    long fileSize = bufferSize;
+
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    BufferData data = new BufferData(0, buffer);
+    FilePosition pos = new FilePosition(fileSize, bufferSize);
+
+    long eofOffset = fileSize;
+    pos.setData(data, 0, eofOffset);
+
+    assertTrue(pos.isWithinCurrentBuffer(eofOffset));
+    assertEquals(eofOffset, pos.absolute());
+
+    assertTrue(pos.setAbsolute(eofOffset));
+    assertEquals(eofOffset, pos.absolute());
   }
 }
