@@ -245,7 +245,9 @@ public class AbfsRestOperation {
     String accountName = this.client.getAbfsConfiguration().getAccountName();
     boolean isAutoThrottlingEnabled = this.client.getAbfsConfiguration().isAutoThrottlingEnabled();
     boolean isSingletonEnabled = this.client.getAbfsConfiguration().isSingletonEnabled();
-    AbfsClientThrottlingIntercept intercept;
+    AbfsClientThrottlingIntercept intercept
+        = AbfsClientThrottlingInterceptFactory.getInstance(accountName,
+        isAutoThrottlingEnabled, isSingletonEnabled);
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
@@ -282,7 +284,6 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      intercept = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
       if (intercept != null) {
         intercept.sendingRequest(operationType, abfsCounters);
       }
@@ -323,9 +324,8 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      AbfsClientThrottlingIntercept instance = AbfsClientThrottlingInterceptFactory.getInstance(accountName, isAutoThrottlingEnabled, isSingletonEnabled);
-      if (instance != null) {
-        instance.updateMetrics(operationType, httpOperation);
+      if (intercept != null) {
+        intercept.updateMetrics(operationType, httpOperation);
       }
     }
 
