@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.IntStream;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
