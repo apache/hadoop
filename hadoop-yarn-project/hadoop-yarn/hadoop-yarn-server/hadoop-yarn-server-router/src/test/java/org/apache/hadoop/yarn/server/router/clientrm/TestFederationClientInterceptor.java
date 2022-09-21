@@ -128,6 +128,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -580,12 +581,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
 
+    // Clear Membership
+    Map<SubClusterId, SubClusterInfo> membership = new HashMap<>();
+    membership.putAll(stateStore.getMembership());
+    stateStore.getMembership().clear();
+
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
     Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.
         invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
-    Assert.assertTrue(!clusterMetrics.isEmpty());
+    Assert.assertTrue(clusterMetrics.isEmpty());
+
+    // Restore membership
+    stateStore.setMembership(membership);
   }
 
   /**

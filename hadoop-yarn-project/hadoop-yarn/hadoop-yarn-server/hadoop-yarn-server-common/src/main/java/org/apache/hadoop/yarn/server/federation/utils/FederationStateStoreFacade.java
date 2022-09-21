@@ -728,18 +728,6 @@ public final class FederationStateStoreFacade {
     return stateStore;
   }
 
-  /**
-   * Get Active's SubClusterIds{@link SubClusterId}.
-   *
-   * @return SubClusterId Collection.
-   * @throws YarnException if the call to get active subClusterIds is unsuccessful
-   */
-  public Collection<SubClusterId> getActiveSubClusterIds() throws YarnException {
-    Map<SubClusterId, SubClusterInfo> activeSubClusters =
-        getSubClusters(true);
-    return activeSubClusters.keySet();
-  }
-
   /*
    * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *

@@ -701,7 +701,9 @@ public class FederationClientInterceptor
   <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz)
       throws YarnException {
 
-    Collection<SubClusterId> subClusterIds = federationFacade.getActiveSubClusterIds();
+    Map<SubClusterId, SubClusterInfo> subClusterInfo =
+        federationFacade.getSubClusters(true);
+    Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
@@ -710,11 +712,12 @@ public class FederationClientInterceptor
     // Generate parallel Callable tasks
     for (SubClusterId subClusterId : subClusterIds) {
       callables.add(() -> {
-        ApplicationClientProtocol protocol =
-            getClientRMProxyForSubCluster(subClusterId);
-        Method method = ApplicationClientProtocol.class
-            .getMethod(request.getMethodName(), request.getTypes());
-        Object result = method.invoke(protocol, request.getParams());
+        ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
+        String methodName = request.getMethodName();
+        Class<?>[] types = request.getTypes();
+        Object[] params = request.getParams();
+        Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
+        Object result = method.invoke(protocol, params);
         return Pair.of(subClusterId, result);
       });
     }
@@ -763,17 +766,17 @@ public class FederationClientInterceptor
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getClusterNodes",
         new Class[]{GetClusterNodesRequest.class}, new Object[]{request});
-    Collection<GetClusterNodesResponse> clusterNodes = null;
     try {
-      clusterNodes = invokeConcurrent(remoteMethod, GetClusterNodesResponse.class);
+      Collection<GetClusterNodesResponse> clusterNodes =
+          invokeConcurrent(remoteMethod, GetClusterNodesResponse.class);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
+      return RouterYarnClientUtils.mergeClusterNodesResponse(clusterNodes);
     } catch (Exception ex) {
       routerMetrics.incrClusterNodesFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get cluster nodes due to exception.", ex);
     }
-    long stopTime = clock.getTime();
-    routerMetrics.succeededGetClusterNodesRetrieved(stopTime - startTime);
-    // Merge the NodesResponse
-    return RouterYarnClientUtils.mergeClusterNodesResponse(clusterNodes);
+    throw new YarnException("Unable to get cluster nodes.");
   }
 
   @Override

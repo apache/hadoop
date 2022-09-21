@@ -476,4 +476,14 @@ public class MemoryFederationStateStore implements FederationStateStore {
   public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
     return routerRMSecretManagerState;
   }
+
+  @VisibleForTesting
+  public Map<SubClusterId, SubClusterInfo> getMembership() {
+    return membership;
+  }
+
+  @VisibleForTesting
+  public void setMembership(Map<SubClusterId, SubClusterInfo> membership) {
+    this.membership = membership;
+  }
 }
