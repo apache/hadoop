@@ -3568,7 +3568,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   public void writeXml(Writer out) throws IOException {
-    writeXml(null, out, null);
+    writeXml(null, out);
   }
 
   /**
@@ -3614,6 +3614,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (TransformerException te) {
       throw new IOException(te);
     }
+  }
+
+  public void writeXml(@Nullable String propertyName, Writer out)
+      throws IOException, IllegalArgumentException {
+    writeXml(propertyName, out);
   }
 
   /**

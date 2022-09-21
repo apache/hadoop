@@ -43,7 +43,6 @@ public class ConfServlet extends HttpServlet {
   protected static final String FORMAT_JSON = "json";
   protected static final String FORMAT_XML = "xml";
 
-
   /**
    * Return the Configuration of the daemon hosting this servlet.
    * This is populated when the HttpServer starts.
