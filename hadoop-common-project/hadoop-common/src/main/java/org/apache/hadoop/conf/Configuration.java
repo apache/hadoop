@@ -3618,7 +3618,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   public void writeXml(@Nullable String propertyName, Writer out)
       throws IOException, IllegalArgumentException {
-    writeXml(propertyName, out);
+    writeXml(propertyName, out, null);
   }
 
   /**
