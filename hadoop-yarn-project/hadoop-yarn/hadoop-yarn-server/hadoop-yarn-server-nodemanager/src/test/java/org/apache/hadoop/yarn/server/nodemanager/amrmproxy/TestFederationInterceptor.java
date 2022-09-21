@@ -91,7 +91,7 @@ import org.slf4j.LoggerFactory;
  * Extends the TestAMRMProxyService and overrides methods in order to use the
  * AMRMProxyService's pipeline test cases for testing the FederationInterceptor
  * class. The tests for AMRMProxyService has been written cleverly so that it
- * can be reused to validate different request intercepter chains.
+ * can be reused to validate different request interceptor chains.
  */
 public class TestFederationInterceptor extends BaseAMRMProxyTest {
   private static final Logger LOG =
@@ -155,8 +155,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     String mockPassThroughInterceptorClass =
         PassThroughRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
@@ -262,7 +262,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
     // The release request will be split and handled by the corresponding UAM.
     // The release containers returned by the mock resource managers will be
-    // aggregated and returned back to us and we can check if total request size
+    // aggregated and returned back to us, and we can check if total request size
     // and returned size are the same
     List<ContainerId> containersForReleasedContainerIds =
         new ArrayList<ContainerId>();
@@ -368,10 +368,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         return null;
       }
@@ -428,10 +428,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
         return null;
       }
     });
@@ -586,7 +586,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
             interceptor.getSecondaryRMs();
 
-        // Create a new intercepter instance and recover
+        // Create a new interceptor instance and recover
         interceptor = new TestableFederationInterceptor(homeRM, secondaries);
         interceptor.init(new AMRMProxyApplicationContextImpl(nmContext,
             getConf(), attemptId, "test-user", null, null, null, registryObj));
@@ -621,10 +621,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         // After the application succeeds, the registry/NMSS entry should be
         // cleaned up
@@ -862,7 +862,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
             interceptor.getSecondaryRMs();
 
-        // Increase the attemptId and create a new intercepter instance for it
+        // Increase the attemptId and create a new interceptor instance for it
         attemptId = ApplicationAttemptId.newInstance(
             attemptId.getApplicationId(), attemptId.getAttemptId() + 1);
 
@@ -901,10 +901,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         // After the application succeeds, the registry entry should be deleted
         if (interceptor.getRegistryClient() != null) {
