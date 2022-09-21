@@ -115,9 +115,8 @@ public final class HadoopExecutors {
     try {
       executorService.shutdown();
 
-      logger.debug(
-          "Gracefully shutting down executor service. Waiting max {} {}",
-          timeout, unit);
+      logger.debug("Gracefully shutting down executor service {}. Waiting max {} {}",
+          executorService, timeout, unit);
       if (!executorService.awaitTermination(timeout, unit)) {
         logger.debug(
             "Executor service has not shutdown yet. Forcing. "
