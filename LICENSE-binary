@@ -523,7 +523,7 @@ junit:junit:4.13.2
 HSQL License
 ------------
 
-org.hsqldb:hsqldb:2.3.4
+org.hsqldb:hsqldb:2.5.2
 
 
 JDOM License

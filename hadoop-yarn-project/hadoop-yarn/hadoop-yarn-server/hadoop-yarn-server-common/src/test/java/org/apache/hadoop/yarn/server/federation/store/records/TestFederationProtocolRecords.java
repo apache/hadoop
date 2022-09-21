@@ -47,6 +47,9 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClu
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterRegisterResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.UpdateApplicationHomeSubClusterResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyResponseProto;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.DeleteApplicationHomeSubClusterRequestPBImpl;
@@ -75,6 +78,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubCluster
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterRegisterResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.UpdateApplicationHomeSubClusterResponsePBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyRequestPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterMasterKeyResponsePBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -92,6 +98,7 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(SubClusterInfo.class);
     generateByNewInstance(ApplicationHomeSubCluster.class);
     generateByNewInstance(SubClusterPolicyConfiguration.class);
+    generateByNewInstance(RouterMasterKey.class);
   }
 
   @Test
@@ -261,5 +268,20 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     validatePBImplRecord(
         GetSubClusterPoliciesConfigurationsResponsePBImpl.class,
         GetSubClusterPoliciesConfigurationsResponseProto.class);
+  }
+
+  @Test
+  public void testRouterMasterKey() throws Exception {
+    validatePBImplRecord(RouterMasterKeyPBImpl.class, RouterMasterKeyProto.class);
+  }
+
+  @Test
+  public void testRouterMasterKeyRequest() throws Exception {
+    validatePBImplRecord(RouterMasterKeyRequestPBImpl.class, RouterMasterKeyRequestProto.class);
+  }
+
+  @Test
+  public void testRouterMasterKeyResponse() throws Exception {
+    validatePBImplRecord(RouterMasterKeyResponsePBImpl.class, RouterMasterKeyResponseProto.class);
   }
 }
