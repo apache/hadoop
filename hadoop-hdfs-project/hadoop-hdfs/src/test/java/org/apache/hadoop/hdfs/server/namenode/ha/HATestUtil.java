@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
-import static org.apache.hadoop.hdfs.DFSUtil.createUri;
-
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
@@ -39,9 +32,9 @@ import java.util.concurrent.atomic.LongAccumulator;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.ClientGSIContext;
@@ -60,7 +53,12 @@ import org.apache.hadoop.io.retry.RetryInvocationHandler;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
-import java.util.function.Supplier;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSUtil.createUri;
 
 /**
  * Static utility functions useful for testing HA.
@@ -146,7 +144,9 @@ public abstract class HATestUtil {
     }
   }
 
-  /** Gets the filesystem instance by setting the failover configurations */
+  /**
+   * Gets the filesystem instance by setting the failover configurations.
+   */
   public static DistributedFileSystem configureFailoverFs(
       MiniDFSCluster cluster, Configuration conf)
       throws IOException, URISyntaxException {
@@ -154,7 +154,7 @@ public abstract class HATestUtil {
   }
 
   /**
-   * Gets the filesystem instance by setting the failover configurations
+   * Gets the filesystem instance by setting the failover configurations.
    * @param cluster the single process DFS cluster
    * @param conf cluster configuration
    * @param nsIndex namespace index starting with zero
@@ -273,7 +273,8 @@ public abstract class HATestUtil {
   }
 
   /** Sets the required configurations for performing failover.  */
-  public static void setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf, String logicalName, String proxyProvider, int nsIndex) {
+  public static void setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf,
+      String logicalName, String proxyProvider, int nsIndex) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
     List<InetSocketAddress> nnAddresses = new ArrayList<InetSocketAddress>(3);
     for (MiniDFSCluster.NameNodeInfo nn : nns) {
@@ -300,11 +301,11 @@ public abstract class HATestUtil {
   }
 
   /**
-   * Sets the required configurations for performing failover
+   * Sets the required configurations for performing failover.
    */
   public static void setFailoverConfigurations(Configuration conf, String logicalName,
       String proxyProvider, List<InetSocketAddress> nnAddresses) {
-    final List<String> addresses = new ArrayList();
+    final List<String> addresses = new ArrayList<>();
     nnAddresses
         .forEach(addr -> addresses.add("hdfs://" + addr.getHostName() + ":" + addr.getPort()));
     setFailoverConfigurations(conf, logicalName, proxyProvider, addresses);
@@ -334,12 +335,12 @@ public abstract class HATestUtil {
   }
 
   /**
-   * Sets the required configurations for performing failover
+   * Sets the required configurations for performing failover.
    */
   public static <P extends FailoverProxyProvider<?>> void
       setFailoverConfigurations(Configuration conf, String logicalName,
       List<InetSocketAddress> nnAddresses, Class<P> classFPP) {
-    final List<String> addresses = new ArrayList();
+    final List<String> addresses = new ArrayList<>();
     nnAddresses.forEach(
         addr -> addresses.add(
             "hdfs://" + addr.getHostName() + ":" + addr.getPort()));
