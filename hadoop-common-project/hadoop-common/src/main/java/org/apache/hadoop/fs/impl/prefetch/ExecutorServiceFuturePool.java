@@ -22,7 +22,12 @@ package org.apache.hadoop.fs.impl.prefetch;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 /**
  * A FuturePool implementation backed by a java.util.concurrent.ExecutorService.
@@ -37,7 +42,8 @@ import java.util.function.Supplier;
  *
  */
 public class ExecutorServiceFuturePool {
-  private ExecutorService executor;
+
+  private final ExecutorService executor;
 
   public ExecutorServiceFuturePool(ExecutorService executor) {
     this.executor = executor;
@@ -62,6 +68,18 @@ public class ExecutorServiceFuturePool {
   @SuppressWarnings("unchecked")
   public Future<Void> executeRunnable(final Runnable r) {
     return (Future<Void>) executor.submit(r::run);
+  }
+
+  /**
+   * Utility to shutdown the {@link ExecutorService} used by this class. Will wait up to a
+   * certain timeout for the ExecutorService to gracefully shutdown.
+   *
+   * @param logger Logger
+   * @param timeout the maximum time to wait
+   * @param unit the time unit of the timeout argument
+   */
+  public void shutdown(Logger logger, long timeout, TimeUnit unit) {
+    HadoopExecutors.shutdown(executor, logger, timeout, unit);
   }
 
   public String toString() {
