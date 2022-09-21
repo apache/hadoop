@@ -248,6 +248,7 @@ public class AbfsRestOperation {
     AbfsClientThrottlingIntercept intercept
         = AbfsClientThrottlingInterceptFactory.getInstance(accountName,
         isAutoThrottlingEnabled, isSingletonEnabled);
+
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
