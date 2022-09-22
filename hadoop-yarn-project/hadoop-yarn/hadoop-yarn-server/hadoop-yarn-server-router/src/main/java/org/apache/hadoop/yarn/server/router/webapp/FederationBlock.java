@@ -24,11 +24,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
+import com.google.gson.Gson;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -46,8 +48,6 @@ import com.sun.jersey.api.json.JSONUnmarshaller;
 
 class FederationBlock extends HtmlBlock {
 
-  private static final long BYTES_IN_MB = 1024 * 1024;
-
   private final Router router;
 
   @Inject
@@ -58,119 +58,195 @@ class FederationBlock extends HtmlBlock {
 
   @Override
   public void render(Block html) {
+
     Configuration conf = this.router.getConfig();
-    boolean isEnabled = conf.getBoolean(
-        YarnConfiguration.FEDERATION_ENABLED,
+    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+
     if (isEnabled) {
-      setTitle("Federation");
+
+      List<Map<String, String>> lists = new ArrayList<>();
 
       // Table header
-      TBODY<TABLE<Hamlet>> tbody = html.table("#rms").thead().tr()
+      TBODY<TABLE<Hamlet>> tbody =
+          html.table("#rms").$class("display").$style("width:100%").thead().tr()
           .th(".id", "SubCluster")
-          .th(".submittedA", "Applications Submitted*")
-          .th(".pendingA", "Applications Pending*")
-          .th(".runningA", "Applications Running*")
-          .th(".failedA", "Applications Failed*")
-          .th(".killedA", "Applications Killed*")
-          .th(".completedA", "Applications Completed*")
-          .th(".contAllocated", "Containers Allocated")
-          .th(".contReserved", "Containers Reserved")
-          .th(".contPending", "Containers Pending")
-          .th(".availableM", "Available Memory")
-          .th(".allocatedM", "Allocated Memory")
-          .th(".reservedM", "Reserved Memory")
-          .th(".totalM", "Total Memory")
-          .th(".availableVC", "Available VirtualCores")
-          .th(".allocatedVC", "Allocated VirtualCores")
-          .th(".reservedVC", "Reserved VirtualCores")
-          .th(".totalVC", "Total VirtualCores")
-          .th(".activeN", "Active Nodes")
-          .th(".lostN", "Lost Nodes")
-          .th(".availableN", "Available Nodes")
-          .th(".unhealtyN", "Unhealthy Nodes")
-          .th(".rebootedN", "Rebooted Nodes")
-          .th(".totalN", "Total Nodes")
+          .th(".state", "State")
+          .th(".lastStartTime", "LastStartTime")
+          .th(".lastHeartBeat", "LastHeartBeat")
+          .th(".resource", "Resource")
+          .th(".nodes", "Nodes")
           .__().__().tbody();
 
       try {
         // Binding to the FederationStateStore
-        FederationStateStoreFacade facade =
-            FederationStateStoreFacade.getInstance();
+        FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+
         Map<SubClusterId, SubClusterInfo> subClustersInfo =
             facade.getSubClusters(true);
 
         // Sort the SubClusters
         List<SubClusterInfo> subclusters = new ArrayList<>();
         subclusters.addAll(subClustersInfo.values());
-        Comparator<? super SubClusterInfo> cmp =
-            new Comparator<SubClusterInfo>() {
-              @Override
-              public int compare(SubClusterInfo o1, SubClusterInfo o2) {
-                return o1.getSubClusterId().compareTo(o2.getSubClusterId());
-              }
-            };
+        Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
         Collections.sort(subclusters, cmp);
 
         for (SubClusterInfo subcluster : subclusters) {
+
+          Map<String, String> subclusterMap = new HashMap<>();
+
+          // Prepare subCluster
           SubClusterId subClusterId = subcluster.getSubClusterId();
+          String anchorText = "";
+          if (subClusterId != null) {
+            anchorText = subClusterId.getId();
+          }
+
+          // Prepare WebAppAddress
           String webAppAddress = subcluster.getRMWebServiceAddress();
+          String herfWebAppAddress = "";
+          if (webAppAddress != null && !webAppAddress.isEmpty()) {
+            herfWebAppAddress = "//" + webAppAddress;
+          }
+
+          // Prepare Capability
           String capability = subcluster.getCapability();
           ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
 
-          // Building row per SubCluster
-          tbody.tr().td().a("//" + webAppAddress, subClusterId.toString()).__()
-              .td(Integer.toString(subClusterInfo.getAppsSubmitted()))
-              .td(Integer.toString(subClusterInfo.getAppsPending()))
-              .td(Integer.toString(subClusterInfo.getAppsRunning()))
-              .td(Integer.toString(subClusterInfo.getAppsFailed()))
-              .td(Integer.toString(subClusterInfo.getAppsKilled()))
-              .td(Integer.toString(subClusterInfo.getAppsCompleted()))
-              .td(Integer.toString(subClusterInfo.getContainersAllocated()))
-              .td(Integer.toString(subClusterInfo.getReservedContainers()))
-              .td(Integer.toString(subClusterInfo.getPendingContainers()))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getAvailableMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getAllocatedMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getReservedMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getTotalMB() * BYTES_IN_MB))
-              .td(Long.toString(subClusterInfo.getAvailableVirtualCores()))
-              .td(Long.toString(subClusterInfo.getAllocatedVirtualCores()))
-              .td(Long.toString(subClusterInfo.getReservedVirtualCores()))
-              .td(Long.toString(subClusterInfo.getTotalVirtualCores()))
-              .td(Integer.toString(subClusterInfo.getActiveNodes()))
-              .td(Integer.toString(subClusterInfo.getLostNodes()))
-              .td(Integer.toString(subClusterInfo.getDecommissionedNodes()))
-              .td(Integer.toString(subClusterInfo.getUnhealthyNodes()))
-              .td(Integer.toString(subClusterInfo.getRebootedNodes()))
-              .td(Integer.toString(subClusterInfo.getTotalNodes())).__();
+          // Prepare LastStartTime & LastHeartBeat
+          String lastStartTime =
+              DateFormatUtils.format(subcluster.getLastStartTime(), DATE_PATTERN);
+          String lastHeartBeat =
+              DateFormatUtils.format(subcluster.getLastHeartBeat(), DATE_PATTERN);
+
+          // Prepare Resource
+          long totalMB = subClusterInfo.getTotalMB();
+          String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
+          long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
+          String resources = String.format("<Memory:%s, VCore:%s>", totalMBDesc, totalVirtualCores);
+
+          // Prepare Node
+          long totalNodes = subClusterInfo.getTotalNodes();
+          long activeNodes = subClusterInfo.getActiveNodes();
+          String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>",
+              totalNodes, activeNodes);
+
+          // Prepare HTML Table
+          tbody.tr().$id(subClusterId.toString())
+              .td().$class("details-control").a(herfWebAppAddress, anchorText).__()
+              .td(subcluster.getState().name())
+              .td(lastStartTime)
+              .td(lastHeartBeat)
+              .td(resources)
+              .td(nodes)
+          .__();
+
+          subclusterMap.put("subcluster", subClusterId.getId());
+          subclusterMap.put("capability", capability);
+          lists.add(subclusterMap);
         }
-      } catch (YarnException e) {
-        LOG.error("Cannot render ResourceManager", e);
+      } catch (Exception e) {
+        LOG.error("Cannot render Router Federation.", e);
       }
 
-      tbody.__().__().div()
-          .p().__("*The application counts are local per subcluster").__().__();
+      // Init FederationBlockTableJs
+      initFederationBlockTableJs(html, lists);
+
+      // Tips
+      tbody.__().__().div().p().$style("color:red")
+           .__("*The application counts are local per subcluster").__().__();
     } else {
-      setTitle("Federation is not Enabled!");
+      // When Federation is not enabled, user information needs to be prompted
+      Hamlet.DIV<Hamlet> div = html.div("#div_id");
+      div.p().$style("color:red").__("Federation is not Enabled.").__()
+         .p().__()
+         .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
+         .p().$style("color:blue").__()
+          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
+          "Hadoop: YARN Federation").
+         __();
     }
   }
 
   private static ClusterMetricsInfo getClusterMetricsInfo(String capability) {
-    ClusterMetricsInfo clusterMetrics = null;
     try {
-      JSONJAXBContext jc = new JSONJAXBContext(
-          JSONConfiguration.mapped().rootUnwrapping(false).build(),
-          ClusterMetricsInfo.class);
-      JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
-      clusterMetrics = unmarshaller.unmarshalFromJSON(
-          new StringReader(capability), ClusterMetricsInfo.class);
+      if (capability != null && !capability.isEmpty()) {
+        JSONJAXBContext jc = new JSONJAXBContext(
+            JSONConfiguration.mapped().rootUnwrapping(false).build(), ClusterMetricsInfo.class);
+        JSONUnmarshaller unmarShaller = jc.createJSONUnmarshaller();
+        StringReader stringReader = new StringReader(capability);
+        ClusterMetricsInfo clusterMetrics =
+            unmarShaller.unmarshalFromJSON(stringReader, ClusterMetricsInfo.class);
+        return clusterMetrics;
+      }
     } catch (Exception e) {
       LOG.error("Cannot parse SubCluster info", e);
     }
-    return clusterMetrics;
+    return null;
+  }
+
+  private static void initFederationBlockTableJs(Block html, List<Map<String, String>> jsonMap) {
+    Gson gson =new Gson();
+    html.script().$type("text/javascript").
+         __("$(document).ready(function() { " +
+          " var appsTableData = " + gson.toJson(jsonMap) + "; " +
+          " var table = $('#rms').DataTable(); " +
+          " $('#rms tbody').on('click', 'td.details-control', function () { " +
+          " var tr = $(this).closest('tr');  " +
+          " var row = table.row(tr); " +
+          " if (row.child.isShown()) {  " +
+          "  row.child.hide(); " +
+          "  tr.removeClass('shown'); " +
+          " } else { " +
+          "  console.log(row.id());\n " +
+          "  var capabilityArr = appsTableData.filter(item=>(item.subcluster === row.id())); " +
+          "  var capabilityObj = JSON.parse(capabilityArr[0].capability).clusterMetrics; " +
+          "  row.child(" +
+          "     '<table>" +
+          "          <tr>" +
+          "              <td>" +
+          "                  <h3>Application Metrics</h3>" +
+          "                  appsSubmitted : '+capabilityObj.appsSubmitted+' </p>" +
+          "                  appsCompleted : '+capabilityObj.appsCompleted+' </p>" +
+          "                  appsPending   : '+capabilityObj.appsPending+' </p>" +
+          "                  appsRunning   : '+capabilityObj.appsRunning+' </p>" +
+          "                  appsFailed    : '+capabilityObj.appsFailed+' </p> " +
+          "                  appsKilled    : '+capabilityObj.appsKilled+' </p>" +
+          "              </td>" +
+          "              <td>" +
+          "                 <h3>Resource Metrics</h3>" +
+          "                 <h4>Memory</h4>" +
+          "                    totalMB     :  '+capabilityObj.totalMB+' </p>" +
+          "                 reservedMB     :  '+capabilityObj.reservedMB+' </p>" +
+          "                 availableMB    :  '+capabilityObj.availableMB+' </p>" +
+          "                 allocatedMB    :  '+capabilityObj.allocatedMB+' </p>" +
+          "                 pendingMB      :  '+capabilityObj.pendingMB+' </p>" +
+          "                 <h4>VirtualCores</h4>" +
+          "                 totalVirtualCores  :  '+capabilityObj.totalVirtualCores+' </p>" +
+          "                 reservedVirtualCores  :  '+capabilityObj.reservedVirtualCores+' </p>" +
+          "                 availableVirtualCores :  '+capabilityObj.availableVirtualCores+' </p>" +
+          "                 allocatedVirtualCores :  '+capabilityObj.allocatedVirtualCores+' </p>" +
+          "                 pendingVirtualCores   :  '+capabilityObj.pendingVirtualCores+' </p>" +
+          "                 <h4>Containers</h4>" +
+          "                 containersAllocated   :  '+capabilityObj.containersAllocated+' </p>" +
+          "                 containersReserved    :  '+capabilityObj.containersReserved+' </p>" +
+          "                 containersPending     :  '+capabilityObj.containersPending+' </p>" +
+          "             </td>" +
+          "             <td>" +
+          "                <h3>Node Metrics</h3>" +
+          "                totalNodes :  '+capabilityObj.totalNodes+' </p>" +
+          "                lostNodes  :  '+capabilityObj.lostNodes+' </p>" +
+          "                unhealthyNodes : '+capabilityObj.unhealthyNodes+' </p>" +
+          "                decommissioningNodes : '+capabilityObj.decommissioningNodes+' </p>" +
+          "                decommissionedNodes :  '+capabilityObj.decommissionedNodes+' </p>" +
+          "                rebootedNodes : '+capabilityObj.rebootedNodes+' </p>" +
+          "                activeNodes : '+capabilityObj.activeNodes+' </p>" +
+          "                shutdownNodes : '+capabilityObj.shutdownNodes+' " +
+          "             </td>" +
+          "          </tr>" +
+          "     </table>').show(); "+
+          "   tr.addClass('shown'); " +
+          " } " +
+          " }); });").__();
   }
 }
