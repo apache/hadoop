@@ -39,8 +39,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
@@ -53,6 +51,9 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -149,6 +150,17 @@ public class RequestFactoryImpl implements RequestFactory {
     return requestPreparer != null
         ? requestPreparer.prepareRequest(t)
         : t;
+  }
+
+  /**
+   * Preflight preparation of V2 AWS request.
+   * @param <T> web service request
+   * @return prepared entry.
+   */
+  // TODO: Currently this is a NOOP, will be completed separately as part of auditor work.
+  @Retries.OnceRaw
+  private <T extends AwsRequest> T prepareV2Request(T t) {
+    return t;
   }
 
   /**
@@ -569,14 +581,15 @@ public class RequestFactoryImpl implements RequestFactory {
       final String key,
       final String delimiter,
       final int maxKeys) {
-    ListObjectsRequest request = new ListObjectsRequest()
-        .withBucketName(bucket)
-        .withMaxKeys(maxKeys)
-        .withPrefix(key);
+
+    ListObjectsRequest.Builder requestBuilder =
+        ListObjectsRequest.builder().bucket(bucket).maxKeys(maxKeys).prefix(key);
+
     if (delimiter != null) {
-      request.setDelimiter(delimiter);
+      requestBuilder.delimiter(delimiter);
     }
-    return prepareRequest(request);
+
+    return prepareV2Request(requestBuilder.build());
   }
 
   @Override
@@ -590,14 +603,17 @@ public class RequestFactoryImpl implements RequestFactory {
       final String key,
       final String delimiter,
       final int maxKeys) {
-    final ListObjectsV2Request request = new ListObjectsV2Request()
-        .withBucketName(bucket)
-        .withMaxKeys(maxKeys)
-        .withPrefix(key);
+
+    final ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
+        .bucket(bucket)
+        .maxKeys(maxKeys)
+        .prefix(key);
+
     if (delimiter != null) {
-      request.setDelimiter(delimiter);
+      requestBuilder.delimiter(delimiter);
     }
-    return prepareRequest(request);
+
+    return prepareV2Request(requestBuilder.build());
   }
 
   @Override

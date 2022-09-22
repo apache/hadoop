@@ -29,7 +29,6 @@ import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
@@ -53,8 +52,10 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.util.Lists;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -467,7 +468,7 @@ public final class S3AUtils {
   /**
    * Create a files status instance from a listing.
    * @param keyPath path to entry
-   * @param summary summary from AWS
+   * @param s3Object s3Object entry
    * @param blockSize block size to declare.
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
@@ -476,20 +477,20 @@ public final class S3AUtils {
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
-      S3ObjectSummary summary,
+      S3Object s3Object,
       long blockSize,
       String owner,
       String eTag,
       String versionId,
       boolean isCSEEnabled) {
-    long size = summary.getSize();
+    long size = s3Object.size();
     // check if cse is enabled; strip out constant padding length.
     if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
       size -= CSE_PADDING_LENGTH;
     }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.getKey()),
-        size, summary.getLastModified(), blockSize, owner, eTag, versionId);
+        objectRepresentsDirectory(s3Object.key()),
+        size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
   }
 
   /**
@@ -936,13 +937,13 @@ public final class S3AUtils {
 
   /**
    * String information about a summary entry for debug messages.
-   * @param summary summary object
+   * @param s3Object s3Object entry
    * @return string value
    */
-  public static String stringify(S3ObjectSummary summary) {
-    StringBuilder builder = new StringBuilder(summary.getKey().length() + 100);
-    builder.append(summary.getKey()).append(' ');
-    builder.append("size=").append(summary.getSize());
+  public static String stringify(S3Object s3Object) {
+    StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
+    builder.append(s3Object.key()).append(' ');
+    builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
 

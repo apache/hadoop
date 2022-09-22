@@ -64,8 +64,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -88,6 +86,10 @@ import com.amazonaws.event.ProgressListener;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -277,6 +279,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Path workingDir;
   private String username;
   private AmazonS3 s3;
+  private S3Client s3V2;
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninitialized filesystem.
@@ -955,6 +958,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
         .createS3Client(getUri(),
             parameters);
+
+    s3V2 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
+        .createS3ClientV2(getUri(),
+            parameters);
+
   }
 
   /**
@@ -1242,11 +1250,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param reason a justification for requesting access.
    * @return AmazonS3Client
    */
+  // TODO: Remove when we remove S3V1 client
   @VisibleForTesting
   public AmazonS3 getAmazonS3ClientForTesting(String reason) {
     LOG.warn("Access to S3A client requested, reason {}", reason);
     V2Migration.v1S3ClientRequested();
     return s3;
+  }
+
+  /**
+   * Returns the S3 client used by this filesystem.
+   * <i>Warning: this must only be used for testing, as it bypasses core
+   * S3A operations. </i>
+   * @param reason a justification for requesting access.
+   * @return S3Client
+   */
+  @VisibleForTesting
+  public S3Client getAmazonS3V2ClientForTesting(String reason) {
+    LOG.warn("Access to S3 client requested, reason {}", reason);
+    return s3V2;
   }
 
   /**
@@ -2653,9 +2675,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-                  return S3ListResult.v1(s3.listObjects(request.getV1()));
+                  return S3ListResult.v1(s3V2.listObjects(request.getV1()));
                 } else {
-                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+                  return S3ListResult.v2(s3V2.listObjectsV2(request.getV2()));
                 }
               }));
     }
@@ -2698,15 +2720,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_CONTINUE_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-                  return S3ListResult.v1(
-                      s3.listNextBatchOfObjects(
-                          getRequestFactory()
-                              .newListNextBatchOfObjectsRequest(
-                                  prevResult.getV1())));
+                  //TODO: Update to List<S3Object> once we can get rid of the other S3Object import
+                  List<software.amazon.awssdk.services.s3.model.S3Object>
+                      prevListResult = prevResult.getV1().contents();
+
+                  // Next markers are only present when a delimiter is specified.
+                  String nextMarker;
+                  if (prevResult.getV1().nextMarker() != null) {
+                    nextMarker = prevResult.getV1().nextMarker();
+                  } else {
+                    nextMarker = prevListResult.get(prevListResult.size() - 1).key();
+                  }
+
+                  return S3ListResult.v1(s3V2.listObjects(
+                      request.getV1().toBuilder().marker(nextMarker).build()));
                 } else {
-                  request.getV2().setContinuationToken(prevResult.getV2()
-                      .getNextContinuationToken());
-                  return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+                  return S3ListResult.v2(s3V2.listObjectsV2(request.getV2().toBuilder()
+                      .continuationToken(prevResult.getV2().nextContinuationToken()).build()));
                 }
               }));
     }

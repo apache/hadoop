@@ -20,9 +20,12 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.regions.RegionUtils;
@@ -41,10 +44,25 @@ import com.amazonaws.services.s3.model.EncryptionMaterialsProvider;
 import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
+
+import org.apache.hadoop.fs.s3a.adapter.V1V2AwsCredentialProviderAdapter;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -57,9 +75,14 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static com.amazonaws.services.s3.Headers.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
+import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_STATUS_CODE_MOVED_PERMANENTLY;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
@@ -160,6 +183,82 @@ public class DefaultS3ClientFactory extends Configured
       throw translateException("creating AWS S3 client", uri.toString(), e);
     }
   }
+
+  /**
+   * Creates a new {@link S3Client}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return S3 client
+   * @throws IOException on any IO problem
+   */
+  @Override
+  public S3Client createS3ClientV2(
+      final URI uri,
+      final S3ClientCreationParameters parameters) throws IOException {
+
+    Configuration conf = getConf();
+    bucket = uri.getHost();
+
+    final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
+        AWSClientConfig.createClientConfigBuilder(conf);
+
+    final ApacheHttpClient.Builder httpClientBuilder =
+        AWSClientConfig.createHttpClientBuilder(conf);
+
+    final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
+
+    final ProxyConfiguration.Builder proxyConfigBuilder =
+        AWSClientConfig.createProxyConfigurationBuilder(conf, bucket);
+
+    S3ClientBuilder s3ClientBuilder = S3Client.builder();
+
+    // add any headers
+    parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));
+
+    if (parameters.isRequesterPays()) {
+      // All calls must acknowledge requester will pay via header.
+      clientOverrideConfigBuilder.putHeader(REQUESTER_PAYS_HEADER, REQUESTER_PAYS_HEADER_VALUE);
+    }
+
+    if (!StringUtils.isEmpty(parameters.getUserAgentSuffix())) {
+      clientOverrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_SUFFIX,
+          parameters.getUserAgentSuffix());
+    }
+
+    clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
+    httpClientBuilder.proxyConfiguration(proxyConfigBuilder.build());
+
+    s3ClientBuilder.httpClientBuilder(httpClientBuilder)
+        .overrideConfiguration(clientOverrideConfigBuilder.build());
+
+    // use adapter classes so V1 credential providers continue to work. This will be moved to
+    // AWSCredentialProviderList.add() when that class is updated.
+    s3ClientBuilder.credentialsProvider(
+        V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()));
+
+    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
+
+    Region region =
+        getS3Region(conf.getTrimmed(AWS_REGION), parameters.getCredentialSet());
+
+    LOG.debug("Using endpoint {}; and region {}", endpoint, region);
+
+    s3ClientBuilder.endpointOverride(endpoint).region(region);
+
+    S3Configuration s3Configuration = S3Configuration.builder()
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .build();
+
+    s3ClientBuilder.serviceConfiguration(s3Configuration);
+
+    // TODO: Some configuration done in configureBasicParams is not done yet.
+    //  Request handlers will be added during auditor work. Need to verify how metrics collection
+    //  can be done, as SDK V2 only seems to have a metrics publisher.
+
+    return s3ClientBuilder.build();
+  }
+
 
   /**
    * Create an {@link AmazonS3} client of type
@@ -390,5 +489,73 @@ public class DefaultS3ClientFactory extends Configured
     LOG.debug("Region for endpoint {}, URI {} is determined as {}",
         endpoint, epr, region);
     return new AwsClientBuilder.EndpointConfiguration(endpoint, region);
+  }
+
+  /**
+   * Given a endpoint string, create the endpoint URI.
+   *
+   * @param endpoint possibly null endpoint.
+   * @param conf config to build the URI from.
+   * @return an endpoint uri
+   */
+  private static URI getS3Endpoint(String endpoint, final Configuration conf) {
+
+    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS);
+
+    String protocol = secureConnections ? "https" : "http";
+
+    if (endpoint == null || endpoint.isEmpty()) {
+      // the default endpoint
+      endpoint = CENTRAL_ENDPOINT;
+    }
+
+    if (!endpoint.contains("://")) {
+      endpoint = String.format("%s://%s", protocol, endpoint);
+    }
+
+    try {
+      return new URI(endpoint);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  /**
+   * Get the bucket region.
+   *
+   * @param region AWS S3 Region set in the config. This property may not be set, in which case
+   *               ask S3 for the region.
+   * @param credentialsProvider Credentials provider to be used with the default s3 client.
+   * @return region of the bucket.
+   */
+  private Region getS3Region(String region, AWSCredentialsProvider credentialsProvider) {
+
+    if (!StringUtils.isBlank(region)) {
+      return Region.of(region);
+    }
+
+    try {
+      // build a s3 client with region eu-west-1 that can be used to get the region of the bucket.
+      // Using eu-west-1, as headBucket() doesn't work with us-east-1. This is because
+      // us-east-1 uses the endpoint s3.amazonaws.com, which resolves bucket.s3.amazonaws.com to
+      // the actual region the bucket is in. As the request is signed with us-east-1 and not the
+      // bucket's region, it fails.
+      S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
+          .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(credentialsProvider))
+          .build();
+
+      HeadBucketResponse headBucketResponse =
+          s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+      return Region.of(
+          headBucketResponse.sdkHttpResponse().headers().get(BUCKET_REGION_HEADER).get(0));
+    } catch (S3Exception exception) {
+      if (exception.statusCode() == HTTP_STATUS_CODE_MOVED_PERMANENTLY) {
+        List<String> bucketRegion =
+            exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER);
+        return Region.of(bucketRegion.get(0));
+      }
+    }
+
+    return Region.US_EAST_1;
   }
 }

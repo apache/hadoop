@@ -1235,4 +1235,14 @@ public final class Constants {
    */
   public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
   public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
+
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Status code for moved permanently.
+   */
+  public static final int HTTP_STATUS_CODE_MOVED_PERMANENTLY = 301;
 }
