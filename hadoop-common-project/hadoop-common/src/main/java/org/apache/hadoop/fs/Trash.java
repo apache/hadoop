@@ -113,7 +113,6 @@ public class Trash extends Configured {
      */
     if (conf.getBoolean(CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT,
         CONFIG_VIEWFS_TRASH_FORCE_INSIDE_MOUNT_POINT_DEFAULT)) {
-      //TODO: Create a new FS object, to ensure the latest conf is used.
       Trash trash = new Trash(fs, conf);
       return trash.moveToTrash(p);
     }
