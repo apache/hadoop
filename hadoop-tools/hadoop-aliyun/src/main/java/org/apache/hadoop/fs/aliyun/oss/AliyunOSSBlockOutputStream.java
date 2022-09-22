@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import com.aliyun.oss.model.PartETag;
 import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -29,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -134,8 +132,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
         OSSDataBlocks.DataBlock dataBlock = getActiveBlock();
         if (dataBlock == null) {
           // zero size file
-          store.uploadObject(key,
-              new ByteArrayInputStream("".getBytes(Charsets.UTF_8)), 0);
+          store.storeEmptyFile(key);
         } else {
           OSSDataBlocks.BlockUploadData uploadData = dataBlock.startUpload();
           if (uploadData.hasFile()) {
