@@ -19,12 +19,17 @@
 package org.apache.hadoop.fs.contract;
 
 import java.io.EOFException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
@@ -41,8 +46,12 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
+import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.util.functional.FutureIO;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -363,6 +372,63 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       returnBuffersToPoolPostRead(fileRanges2, pool);
     }
   }
+
+  /**
+   * This test creates list of ranges and then submit a readVectored
+   * operation and then uses a separate thread pool to process the
+   * results asynchronously.
+   */
+  @Test
+  public void testVectoredIOEndToEnd() throws Exception {
+    FileSystem fs = getFileSystem();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(8 * 1024, 100));
+    fileRanges.add(FileRange.createFileRange(14 * 1024, 100));
+    fileRanges.add(FileRange.createFileRange(10 * 1024, 100));
+    fileRanges.add(FileRange.createFileRange(2 * 1024 - 101, 100));
+    fileRanges.add(FileRange.createFileRange(40 * 1024, 1024));
+
+    ExecutorService dataProcessor = Executors.newFixedThreadPool(5);
+    CountDownLatch countDown = new CountDownLatch(fileRanges.size());
+
+    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      in.readVectored(fileRanges, value -> pool.getBuffer(true, value));
+      // user can perform other computations while waiting for IO.
+      for (FileRange res : fileRanges) {
+        dataProcessor.submit(() -> {
+          try {
+            readBufferValidateDataAndReturnToPool(pool, res, countDown);
+          } catch (Exception e) {
+            LOG.error("Error while process result for {} ", res, e);
+          }
+        });
+      }
+      if (!countDown.await(100, TimeUnit.SECONDS)) {
+        throw new AssertionError("Error while processing vectored io results");
+      }
+    } finally {
+      pool.release();
+      HadoopExecutors.shutdown(dataProcessor, LOG, 100, TimeUnit.SECONDS);
+    }
+  }
+
+  private void readBufferValidateDataAndReturnToPool(ByteBufferPool pool,
+                                                     FileRange res,
+                                                     CountDownLatch countDownLatch)
+          throws IOException, TimeoutException {
+    CompletableFuture<ByteBuffer> data = res.getData();
+    ByteBuffer buffer = FutureIO.awaitFuture(data,
+            VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            TimeUnit.SECONDS);
+    // Read the data and perform custom operation. Here we are just
+    // validating it with original data.
+    assertDatasetEquals((int) res.getOffset(), "vecRead",
+            buffer, res.getLength(), DATASET);
+    // return buffer to pool.
+    pool.putBuffer(buffer);
+    countDownLatch.countDown();
+  }
+
 
   protected List<FileRange> createSampleNonOverlappingRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
