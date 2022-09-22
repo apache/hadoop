@@ -23,6 +23,7 @@ import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -38,19 +39,24 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus.Flags;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing.DiffReportListingEntry;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
@@ -476,5 +482,47 @@ public class TestJsonUtil {
     } catch (Exception e) {
       // expected
     }
+  }
+
+  @Test
+  public void testToJsonFromLocatedBlocksWithECPolicy() throws IOException {
+    ExtendedBlock dummyBlock = new ExtendedBlock("mockBPId", 100, 1024 * 1024, 1);
+    DatanodeInfo dummyLoc = DFSTestUtil.getDatanodeInfo("127.0.0.1");
+    LocatedBlock dummyLocatedBlock = new LocatedBlock(dummyBlock, new DatanodeInfo[]{dummyLoc});
+    ErasureCodingPolicy dummyEcPolicy = new ErasureCodingPolicy("ecPolicy1",
+        new ECSchema("EcSchema", 1, 1), 1024 * 2, (byte) 1);
+    List<LocatedBlock> blks = new ArrayList<>();
+    blks.add(dummyLocatedBlock);
+    LocatedBlocks dummyLocatedBlocks = new LocatedBlocks(1024 * 1024, false,
+        blks, dummyLocatedBlock, true, null, dummyEcPolicy);
+
+    String serializedJSON = JsonUtil.toJsonString(dummyLocatedBlocks);
+
+    Map<?, ?> deserializedJSON = JsonSerialization.mapReader().readValue(serializedJSON);
+    LocatedBlocks deserializedLocatedBlocks = JsonUtilClient.toLocatedBlocks(deserializedJSON);
+
+    Assert.assertEquals(dummyEcPolicy, deserializedLocatedBlocks.getErasureCodingPolicy());
+    Assert.assertEquals(dummyLocatedBlocks.toString(), deserializedLocatedBlocks.toString());
+  }
+
+  @Test
+  public void testToJsonFromLocatedBlocksWithoutECPolicy() throws IOException {
+    ExtendedBlock dummyBlock = new ExtendedBlock("mockBPId", 100, 1024 * 1024, 1);
+    DatanodeInfo dummyLoc = DFSTestUtil.getDatanodeInfo("127.0.0.1");
+    LocatedBlock dummyLocatedBlock = new LocatedBlock(dummyBlock, new DatanodeInfo[]{dummyLoc});
+    ErasureCodingPolicy dummyEcPolicy = new ErasureCodingPolicy("ecPolicy1",
+        new ECSchema("EcSchema", 1, 1), 1024 * 2, (byte) 1);
+    List<LocatedBlock> blks = new ArrayList<>();
+    blks.add(dummyLocatedBlock);
+    LocatedBlocks dummyLocatedBlocks = new LocatedBlocks(1024 * 1024, false,
+        blks, dummyLocatedBlock, true, null, dummyEcPolicy);
+
+    String serializedJSON = JsonUtil.toJsonString(dummyLocatedBlocks);
+
+    Map<?, ?> deserializedJSON = JsonSerialization.mapReader().readValue(serializedJSON);
+    LocatedBlocks deserializedLocatedBlocks = JsonUtilClient.toLocatedBlocks(deserializedJSON);
+
+    Assert.assertEquals(dummyEcPolicy, deserializedLocatedBlocks.getErasureCodingPolicy());
+    Assert.assertEquals(dummyLocatedBlocks.toString(), deserializedLocatedBlocks.toString());
   }
 }
