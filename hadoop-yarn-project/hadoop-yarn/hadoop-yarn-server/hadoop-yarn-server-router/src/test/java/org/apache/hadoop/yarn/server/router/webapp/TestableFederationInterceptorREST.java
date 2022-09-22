@@ -71,10 +71,12 @@ public class TestableFederationInterceptorREST
   }
 
   protected void setupResourceManager() throws IOException {
+
+    if (mockRM != null) {
+      return;
+    }
+
     try {
-      if (mockRM != null) {
-        return;
-      }
 
       DefaultMetricsSystem.setMiniClusterMode(true);
       CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
@@ -111,6 +113,7 @@ public class TestableFederationInterceptorREST
   public void shutdown() {
     if (mockRM != null) {
       mockRM.stop();
+      mockRM = null;
     }
     super.shutdown();
   }

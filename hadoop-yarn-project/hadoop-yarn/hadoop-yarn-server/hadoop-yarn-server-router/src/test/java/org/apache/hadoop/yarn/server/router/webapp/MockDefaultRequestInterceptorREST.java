@@ -939,57 +939,56 @@ public class MockDefaultRequestInterceptorREST
     return Response.status(Status.OK).entity(resRespInfo).build();
   }
 
-  private void updateReservation(ReservationUpdateRequestInfo resContext) {
+  private void updateReservation(ReservationUpdateRequestInfo resContext) throws IOException {
+
+    if (resContext == null) {
+      throw new BadRequestException("Input ReservationSubmissionContext should not be null");
+    }
+
+    ReservationDefinitionInfo resInfo = resContext.getReservationDefinition();
+    if (resInfo == null) {
+      throw new BadRequestException("Input ReservationDefinition should not be null");
+    }
+
+    ReservationRequestsInfo resReqsInfo = resInfo.getReservationRequests();
+    if (resReqsInfo == null || resReqsInfo.getReservationRequest() == null
+        || resReqsInfo.getReservationRequest().isEmpty()) {
+       throw new BadRequestException("The ReservationDefinition should " +
+           "contain at least one ReservationRequest");
+    }
+
+    if (resContext.getReservationId() == null) {
+       throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter requestInterpreter =
+        values[resReqsInfo.getReservationRequestsInterpreter()];
+    List<ReservationRequest> list = new ArrayList<>();
+
+    for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
+       ResourceInfo rInfo = resReqInfo.getCapability();
+       Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
+       int numContainers = resReqInfo.getNumContainers();
+       int minConcurrency = resReqInfo.getMinConcurrency();
+       long duration = resReqInfo.getDuration();
+       ReservationRequest rr = ReservationRequest.newInstance(
+           capability, numContainers, minConcurrency, duration);
+       list.add(rr);
+    }
+
+    ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        resInfo.getArrival(), resInfo.getDeadline(), reqs,
+        resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
+        Priority.newInstance(resInfo.getPriority()));
+    ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
+        rDef, ReservationId.parseReservationId(resContext.getReservationId()));
+
+    ClientRMService clientService = mockRM.getClientRMService();
     try {
-
-      if (resContext == null) {
-        throw new BadRequestException("Input ReservationSubmissionContext should not be null");
-      }
-
-      ReservationDefinitionInfo resInfo = resContext.getReservationDefinition();
-      if (resInfo == null) {
-        throw new BadRequestException("Input ReservationDefinition should not be null");
-      }
-
-      ReservationRequestsInfo resReqsInfo = resInfo.getReservationRequests();
-      if (resReqsInfo == null || resReqsInfo.getReservationRequest() == null
-          || resReqsInfo.getReservationRequest().size() == 0) {
-        throw new BadRequestException("The ReservationDefinition should " +
-            "contain at least one ReservationRequest");
-      }
-
-      if (resContext.getReservationId() == null) {
-        throw new BadRequestException("Update operations must specify an existing ReservaitonId");
-      }
-
-      ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
-      ReservationRequestInterpreter requestInterpreter =
-          values[resReqsInfo.getReservationRequestsInterpreter()];
-      List<ReservationRequest> list = new ArrayList<>();
-
-      for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
-        ResourceInfo rInfo = resReqInfo.getCapability();
-        Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
-        int numContainers = resReqInfo.getNumContainers();
-        int minConcurrency = resReqInfo.getMinConcurrency();
-        long duration = resReqInfo.getDuration();
-        ReservationRequest rr =
-            ReservationRequest.newInstance(capability, numContainers, minConcurrency, duration);
-        list.add(rr);
-      }
-
-      ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);
-      ReservationDefinition rDef = ReservationDefinition.newInstance(
-          resInfo.getArrival(), resInfo.getDeadline(), reqs,
-          resInfo.getReservationName(), resInfo.getRecurrenceExpression(),
-          Priority.newInstance(resInfo.getPriority()));
-      ReservationUpdateRequest request = ReservationUpdateRequest.newInstance(
-          rDef, ReservationId.parseReservationId(resContext.getReservationId()));
-
-      ClientRMService clientService = mockRM.getClientRMService();
       clientService.updateReservation(request);
-
-    } catch (Exception ex) {
+    } catch (YarnException ex) {
       throw new RuntimeException(ex);
     }
   }

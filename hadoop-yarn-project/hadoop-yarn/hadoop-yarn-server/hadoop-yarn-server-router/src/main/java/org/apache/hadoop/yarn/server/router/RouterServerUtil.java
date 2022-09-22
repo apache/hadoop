@@ -292,7 +292,7 @@ public final class RouterServerUtil {
    * @param reservationId reservationId
    * @return true - exist, false - not exist
    */
-  public static Boolean existsReservationHomeSubCluster(FederationStateStoreFacade federationFacade,
+  public static boolean existsReservationHomeSubCluster(FederationStateStoreFacade federationFacade,
       ReservationId reservationId) {
     try {
       SubClusterId subClusterId = federationFacade.getReservationHomeSubCluster(reservationId);
@@ -338,8 +338,8 @@ public final class RouterServerUtil {
     ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
     ReservationRequestInterpreter reservationRequestInterpreter =
         values[reservationRequestsInfo.getReservationRequestsInterpreter()];
-    ReservationRequests reservationRequests =
-        ReservationRequests.newInstance(reservationRequestList, reservationRequestInterpreter);
+    ReservationRequests reservationRequests = ReservationRequests.newInstance(
+        reservationRequestList, reservationRequestInterpreter);
 
     ReservationDefinition definition =
         ReservationDefinition.newInstance(

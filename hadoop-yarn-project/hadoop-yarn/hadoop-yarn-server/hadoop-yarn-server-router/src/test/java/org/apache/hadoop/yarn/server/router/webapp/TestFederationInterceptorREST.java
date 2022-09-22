@@ -1332,14 +1332,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       ReservationId reservationId, int numContainers, long arrival,
       long deadline, long duration, int memory, int vcore) {
     // create a request with a single atomic ask
-    ReservationRequest r = ReservationRequest
-        .newInstance(Resource.newInstance(memory, vcore), numContainers, 1, duration);
+    ReservationRequest r = ReservationRequest.newInstance(
+        Resource.newInstance(memory, vcore), numContainers, 1, duration);
     ReservationRequests reqs = ReservationRequests.newInstance(
         Collections.singletonList(r), ReservationRequestInterpreter.R_ALL);
-    ReservationDefinition rDef = ReservationDefinition.newInstance(arrival,
-        deadline, reqs, "testClientRMService#reservation", "0", Priority.UNDEFINED);
-    ReservationSubmissionRequest request = ReservationSubmissionRequest
-        .newInstance(rDef, QUEUE_DEDICATED_FULL, reservationId);
+    ReservationDefinition rDef = ReservationDefinition.newInstance(
+        arrival, deadline, reqs, "testClientRMService#reservation", "0", Priority.UNDEFINED);
+    ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
+        rDef, QUEUE_DEDICATED_FULL, reservationId);
     return request;
   }
 }
