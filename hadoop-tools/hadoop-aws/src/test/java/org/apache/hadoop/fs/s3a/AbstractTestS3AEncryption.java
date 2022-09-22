@@ -79,7 +79,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   };
 
   protected void requireEncryptedFileSystem() {
-    skipIfEncryptionTestsDisabled(getFileSystem().getConf());
+    skipIfEncryptionTestsDisabled(createConfiguration());
   }
 
   /**
@@ -91,8 +91,8 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
   @Override
   public void setup() throws Exception {
     try {
-      super.setup();
       requireEncryptedFileSystem();
+      super.setup();
     } catch (AccessDeniedException e) {
       skip("Bucket does not allow " + getSSEAlgorithm() + " encryption method");
     }
