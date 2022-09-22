@@ -701,6 +701,7 @@ public class FederationClientInterceptor
   <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz)
       throws YarnException {
 
+    // Get Active SubClusters
     Map<SubClusterId, SubClusterInfo> subClusterInfo =
         federationFacade.getSubClusters(true);
     Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
@@ -741,7 +742,7 @@ public class FederationClientInterceptor
         }
       });
     } catch (InterruptedException e) {
-      throw new YarnException(e);
+      throw new YarnException("invokeConcurrent Failed.", e);
     }
 
     // All sub-clusters return results to be considered successful,
