@@ -85,7 +85,7 @@ class StripedWriter {
     targetIndices = new short[targets.length];
     Preconditions.checkArgument(
             targetIndices.length <= dataBlkNum + parityBlkNum - reconstructor.getNumLiveBlocks(),
-            "Reconstrutcion work gets too much targets.");
+            "Reconstruction work gets too much targets.");
     Preconditions.checkArgument(targetIndices.length <= parityBlkNum,
         "Too much missed striped blocks.");
     initTargetIndices();
