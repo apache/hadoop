@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -56,32 +57,22 @@ import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
-import com.amazonaws.services.s3.transfer.Upload;
-import com.amazonaws.services.s3.transfer.model.CopyResult;
-import com.amazonaws.services.s3.transfer.model.UploadResult;
-import com.amazonaws.event.ProgressListener;
 
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
@@ -90,6 +81,21 @@ import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.transfer.s3.CompletedCopy;
+import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
+import software.amazon.awssdk.transfer.s3.Copy;
+import software.amazon.awssdk.transfer.s3.CopyRequest;
+import software.amazon.awssdk.transfer.s3.FileUpload;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
+import software.amazon.awssdk.transfer.s3.UploadFileRequest;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -114,7 +120,6 @@ import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
-import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.impl.CreateFileBuilder;
 import org.apache.hadoop.fs.s3a.impl.DeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
@@ -227,6 +232,7 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucketV2;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
@@ -299,6 +305,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private long partSize;
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
+  private S3TransferManager transferManagerV2;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
 
@@ -1140,6 +1147,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
     transferConfiguration.setMultipartCopyPartSize(partSize);
     transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
+
+      transferManagerV2 = S3TransferManager.builder()
+        .s3ClientConfiguration(clientConfiguration -> {
+          // TODO: This partSize check is required temporarily as some of the unit tests
+          //  (TestStagingCommitter) set the S3Client using setAmazonS3Client() at which point
+          //  partSize = 0, which gives a validation error with the new TM. The fix for this is
+          //  probably in the tests and will be updated separately.
+          if (partSize > 0) {
+            clientConfiguration.minimumPartSizeInBytes(partSize);
+          }
+        })
+        .build();
 
     transfers = new TransferManager(s3, unboundedThreadPool);
     transfers.setConfiguration(transferConfiguration);
@@ -2257,7 +2276,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public CopyResult copyFile(final String srcKey,
+    public CopyObjectResponse copyFile(final String srcKey,
         final String destKey,
         final S3ObjectAttributes srcAttributes,
         final S3AReadOpContext readContext) throws IOException {
@@ -2379,7 +2398,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @InterfaceAudience.LimitedPrivate("utilities")
   @Retries.RetryTranslated
   @InterfaceStability.Evolving
-  public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+  public HeadObjectResponse getObjectMetadata(Path path) throws IOException {
     V2Migration.v1GetObjectMetadataCalled();
     return trackDurationAndSpan(INVOCATION_GET_FILE_STATUS, path, () ->
         getObjectMetadata(makeQualified(path), null, invoker,
@@ -2396,7 +2415,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO and object access problems.
    */
   @Retries.RetryTranslated
-  private ObjectMetadata getObjectMetadata(Path path,
+  private HeadObjectResponse getObjectMetadata(Path path,
       ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
     String key = pathToKey(path);
@@ -2594,7 +2613,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryRaw
   @VisibleForTesting
   @InterfaceAudience.LimitedPrivate("external utilities")
-  ObjectMetadata getObjectMetadata(String key) throws IOException {
+  HeadObjectResponse getObjectMetadata(String key) throws IOException {
     return getObjectMetadata(key, null, invoker, "getObjectMetadata");
   }
 
@@ -2611,28 +2630,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws RemoteFileChangedException if an unexpected version is detected
    */
   @Retries.RetryRaw
-  protected ObjectMetadata getObjectMetadata(String key,
+  protected HeadObjectResponse getObjectMetadata(String key,
       ChangeTracker changeTracker,
       Invoker changeInvoker,
       String operation) throws IOException {
-    ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
+    HeadObjectResponse response = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
-          GetObjectMetadataRequest request
-              = getRequestFactory().newGetObjectMetadataRequest(key);
+          HeadObjectRequest.Builder requestBuilder =
+              getRequestFactory().newHeadObjectRequestBuilder(key);
           incrementStatistic(OBJECT_METADATA_REQUESTS);
           DurationTracker duration = getDurationTrackerFactory()
               .trackDuration(ACTION_HTTP_HEAD_REQUEST.getSymbol());
           try {
             LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
             if (changeTracker != null) {
-              changeTracker.maybeApplyConstraint(request);
+              changeTracker.maybeApplyConstraint(requestBuilder);
             }
-            ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
+            HeadObjectResponse headObjectResponse = s3V2.headObject(requestBuilder.build());
             if (changeTracker != null) {
-              changeTracker.processMetadata(objectMetadata, operation);
+              changeTracker.processMetadata(headObjectResponse, operation);
             }
-            return objectMetadata;
-          } catch(AmazonServiceException ase) {
+            return headObjectResponse;
+          } catch(AwsServiceException ase) {
             if (!isObjectNotFound(ase)) {
               // file not found is not considered a failure of the call,
               // so only switch the duration tracker to update failure
@@ -2646,7 +2665,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         });
     incrementReadOperations();
-    return meta;
+    return response;
   }
 
   /**
@@ -2886,28 +2905,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Create a putObject request.
+   * Create a putObject request builder.
    * Adds the ACL and metadata
    * @param key key of object
-   * @param metadata metadata header
-   * @param srcfile source file
+   * @param length length of object to be uploaded
+   * @param isDirectoryMarker true if object to be uploaded is a directory marker
    * @return the request
    */
-  public PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, File srcfile) {
-    return requestFactory.newPutObjectRequest(key, metadata, null, srcfile);
-  }
-
-  /**
-   * Create a new object metadata instance.
-   * Any standard metadata headers are added here, for example:
-   * encryption.
-   *
-   * @param length length of data to set in header.
-   * @return a new metadata instance
-   */
-  public ObjectMetadata newObjectMetadata(long length) {
-    return requestFactory.newObjectMetadata(length);
+  public PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
+      long length,
+      boolean isDirectoryMarker) {
+    return requestFactory.newPutObjectRequestBuilder(key, null, length, isDirectoryMarker);
   }
 
   /**
@@ -2924,15 +2932,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: N/A: the transfer manager is performing the upload.
    * Auditing: must be inside an audit span.
    * @param putObjectRequest the request
+   * @param file the file to be uploaded
+   * @param listener the progress listener for the request
    * @return the upload initiated
    */
   @Retries.OnceRaw
-  public UploadInfo putObject(PutObjectRequest putObjectRequest) {
+  public UploadInfo putObject(PutObjectRequest putObjectRequest, File file,
+      ProgressableProgressListener listener) {
     long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {} via transfer manager ",
-        len, putObjectRequest.getKey());
+    LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
-    Upload upload = transfers.upload(putObjectRequest);
+
+    // TODO: Something not right with the TM listener, fix
+    FileUpload upload = transferManagerV2.uploadFile(
+        UploadFileRequest.builder().putObjectRequest(putObjectRequest).source(file).build());
+          //  .overrideConfiguration(o -> o.addListener(listener)).build());
+
     return new UploadInfo(upload, len);
   }
 
@@ -2946,28 +2961,34 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
+   * @param isFile represents if data to be uploaded is a file
    * @return the upload initiated
    * @throws AmazonClientException on problems
    */
   @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
-  PutObjectResult putObjectDirect(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+  PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
       throws AmazonClientException {
     long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {}", len, putObjectRequest.getKey());
+    LOG.debug("PUT {} bytes to {}", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
     try {
-      PutObjectResult result = trackDurationOfSupplier(
-          getDurationTrackerFactory(),
-          OBJECT_PUT_REQUESTS.getSymbol(), () ->
-              s3.putObject(putObjectRequest));
+      PutObjectResponse response =
+          trackDurationOfSupplier(getDurationTrackerFactory(), OBJECT_PUT_REQUESTS.getSymbol(),
+              () -> isFile ?
+                  s3V2.putObject(putObjectRequest, RequestBody.fromFile(uploadData.getFile())) :
+                  s3V2.putObject(putObjectRequest,
+                      RequestBody.fromInputStream(uploadData.getUploadStream(),
+                          putObjectRequest.contentLength())));
       incrementPutCompletedStatistics(true, len);
       // apply any post-write actions.
-      finishedWrite(putObjectRequest.getKey(), len,
-          result.getETag(), result.getVersionId(),
+      finishedWrite(putObjectRequest.key(), len,
+          response.eTag(), response.versionId(),
           putOptions);
-      return result;
+      return response;
     } catch (SdkBaseException e) {
       incrementPutCompletedStatistics(false, len);
       throw e;
@@ -2982,11 +3003,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private long getPutRequestLength(PutObjectRequest putObjectRequest) {
     long len;
-    if (putObjectRequest.getFile() != null) {
-      len = putObjectRequest.getFile().length();
-    } else {
-      len = putObjectRequest.getMetadata().getContentLength();
-    }
+
+    // TODO: Check why this exists. Content length is set before. Why can't that be used directly?
+//    if (putObjectRequest.getFile() != null) {
+//      len = putObjectRequest.getFile().length();
+//    } else {
+//      len = putObjectRequest.getMetadata().getContentLength();
+//    }
+
+    len = putObjectRequest.contentLength();
+
     Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
     return len;
   }
@@ -3391,15 +3417,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3ListRequest createListObjectsRequest(String key,
       String delimiter, int limit) {
     if (!useListV1) {
-      ListObjectsV2Request request =
-          getRequestFactory().newListObjectsV2Request(
+      ListObjectsV2Request.Builder requestBuilder =
+          getRequestFactory().newListObjectsV2RequestBuilder(
               key, delimiter, limit);
-      return S3ListRequest.v2(request);
+      return S3ListRequest.v2(requestBuilder.build());
     } else {
-      ListObjectsRequest request =
-          getRequestFactory().newListObjectsV1Request(
+      ListObjectsRequest.Builder requestBuilder =
+          getRequestFactory().newListObjectsV1RequestBuilder(
               key, delimiter, limit);
-      return S3ListRequest.v1(request);
+      return S3ListRequest.v1(requestBuilder.build());
     }
   }
 
@@ -3687,22 +3713,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         && probes.contains(StatusProbeEnum.Head)) {
       try {
         // look for the simple file
-        ObjectMetadata meta = getObjectMetadata(key);
+        HeadObjectResponse meta = getObjectMetadata(key);
         LOG.debug("Found exact file: normal file {}", key);
-        long contentLength = meta.getContentLength();
+        long contentLength = meta.contentLength();
         // check if CSE is enabled, then strip padded length.
-        if (isCSEEnabled
-            && meta.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+        if (isCSEEnabled &&
+            meta.metadata().get(Headers.CRYPTO_CEK_ALGORITHM) != null
             && contentLength >= CSE_PADDING_LENGTH) {
           contentLength -= CSE_PADDING_LENGTH;
         }
         return new S3AFileStatus(contentLength,
-            dateToLong(meta.getLastModified()),
+            meta.lastModified().toEpochMilli(),
             path,
             getDefaultBlockSize(path),
             username,
-            meta.getETag(),
-            meta.getVersionId());
+            meta.eTag(),
+            meta.versionId());
       } catch (AmazonServiceException e) {
         // if the response is a 404 error, it just means that there is
         // no file at that path...the remaining checks will be needed.
@@ -3713,6 +3739,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
       } catch (AmazonClientException e) {
         throw translateException("getFileStatus", path, e);
+      }  catch (AwsServiceException e) {
+        // TODO: This and above exception handling blocks will be updated during exception
+        //  handling work.
+        if (e.statusCode() != SC_404 || isUnknownBucketV2(e)) {
+          throw translateExceptionV2("getFileStatus", path.toString(), e);
+        }
       }
     }
 
@@ -3760,6 +3792,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
       } catch (AmazonClientException e) {
         throw translateException("getFileStatus", path, e);
+      } catch (AwsServiceException e) {
+        if (e.statusCode() != SC_404 || isUnknownBucketV2(e)) {
+          throw translateExceptionV2("getFileStatus", path.toString(), e);
+        }
       }
     }
 
@@ -3857,13 +3893,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           to,
           () -> {
             final String key = pathToKey(to);
-            final ObjectMetadata om = newObjectMetadata(file.length());
             Progressable progress = null;
-            PutObjectRequest putObjectRequest = newPutObjectRequest(key, om, file);
-            S3AFileSystem.this.invoker.retry(
-                "putObject(" + "" + ")", to.toString(),
-                true,
-                () -> executePut(putObjectRequest, progress, putOptionsForPath(to)));
+            PutObjectRequest.Builder putObjectRequestBuilder =
+                newPutObjectRequestBuilder(key, file.length(), false);
+            S3AFileSystem.this.invoker.retry("putObject(" + "" + ")", to.toString(), true,
+                () -> executePut(putObjectRequestBuilder.build(), progress, putOptionsForPath(to),
+                    file));
 
             return null;
           });
@@ -3897,24 +3932,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws InterruptedIOException if the blocking was interrupted.
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
-  UploadResult executePut(
+  PutObjectResponse executePut(
       final PutObjectRequest putObjectRequest,
       final Progressable progress,
-      final PutObjectOptions putOptions)
+      final PutObjectOptions putOptions,
+      final File file)
       throws InterruptedIOException {
-    String key = putObjectRequest.getKey();
+    String key = putObjectRequest.key();
     long len = getPutRequestLength(putObjectRequest);
-    UploadInfo info = putObject(putObjectRequest);
-    Upload upload = info.getUpload();
-    ProgressableProgressListener listener = new ProgressableProgressListener(
-        this, key, upload, progress);
-    upload.addProgressListener(listener);
-    UploadResult result = waitForUploadCompletion(key, info);
-    listener.uploadCompleted();
+    ProgressableProgressListener listener =
+        new ProgressableProgressListener(this, putObjectRequest.key(), progress);
+    UploadInfo info = putObject(putObjectRequest, file, listener);
+    PutObjectResponse result = waitForUploadCompletion(key, info).response();
+    listener.uploadCompleted(info.getFileUpload());
 
     // post-write actions
     finishedWrite(key, len,
-        result.getETag(), result.getVersionId(), putOptions);
+        result.eTag(), result.versionId(), putOptions);
     return result;
   }
 
@@ -3932,22 +3966,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws InterruptedIOException if the blocking was interrupted.
    */
   @Retries.OnceRaw
-  UploadResult waitForUploadCompletion(String key, UploadInfo uploadInfo)
+  CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
       throws InterruptedIOException {
-    Upload upload = uploadInfo.getUpload();
-    try {
-      UploadResult result = upload.waitForUploadResult();
+    FileUpload upload = uploadInfo.getFileUpload();
+    // TODO: Check what this logic should be updated to. 
+    //  this no longer throws an interrupted exception.
+  //  try {
+      CompletedFileUpload result = upload.completionFuture().join();
       incrementPutCompletedStatistics(true, uploadInfo.getLength());
       return result;
-    } catch (InterruptedException e) {
-      LOG.info("Interrupted: aborting upload");
-      incrementPutCompletedStatistics(false, uploadInfo.getLength());
-      upload.abort();
-      throw (InterruptedIOException)
-          new InterruptedIOException("Interrupted in PUT to "
-              + keyToQualifiedPath(key))
-          .initCause(e);
-    }
+//    } catch (InterruptedException e) {
+//      LOG.info("Interrupted: aborting upload");
+//      incrementPutCompletedStatistics(false, uploadInfo.getLength());
+//      upload.completionFuture().cancel(true);
+//      throw (InterruptedIOException)
+//          new InterruptedIOException("Interrupted in PUT to "
+//              + keyToQualifiedPath(key))
+//          .initCause(e);
+//    }
   }
 
   /**
@@ -4208,20 +4244,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException Other IO problems
    */
   @Retries.RetryTranslated
-  private CopyResult copyFile(String srcKey, String dstKey, long size,
+  private CopyObjectResponse copyFile(String srcKey, String dstKey, long size,
       S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
       throws IOException, InterruptedIOException  {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
-    ProgressListener progressListener = progressEvent -> {
-      switch (progressEvent.getEventType()) {
-      case TRANSFER_PART_COMPLETED_EVENT:
-        incrementWriteOperations();
-        break;
-      default:
-        break;
-      }
-    };
+    // TODO: Transfer manager currently only provides transfer listeners for upload,
+    //  add progress listener for copy when this is supported.
+//    ProgressListener progressListener = progressEvent -> {
+//      switch (progressEvent.getEventType()) {
+//      case TRANSFER_PART_COMPLETED_EVENT:
+//        incrementWriteOperations();
+//        break;
+//      default:
+//        break;
+//      }
+//    };
 
     ChangeTracker changeTracker = new ChangeTracker(
         keyToQualifiedPath(srcKey).toString(),
@@ -4234,7 +4272,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String action = "copyFile(" + srcKey + ", " + dstKey + ")";
     Invoker readInvoker = readContext.getReadInvoker();
 
-    ObjectMetadata srcom;
+    HeadObjectResponse srcom;
     try {
       srcom = once(action, srcKey,
           () ->
@@ -4257,29 +4295,32 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         action, srcKey,
         true,
         () -> {
-          CopyObjectRequest copyObjectRequest =
-              getRequestFactory().newCopyObjectRequest(srcKey, dstKey, srcom);
-          changeTracker.maybeApplyConstraint(copyObjectRequest);
+          CopyObjectRequest.Builder copyObjectRequestBuilder =
+              getRequestFactory().newCopyObjectRequestBuilder(srcKey, dstKey, srcom);
+          changeTracker.maybeApplyConstraint(copyObjectRequestBuilder);
           incrementStatistic(OBJECT_COPY_REQUESTS);
-          Copy copy = transfers.copy(copyObjectRequest,
-              getAuditManager().createStateChangeListener());
-          copy.addProgressListener(progressListener);
-          CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
-          InterruptedException interruptedException =
-              copyOutcome.getInterruptedException();
-          if (interruptedException != null) {
-            // copy interrupted: convert to an IOException.
-            throw (IOException)new InterruptedIOException(
-                "Interrupted copying " + srcKey
-                    + " to " + dstKey + ", cancelling")
-                .initCause(interruptedException);
-          }
-          SdkBaseException awsException = copyOutcome.getAwsException();
-          if (awsException != null) {
-            changeTracker.processException(awsException, "copy");
-            throw awsException;
-          }
-          CopyResult result = copyOutcome.getCopyResult();
+
+          Copy copy = transferManagerV2.copy(
+              CopyRequest.builder().copyObjectRequest(copyObjectRequestBuilder.build()).build());
+
+          CompletedCopy completedCopy = copy.completionFuture().join();
+
+          // TODO: Check what should happen for these exceptions.
+//          InterruptedException interruptedException =
+//              copyOutcome.getInterruptedException();
+//          if (interruptedException != null) {
+//            // copy interrupted: convert to an IOException.
+//            throw (IOException)new InterruptedIOException(
+//                "Interrupted copying " + srcKey
+//                    + " to " + dstKey + ", cancelling")
+//                .initCause(interruptedException);
+//          }
+//          SdkBaseException awsException = copyOutcome.getAwsException();
+//          if (awsException != null) {
+//            changeTracker.processException(awsException, "copy");
+//            throw awsException;
+//          }
+          CopyObjectResponse result = completedCopy.response();
           changeTracker.processResponse(result);
           incrementWriteOperations();
           instrumentation.filesCopied(1, size);
@@ -4422,10 +4463,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private void createEmptyObject(final String objectName, PutObjectOptions putOptions)
       throws IOException {
-    invoker.retry("PUT 0-byte object ", objectName,
-         true, () ->
-            putObjectDirect(getRequestFactory()
-                .newDirectoryMarkerRequest(objectName), putOptions));
+
+    final InputStream im = new InputStream() {
+      @Override
+      public int read() throws IOException {
+        return -1;
+      }
+    };
+
+    S3ADataBlocks.BlockUploadData uploadData = new S3ADataBlocks.BlockUploadData(im);
+
+    invoker.retry("PUT 0-byte object ", objectName, true,
+        () -> putObjectDirect(getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
+            putOptions, uploadData, false));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
@@ -4682,10 +4732,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         ETAG_CHECKSUM_ENABLED_DEFAULT)) {
       return trackDurationAndSpan(INVOCATION_GET_FILE_CHECKSUM, path, () -> {
         LOG.debug("getFileChecksum({})", path);
-        ObjectMetadata headers = getObjectMetadata(path, null,
+        HeadObjectResponse headers = getObjectMetadata(path, null,
             invoker,
             "getFileChecksum are");
-        String eTag = headers.getETag();
+        String eTag = headers.eTag();
         return eTag != null ? new EtagChecksum(eTag) : null;
       });
     } else {
@@ -4767,7 +4817,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       HeaderProcessing.HeaderProcessingCallbacks {
 
     @Override
-    public ObjectMetadata getObjectMetadata(final String key)
+    public HeadObjectResponse getObjectMetadata(final String key)
         throws IOException {
       return once("getObjectMetadata", key, () ->
           S3AFileSystem.this.getObjectMetadata(key));

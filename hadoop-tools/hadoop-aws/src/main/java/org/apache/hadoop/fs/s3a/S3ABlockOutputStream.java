@@ -36,8 +36,6 @@ import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
@@ -49,6 +47,9 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningE
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -575,24 +576,30 @@ class S3ABlockOutputStream extends OutputStream implements
     final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
         writeOperationHelper.createPutObjectRequest(
             key,
-            uploadData.getFile(),
-            builder.putOptions)
+            uploadData.getFile().length(),
+            builder.putOptions,
+            true)
         : writeOperationHelper.createPutObjectRequest(
             key,
-            uploadData.getUploadStream(),
             size,
-            builder.putOptions);
-    BlockUploadProgress callback =
-        new BlockUploadProgress(
-            block, progressListener,  now());
-    putObjectRequest.setGeneralProgressListener(callback);
+            builder.putOptions,
+        false);
+
+          // TODO: You cannot currently add progress listeners to requests not via the TM.
+          // There is an open ticket for this with the SDK team. But need to check how important
+          // this is for us?
+    //    BlockUploadProgress callback =
+    //        new BlockUploadProgress(
+    //            block, progressListener,  now());
+    // putObjectRequest.setGeneralProgressListener(callback);
     statistics.blockUploadQueued(size);
-    ListenableFuture<PutObjectResult> putObjectResult =
+    ListenableFuture<PutObjectResponse> putObjectResult =
         executorService.submit(() -> {
           try {
             // the putObject call automatically closes the input
             // stream afterwards.
-            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions);
+            return writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
+                uploadData.hasFile());
           } finally {
             cleanupWithLogger(LOG, uploadData, block);
           }

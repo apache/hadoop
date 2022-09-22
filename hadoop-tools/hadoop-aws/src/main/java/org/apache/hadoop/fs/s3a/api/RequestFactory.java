@@ -27,25 +27,26 @@ import java.util.Optional;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
+
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -115,63 +116,42 @@ public interface RequestFactory {
   StorageClass getStorageClass();
 
   /**
-   * Create a new object metadata instance.
-   * Any standard metadata headers are added here, for example:
-   * encryption.
-   *
-   * @param length length of data to set in header; Ignored if negative
-   * @return a new metadata instance
-   */
-  ObjectMetadata newObjectMetadata(long length);
-
-  /**
-   * Create a copy request.
+   * Create a copy request builder.
    * This includes the work of copying the relevant parts
    * of the metadata from the source
    * @param srcKey source
    * @param dstKey destination
    * @param srcom source object metadata.
-   * @return the request
+   * @return the request builder
    */
-  CopyObjectRequest newCopyObjectRequest(String srcKey,
+  CopyObjectRequest.Builder newCopyObjectRequestBuilder(String srcKey,
       String dstKey,
-      ObjectMetadata srcom);
+      HeadObjectResponse srcom);
+
 
   /**
-   * Create a putObject request.
-   * Adds the ACL and metadata
-   * @param key key of object
-   * @param metadata metadata header
-   * @param options options for the request
-   * @param srcfile source file
-   * @return the request
-   */
-  PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata, PutObjectOptions options, File srcfile);
-
-  /**
-   * Create a {@link PutObjectRequest} request.
+   * Create a {@link PutObjectRequest} request builder.
    * The metadata is assumed to have been configured with the size of the
    * operation.
    * @param key key of object
-   * @param metadata metadata header
    * @param options options for the request
-   * @param inputStream source data.
-   * @return the request
+   * @param length length of object to be uploaded
+   * @param isDirectoryMarker true if object to be uploaded is a directory marker
+   * @return the request builder
    */
-  PutObjectRequest newPutObjectRequest(String key,
-      ObjectMetadata metadata,
+  PutObjectRequest.Builder newPutObjectRequestBuilder(String key,
       PutObjectOptions options,
-      InputStream inputStream);
+      long length,
+      boolean isDirectoryMarker);
 
   /**
    * Create a {@link PutObjectRequest} request for creating
    * an empty directory.
    *
    * @param directory destination directory.
-   * @return request for a zero byte upload.
+   * @return request builder for a zero byte upload.
    */
-  PutObjectRequest newDirectoryMarkerRequest(String directory);
+  PutObjectRequest.Builder newDirectoryMarkerRequest(String directory);
 
   /**
    * List all multipart uploads under a prefix.
@@ -214,11 +194,12 @@ public interface RequestFactory {
       List<PartETag> partETags);
 
   /**
-   * Create a HEAD request.
+   * Create a HEAD request builder.
    * @param key key, may have trailing /
-   * @return the request.
+   * @return the request builder.
    */
-  GetObjectMetadataRequest newGetObjectMetadataRequest(String key);
+  HeadObjectRequest.Builder newHeadObjectRequestBuilder(String key);
+
 
   /**
    * Create a GET request.
@@ -262,13 +243,13 @@ public interface RequestFactory {
   SelectObjectContentRequest newSelectRequest(String key);
 
   /**
-   * Create the (legacy) V1 list request.
+   * Create the (legacy) V1 list request builder.
    * @param key key to list under
    * @param delimiter delimiter for keys
    * @param maxKeys maximum number in a list page.
-   * @return the request
+   * @return the request builder.
    */
-  ListObjectsRequest newListObjectsV1Request(String key,
+  ListObjectsRequest.Builder newListObjectsV1RequestBuilder(String key,
       String delimiter,
       int maxKeys);
 
@@ -283,14 +264,14 @@ public interface RequestFactory {
       ObjectListing prev);
 
   /**
-   * Create a V2 list request.
+   * Create a V2 list request builder.
    * This will be recycled for any subsequent requests.
    * @param key key to list under
    * @param delimiter delimiter for keys
    * @param maxKeys maximum number in a list page.
-   * @return the request
+   * @return the request builder.
    */
-  ListObjectsV2Request newListObjectsV2Request(String key,
+  ListObjectsV2Request.Builder newListObjectsV2RequestBuilder(String key,
       String delimiter,
       int maxKeys);
 

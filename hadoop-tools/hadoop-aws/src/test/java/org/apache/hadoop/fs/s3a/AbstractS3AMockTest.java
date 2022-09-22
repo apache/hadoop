@@ -51,7 +51,7 @@ public abstract class AbstractS3AMockTest {
 
   protected S3AFileSystem fs;
   protected AmazonS3 s3;
-  private S3Client s3V2;
+  protected S3Client s3V2;
 
   @Before
   public void setup() throws Exception {

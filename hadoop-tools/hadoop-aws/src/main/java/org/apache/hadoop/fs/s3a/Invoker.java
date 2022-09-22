@@ -28,6 +28,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.SdkBaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -120,8 +122,13 @@ public class Invoker {
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return operation.apply();
-    } catch (AmazonClientException e) {
-      throw S3AUtils.translateException(action, path, e);
+    } catch (AmazonClientException | AwsServiceException e) {
+      // TODO: This is temporary, and will be updated during error translation work.
+      if (e instanceof  AmazonClientException) {
+        throw S3AUtils.translateException(action, path, (SdkBaseException) e);
+      } else {
+        throw S3AUtils.translateExceptionV2(action, path, (SdkException) e);
+      }
     }
   }
 
@@ -466,7 +473,7 @@ public class Invoker {
         }
         // execute the operation, returning if successful
         return operation.apply();
-      } catch (IOException | SdkBaseException e) {
+      } catch (IOException | SdkBaseException | AwsServiceException e) {
         caught = e;
       }
       // you only get here if the operation didn't complete
@@ -474,11 +481,16 @@ public class Invoker {
 
       // translate the exception into an IOE for the retry logic
       IOException translated;
+      // TODO: Update during error translation work. This is a temporary fix to allow
+      //  getObjectMetadata to throw FNFE.
       if (caught instanceof IOException) {
         translated = (IOException) caught;
-      } else {
+      } else if (caught instanceof SdkBaseException) {
         translated = S3AUtils.translateException(text, "",
             (SdkBaseException)caught);
+      } else {
+        translated = S3AUtils.translateExceptionV2(text, "",
+            (AwsServiceException)caught);
       }
 
       try {
@@ -516,8 +528,11 @@ public class Invoker {
 
     if (caught instanceof IOException) {
       throw (IOException) caught;
-    } else {
+      // TODO: This is temporary, and will be updated during error translation work.
+    } else if (caught instanceof SdkBaseException) {
       throw (SdkBaseException) caught;
+    } else {
+      throw (AwsServiceException) caught;
     }
   }
 

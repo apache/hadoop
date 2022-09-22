@@ -26,9 +26,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 
@@ -51,17 +54,25 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
   public void testUnbuffer() throws IOException {
     // Create mock ObjectMetadata for getFileStatus()
     Path path = new Path("/file");
-    ObjectMetadata meta = mock(ObjectMetadata.class);
-    when(meta.getContentLength()).thenReturn(1L);
-    when(meta.getLastModified()).thenReturn(new Date(2L));
-    when(meta.getETag()).thenReturn("mock-etag");
-    when(s3.getObjectMetadata(any())).thenReturn(meta);
+    HeadObjectResponse objectMetadata = mock(HeadObjectResponse.class);
+    when(objectMetadata.contentLength()).thenReturn(1L);
+    when(objectMetadata.lastModified()).thenReturn(new Date(2L).toInstant());
+    when(objectMetadata.eTag()).thenReturn("mock-etag");
+    when(s3V2.headObject((HeadObjectRequest) any())).thenReturn(objectMetadata);
 
     // Create mock S3ObjectInputStream and S3Object for open()
     S3ObjectInputStream objectStream = mock(S3ObjectInputStream.class);
     when(objectStream.read()).thenReturn(-1);
     when(objectStream.read(any(byte[].class))).thenReturn(-1);
     when(objectStream.read(any(byte[].class), anyInt(), anyInt())).thenReturn(-1);
+
+    // TODO: Remove during getObject work, required currently for the
+    //  s3Object.getObjectMetadata() call.
+    ObjectMetadata meta = mock(ObjectMetadata.class);
+    when(meta.getContentLength()).thenReturn(1L);
+    when(meta.getLastModified()).thenReturn(new Date(2L));
+    when(meta.getETag()).thenReturn("mock-etag");
+    when(s3.getObjectMetadata(any())).thenReturn(meta);
 
     S3Object s3Object = mock(S3Object.class);
     when(s3Object.getObjectContent()).thenReturn(objectStream);

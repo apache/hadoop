@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.adapter;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AWSSessionCredentials;
+import com.amazonaws.auth.AnonymousAWSCredentials;
+
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -45,6 +48,8 @@ final class V1ToV2AwsCredentialProviderAdapter implements V1V2AwsCredentialProvi
       return AwsSessionCredentials.create(toAdapt.getAWSAccessKeyId(),
           toAdapt.getAWSSecretKey(),
           ((AWSSessionCredentials) toAdapt).getSessionToken());
+    } else if (toAdapt instanceof AnonymousAWSCredentials) {
+      return AnonymousCredentialsProvider.create().resolveCredentials();
     } else {
       return AwsBasicCredentials.create(toAdapt.getAWSAccessKeyId(), toAdapt.getAWSSecretKey());
     }

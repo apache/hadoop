@@ -31,10 +31,10 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.thirdparty.org.apache.http.client.utils.URIBuilder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.http.client.utils.URIBuilder;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;

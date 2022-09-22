@@ -50,6 +50,35 @@ public final class EncryptionSecretOperations {
     }
   }
 
+  /***
+   * Gets the SSE-C client side key if present.
+   *
+   * @param secrets source of the encryption secrets.
+   * @return an optional key to attach to a request.
+   */
+  public static Optional<String> getSSECustomerKey(final EncryptionSecrets secrets) {
+    if (secrets.hasEncryptionKey() && secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+      return Optional.of(secrets.getEncryptionKey());
+    } else {
+     return Optional.empty();
+    }
+  }
+
+  /**
+   * Gets the SSE-KMS key if present, else let S3 use AWS managed key.
+   *
+   * @param secrets source of the encryption secrets.
+   * @return an optional key to attach to a request.
+   */
+  public static Optional<String> getSSEAwsKMSKey(final EncryptionSecrets secrets) {
+    if (secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS
+        && secrets.hasEncryptionKey()) {
+      return Optional.of(secrets.getEncryptionKey());
+    } else {
+      return Optional.empty();
+    }
+  }
+
   /**
    * Create SSE-KMS options for a request, iff the encryption is SSE-KMS.
    * @return an optional SSE-KMS param to attach to a request.

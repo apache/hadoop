@@ -29,14 +29,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -76,27 +76,15 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Create a {@link PutObjectRequest} request against the specific key.
    * @param destKey destination key
-   * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
+   * @param isFile is data to be uploaded a file
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream,
       long length,
-      @Nullable PutObjectOptions options);
-
-  /**
-   * Create a {@link PutObjectRequest} request to upload a file.
-   * @param dest key to PUT to.
-   * @param sourceFile source file
-   * @param options options for the request
-   * @return the request
-   */
-  PutObjectRequest createPutObjectRequest(
-      String dest,
-      File sourceFile,
-      @Nullable PutObjectOptions options);
+      @Nullable PutObjectOptions options,
+      boolean isFile);
 
   /**
    * Callback on a successful write.
@@ -109,15 +97,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param ex Any exception raised which triggered the failure.
    */
   void writeFailed(Exception ex);
-
-  /**
-   * Create a new object metadata instance.
-   * Any standard metadata headers are added here, for example:
-   * encryption.
-   * @param length size, if known. Use -1 for not known
-   * @return a new metadata instance
-   */
-  ObjectMetadata newObjectMetadata(long length);
 
   /**
    * Start the multipart upload process.
@@ -244,12 +223,14 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
+   * @param isFile is data to be uploaded a file
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+  PutObjectResponse putObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
       throws IOException;
 
   /**
@@ -257,12 +238,14 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    *
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
+   * @param isFile is data to be uploaded a file
    *
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
       throws IOException;
 
   /**

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;
 
@@ -54,6 +55,19 @@ public class ErrorTranslation {
         && AwsErrorCodes.E_NO_SUCH_BUCKET.equals(e.getErrorCode());
   }
 
+  // TODO: This method will be replace isUnkownBucket() during error translation work.
+  /**
+   * Does this exception indicate that the AWS Bucket was unknown.
+   * @param e exception.
+   * @return true if the status code and error code mean that the
+   * remote bucket is unknown.
+   */
+  public static boolean isUnknownBucketV2(AwsServiceException e) {
+    return e.statusCode() == SC_404
+        && AwsErrorCodes.E_NO_SUCH_BUCKET.equals(e.awsErrorDetails().errorCode());
+  }
+
+
   /**
    * Does this exception indicate that a reference to an object
    * returned a 404. Unknown bucket errors do not match this
@@ -62,8 +76,8 @@ public class ErrorTranslation {
    * @return true if the status code and error code mean that the
    * HEAD request returned 404 but the bucket was there.
    */
-  public static boolean isObjectNotFound(AmazonServiceException e) {
-    return e.getStatusCode() == SC_404 && !isUnknownBucket(e);
+  public static boolean isObjectNotFound(AwsServiceException e) {
+    return e.statusCode() == SC_404 && !isUnknownBucketV2(e);
   }
 
   /**

@@ -1129,6 +1129,11 @@
         </exclusions>
       </dependency>
       <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>s3-transfer-manager</artifactId>
+        <version>2.17.196-PREVIEW</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.mina</groupId>
         <artifactId>mina-core</artifactId>
         <version>2.0.22</version>

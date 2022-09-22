@@ -228,7 +228,7 @@ public class S3ADelegationTokens extends AbstractDTService {
     try {
       super.serviceStop();
     } finally {
-      ServiceOperations.stopQuietly(LOG, tokenBinding);
+     // ServiceOperations.stopQuietly(LOG, tokenBinding);
     }
   }
 

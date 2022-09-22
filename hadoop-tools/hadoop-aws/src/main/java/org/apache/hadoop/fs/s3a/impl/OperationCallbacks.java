@@ -26,6 +26,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -126,7 +127,7 @@ public interface OperationCallbacks {
    * @throws IOException Other IO problems
    */
   @Retries.RetryTranslated
-  CopyResult copyFile(String srcKey,
+  CopyObjectResponse copyFile(String srcKey,
       String destKey,
       S3ObjectAttributes srcAttributes,
       S3AReadOpContext readContext)

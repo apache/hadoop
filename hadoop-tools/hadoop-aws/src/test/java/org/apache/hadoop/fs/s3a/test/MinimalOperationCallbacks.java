@@ -25,6 +25,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -88,7 +89,7 @@ public class MinimalOperationCallbacks
   }
 
   @Override
-  public CopyResult copyFile(
+  public CopyObjectResponse copyFile(
       String srcKey,
       String destKey,
       S3ObjectAttributes srcAttributes,

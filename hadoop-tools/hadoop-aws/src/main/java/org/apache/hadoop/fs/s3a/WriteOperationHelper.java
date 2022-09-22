@@ -31,16 +31,16 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -238,50 +238,29 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Create a {@link PutObjectRequest} request against the specific key.
    * @param destKey destination key
-   * @param inputStream source data.
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
+   * @param isFile is data to be uploaded a file
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(String destKey,
-      InputStream inputStream,
       long length,
-      final PutObjectOptions options) {
+      final PutObjectOptions options,
+      boolean isFile) {
+
+    if(isFile) {
+      Preconditions.checkState(length < Integer.MAX_VALUE,
+          "File length is too big for a single PUT upload");
+    }
+
     activateAuditSpan();
-    ObjectMetadata objectMetadata = newObjectMetadata(length);
-    return getRequestFactory().newPutObjectRequest(
-        destKey,
-        objectMetadata,
-        options,
-        inputStream);
+
+    return getRequestFactory()
+        .newPutObjectRequestBuilder(destKey, options, length, false)
+        .build();
   }
 
-  /**
-   * Create a {@link PutObjectRequest} request to upload a file.
-   * @param dest key to PUT to.
-   * @param sourceFile source file
-   * @param options options for the request
-   * @return the request
-   */
-  @Retries.OnceRaw
-  public PutObjectRequest createPutObjectRequest(
-      String dest,
-      File sourceFile,
-      final PutObjectOptions options) {
-    Preconditions.checkState(sourceFile.length() < Integer.MAX_VALUE,
-        "File length is too big for a single PUT upload");
-    activateAuditSpan();
-    final ObjectMetadata objectMetadata =
-        newObjectMetadata((int) sourceFile.length());
-
-    PutObjectRequest putObjectRequest = getRequestFactory().
-        newPutObjectRequest(dest,
-            objectMetadata,
-            options,
-            sourceFile);
-    return putObjectRequest;
-  }
 
   /**
    * Callback on a successful write.
@@ -296,17 +275,6 @@ public class WriteOperationHelper implements WriteOperations {
    */
   public void writeFailed(Exception ex) {
     LOG.debug("Write to {} failed", this, ex);
-  }
-
-  /**
-   * Create a new object metadata instance.
-   * Any standard metadata headers are added here, for example:
-   * encryption.
-   * @param length size, if known. Use -1 for not known
-   * @return a new metadata instance
-   */
-  public ObjectMetadata newObjectMetadata(long length) {
-    return getRequestFactory().newObjectMetadata(length);
   }
 
   /**
@@ -566,17 +534,20 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
+   * @param isFile is data to be uploaded a file
+   *
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public PutObjectResult putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+  public PutObjectResponse putObject(PutObjectRequest putObjectRequest,
+      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
       throws IOException {
     return retry("Writing Object",
-        putObjectRequest.getKey(), true,
+        putObjectRequest.key(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions, uploadData, isFile)));
   }
 
   /**
@@ -584,18 +555,19 @@ public class WriteOperationHelper implements WriteOperations {
    *
    * @param putObjectRequest the request
    * @param putOptions put object options
+   * @param uploadData data to be uploaded
+   * @param isFile is data to be uploaded a file
    *
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public void uploadObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions)
+      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
       throws IOException {
 
-    retry("Writing Object",
-        putObjectRequest.getKey(), true,
+    retry("Writing Object", putObjectRequest.key(), true,
         withinAuditSpan(getAuditSpan(), () ->
-            owner.putObjectDirect(putObjectRequest, putOptions)));
+            owner.putObjectDirect(putObjectRequest, putOptions, uploadData, isFile)));
   }
 
   /**
