@@ -172,7 +172,8 @@ public class MiniQJMHACluster implements AutoCloseable {
     }
 
     // use standard failover configurations
-    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE, "RequestHedgingProxyProvider", nns);
+    HATestUtil.setFailoverConfigurations(conf, NAMESERVICE,
+        "org.apache.hadoop.hdfs.server.namenode.ha.RequestHedgingProxyProvider", nns);
     return conf;
   }
 
