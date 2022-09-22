@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
-import java.util.Collection;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
