@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import com.aliyun.oss.model.PartETag;
 import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -28,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -74,7 +76,6 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
     this.blockSize = blockSize;
     this.blockFactory = blockFactory;
     this.statistics = statistics;
-    createBlockIfNeeded();
     this.partETagsFutures = new ArrayList<>(2);
     this.executorService = MoreExecutors.listeningDecorator(executorService);
   }
@@ -131,12 +132,18 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
       if (uploadId == null) {
         // just upload it directly
         OSSDataBlocks.DataBlock dataBlock = getActiveBlock();
-        OSSDataBlocks.BlockUploadData uploadData = dataBlock.startUpload();
-        if (uploadData.hasFile()) {
-          store.uploadObject(key, uploadData.getFile());
-        } else {
+        if (dataBlock == null) {
+          // zero size file
           store.uploadObject(key,
-              uploadData.getUploadStream(), dataBlock.dataSize());
+              new ByteArrayInputStream("".getBytes(Charsets.UTF_8)), 0);
+        } else {
+          OSSDataBlocks.BlockUploadData uploadData = dataBlock.startUpload();
+          if (uploadData.hasFile()) {
+            store.uploadObject(key, uploadData.getFile());
+          } else {
+            store.uploadObject(key,
+                uploadData.getUploadStream(), dataBlock.dataSize());
+          }
         }
       } else {
         if (blockWritten > 0) {

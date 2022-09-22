@@ -93,7 +93,7 @@ public class TestAliyunOSSBlockOutputStream {
   @Test
   public void testZeroByteUpload() throws IOException {
     ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 0);
-    bufferShouldReleased();
+    bufferShouldReleased(true);
   }
 
   @Test
@@ -219,6 +219,10 @@ public class TestAliyunOSSBlockOutputStream {
   }
 
   private void bufferShouldReleased() throws IOException {
+    bufferShouldReleased(false);
+  }
+
+  private void bufferShouldReleased(boolean zeroSizeFile) throws IOException {
     String bufferDir = fs.getConf().get(BUFFER_DIR_KEY);
     String bufferType = fs.getConf().get(FAST_UPLOAD_BUFFER);
     if (bufferType.equals(FAST_UPLOAD_BUFFER_DISK)) {
@@ -241,7 +245,11 @@ public class TestAliyunOSSBlockOutputStream {
         ((AliyunOSSFileSystem)fs).getBlockOutputStreamStatistics();
     assertEquals(statistics.getBlocksAllocated(),
         statistics.getBlocksReleased());
-    assertTrue(statistics.getBlocksAllocated() >= 1);
+    if (zeroSizeFile) {
+      assertEquals(statistics.getBlocksAllocated(), 0);
+    } else {
+      assertTrue(statistics.getBlocksAllocated() >= 1);
+    }
     assertEquals(statistics.getBytesReleased(),
         statistics.getBytesAllocated());
   }
