@@ -287,7 +287,7 @@ public class TestConfServlet {
       // is the value before replacement, test-user
       // result contains the replaced value, which should be ******
       assertTrue(result.contains(propertyName));
-      assertTrue(!result.contains(MASK_PROPERTIES.get(propertyName)));
+      assertFalse(result.contains(MASK_PROPERTIES.get(propertyName)));
 
     } finally {
       if (sw != null) {
