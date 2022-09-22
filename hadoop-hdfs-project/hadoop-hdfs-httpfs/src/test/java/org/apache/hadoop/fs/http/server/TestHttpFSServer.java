@@ -2026,14 +2026,12 @@ public class TestHttpFSServer extends HFSTestCase {
     HttpURLConnection conn = sendRequestToHttpFSServer(file1,
         "GETFILEBLOCKLOCATIONS", "length=10&offset10");
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    BlockLocation[] locations1 =
-        dfs.getFileBlockLocations(new Path(file1), 0, 1);
+    BlockLocation[] locations1 = dfs.getFileBlockLocations(new Path(file1), 0, 1);
     Assert.assertNotNull(locations1);
 
     Map<?, ?> jsonMap = JsonSerialization.mapReader().readValue(conn.getInputStream());
 
-    BlockLocation[] httpfsBlockLocations =
-        JsonUtilClient.toBlockLocationArray(jsonMap);
+    BlockLocation[] httpfsBlockLocations = JsonUtilClient.toBlockLocationArray(jsonMap);
 
     assertEquals(locations1.length, httpfsBlockLocations.length);
     for (int i = 0; i < locations1.length; i++) {

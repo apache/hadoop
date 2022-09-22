@@ -709,15 +709,7 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
-    if (locations == null) {
-      return null;
-    }
-    final Map<String, Object> m = new HashMap<>();
-    Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
-      blockLocations[i] = toJsonMap(locations[i]);
-    }
-    m.put(BlockLocation.class.getSimpleName(), blockLocations);
+    final Map<String, Object> m = toJsonMap(locations);
     return toJsonString("BlockLocations", m);
   }
 

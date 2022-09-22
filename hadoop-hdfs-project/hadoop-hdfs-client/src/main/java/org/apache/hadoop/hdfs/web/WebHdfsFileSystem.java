@@ -1888,25 +1888,21 @@ public class WebHdfsFileSystem extends FileSystem
       final long length) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
-    BlockLocation[] locations = null;
+    BlockLocation[] locations;
     try {
       if (isServerHCFSCompatible) {
-        locations =
-            getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p, offset, length);
+        locations = getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p, offset, length);
       } else {
-        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p,
-            offset, length);
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p, offset, length);
       }
     } catch (RemoteException e) {
-      // parsing the exception is needed only if the client thinks the service
-      // is compatible
+      // parsing the exception is needed only if the client thinks the service is compatible
       if (isServerHCFSCompatible && isGetFileBlockLocationsException(e)) {
         LOG.warn("Server does not appear to support GETFILEBLOCKLOCATIONS." +
                 "Fallback to the old GET_BLOCK_LOCATIONS. Exception: " +
             e.getMessage());
         isServerHCFSCompatible = false;
-        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p,
-            offset, length);
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p, offset, length);
       } else {
         throw e;
       }
@@ -1915,10 +1911,8 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   private boolean isGetFileBlockLocationsException(RemoteException e) {
-    return e.getMessage() != null
-        && e.getMessage().contains("Invalid value for webhdfs parameter")
-        && e.getMessage()
-        .contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString());
+    return e.getMessage() != null && e.getMessage().contains("Invalid value for webhdfs parameter")
+        && e.getMessage().contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString());
   }
 
   private BlockLocation[] getFileBlockLocations(GetOpParam.Op operation,
@@ -1932,8 +1926,7 @@ public class WebHdfsFileSystem extends FileSystem
         case GETFILEBLOCKLOCATIONS:
           return JsonUtilClient.toBlockLocationArray(json);
         case GET_BLOCK_LOCATIONS:
-          return DFSUtilClient
-              .locatedBlocks2Locations(JsonUtilClient.toLocatedBlocks(json));
+          return DFSUtilClient.locatedBlocks2Locations(JsonUtilClient.toLocatedBlocks(json));
         default:
           throw new IOException("Unknown operation " + operation.name());
         }

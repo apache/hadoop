@@ -2203,9 +2203,9 @@ public final class FSOperations {
   @SuppressWarnings("rawtypes")
   public static class FSFileBlockLocations
       implements FileSystemAccess.FileSystemExecutor<Map> {
-    private Path path;
-    private long offsetValue;
-    private long lengthValue;
+    final private Path path;
+    final private long offsetValue;
+    final private long lengthValue;
 
     /**
      * Creates a file-block-locations executor.
@@ -2214,8 +2214,7 @@ public final class FSOperations {
      * @param offsetValue offset into the given file
      * @param lengthValue length for which to get locations for
      */
-    public FSFileBlockLocations(String path, long offsetValue,
-        long lengthValue) {
+    public FSFileBlockLocations(String path, long offsetValue, long lengthValue) {
       this.path = new Path(path);
       this.offsetValue = offsetValue;
       this.lengthValue = lengthValue;
@@ -2238,9 +2237,9 @@ public final class FSOperations {
   @SuppressWarnings("rawtypes")
   public static class FSFileBlockLocationsLegacy
       implements FileSystemAccess.FileSystemExecutor<Map> {
-    private Path path;
-    private long offsetValue;
-    private long lengthValue;
+    final private Path path;
+    final private long offsetValue;
+    final private long lengthValue;
 
     /**
      * Creates a file-block-locations executor.
@@ -2249,8 +2248,7 @@ public final class FSOperations {
      * @param offsetValue offset into the given file
      * @param lengthValue length for which to get locations for
      */
-    public FSFileBlockLocationsLegacy(String path, long offsetValue,
-        long lengthValue) {
+    public FSFileBlockLocationsLegacy(String path, long offsetValue, long lengthValue) {
       this.path = new Path(path);
       this.offsetValue = offsetValue;
       this.lengthValue = lengthValue;

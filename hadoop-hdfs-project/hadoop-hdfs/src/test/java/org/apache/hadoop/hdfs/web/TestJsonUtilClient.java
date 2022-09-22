@@ -32,9 +32,8 @@ import static org.junit.Assert.assertNotNull;
 
 public class TestJsonUtilClient {
   @Test
-  public void testToStringArray() throws Exception {
-    List<String> strList = new ArrayList<String>(
-        Arrays.asList("aaa", "bbb", "ccc"));
+  public void testToStringArray() {
+    List<String> strList = new ArrayList<String>(Arrays.asList("aaa", "bbb", "ccc"));
 
     String[] strArr = JsonUtilClient.toStringArray(strList);
     assertEquals("Expected 3 items in the array", 3, strArr.length);
