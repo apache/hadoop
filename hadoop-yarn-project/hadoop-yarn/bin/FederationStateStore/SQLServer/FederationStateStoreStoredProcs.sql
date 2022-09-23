@@ -117,7 +117,7 @@ AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
-    
+
         SELECT
             [applicationId],
             [homeSubCluster],

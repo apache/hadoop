@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
-import java.util.Set;
-import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
