@@ -30,14 +30,15 @@ public class TestFederationWebApp {
 
   @Test
   public void testFederationWebViewNotEnable() throws InterruptedException, YarnException, IOException {
+    // Test Federation is not Enabled
     Configuration config = new YarnConfiguration();
-    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
     WebAppTests.testPage(FederationPage.class, Router.class, new MockRouter(config));
   }
 
   @Test
   public void testFederationWebViewEnable() throws InterruptedException, YarnException, IOException {
+    // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     WebAppTests.testPage(FederationPage.class, Router.class, new MockRouter(config));

@@ -213,10 +213,7 @@ class FederationBlock extends HtmlBlock {
 
         // Prepare subCluster
         SubClusterId subClusterId = subcluster.getSubClusterId();
-        String subClusterIdText = "";
-        if (subClusterId != null) {
-          subClusterIdText = subClusterId.getId();
-        }
+        String subClusterIdText = subClusterId.getId();
 
         // Prepare WebAppAddress
         String webAppAddress = subcluster.getRMWebServiceAddress();
