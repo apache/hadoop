@@ -30,6 +30,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.mapreduce.task.TaskDescriptions;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterGroupInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.CounterInfo;
@@ -59,14 +60,14 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   private final Set<Class> types;
 
   // you have to specify all the dao classes here
-  private final Class[] cTypes = { HistoryInfo.class, JobInfo.class,
+  private final Class[] cTypes = {HistoryInfo.class, JobInfo.class,
       JobsInfo.class, TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class,
       ConfInfo.class, CounterInfo.class, JobTaskCounterInfo.class,
       JobTaskAttemptCounterInfo.class, TaskCounterInfo.class,
       JobCounterInfo.class, MapTaskAttemptInfo.class, ReduceTaskAttemptInfo.class,
       TaskAttemptsInfo.class, CounterGroupInfo.class,
       TaskCounterGroupInfo.class, AMAttemptInfo.class, AMAttemptsInfo.class,
-      RemoteExceptionData.class };
+      RemoteExceptionData.class, TaskDescriptions.class};
 
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));
