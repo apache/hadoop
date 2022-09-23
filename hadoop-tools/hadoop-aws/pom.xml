@@ -53,6 +53,9 @@
     <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
     <!--    marker retention policy -->
     <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
+
+    <!-- Is prefetch enabled? -->
+    <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
   </properties>
 
   <profiles>
@@ -127,6 +130,8 @@
                 <!-- Markers-->
                 <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                 <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                <!-- Prefetch -->
+                <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -166,6 +171,8 @@
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -215,6 +222,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -271,6 +280,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -329,6 +340,19 @@
       </activation>
       <properties >
         <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+
+    <!-- Turn on prefetching-->
+    <profile>
+      <id>prefetch</id>
+      <activation>
+        <property>
+          <name>prefetch</name>
+        </property>
+      </activation>
+      <properties>
+        <fs.s3a.prefetch.enabled>true</fs.s3a.prefetch.enabled>
       </properties>
     </profile>
 
