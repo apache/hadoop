@@ -60,115 +60,28 @@ class FederationBlock extends HtmlBlock {
   public void render(Block html) {
 
     Configuration conf = this.router.getConfig();
-    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+    boolean isEnabled = conf.getBoolean(
+        YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
+    // If Yarn Federation is enabled.
     if (isEnabled) {
+      initHtmlPageFederationEnabled(html);
+    }
 
-      List<Map<String, String>> lists = new ArrayList<>();
-
-      // Table header
-      TBODY<TABLE<Hamlet>> tbody =
-          html.table("#rms").$class("display").$style("width:100%").thead().tr()
-          .th(".id", "SubCluster")
-          .th(".state", "State")
-          .th(".lastStartTime", "LastStartTime")
-          .th(".lastHeartBeat", "LastHeartBeat")
-          .th(".resource", "Resource")
-          .th(".nodes", "Nodes")
-          .__().__().tbody();
-
-      try {
-        // Binding to the FederationStateStore
-        FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
-
-        Map<SubClusterId, SubClusterInfo> subClustersInfo =
-            facade.getSubClusters(true);
-
-        // Sort the SubClusters
-        List<SubClusterInfo> subclusters = new ArrayList<>();
-        subclusters.addAll(subClustersInfo.values());
-        Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
-        Collections.sort(subclusters, cmp);
-
-        for (SubClusterInfo subcluster : subclusters) {
-
-          Map<String, String> subclusterMap = new HashMap<>();
-
-          // Prepare subCluster
-          SubClusterId subClusterId = subcluster.getSubClusterId();
-          String anchorText = "";
-          if (subClusterId != null) {
-            anchorText = subClusterId.getId();
-          }
-
-          // Prepare WebAppAddress
-          String webAppAddress = subcluster.getRMWebServiceAddress();
-          String herfWebAppAddress = "";
-          if (webAppAddress != null && !webAppAddress.isEmpty()) {
-            herfWebAppAddress = "//" + webAppAddress;
-          }
-
-          // Prepare Capability
-          String capability = subcluster.getCapability();
-          ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
-
-          // Prepare LastStartTime & LastHeartBeat
-          String lastStartTime =
-              DateFormatUtils.format(subcluster.getLastStartTime(), DATE_PATTERN);
-          String lastHeartBeat =
-              DateFormatUtils.format(subcluster.getLastHeartBeat(), DATE_PATTERN);
-
-          // Prepare Resource
-          long totalMB = subClusterInfo.getTotalMB();
-          String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
-          long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
-          String resources = String.format("<Memory:%s, VCore:%s>", totalMBDesc, totalVirtualCores);
-
-          // Prepare Node
-          long totalNodes = subClusterInfo.getTotalNodes();
-          long activeNodes = subClusterInfo.getActiveNodes();
-          String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>",
-              totalNodes, activeNodes);
-
-          // Prepare HTML Table
-          tbody.tr().$id(subClusterId.toString())
-              .td().$class("details-control").a(herfWebAppAddress, anchorText).__()
-              .td(subcluster.getState().name())
-              .td(lastStartTime)
-              .td(lastHeartBeat)
-              .td(resources)
-              .td(nodes)
-          .__();
-
-          subclusterMap.put("subcluster", subClusterId.getId());
-          subclusterMap.put("capability", capability);
-          lists.add(subclusterMap);
-        }
-      } catch (Exception e) {
-        LOG.error("Cannot render Router Federation.", e);
-      }
-
-      // Init FederationBlockTableJs
-      initFederationBlockTableJs(html, lists);
-
-      // Tips
-      tbody.__().__().div().p().$style("color:red")
-           .__("*The application counts are local per subcluster").__().__();
-    } else {
-      // When Federation is not enabled, user information needs to be prompted
-      Hamlet.DIV<Hamlet> div = html.div("#div_id");
-      div.p().$style("color:red").__("Federation is not Enabled.").__()
-         .p().__()
-         .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
-         .p().$style("color:blue").__()
-          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
-          "Hadoop: YARN Federation").
-         __();
+    // If Yarn Federation is not enabled.
+    if(!isEnabled) {
+      initHtmlPageFederationNotEnabled(html);
     }
   }
 
-  private static ClusterMetricsInfo getClusterMetricsInfo(String capability) {
+  /**
+   * Parse the capability and obtain the metric information of the cluster.
+   *
+   * @param capability metric json obtained from RM.
+   * @return ClusterMetricsInfo Object
+   */
+  private ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     try {
       if (capability != null && !capability.isEmpty()) {
         JSONJAXBContext jc = new JSONJAXBContext(
@@ -185,11 +98,24 @@ class FederationBlock extends HtmlBlock {
     return null;
   }
 
-  private static void initFederationBlockTableJs(Block html, List<Map<String, String>> jsonMap) {
-    Gson gson =new Gson();
+  /**
+   * Initialize the subCluster details JavaScript of the Federation page.
+   *
+   * This part of the js script will control to display or hide the detailed information
+   * of the subCluster when the user clicks on the subClusterId.
+   *
+   * We will obtain the specific information of a SubCluster,
+   * including the information of Applications, Resources, and Nodes.
+   *
+   * @param html html object
+   * @param subClusterDetailMap subCluster Detail Map
+   */
+  private void initFederationSubClusterDetailTableJs(Block html,
+      List<Map<String, String>> subClusterDetailMap) {
+    Gson gson = new Gson();
     html.script().$type("text/javascript").
          __("$(document).ready(function() { " +
-          " var appsTableData = " + gson.toJson(jsonMap) + "; " +
+          " var scTableData = " + gson.toJson(subClusterDetailMap) + "; " +
           " var table = $('#rms').DataTable(); " +
           " $('#rms tbody').on('click', 'td.details-control', function () { " +
           " var tr = $(this).closest('tr');  " +
@@ -198,55 +124,169 @@ class FederationBlock extends HtmlBlock {
           "  row.child.hide(); " +
           "  tr.removeClass('shown'); " +
           " } else { " +
-          "  console.log(row.id());\n " +
-          "  var capabilityArr = appsTableData.filter(item=>(item.subcluster === row.id())); " +
+          "  var capabilityArr = scTableData.filter(item => (item.subcluster === row.id())); " +
           "  var capabilityObj = JSON.parse(capabilityArr[0].capability).clusterMetrics; " +
           "  row.child(" +
           "     '<table>" +
           "          <tr>" +
           "              <td>" +
           "                  <h3>Application Metrics</h3>" +
-          "                  appsSubmitted : '+capabilityObj.appsSubmitted+' </p>" +
-          "                  appsCompleted : '+capabilityObj.appsCompleted+' </p>" +
-          "                  appsPending   : '+capabilityObj.appsPending+' </p>" +
-          "                  appsRunning   : '+capabilityObj.appsRunning+' </p>" +
-          "                  appsFailed    : '+capabilityObj.appsFailed+' </p> " +
-          "                  appsKilled    : '+capabilityObj.appsKilled+' </p>" +
+          "                  ApplicationSubmitted* : '+ capabilityObj.appsSubmitted +' </p>" +
+          "                  ApplicationCompleted* : '+ capabilityObj.appsCompleted +' </p>" +
+          "                  ApplicationPending*   : '+ capabilityObj.appsPending +' </p>" +
+          "                  ApplicationRunning*   : '+ capabilityObj.appsRunning +' </p>" +
+          "                  ApplicationFailed*    : '+ capabilityObj.appsFailed +' </p> " +
+          "                  ApplicationKilled*    : '+ capabilityObj.appsKilled +' </p>" +
           "              </td>" +
           "              <td>" +
           "                 <h3>Resource Metrics</h3>" +
           "                 <h4>Memory</h4>" +
-          "                    totalMB     :  '+capabilityObj.totalMB+' </p>" +
-          "                 reservedMB     :  '+capabilityObj.reservedMB+' </p>" +
-          "                 availableMB    :  '+capabilityObj.availableMB+' </p>" +
-          "                 allocatedMB    :  '+capabilityObj.allocatedMB+' </p>" +
-          "                 pendingMB      :  '+capabilityObj.pendingMB+' </p>" +
+          "                 TotalMB : '+ capabilityObj.totalMB +' </p>" +
+          "                 ReservedMB : '+ capabilityObj.reservedMB +' </p>" +
+          "                 AvailableMB : '+ capabilityObj.availableMB +' </p>" +
+          "                 AllocatedMB : '+ capabilityObj.allocatedMB +' </p>" +
+          "                 PendingMB : '+ capabilityObj.pendingMB +' </p>" +
           "                 <h4>VirtualCores</h4>" +
-          "                 totalVirtualCores  :  '+capabilityObj.totalVirtualCores+' </p>" +
-          "                 reservedVirtualCores  :  '+capabilityObj.reservedVirtualCores+' </p>" +
-          "                 availableVirtualCores :  '+capabilityObj.availableVirtualCores+' </p>" +
-          "                 allocatedVirtualCores :  '+capabilityObj.allocatedVirtualCores+' </p>" +
-          "                 pendingVirtualCores   :  '+capabilityObj.pendingVirtualCores+' </p>" +
+          "                 TotalVirtualCores : '+capabilityObj.totalVirtualCores+' </p>" +
+          "                 ReservedVirtualCores : '+capabilityObj.reservedVirtualCores+' </p>" +
+          "                 AvailableVirtualCore : '+capabilityObj.availableVirtualCores+' </p>" +
+          "                 AllocatedVirtualCores : '+capabilityObj.allocatedVirtualCores+' </p>" +
+          "                 PendingVirtualCores : '+capabilityObj.pendingVirtualCores+' </p>" +
           "                 <h4>Containers</h4>" +
-          "                 containersAllocated   :  '+capabilityObj.containersAllocated+' </p>" +
-          "                 containersReserved    :  '+capabilityObj.containersReserved+' </p>" +
-          "                 containersPending     :  '+capabilityObj.containersPending+' </p>" +
+          "                 ContainersAllocated : '+capabilityObj.containersAllocated+' </p>" +
+          "                 ContainersReserved : '+capabilityObj.containersReserved+' </p>" +
+          "                 ContainersPending : '+capabilityObj.containersPending+' </p>" +
           "             </td>" +
           "             <td>" +
           "                <h3>Node Metrics</h3>" +
-          "                totalNodes :  '+capabilityObj.totalNodes+' </p>" +
-          "                lostNodes  :  '+capabilityObj.lostNodes+' </p>" +
-          "                unhealthyNodes : '+capabilityObj.unhealthyNodes+' </p>" +
-          "                decommissioningNodes : '+capabilityObj.decommissioningNodes+' </p>" +
-          "                decommissionedNodes :  '+capabilityObj.decommissionedNodes+' </p>" +
-          "                rebootedNodes : '+capabilityObj.rebootedNodes+' </p>" +
-          "                activeNodes : '+capabilityObj.activeNodes+' </p>" +
-          "                shutdownNodes : '+capabilityObj.shutdownNodes+' " +
+          "                TotalNodes : '+capabilityObj.totalNodes+' </p>" +
+          "                LostNodes : '+capabilityObj.lostNodes+' </p>" +
+          "                UnhealthyNodes : '+capabilityObj.unhealthyNodes+' </p>" +
+          "                DecommissioningNodes : '+capabilityObj.decommissioningNodes+' </p>" +
+          "                DecommissionedNodes : '+capabilityObj.decommissionedNodes+' </p>" +
+          "                RebootedNodes : '+capabilityObj.rebootedNodes+' </p>" +
+          "                ActiveNodes : '+capabilityObj.activeNodes+' </p>" +
+          "                ShutdownNodes : '+capabilityObj.shutdownNodes+' " +
           "             </td>" +
           "          </tr>" +
           "     </table>').show(); "+
           "   tr.addClass('shown'); " +
           " } " +
           " }); });").__();
+  }
+
+  /**
+   * Initialize the Html page when Federation is enabled.
+   *
+   * @param html html object
+   */
+  private void initHtmlPageFederationEnabled(Block html) {
+    List<Map<String, String>> lists = new ArrayList<>();
+
+    // Table header
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#rms").$class("cell-border").$style("width:100%").thead().tr()
+        .th(".id", "SubCluster")
+        .th(".state", "State")
+        .th(".lastStartTime", "LastStartTime")
+        .th(".lastHeartBeat", "LastHeartBeat")
+        .th(".resources", "Resources")
+        .th(".nodes", "Nodes")
+        .__().__().tbody();
+
+    try {
+      // Binding to the FederationStateStore
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+
+      Map<SubClusterId, SubClusterInfo> subClustersInfo =
+          facade.getSubClusters(true);
+
+      // Sort the SubClusters
+      List<SubClusterInfo> subclusters = new ArrayList<>();
+      subclusters.addAll(subClustersInfo.values());
+      Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
+      Collections.sort(subclusters, cmp);
+
+      for (SubClusterInfo subcluster : subclusters) {
+
+        Map<String, String> subclusterMap = new HashMap<>();
+
+        // Prepare subCluster
+        SubClusterId subClusterId = subcluster.getSubClusterId();
+        String anchorText = "";
+        if (subClusterId != null) {
+          anchorText = subClusterId.getId();
+        }
+
+        // Prepare WebAppAddress
+        String webAppAddress = subcluster.getRMWebServiceAddress();
+        String herfWebAppAddress = "";
+        if (webAppAddress != null && !webAppAddress.isEmpty()) {
+          herfWebAppAddress = "//" + webAppAddress;
+        }
+
+        // Prepare Capability
+        String capability = subcluster.getCapability();
+        ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
+
+        // Prepare LastStartTime & LastHeartBeat
+        String lastStartTime =
+            DateFormatUtils.format(subcluster.getLastStartTime(), DATE_PATTERN);
+        String lastHeartBeat =
+            DateFormatUtils.format(subcluster.getLastHeartBeat(), DATE_PATTERN);
+
+        // Prepare Resource
+        long totalMB = subClusterInfo.getTotalMB();
+        String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
+        long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
+        String resources = String.format("<Memory:%s, VCore:%s>", totalMBDesc, totalVirtualCores);
+
+        // Prepare Node
+        long totalNodes = subClusterInfo.getTotalNodes();
+        long activeNodes = subClusterInfo.getActiveNodes();
+        String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>",
+            totalNodes, activeNodes);
+
+        // Prepare HTML Table
+        tbody.tr().$id(subClusterId.toString())
+            .td().$class("details-control").a(herfWebAppAddress, anchorText).__()
+            .td(subcluster.getState().name())
+            .td(lastStartTime)
+            .td(lastHeartBeat)
+            .td(resources)
+            .td(nodes)
+            .__();
+
+        subclusterMap.put("subcluster", subClusterId.getId());
+        subclusterMap.put("capability", capability);
+        lists.add(subclusterMap);
+      }
+    } catch (Exception e) {
+      LOG.error("Cannot render Router Federation.", e);
+    }
+
+    // Init FederationBlockTableJs
+    initFederationSubClusterDetailTableJs(html, lists);
+
+    // Tips
+    tbody.__().__().div().p().$style("color:red")
+        .__("*The application counts are local per subcluster").__().__();
+  }
+
+  /**
+   * Initialize Html page when Federation is not enabled.
+   *
+   * @param html html object
+   */
+  private void initHtmlPageFederationNotEnabled(Block html) {
+    // When Federation is not enabled, user information needs to be prompted
+    Hamlet.DIV<Hamlet> div = html.div("#div_id");
+    div.p().$style("color:red").__("Federation is not Enabled.").__()
+        .p().__()
+        .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
+        .p().$style("color:blue").__()
+        .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
+        "Hadoop: YARN Federation").
+        __();
   }
 }

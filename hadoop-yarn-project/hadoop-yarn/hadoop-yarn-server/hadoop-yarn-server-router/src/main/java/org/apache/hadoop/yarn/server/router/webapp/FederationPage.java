@@ -47,12 +47,14 @@ class FederationPage extends RouterView {
   }
 
   private String rmsTableInit() {
-    StringBuilder b = tableInit().append(", aoColumnDefs: [");
-    b.append("{'bSearchable': false, 'aTargets': [ 2 ]}")
-        .append(", {'sType': 'title-numeric', 'bSearchable': false, "
-            + "'aTargets': [ 2 ] }")
-        .append(", {'sType': 'title-numeric', 'aTargets': [ 2 ]}")
+    StringBuilder builder = tableInit().append(", aoColumnDefs: [");
+    builder
+        .append("{'sName':'State', 'sType':'string', 'bSearchable':false, 'aTargets':[1]},")
+        .append("{'sName':'LastStartTime', 'sType':'string', 'bSearchable':false, 'aTargets':[2]},")
+        .append("{'sName':'lastHeartBeat', 'sType':'string', 'bSearchable':false, 'aTargets':[3]},")
+        .append("{'sName':'resource', 'sType':'string', 'bSearchable':false, 'aTargets':[4]},")
+        .append("{'sName':'nodes', 'sType':'string', 'bSearchable':false, 'aTargets':[5]}")
         .append("]}");
-    return b.toString();
+    return builder.toString();
   }
 }
