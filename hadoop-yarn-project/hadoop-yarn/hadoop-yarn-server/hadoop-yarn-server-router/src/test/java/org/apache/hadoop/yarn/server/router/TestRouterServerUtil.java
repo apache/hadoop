@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
@@ -45,7 +44,7 @@ public class TestRouterServerUtil {
   public static final Logger LOG = LoggerFactory.getLogger(TestRouterServerUtil.class);
 
   @Test
-  public void TestConvertReservationDefinition() {
+  public void testConvertReservationDefinition() {
     // Prepare parameters
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     ReservationSubmissionRequestInfo requestInfo =
@@ -95,7 +94,7 @@ public class TestRouterServerUtil {
   }
 
   @Test
-  public void TestConvertReservationDefinitionEmpty() throws Exception {
+  public void testConvertReservationDefinitionEmpty() throws Exception {
 
     // param ReservationDefinitionInfo is Null
     ReservationDefinitionInfo definitionInfo = null;
