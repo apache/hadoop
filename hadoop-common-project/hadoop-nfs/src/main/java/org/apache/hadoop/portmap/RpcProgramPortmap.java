@@ -18,6 +18,7 @@
 package org.apache.hadoop.portmap;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -54,7 +55,7 @@ final class RpcProgramPortmap extends IdleStateHandler {
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcProgramPortmap.class);
 
-  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
+  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<>();
 
   /** ChannelGroup that remembers all active channels for gracefully shutdown. */
   private final ChannelGroup allChannels;
@@ -207,5 +208,9 @@ final class RpcProgramPortmap extends IdleStateHandler {
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable t) {
     LOG.warn("Encountered ", t);
     ctx.channel().close();
+  }
+
+  public Map<String, PortmapMapping> getMap() {
+    return map;
   }
 }

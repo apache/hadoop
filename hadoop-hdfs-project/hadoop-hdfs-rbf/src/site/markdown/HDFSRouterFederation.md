@@ -46,7 +46,6 @@ This approach has the same architecture as [YARN federation](../../hadoop-yarn/h
 ### Example flow
 The simplest configuration deploys a Router on each NameNode machine.
 The Router monitors the local NameNode and its state and heartbeats to the State Store.
-The Router monitors the local NameNode and heartbeats the state to the State Store.
 When a regular DFS client contacts any of the Routers to access a file in the federated filesystem, the Router checks the Mount Table in the State Store (i.e., the local cache) to find out which subcluster contains the file.
 Then it checks the Membership table in the State Store (i.e., the local cache) for the NameNode responsible for the subcluster.
 After it has identified the correct NameNode, the Router proxies the request.
