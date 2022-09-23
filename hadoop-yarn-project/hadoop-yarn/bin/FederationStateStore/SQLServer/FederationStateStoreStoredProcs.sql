@@ -117,6 +117,7 @@ AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
+    
         SELECT
             [applicationId],
             [homeSubCluster],
@@ -129,6 +130,7 @@ AS BEGIN
              FROM [dbo].[applicationsHomeSubCluster]
              WHERE [homeSubCluster] = @homeSubCluster OR @homeSubCluster = '') AS applicationsHomeSubCluster
         WHERE app_rank <= @limit;
+
     END TRY
 
     BEGIN CATCH
