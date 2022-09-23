@@ -209,6 +209,7 @@ The versions supported by MySQL are as follows:
 
 1. MySQL 5.7
 2. MySQL 8.0
+MySQL 5.7 and above can be used.
 
 **Note:** Cannot Support MySQL Versions Below MySQL 5.6 (includes MySQL 5.6)
 
@@ -222,7 +223,7 @@ The versions supported by SQL-Server are as follows:
 3. SQL Server 2016 Enterprise
 4. SQL Server 2017 Enterprise
 5. SQL Server 2019 Enterprise
-
+SQL Server 2008 R2 and above can be used.
 
 ####Optional:
 
