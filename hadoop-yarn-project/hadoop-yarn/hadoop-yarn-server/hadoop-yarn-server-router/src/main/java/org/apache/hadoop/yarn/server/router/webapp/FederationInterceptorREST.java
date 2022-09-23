@@ -43,7 +43,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1613,7 +1615,81 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) {
-    throw new NotImplementedException("Code is not implemented");
+
+    // Parameter Verification
+    if (queue == null || queue.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
+    }
+
+    if (username == null || username.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the username is empty or null.");
+    }
+
+    if (queueAclType == null || queueAclType.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the queueAclType is empty or null.");
+    }
+
+    // Traverse SubCluster and call checkUserAccessToQueue Api
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, String.class, String.class,
+          HttpServletRequest.class};
+      Object[] args = new Object[]{queue, username, queueAclType, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("checkUserAccessToQueue", argsClasses, args);
+      Map<SubClusterInfo, RMQueueAclInfo> rMQueueAclInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, RMQueueAclInfo.class);
+
+      boolean allowed = true;
+      List<String> subClusterDiagnostics = new ArrayList<>();
+      for (Map.Entry<SubClusterInfo, RMQueueAclInfo> item : rMQueueAclInfoMap.entrySet()) {
+        SubClusterInfo subClusterInfo = item.getKey();
+        RMQueueAclInfo rMQueueAclInfo = item.getValue();
+        if (subClusterInfo == null || rMQueueAclInfo == null) {
+          allowed = false;
+          subClusterDiagnostics.add("SubCluster Or RMQueueAclInfo Is Empty.");
+          break;
+        }
+        allowed = allowed && rMQueueAclInfo.isAllowed();
+        String diagnostics = rMQueueAclInfo.getDiagnostics();
+        if (diagnostics != null && !diagnostics.isEmpty()) {
+          subClusterDiagnostics.add(diagnostics);
+        }
+      }
+
+      // All subClusters have successfully returned information
+      // before the information can be merged and returned,
+      // otherwise an exception will be thrown.
+      if (subClustersActive.size() != rMQueueAclInfoMap.size()) {
+        Collection<SubClusterInfo> subClusterInfoList = subClustersActive.values()
+            .stream().filter(subClusterInfo -> !rMQueueAclInfoMap.containsKey(subClusterInfo))
+            .collect(Collectors.toList());
+        for (SubClusterInfo subClusterInfo : subClusterInfoList) {
+          SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+          subClusterDiagnostics.add(
+              String.format("SubCluster = %s call checkUserAccessToQueue Failed.",
+              subClusterId.getId()));
+        }
+      }
+
+      // If allowed==false or subClusterDiagnostics.size > 0, return an error message
+      if (!allowed || CollectionUtils.isNotEmpty(subClusterDiagnostics)) {
+        String diagnostics = StringUtils.join(subClusterDiagnostics, ",");
+        return new RMQueueAclInfo(false, username, diagnostics);
+      }
+
+      // Return verification pass information
+      return new RMQueueAclInfo(true, username, StringUtils.EMPTY);
+
+    } catch (NotFoundException e) {
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
+    } catch (IOException e) {
+      RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
+    }
+
+    throw new RuntimeException("checkUserAccessToQueue error.");
   }
 
   @Override
