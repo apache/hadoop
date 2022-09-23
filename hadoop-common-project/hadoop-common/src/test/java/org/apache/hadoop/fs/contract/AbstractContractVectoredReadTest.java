@@ -393,39 +393,40 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
     try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))) {
       in.readVectored(fileRanges, value -> pool.getBuffer(true, value));
-      // user can perform other computations while waiting for IO.
       for (FileRange res : fileRanges) {
         dataProcessor.submit(() -> {
           try {
-            readBufferValidateDataAndReturnToPool(pool, res, countDown);
+            readBufferValidateDataAndReturnToPool(res, countDown);
           } catch (Exception e) {
-            LOG.error("Error while process result for {} ", res, e);
+            String error = String.format("Error while processing result for %s", res);
+            LOG.error(error, e);
+            ContractTestUtils.fail(error, e);
           }
         });
       }
-      if (!countDown.await(100, TimeUnit.SECONDS)) {
-        throw new AssertionError("Error while processing vectored io results");
+      // user can perform other computations while waiting for IO.
+      if (!countDown.await(VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        ContractTestUtils.fail("Timeout/Error while processing vectored io results");
       }
     } finally {
-      pool.release();
       HadoopExecutors.shutdown(dataProcessor, LOG, 100, TimeUnit.SECONDS);
     }
   }
 
-  private void readBufferValidateDataAndReturnToPool(ByteBufferPool pool,
-                                                     FileRange res,
+  private void readBufferValidateDataAndReturnToPool(FileRange res,
                                                      CountDownLatch countDownLatch)
           throws IOException, TimeoutException {
     CompletableFuture<ByteBuffer> data = res.getData();
-    ByteBuffer buffer = FutureIO.awaitFuture(data,
-            VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
-            TimeUnit.SECONDS);
     // Read the data and perform custom operation. Here we are just
     // validating it with original data.
-    assertDatasetEquals((int) res.getOffset(), "vecRead",
-            buffer, res.getLength(), DATASET);
-    // return buffer to pool.
-    pool.putBuffer(buffer);
+    FutureIO.awaitFuture(data.thenAccept(buffer -> {
+              assertDatasetEquals((int) res.getOffset(),
+                      "vecRead", buffer, res.getLength(), DATASET);
+              // return buffer to the pool once read.
+              pool.putBuffer(buffer);
+            }), VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+
+    // countdown to notify main thread that processing has been done.
     countDownLatch.countDown();
   }
 
