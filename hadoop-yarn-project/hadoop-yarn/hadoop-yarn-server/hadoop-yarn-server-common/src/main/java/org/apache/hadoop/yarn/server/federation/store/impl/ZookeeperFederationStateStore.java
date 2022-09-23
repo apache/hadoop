@@ -833,24 +833,24 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    return null;
+    throw new NotImplementedException("Code is not implemented");
   }
 }

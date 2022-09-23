@@ -282,7 +282,7 @@ public class TestFederationStateStoreFacade {
   public void testStoreNewToken() throws YarnException, IOException {
     // store new rm-token
     RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
-            new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
     int sequenceNumber = 1;
     dtId1.setSequenceNumber(sequenceNumber);
     Long renewDate1 = Time.now();
