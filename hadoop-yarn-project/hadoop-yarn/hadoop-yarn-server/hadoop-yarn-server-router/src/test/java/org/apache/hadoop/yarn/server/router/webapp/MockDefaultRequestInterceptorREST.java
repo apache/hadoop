@@ -953,12 +953,12 @@ public class MockDefaultRequestInterceptorREST
     ReservationRequestsInfo resReqsInfo = resInfo.getReservationRequests();
     if (resReqsInfo == null || resReqsInfo.getReservationRequest() == null
         || resReqsInfo.getReservationRequest().isEmpty()) {
-       throw new BadRequestException("The ReservationDefinition should " +
+      throw new BadRequestException("The ReservationDefinition should " +
            "contain at least one ReservationRequest");
     }
 
     if (resContext.getReservationId() == null) {
-       throw new BadRequestException("Update operations must specify an existing ReservaitonId");
+      throw new BadRequestException("Update operations must specify an existing ReservaitonId");
     }
 
     ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
@@ -967,14 +967,14 @@ public class MockDefaultRequestInterceptorREST
     List<ReservationRequest> list = new ArrayList<>();
 
     for (ReservationRequestInfo resReqInfo : resReqsInfo.getReservationRequest()) {
-       ResourceInfo rInfo = resReqInfo.getCapability();
-       Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
-       int numContainers = resReqInfo.getNumContainers();
-       int minConcurrency = resReqInfo.getMinConcurrency();
-       long duration = resReqInfo.getDuration();
-       ReservationRequest rr = ReservationRequest.newInstance(
-           capability, numContainers, minConcurrency, duration);
-       list.add(rr);
+      ResourceInfo rInfo = resReqInfo.getCapability();
+      Resource capability = Resource.newInstance(rInfo.getMemorySize(), rInfo.getvCores());
+      int numContainers = resReqInfo.getNumContainers();
+      int minConcurrency = resReqInfo.getMinConcurrency();
+      long duration = resReqInfo.getDuration();
+      ReservationRequest rr = ReservationRequest.newInstance(
+          capability, numContainers, minConcurrency, duration);
+      list.add(rr);
     }
 
     ReservationRequests reqs = ReservationRequests.newInstance(list, requestInterpreter);

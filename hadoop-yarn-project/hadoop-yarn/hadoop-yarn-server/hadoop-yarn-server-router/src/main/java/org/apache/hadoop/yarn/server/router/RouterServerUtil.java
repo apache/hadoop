@@ -308,6 +308,12 @@ public final class RouterServerUtil {
   public static ReservationDefinition convertReservationDefinition(
       ReservationDefinitionInfo definitionInfo) {
 
+    if (definitionInfo == null || definitionInfo.getReservationRequests() == null
+        || definitionInfo.getReservationRequests().getReservationRequest() == null
+        || definitionInfo.getReservationRequests().getReservationRequest().isEmpty()) {
+      throw new RuntimeException("definitionInfo Or ReservationRequests is Null.");
+    }
+
     // basic variable
     long arrival = definitionInfo.getArrival();
     long deadline = definitionInfo.getDeadline();

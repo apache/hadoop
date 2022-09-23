@@ -1292,7 +1292,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     return response;
   }
 
-  private ReservationSubmissionRequestInfo getReservationSubmissionRequestInfo(
+  public static ReservationSubmissionRequestInfo getReservationSubmissionRequestInfo(
       ReservationId reservationId) {
 
     ReservationSubmissionRequest resSubRequest =
@@ -1310,7 +1310,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     return resSubmissionRequestInfo;
   }
 
-  private ReservationSubmissionRequest getReservationSubmissionRequest(
+  public static ReservationSubmissionRequest getReservationSubmissionRequest(
       ReservationId reservationId, int numContainers, int memory, int vcore) {
 
     // arrival time from which the resource(s) can be allocated.
