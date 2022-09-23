@@ -205,8 +205,23 @@ In the same directory we provide scripts to drop the Stored Procedures, the Tabl
 
 **Note:** the FederationStateStoreUser.sql defines a default user/password for the DB that you are **highly encouraged** to set this to a proper strong password.
 
+The versions supported by MySQL are as follows:
+
+1. MySQL 5.7
+2. MySQL 8.0
+
+**Note:** Cannot Support MySQL Versions Below MySQL 5.6 (includes MySQL 5.6)
+
 For SQL-Server, the process is similar, but the jdbc driver is already included.
 SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
+
+The versions supported by SQL-Server are as follows:
+
+1. SQL Server 2008 R2 Enterprise
+2. SQL Server 2012 Enterprise
+3. SQL Server 2016 Enterprise
+4. SQL Server 2017 Enterprise
+5. SQL Server 2019 Enterprise
 
 
 ####Optional:
