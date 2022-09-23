@@ -29,11 +29,11 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SimpleAppInfo {
 
-  protected int id;
+  private int id;
 
-  protected AppState state;
+  private AppState state;
 
-  protected String trackingUrl;
+  private String trackingUrl;
 
   public SimpleAppInfo() {
   }

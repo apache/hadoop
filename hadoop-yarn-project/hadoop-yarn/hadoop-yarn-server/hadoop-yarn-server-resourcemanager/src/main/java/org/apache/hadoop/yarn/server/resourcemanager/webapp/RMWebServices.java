@@ -1902,7 +1902,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       throw new NotFoundException("appId, " + appId + ", is empty or null");
     }
     ApplicationId id;
-    id = ConverterUtils.toApplicationId(recordFactory, appId);
+    id = ApplicationId.fromString(appId);
     if (id == null) {
       throw new NotFoundException("appId is null");
     }
