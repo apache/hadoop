@@ -213,9 +213,9 @@ class FederationBlock extends HtmlBlock {
 
         // Prepare subCluster
         SubClusterId subClusterId = subcluster.getSubClusterId();
-        String anchorText = "";
+        String subClusterIdText = "";
         if (subClusterId != null) {
-          anchorText = subClusterId.getId();
+          subClusterIdText = subClusterId.getId();
         }
 
         // Prepare WebAppAddress
@@ -248,8 +248,8 @@ class FederationBlock extends HtmlBlock {
             totalNodes, activeNodes);
 
         // Prepare HTML Table
-        tbody.tr().$id(subClusterId.toString())
-            .td().$class("details-control").a(herfWebAppAddress, anchorText).__()
+        tbody.tr().$id(subClusterIdText)
+            .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
             .td(subcluster.getState().name())
             .td(lastStartTime)
             .td(lastHeartBeat)
