@@ -1834,14 +1834,17 @@ public class TestFsDatasetImpl {
     }
   }
 
+  /**
+   * If delete the block asynchronously task stacked pending,
+   * It's ok get the replica from the ReplicaMap
+   */
   @Test
   public void testAysncDiskServiceDeleteReplica()
       throws IOException, InterruptedException, TimeoutException {
     HdfsConfiguration conf = new HdfsConfiguration();
     // Bump up replication interval.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
-    MiniDFSCluster cluster =
-        new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     DistributedFileSystem fs = cluster.getFileSystem();
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
@@ -1851,11 +1854,11 @@ public class TestFsDatasetImpl {
       final DataNodeFaultInjector injector = new DataNodeFaultInjector() {
         @Override
         public void delayDeleteReplica() {
-          // Lets wait for the remove replia process
+          // Lets wait for the remove replica process.
           try {
             semaphore.acquire(1);
           } catch (InterruptedException e) {
-            // ignore
+            // ignore.
           }
         }
       };
@@ -1873,14 +1876,14 @@ public class TestFsDatasetImpl {
       // DN side.
       DataNode dn = cluster.getDataNode(loc[0].getIpcPort());
       final FsDatasetImpl ds = (FsDatasetImpl) DataNodeTestUtils.getFSDataset(dn);
-      List<Block> blockList = com.google.common.collect.Lists.newArrayList(extendedBlock.getLocalBlock());
+      List<Block> blockList = Lists.newArrayList(extendedBlock.getLocalBlock());
       assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
       ds.invalidate(bpid, blockList.toArray(new Block[0]));
 
       // Test get blocks and datanodes.
       loc = DFSTestUtil.getAllBlocks(fs, path).get(0).getLocations();
       assertEquals(3, loc.length);
-      List<String> uuids = com.google.common.collect.Lists.newArrayList();
+      List<String> uuids = Lists.newArrayList();
       for (DatanodeInfo datanodeInfo : loc) {
         uuids.add(datanodeInfo.getDatanodeUuid());
       }
@@ -1891,23 +1894,22 @@ public class TestFsDatasetImpl {
       // If this replica is deleted from memory, the client would got an ReplicaNotFoundException.
       assertNotNull(ds.getStoredBlock(bpid, extendedBlock.getBlockId()));
 
-      // Make it resume the removeReplicaFromMem method
+      // Make it resume the removeReplicaFromMem method.
       semaphore.release(1);
 
       // Sleep for 1 second so that datanode can complete invalidate.
-      GenericTestUtils.waitFor(new com.google.common.base.Supplier<Boolean>() {
-        @Override public Boolean get() {
-          return ds.asyncDiskService.countPendingDeletions() == 0;
-        }
-      }, 100, 1000);
+      GenericTestUtils.waitFor(() -> ds.asyncDiskService.countPendingDeletions() == 0,
+          100, 1000);
 
-      // Sleep for two heartbeat times (default a heartbeat interval is 3 second).
-      Thread.sleep(6000);
+      // Sleep for two heartbeat times.
+      Thread.sleep(conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+          DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
+          TimeUnit.SECONDS, TimeUnit.MILLISECONDS) * 2);
 
       // Test get blocks and datanodes again.
       loc = DFSTestUtil.getAllBlocks(fs, path).get(0).getLocations();
       assertEquals(2, loc.length);
-      uuids = com.google.common.collect.Lists.newArrayList();
+      uuids = Lists.newArrayList();
       for (DatanodeInfo datanodeInfo : loc) {
         uuids.add(datanodeInfo.getDatanodeUuid());
       }
