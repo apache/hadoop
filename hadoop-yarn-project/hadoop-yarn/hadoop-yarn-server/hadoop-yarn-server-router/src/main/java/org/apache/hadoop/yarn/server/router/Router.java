@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.JvmPauseMonitor;
@@ -167,6 +168,16 @@ public class Router extends CompositeService {
 
   @VisibleForTesting
   public void startWepApp() {
+
+    // Initialize RouterWeb's CrossOrigin capability.
+    boolean enableCors = conf.getBoolean(YarnConfiguration.ROUTER_WEBAPP_ENABLE_CORS_FILTER,
+        YarnConfiguration.DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER);
+    if (enableCors) {
+      conf.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
+
+    LOG.info("Instantiating RouterWebApp at {}.", webAppAddress);
 
     RMWebAppUtil.setupSecurityAndFilters(conf, null);
 

@@ -153,7 +153,7 @@ public class CrossOriginFilter implements Filter {
   }
 
   @VisibleForTesting
-  String getAllowedHeadersHeader() {
+  public String getAllowedHeadersHeader() {
     return StringUtils.join(allowedHeaders, ',');
   }
 
