@@ -37,9 +37,10 @@ import java.nio.charset.StandardCharsets;
 
 public class MockRouter extends Router {
 
-  FederationStateStoreFacade facade;
+  private FederationStateStoreFacade facade;
 
-  public MockRouter(Configuration configuration) throws InterruptedException, YarnException, IOException {
+  public MockRouter(Configuration configuration)
+      throws InterruptedException, YarnException, IOException {
     this.setConfig(configuration);
 
     boolean isEnabled = configuration.getBoolean(
@@ -47,12 +48,13 @@ public class MockRouter extends Router {
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
     if (isEnabled) {
-       facade = FederationStateStoreFacade.getInstance();
-       initTestFederationSubCluster();
+      facade = FederationStateStoreFacade.getInstance();
+      initTestFederationSubCluster();
     }
   }
 
-  public void initTestFederationSubCluster() throws IOException, InterruptedException, YarnException {
+  public void initTestFederationSubCluster()
+      throws IOException, InterruptedException, YarnException {
 
     // Initialize subcluster information
     String scAmRMAddress = "5.6.7.8:5";

@@ -29,7 +29,8 @@ import java.io.IOException;
 public class TestFederationWebApp {
 
   @Test
-  public void testFederationWebViewNotEnable() throws InterruptedException, YarnException, IOException {
+  public void testFederationWebViewNotEnable()
+      throws InterruptedException, YarnException, IOException {
     // Test Federation is not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -37,7 +38,8 @@ public class TestFederationWebApp {
   }
 
   @Test
-  public void testFederationWebViewEnable() throws InterruptedException, YarnException, IOException {
+  public void testFederationWebViewEnable()
+      throws InterruptedException, YarnException, IOException {
     // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
