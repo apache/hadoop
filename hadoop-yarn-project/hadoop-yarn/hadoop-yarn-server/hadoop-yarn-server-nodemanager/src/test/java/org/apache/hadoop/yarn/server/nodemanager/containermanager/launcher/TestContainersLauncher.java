@@ -38,7 +38,6 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -183,11 +182,8 @@ public class TestContainersLauncher {
   @Test
   public void testCleanupContainerEvent()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    Map<ContainerId, ContainerLaunch> dummyMap = Collections
-        .synchronizedMap(new HashMap<>());
-    dummyMap.put(containerId, containerLaunch);
     spy.running.clear();
-    spy.running.putAll(dummyMap);
+    spy.running.put(containerId, containerLaunch);
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER);
@@ -201,11 +197,8 @@ public class TestContainersLauncher {
   @Test
   public void testCleanupContainerForReINITEvent()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    Map<ContainerId, ContainerLaunch> dummyMap = Collections
-        .synchronizedMap(new HashMap<>());
-    dummyMap.put(containerId, containerLaunch);
     spy.running.clear();
-    spy.running.putAll(dummyMap);
+    spy.running.put(containerId, containerLaunch);
 
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.CLEANUP_CONTAINER_FOR_REINIT);
@@ -222,9 +215,6 @@ public class TestContainersLauncher {
   @Test
   public void testSignalContainerEvent()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    Map<ContainerId, ContainerLaunch> dummyMap = Collections
-        .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
-    dummyMap.put(containerId, containerLaunch);
 
     SignalContainersLauncherEvent dummyEvent =
         mock(SignalContainersLauncherEvent.class);
@@ -235,7 +225,7 @@ public class TestContainersLauncher {
         .thenReturn(appId);
 
     spy.running.clear();
-    spy.running.putAll(dummyMap);
+    spy.running.put(containerId, containerLaunch);
     when(dummyEvent.getType())
         .thenReturn(ContainersLauncherEventType.SIGNAL_CONTAINER);
     when(dummyEvent.getCommand())
@@ -243,7 +233,7 @@ public class TestContainersLauncher {
     doNothing().when(containerLaunch)
         .signalContainer(SignalContainerCommand.GRACEFUL_SHUTDOWN);
     spy.handle(dummyEvent);
-    assertEquals(1, dummyMap.size());
+    assertEquals(1, spy.running.size());
     Mockito.verify(containerLaunch, Mockito.times(1))
         .signalContainer(SignalContainerCommand.GRACEFUL_SHUTDOWN);
   }
