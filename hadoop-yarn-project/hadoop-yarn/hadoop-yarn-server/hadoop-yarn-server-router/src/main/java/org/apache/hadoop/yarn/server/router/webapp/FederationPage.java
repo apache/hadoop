@@ -33,7 +33,7 @@ class FederationPage extends RouterView {
   @Override
   protected void preHead(Page.HTML<__> html) {
     commonPreHead(html);
-    setTitle("About The Federation");
+    setTitle("About The YARN Federation");
     set(DATATABLES_ID, "rms");
     set("ui.div.id", "div_id");
     set(initID(DATATABLES, "rms"), rmsTableInit());

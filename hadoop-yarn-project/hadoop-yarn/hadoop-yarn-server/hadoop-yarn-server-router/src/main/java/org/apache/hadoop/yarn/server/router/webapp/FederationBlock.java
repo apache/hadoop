@@ -67,10 +67,8 @@ class FederationBlock extends HtmlBlock {
     // If Yarn Federation is enabled.
     if (isEnabled) {
       initHtmlPageFederationEnabled(html);
-    }
-
-    // If Yarn Federation is not enabled.
-    if(!isEnabled) {
+    } else {
+      // If Yarn Federation is not enabled.
       initHtmlPageFederationNotEnabled(html);
     }
   }
@@ -198,8 +196,7 @@ class FederationBlock extends HtmlBlock {
       // Binding to the FederationStateStore
       FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
 
-      Map<SubClusterId, SubClusterInfo> subClustersInfo =
-          facade.getSubClusters(true);
+      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
 
       // Sort the SubClusters
       List<SubClusterInfo> subclusters = new ArrayList<>();
@@ -241,8 +238,7 @@ class FederationBlock extends HtmlBlock {
         // Prepare Node
         long totalNodes = subClusterInfo.getTotalNodes();
         long activeNodes = subClusterInfo.getActiveNodes();
-        String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>",
-            totalNodes, activeNodes);
+        String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>", totalNodes, activeNodes);
 
         // Prepare HTML Table
         tbody.tr().$id(subClusterIdText)

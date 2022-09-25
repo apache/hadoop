@@ -61,7 +61,7 @@ public class MockRouter extends Router {
     String scWebAppAddress = "127.0.0.1:8080";
 
     // Initialize subcluster capability
-    String[] capabilityPathItems = new String[] {".", "target", "test-classes", "capability" };
+    String[] capabilityPathItems = new String[] {".", "target", "test-classes", "capability"};
     String capabilityPath = StringUtils.join(capabilityPathItems, File.separator);
     String capabilityJson =
         FileUtils.readFileToString(new File(capabilityPath), StandardCharsets.UTF_8);
