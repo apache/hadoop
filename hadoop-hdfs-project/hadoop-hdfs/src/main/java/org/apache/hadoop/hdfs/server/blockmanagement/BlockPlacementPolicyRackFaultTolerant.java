@@ -223,7 +223,9 @@ public class BlockPlacementPolicyRackFaultTolerant extends BlockPlacementPolicyD
     // if node is DECOMMISSIONING and try a node on local rack, otherwise choose randomly,
     // Here is a point to explain, currently we only consider the scenario
     // where maxNodesPerRack is 1.
-    boolean isInResult = results.contains(writer);
+    final Node tmpWriter = writer;
+    boolean isInResult = results.stream().anyMatch(datanodeStorageInfo ->
+        datanodeStorageInfo.getDatanodeDescriptor().getName().equals(tmpWriter.getName()));
     if (!isInResult) {
       writer = chooseLocalStorage(writer, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes, true)
