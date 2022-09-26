@@ -1215,7 +1215,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return applicationStatisticsInfo;
     } catch (IOException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("get all active subclusters error.", e);
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("getAppStatistics error.", e);
@@ -1243,7 +1243,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return nodeToLabelsInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowIOException("get all active subclusters error.", e);
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getNodeToLabels error.", e);
@@ -1280,11 +1280,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return labelsToNodesInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowIOException("get all active subclusters error.", e);
+      RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getLabelsToNodes error.", e);
     }
+    routerMetrics.incrLabelsToNodesFailedRetrieved();
     throw new RuntimeException("getLabelsToNodes Failed.");
   }
 
@@ -1304,6 +1305,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
     try {
+      long startTime = clock.getTime();
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class};
@@ -1313,13 +1315,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
       Set<NodeLabel> hashSets = Sets.newHashSet();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
-      return new NodeLabelsInfo(hashSets);
+      NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+      return nodeLabelsInfo;
     } catch (NotFoundException e) {
+      routerMetrics.incrClusterNodeLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
+      routerMetrics.incrClusterNodeLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
     }
-    return null;
+    routerMetrics.incrClusterNodeLabelsFailedRetrieved();
+    throw new RuntimeException("getClusterNodeLabels Failed.");
   }
 
   @Override
@@ -1338,6 +1346,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
     try {
+      long startTime = clock.getTime();
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class};
@@ -1347,13 +1356,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
            invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
       Set<NodeLabel> hashSets = Sets.newHashSet();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
-      return new NodeLabelsInfo(hashSets);
+      NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+      return nodeLabelsInfo;
     } catch (NotFoundException e) {
+      routerMetrics.incrLabelsToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
+      routerMetrics.incrLabelsToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
     }
-    return null;
+    routerMetrics.incrLabelsToNodesFailedRetrieved();
+    throw new RuntimeException("getLabelsOnNode Failed.");
   }
 
   @Override
