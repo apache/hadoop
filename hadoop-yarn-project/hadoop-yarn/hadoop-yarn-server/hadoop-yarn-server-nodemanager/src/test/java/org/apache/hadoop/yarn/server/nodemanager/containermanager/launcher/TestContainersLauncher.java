@@ -39,8 +39,6 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -241,32 +239,26 @@ public class TestContainersLauncher {
   @Test
   public void testPauseContainerEvent()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    Map<ContainerId, ContainerLaunch> dummyMap = Collections
-        .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
-    dummyMap.put(containerId, containerLaunch);
     spy.running.clear();
-    spy.running.putAll(dummyMap);
+    spy.running.put(containerId, containerLaunch);
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.PAUSE_CONTAINER);
     doNothing().when(containerLaunch).pauseContainer();
     spy.handle(event);
-    assertEquals(1, dummyMap.size());
+    assertEquals(1, spy.running.size());
     Mockito.verify(containerLaunch, Mockito.times(1)).pauseContainer();
   }
 
   @Test
   public void testResumeContainerEvent()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    Map<ContainerId, ContainerLaunch> dummyMap = Collections
-        .synchronizedMap(new HashMap<ContainerId, ContainerLaunch>());
-    dummyMap.put(containerId, containerLaunch);
     spy.running.clear();
-    spy.running.putAll(dummyMap);
+    spy.running.put(containerId, containerLaunch);
     when(event.getType())
         .thenReturn(ContainersLauncherEventType.RESUME_CONTAINER);
     doNothing().when(containerLaunch).resumeContainer();
     spy.handle(event);
-    assertEquals(1, dummyMap.size());
+    assertEquals(1, spy.running.size());
     Mockito.verify(containerLaunch, Mockito.times(1)).resumeContainer();
   }
 }
