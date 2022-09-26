@@ -1442,6 +1442,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetAppQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
@@ -1451,13 +1452,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       return interceptor.getAppQueue(hsr, appId);
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get queue by appId: %s.", appId);
     } catch (YarnException e) {
+      routerMetrics.incrGetAppQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("getAppQueue Failed.", e);
     }
-
-    return null;
+    routerMetrics.incrGetAppQueueFailedRetrieved();
+    throw new RuntimeException("getAppQueue Failed.");
   }
 
   @Override
