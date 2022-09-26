@@ -182,6 +182,28 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Throws an IOException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws IOException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowIOException(Throwable t, String errMsgFormat, Object... args)
+      throws IOException {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      throw new IOException(msg, t);
+    } else {
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+  }
+
+  /**
    * Throws an RunTimeException due to an error.
    *
    * @param errMsg the error message

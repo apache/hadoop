@@ -483,6 +483,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getAppActivitiesFailed call");
       metrics.incrGetAppActivitiesFailedRetrieved();
     }
+
+    public void getAppStatisticsFailed() {
+      LOG.info("Mocked: failed getAppStatisticsFailed call");
+      metrics.incrGetAppStatisticsFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -662,6 +667,11 @@ public class TestRouterMetrics {
     public void getAppActivitiesRetrieved(long duration) {
       LOG.info("Mocked: successful getAppActivities call with duration {}", duration);
       metrics.succeededGetAppActivitiesRetrieved(duration);
+    }
+
+    public void getAppStatisticsRetrieved(long duration) {
+      LOG.info("Mocked: successful getAppStatistics call with duration {}", duration);
+      metrics.succeededGetAppStatisticsRetrieved(duration);
     }
   }
 
@@ -1266,5 +1276,28 @@ public class TestRouterMetrics {
     badSubCluster.getAppActivitiesFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getAppActivitiesFailedRetrieved());
+  }
+
+  @Test
+  public void testGetAppStatisticsLatencyRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetAppStatisticsRetrieved();
+    goodSubCluster.getAppStatisticsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetAppStatisticsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAppStatisticsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getAppStatisticsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetAppStatisticsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetAppStatisticsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetAppStatisticsRetrievedFailed() {
+    long totalBadBefore = metrics.getAppStatisticsFailedRetrieved();
+    badSubCluster.getAppStatisticsFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+    metrics.getAppStatisticsFailedRetrieved());
   }
 }
