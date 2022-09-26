@@ -1376,22 +1376,29 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetAppPriorityFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppPriority(hsr, appId);
+      AppPriority appPriority = interceptor.getAppPriority(hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetAppPriorityRetrieved(stopTime - startTime);
+      return appPriority;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppPriorityFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppPriority appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppPriority Failed.", e);
+      routerMetrics.incrGetAppPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getAppPriority error.", e);
     }
-
-    return null;
+    routerMetrics.incrGetAppPriorityFailedRetrieved();
+    throw new RuntimeException("getAppPriority Failed.");
   }
 
   @Override
@@ -1400,26 +1407,34 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       YarnException, InterruptedException, IOException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     if (targetPriority == null) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the targetPriority is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.updateApplicationPriority(targetPriority, hsr, appId);
+      Response response = interceptor.updateApplicationPriority(targetPriority, hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededUpdateAppPriorityRetrieved((stopTime - startTime));
+      return response;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the updateApplicationPriority appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("updateApplicationPriority Failed.", e);
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("updateApplicationPriority error.", e);
     }
-
-    return null;
+    routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+    throw new RuntimeException("updateApplicationPriority Failed.");
   }
 
   @Override

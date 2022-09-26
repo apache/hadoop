@@ -111,8 +111,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetAppActivitiesFailedRetrieved;
   @Metric("# of getAppStatistics failed to be retrieved")
   private MutableGaugeInt numGetAppStatisticsFailedRetrieved;
-
-
+  @Metric("# of getAppPriority failed to be retrieved")
+  private MutableGaugeInt numGetAppPriorityFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -185,6 +185,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetAppActivitiesRetrieved;
   @Metric("Total number of successful Retrieved GetAppStatistics and latency(ms)")
   private MutableRate totalSucceededGetAppStatisticsRetrieved;
+  @Metric("Total number of successful Retrieved GetAppPriority and latency(ms)")
+  private MutableRate totalSucceededGetAppPriorityRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -224,6 +226,7 @@ public final class RouterMetrics {
   private MutableQuantiles listReservationLatency;
   private MutableQuantiles getAppActivitiesLatency;
   private MutableQuantiles getAppStatisticsLatency;
+  private MutableQuantiles getAppPriorityLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -362,6 +365,10 @@ public final class RouterMetrics {
     getAppStatisticsLatency =
         registry.newQuantiles("getAppStatisticsLatency",
             "latency of get app statistics timeouts", "ops", "latency", 10);
+
+    getAppPriorityLatency =
+        registry.newQuantiles("getAppPriorityLatency",
+            "latency of get app priority timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -559,6 +566,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetAppPriorityRetrieved() {
+    return totalSucceededGetAppPriorityRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -734,6 +746,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetAppPriorityRetrieved() {
+    return totalSucceededGetAppPriorityRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -892,6 +909,10 @@ public final class RouterMetrics {
 
   public int getAppStatisticsFailedRetrieved() {
     return numGetAppStatisticsFailedRetrieved.value();
+  }
+
+  public int getAppPriorityFailedRetrieved() {
+    return numGetAppPriorityFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1069,6 +1090,11 @@ public final class RouterMetrics {
     getAppStatisticsLatency.add(duration);
   }
 
+  public void succeededGetAppPriorityRetrieved(long duration) {
+    totalSucceededGetAppPriorityRetrieved.add(duration);
+    getAppPriorityLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1207,5 +1233,9 @@ public final class RouterMetrics {
 
   public void incrGetAppStatisticsFailedRetrieved() {
     numGetAppStatisticsFailedRetrieved.incr();
+  }
+
+  public void incrGetAppPriorityFailedRetrieved() {
+    numGetAppPriorityFailedRetrieved.incr();
   }
 }

@@ -488,6 +488,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getAppStatisticsFailed call");
       metrics.incrGetAppStatisticsFailedRetrieved();
     }
+
+    public void getAppPriorityFailed() {
+      LOG.info("Mocked: failed getAppPriorityFailed call");
+      metrics.incrGetAppPriorityFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -672,6 +677,11 @@ public class TestRouterMetrics {
     public void getAppStatisticsRetrieved(long duration) {
       LOG.info("Mocked: successful getAppStatistics call with duration {}", duration);
       metrics.succeededGetAppStatisticsRetrieved(duration);
+    }
+
+    public void getAppPriorityRetrieved(long duration) {
+      LOG.info("Mocked: successful getAppPriority call with duration {}", duration);
+      metrics.succeededGetAppPriorityRetrieved(duration);
     }
   }
 
@@ -1298,6 +1308,29 @@ public class TestRouterMetrics {
     long totalBadBefore = metrics.getAppStatisticsFailedRetrieved();
     badSubCluster.getAppStatisticsFailed();
     Assert.assertEquals(totalBadBefore + 1,
-    metrics.getAppStatisticsFailedRetrieved());
+        metrics.getAppStatisticsFailedRetrieved());
+  }
+
+  @Test
+  public void testGetAppPriorityLatencyRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetAppPriorityRetrieved();
+    goodSubCluster.getAppPriorityRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetAppPriorityRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getAppPriorityRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetAppPriorityRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetAppPriorityRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetAppPriorityRetrievedFailed() {
+    long totalBadBefore = metrics.getAppPriorityFailedRetrieved();
+    badSubCluster.getAppPriorityFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getAppPriorityFailedRetrieved());
   }
 }
