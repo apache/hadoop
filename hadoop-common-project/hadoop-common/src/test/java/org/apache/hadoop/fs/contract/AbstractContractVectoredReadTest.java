@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.FutureIOSupport;
-import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.FutureIO;
@@ -420,11 +419,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     // Read the data and perform custom operation. Here we are just
     // validating it with original data.
     FutureIO.awaitFuture(data.thenAccept(buffer -> {
-              assertDatasetEquals((int) res.getOffset(),
-                      "vecRead", buffer, res.getLength(), DATASET);
-              // return buffer to the pool once read.
-              pool.putBuffer(buffer);
-            }), VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      assertDatasetEquals((int) res.getOffset(),
+              "vecRead", buffer, res.getLength(), DATASET);
+      // return buffer to the pool once read.
+      pool.putBuffer(buffer);
+    }), VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // countdown to notify main thread that processing has been done.
     countDownLatch.countDown();
