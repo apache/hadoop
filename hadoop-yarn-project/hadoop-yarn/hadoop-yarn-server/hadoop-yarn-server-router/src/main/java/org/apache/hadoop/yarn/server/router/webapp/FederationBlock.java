@@ -64,13 +64,8 @@ class FederationBlock extends HtmlBlock {
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
 
-    // If Yarn Federation is enabled.
-    if (isEnabled) {
-      initHtmlPageFederationEnabled(html);
-    } else {
-      // If Yarn Federation is not enabled.
-      initHtmlPageFederationNotEnabled(html);
-    }
+    // init Html Page Federation
+    initHtmlPageFederation(html, isEnabled);
   }
 
   /**
@@ -112,74 +107,35 @@ class FederationBlock extends HtmlBlock {
       List<Map<String, String>> subClusterDetailMap) {
     Gson gson = new Gson();
     html.script().$type("text/javascript").
-         __("$(document).ready(function() { " +
-          " var scTableData = " + gson.toJson(subClusterDetailMap) + "; " +
-          " var table = $('#rms').DataTable(); " +
-          " $('#rms tbody').on('click', 'td.details-control', function () { " +
-          " var tr = $(this).closest('tr');  " +
-          " var row = table.row(tr); " +
-          " if (row.child.isShown()) {  " +
-          "  row.child.hide(); " +
-          "  tr.removeClass('shown'); " +
-          " } else { " +
-          "  var capabilityArr = scTableData.filter(item => (item.subcluster === row.id())); " +
-          "  var capabilityObj = JSON.parse(capabilityArr[0].capability).clusterMetrics; " +
-          "  row.child(" +
-          "     '<table>" +
-          "          <tr>" +
-          "              <td>" +
-          "                  <h3>Application Metrics</h3>" +
-          "                  ApplicationSubmitted* : '+ capabilityObj.appsSubmitted +' </p>" +
-          "                  ApplicationCompleted* : '+ capabilityObj.appsCompleted +' </p>" +
-          "                  ApplicationPending*   : '+ capabilityObj.appsPending +' </p>" +
-          "                  ApplicationRunning*   : '+ capabilityObj.appsRunning +' </p>" +
-          "                  ApplicationFailed*    : '+ capabilityObj.appsFailed +' </p> " +
-          "                  ApplicationKilled*    : '+ capabilityObj.appsKilled +' </p>" +
-          "              </td>" +
-          "              <td>" +
-          "                 <h3>Resource Metrics</h3>" +
-          "                 <h4>Memory</h4>" +
-          "                 TotalMB : '+ capabilityObj.totalMB +' </p>" +
-          "                 ReservedMB : '+ capabilityObj.reservedMB +' </p>" +
-          "                 AvailableMB : '+ capabilityObj.availableMB +' </p>" +
-          "                 AllocatedMB : '+ capabilityObj.allocatedMB +' </p>" +
-          "                 PendingMB : '+ capabilityObj.pendingMB +' </p>" +
-          "                 <h4>VirtualCores</h4>" +
-          "                 TotalVirtualCores : '+capabilityObj.totalVirtualCores+' </p>" +
-          "                 ReservedVirtualCores : '+capabilityObj.reservedVirtualCores+' </p>" +
-          "                 AvailableVirtualCore : '+capabilityObj.availableVirtualCores+' </p>" +
-          "                 AllocatedVirtualCores : '+capabilityObj.allocatedVirtualCores+' </p>" +
-          "                 PendingVirtualCores : '+capabilityObj.pendingVirtualCores+' </p>" +
-          "                 <h4>Containers</h4>" +
-          "                 ContainersAllocated : '+capabilityObj.containersAllocated+' </p>" +
-          "                 ContainersReserved : '+capabilityObj.containersReserved+' </p>" +
-          "                 ContainersPending : '+capabilityObj.containersPending+' </p>" +
-          "             </td>" +
-          "             <td>" +
-          "                <h3>Node Metrics</h3>" +
-          "                TotalNodes : '+capabilityObj.totalNodes+' </p>" +
-          "                LostNodes : '+capabilityObj.lostNodes+' </p>" +
-          "                UnhealthyNodes : '+capabilityObj.unhealthyNodes+' </p>" +
-          "                DecommissioningNodes : '+capabilityObj.decommissioningNodes+' </p>" +
-          "                DecommissionedNodes : '+capabilityObj.decommissionedNodes+' </p>" +
-          "                RebootedNodes : '+capabilityObj.rebootedNodes+' </p>" +
-          "                ActiveNodes : '+capabilityObj.activeNodes+' </p>" +
-          "                ShutdownNodes : '+capabilityObj.shutdownNodes+' " +
-          "             </td>" +
-          "          </tr>" +
-          "     </table>').show(); "+
-          "   tr.addClass('shown'); " +
-          " } " +
-          " }); });").__();
+        __(" var scTableData = " + gson.toJson(subClusterDetailMap) + "; ")
+        .__();
+    html.script(root_url("static/federation/federation.js"));
   }
 
   /**
-   * Initialize the Html page when Federation is enabled.
+   * Initialize the Html page.
    *
    * @param html html object
    */
-  private void initHtmlPageFederationEnabled(Block html) {
+  private void initHtmlPageFederation(Block html, boolean isEnabled) {
     List<Map<String, String>> lists = new ArrayList<>();
+
+    // If Yarn Federation is not enabled, the user needs to be prompted.
+    if (!isEnabled) {
+      html.style(".alert {padding: 15px; margin-bottom: 20px; " +
+          " border: 1px solid transparent; border-radius: 4px;}");
+      html.style(".alert-dismissable {padding-right: 35px;}");
+      html.style(".alert-info {color: #856404;background-color: #fff3cd;border-color: #ffeeba;}");
+
+      Hamlet.DIV<Hamlet> div = html.div("#div_id").$class("alert alert-dismissable alert-info");
+      div.p().$style("color:red").__("Federation is not Enabled.").__()
+          .p().__()
+          .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
+          .p().__()
+          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
+          "Hadoop: YARN Federation").
+          __();
+    }
 
     // Table header
     TBODY<TABLE<Hamlet>> tbody =
@@ -264,22 +220,5 @@ class FederationBlock extends HtmlBlock {
     // Tips
     tbody.__().__().div().p().$style("color:red")
         .__("*The application counts are local per subcluster").__().__();
-  }
-
-  /**
-   * Initialize Html page when Federation is not enabled.
-   *
-   * @param html html object
-   */
-  private void initHtmlPageFederationNotEnabled(Block html) {
-    // When Federation is not enabled, user information needs to be prompted
-    Hamlet.DIV<Hamlet> div = html.div("#div_id");
-    div.p().$style("color:red").__("Federation is not Enabled.").__()
-        .p().__()
-        .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
-        .p().$style("color:blue").__()
-        .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
-        "Hadoop: YARN Federation").
-        __();
   }
 }
