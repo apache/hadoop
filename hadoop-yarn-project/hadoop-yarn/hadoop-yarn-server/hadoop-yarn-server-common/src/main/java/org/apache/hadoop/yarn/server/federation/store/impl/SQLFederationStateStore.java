@@ -1389,6 +1389,11 @@ public class SQLFederationStateStore implements FederationStateStore {
         " according to reservation" + reservationId);
   }
 
+  @VisibleForTesting
+  public Connection getConn() {
+    return conn;
+  }
+
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
