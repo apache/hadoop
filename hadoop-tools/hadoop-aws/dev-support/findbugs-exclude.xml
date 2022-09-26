@@ -61,6 +61,7 @@
   </Match>
   <Match>
     <Class name="org.apache.hadoop.fs.s3a.S3AFileSystem"/>
+    <Field name="futurePool"/>
     <Bug pattern="IS2_INCONSISTENT_SYNC"/>
   </Match>
   <Match>
