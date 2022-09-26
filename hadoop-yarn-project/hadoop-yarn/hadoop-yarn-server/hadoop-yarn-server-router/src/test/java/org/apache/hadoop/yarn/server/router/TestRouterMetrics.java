@@ -478,6 +478,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getListReservationFailed call");
       metrics.incrListReservationFailedRetrieved();
     }
+
+    public void getAppActivitiesFailed() {
+      LOG.info("Mocked: failed getAppActivitiesFailed call");
+      metrics.incrGetAppActivitiesFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -652,6 +657,11 @@ public class TestRouterMetrics {
     public void getListReservationRetrieved(long duration) {
       LOG.info("Mocked: successful getListReservation call with duration {}", duration);
       metrics.succeededListReservationRetrieved(duration);
+    }
+
+    public void getAppActivitiesRetrieved(long duration) {
+      LOG.info("Mocked: successful getAppActivities call with duration {}", duration);
+      metrics.succeededGetAppActivitiesRetrieved(duration);
     }
   }
 
@@ -1233,5 +1243,28 @@ public class TestRouterMetrics {
     badSubCluster.getListReservationFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getListReservationFailedRetrieved());
+  }
+
+  @Test
+  public void testGetAppActivitiesRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetAppActivitiesRetrieved();
+    goodSubCluster.getAppActivitiesRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetAppActivitiesRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAppActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getAppActivitiesRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetAppActivitiesRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetAppActivitiesRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetAppActivitiesRetrievedFailed() {
+    long totalBadBefore = metrics.getAppActivitiesFailedRetrieved();
+    badSubCluster.getAppActivitiesFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getAppActivitiesFailedRetrieved());
   }
 }

@@ -107,6 +107,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numDeleteReservationFailedRetrieved;
   @Metric("# of listReservation failed to be retrieved")
   private MutableGaugeInt numListReservationFailedRetrieved;
+  @Metric("# of getAppActivities failed to be retrieved")
+  private MutableGaugeInt numGetAppActivitiesFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -175,6 +177,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededDeleteReservationRetrieved;
   @Metric("Total number of successful Retrieved ListReservation and latency(ms)")
   private MutableRate totalSucceededListReservationRetrieved;
+  @Metric("Total number of successful Retrieved GetAppActivities and latency(ms)")
+  private MutableRate totalSucceededGetAppActivitiesRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -212,6 +216,7 @@ public final class RouterMetrics {
   private MutableQuantiles updateReservationLatency;
   private MutableQuantiles deleteReservationLatency;
   private MutableQuantiles listReservationLatency;
+  private MutableQuantiles getAppActivitiesLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -342,6 +347,10 @@ public final class RouterMetrics {
     listReservationLatency =
         registry.newQuantiles("listReservationLatency",
             "latency of list reservation timeouts", "ops", "latency", 10);
+
+    getAppActivitiesLatency =
+        registry.newQuantiles("getAppActivitiesLatency",
+            "latency of get app activities timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -529,6 +538,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetAppActivitiesRetrieved() {
+    return totalSucceededGetAppActivitiesRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -694,6 +708,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetAppActivitiesRetrieved() {
+    return totalSucceededGetAppActivitiesRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -844,6 +863,10 @@ public final class RouterMetrics {
 
   public int getListReservationFailedRetrieved() {
     return numListReservationFailedRetrieved.value();
+  }
+
+  public int getAppActivitiesFailedRetrieved() {
+    return numGetAppActivitiesFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1011,6 +1034,11 @@ public final class RouterMetrics {
     listReservationLatency.add(duration);
   }
 
+  public void succeededGetAppActivitiesRetrieved(long duration) {
+    totalSucceededGetAppActivitiesRetrieved.add(duration);
+    getAppActivitiesLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1141,5 +1169,9 @@ public final class RouterMetrics {
 
   public void incrListReservationFailedRetrieved() {
     numListReservationFailedRetrieved.incr();
+  }
+
+  public void incrGetAppActivitiesFailedRetrieved() {
+    numGetAppActivitiesFailedRetrieved.incr();
   }
 }

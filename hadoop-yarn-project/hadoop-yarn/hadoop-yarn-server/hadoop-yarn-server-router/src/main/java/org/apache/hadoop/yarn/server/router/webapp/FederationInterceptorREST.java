@@ -1169,25 +1169,32 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // because the specific subCluster needs to be found according to the app_id,
     // and other verifications are directly handed over to the corresponding subCluster RM
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetAppActivitiesFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-
       final HttpServletRequest hsrCopy = clone(hsr);
-      return interceptor.getAppActivities(hsrCopy, appId, time, requestPriorities,
-          allocationRequestIds, groupBy, limit, actions, summarize);
+      AppActivitiesInfo appActivitiesInfo = interceptor.getAppActivities(hsrCopy, appId, time,
+          requestPriorities, allocationRequestIds, groupBy, limit, actions, summarize);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetAppActivitiesRetrieved(stopTime - startTime);
+      return appActivitiesInfo;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppActivitiesFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get subCluster by appId: %s.",
           appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppActivities Failed.", e);
+      routerMetrics.incrGetAppActivitiesFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getAppActivities error.", e);
     }
 
-    return null;
+    routerMetrics.incrGetAppActivitiesFailedRetrieved();
+    throw new RuntimeException("getAppActivities Failed.");
   }
 
   @Override
@@ -1205,9 +1212,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     } catch (IOException e) {
       RouterServerUtil.logAndThrowRunTimeException(e, "Get all active sub cluster(s) error.");
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException(e, "getAppStatistics error.");
+      RouterServerUtil.logAndThrowRunTimeException("getAppStatistics error.", e);
     }
-    return null;
+    throw new RuntimeException("getAppStatistics Failed.");
   }
 
   @Override
