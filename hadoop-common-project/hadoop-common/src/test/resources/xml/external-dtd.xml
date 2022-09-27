@@ -1,0 +1,7 @@
+<?xml version = "1.0" encoding = "UTF-8" standalone = "no" ?>
+<!DOCTYPE address SYSTEM "address.dtd">
+<address>
+    <name>First Last</name>
+    <company>Acme</company>
+    <phone>(555) 123-4567</phone>
+</address>
