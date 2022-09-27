@@ -249,6 +249,8 @@ public class SLSSchedulerCommons {
           schedulerEvent.getType()).time();
 
       ((SchedulerWrapper)scheduler).propagatedHandle(schedulerEvent);
+    } catch (Exception e) {
+      LOG.error("Caught exception while handling scheduler event", e);
     } finally {
       if (handlerTimer != null) {
         handlerTimer.stop();

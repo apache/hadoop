@@ -178,7 +178,7 @@ public abstract class SchedulerMetrics {
     pool.scheduleAtFixedRate(new HistogramsRunnable(), 0, 1000,
         TimeUnit.MILLISECONDS);
 
-    // a thread to output metrics for real-tiem tracking
+    // a thread to output metrics for real-time tracking
     pool.scheduleAtFixedRate(new MetricsLogRunnable(), 0, 1000,
         TimeUnit.MILLISECONDS);
 
@@ -255,6 +255,8 @@ public abstract class SchedulerMetrics {
         trackedQueues.add(queue);
         registerQueueMetrics(queue);
       }
+    } catch (Exception e) {
+      LOG.error("Caught exception from track a queue", e);
     } finally {
       queueLock.unlock();
     }
@@ -467,6 +469,8 @@ public abstract class SchedulerMetrics {
         schedulerHistogramList.add(histogram);
         histogramTimerMap.put(histogram, schedulerHandleTimerMap.get(e));
       }
+    } catch(Exception e) {
+      LOG.error("Caught exception during register scheduler metrics", e);
     } finally {
       samplerLock.unlock();
     }
@@ -510,6 +514,8 @@ public abstract class SchedulerMetrics {
             }
         );
       }
+    } catch(Exception e){
+      LOG.error("Caught exception from register node usage memory", e);
     } finally {
       samplerLock.unlock();
     }
