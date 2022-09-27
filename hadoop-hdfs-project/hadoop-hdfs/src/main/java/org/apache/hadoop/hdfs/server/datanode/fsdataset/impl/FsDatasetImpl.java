@@ -2408,13 +2408,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @return
    */
   boolean removeReplicaFromMem(final ExtendedBlock block, final FsVolumeImpl volume) {
-    final String blockPoolId = block.getBlockPoolId();
+    final String bpid = block.getBlockPoolId();
     final Block localBlock = block.getLocalBlock();
     final long blockId = localBlock.getBlockId();
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, blockPoolId)) {
-      final ReplicaInfo info = volumeMap.get(blockPoolId, localBlock);
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+      final ReplicaInfo info = volumeMap.get(bpid, localBlock);
       if (info == null) {
-        ReplicaInfo infoByBlockId = volumeMap.get(blockPoolId, blockId);
+        ReplicaInfo infoByBlockId = volumeMap.get(bpid, blockId);
         if (infoByBlockId == null) {
           // It is okay if the block is not found -- it
           // may be deleted earlier.
@@ -2454,8 +2454,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return false;
       }
 
-      ReplicaInfo removing = volumeMap.remove(blockPoolId, localBlock);
-      addDeletingBlock(blockPoolId, removing.getBlockId());
+      ReplicaInfo removing = volumeMap.remove(bpid, localBlock);
+      addDeletingBlock(bpid, removing.getBlockId());
       LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
       datanode.getMetrics().incrBlocksRemoved(1);
       if (removing instanceof ReplicaInPipeline) {
@@ -2465,7 +2465,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     if (volume.isTransientStorage()) {
       RamDiskReplicaTracker.RamDiskReplica replicaInfo = ramDiskReplicaTracker.
-          getReplica(blockPoolId, blockId);
+          getReplica(bpid, blockId);
       if (replicaInfo != null) {
         if (!replicaInfo.getIsPersisted()) {
           datanode.getMetrics().incrRamDiskBlocksDeletedBeforeLazyPersisted();
@@ -2481,7 +2481,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         ExtendedBlockId.fromExtendedBlock(block));
 
     // If the block is cached, start uncaching it.
-    cacheManager.uncacheBlock(blockPoolId, blockId);
+    cacheManager.uncacheBlock(bpid, blockId);
     return true;
   }
 

@@ -1840,10 +1840,10 @@ public class TestFsDatasetImpl {
   @Test
   public void testAysncDiskServiceDeleteReplica()
       throws IOException, InterruptedException, TimeoutException {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration config = new HdfsConfiguration();
     // Bump up replication interval.
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    config.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 10);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).numDataNodes(3).build();
     DistributedFileSystem fs = cluster.getFileSystem();
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
@@ -1901,7 +1901,7 @@ public class TestFsDatasetImpl {
           ds.asyncDiskService.countPendingDeletions() == 0, 100, 1000);
 
       // Sleep for two heartbeat times.
-      Thread.sleep(conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+      Thread.sleep(config.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
           DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
           TimeUnit.SECONDS, TimeUnit.MILLISECONDS) * 2);
 

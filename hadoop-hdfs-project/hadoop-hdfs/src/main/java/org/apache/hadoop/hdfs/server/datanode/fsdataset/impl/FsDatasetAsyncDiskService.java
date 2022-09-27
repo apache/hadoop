@@ -31,12 +31,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
-import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
-import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
