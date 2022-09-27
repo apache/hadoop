@@ -1447,17 +1447,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppQueue(hsr, appId);
+      AppQueue queue = interceptor.getAppQueue(hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetAppQueueRetrieved((stopTime - startTime));
+      return queue;
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException(e,
-          "Unable to get queue by appId: %s.", appId);
+      RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get queue by appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("getAppQueue Failed.", e);
+      RouterServerUtil.logAndThrowRunTimeException("getAppQueue error.", e);
     }
     routerMetrics.incrGetAppQueueFailedRetrieved();
     throw new RuntimeException("getAppQueue Failed.");
@@ -1469,26 +1472,34 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       InterruptedException, IOException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrUpdateAppQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     if (targetQueue == null) {
+      routerMetrics.incrUpdateAppQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the targetQueue is null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.updateAppQueue(targetQueue, hsr, appId);
+      Response response = interceptor.updateAppQueue(targetQueue, hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededUpdateAppQueueRetrieved((stopTime - startTime));
+      return response;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateAppQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to update app queue by appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("updateAppQueue Failed.", e);
+      routerMetrics.incrUpdateAppQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("updateAppQueue error.", e);
     }
-
-    return null;
+    routerMetrics.incrUpdateAppQueueFailedRetrieved();
+    throw new RuntimeException("updateAppQueue Failed.");
   }
 
   @Override
@@ -1555,6 +1566,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
+      long clockStartTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
@@ -1562,11 +1574,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = interceptor.listReservation(queue, reservationId, startTime, endTime,
           includeResourceAllocations, hsrCopy);
       if (response != null) {
+        long clockStopTime = clock.getTime();
+        routerMetrics.succeededListReservationRetrieved((clockStopTime - clockStartTime));
         return response;
       }
     } catch (YarnException e) {
       routerMetrics.incrListReservationFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("listReservation Failed.", e);
+      RouterServerUtil.logAndThrowRunTimeException("listReservation error.", e);
     }
 
     routerMetrics.incrListReservationFailedRetrieved();
