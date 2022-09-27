@@ -503,6 +503,11 @@ public class TestRouterMetrics {
       LOG.info("Mocked: failed getUpdateQueueFailed call");
       metrics.incrUpdateAppQueueFailedRetrieved();
     }
+
+    public void getAppTimeoutFailed() {
+      LOG.info("Mocked: failed getAppTimeoutFailed call");
+      metrics.incrGetAppTimeoutFailedRetrieved();
+    }
   }
 
   // Records successes for all calls
@@ -702,6 +707,11 @@ public class TestRouterMetrics {
     public void getUpdateQueueRetrieved(long duration) {
       LOG.info("Mocked: successful getUpdateQueue call with duration {}", duration);
       metrics.succeededUpdateAppQueueRetrieved(duration);
+    }
+
+    public void getAppTimeoutRetrieved(long duration) {
+      LOG.info("Mocked: successful getAppTimeout call with duration {}", duration);
+      metrics.succeededGetAppTimeoutRetrieved(duration);
     }
   }
 
@@ -1398,5 +1408,28 @@ public class TestRouterMetrics {
     badSubCluster.getUpdateQueueFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getUpdateAppQueueFailedRetrieved());
+  }
+
+  @Test
+  public void testGetAppTimeoutLatencyRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetAppTimeoutRetrieved();
+    goodSubCluster.getAppTimeoutRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetAppTimeoutRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetAppTimeoutRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getAppTimeoutRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetAppTimeoutRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetAppTimeoutRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetAppTimeoutRetrievedFailed() {
+    long totalBadBefore = metrics.getAppTimeoutFailedRetrieved();
+    badSubCluster.getAppTimeoutFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getAppTimeoutFailedRetrieved());
   }
 }

@@ -1566,7 +1566,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     }
 
     try {
-      long clockStartTime = clock.getTime();
+      long startTime1 = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
@@ -1574,8 +1574,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Response response = interceptor.listReservation(queue, reservationId, startTime, endTime,
           includeResourceAllocations, hsrCopy);
       if (response != null) {
-        long clockStopTime = clock.getTime();
-        routerMetrics.succeededListReservationRetrieved((clockStopTime - clockStartTime));
+        long stopTime = clock.getTime();
+        routerMetrics.succeededListReservationRetrieved((stopTime - startTime1));
         return response;
       }
     } catch (YarnException e) {
@@ -1592,25 +1592,34 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String type) throws AuthorizationException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetAppTimeoutFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     if (type == null || type.isEmpty()) {
+      routerMetrics.incrGetAppTimeoutFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the type is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppTimeout(hsr, appId, type);
+      AppTimeoutInfo appTimeoutInfo = interceptor.getAppTimeout(hsr, appId, type);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetAppTimeoutRetrieved((stopTime - startTime));
+      return appTimeoutInfo;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppTimeoutFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppTimeout appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppTimeout Failed.", e);
+      routerMetrics.incrGetAppTimeoutFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getAppTimeout error.", e);
     }
-    return null;
+    routerMetrics.incrGetAppTimeoutFailedRetrieved();
+    throw new RuntimeException("getAppTimeout Failed.");
   }
 
   @Override
