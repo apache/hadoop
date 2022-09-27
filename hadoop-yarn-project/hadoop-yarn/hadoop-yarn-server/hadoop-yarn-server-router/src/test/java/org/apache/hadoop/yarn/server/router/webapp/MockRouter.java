@@ -34,6 +34,8 @@ import org.apache.hadoop.yarn.server.router.Router;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MockRouter extends Router {
 
@@ -67,6 +69,12 @@ public class MockRouter extends Router {
     String capabilityPath = StringUtils.join(capabilityPathItems, File.separator);
     String capabilityJson =
         FileUtils.readFileToString(new File(capabilityPath), StandardCharsets.UTF_8);
+
+    // capability json needs to remove asflicense
+    String regex = "\"___asflicense__.*\\n(.*,\\n){1,15}.*\\n.*";
+    Pattern p = Pattern.compile(regex);
+    Matcher m = p.matcher(capabilityJson);
+    capabilityJson = m.replaceAll("").trim();
 
     // Initialize subcluster sc1
     SubClusterInfo sc1 =
