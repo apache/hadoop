@@ -48,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1627,21 +1628,30 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppTimeouts(hsr, appId);
+      AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetAppTimeoutsRetrieved((stopTime - startTime));
+      return appTimeoutsInfo;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the getAppTimeouts appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppTimeouts Failed.", e);
+      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getAppTimeouts error.", e);
     }
-    return null;
+
+    routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+    throw new RuntimeException("getAppTimeouts Failed.");
   }
 
   @Override
@@ -1650,25 +1660,35 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       YarnException, InterruptedException, IOException {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     if (appTimeout == null) {
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       throw new IllegalArgumentException("Parameter error, the appTimeout is null.");
     }
 
     try {
+      long startTime = Time.now();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
+      Response response = interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededUpdateAppTimeoutsRetrieved((stopTime - startTime));
+      return response;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the updateApplicationTimeout appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("updateApplicationTimeout Failed.", e);
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("updateApplicationTimeout error.", e);
     }
-    return null;
+
+    routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+    throw new RuntimeException("updateApplicationTimeout Failed.");
   }
 
   @Override
