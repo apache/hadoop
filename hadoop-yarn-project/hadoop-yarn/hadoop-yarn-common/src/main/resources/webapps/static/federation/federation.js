@@ -30,46 +30,46 @@ $(document).ready(function() {
             row.child(
                 '<table>' +
                 '   <tr>' +
-                '      <td> ' +
-                '         <h3>Application Metrics</h3>  ' +
-                '         ApplicationSubmitted* : '+ capabilityObj.appsSubmitted +' </p>' +
-                '         ApplicationCompleted* : '+ capabilityObj.appsCompleted +' </p>' +
-                '         ApplicationPending*   : '+ capabilityObj.appsPending +' </p>' +
-                '         ApplicationRunning*   : '+ capabilityObj.appsRunning +' </p>'+
-                '         ApplicationFailed*    : '+ capabilityObj.appsFailed +' </p>'+
-                '         ApplicationKilled*    : '+ capabilityObj.appsKilled +' </p>'+
+                '      <td>' +
+                '         <h3>Application Metrics</h3>' +
+                '         ApplicationSubmitted* : ' + capabilityObj.appsSubmitted + ' </p>' +
+                '         ApplicationCompleted* : ' + capabilityObj.appsCompleted + ' </p>' +
+                '         ApplicationPending*   : ' + capabilityObj.appsPending + ' </p>' +
+                '         ApplicationRunning*   : ' + capabilityObj.appsRunning + ' </p>' +
+                '         ApplicationFailed*    : ' + capabilityObj.appsFailed + ' </p>' +
+                '         ApplicationKilled*    : ' + capabilityObj.appsKilled + ' </p>' +
                 '      </td>' +
                 '      <td>' +
-                '        <h3>Resource Metrics</h3>'+
-                '        <h4>Memory</h4>'+
-                '        TotalMB : '+ capabilityObj.totalMB +' </p>' +
-                '        ReservedMB : '+ capabilityObj.reservedMB +' </p>'+
-                '        AvailableMB : '+ capabilityObj.availableMB +' </p> '+
-                '        AllocatedMB : '+ capabilityObj.allocatedMB +' </p> '+
-                '        PendingMB : '+ capabilityObj.pendingMB +' </p>' +
-                '        <h4>VirtualCores</h4>'+
-                '        TotalVirtualCores : '+capabilityObj.totalVirtualCores+' </p>'+
-                '        ReservedVirtualCores : '+capabilityObj.reservedVirtualCores+' </p>'+
-                '        AvailableVirtualCore : '+capabilityObj.availableVirtualCores+' </p>'+
-                '        AllocatedVirtualCores : '+capabilityObj.allocatedVirtualCores+' </p>'+
-                '        PendingVirtualCores : '+capabilityObj.pendingVirtualCores+' </p>'+
-                '        <h4>Containers</h4>'+
-                '        ContainersAllocated : '+capabilityObj.containersAllocated+' </p>'+
-                '        ContainersReserved : '+capabilityObj.containersReserved+' </p>' +
-                '        ContainersPending : '+capabilityObj.containersPending+' </p>'+
-                '     </td>'+
-                '     <td>'+
-                '        <h3>Node Metrics</h3>'+
-                '         TotalNodes : '+capabilityObj.totalNodes+' </p>'+
-                '         LostNodes : '+capabilityObj.lostNodes+' </p>'+
-                '         UnhealthyNodes : '+capabilityObj.unhealthyNodes+' </p>'+
-                '         DecommissioningNodes : '+capabilityObj.decommissioningNodes+' </p>'+
-                '         DecommissionedNodes : '+capabilityObj.decommissionedNodes+' </p>'+
-                '         RebootedNodes : '+capabilityObj.rebootedNodes+' </p>'+
-                '         ActiveNodes : '+capabilityObj.activeNodes+' </p>'+
-                '         ShutdownNodes : '+capabilityObj.shutdownNodes+' </p>'+
-                '     </td>'+
-                '  </tr>'+
+                '        <h3>Resource Metrics</h3>' +
+                '        <h4>Memory</h4>' +
+                '        TotalMB : ' + capabilityObj.totalMB + ' </p>' +
+                '        ReservedMB : ' + capabilityObj.reservedMB + ' </p>' +
+                '        AvailableMB : ' + capabilityObj.availableMB + ' </p>' +
+                '        AllocatedMB : ' + capabilityObj.allocatedMB + ' </p>' +
+                '        PendingMB : ' + capabilityObj.pendingMB + ' </p>' +
+                '        <h4>VirtualCores</h4>' +
+                '        TotalVirtualCores : ' + capabilityObj.totalVirtualCores + ' </p>' +
+                '        ReservedVirtualCores : ' + capabilityObj.reservedVirtualCores + ' </p>' +
+                '        AvailableVirtualCore : ' + capabilityObj.availableVirtualCores + ' </p>' +
+                '        AllocatedVirtualCores : '+ capabilityObj.allocatedVirtualCores + ' </p>' +
+                '        PendingVirtualCores : ' + capabilityObj.pendingVirtualCores + ' </p>' +
+                '        <h4>Containers</h4>' +
+                '        ContainersAllocated : ' + capabilityObj.containersAllocated + ' </p>' +
+                '        ContainersReserved : ' + capabilityObj.containersReserved + ' </p>' +
+                '        ContainersPending : ' + capabilityObj.containersPending + ' </p>' +
+                '     </td>' +
+                '     <td>' +
+                '        <h3>Node Metrics</h3>' +
+                '         TotalNodes : ' + capabilityObj.totalNodes + ' </p>' +
+                '         LostNodes : ' + capabilityObj.lostNodes + ' </p>' +
+                '         UnhealthyNodes : ' + capabilityObj.unhealthyNodes + ' </p>' +
+                '         DecommissioningNodes : ' + capabilityObj.decommissioningNodes + ' </p>' +
+                '         DecommissionedNodes : ' + capabilityObj.decommissionedNodes + ' </p>' +
+                '         RebootedNodes : ' + capabilityObj.rebootedNodes + ' </p>' +
+                '         ActiveNodes : ' + capabilityObj.activeNodes + ' </p>' +
+                '         ShutdownNodes : ' + capabilityObj.shutdownNodes + ' </p>' +
+                '     </td>' +
+                '  </tr>' +
                 '</table>').show();
             tr.addClass('shown');
         }

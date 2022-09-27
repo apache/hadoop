@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -172,7 +173,8 @@ class FederationBlock extends HtmlBlock {
         String webAppAddress = subcluster.getRMWebServiceAddress();
         String herfWebAppAddress = "";
         if (webAppAddress != null && !webAppAddress.isEmpty()) {
-          herfWebAppAddress = "//" + webAppAddress;
+          herfWebAppAddress =
+              WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAppAddress;
         }
 
         // Prepare Capability
