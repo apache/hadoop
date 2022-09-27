@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.statistics;
 
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsContextIntegration;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * An interface defined to capture thread-level IOStatistics by using per
  * thread context.
@@ -67,7 +69,11 @@ public interface IOStatisticsContext extends IOStatisticsSource {
    * @return instance of IOStatisticsContext for the context.
    */
   static IOStatisticsContext getCurrentIOStatisticsContext() {
-    return IOStatisticsContextIntegration.getCurrentIOStatisticsContext();
+    // the null check is just a safety check to highlight exactly where a null value would
+    // be returned if HADOOP-18456 has resurfaced.
+    return requireNonNull(
+        IOStatisticsContextIntegration.getCurrentIOStatisticsContext(),
+        "Null IOStatisticsContext");
   }
 
   /**
