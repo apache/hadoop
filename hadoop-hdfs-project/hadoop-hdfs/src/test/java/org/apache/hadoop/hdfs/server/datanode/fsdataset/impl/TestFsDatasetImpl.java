@@ -1896,9 +1896,9 @@ public class TestFsDatasetImpl {
       // Make it resume the removeReplicaFromMem method.
       semaphore.release(1);
 
-      // Sleep for 1 second so that datanode can complete invalidate.
-      GenericTestUtils.waitFor(() -> ds.asyncDiskService.countPendingDeletions() == 0,
-          100, 1000);
+      // Waiting for the async deletion task finish.
+      GenericTestUtils.waitFor(() ->
+          ds.asyncDiskService.countPendingDeletions() == 0, 100, 1000);
 
       // Sleep for two heartbeat times.
       Thread.sleep(conf.getTimeDuration(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,

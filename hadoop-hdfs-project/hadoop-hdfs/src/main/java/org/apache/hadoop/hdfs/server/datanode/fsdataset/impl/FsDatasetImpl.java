@@ -2407,7 +2407,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param volume
    * @return
    */
-  public boolean removeReplicaFromMem(final ExtendedBlock block, final FsVolumeImpl volume) {
+  boolean removeReplicaFromMem(final ExtendedBlock block, final FsVolumeImpl volume) {
     final String blockPoolId = block.getBlockPoolId();
     final Block localBlock = block.getLocalBlock();
     final long blockId = localBlock.getBlockId();
@@ -2428,7 +2428,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         return false;
       }
 
-      FsVolumeImpl v = (FsVolumeImpl)info.getVolume();
+      FsVolumeImpl v = (FsVolumeImpl) info.getVolume();
       if (v == null) {
         LOG.error("Failed to delete replica {}. No volume for this replica {} " +
             "in removeReplicaFromMem.", localBlock, info);
@@ -2437,7 +2437,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
       try {
         File blockFile = new File(info.getBlockURI());
-        if (blockFile != null && blockFile.getParentFile() == null) {
+        if (blockFile.getParentFile() == null) {
           LOG.error("Failed to delete replica {}. Parent not found for block file: {} " +
               "in removeReplicaFromMem.", localBlock, blockFile);
           return false;
@@ -2478,7 +2478,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // If a DFSClient has the replica in its cache of short-circuit file
     // descriptors (and the client is using ShortCircuitShm), invalidate it.
     datanode.getShortCircuitRegistry().processBlockInvalidation(
-        new ExtendedBlockId(blockId, blockPoolId));
+        ExtendedBlockId.fromExtendedBlock(block));
 
     // If the block is cached, start uncaching it.
     cacheManager.uncacheBlock(blockPoolId, blockId);

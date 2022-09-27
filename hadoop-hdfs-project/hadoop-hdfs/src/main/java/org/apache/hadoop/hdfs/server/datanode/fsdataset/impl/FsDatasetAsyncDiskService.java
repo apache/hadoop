@@ -343,7 +343,7 @@ class FsDatasetAsyncDiskService {
         // For testing, simulate the case asynchronously deletion of the
         // replica task stacked pending.
         DataNodeFaultInjector.get().delayDeleteReplica();
-        if (!fsdatasetImpl.removeReplicaFromMem(block, volume)){
+        if (!fsdatasetImpl.removeReplicaFromMem(block, volume)) {
           return;
         }
 
