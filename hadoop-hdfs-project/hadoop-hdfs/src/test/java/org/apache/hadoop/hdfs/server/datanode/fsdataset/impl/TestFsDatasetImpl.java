@@ -1835,8 +1835,7 @@ public class TestFsDatasetImpl {
   }
 
   /**
-   * If delete the block asynchronously task stacked pending,
-   * It's ok get the replica from the ReplicaMap
+   * The block should be in the replicaMap if the async deletion task is pending.
    */
   @Test
   public void testAysncDiskServiceDeleteReplica()
