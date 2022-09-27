@@ -100,8 +100,9 @@ public class TestRequestHedgingProxyProvider {
     final ClientProtocol badMock = Mockito.mock(ClientProtocol.class);
     Mockito.when(badMock.getStats()).thenThrow(new IOException("Bad mock !!"));
 
-    RequestHedgingProxyProvider<ClientProtocol> provider = new RequestHedgingProxyProvider<>(
-        conf, nnUri, ClientProtocol.class, createFactory(badMock, goodMock));
+    RequestHedgingProxyProvider<ClientProtocol> provider =
+        new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
+            createFactory(badMock, goodMock));
     Assert.assertTrue(Proxy.getInvocationHandler(
         provider.getProxy().proxy) instanceof RpcInvocationHandler);
     long[] stats = provider.getProxy().proxy.getStats();
