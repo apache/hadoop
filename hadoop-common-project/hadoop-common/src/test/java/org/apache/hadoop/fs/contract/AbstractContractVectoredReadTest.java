@@ -408,7 +408,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         ContractTestUtils.fail("Timeout/Error while processing vectored io results");
       }
     } finally {
-      HadoopExecutors.shutdown(dataProcessor, LOG, 100, TimeUnit.SECONDS);
+      HadoopExecutors.shutdown(dataProcessor, LOG,
+              VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
   }
 
@@ -423,7 +424,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
               "vecRead", buffer, res.getLength(), DATASET);
       // return buffer to the pool once read.
       pool.putBuffer(buffer);
-    }), VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    }),
+    VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     // countdown to notify main thread that processing has been done.
     countDownLatch.countDown();
