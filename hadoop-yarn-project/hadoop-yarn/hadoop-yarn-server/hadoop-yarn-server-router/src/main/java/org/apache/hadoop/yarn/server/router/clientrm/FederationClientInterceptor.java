@@ -871,7 +871,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.moveApplicationAcrossQueues(request);
     } catch (Exception e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
+      routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to moveApplicationAcrossQueues for " +
           applicationId + " to SubCluster " + subClusterId.getId(), e);
     }
@@ -1212,7 +1212,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getApplicationAttemptReport(request);
     } catch (Exception e) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       String msg = String.format(
           "Unable to get the applicationAttempt report for %s to SubCluster %s.",
           request.getApplicationAttemptId(), subClusterId.getId());

@@ -1695,21 +1695,30 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
     try {
+      long startTime = Time.now();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppAttempts(hsr, appId);
+      AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
+      long stopTime = Time.now();
+      routerMetrics.succeededAppAttemptsRetrieved((stopTime - startTime));
+      return appAttemptsInfo;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the AppAttempt appId: %s.", appId);
     } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("getAppAttempts Failed.", e);
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getAppAttempts error.", e);
     }
-    return null;
+
+    routerMetrics.incrAppAttemptsFailedRetrieved();
+    throw new RuntimeException("getAppAttempts Failed.");
   }
 
   @Override
@@ -1723,26 +1732,35 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletResponse res, String appId, String appAttemptId) {
 
     if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
+
     if (appAttemptId == null || appAttemptId.isEmpty()) {
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
     }
 
     try {
+      long startTime = Time.now();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
-
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
-      return interceptor.getAppAttempt(req, res, appId, appAttemptId);
+      AppAttemptInfo appAttemptInfo = interceptor.getAppAttempt(req, res, appId, appAttemptId);
+      long stopTime = Time.now();
+      routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
+      return appAttemptInfo;
     } catch (IllegalArgumentException e) {
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
           "Unable to get the AppAttempt appId: %s, appAttemptId: %s.", appId, appAttemptId);
     } catch (YarnException e) {
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
     }
 
-    return null;
+    routerMetrics.incrAppAttemptReportFailedRetrieved();
+    throw new RuntimeException("getAppAttempt Failed.");
   }
 
   @Override
