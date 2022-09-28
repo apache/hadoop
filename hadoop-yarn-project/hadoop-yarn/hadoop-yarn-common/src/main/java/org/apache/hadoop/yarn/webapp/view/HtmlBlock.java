@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 public abstract class HtmlBlock extends TextView implements SubView {
 
   protected static final String UNAVAILABLE = "N/A";
+  protected static final long BYTES_IN_MB = 1024 * 1024;
+  protected static final String DATE_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
   public class Block extends Hamlet {
     Block(PrintWriter out, int level, boolean wasInline) {
