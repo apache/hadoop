@@ -339,6 +339,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Vectored IO context. */
   private VectoredIOContext vectoredIOContext;
 
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   */
+  private int vectoredActiveRangeReads;
+
   private long readAhead;
   private ChangeDetectionPolicy changeDetectionPolicy;
   private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -628,6 +634,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           longBytesOption(conf, ASYNC_DRAIN_THRESHOLD,
                         DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
           inputPolicy);
+      vectoredActiveRangeReads = intOption(conf,
+              AWS_S3_VECTOR_ACTIVE_RANGE_READS, DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS, 1);
       vectoredIOContext = populateVectoredIOContext(conf);
     } catch (AmazonClientException e) {
       // amazon client exception: stop all services then throw the translation
@@ -1561,7 +1569,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               createObjectAttributes(path, fileStatus),
               createInputStreamCallbacks(auditSpan),
                   inputStreamStats,
-                  unboundedThreadPool));
+                  new SemaphoredDelegatingExecutor(
+                          boundedThreadPool,
+                          vectoredActiveRangeReads,
+                          true,
+                          inputStreamStats)));
     }
   }
 

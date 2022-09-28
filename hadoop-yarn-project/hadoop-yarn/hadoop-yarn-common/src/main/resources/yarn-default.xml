@@ -5006,7 +5006,7 @@
       Default is 100
     </description>
   </property>
-
+  
   <property>
     <name>yarn.router.webapp.cross-origin.enabled</name>
     <value>false</value>
@@ -5015,6 +5015,15 @@
       For Yarn Router, also add
       org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
       configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+  </property>
+  
+  <property>
+    <name>yarn.federation.state-store.max-applications</name>
+    <value>1000</value>
+    <description>
+      Yarn federation state-store supports querying the maximum number of apps.
+      Default is 1000.
     </description>
   </property>
 

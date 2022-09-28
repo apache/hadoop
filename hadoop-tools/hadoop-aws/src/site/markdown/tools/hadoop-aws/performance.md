@@ -75,13 +75,22 @@ on the client requirements.
    </description>
 </property>
 <property>
-<name>fs.s3a.vectored.read.max.merged.size</name>
-<value>1M</value>
-<description>
-   What is the largest merged read size in bytes such
-   that we group ranges together during vectored read.
-   Setting this value to 0 will disable merging of ranges.
-</description>
+   <name>fs.s3a.vectored.read.max.merged.size</name>
+   <value>1M</value>
+   <description>
+      What is the largest merged read size in bytes such
+      that we group ranges together during vectored read.
+      Setting this value to 0 will disable merging of ranges.
+   </description>
+<property>
+   <name>fs.s3a.vectored.active.ranged.reads</name>
+   <value>4</value>
+   <description>
+      Maximum number of range reads a single input stream can have
+      active (downloading, or queued) to the central FileSystem
+      instance's pool of queued operations.
+      This stops a single stream overloading the shared thread pool.
+   </description>
 </property>
 ```
 

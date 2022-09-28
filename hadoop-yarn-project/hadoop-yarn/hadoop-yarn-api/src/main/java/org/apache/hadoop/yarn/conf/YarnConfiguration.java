@@ -4056,6 +4056,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
 
+  public static final String FEDERATION_STATESTORE_MAX_APPLICATIONS =
+      FEDERATION_PREFIX + "state-store.max-applications";
+
+  public static final int DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS = 1000;
+
   public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
 
   public static final String ROUTER_BIND_HOST = ROUTER_PREFIX + "bind-host";
