@@ -56,6 +56,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -206,7 +207,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
-    ApplicationId application1 = BuilderUtils.newApplicationId(1234, 1);
+    Random random = new Random(System.currentTimeMillis());
+    long clusterTimeStamp = random.nextLong();
+    ApplicationId application1 = BuilderUtils.newApplicationId(clusterTimeStamp, 1);
 
     // AppLogDir should be created
     File app1LogDir =
@@ -245,15 +248,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
       String containerIdStr = container11.toString();
       File containerLogDir = new File(app1LogDir, containerIdStr);
-      int count = 0;
-      int maxAttempts = 50;
       for (String fileType : new String[]{"stdout", "stderr", "syslog"}) {
         File f = new File(containerLogDir, fileType);
-        count = 0;
-        while ((f.exists()) && (count < maxAttempts)) {
-          count++;
-          Thread.sleep(100);
-        }
+        GenericTestUtils.waitFor(() -> !f.exists(), 1000, 1000 * 50);
         Assert.assertFalse("File [" + f + "] was not deleted", f.exists());
       }
       Assert.assertFalse("Directory [" + app1LogDir + "] was not deleted",
