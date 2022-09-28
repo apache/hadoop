@@ -210,16 +210,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public Set<? extends Replica> deepCopyReplica(String bpid)
       throws IOException {
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      Set<ReplicaInfo> replicas = new HashSet<>();
-      volumeMap.replicas(bpid, (iterator) -> {
-        while (iterator.hasNext()) {
-          ReplicaInfo b = iterator.next();
-          replicas.add(b);
-        }
-      });
-      return replicas;
-    }
+    Set<ReplicaInfo> replicas = new HashSet<>();
+    volumeMap.replicas(bpid, (iterator) -> {
+      while (iterator.hasNext()) {
+        ReplicaInfo b = iterator.next();
+        replicas.add(b);
+      }
+    });
+    return replicas;
   }
 
   /**
