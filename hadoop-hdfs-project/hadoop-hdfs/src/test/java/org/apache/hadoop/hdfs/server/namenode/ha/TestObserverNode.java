@@ -565,8 +565,8 @@ public class TestObserverNode {
     assertSentTo(2);
 
     // Create a spy on FSEditLog, which delays MkdirOp transaction by 100 mec
-    FSEditLog spyEditLog = NameNodeAdapter.spyDelayMkDirTransaction(
-        dfsCluster.getNameNode(0), 100);
+    FSEditLog spyEditLog = NameNodeAdapter
+        .spyDelayMkDirTransaction(dfsCluster.getNameNode(0), 100);
 
     final int numThreads = 4;
     ClientState[] clientStates = new ClientState[numThreads];
@@ -604,12 +604,11 @@ public class TestObserverNode {
         dfsCluster.getNameNode(0).getFSImage().getLastAppliedOrWrittenTxId(),
         dfsCluster.getNameNode(2).getFSImage().getLastAppliedOrWrittenTxId());
     for (int i = 0; i < numThreads; i++) {
-      assertTrue("Client #" + i
-          + " lastSeenStateId=" + clientStates[i].lastSeenStateId
-          + " activStateId=" + activStateId
-          + "\n" + clientStates[i].fnfe,
-          clientStates[i].lastSeenStateId >= activStateId &&
-          clientStates[i].fnfe == null);
+      assertTrue(
+          "Client #" + i + " lastSeenStateId=" + clientStates[i].lastSeenStateId
+              + " activStateId=" + activStateId + "\n" + clientStates[i].fnfe,
+          clientStates[i].lastSeenStateId >= activStateId
+              && clientStates[i].fnfe == null);
     }
 
     // Restore edit log
