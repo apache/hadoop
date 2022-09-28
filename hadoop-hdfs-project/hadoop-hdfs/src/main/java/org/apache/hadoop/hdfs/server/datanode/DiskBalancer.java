@@ -1029,7 +1029,7 @@ public class DiskBalancer {
       }
 
       List<FsVolumeSpi.BlockIterator> poolIters = new LinkedList<>();
-      startTime = Time.now();
+      startTime = Time.monotonicNow();
       item.setStartTime(startTime);
       secondsElapsed = 0;
 
@@ -1116,7 +1116,7 @@ public class DiskBalancer {
             // throughput threshold.
             item.incCopiedSoFar(block.getNumBytes());
             item.incBlocksCopied();
-            secondsElapsed = TimeUnit.MILLISECONDS.toSeconds(Time.now() -
+            secondsElapsed = TimeUnit.MILLISECONDS.toSeconds(Time.monotonicNow() -
                 startTime);
             item.setSecondsElapsed(secondsElapsed);
           } catch (IOException ex) {

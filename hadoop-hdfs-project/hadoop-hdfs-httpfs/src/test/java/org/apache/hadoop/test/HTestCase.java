@@ -144,18 +144,18 @@ public abstract class HTestCase {
    *         to <code>true</code>.
    */
   protected long waitFor(int timeout, boolean failIfTimeout, Predicate predicate) {
-    long started = Time.now();
-    long mustEnd = Time.now() + (long) (getWaitForRatio() * timeout);
+    long started = Time.monotonicNow();
+    long mustEnd = Time.monotonicNow() + (long) (getWaitForRatio() * timeout);
     long lastEcho = 0;
     try {
-      long waiting = mustEnd - Time.now();
+      long waiting = mustEnd - Time.monotonicNow();
       System.out.println(MessageFormat.format("Waiting up to [{0}] msec", waiting));
       boolean eval;
-      while (!(eval = predicate.evaluate()) && Time.now() < mustEnd) {
-        if ((Time.now() - lastEcho) > 5000) {
-          waiting = mustEnd - Time.now();
+      while (!(eval = predicate.evaluate()) && Time.monotonicNow() < mustEnd) {
+        if ((Time.monotonicNow() - lastEcho) > 5000) {
+          waiting = mustEnd - Time.monotonicNow();
           System.out.println(MessageFormat.format("Waiting up to [{0}] msec", waiting));
-          lastEcho = Time.now();
+          lastEcho = Time.monotonicNow();
         }
         Thread.sleep(100);
       }
@@ -166,7 +166,7 @@ public abstract class HTestCase {
           System.out.println(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
         }
       }
-      return (eval) ? Time.now() - started : -1;
+      return (eval) ? Time.monotonicNow() - started : -1;
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
