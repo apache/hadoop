@@ -2167,19 +2167,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override
   public List<ReplicaInfo> getFinalizedBlocks(String bpid) {
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      ArrayList<ReplicaInfo> finalized =
-          new ArrayList<>(volumeMap.size(bpid));
-      volumeMap.replicas(bpid, (iterator) -> {
-        while (iterator.hasNext()) {
-          ReplicaInfo b = iterator.next();
-          if (b.getState() == ReplicaState.FINALIZED) {
-            finalized.add(new FinalizedReplica((FinalizedReplica)b));
-          }
+    ArrayList<ReplicaInfo> finalized = new ArrayList<>();
+    volumeMap.replicas(bpid, (iterator) -> {
+      while (iterator.hasNext()) {
+        ReplicaInfo b = iterator.next();
+        if (b.getState() == ReplicaState.FINALIZED) {
+          finalized.add(new FinalizedReplica((FinalizedReplica)b));
         }
-      });
-      return finalized;
-    }
+      }
+    });
+    return finalized;
   }
 
   /**
