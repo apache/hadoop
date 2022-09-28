@@ -122,21 +122,7 @@ class FederationBlock extends HtmlBlock {
     List<Map<String, String>> lists = new ArrayList<>();
 
     // If Yarn Federation is not enabled, the user needs to be prompted.
-    if (!isEnabled) {
-      html.style(".alert {padding: 15px; margin-bottom: 20px; " +
-          " border: 1px solid transparent; border-radius: 4px;}");
-      html.style(".alert-dismissable {padding-right: 35px;}");
-      html.style(".alert-info {color: #856404;background-color: #fff3cd;border-color: #ffeeba;}");
-
-      Hamlet.DIV<Hamlet> div = html.div("#div_id").$class("alert alert-dismissable alert-info");
-      div.p().$style("color:red").__("Federation is not Enabled.").__()
-          .p().__()
-          .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
-          .p().__()
-          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
-          "Hadoop: YARN Federation").
-          __();
-    }
+    initUserHelpInformationDiv(html, isEnabled);
 
     // Table header
     TBODY<TABLE<Hamlet>> tbody =

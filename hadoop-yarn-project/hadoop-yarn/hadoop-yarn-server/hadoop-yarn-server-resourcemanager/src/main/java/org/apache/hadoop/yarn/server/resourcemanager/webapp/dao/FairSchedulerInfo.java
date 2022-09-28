@@ -42,6 +42,10 @@ public class FairSchedulerInfo extends SchedulerInfo {
   } // JAXB needs this
   
   public FairSchedulerInfo(FairScheduler fs) {
+    this.schedulerName = "Fair Scheduler";
+    this.minAllocResource = new ResourceInfo(fs.getMinimumResourceCapability());
+    this.maxAllocResource = new ResourceInfo(fs.getMaximumResourceCapability());
+    this.maximumClusterPriority = fs.getMaxClusterLevelAppPriority().getPriority();
     scheduler = fs;
     rootQueue = new FairSchedulerQueueInfo(scheduler.getQueueManager().
         getRootQueue(), scheduler);
