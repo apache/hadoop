@@ -633,7 +633,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     }
 
     for (DatanodeStorageInfo s : storage) {
-      namesystem.readLock();
+      namesystem.writeLock();
       try {
         // As the lock is dropped and re-taken between each storage, we need
         // to check the storage is still present before processing it, as it
@@ -659,7 +659,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           numBlocksChecked++;
         }
       } finally {
-        namesystem.readUnlock("scanDatanodeStorage");
+        namesystem.writeUnlock("scanDatanodeStorage");
       }
     }
   }
