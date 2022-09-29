@@ -925,7 +925,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
    */
   public static int run(Configuration conf, String... args) throws
       Exception {
-    /** ToolRunner.run does this too, but we must do it before looking at
+    /* ToolRunner.run does this too, but we must do it before looking at
     subCommand or instantiating the cmd object below */
     String[] otherArgs = new GenericOptionsParser(conf, args)
         .getRemainingArgs();

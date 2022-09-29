@@ -37,8 +37,7 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,7 +148,6 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Constant to use when there is no limit on the number of
    * objects listed: {@value}.
-   * 
    * The value is 0 and not -1 because it allows for the limit to be
    * set on the command line {@code -limit 0}.
    * The command line parser rejects {@code -limit -1} as the -1
@@ -654,8 +652,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param size size to generate a suffix for
    * @return "" or "s", depending on size
    */
-
-  private @NotNull String suffix(final int size) {
+  private String suffix(final int size) {
     return size == 1 ? "" : "s";
   }
 
@@ -857,9 +854,8 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Arguments for the scan.
-   * 
    * Uses a builder/argument object because too many arguments were
-   * being created and it was making maintenance harder.
+   * being created, and it was making maintenance harder.
    */
   public static final class ScanArgs {
 
@@ -976,7 +972,7 @@ public final class MarkerTool extends S3GuardTool {
 
     /** Path to scan.
      * @param p path to scan
-     * @return the builder class after scanning path
+     * @return builder class for method chaining
      */
     public ScanArgsBuilder withPath(final Path p) {
       this.path = p;
@@ -984,24 +980,26 @@ public final class MarkerTool extends S3GuardTool {
     }
 
     //Please explain the Parameter d
-    /** Purge? */
+    /** Purge?
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withDoPurge(final boolean d) {
       this.doPurge = d;
       return this;
     }
 
-    /** Min marker count (ignored on purge).
-     * @param min Minimum Marker Count an audit must find (default 0)
-     * @return the builder class after scanning Min Marker Count
+    /** Min marker count an audit must find (ignored on purge).
+     * @param min Minimum Marker Count (default 0)
+     * @return builder class for method chaining
      */
     public ScanArgsBuilder withMinMarkerCount(final int min) {
       this.minMarkerCount = min;
       return this;
     }
 
-    /** Max marker count (ignored on purge).
-     * @param max Maximum Marker Count an audit must find (default 0)
-     * @return the builder class after scanning Max Marker Count
+    /** Max marker count an audit must find (ignored on purge).
+     * @param max Maximum Marker Count (default 0)
+     * @return builder class for method chaining
      */
     public ScanArgsBuilder withMaxMarkerCount(final int max) {
       this.maxMarkerCount = max;
@@ -1010,7 +1008,7 @@ public final class MarkerTool extends S3GuardTool {
 
     /** Limit of files to scan; 0 for 'unlimited'.
      * @param l Limit of files to scan
-     * @return the builder class after scanning the limit of files
+     * @return builder class for method chaining
      */
     public ScanArgsBuilder withLimit(final int l) {
       this.limit = l;
@@ -1018,7 +1016,9 @@ public final class MarkerTool extends S3GuardTool {
     }
 
     //Please explain the parameter b
-    /** Consider only markers in nonauth paths as errors. */
+    /** Consider only markers in nonauth paths as errors.
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withNonAuth(final boolean b) {
       this.nonAuth = b;
       return this;
