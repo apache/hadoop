@@ -22,7 +22,8 @@ USE FederationStateStore
 
 CREATE TABLE applicationsHomeSubCluster(
    applicationId varchar(64) NOT NULL,
-   homeSubCluster varchar(256) NULL,
+   homeSubCluster varchar(256) NOT NULL,
+   createTime datetime NOT NULL,
    CONSTRAINT pk_applicationId PRIMARY KEY (applicationId)
 );
 

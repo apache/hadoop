@@ -27,12 +27,16 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.Comparator;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -90,6 +94,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
+
 /**
  * In-memory implementation of {@link FederationStateStore}.
  */
@@ -100,6 +106,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private Map<ReservationId, SubClusterId> reservations;
   private Map<String, SubClusterPolicyConfiguration> policies;
   private RouterRMDTSecretManagerState routerRMSecretManagerState;
+  private int maxAppsInStateStore;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -113,6 +120,9 @@ public class MemoryFederationStateStore implements FederationStateStore {
     reservations = new ConcurrentHashMap<ReservationId, SubClusterId>();
     policies = new ConcurrentHashMap<String, SubClusterPolicyConfiguration>();
     routerRMSecretManagerState = new RouterRMDTSecretManagerState();
+    maxAppsInStateStore = conf.getInt(
+        YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
   }
 
   @Override
@@ -266,15 +276,26 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    List<ApplicationHomeSubCluster> result =
-        new ArrayList<ApplicationHomeSubCluster>();
-    for (Entry<ApplicationId, SubClusterId> e : applications.entrySet()) {
-      result
-          .add(ApplicationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
     }
 
-    GetApplicationsHomeSubClusterResponse.newInstance(result);
+    SubClusterId requestSC = request.getSubClusterId();
+    List<ApplicationHomeSubCluster> result = applications.keySet().stream()
+        .map(applicationId -> generateAppHomeSC(applicationId))
+        .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
+        .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
+        .limit(maxAppsInStateStore)
+        .collect(Collectors.toList());
+
+    LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
+    SubClusterId subClusterId = applications.get(applicationId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), subClusterId);
   }
 
   @Override
