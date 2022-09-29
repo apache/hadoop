@@ -1099,8 +1099,10 @@ public class TestRMWebServices extends JerseyTestBase {
     return  webService;
   }
 
+  // In the case of testing FifoScheduler,
+  // whether the returned overview results meet expectations.
   @Test
-  public void testClusterSchedulerOverviewFifo() throws JSONException, Exception {
+  public void testClusterSchedulerOverviewFifo() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
@@ -1109,11 +1111,10 @@ public class TestRMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    verifyClusterSchedulerFifoOverView(json);
-    System.out.println(json);
+    verifyClusterSchedulerOverViewFifo(json);
   }
 
-  public void verifyClusterSchedulerFifoOverView(JSONObject json)
+  public void verifyClusterSchedulerOverViewFifo(JSONObject json)
       throws Exception {
 
     // why json contains 8 elements because we defined 8 fields
