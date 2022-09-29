@@ -702,8 +702,7 @@ public class FederationClientInterceptor
       throws YarnException {
 
     // Get Active SubClusters
-    Map<SubClusterId, SubClusterInfo> subClusterInfo =
-        federationFacade.getSubClusters(true);
+    Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
     Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();

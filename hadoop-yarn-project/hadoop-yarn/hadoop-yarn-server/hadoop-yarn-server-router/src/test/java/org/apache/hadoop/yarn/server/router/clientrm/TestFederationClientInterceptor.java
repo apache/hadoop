@@ -589,8 +589,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
-    Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.
-        invokeConcurrent(remoteMethod, GetClusterMetricsResponse.class);
+    Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.invokeConcurrent(
+        remoteMethod, GetClusterMetricsResponse.class);
     Assert.assertTrue(clusterMetrics.isEmpty());
 
     // Restore membership
