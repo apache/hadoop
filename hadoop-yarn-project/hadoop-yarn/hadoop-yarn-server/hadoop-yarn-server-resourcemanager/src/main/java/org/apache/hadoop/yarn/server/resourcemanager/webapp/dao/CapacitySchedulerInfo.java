@@ -74,10 +74,6 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   } // JAXB needs this
 
   public CapacitySchedulerInfo(CSQueue parent, CapacityScheduler cs) {
-    this.schedulerName = "Capacity Scheduler";
-    this.minAllocResource = new ResourceInfo(cs.getMinimumResourceCapability());
-    this.maxAllocResource = new ResourceInfo(cs.getMaximumResourceCapability());
-    this.maximumClusterPriority = cs.getMaxClusterLevelAppPriority().getPriority();
     this.queueName = parent.getQueueName();
     this.queuePath = parent.getQueuePath();
     this.usedCapacity = parent.getUsedCapacity() * 100;
