@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.slf4j.Logger;
@@ -50,6 +51,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       " CREATE TABLE applicationsHomeSubCluster ("
           + " applicationId varchar(64) NOT NULL,"
           + " homeSubCluster varchar(256) NOT NULL,"
+          + " createTime datetime NOT NULL,"
           + " CONSTRAINT pk_applicationId PRIMARY KEY (applicationId))";
 
   private static final String TABLE_MEMBERSHIP =
@@ -149,8 +151,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " INSERT INTO applicationsHomeSubCluster "
-          + " (applicationId,homeSubCluster) "
-          + " (SELECT applicationId_IN, homeSubCluster_IN"
+          + " (applicationId,homeSubCluster,createTime) "
+          + " (SELECT applicationId_IN, homeSubCluster_IN, "
+          + " NOW() AT TIME ZONE INTERVAL '0:00' HOUR TO MINUTE"
           + " FROM applicationsHomeSubCluster"
           + " WHERE applicationId = applicationId_IN"
           + " HAVING COUNT(*) = 0 );"
@@ -179,11 +182,16 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE applicationId = applicationID_IN; END";
 
   private static final String SP_GETAPPLICATIONSHOMESUBCLUSTER =
-      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster()"
+      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster("
+          + "IN limit_IN int, IN homeSubCluster_IN varchar(256))"
           + " MODIFIES SQL DATA DYNAMIC RESULT SETS 1 BEGIN ATOMIC"
           + " DECLARE result CURSOR FOR"
-          + " SELECT applicationId, homeSubCluster"
-          + " FROM applicationsHomeSubCluster; OPEN result; END";
+          + " SELECT applicationId, homeSubCluster, createTime"
+          + " FROM applicationsHomeSubCluster "
+          + " WHERE ROWNUM() <= limit_IN AND "
+          + " (homeSubCluster_IN = '' OR homeSubCluster = homeSubCluster_IN) "
+          + " ORDER BY createTime desc; "
+          + " OPEN result; END";
 
   private static final String SP_DELETEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_deleteApplicationHomeSubCluster("
@@ -315,6 +323,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
   @Override
   public void init(Configuration conf) {
     try {
+      conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
       super.init(conf);
       conn = super.conn;
 

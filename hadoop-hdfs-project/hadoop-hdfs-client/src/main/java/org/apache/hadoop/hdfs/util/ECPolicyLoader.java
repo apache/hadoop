@@ -89,6 +89,11 @@ public class ECPolicyLoader {
     // Read and parse the EC policy file.
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setIgnoringComments(true);
+    dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+    dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+    dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    dbf.setFeature("http://apache.org/xml/features/dom/create-entity-ref-nodes", false);
     DocumentBuilder builder = dbf.newDocumentBuilder();
     Document doc = builder.parse(policyFile);
     Element root = doc.getDocumentElement();
