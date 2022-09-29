@@ -19,15 +19,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -38,16 +32,12 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.RouterSchedulerMetrics;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Comparator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class MetricsOverviewTable extends RouterBlock {
 
@@ -70,12 +60,12 @@ public class MetricsOverviewTable extends RouterBlock {
 
     // metrics div
     Hamlet.DIV<Hamlet> div = html.div().$class("metrics");
-    initFederationClusterAppsMetrics(div, routerClusterMetrics);
-    initFederationClusterNodesMetrics(div, routerClusterMetrics);
     try {
+      initFederationClusterAppsMetrics(div, routerClusterMetrics);
+      initFederationClusterNodesMetrics(div, routerClusterMetrics);
       initFederationClusterSchedulersMetrics(div, routerClusterMetrics);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("MetricsOverviewTable init error.", e);
     }
     div.__();
   }
@@ -215,6 +205,18 @@ public class MetricsOverviewTable extends RouterBlock {
           td(rsMetrics.getMinimumAllocation()).
           td(rsMetrics.getMaximumAllocation()).
           td(rsMetrics.getApplicationPriority())
+          .__();
+    }
+
+    // If there is no cluster information
+    if (subclusters != null && subclusters.size() == 0) {
+      fsMetricsScheduleTr.tr().
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE)
           .__();
     }
 

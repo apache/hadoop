@@ -35,7 +35,6 @@ public class RouterInfo {
   private long id;
   private long startedOn;
   private Service.STATE state;
-  private HAServiceProtocol.HAServiceState haState;
   private String routerStateStoreName;
   private String routerVersion;
   private String routerBuildVersion;
