@@ -28,9 +28,12 @@ import java.util.concurrent.Future;
 
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.security.ConfiguredYarnAuthorizer;
 import org.apache.hadoop.yarn.security.Permission;
 import org.apache.hadoop.yarn.security.PrivilegedEntity;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.federation.FederationStateStoreService;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +117,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private boolean nodeLabelsEnabled;
   private Set<String> exclusiveEnforcedPartitions;
   private String amDefaultNodeLabel;
+  private FederationStateStoreService federationStateStoreService;
 
   private static final String USER_ID_PREFIX = "userid=";
 
@@ -347,6 +351,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + ", removing app " + removeApp.getApplicationId()
           + " from state store.");
       rmContext.getStateStore().removeApplication(removeApp);
+      removeApplicationIdFromStateStore(removeId);
       completedAppsInStateStore--;
     }
 
@@ -358,6 +363,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           + this.maxCompletedAppsInMemory + ", removing app " + removeId
           + " from memory: ");
       rmContext.getRMApps().remove(removeId);
+      removeApplicationIdFromStateStore(removeId);
       this.applicationACLsManager.removeApplication(removeId);
     }
   }
@@ -1052,6 +1058,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
           " in queue: " + placementContext.getQueue() +
           ", original submission queue was: " + context.getQueue());
       context.setQueue(placementContext.getQueue());
+    }
+  }
+
+  @VisibleForTesting
+  public void setFederationStateStoreService(FederationStateStoreService stateStoreService) {
+    this.federationStateStoreService = stateStoreService;
+  }
+
+  private void removeApplicationIdFromStateStore(ApplicationId applicationId) {
+    if (HAUtil.isFederationEnabled(conf) && federationStateStoreService != null) {
+      try {
+        DeleteApplicationHomeSubClusterResponse response =
+            federationStateStoreService.cleanUpFinishApplicationsWithRetries(applicationId);
+        if (response != null) {
+          LOG.info("applicationId = {} remove from state store success.",
+              applicationId);
+        }
+      } catch (Exception e) {
+        LOG.error("applicationId = {} remove from state store error.", applicationId, e);
+      }
     }
   }
 }

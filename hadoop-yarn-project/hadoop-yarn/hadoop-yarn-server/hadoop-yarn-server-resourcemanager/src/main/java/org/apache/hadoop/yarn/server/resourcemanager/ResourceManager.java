@@ -917,6 +917,7 @@ public class ResourceManager extends CompositeService
         }
         federationStateStoreService = createFederationStateStoreService();
         addIfService(federationStateStoreService);
+        rmAppManager.setFederationStateStoreService(federationStateStoreService);
         LOG.info("Initialized Federation membership.");
       }
 
@@ -996,6 +997,13 @@ public class ResourceManager extends CompositeService
           RMState state = rmStore.loadState();
           recover(state);
           LOG.info("Recovery ended");
+
+          // Make sure that the App is cleaned up after the RM memory is restored.
+          if (HAUtil.isFederationEnabled(conf)) {
+            federationStateStoreService.
+                createCleanUpFinishApplicationThread("Recovery");
+          }
+
         } catch (Exception e) {
           // the Exception from loadState() needs to be handled for
           // HA and we need to give up master status if we got fenced
@@ -1016,6 +1024,12 @@ public class ResourceManager extends CompositeService
 
     @Override
     protected void serviceStop() throws Exception {
+
+      // If RM is stopped, also perform a cleanup operation.
+      if (HAUtil.isFederationEnabled(conf)) {
+        federationStateStoreService.
+            createCleanUpFinishApplicationThread("Stop");
+      }
 
       super.serviceStop();
 

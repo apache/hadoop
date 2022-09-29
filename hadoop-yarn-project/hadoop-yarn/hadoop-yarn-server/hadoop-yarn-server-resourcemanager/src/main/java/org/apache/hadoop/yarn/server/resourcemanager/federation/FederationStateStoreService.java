@@ -29,6 +29,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -74,6 +75,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -102,6 +104,7 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private long heartbeatInitialDelay;
   private RMContext rmContext;
+  private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -377,5 +380,105 @@ public class FederationStateStoreService extends AbstractService
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
+  }
+
+  /**
+   * Create a thread that cleans up the app.
+   * @param stage rm-start/rm-stop.
+   */
+  public void createCleanUpFinishApplicationThread(String stage) {
+    String threadName = cleanUpThreadNamePrefix + "-" + stage;
+    Thread finishApplicationThread = new Thread(createCleanUpFinishApplicationThread());
+    finishApplicationThread.setName(threadName);
+    finishApplicationThread.start();
+  }
+
+  /**
+   * Create a thread that cleans up the app.
+   *
+   * @return thread object.
+   */
+  private Runnable createCleanUpFinishApplicationThread() {
+    return () -> {
+
+      try {
+        // Get the current RM's App list based on subClusterId
+        GetApplicationsHomeSubClusterRequest request =
+            GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
+        GetApplicationsHomeSubClusterResponse response =
+            getApplicationsHomeSubCluster(request);
+        List<ApplicationHomeSubCluster> applications = response.getAppsHomeSubClusters();
+
+        // Traverse the app list and clean up the app.
+        long successCleanUpAppCount = 0;
+        for (ApplicationHomeSubCluster application : applications) {
+          ApplicationId applicationId = application.getApplicationId();
+          if (!this.rmContext.getRMApps().containsKey(applicationId)) {
+            try {
+              DeleteApplicationHomeSubClusterResponse deleteResponse =
+                  cleanUpFinishApplicationsWithRetries(applicationId);
+              if (deleteResponse != null) {
+                LOG.info("application = {} has been cleaned up successfully.", applicationId);
+                successCleanUpAppCount++;
+              }
+            } catch (YarnException e) {
+              LOG.error("problem during application = {} cleanup.", applicationId, e);
+            }
+          }
+        }
+
+        // print app cleanup log
+        LOG.info("cleanup finished applications size = {}, number = {} successful cleanups.",
+            applications.size(), successCleanUpAppCount);
+      } catch (Exception e) {
+        LOG.error("problem during cleanup applications.", e);
+      }
+    };
+  }
+
+  /**
+   * Clean up the completed Application.
+   *
+   * @param applicationId app id.
+   * @return DeleteApplicationHomeSubClusterResponse.
+   * @throws Exception exception occurs.
+   */
+  public DeleteApplicationHomeSubClusterResponse
+      cleanUpFinishApplicationsWithRetries(ApplicationId applicationId) throws Exception {
+    DeleteApplicationHomeSubClusterRequest request =
+        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId);
+    return new FederationStateStoreAction<DeleteApplicationHomeSubClusterResponse>() {
+      @Override
+      public DeleteApplicationHomeSubClusterResponse run() throws Exception {
+        return deleteApplicationHomeSubCluster(request);
+      }
+    }.runWithRetries();
+  }
+
+  /**
+   * Define an abstract class, abstract retry method,
+   * which can be used for other methods later.
+   *
+   * @param <T> abstract parameter
+   */
+  private abstract class FederationStateStoreAction<T> {
+    abstract T run() throws Exception;
+
+    T runWithRetries() throws Exception {
+      int retry = 0;
+      while (true) {
+        try {
+          return run();
+        } catch (Exception e) {
+          LOG.info("Exception while executing an FederationStateStore operation.", e);
+          if (++retry > 10) {
+            LOG.info("Maxed out FederationStateStore retries. Giving up!");
+            throw e;
+          }
+          LOG.info("Retrying operation on FederationStateStore. Retry no. " + retry);
+          Thread.sleep(10);
+        }
+      }
+    }
   }
 }
