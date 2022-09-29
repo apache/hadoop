@@ -62,11 +62,11 @@ char *__get_exec_readproc(char *procfn) {
   if (len == -1) {
     fprintf(ERRORFILE,"Can't get executable name from %s - %s\n", procfn,
             strerror(errno));
-    exit(Unknown Error);
+    exit(-1);
   } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE,"Resolved path for %s [%s] is longer than %d characters.\n",
             procfn, filename, EXECUTOR_PATH_MAX);
-    exit(Unknown Error);
+    exit(-1);
   }
   filename[len] = '\0';
   return filename;
@@ -90,7 +90,7 @@ char *__get_exec_sysctl(int *mib)
   if (sysctl(mib, 4, buffer, &len, NULL, 0) == -1) {
     fprintf(ERRORFILE,"Can't get executable name from kernel: %s\n",
       strerror(errno));
-    exit(Unknown Error);
+    exit(-1);
   }
   filename=malloc(EXECUTOR_PATH_MAX);
   if (!filename) {
