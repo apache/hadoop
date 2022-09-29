@@ -1099,4 +1099,63 @@ public class TestRMWebServices extends JerseyTestBase {
     return  webService;
   }
 
+  @Test
+  public void testClusterSchedulerOverviewFifo() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        response.getType().toString());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterSchedulerFifoOverView(json);
+    System.out.println(json);
+  }
+
+  public void verifyClusterSchedulerFifoOverView(JSONObject json)
+      throws Exception {
+
+    // why json contains 8 elements because we defined 8 fields
+    assertEquals("incorrect number of elements in: " + json, 8, json.length());
+
+    // 1.Verify that the schedulerType is as expected
+    String schedulerType = json.getString("schedulerType");
+    Assert.assertEquals("Fifo Scheduler", schedulerType);
+    System.out.println(schedulerType);
+
+    // 2.Verify that schedulingResourceType is as expected
+    String schedulingResourceType = json.getString("schedulingResourceType");
+    Assert.assertEquals("memory-mb (unit=Mi),vcores", schedulingResourceType);
+
+    // 3.Verify that minimumAllocation is as expected
+    JSONObject minimumAllocation = json.getJSONObject("minimumAllocation");
+    String minMemory = minimumAllocation.getString("memory");
+    String minVCores = minimumAllocation.getString("vCores");
+    Assert.assertEquals("1024", minMemory);
+    Assert.assertEquals("1", minVCores);
+
+    // 4.Verify that maximumAllocation is as expected
+    JSONObject maximumAllocation = json.getJSONObject("maximumAllocation");
+    String maxMemory = maximumAllocation.getString("memory");
+    String maxVCores = maximumAllocation.getString("vCores");
+    Assert.assertEquals("8192", maxMemory);
+    Assert.assertEquals("4", maxVCores);
+
+    // 5.Verify that schedulerBusy is as expected
+    int schedulerBusy = json.getInt("schedulerBusy");
+    Assert.assertEquals(-1, schedulerBusy);
+
+    // 6.Verify that rmDispatcherEventQueueSize is as expected
+    int rmDispatcherEventQueueSize = json.getInt("rmDispatcherEventQueueSize");
+    Assert.assertEquals(0, rmDispatcherEventQueueSize);
+
+    // 7.Verify that schedulerDispatcherEventQueueSize is as expected
+    int schedulerDispatcherEventQueueSize = json.getInt("schedulerDispatcherEventQueueSize");
+    Assert.assertEquals(0, schedulerDispatcherEventQueueSize);
+
+    // 8.Verify that applicationPriority is as expected
+    int applicationPriority = json.getInt("applicationPriority");
+    Assert.assertEquals(0, applicationPriority);
+  }
 }
