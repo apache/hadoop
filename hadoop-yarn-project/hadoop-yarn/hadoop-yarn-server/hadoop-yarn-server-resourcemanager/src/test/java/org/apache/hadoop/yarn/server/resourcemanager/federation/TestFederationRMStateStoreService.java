@@ -26,15 +26,14 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.junit.After;
@@ -206,5 +205,48 @@ public class TestFederationRMStateStoreService {
     Assert.assertTrue(logCapture.getOutput().contains(
         "Started federation membership heartbeat with interval: 300 and initial delay: 10"));
     rm.stop();
+  }
+
+  @Test
+  public void testCleanUpApplication() throws Exception {
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
+    conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
+
+    final MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    stateStore = rm.getFederationStateStoreService().getStateStoreClient();
+    rm.start();
+
+    FederationStateStoreService stateStoreService =
+        rm.getFederationStateStoreService();
+    FederationStateStoreHeartbeat storeHeartbeat =
+        stateStoreService.getStateStoreHeartbeatThread();
+    storeHeartbeat.run();
+    checkSubClusterInfo(SubClusterState.SC_RUNNING);
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationHomeSubCluster appHomeSubCluster1 = ApplicationHomeSubCluster
+        .newInstance(appId, subClusterId);
+    AddApplicationHomeSubClusterRequest request =
+        AddApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster1);
+    stateStore.addApplicationHomeSubCluster(request);
+
+    GetApplicationHomeSubClusterRequest appRequest =
+         GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse response =
+         stateStore.getApplicationHomeSubCluster(appRequest);
+    Assert.assertNotNull(response);
+    ApplicationHomeSubCluster appHomeSubCluster = response.getApplicationHomeSubCluster();
+    Assert.assertNotNull(appHomeSubCluster);
+    Assert.assertNotNull(appHomeSubCluster.getApplicationId());
+    Assert.assertEquals(appId, appHomeSubCluster.getApplicationId());
+
+    DeleteApplicationHomeSubClusterResponse delResponse =
+        stateStoreService.cleanUpFinishApplicationsWithRetries(appId);
+    Assert.assertNotNull(delResponse);
+    LambdaTestUtils.intercept(FederationStateStoreException.class,
+        "Application " + appId + " does not exist",
+        () -> stateStore.getApplicationHomeSubCluster(appRequest));
   }
 }
