@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -306,15 +307,17 @@ public abstract class HATestUtil {
   /**
    * Sets the required configurations for performing failover.
    */
-  public static void setFailoverConfigurations(Configuration conf, String logicalName,
+  public static void setFailoverConfigurations(
+      Configuration conf, String logicalName,
       String proxyProvider, List<InetSocketAddress> nnAddresses) {
     final List<String> addresses = new ArrayList<>();
-    nnAddresses
-        .forEach(addr -> addresses.add("hdfs://" + addr.getHostName() + ":" + addr.getPort()));
+    nnAddresses.forEach(addr ->
+        addresses.add("hdfs://" + addr.getHostName() + ":" + addr.getPort()));
     setFailoverConfigurations(conf, logicalName, proxyProvider, addresses);
   }
 
-  public static void setFailoverConfigurations(Configuration conf, String logicalName,
+  public static void setFailoverConfigurations(
+      Configuration conf, String logicalName,
       String proxyProvider, Iterable<String> nnAddresses) {
     List<String> nnids = new ArrayList<String>();
     int i = 0;
@@ -328,10 +331,10 @@ public abstract class HATestUtil {
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, logicalName),
         Joiner.on(',').join(nnids));
     if (proxyProvider == null) {
-      conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
+      conf.set(Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
           ConfiguredFailoverProxyProvider.class.getName());
     } else {
-      conf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
+      conf.set(Failover.PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
           proxyProvider);
     }
     conf.set("fs.defaultFS", "hdfs://" + logicalName);
