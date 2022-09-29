@@ -1493,6 +1493,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         }
       } catch (YarnException e) {
         routerMetrics.incrGetNewReservationFailedRetrieved();
+        subClustersActive.remove(subClusterId);
         LOG.error("createNewReservation try #{} on SubCluster {} error.", i, subClusterId, e);
       }
     }

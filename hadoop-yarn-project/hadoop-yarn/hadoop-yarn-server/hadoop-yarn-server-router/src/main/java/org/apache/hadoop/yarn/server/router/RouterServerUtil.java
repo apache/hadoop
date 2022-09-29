@@ -347,9 +347,8 @@ public final class RouterServerUtil {
     ReservationRequests reservationRequests = ReservationRequests.newInstance(
         reservationRequestList, reservationRequestInterpreter);
 
-    ReservationDefinition definition =
-        ReservationDefinition.newInstance(
-            arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
+    ReservationDefinition definition = ReservationDefinition.newInstance(
+        arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
 
     return definition;
   }
