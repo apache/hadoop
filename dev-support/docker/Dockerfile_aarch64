@@ -130,7 +130,10 @@ ENV PATH "${PATH}:/opt/protobuf/bin"
 ####
 # Install pylint and python-dateutil
 ####
-RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
+# Disabled due to dependency availability/build issues (see HADOOP-18401)
+# instead "python" is added so the yarn-ui will build)
+# RUN pip3 install pylint==2.6.0 python-dateutil==2.8.1
+RUN apt-get update && apt-get install -y python
 
 ###
 # Avoid out of memory errors in builds
