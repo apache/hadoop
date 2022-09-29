@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.router.webapp.dao.RouterClusterMetrics;
 import org.apache.hadoop.yarn.server.router.webapp.dao.RouterSchedulerMetrics;
@@ -180,8 +180,11 @@ public class MetricsOverviewTable extends RouterBlock {
         th().$class("ui-state-default").__("Scheduling Resource Type").__().
         th().$class("ui-state-default").__("Minimum Allocation").__().
         th().$class("ui-state-default").__("Maximum Allocation").__().
+        th().$class("ui-state-default").__("Maximum Cluster Application Priority").__().
+        th().$class("ui-state-default").__("Scheduler Busy %").__().
+        th().$class("ui-state-default").__("RM Dispatcher EventQueue Size").__().
         th().$class("ui-state-default")
-        .__("Maximum Cluster Application Priority").__().
+        .__("Scheduler Dispatcher EventQueue Size").__().
         __().
         __().
         tbody().$class("ui-widget-content");
@@ -191,9 +194,9 @@ public class MetricsOverviewTable extends RouterBlock {
       // Call the RM interface to obtain schedule information
       String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) +
           subcluster.getRMWebServiceAddress();
-      SchedulerTypeInfo typeInfo = RouterWebServiceUtil
-          .genericForward(webAppAddress, null, SchedulerTypeInfo.class, HTTPMethods.GET,
-          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER, null, null,
+      SchedulerOverviewInfo typeInfo = RouterWebServiceUtil
+          .genericForward(webAppAddress, null, SchedulerOverviewInfo.class, HTTPMethods.GET,
+          RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_OVERVIEW, null, null,
           this.router.getConfig(), client);
       RouterSchedulerMetrics rsMetrics = new RouterSchedulerMetrics(subcluster, metrics, typeInfo);
 
@@ -204,13 +207,19 @@ public class MetricsOverviewTable extends RouterBlock {
           td(rsMetrics.getSchedulingResourceType()).
           td(rsMetrics.getMinimumAllocation()).
           td(rsMetrics.getMaximumAllocation()).
-          td(rsMetrics.getApplicationPriority())
-          .__();
+          td(rsMetrics.getApplicationPriority()).
+          td(rsMetrics.getSchedulerBusy()).
+          td(rsMetrics.getRmDispatcherEventQueueSize()).
+          td(rsMetrics.getSchedulerDispatcherEventQueueSize()).
+          __();
     }
 
     // If there is no cluster information
     if (subclusters != null && subclusters.size() == 0) {
       fsMetricsScheduleTr.tr().
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
           td(UNAVAILABLE).
           td(UNAVAILABLE).
           td(UNAVAILABLE).

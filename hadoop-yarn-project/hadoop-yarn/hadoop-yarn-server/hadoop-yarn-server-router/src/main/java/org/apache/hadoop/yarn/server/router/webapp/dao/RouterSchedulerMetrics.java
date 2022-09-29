@@ -17,20 +17,15 @@
  */
 package org.apache.hadoop.yarn.server.router.webapp.dao;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
+
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInformationsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
-import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -55,29 +50,22 @@ public class RouterSchedulerMetrics {
   }
 
   public RouterSchedulerMetrics(SubClusterInfo subClusterInfo, RouterClusterMetrics metrics,
-      SchedulerTypeInfo typeInfo) {
+      SchedulerOverviewInfo overview) {
     try {
       // Parse Scheduler Information.
-      SchedulerInfo schedulerInfo = typeInfo.getSchedulerInfo();
       this.subCluster = subClusterInfo.getSubClusterId().getId();
-      this.schedulerType = schedulerInfo.getSchedulerType();
-
-      // Resource Information
-      ResourceInformationsInfo resourceInformationsInfo =
-          schedulerInfo.getMinAllocation().getResourcesInformations();
-      List<String> items = new ArrayList<>();
-      for (ResourceInformation info : resourceInformationsInfo.getApps()) {
-        if (StringUtils.isNotBlank(info.getUnits())) {
-          items.add(info.getName() + "(" + info.getUnits() + ")");
-        } else {
-          items.add(info.getName());
-        }
+      this.schedulerType = overview.getSchedulerType();
+      this.schedulingResourceType = overview.getSchedulingResourceType();
+      this.minimumAllocation = overview.getMinimumAllocation().toString();
+      this.maximumAllocation = overview.getMaximumAllocation().toString();
+      this.applicationPriority = String.valueOf(overview.getApplicationPriority());
+      if (overview.getSchedulerBusy() != -1) {
+        this.schedulerBusy = String.valueOf(overview.getSchedulerBusy());
       }
-      this.schedulingResourceType = "[" + StringUtils.join(items, ",") + "]";
-      this.minimumAllocation = schedulerInfo.getMinAllocation().toString();
-      this.maximumAllocation = schedulerInfo.getMaxAllocation().toString();
-      this.applicationPriority = String.valueOf(schedulerInfo.getMaxClusterLevelAppPriority());
-
+      this.rmDispatcherEventQueueSize =
+          String.valueOf(overview.getRmDispatcherEventQueueSize());
+      this.schedulerDispatcherEventQueueSize =
+          String.valueOf(overview.getSchedulerDispatcherEventQueueSize());
     } catch (Exception ex) {
       LOG.error("RouterSchedulerMetrics Error.", ex);
     }
