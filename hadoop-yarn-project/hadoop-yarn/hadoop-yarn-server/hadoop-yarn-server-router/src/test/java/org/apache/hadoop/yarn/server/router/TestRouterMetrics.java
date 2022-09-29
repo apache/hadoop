@@ -389,9 +389,9 @@ public class TestRouterMetrics {
       metrics.incrContainerReportFailedRetrieved();
     }
 
-    public void getContainer() {
+    public void getContainers() {
       LOG.info("Mocked: failed getContainer call");
-      metrics.incrContainerFailedRetrieved();
+      metrics.incrGetContainersFailedRetrieved();
     }
 
     public void getResourceTypeInfo() {
@@ -599,7 +599,7 @@ public class TestRouterMetrics {
       metrics.succeededGetContainerReportRetrieved(duration);
     }
 
-    public void getContainer(long duration) {
+    public void getContainers(long duration) {
       LOG.info("Mocked: successful getContainer call with duration {}", duration);
       metrics.succeededGetContainersRetrieved(duration);
     }
@@ -897,12 +897,12 @@ public class TestRouterMetrics {
   @Test
   public void testSucceededGetContainers() {
     long totalGoodBefore = metrics.getNumSucceededGetContainersRetrieved();
-    goodSubCluster.getContainer(150);
+    goodSubCluster.getContainers(150);
     Assert.assertEquals(totalGoodBefore + 1,
         metrics.getNumSucceededGetContainersRetrieved());
     Assert.assertEquals(150,
         metrics.getLatencySucceededGetContainersRetrieved(), ASSERT_DOUBLE_DELTA);
-    goodSubCluster.getContainer(300);
+    goodSubCluster.getContainers(300);
     Assert.assertEquals(totalGoodBefore + 2,
         metrics.getNumSucceededGetContainersRetrieved());
     Assert.assertEquals(225, metrics.getLatencySucceededGetContainersRetrieved(),
@@ -910,9 +910,9 @@ public class TestRouterMetrics {
   }
 
   @Test
-  public void testGetContainerFailed() {
+  public void testGetContainersFailed() {
     long totalBadBefore = metrics.getContainersFailedRetrieved();
-    badSubCluster.getContainer();
+    badSubCluster.getContainers();
     Assert.assertEquals(totalBadBefore + 1, metrics.getContainersFailedRetrieved());
   }
 

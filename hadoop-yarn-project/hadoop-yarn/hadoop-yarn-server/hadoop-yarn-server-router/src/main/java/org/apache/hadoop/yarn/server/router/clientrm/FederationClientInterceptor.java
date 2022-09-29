@@ -1318,7 +1318,7 @@ public class FederationClientInterceptor
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
     if (request == null || request.getApplicationAttemptId() == null) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing getContainers request or ApplicationAttemptId.", null);
     }
@@ -1329,7 +1329,7 @@ public class FederationClientInterceptor
     try {
       subClusterId = getApplicationHomeSubCluster(applicationId);
     } catch (YarnException ex) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException("Application " + applicationId +
           " does not exist in FederationStateStore.", ex);
     }
@@ -1340,7 +1340,7 @@ public class FederationClientInterceptor
     try {
       response = clientRMProxy.getContainers(request);
     } catch (Exception ex) {
-      routerMetrics.incrContainerFailedRetrieved();
+      routerMetrics.incrGetContainersFailedRetrieved();
       RouterServerUtil.logAndThrowException("Unable to get the containers for " +
           applicationId + " from SubCluster " + subClusterId.getId(), ex);
     }

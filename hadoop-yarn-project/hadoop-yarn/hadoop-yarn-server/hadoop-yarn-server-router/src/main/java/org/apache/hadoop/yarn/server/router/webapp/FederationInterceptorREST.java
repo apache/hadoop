@@ -1182,9 +1182,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       final HttpServletRequest hsrCopy = clone(hsr);
       AppActivitiesInfo appActivitiesInfo = interceptor.getAppActivities(hsrCopy, appId, time,
           requestPriorities, allocationRequestIds, groupBy, limit, actions, summarize);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppActivitiesRetrieved(stopTime - startTime);
-      return appActivitiesInfo;
+      if (appActivitiesInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppActivitiesRetrieved(stopTime - startTime);
+        return appActivitiesInfo;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get subCluster by appId: %s.",
@@ -1211,9 +1213,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClustersActive.values(), remoteMethod, ApplicationStatisticsInfo.class);
       ApplicationStatisticsInfo applicationStatisticsInfo  =
           RouterWebServiceUtil.mergeApplicationStatisticsInfo(appStatisticsMap.values());
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppStatisticsRetrieved(stopTime - startTime);
-      return applicationStatisticsInfo;
+      if (applicationStatisticsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppStatisticsRetrieved(stopTime - startTime);
+        return applicationStatisticsInfo;
+      }
     } catch (IOException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
@@ -1239,9 +1243,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeToLabelsInfo.class);
       NodeToLabelsInfo nodeToLabelsInfo =
           RouterWebServiceUtil.mergeNodeToLabels(nodeToLabelsInfoMap);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
-      return nodeToLabelsInfo;
+      if (nodeToLabelsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetNodeToLabelsRetrieved(stopTime - startTime);
+        return nodeToLabelsInfo;
+      }
     } catch (NotFoundException e) {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
@@ -1276,9 +1282,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         }
       });
       LabelsToNodesInfo labelsToNodesInfo = new LabelsToNodesInfo(labelToNodesMap);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
-      return labelsToNodesInfo;
+      if (labelsToNodesInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+        return labelsToNodesInfo;
+      }
     } catch (NotFoundException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
@@ -1317,9 +1325,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<NodeLabel> hashSets = Sets.newHashSet();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
-      return nodeLabelsInfo;
+      if (nodeLabelsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetClusterNodeLabelsRetrieved(stopTime - startTime);
+        return nodeLabelsInfo;
+      }
     } catch (NotFoundException e) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
@@ -1358,9 +1368,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Set<NodeLabel> hashSets = Sets.newHashSet();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
-      return nodeLabelsInfo;
+      if (nodeLabelsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetLabelsToNodesRetrieved(stopTime - startTime);
+        return nodeLabelsInfo;
+      }
     } catch (NotFoundException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("Get all active sub cluster(s) error.", e);
@@ -1387,9 +1399,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppPriority appPriority = interceptor.getAppPriority(hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppPriorityRetrieved(stopTime - startTime);
-      return appPriority;
+      if (appPriority != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppPriorityRetrieved(stopTime - startTime);
+        return appPriority;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppPriorityFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1423,9 +1437,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       Response response = interceptor.updateApplicationPriority(targetPriority, hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededUpdateAppPriorityRetrieved((stopTime - startTime));
-      return response;
+      if (response != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateAppPriorityRetrieved(stopTime - startTime);
+        return response;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1453,9 +1469,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppQueue queue = interceptor.getAppQueue(hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppQueueRetrieved((stopTime - startTime));
-      return queue;
+      if (queue != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppQueueRetrieved((stopTime - startTime));
+        return queue;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get queue by appId: %s.", appId);
@@ -1488,9 +1506,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       Response response = interceptor.updateAppQueue(targetQueue, hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededUpdateAppQueueRetrieved((stopTime - startTime));
-      return response;
+      if (response != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateAppQueueRetrieved(stopTime - startTime);
+        return response;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1576,7 +1596,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           includeResourceAllocations, hsrCopy);
       if (response != null) {
         long stopTime = clock.getTime();
-        routerMetrics.succeededListReservationRetrieved((stopTime - startTime1));
+        routerMetrics.succeededListReservationRetrieved(stopTime - startTime1);
         return response;
       }
     } catch (YarnException e) {
@@ -1608,9 +1628,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppTimeoutInfo appTimeoutInfo = interceptor.getAppTimeout(hsr, appId, type);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppTimeoutRetrieved((stopTime - startTime));
-      return appTimeoutInfo;
+      if (appTimeoutInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppTimeoutRetrieved((stopTime - startTime));
+        return appTimeoutInfo;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1638,9 +1660,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededGetAppTimeoutsRetrieved((stopTime - startTime));
-      return appTimeoutsInfo;
+      if (appTimeoutsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetAppTimeoutsRetrieved((stopTime - startTime));
+        return appTimeoutsInfo;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppTimeoutsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1675,9 +1699,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       Response response = interceptor.updateApplicationTimeout(appTimeout, hsr, appId);
-      long stopTime = clock.getTime();
-      routerMetrics.succeededUpdateAppTimeoutsRetrieved((stopTime - startTime));
-      return response;
+      if (response != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededUpdateAppTimeoutsRetrieved((stopTime - startTime));
+        return response;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1705,9 +1731,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
-      long stopTime = Time.now();
-      routerMetrics.succeededAppAttemptsRetrieved((stopTime - startTime));
-      return appAttemptsInfo;
+      if (appAttemptsInfo != null) {
+        long stopTime = Time.now();
+        routerMetrics.succeededAppAttemptsRetrieved((stopTime - startTime));
+        return appAttemptsInfo;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1747,9 +1775,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       AppAttemptInfo appAttemptInfo = interceptor.getAppAttempt(req, res, appId, appAttemptId);
-      long stopTime = Time.now();
-      routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
-      return appAttemptInfo;
+      if (appAttemptInfo != null) {
+        long stopTime = Time.now();
+        routerMetrics.succeededAppAttemptReportRetrieved(stopTime - startTime);
+        return appAttemptInfo;
+      }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(e,
@@ -1767,32 +1797,47 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
 
-    ContainersInfo containersInfo = new ContainersInfo();
+    if (appId == null || appId.isEmpty()) {
+      routerMetrics.incrGetContainersFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive;
-    try {
-      subClustersActive = getActiveSubclusters();
-    } catch (NotFoundException e) {
-      LOG.error("Get all active sub cluster(s) error.", e);
-      return containersInfo;
+    if (appAttemptId == null || appAttemptId.isEmpty()) {
+      routerMetrics.incrGetContainersFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
     }
 
     try {
+      long startTime = clock.getTime();
+      ContainersInfo containersInfo = new ContainersInfo();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       Class[] argsClasses = new Class[]{
           HttpServletRequest.class, HttpServletResponse.class, String.class, String.class};
       Object[] args = new Object[]{req, res, appId, appAttemptId};
       ClientMethod remoteMethod = new ClientMethod("getContainers", argsClasses, args);
       Map<SubClusterInfo, ContainersInfo> containersInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, ContainersInfo.class);
-      if (containersInfoMap != null) {
+      if (containersInfoMap != null && !containersInfoMap.isEmpty()) {
         containersInfoMap.values().forEach(containers ->
             containersInfo.addAll(containers.getContainers()));
       }
-    } catch (Exception ex) {
-      LOG.error("Failed to return GetContainers.",  ex);
+      if (containersInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetContainersRetrieved(stopTime - startTime);
+        return containersInfo;
+      }
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetContainersFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e, "getContainers error, appId = %s, " +
+          " appAttemptId = %s, Probably getActiveSubclusters error.", appId, appAttemptId);
+    } catch (IOException | YarnException e) {
+      routerMetrics.incrGetContainersFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e, "getContainers error, appId = %s, " +
+          " appAttemptId = %s.", appId, appAttemptId);
     }
 
-    return containersInfo;
+    routerMetrics.incrGetContainersFailedRetrieved();
+    throw new RuntimeException("getContainers Failed.");
   }
 
   @Override
