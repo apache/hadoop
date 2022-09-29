@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.router.webapp.dao;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
