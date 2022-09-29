@@ -80,25 +80,25 @@ public abstract class HATestUtil {
    * @throws CouldNotCatchUpException if the standby doesn't catch up to the
    *         active in NN_LAG_TIMEOUT milliseconds
    */
-  public static void waitForStandbyToCatchUp(NameNode active,
-      NameNode standby) throws InterruptedException, IOException, CouldNotCatchUpException {
-    long activeTxId = active.getNamesystem().getFSImage().getEditLog()
-      .getLastWrittenTxId();
+  public static void waitForStandbyToCatchUp(NameNode active, NameNode standby)
+      throws InterruptedException, IOException, CouldNotCatchUpException {
+    long activeTxId =
+        active.getNamesystem().getFSImage().getEditLog().getLastWrittenTxId();
 
     active.getRpcServer().rollEditLog();
 
     long start = Time.now();
     while (Time.now() - start < TestEditLogTailer.NN_LAG_TIMEOUT) {
-      long nn2HighestTxId = standby.getNamesystem().getFSImage()
-        .getLastAppliedTxId();
+      long nn2HighestTxId =
+          standby.getNamesystem().getFSImage().getLastAppliedTxId();
       if (nn2HighestTxId >= activeTxId) {
         return;
       }
       Thread.sleep(TestEditLogTailer.SLEEP_TIME);
     }
-    throw new CouldNotCatchUpException("Standby did not catch up to txid " +
-        activeTxId + " (currently at " +
-        standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
+    throw new CouldNotCatchUpException(
+        "Standby did not catch up to txid " + activeTxId + " (currently at "
+            + standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
   }
 
   /**
@@ -171,7 +171,7 @@ public abstract class HATestUtil {
   }
 
   public static <P extends ObserverReadProxyProvider<?>>
-  DistributedFileSystem configureObserverReadFs(
+      DistributedFileSystem configureObserverReadFs(
       MiniDFSCluster cluster, Configuration conf,
       Class<P> classFPP, boolean isObserverReadEnabled)
           throws IOException, URISyntaxException {
@@ -247,8 +247,8 @@ public abstract class HATestUtil {
     return qjmhaCluster;
   }
 
-  public static <P extends FailoverProxyProvider<?>>
-  void setupHAConfiguration(MiniDFSCluster cluster,
+  public static <P extends FailoverProxyProvider<?>> void
+      setupHAConfiguration(MiniDFSCluster cluster,
       Configuration conf, int nsIndex, Class<P> classFPP) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
     List<String> nnAddresses = new ArrayList<String>();
@@ -273,8 +273,9 @@ public abstract class HATestUtil {
   }
 
   /** Sets the required configurations for performing failover.  */
-  public static void setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf,
-      String logicalName, String proxyProvider, int nsIndex) {
+  public static void setFailoverConfigurations(MiniDFSCluster cluster,
+      Configuration conf, String logicalName, String proxyProvider,
+      int nsIndex) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
     List<InetSocketAddress> nnAddresses = new ArrayList<InetSocketAddress>(3);
     for (MiniDFSCluster.NameNodeInfo nn : nns) {
@@ -295,9 +296,11 @@ public abstract class HATestUtil {
     setFailoverConfigurations(conf, logicalName, nnAddresses, classFPP);
   }
 
-  public static void setFailoverConfigurations(Configuration conf, String logicalName,
-      String proxyProvider, InetSocketAddress... nnAddresses) {
-    setFailoverConfigurations(conf, logicalName, proxyProvider, Arrays.asList(nnAddresses));
+  public static void setFailoverConfigurations(Configuration conf,
+      String logicalName, String proxyProvider,
+      InetSocketAddress... nnAddresses) {
+    setFailoverConfigurations(conf, logicalName, proxyProvider,
+        Arrays.asList(nnAddresses));
   }
 
   /**
@@ -348,7 +351,7 @@ public abstract class HATestUtil {
   }
 
   public static <P extends FailoverProxyProvider<?>>
-  void setFailoverConfigurations(
+      void setFailoverConfigurations(
       Configuration conf, String logicalName,
       Iterable<String> nnAddresses, Class<P> classFPP) {
     List<String> nnids = new ArrayList<String>();
