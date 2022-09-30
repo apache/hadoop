@@ -23,6 +23,7 @@ import java.io.StringWriter;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.SAXParser;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
@@ -76,7 +77,7 @@ public class TestXMLUtils {
     }
   }
 
-  @Test(expected = SAXException.class)
+  @Test(expected = TransformerException.class)
   public void testExternalDtdWithSecureTransformerFactory() throws Exception {
     Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
     try (
@@ -99,7 +100,7 @@ public class TestXMLUtils {
     }
   }
 
-  @Test(expected = SAXException.class)
+  @Test(expected = TransformerException.class)
   public void testExternalDtdWithSecureSAXTransformerFactory() throws Exception {
     Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
     try (

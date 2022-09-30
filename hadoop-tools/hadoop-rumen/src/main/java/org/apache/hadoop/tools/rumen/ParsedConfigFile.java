@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
-
-import java.io.IOException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;

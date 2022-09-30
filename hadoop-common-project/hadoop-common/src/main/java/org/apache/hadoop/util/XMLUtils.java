@@ -83,12 +83,13 @@ public class XMLUtils {
   }
 
   /**
-   * This method should be used if you need a {@link DocumentBuilderFactory}. Use this method instead
-   * of {@link DocumentBuilderFactory#newInstance()}. The factory that is returned has secure configuration
-   * enabled.
+   * This method should be used if you need a {@link DocumentBuilderFactory}. Use this method
+   * instead of {@link DocumentBuilderFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
    *
    * @return a {@link DocumentBuilderFactory} with secure configuration enabled
-   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the secure configuration
+   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the
+   * secure configuration
    */
   public static DocumentBuilderFactory newSecureDocumentBuilderFactory()
           throws ParserConfigurationException {
@@ -103,12 +104,13 @@ public class XMLUtils {
   }
 
   /**
-   * This method should be used if you need a {@link SAXParserFactory}. Use this method instead
-   * of {@link SAXParserFactory#newInstance()}. The factory that is returned has secure configuration
-   * enabled.
+   * This method should be used if you need a {@link SAXParserFactory}. Use this method
+   * instead of {@link SAXParserFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
    *
    * @return a {@link SAXParserFactory} with secure configuration enabled
-   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the secure configuration
+   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the
+   * secure configuration
    * @throws SAXException if there are another issues when creating the factory
    */
   public static SAXParserFactory newSecureSAXParserFactory()
@@ -123,12 +125,13 @@ public class XMLUtils {
   }
 
   /**
-   * This method should be used if you need a {@link TransformerFactory}. Use this method instead
-   * of {@link TransformerFactory#newInstance()}. The factory that is returned has secure configuration
-   * enabled.
+   * This method should be used if you need a {@link TransformerFactory}. Use this method
+   * instead of {@link TransformerFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
    *
    * @return a {@link TransformerFactory} with secure configuration enabled
-   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not support the secure configuration
+   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not
+   * support the secure configuration
    */
   public static TransformerFactory newSecureTransformerFactory()
           throws TransformerConfigurationException {
@@ -140,12 +143,13 @@ public class XMLUtils {
   }
 
   /**
-   * This method should be used if you need a {@link SAXTransformerFactory}. Use this method instead
-   * of {@link SAXTransformerFactory#newInstance()}. The factory that is returned has secure configuration
-   * enabled.
+   * This method should be used if you need a {@link SAXTransformerFactory}. Use this method
+   * instead of {@link SAXTransformerFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
    *
    * @return a {@link SAXTransformerFactory} with secure configuration enabled
-   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not support the secure configuration
+   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not
+   * support the secure configuration
    */
   public static SAXTransformerFactory newSecureSAXTransformerFactory()
           throws TransformerConfigurationException {
