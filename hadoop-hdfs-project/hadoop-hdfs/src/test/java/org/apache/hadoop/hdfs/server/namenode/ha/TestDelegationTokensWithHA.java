@@ -95,7 +95,7 @@ public class TestDelegationTokensWithHA {
     cluster.waitActive();
     
     String logicalName = HATestUtil.getLogicalHostname(cluster);
-    HATestUtil.setFailoverConfigurations(cluster, conf, logicalName, 0);
+    HATestUtil.setFailoverConfigurations(cluster, conf, logicalName, null, 0);
 
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
