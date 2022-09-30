@@ -163,9 +163,10 @@ public class FederationStateStoreService extends AbstractService
     cleanUpRetryCountNum = conf.getInt(YarnConfiguration.FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT);
 
-    cleanUpRetrySleepTime = conf.getLong(
+    cleanUpRetrySleepTime = conf.getTimeDuration(
         YarnConfiguration.FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME,
-        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME);
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME,
+        TimeUnit.MILLISECONDS);
 
     LOG.info("Initialized federation membership service.");
 
