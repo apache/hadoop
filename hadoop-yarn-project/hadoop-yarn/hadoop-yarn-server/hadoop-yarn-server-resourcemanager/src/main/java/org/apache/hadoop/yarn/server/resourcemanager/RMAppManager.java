@@ -1066,17 +1066,23 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.federationStateStoreService = stateStoreService;
   }
 
-  private void removeApplicationIdFromStateStore(ApplicationId applicationId) {
+  /**
+   * Remove ApplicationId From StateStore.
+   *
+   * @param appId appId
+   */
+  private void removeApplicationIdFromStateStore(ApplicationId appId) {
     if (HAUtil.isFederationEnabled(conf) && federationStateStoreService != null) {
       try {
-        DeleteApplicationHomeSubClusterResponse response =
-            federationStateStoreService.cleanUpFinishApplicationsWithRetries(applicationId);
-        if (response != null) {
-          LOG.info("applicationId = {} remove from state store success.",
-              applicationId);
+        boolean cleanUpResult =
+            federationStateStoreService.cleanUpFinishApplicationsWithRetries(appId, true);
+        if(cleanUpResult){
+          LOG.info("applicationId = {} remove from state store success.", appId);
+        } else {
+          LOG.warn("applicationId = {} remove from state store failed.", appId);
         }
       } catch (Exception e) {
-        LOG.error("applicationId = {} remove from state store error.", applicationId, e);
+        LOG.error("applicationId = {} remove from state store error.", appId, e);
       }
     }
   }

@@ -252,9 +252,9 @@ public class TestFederationRMStateStoreService {
     Assert.assertNotNull(appHomeSubCluster.getApplicationId());
     Assert.assertEquals(appId, appHomeSubCluster.getApplicationId());
 
-    DeleteApplicationHomeSubClusterResponse delResponse =
-        stateStoreService.cleanUpFinishApplicationsWithRetries(appId);
-    Assert.assertNotNull(delResponse);
+    boolean cleanUpResult =
+        stateStoreService.cleanUpFinishApplicationsWithRetries(appId, true);
+    Assert.assertTrue(cleanUpResult);
     LambdaTestUtils.intercept(FederationStateStoreException.class,
         "Application " + appId + " does not exist",
         () -> stateStore.getApplicationHomeSubCluster(appRequest));

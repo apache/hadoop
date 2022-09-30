@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
@@ -34,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
@@ -81,6 +84,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +110,8 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInitialDelay;
   private RMContext rmContext;
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
+  private int cleanUpRetryNum;
+  private long cleanUpRetryTime;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -412,24 +418,31 @@ public class FederationStateStoreService extends AbstractService
 
         // Traverse the app list and clean up the app.
         long successCleanUpAppCount = 0;
-        for (ApplicationHomeSubCluster application : applications) {
-          ApplicationId applicationId = application.getApplicationId();
-          if (!this.rmContext.getRMApps().containsKey(applicationId)) {
-            try {
-              DeleteApplicationHomeSubClusterResponse deleteResponse =
-                  cleanUpFinishApplicationsWithRetries(applicationId);
-              if (deleteResponse != null) {
-                LOG.info("application = {} has been cleaned up successfully.", applicationId);
-                successCleanUpAppCount++;
+
+        // Save a local copy of the map so that it won't change with the map
+        Map<ApplicationId, RMApp> rmApps = new HashMap<>(this.rmContext.getRMApps());
+
+        // Need to make sure there is app list in RM memory.
+        if (rmApps != null && !rmApps.isEmpty()) {
+          for (ApplicationHomeSubCluster application : applications) {
+            ApplicationId applicationId = application.getApplicationId();
+            if (!this.rmContext.getRMApps().containsKey(applicationId)) {
+              try {
+                Boolean cleanUpSuccess =
+                    cleanUpFinishApplicationsWithRetries(applicationId, false);
+                if (cleanUpSuccess) {
+                  LOG.info("application = {} has been cleaned up successfully.", applicationId);
+                  successCleanUpAppCount++;
+                }
+              } catch (YarnException e) {
+                LOG.error("problem during application = {} cleanup.", applicationId, e);
               }
-            } catch (YarnException e) {
-              LOG.error("problem during application = {} cleanup.", applicationId, e);
             }
           }
         }
 
         // print app cleanup log
-        LOG.info("cleanup finished applications size = {}, number = {} successful cleanups.",
+        LOG.info("cleanup finished applications size = {}, number = {} successful cleanup.",
             applications.size(), successCleanUpAppCount);
       } catch (Exception e) {
         LOG.error("problem during cleanup applications.", e);
@@ -438,48 +451,67 @@ public class FederationStateStoreService extends AbstractService
   }
 
   /**
-   * Clean up the completed Application.
+   * Clean up the federation completed Application.
    *
    * @param applicationId app id.
-   * @return DeleteApplicationHomeSubClusterResponse.
+   * @param isQuery true, need to query from statestore ; false not query.
    * @throws Exception exception occurs.
    */
-  public DeleteApplicationHomeSubClusterResponse
-      cleanUpFinishApplicationsWithRetries(ApplicationId applicationId) throws Exception {
-    DeleteApplicationHomeSubClusterRequest request =
+  public boolean cleanUpFinishApplicationsWithRetries(ApplicationId applicationId, boolean isQuery)
+      throws Exception {
+
+    // Generate a request to delete data
+    DeleteApplicationHomeSubClusterRequest delRequest =
         DeleteApplicationHomeSubClusterRequest.newInstance(applicationId);
-    return new FederationStateStoreAction<DeleteApplicationHomeSubClusterResponse>() {
+
+    return new FederationActionRetry<Boolean>() {
       @Override
-      public DeleteApplicationHomeSubClusterResponse run() throws Exception {
-        return deleteApplicationHomeSubCluster(request);
-      }
-    }.runWithRetries();
-  }
+      public Boolean run() throws Exception {
+        boolean isAppNeedClean = true;
 
-  /**
-   * Define an abstract class, abstract retry method,
-   * which can be used for other methods later.
-   *
-   * @param <T> abstract parameter
-   */
-  private abstract class FederationStateStoreAction<T> {
-    abstract T run() throws Exception;
+        // If we need to query the StateStore
+        if (isQuery) {
 
-    T runWithRetries() throws Exception {
-      int retry = 0;
-      while (true) {
-        try {
-          return run();
-        } catch (Exception e) {
-          LOG.info("Exception while executing an FederationStateStore operation.", e);
-          if (++retry > 10) {
-            LOG.info("Maxed out FederationStateStore retries. Giving up!");
-            throw e;
+          GetApplicationHomeSubClusterRequest queryRequest =
+              GetApplicationHomeSubClusterRequest.newInstance(applicationId);
+          // Here we need to use try...catch,
+          // because getApplicationHomeSubCluster may throw not exist exception
+          try {
+            GetApplicationHomeSubClusterResponse queryResp =
+                getApplicationHomeSubCluster(queryRequest);
+            if (queryResp != null) {
+              ApplicationHomeSubCluster appHomeSC = queryResp.getApplicationHomeSubCluster();
+              SubClusterId homeSubClusterId = appHomeSC.getHomeSubCluster();
+              if (!subClusterId.equals(homeSubClusterId)) {
+                isAppNeedClean = false;
+                LOG.warn("The homeSubCluster of applicationId = {} is {}, " +
+                    " not belong subCluster = {} and is not allowed to delete.",
+                    applicationId, homeSubClusterId, subClusterId);
+              }
+            } else {
+              isAppNeedClean = false;
+              LOG.warn("The applicationId = {} not belong subCluster = {} " +
+                  " and is not allowed to delete.", applicationId, subClusterId);
+            }
+          } catch (Exception e) {
+            isAppNeedClean = false;
+            LOG.warn("query applicationId = {} error.", applicationId, e);
           }
-          LOG.info("Retrying operation on FederationStateStore. Retry no. " + retry);
-          Thread.sleep(10);
         }
+
+        // When the App needs to be cleaned up, clean up the App.
+        if (isAppNeedClean) {
+          DeleteApplicationHomeSubClusterResponse response =
+              deleteApplicationHomeSubCluster(delRequest);
+          if (response != null) {
+            LOG.info("The applicationId ={} has been successfully cleaned up.",
+                applicationId);
+            return true;
+          }
+        }
+
+        return false;
       }
-    }
+    }.runWithRetries(10, 100);
   }
 }
