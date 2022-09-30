@@ -31,7 +31,11 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
@@ -48,10 +52,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -63,7 +71,6 @@ import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONUnmarshaller;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for FederationStateStoreService.
@@ -293,7 +300,7 @@ public class TestFederationRMStateStoreService {
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
 
     // set up MockRM.
-    final MockRM rm = new MockRM(conf);
+    MockRM rm = new MockRM(conf);
     rm.init(conf);
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
 
@@ -326,11 +333,7 @@ public class TestFederationRMStateStoreService {
     // app04 exists in both RM memory and stateStore.
     ApplicationId appId04 = ApplicationId.newInstance(Time.now(), 4);
     addApplication2StateStore(appId04, stateStore);
-    RMContext rmContext = rm.getRMContext();
-    Map<ApplicationId, RMApp> rmAppMaps = rmContext.getRMApps();
-    RMAppImpl appId04RMApp = mock(RMAppImpl.class);
-    when(appId04RMApp.getApplicationId()).thenReturn(appId04);
-    rmAppMaps.put(appId04, appId04RMApp);
+    addApplication2RMAppManager(rm, appId04);
 
     // start rm.
     rm.start();
@@ -339,7 +342,10 @@ public class TestFederationRMStateStoreService {
     GenericTestUtils.waitFor(() -> {
       int appsSize = 0;
       try {
-        appsSize = getApplicationsFromStateStore();
+        List<ApplicationHomeSubCluster> subClusters =
+            getApplicationsFromStateStore();
+        Assert.assertNotNull(subClusters);
+        appsSize = subClusters.size();
       } catch (YarnException e) {
         e.printStackTrace();
       }
@@ -354,25 +360,91 @@ public class TestFederationRMStateStoreService {
           "Application " + appId + " does not exist",
           () -> stateStore.getApplicationHomeSubCluster(appRequest));
     }
+
+    if (rm != null) {
+      rm.stop();
+      rm = null;
+    }
   }
 
   @Test
-  public void testCleanUpApplicationWhenRMStop() throws Exception {
+  public void testCleanUpApplicationWhenRMCompleteOneApp() throws Exception {
+
     // We design such a test case.
-    // Step1. We start RM, Register app[01-04] to RM memory,
-    // There will be 4 apps in memory
+    // Step1. We start RM，Set the RM memory to keep a maximum of 1 completed app.
+    // Step2. Register app[01-03] to RM memory & stateStore.
+    // Step3. We clean up app01, app02, app03, at this time,
+    // app01, app02 should be cleaned up from statestore, app03 should remain in statestore.
+
+    // set yarn configuration.
+    conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY, 10);
+    conf.set(YarnConfiguration.RM_CLUSTER_ID, subClusterId.getId());
+    conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 1);
+    conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
+
+    // set up MockRM.
+    MockRM rm = new MockRM(conf);
+    rm.init(conf);
+    stateStore = rm.getFederationStateStoreService().getStateStoreClient();
+    rm.start();
+
+    // generate an [app01] and join the [SC-1] cluster.
+    List<ApplicationId> appIds = new ArrayList();
+    ApplicationId appId01 = ApplicationId.newInstance(Time.now(), 1);
+    addApplication2StateStore(appId01, stateStore);
+    addApplication2RMAppManager(rm, appId01);
+    appIds.add(appId01);
+
+    // generate an [app02] and join the [SC-1] cluster.
+    ApplicationId appId02 = ApplicationId.newInstance(Time.now(), 2);
+    addApplication2StateStore(appId02, stateStore);
+    addApplication2RMAppManager(rm, appId02);
+    appIds.add(appId02);
+
+    // generate an [app03] and join the [SC-1] cluster.
+    ApplicationId appId03 = ApplicationId.newInstance(Time.now(), 3);
+    addApplication2StateStore(appId03, stateStore);
+    addApplication2RMAppManager(rm, appId03);
+
+
+    // rmAppManager
+    RMAppManager rmAppManager = rm.getRMAppManager();
+    rmAppManager.finishApplication4Test(appId01);
+    rmAppManager.finishApplication4Test(appId02);
+    rmAppManager.finishApplication4Test(appId03);
+    rmAppManager.checkAppNumCompletedLimit4Test();
+
+    // app01, app02 should be cleaned from statestore
+    // After the query, it should report the error not exist.
+    for (ApplicationId appId : appIds) {
+      GetApplicationHomeSubClusterRequest appRequest =
+          GetApplicationHomeSubClusterRequest.newInstance(appId);
+      LambdaTestUtils.intercept(FederationStateStoreException.class,
+          "Application " + appId + " does not exist",
+          () -> stateStore.getApplicationHomeSubCluster(appRequest));
+    }
+
+    // app03 should remain in statestore
+    List<ApplicationHomeSubCluster> appHomeScList = getApplicationsFromStateStore();
+    Assert.assertNotNull(appHomeScList);
+    Assert.assertEquals(1, appHomeScList.size());
+    ApplicationHomeSubCluster homeSubCluster = appHomeScList.get(0);
+    Assert.assertNotNull(homeSubCluster);
+    Assert.assertEquals(appId03, homeSubCluster.getApplicationId());
   }
 
   private void addApplication2StateStore(ApplicationId appId,
       FederationStateStore stateStore) throws YarnException {
     ApplicationHomeSubCluster appHomeSC = ApplicationHomeSubCluster.newInstance(
-         appId, subClusterId);
+        appId, subClusterId);
     AddApplicationHomeSubClusterRequest addHomeSCRequest =
-            AddApplicationHomeSubClusterRequest.newInstance(appHomeSC);
+        AddApplicationHomeSubClusterRequest.newInstance(appHomeSC);
     stateStore.addApplicationHomeSubCluster(addHomeSCRequest);
   }
 
-  private int getApplicationsFromStateStore() throws YarnException {
+  private List<ApplicationHomeSubCluster> getApplicationsFromStateStore() throws YarnException {
     // make sure the apps can be queried in the stateStore
     GetApplicationsHomeSubClusterRequest allRequest =
         GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
@@ -381,6 +453,34 @@ public class TestFederationRMStateStoreService {
     Assert.assertNotNull(allResponse);
     List<ApplicationHomeSubCluster> appHomeSCLists = allResponse.getAppsHomeSubClusters();
     Assert.assertNotNull(appHomeSCLists);
-    return appHomeSCLists.size();
+    return appHomeSCLists;
+  }
+
+  private void addApplication2RMAppManager(MockRM rm, ApplicationId appId) {
+    RMContext rmContext = rm.getRMContext();
+    Map<ApplicationId, RMApp> rmAppMaps = rmContext.getRMApps();
+    String user = MockApps.newUserName();
+    String name = MockApps.newAppName();
+    String queue = MockApps.newQueue();
+
+    YarnScheduler scheduler = mock(YarnScheduler.class);
+
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(rmContext, scheduler);
+
+    ApplicationSubmissionContext submissionContext =
+        new ApplicationSubmissionContextPBImpl();
+
+    // applicationId will not be used because RMStateStore is mocked,
+    // but applicationId is still set for safety
+    submissionContext.setApplicationId(appId);
+    submissionContext.setPriority(Priority.newInstance(0));
+
+    RMApp application = new RMAppImpl(appId, rmContext, conf, name,
+        user, queue, submissionContext, scheduler, masterService,
+        System.currentTimeMillis(), "YARN", null,
+        new ArrayList<>());
+
+    rmAppMaps.putIfAbsent(application.getApplicationId(), application);
   }
 }

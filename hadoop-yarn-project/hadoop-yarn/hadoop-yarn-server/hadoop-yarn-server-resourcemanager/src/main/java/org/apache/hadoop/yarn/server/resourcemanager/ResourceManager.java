@@ -1025,12 +1025,6 @@ public class ResourceManager extends CompositeService
     @Override
     protected void serviceStop() throws Exception {
 
-      // If RM is stopped, also perform a cleanup operation.
-      if (HAUtil.isFederationEnabled(conf)) {
-        federationStateStoreService.
-            createCleanUpFinishApplicationThread("Stop");
-      }
-
       super.serviceStop();
 
       DefaultMetricsSystem.shutdown();

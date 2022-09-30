@@ -1086,4 +1086,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
     }
   }
+
+  // just test using
+  @VisibleForTesting
+  public void checkAppNumCompletedLimit4Test() {
+    checkAppNumCompletedLimit();
+  }
+
+  // just test using
+  @VisibleForTesting
+  public void finishApplication4Test(ApplicationId applicationId) {
+    finishApplication(applicationId);
+  }
 }

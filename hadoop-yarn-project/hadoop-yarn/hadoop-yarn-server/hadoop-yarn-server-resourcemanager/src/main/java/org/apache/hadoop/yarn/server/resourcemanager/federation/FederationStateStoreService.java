@@ -410,53 +410,59 @@ public class FederationStateStoreService extends AbstractService
   }
 
   /**
-   * Create a thread that cleans up the app.
+   * Create a thread that cleans up the apps.
    *
    * @return thread object.
    */
   private Runnable createCleanUpFinishApplicationThread() {
     return () -> {
+      createCleanUpFinishApplication();
+    };
+  }
 
-      try {
-        // Get the current RM's App list based on subClusterId
-        GetApplicationsHomeSubClusterRequest request =
-            GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
-        GetApplicationsHomeSubClusterResponse response =
-            getApplicationsHomeSubCluster(request);
-        List<ApplicationHomeSubCluster> applicationHomeSCs = response.getAppsHomeSubClusters();
+  /**
+   * cleans up the apps.
+   */
+  private void createCleanUpFinishApplication() {
+    try {
+      // Get the current RM's App list based on subClusterId
+      GetApplicationsHomeSubClusterRequest request =
+              GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
+      GetApplicationsHomeSubClusterResponse response =
+              getApplicationsHomeSubCluster(request);
+      List<ApplicationHomeSubCluster> applicationHomeSCs = response.getAppsHomeSubClusters();
 
-        // Traverse the app list and clean up the app.
-        long successCleanUpAppCount = 0;
+      // Traverse the app list and clean up the app.
+      long successCleanUpAppCount = 0;
 
-        // Save a local copy of the map so that it won't change with the map
-        Map<ApplicationId, RMApp> rmApps = new HashMap<>(this.rmContext.getRMApps());
+      // Save a local copy of the map so that it won't change with the map
+      Map<ApplicationId, RMApp> rmApps = new HashMap<>(this.rmContext.getRMApps());
 
-        // Need to make sure there is app list in RM memory.
-        if (rmApps != null && !rmApps.isEmpty()) {
-          for (ApplicationHomeSubCluster applicationHomeSC : applicationHomeSCs) {
-            ApplicationId applicationId = applicationHomeSC.getApplicationId();
-            if (!rmApps.containsKey(applicationId)) {
-              try {
-                Boolean cleanUpSuccess =
-                    cleanUpFinishApplicationsWithRetries(applicationId, false);
-                if (cleanUpSuccess) {
-                  LOG.info("application = {} has been cleaned up successfully.", applicationId);
-                  successCleanUpAppCount++;
-                }
-              } catch (Exception e) {
-                LOG.error("problem during application = {} cleanup.", applicationId, e);
+      // Need to make sure there is app list in RM memory.
+      if (rmApps != null && !rmApps.isEmpty()) {
+        for (ApplicationHomeSubCluster applicationHomeSC : applicationHomeSCs) {
+          ApplicationId applicationId = applicationHomeSC.getApplicationId();
+          if (!rmApps.containsKey(applicationId)) {
+            try {
+              Boolean cleanUpSuccess =
+                      cleanUpFinishApplicationsWithRetries(applicationId, false);
+              if (cleanUpSuccess) {
+                LOG.info("application = {} has been cleaned up successfully.", applicationId);
+                successCleanUpAppCount++;
               }
+            } catch (Exception e) {
+              LOG.error("problem during application = {} cleanup.", applicationId, e);
             }
           }
         }
-
-        // print app cleanup log
-        LOG.info("cleanup finished applications size = {}, number = {} successful cleanup.",
-            applicationHomeSCs.size(), successCleanUpAppCount);
-      } catch (Exception e) {
-        LOG.error("problem during cleanup applications.", e);
       }
-    };
+
+      // print app cleanup log
+      LOG.info("cleanup finished applications size = {}, number = {} successful cleanup.",
+              applicationHomeSCs.size(), successCleanUpAppCount);
+    } catch (Exception e) {
+      LOG.error("problem during cleanup applications.", e);
+    }
   }
 
   /**
@@ -468,10 +474,6 @@ public class FederationStateStoreService extends AbstractService
    */
   public boolean cleanUpFinishApplicationsWithRetries(ApplicationId applicationId, boolean isQuery)
       throws Exception {
-
-    if(applicationId==null){
-      LOG.info("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
-    }
 
     // Generate a request to delete data
     DeleteApplicationHomeSubClusterRequest delRequest =
