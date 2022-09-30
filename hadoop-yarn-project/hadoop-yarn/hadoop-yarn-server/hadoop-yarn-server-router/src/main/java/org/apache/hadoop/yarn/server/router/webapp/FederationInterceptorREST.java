@@ -1797,16 +1797,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetContainersFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
-    if (appAttemptId == null || appAttemptId.isEmpty()) {
-      routerMetrics.incrGetContainersFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
-    }
-
     try {
       long startTime = clock.getTime();
       ContainersInfo containersInfo = new ContainersInfo();

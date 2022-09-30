@@ -633,6 +633,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testGetContainersNotExists() {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
     ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
     Assert.assertTrue(response.getContainers().isEmpty());
   }
