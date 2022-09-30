@@ -104,9 +104,12 @@ public class TestDefaultStringifier {
 
     String keyName = "test.defaultstringifier.key2";
 
-    Integer[] array = new Integer[] {1,2,3,4,5};
+    Integer[] array = new Integer[] {1,2,3,4,5}, emptyArray = new Integer[] {};
 
 
+    DefaultStringifier.storeArray(conf, emptyArray, keyName);
+    assertEquals(0
+        , DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class).length);
     DefaultStringifier.storeArray(conf, array, keyName);
 
     Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
