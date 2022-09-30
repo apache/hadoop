@@ -138,7 +138,8 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   @Test
   public void testReadLargeFileFullyLazySeek() throws Throwable {
-    describe("read a large file using readFully(position,buffer,offset,length), uses S3ACachingInputStream");
+    describe("read a large file using readFully(position,buffer,offset,length),"
+        + " uses S3ACachingInputStream");
     IOStatistics ioStats;
     openFS();
 

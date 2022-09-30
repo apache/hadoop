@@ -184,13 +184,13 @@ in.read(buffer, 0, 4MB)
 ```
 
 For the above read sequence, after the `seek(10MB)` call is issued, block 0 has not been read
-completely so the subsequent call to `read()` will cache it, on the assumption that the caller 
+completely so the subsequent call to `read()` will cache it, on the assumption that the caller
 will probably want to read from it again.
 
-After `seek(2MB)` is called, the position is back inside block 0. The next read can now be 
-satisfied from the locally cached block file, which is typically orders of magnitude faster 
+After `seek(2MB)` is called, the position is back inside block 0. The next read can now be
+satisfied from the locally cached block file, which is typically orders of magnitude faster
 than a network based read.
 
-NB: `seek()` is implemented lazily, so it only keeps track of the new position but does not 
-otherwise affect the internal state of the stream. Only when a `read()` is issued, it will call 
+NB: `seek()` is implemented lazily, so it only keeps track of the new position but does not
+otherwise affect the internal state of the stream. Only when a `read()` is issued, it will call
 the `ensureCurrentBuffer()` method and fetch a new block if required.
