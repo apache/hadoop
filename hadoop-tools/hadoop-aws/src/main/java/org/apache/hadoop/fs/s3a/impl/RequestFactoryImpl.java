@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -35,8 +34,6 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
@@ -53,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
@@ -495,11 +493,19 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public GetObjectRequest newGetObjectRequest(String key) {
-    GetObjectRequest request = new GetObjectRequest(bucket, key);
-    generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
+  public GetObjectRequest.Builder newGetObjectRequestBuilder(String key) {
+    GetObjectRequest.Builder builder = GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(key);
 
-    return prepareRequest(request);
+    // need to set key to get objects encrypted with SSE_C
+    EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
+      builder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+          .sseCustomerKey(base64customerKey)
+          .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
+    });
+
+    return prepareV2Request(builder);
   }
 
   @Override

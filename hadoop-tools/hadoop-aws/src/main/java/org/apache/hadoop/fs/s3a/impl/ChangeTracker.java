@@ -20,14 +20,14 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
@@ -118,15 +118,15 @@ public class ChangeTracker {
   /**
    * Apply any revision control set by the policy if it is to be
    * enforced on the server.
-   * @param request request to modify
+   * @param builder request builder to modify
    * @return true iff a constraint was added.
    */
   public boolean maybeApplyConstraint(
-      final GetObjectRequest request) {
+      final GetObjectRequest.Builder builder) {
 
     if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
         && revisionId != null) {
-      policy.applyRevisionConstraint(request, revisionId);
+      policy.applyRevisionConstraint(builder, revisionId);
       return true;
     }
     return false;
@@ -169,7 +169,7 @@ public class ChangeTracker {
    * @throws PathIOException raised on failure
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processResponse(final S3Object object,
+  public void processResponse(final GetObjectResponse object,
       final String operation,
       final long pos) throws PathIOException {
     if (object == null) {
@@ -192,8 +192,7 @@ public class ChangeTracker {
       }
     }
 
-    // TODO: will be done with GetObject update
-   // processMetadata(object.getObjectMetadata(), operation);
+    processMetadata(object, operation);
   }
 
   /**
@@ -261,6 +260,20 @@ public class ChangeTracker {
   public void processMetadata(final HeadObjectResponse metadata,
       final String operation) throws PathIOException {
     final String newRevisionId = policy.getRevisionId(metadata, uri);
+    processNewRevision(newRevisionId, operation, -1);
+  }
+
+  /**
+   * Process the response from server for validation against the change
+   * policy.
+   * @param getObjectResponse response returned from server
+   * @param operation operation in progress
+   * @throws PathIOException raised on failure
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
+  public void processMetadata(final GetObjectResponse getObjectResponse,
+      final String operation) throws PathIOException {
+    final String newRevisionId = policy.getRevisionId(getObjectResponse, uri);
     processNewRevision(newRevisionId, operation, -1);
   }
 

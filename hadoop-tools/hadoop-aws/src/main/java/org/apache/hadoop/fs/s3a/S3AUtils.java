@@ -1932,4 +1932,15 @@ public final class S3AUtils {
     }
   };
 
+  /**
+   * Format a byte range for a request header.
+   * See https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+   *
+   * @param rangeStart the start byte offset
+   * @param rangeEnd the end byte offset (inclusive)
+   * @return a formatted byte range
+   */
+  public static String formatRange(long rangeStart, long rangeEnd) {
+    return String.format("bytes=%d-%d", rangeStart, rangeEnd);
+  }
 }

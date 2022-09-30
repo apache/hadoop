@@ -171,7 +171,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     a(factory.newDeleteObjectRequest(path));
     a(factory.newBulkDeleteRequest(new ArrayList<>()));
    // a(factory.newDirectoryMarkerRequest(path));
-    a(factory.newGetObjectRequest(path));
+   // a(factory.newGetObjectRequest(path));
    // a(factory.newGetObjectMetadataRequest(path));
     a(factory.newListMultipartUploadsRequest(path));
     //TODO: Commenting out for now, new request extends AwsRequest, this can be updated once all

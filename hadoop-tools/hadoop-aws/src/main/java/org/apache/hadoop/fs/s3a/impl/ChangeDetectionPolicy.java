@@ -20,13 +20,14 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.Locale;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
@@ -217,6 +218,19 @@ public abstract class ChangeDetectionPolicy {
 
   /**
    * Like {{@link #getRevisionId(HeadObjectResponse, String)}}, but retrieves the
+   *    * revision identifier from {@link GetObjectResponse}.
+   *
+   * @param getObjectResponse the response instance
+   * @param uri the URI of the object
+   * @return the revisionId string as interpreted by this policy, or potentially
+   * null if the attribute is unavailable (such as when the policy says to use
+   * versionId but object versioning is not enabled for the bucket).
+   */
+  public abstract String getRevisionId(GetObjectResponse getObjectResponse,
+      String uri);
+
+  /**
+   * Like {{@link #getRevisionId(HeadObjectResponse, String)}}, but retrieves the
    * revision identifier from {@link S3ObjectAttributes}.
    *
    * @param s3Attributes the object attributes
@@ -239,12 +253,12 @@ public abstract class ChangeDetectionPolicy {
 
   /**
    * Applies the given {@link #getRevisionId(HeadObjectResponse, String) revisionId}
-   * as a server-side qualification on the {@code GetObjectRequest}.
+   * as a server-side qualification on the {@code GetObjectRequest.Builder}.
    *
    * @param request the request
    * @param revisionId the revision id
    */
-  public abstract void applyRevisionConstraint(GetObjectRequest request,
+  public abstract void applyRevisionConstraint(GetObjectRequest.Builder request,
       String revisionId);
 
   /**
@@ -333,6 +347,11 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
+    public String getRevisionId(GetObjectResponse objectMetadata, String uri) {
+      return objectMetadata.eTag();
+    }
+
+    @Override
     public String getRevisionId(HeadObjectResponse objectMetadata, String uri) {
       return objectMetadata.eTag();
     }
@@ -348,11 +367,11 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(GetObjectRequest request,
+    public void applyRevisionConstraint(GetObjectRequest.Builder builder,
         String revisionId) {
       if (revisionId != null) {
         LOG.debug("Restricting get request to etag {}", revisionId);
-        request.withMatchingETagConstraint(revisionId);
+        builder.ifMatch(revisionId);
       } else {
         LOG.debug("No etag revision ID to use as a constraint");
       }
@@ -400,7 +419,15 @@ public abstract class ChangeDetectionPolicy {
 
     @Override
     public String getRevisionId(HeadObjectResponse objectMetadata, String uri) {
-      String versionId = objectMetadata.versionId();
+      return logIfNull(objectMetadata.versionId(), uri);
+    }
+
+    @Override
+    public String getRevisionId(GetObjectResponse getObjectResponse, String uri) {
+      return logIfNull(getObjectResponse.versionId(), uri);
+    }
+
+    private String logIfNull(String versionId, String uri) {
       if (versionId == null) {
         // this policy doesn't work if the bucket doesn't have object versioning
         // enabled (which isn't by default)
@@ -408,8 +435,7 @@ public abstract class ChangeDetectionPolicy {
             CHANGE_DETECT_MODE + " set to " + Source.VersionId
                 + " but no versionId available while reading {}. "
                 + "Ensure your bucket has object versioning enabled. "
-                + "You may see inconsistent reads.",
-            uri);
+                + "You may see inconsistent reads.", uri);
       }
       return versionId;
     }
@@ -425,11 +451,11 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(GetObjectRequest request,
+    public void applyRevisionConstraint(GetObjectRequest.Builder builder,
         String revisionId) {
       if (revisionId != null) {
         LOG.debug("Restricting get request to version {}", revisionId);
-        request.withVersionId(revisionId);
+        builder.versionId(revisionId);
       } else {
         LOG.debug("No version ID to use as a constraint");
       }
@@ -483,6 +509,12 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
+    public String getRevisionId(final GetObjectResponse objectMetadata,
+        final String uri) {
+      return null;
+    }
+
+    @Override
     public String getRevisionId(final HeadObjectResponse objectMetadata,
         final String uri) {
       return null;
@@ -499,7 +531,7 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(final GetObjectRequest request,
+    public void applyRevisionConstraint(final GetObjectRequest.Builder builder,
         final String revisionId) {
 
     }
