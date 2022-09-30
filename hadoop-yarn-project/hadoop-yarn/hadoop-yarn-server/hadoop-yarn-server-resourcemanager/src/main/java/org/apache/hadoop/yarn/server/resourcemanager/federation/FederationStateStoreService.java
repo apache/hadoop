@@ -110,8 +110,8 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInitialDelay;
   private RMContext rmContext;
   private String cleanUpThreadNamePrefix = "FederationStateStoreService-Clean-Thread";
-  private int cleanUpRetryNum;
-  private long cleanUpRetryTime;
+  private int cleanUpRetryCountNum;
+  private long cleanUpRetrySleepTime;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -159,6 +159,14 @@ public class FederationStateStoreService extends AbstractService
       heartbeatInitialDelay =
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY;
     }
+
+    cleanUpRetryCountNum = conf.getInt(YarnConfiguration.FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT);
+
+    cleanUpRetrySleepTime = conf.getLong(
+        YarnConfiguration.FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME);
+
     LOG.info("Initialized federation membership service.");
 
     super.serviceInit(conf);
@@ -398,6 +406,7 @@ public class FederationStateStoreService extends AbstractService
     Thread finishApplicationThread = new Thread(createCleanUpFinishApplicationThread());
     finishApplicationThread.setName(threadName);
     finishApplicationThread.start();
+    LOG.info("CleanUpFinishApplicationThread has been started {}.", threadName);
   }
 
   /**
@@ -414,7 +423,7 @@ public class FederationStateStoreService extends AbstractService
             GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
         GetApplicationsHomeSubClusterResponse response =
             getApplicationsHomeSubCluster(request);
-        List<ApplicationHomeSubCluster> applications = response.getAppsHomeSubClusters();
+        List<ApplicationHomeSubCluster> applicationHomeSCs = response.getAppsHomeSubClusters();
 
         // Traverse the app list and clean up the app.
         long successCleanUpAppCount = 0;
@@ -424,9 +433,9 @@ public class FederationStateStoreService extends AbstractService
 
         // Need to make sure there is app list in RM memory.
         if (rmApps != null && !rmApps.isEmpty()) {
-          for (ApplicationHomeSubCluster application : applications) {
-            ApplicationId applicationId = application.getApplicationId();
-            if (!this.rmContext.getRMApps().containsKey(applicationId)) {
+          for (ApplicationHomeSubCluster applicationHomeSC : applicationHomeSCs) {
+            ApplicationId applicationId = applicationHomeSC.getApplicationId();
+            if (!rmApps.containsKey(applicationId)) {
               try {
                 Boolean cleanUpSuccess =
                     cleanUpFinishApplicationsWithRetries(applicationId, false);
@@ -434,7 +443,7 @@ public class FederationStateStoreService extends AbstractService
                   LOG.info("application = {} has been cleaned up successfully.", applicationId);
                   successCleanUpAppCount++;
                 }
-              } catch (YarnException e) {
+              } catch (Exception e) {
                 LOG.error("problem during application = {} cleanup.", applicationId, e);
               }
             }
@@ -443,7 +452,7 @@ public class FederationStateStoreService extends AbstractService
 
         // print app cleanup log
         LOG.info("cleanup finished applications size = {}, number = {} successful cleanup.",
-            applications.size(), successCleanUpAppCount);
+            applicationHomeSCs.size(), successCleanUpAppCount);
       } catch (Exception e) {
         LOG.error("problem during cleanup applications.", e);
       }
@@ -459,6 +468,10 @@ public class FederationStateStoreService extends AbstractService
    */
   public boolean cleanUpFinishApplicationsWithRetries(ApplicationId applicationId, boolean isQuery)
       throws Exception {
+
+    if(applicationId==null){
+      LOG.info("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
+    }
 
     // Generate a request to delete data
     DeleteApplicationHomeSubClusterRequest delRequest =
@@ -512,6 +525,6 @@ public class FederationStateStoreService extends AbstractService
 
         return false;
       }
-    }.runWithRetries(10, 100);
+    }.runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
   }
 }
