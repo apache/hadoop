@@ -236,6 +236,23 @@ public class TestRLESparseResourceAllocation {
       // Expected!
     }
 
+    // try with null value of an entry in a
+    a.put(10L, null);
+    b.put(11L, Resource.newInstance(10, 5));
+
+    rleA = new RLESparseResourceAllocation(a, new DefaultResourceCalculator());
+    rleB = new RLESparseResourceAllocation(b, new DefaultResourceCalculator());
+
+    try {
+      RLESparseResourceAllocation out =
+          RLESparseResourceAllocation.merge(new DefaultResourceCalculator(),
+              Resource.newInstance(100 * 128 * 1024, 100 * 32), rleA, rleB,
+              RLEOperator.subtractTestNonNegative, 0, 60);
+      fail();
+    } catch (PlanningException pe) {
+      // Expected!
+    }
+
     // trying a case that should work
     a.put(10L, Resource.newInstance(10, 6));
     b.put(11L, Resource.newInstance(5, 6));
