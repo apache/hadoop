@@ -407,7 +407,7 @@ public class MultipleOutputs {
   private boolean countersEnabled;
 
   @VisibleForTesting
-  public synchronized void setRecordWriters(Map<String, RecordWriter> recordWriters) {
+  synchronized void setRecordWriters(Map<String, RecordWriter> recordWriters) {
     this.recordWriters = recordWriters;
   }
 
@@ -557,7 +557,7 @@ public class MultipleOutputs {
    * @throws java.io.IOException thrown if any of the MultipleOutput files
    *                             could not be closed properly.
    */
-  public void close() throws IOException, InterruptedException {
+  public void close() throws IOException {
     int nThreads = conf.getInt(MRConfig.MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT,
         MRConfig.DEFAULT_MULTIPLE_OUTPUTS_CLOSE_THREAD_COUNT);
     AtomicBoolean encounteredException = new AtomicBoolean(false);

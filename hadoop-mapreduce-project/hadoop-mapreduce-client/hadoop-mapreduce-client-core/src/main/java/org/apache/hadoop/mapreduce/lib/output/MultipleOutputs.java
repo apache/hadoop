@@ -357,7 +357,7 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
   }
 
   @VisibleForTesting
-  public synchronized void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
+  synchronized void setRecordWriters(Map<String, RecordWriter<?, ?>> recordWriters) {
     this.recordWriters = recordWriters;
   }
 

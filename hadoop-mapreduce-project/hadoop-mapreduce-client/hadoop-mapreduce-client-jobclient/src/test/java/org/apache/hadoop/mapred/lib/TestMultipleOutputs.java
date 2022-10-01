@@ -78,7 +78,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
 
   @SuppressWarnings("unchecked")
   @Test(expected = IOException.class)
-  public void testParallelCloseIOException() throws IOException, InterruptedException {
+  public void testParallelCloseIOException() throws IOException {
     RecordWriter writer = mock(RecordWriter.class);
     Map<String, RecordWriter> recordWriters = mock(Map.class);
     when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
@@ -353,11 +353,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
 
     public void close() throws IOException {
-      try {
-        mos.close();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      mos.close();
     }
   }
 
@@ -390,11 +386,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
 
     public void close() throws IOException {
-      try {
-        mos.close();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      mos.close();
     }
   }
   
@@ -420,11 +412,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
 
     public void close() throws IOException {
-      try {
-        mos.close();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      mos.close();
     }
   }
 
@@ -453,11 +441,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
 
     public void close() throws IOException {
-      try {
-        mos.close();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      mos.close();
     }
   }
 
