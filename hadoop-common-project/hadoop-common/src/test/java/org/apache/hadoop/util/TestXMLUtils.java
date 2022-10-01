@@ -104,17 +104,6 @@ public class TestXMLUtils {
     }
   }
 
-  @Test(expected = TransformerException.class)
-  public void testEntityDtdWithSecureTransformerFactory() throws Exception {
-    Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
-    try (
-        InputStream stream = getResourceStream("/xml/entity-dtd.xml");
-        StringWriter stringWriter = new StringWriter()
-    ) {
-      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-    }
-  }
-
   @Test
   public void testSecureSAXTransformerFactory() throws Exception {
     Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
@@ -131,17 +120,6 @@ public class TestXMLUtils {
     Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
     try (
         InputStream stream = getResourceStream("/xml/external-dtd.xml");
-        StringWriter stringWriter = new StringWriter()
-    ) {
-      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-    }
-  }
-
-  @Test(expected = TransformerException.class)
-  public void testEntityDtdWithSecureSAXTransformerFactory() throws Exception {
-    Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
-    try (
-        InputStream stream = getResourceStream("/xml/entity-dtd.xml");
         StringWriter stringWriter = new StringWriter()
     ) {
       transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
