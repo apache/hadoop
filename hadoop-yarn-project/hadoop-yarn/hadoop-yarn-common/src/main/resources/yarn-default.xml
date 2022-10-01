@@ -5007,4 +5007,13 @@
     </description>
   </property>
 
+  <property>
+    <name>yarn.federation.state-store.max-applications</name>
+    <value>1000</value>
+    <description>
+      Yarn federation state-store supports querying the maximum number of apps.
+      Default is 1000.
+    </description>
+  </property>
+
 </configuration>
