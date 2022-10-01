@@ -97,7 +97,7 @@ public class XMLUtils {
     dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
     dbf.setFeature(DISALLOW_DOCTYPE_DECL, true);
     dbf.setFeature(LOAD_EXTERNAL_DECL, false);
-    dbf.setFeature(EXTERNAL_GENERAL_ENTITIES , false);
+    dbf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
     dbf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
     dbf.setFeature(CREATE_ENTITY_REF_NODES, false);
     return dbf;
@@ -119,7 +119,7 @@ public class XMLUtils {
     spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
     spf.setFeature(DISALLOW_DOCTYPE_DECL, true);
     spf.setFeature(LOAD_EXTERNAL_DECL, false);
-    spf.setFeature(EXTERNAL_GENERAL_ENTITIES , false);
+    spf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
     spf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
     return spf;
   }

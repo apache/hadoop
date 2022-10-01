@@ -52,6 +52,14 @@ public class TestXMLUtils {
     }
   }
 
+  @Test(expected = SAXException.class)
+  public void testEntityDtdWithSecureDocumentBuilderFactory() throws Exception {
+    DocumentBuilder db = XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
+    try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
+      Document doc = db.parse(stream);
+    }
+  }
+
   @Test
   public void testSecureSAXParserFactory() throws Exception {
     SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
@@ -62,6 +70,14 @@ public class TestXMLUtils {
   public void testExternalDtdWithSecureSAXParserFactory() throws Exception {
     SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
     try (InputStream stream = getResourceStream("/xml/external-dtd.xml")) {
+      parser.parse(stream, new DefaultHandler());
+    }
+  }
+
+  @Test(expected = SAXException.class)
+  public void testEntityDtdWithSecureSAXParserFactory() throws Exception {
+    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
+    try (InputStream stream = getResourceStream("/xml/entity-dtd.xml")) {
       parser.parse(stream, new DefaultHandler());
     }
   }
@@ -85,7 +101,17 @@ public class TestXMLUtils {
         StringWriter stringWriter = new StringWriter()
     ) {
       transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-      Assertions.assertThat(stringWriter.toString()).contains("<root");
+    }
+  }
+
+  @Test(expected = TransformerException.class)
+  public void testEntityDtdWithSecureTransformerFactory() throws Exception {
+    Transformer transformer = XMLUtils.newSecureTransformerFactory().newTransformer();
+    try (
+        InputStream stream = getResourceStream("/xml/entity-dtd.xml");
+        StringWriter stringWriter = new StringWriter()
+    ) {
+      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
     }
   }
 
@@ -108,7 +134,17 @@ public class TestXMLUtils {
         StringWriter stringWriter = new StringWriter()
     ) {
       transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
-      Assertions.assertThat(stringWriter.toString()).contains("<root");
+    }
+  }
+
+  @Test(expected = TransformerException.class)
+  public void testEntityDtdWithSecureSAXTransformerFactory() throws Exception {
+    Transformer transformer = XMLUtils.newSecureSAXTransformerFactory().newTransformer();
+    try (
+        InputStream stream = getResourceStream("/xml/entity-dtd.xml");
+        StringWriter stringWriter = new StringWriter()
+    ) {
+      transformer.transform(new StreamSource(stream), new StreamResult(stringWriter));
     }
   }
 
