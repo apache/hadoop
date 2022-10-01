@@ -3741,10 +3741,10 @@
       Clear the sleep time of App retry in FederationStateStore.
       When the app fails to clean up,
       it will sleep for a period of time and then try to clean up.
-      The default value is 1000ms.
+      The default value is 1s.
     </description>
     <name>yarn.federation.state-store.clean-up-retry-sleep-time</name>
-    <value>1000ms</value>
+    <value>1s</value>
   </property>
 
   <!-- Other Configuration -->

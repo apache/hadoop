@@ -305,7 +305,7 @@ public class TestFederationRMStateStoreService {
     stateStore = rm.getFederationStateStoreService().getStateStoreClient();
 
     // generate an [app01] and join the [SC-1] cluster.
-    List<ApplicationId> appIds = new ArrayList();
+    List<ApplicationId> appIds = new ArrayList<>();
     ApplicationId appId01 = ApplicationId.newInstance(Time.now(), 1);
     addApplication2StateStore(appId01, stateStore);
     appIds.add(appId01);
@@ -391,7 +391,7 @@ public class TestFederationRMStateStoreService {
     rm.start();
 
     // generate an [app01] and join the [SC-1] cluster.
-    List<ApplicationId> appIds = new ArrayList();
+    List<ApplicationId> appIds = new ArrayList<>();
     ApplicationId appId01 = ApplicationId.newInstance(Time.now(), 1);
     addApplication2StateStore(appId01, stateStore);
     addApplication2RMAppManager(rm, appId01);
@@ -436,12 +436,12 @@ public class TestFederationRMStateStoreService {
   }
 
   private void addApplication2StateStore(ApplicationId appId,
-      FederationStateStore stateStore) throws YarnException {
+      FederationStateStore fedStateStore) throws YarnException {
     ApplicationHomeSubCluster appHomeSC = ApplicationHomeSubCluster.newInstance(
         appId, subClusterId);
     AddApplicationHomeSubClusterRequest addHomeSCRequest =
         AddApplicationHomeSubClusterRequest.newInstance(appHomeSC);
-    stateStore.addApplicationHomeSubCluster(addHomeSCRequest);
+    fedStateStore.addApplicationHomeSubCluster(addHomeSCRequest);
   }
 
   private List<ApplicationHomeSubCluster> getApplicationsFromStateStore() throws YarnException {

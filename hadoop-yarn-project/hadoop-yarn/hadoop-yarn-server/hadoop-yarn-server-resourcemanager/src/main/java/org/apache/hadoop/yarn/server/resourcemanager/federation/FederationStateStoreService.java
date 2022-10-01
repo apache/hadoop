@@ -470,8 +470,9 @@ public class FederationStateStoreService extends AbstractService
    * Clean up the federation completed Application.
    *
    * @param applicationId app id.
-   * @param isQuery true, need to query from statestore ; false not query.
+   * @param isQuery true, need to query from statestore, false not query.
    * @throws Exception exception occurs.
+   * @return true, successfully deleted; false, failed to delete or no need to delete
    */
   public boolean cleanUpFinishApplicationsWithRetries(ApplicationId applicationId, boolean isQuery)
       throws Exception {
@@ -487,32 +488,7 @@ public class FederationStateStoreService extends AbstractService
 
         // If we need to query the StateStore
         if (isQuery) {
-
-          GetApplicationHomeSubClusterRequest queryRequest =
-              GetApplicationHomeSubClusterRequest.newInstance(applicationId);
-          // Here we need to use try...catch,
-          // because getApplicationHomeSubCluster may throw not exist exception
-          try {
-            GetApplicationHomeSubClusterResponse queryResp =
-                getApplicationHomeSubCluster(queryRequest);
-            if (queryResp != null) {
-              ApplicationHomeSubCluster appHomeSC = queryResp.getApplicationHomeSubCluster();
-              SubClusterId homeSubClusterId = appHomeSC.getHomeSubCluster();
-              if (!subClusterId.equals(homeSubClusterId)) {
-                isAppNeedClean = false;
-                LOG.warn("The homeSubCluster of applicationId = {} is {}, " +
-                    " not belong subCluster = {} and is not allowed to delete.",
-                    applicationId, homeSubClusterId, subClusterId);
-              }
-            } else {
-              isAppNeedClean = false;
-              LOG.warn("The applicationId = {} not belong subCluster = {} " +
-                  " and is not allowed to delete.", applicationId, subClusterId);
-            }
-          } catch (Exception e) {
-            isAppNeedClean = false;
-            LOG.warn("query applicationId = {} error.", applicationId, e);
-          }
+          isAppNeedClean = isApplicationNeedClean(applicationId);
         }
 
         // When the App needs to be cleaned up, clean up the App.
@@ -530,4 +506,34 @@ public class FederationStateStoreService extends AbstractService
       }
     }.runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
   }
+
+  private boolean isApplicationNeedClean(ApplicationId applicationId) {
+    GetApplicationHomeSubClusterRequest queryRequest =
+            GetApplicationHomeSubClusterRequest.newInstance(applicationId);
+    // Here we need to use try...catch,
+    // because getApplicationHomeSubCluster may throw not exist exception
+    try {
+      GetApplicationHomeSubClusterResponse queryResp =
+              getApplicationHomeSubCluster(queryRequest);
+      if (queryResp != null) {
+        ApplicationHomeSubCluster appHomeSC = queryResp.getApplicationHomeSubCluster();
+        SubClusterId homeSubClusterId = appHomeSC.getHomeSubCluster();
+        if (!subClusterId.equals(homeSubClusterId)) {
+          LOG.warn("The homeSubCluster of applicationId = {} belong subCluster = {}, " +
+              " not belong subCluster = {} and is not allowed to delete.",
+              applicationId, homeSubClusterId, subClusterId);
+          return false;
+        }
+      } else {
+        LOG.warn("The applicationId = {} not belong subCluster = {} " +
+            " and is not allowed to delete.", applicationId, subClusterId);
+        return false;
+      }
+    } catch (Exception e) {
+      LOG.warn("query applicationId = {} error.", applicationId, e);
+      return false;
+    }
+    return true;
+  }
+
 }
