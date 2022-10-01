@@ -68,8 +68,8 @@ public abstract class RouterBlock extends HtmlBlock {
   /**
    * Get a list of subclusters.
    *
-   * @return subcluster List
-   * @throws YarnException
+   * @return subcluster List.
+   * @throws YarnException if the call to the getSubClusters is unsuccessful.
    */
   protected List<SubClusterInfo> getSubClusterInfoList() throws YarnException {
     FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();

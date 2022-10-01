@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.commons.lang3.time.DateFormatUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.Router;
