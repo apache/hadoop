@@ -48,7 +48,7 @@ public abstract class JerseyTestBase extends JerseyTest {
   }
 
   public void verifyClusterSchedulerOverView(JSONObject json, String expectedSchedulerType)
-     throws Exception {
+    throws Exception {
 
     // why json contains 8 elements because we defined 8 fields
     assertEquals("incorrect number of elements in: " + json, 8, json.length());
