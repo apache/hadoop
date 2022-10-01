@@ -481,32 +481,39 @@ public class FederationStateStoreService extends AbstractService
     DeleteApplicationHomeSubClusterRequest delRequest =
         DeleteApplicationHomeSubClusterRequest.newInstance(applicationId);
 
-    return new FederationActionRetry<Boolean>() {
-      @Override
-      public Boolean run() throws Exception {
-        boolean isAppNeedClean = true;
+    return ((FederationActionRetry<Boolean>) () -> {
 
-        // If we need to query the StateStore
-        if (isQuery) {
-          isAppNeedClean = isApplicationNeedClean(applicationId);
-        }
+      boolean isAppNeedClean = true;
 
-        // When the App needs to be cleaned up, clean up the App.
-        if (isAppNeedClean) {
-          DeleteApplicationHomeSubClusterResponse response =
-              deleteApplicationHomeSubCluster(delRequest);
-          if (response != null) {
-            LOG.info("The applicationId ={} has been successfully cleaned up.",
-                applicationId);
-            return true;
-          }
-        }
-
-        return false;
+      // If we need to query the StateStore
+      if (isQuery) {
+        isAppNeedClean = isApplicationNeedClean(applicationId);
       }
-    }.runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+
+      // When the App needs to be cleaned up, clean up the App.
+      if (isAppNeedClean) {
+        DeleteApplicationHomeSubClusterResponse response =
+            deleteApplicationHomeSubCluster(delRequest);
+        if (response != null) {
+          LOG.info("The applicationId ={} has been successfully cleaned up.", applicationId);
+          return true;
+        }
+      }
+      return false;
+    }).runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
   }
 
+  /**
+   * Used to determine whether the Application is cleaned up.
+   *
+   * When the app in the RM is completed,
+   * the HomeSC corresponding to the app will be queried in the StateStore.
+   * If the current RM is the HomeSC, the completed app will be cleaned up.
+   *
+   * @param applicationId applicationId
+   * @return true, app needs to be cleaned up;
+   *         false, app doesn't need to be cleaned up.
+   */
   private boolean isApplicationNeedClean(ApplicationId applicationId) {
     GetApplicationHomeSubClusterRequest queryRequest =
             GetApplicationHomeSubClusterRequest.newInstance(applicationId);
@@ -514,7 +521,7 @@ public class FederationStateStoreService extends AbstractService
     // because getApplicationHomeSubCluster may throw not exist exception
     try {
       GetApplicationHomeSubClusterResponse queryResp =
-              getApplicationHomeSubCluster(queryRequest);
+          getApplicationHomeSubCluster(queryRequest);
       if (queryResp != null) {
         ApplicationHomeSubCluster appHomeSC = queryResp.getApplicationHomeSubCluster();
         SubClusterId homeSubClusterId = appHomeSC.getHomeSubCluster();

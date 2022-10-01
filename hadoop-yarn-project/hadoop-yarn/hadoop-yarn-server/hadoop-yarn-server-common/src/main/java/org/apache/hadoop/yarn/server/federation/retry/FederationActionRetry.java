@@ -20,14 +20,13 @@ package org.apache.hadoop.yarn.server.federation.retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class FederationActionRetry<T> {
+public interface FederationActionRetry<T> {
 
-  public static final Logger LOG =
-      LoggerFactory.getLogger(FederationActionRetry.class);
+  Logger LOG = LoggerFactory.getLogger(FederationActionRetry.class);
 
-  protected abstract T run() throws Exception;
+  T run() throws Exception;
 
-  public T runWithRetries(int retryCount, long retrySleepTime) throws Exception {
+  default T runWithRetries(int retryCount, long retrySleepTime) throws Exception {
     int retry = 0;
     while (true) {
       try {

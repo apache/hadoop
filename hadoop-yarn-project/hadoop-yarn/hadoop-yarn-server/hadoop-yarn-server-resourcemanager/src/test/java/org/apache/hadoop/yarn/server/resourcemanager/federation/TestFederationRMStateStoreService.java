@@ -408,7 +408,6 @@ public class TestFederationRMStateStoreService {
     addApplication2StateStore(appId03, stateStore);
     addApplication2RMAppManager(rm, appId03);
 
-
     // rmAppManager
     RMAppManager rmAppManager = rm.getRMAppManager();
     rmAppManager.finishApplication4Test(appId01);
