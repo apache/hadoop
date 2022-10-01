@@ -149,6 +149,16 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
     this.homeSubCluster = homeSubCluster;
   }
 
+  @Override
+  public long getCreateTime() {
+    return 0;
+  }
+
+  @Override
+  public void setCreateTime(long time) {
+
+  }
+
   private SubClusterId convertFromProtoFormat(SubClusterIdProto subClusterId) {
     return new SubClusterIdPBImpl(subClusterId);
   }
