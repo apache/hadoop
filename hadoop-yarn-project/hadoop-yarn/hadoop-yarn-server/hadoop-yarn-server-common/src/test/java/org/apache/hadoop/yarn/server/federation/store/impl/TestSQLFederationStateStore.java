@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -83,6 +84,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
         DATABASE_URL + System.currentTimeMillis());
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new HSQLDBFederationStateStore();
   }
@@ -554,5 +556,20 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     LambdaTestUtils.intercept(YarnException.class, errorMsg,
         () -> stateStore.deleteReservationHomeSubCluster(delRequest));
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewMasterKey() throws Exception {
+    super.testStoreNewMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+    super.testGetMasterKeyByDelegationKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    super.testRemoveStoredMasterKey();
   }
 }

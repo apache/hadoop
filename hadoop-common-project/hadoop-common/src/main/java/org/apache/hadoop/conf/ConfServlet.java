@@ -98,7 +98,7 @@ public class ConfServlet extends HttpServlet {
     if (FORMAT_JSON.equals(format)) {
       Configuration.dumpConfiguration(conf, propertyName, out);
     } else if (FORMAT_XML.equals(format)) {
-      conf.writeXml(propertyName, out);
+      conf.writeXml(propertyName, out, conf);
     } else {
       throw new BadFormatException("Bad format: " + format);
     }

@@ -169,6 +169,7 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>copy-site</id>
             <phase>pre-site</phase>
             <goals>
               <goal>run</goal>
@@ -176,6 +177,21 @@
             <configuration>
               <tasks>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-sql</id>
+            <phase>test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/MySQL/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/MySQL"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreTables.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
+                <copy file="${basedir}/../../bin/FederationStateStore/SQLServer/FederationStateStoreStoredProcs.sql" todir="${project.build.directory}/test-classes/SQLServer"/>
               </tasks>
             </configuration>
           </execution>
@@ -195,6 +211,9 @@
                 </additionalProtoPathElement>
                 <additionalProtoPathElement>
                   ${basedir}/../../hadoop-yarn-api/src/main/proto
+                </additionalProtoPathElement>
+                <additionalProtoPathElement>
+                  ${basedir}/../../hadoop-yarn-common/src/main/proto
                 </additionalProtoPathElement>
               </additionalProtoPathElements>
             </configuration>

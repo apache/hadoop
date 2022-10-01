@@ -102,7 +102,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
   private volatile int lastResponseId;
 
   private MockResourceManagerFacade mockHomeRm = null;
-  private Server homeClietRMRpcServer;
+  private Server homeClientRMRpcServer;
 
   private static File workDir;
   private static final File TEST_ROOT_DIR =
@@ -171,15 +171,15 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
 
   private void startRpcServer() {
     YarnRPC rpc = YarnRPC.create(conf);
-    this.homeClietRMRpcServer = rpc.getServer(ApplicationClientProtocol.class, mockHomeRm,
+    this.homeClientRMRpcServer = rpc.getServer(ApplicationClientProtocol.class, mockHomeRm,
         NetUtils.createSocketAddr(HOME_RM_ADDRESS), conf, null, 2);
-    this.homeClietRMRpcServer.start();
-    this.homeClietRMRpcServer.refreshServiceAcl(conf, new MockRMPolicyProvider());
+    this.homeClientRMRpcServer.start();
+    this.homeClientRMRpcServer.refreshServiceAcl(conf, new MockRMPolicyProvider());
   }
 
   private void stopRpcServer() {
-    if (homeClietRMRpcServer != null) {
-      homeClietRMRpcServer.stop();
+    if (homeClientRMRpcServer != null) {
+      homeClientRMRpcServer.stop();
     }
   }
 
@@ -200,8 +200,8 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
     String mockPassThroughInterceptorClass =
         PassThroughRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
@@ -410,7 +410,7 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
         ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
             interceptor.getSecondaryRMs();
 
-        // Create a new intercepter instance and recover
+        // Create a new interceptor instance and recover
         interceptor = new TestableFederationInterceptor(homeRM, secondaries);
         interceptor.init(new AMRMProxyApplicationContextImpl(nmContext, conf, attemptId,
             "test-user", null, null, null, registryObj));
@@ -445,10 +445,10 @@ public class TestFederationInterceptorSecure extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         // After the application succeeds, the registry/NMSS entry should be
         // cleaned up
