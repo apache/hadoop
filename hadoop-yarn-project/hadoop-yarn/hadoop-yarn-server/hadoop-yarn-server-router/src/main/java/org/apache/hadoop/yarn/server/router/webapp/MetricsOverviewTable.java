@@ -19,10 +19,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
@@ -34,10 +33,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Comparator;
 
 public class MetricsOverviewTable extends RouterBlock {
 
@@ -160,15 +155,8 @@ public class MetricsOverviewTable extends RouterBlock {
    */
   private void initFederationClusterSchedulersMetrics(Hamlet.DIV<Hamlet> div,
       RouterClusterMetrics metrics) throws YarnException, IOException, InterruptedException {
-    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
-    Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
-
     // Sort the SubClusters.
-    List<SubClusterInfo> subclusters = new ArrayList<>();
-    subclusters.addAll(subClustersInfo.values());
-    Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
-    Collections.sort(subclusters, cmp);
-    Client client = RouterWebServiceUtil.createJerseyClient(this.router.getConfig());
+    List<SubClusterInfo> subclusters = getSubClusterInfoList();
 
     Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr =
         div.h3("Federation Scheduler Metrics").
@@ -189,15 +177,50 @@ public class MetricsOverviewTable extends RouterBlock {
         __().
         tbody().$class("ui-widget-content");
 
+    boolean isEnabled = isYarnFederationEnabled();
+
+    // If Federation mode is not enabled or there is currently no SubCluster available,
+    // each column in the list should be displayed as N/A
+    if (!isEnabled || subclusters == null || subclusters.isEmpty()) {
+      fsMetricsScheduleTr.tr().
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE).
+          td(UNAVAILABLE)
+          .__();
+    } else {
+      //
+      initSubClusterOverViewTable(metrics, fsMetricsScheduleTr, subclusters);
+    }
+
+    fsMetricsScheduleTr.__().__();
+  }
+
+  private void initSubClusterOverViewTable(RouterClusterMetrics metrics,
+      Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr,
+      List<SubClusterInfo> subclusters) {
+
+    // configuration
+    Configuration config = this.router.getConfig();
+
+    Client client = RouterWebServiceUtil.createJerseyClient(config);
+
     // Traverse all SubClusters to get cluster information.
     for (SubClusterInfo subcluster : subclusters) {
+
       // Call the RM interface to obtain schedule information
-      String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) +
+      String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
           subcluster.getRMWebServiceAddress();
+
       SchedulerOverviewInfo typeInfo = RouterWebServiceUtil
           .genericForward(webAppAddress, null, SchedulerOverviewInfo.class, HTTPMethods.GET,
           RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_OVERVIEW, null, null,
-          this.router.getConfig(), client);
+          config, client);
       RouterSchedulerMetrics rsMetrics = new RouterSchedulerMetrics(subcluster, metrics, typeInfo);
 
       // Basic information
@@ -213,22 +236,5 @@ public class MetricsOverviewTable extends RouterBlock {
           td(rsMetrics.getSchedulerDispatcherEventQueueSize()).
           __();
     }
-
-    // If there is no cluster information
-    if (subclusters != null && subclusters.size() == 0) {
-      fsMetricsScheduleTr.tr().
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE)
-          .__();
-    }
-
-    fsMetricsScheduleTr.__().__();
   }
 }

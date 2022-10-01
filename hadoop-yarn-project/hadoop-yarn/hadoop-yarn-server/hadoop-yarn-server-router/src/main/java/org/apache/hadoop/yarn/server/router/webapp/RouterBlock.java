@@ -20,12 +20,21 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import com.sun.jersey.api.client.Client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
-import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Collections;
+import java.util.Comparator;
 
 public abstract class RouterBlock extends HtmlBlock {
 
@@ -37,40 +46,13 @@ public abstract class RouterBlock extends HtmlBlock {
   }
 
   /**
-   * Initialize User Help Information Div.
-   * When the user does not configure the Yarn Federation function, prompt the user.
-   *
-   * @param html html page
-   * @param isEnabled true, Federation is enabled; false, Federation is not enabled
-   */
-  protected void initUserHelpInformationDiv(HtmlBlock.Block html, boolean isEnabled) {
-    if (!isEnabled) {
-      html.style(".alert {padding: 15px; margin-bottom: 20px; " +
-          " border: 1px solid transparent; border-radius: 4px;}");
-      html.style(".alert-dismissable {padding-right: 35px;}");
-      html.style(".alert-info {color: #856404;background-color: #fff3cd;border-color: #ffeeba;}");
-
-      Hamlet.DIV<Hamlet> div = html.div("#div_id").$class("alert alert-dismissable alert-info");
-      div.p().$style("color:red").__("Federation is not Enabled.").__()
-          .p().__()
-          .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
-          .p().__()
-          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
-          "Hadoop: YARN Federation").
-          __();
-    }
-  }
-
-  /**
    * Get RouterClusterMetrics Info.
    *
    * @return Router ClusterMetricsInfo.
    */
   protected ClusterMetricsInfo getRouterClusterMetricsInfo() {
     Configuration conf = this.router.getConfig();
-    boolean isEnabled = conf.getBoolean(
-        YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    boolean isEnabled = isYarnFederationEnabled();
     if(isEnabled) {
       String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
       Client client = RouterWebServiceUtil.createJerseyClient(conf);
@@ -81,5 +63,37 @@ public abstract class RouterBlock extends HtmlBlock {
       return metrics;
     }
     return null;
+  }
+
+  /**
+   * Get a list of subclusters.
+   *
+   * @return subcluster List
+   * @throws YarnException
+   */
+  protected List<SubClusterInfo> getSubClusterInfoList() throws YarnException {
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
+
+    // Sort the SubClusters.
+    List<SubClusterInfo> subclusters = new ArrayList<>();
+    subclusters.addAll(subClustersInfo.values());
+    Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
+    Collections.sort(subclusters, cmp);
+
+    return subclusters;
+  }
+
+  /**
+   * Whether Yarn Federation is enabled.
+   *
+   * @return true, enable yarn federation; false, not enable yarn federation;
+   */
+  protected boolean isYarnFederationEnabled() {
+    Configuration conf = this.router.getConfig();
+    boolean isEnabled = conf.getBoolean(
+        YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    return isEnabled;
   }
 }
