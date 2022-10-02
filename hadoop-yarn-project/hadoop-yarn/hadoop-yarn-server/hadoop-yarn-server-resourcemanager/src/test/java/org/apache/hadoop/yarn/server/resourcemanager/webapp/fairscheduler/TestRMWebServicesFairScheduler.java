@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.TestRMWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -166,6 +167,6 @@ public class TestRMWebServicesFairScheduler extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    verifyClusterSchedulerOverView(json, "Fair Scheduler");
+    TestRMWebServices.verifyClusterSchedulerOverView(json, "Fair Scheduler");
   }
 }
