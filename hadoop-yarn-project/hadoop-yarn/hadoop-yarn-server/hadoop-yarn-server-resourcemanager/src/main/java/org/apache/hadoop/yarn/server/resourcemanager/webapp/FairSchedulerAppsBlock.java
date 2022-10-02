@@ -128,17 +128,13 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     }
     return true;
   }
-  public class Helper{
-    public long func;
-    public String printData(long func){
-      this.func = func;
-      if (func==-1)
-        return "N/A";
-      else
-        return String.valueOf(func);
-    }
+  public long function;
+  public String printData(long function){
+    if (function==-1)
+      return "N/A";
+    else
+      return String.valueOf(function);
   }
-
   @Override public void render(Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.
       table("#apps").
@@ -185,7 +181,6 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
         // FairScheduler#applications don't have the entry. Skip it.
         continue;
       }
-      Helper helper = new Helper();
       appsTableData.append("[\"<a href='")
       .append(url("app", appInfo.getAppId())).append("'>")
       .append(appInfo.getAppId()).append("</a>\",\"")
@@ -203,16 +198,16 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
-              .append(helper.printData(appInfo.getRunningContainers()))
+      .append(helper.printData(appInfo.getRunningContainers()))
       .append("\",\"")
-              .append(helper.printData(appInfo.getAllocatedVCores()))
-              .append("\",\"")
-              .append(helper.printData(appInfo.getAllocatedMB()))
-              .append("\",\"")
-              .append(helper.printData(appInfo.getReservedVCores()))
-              .append("\",\"")
-              .append(helper.printData(appInfo.getReservedMB()))
-              .append("\",\"")
+      .append(printData(appInfo.getAllocatedVCores()))
+      .append("\",\"")
+      .append(printData(appInfo.getAllocatedMB()))
+      .append("\",\"")
+      .append(printData(appInfo.getReservedVCores()))
+      .append("\",\"")
+      .append(printData(appInfo.getReservedMB()))
+      .append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
