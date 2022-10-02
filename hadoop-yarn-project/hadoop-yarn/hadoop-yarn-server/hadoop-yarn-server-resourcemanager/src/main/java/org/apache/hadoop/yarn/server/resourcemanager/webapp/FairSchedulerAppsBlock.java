@@ -128,15 +128,14 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     }
     return true;
   }
-  private long appInfoFunc;
+
   public String printData(long appInfoFunc) {
-    this.appInfoFunc=appInfoFunc;
-    if (appInfoFunc == -1) {
+    if (appInfoFunc== -1) {
       return "N/A";
-    } else {
-      return String.valueOf(appInfoFunc);
     }
+    return String.valueOf(appInfoFunc);
   }
+
   @Override public void render(Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.
       table("#apps").
