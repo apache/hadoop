@@ -124,6 +124,7 @@ public class SubClusterHeartbeatRequestPBImpl
       builder.clearSubClusterId();
     }
     this.subClusterId = subClusterId;
+    builder.setSubClusterId(convertToProtoFormat(subClusterId));
   }
 
   @Override

@@ -95,6 +95,7 @@ public class RouterMasterKeyRequestPBImpl extends RouterMasterKeyRequest {
       builder.clearRouterMasterKey();
     }
     this.routerMasterKey = masterKey;
+    builder.setRouterMasterKey(convertToProtoFormat(masterKey));
   }
 
   @Override
