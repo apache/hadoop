@@ -117,6 +117,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -341,6 +342,23 @@ public class MockDefaultRequestInterceptorREST
       String appId, String appAttemptId) {
     if (!isRunning) {
       throw new RuntimeException("RM is stopped");
+    }
+
+    // Try format conversion for app_id
+    ApplicationId applicationId = null;
+    try {
+      applicationId = ApplicationId.fromString(appId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
+    // Try format conversion for app_attempt_id
+    ApplicationAttemptId applicationAttemptId = null;
+    try {
+      applicationAttemptId =
+          ApplicationAttemptId.fromString(appAttemptId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
     }
 
     // We avoid to check if the Application exists in the system because we need

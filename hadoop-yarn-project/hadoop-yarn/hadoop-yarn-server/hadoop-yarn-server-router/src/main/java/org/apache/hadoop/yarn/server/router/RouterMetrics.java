@@ -1260,7 +1260,7 @@ public final class RouterMetrics {
     numGetQueueUserAclsFailedRetrieved.incr();
   }
 
-  public void incrContainerReportFailedRetrieved() {
+  public void incrGetContainerReportFailedRetrieved() {
     numGetContainerReportFailedRetrieved.incr();
   }
 

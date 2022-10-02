@@ -386,7 +386,7 @@ public class TestRouterMetrics {
 
     public void getContainerReport() {
       LOG.info("Mocked: failed getContainerReport call");
-      metrics.incrContainerReportFailedRetrieved();
+      metrics.incrGetContainerReportFailedRetrieved();
     }
 
     public void getContainers() {

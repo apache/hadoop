@@ -30,6 +30,7 @@ import java.util.Collections;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -631,24 +632,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainersNotExists() {
+  public void testGetContainersNotExists() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
-    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
-    Assert.assertTrue(response.getContainers().isEmpty());
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the appAttemptId is empty or null.",
+        () -> interceptor.getContainers(null, null, appId.toString(), null));
   }
 
   @Test
-  public void testGetContainersWrongFormat() {
-    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
-
-    Assert.assertNotNull(response);
-    Assert.assertTrue(response.getContainers().isEmpty());
-
+  public void testGetContainersWrongFormat() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
-    Assert.assertTrue(response.getContainers().isEmpty());
+    // Test Case 1: appId is wrong format, appAttemptId is accurate.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid ApplicationId prefix: Application_wrong_id. " +
+        "The valid ApplicationId should start with prefix application",
+        () -> interceptor.getContainers(null, null, "Application_wrong_id", appAttempt.toString()));
+
+    // Test Case2: appId is accurate, appAttemptId is wrong format.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid AppAttemptId prefix: AppAttempt_wrong_id",
+        () -> interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id"));
   }
 
   @Test
