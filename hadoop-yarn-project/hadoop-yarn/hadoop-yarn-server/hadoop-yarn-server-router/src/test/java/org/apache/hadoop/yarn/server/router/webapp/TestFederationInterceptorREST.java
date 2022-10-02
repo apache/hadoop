@@ -32,14 +32,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.NodeLabel;
-import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -742,8 +735,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainer()
-      throws IOException, InterruptedException, YarnException {
+  public void testGetContainer() throws Exception {
     // Submit application to multiSubCluster
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
@@ -751,11 +743,17 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     Assert.assertNotNull(interceptor.submitApplication(context, null));
 
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
 
-    ContainerInfo containerInfo = interceptor.getContainer(null, null,
-        appId.toString(), appAttemptId.toString(), "0");
+    // Test Case1: Wrong ContainerId
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid ContainerId prefix: 0",
+         () -> interceptor.getContainer(null, null, appId.toString(), appAttemptId.toString(), "0"));
+
+    // Test Case2: Correct ContainerId
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
+    ContainerInfo containerInfo =
+        interceptor.getContainer(null, null, appId.toString(), appAttemptId.toString(), containerId.toString());
     Assert.assertNotNull(containerInfo);
   }
 

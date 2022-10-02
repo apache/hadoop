@@ -1920,7 +1920,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           subClusterInfo.getSubClusterId(), subClusterInfo.getRMWebServiceAddress());
       ContainerInfo containerInfo =
           interceptor.getContainer(req, res, appId, appAttemptId, containerId);
-      if (containerInfo == null) {
+      if (containerInfo != null) {
         long stopTime = Time.now();
         routerMetrics.succeededGetContainerReportRetrieved(stopTime - startTime);
         return containerInfo;
@@ -2039,7 +2039,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          throw null;
+          return null;
         }
       });
     }

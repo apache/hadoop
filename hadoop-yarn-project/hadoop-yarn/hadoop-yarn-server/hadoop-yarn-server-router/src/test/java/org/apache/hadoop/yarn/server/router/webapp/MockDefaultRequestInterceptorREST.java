@@ -471,8 +471,7 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
 
-    ContainerId newContainerId = ContainerId.newContainerId(
-        ApplicationAttemptId.fromString(appAttemptId), Integer.valueOf(containerId));
+    ContainerId newContainerId = ContainerId.fromString(containerId);
 
     Resource allocatedResource = Resource.newInstance(1024, 2);
 
