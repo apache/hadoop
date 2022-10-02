@@ -207,6 +207,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       keySet.removeAll(blackListSubClusters);
     }
 
+    if (keySet.size() < 1) {
+      RouterServerUtil.logAndThrowException(
+          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+
     List<SubClusterId> list = keySet.stream().collect(Collectors.toList());
     return list.get(rand.nextInt(list.size()));
   }
