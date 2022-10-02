@@ -31,12 +31,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
-import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
-import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
-import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
-import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+import org.apache.hadoop.yarn.sls.scheduler.*;
+
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RMRunner {
   private ResourceManager rm;
@@ -45,6 +45,7 @@ public class RMRunner {
   private SLSRunner slsRunner;
   private String tableMapping;
   private Map<String, Integer> queueAppNumMap;
+  private static final Logger LOG = LoggerFactory.getLogger(SLSSchedulerCommons.class);
 
   public RMRunner(Configuration conf, SLSRunner slsRunner) {
     this.conf = conf;
@@ -107,7 +108,11 @@ public class RMRunner {
     queueAppNumMap.put(queueName, appNum);
     SchedulerMetrics metrics = wrapper.getSchedulerMetrics();
     if (metrics != null) {
-      metrics.trackQueue(queueName);
+      try {
+        metrics.trackQueue(queueName);
+      } catch (Exception e) {
+        LOG.error("Caught exception while tracking a queue", e);
+      }
     }
   }
 

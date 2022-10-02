@@ -160,8 +160,13 @@ public abstract class SchedulerMetrics {
     registerClusterResourceMetrics();
     registerContainerAppNumMetrics();
     registerSchedulerMetrics();
-    registerNodesUsageMetrics("memory");
-    registerNodesUsageMetrics("vcores");
+
+    try{
+      registerNodesUsageMetrics("memory");
+      registerNodesUsageMetrics("vcores");
+    } catch(Exception e){
+      LOG.error("Caught exception while registering scheduler metrics", e);
+    }
 
     // .csv output
     initMetricsCSVOutput();
@@ -255,8 +260,6 @@ public abstract class SchedulerMetrics {
         trackedQueues.add(queue);
         registerQueueMetrics(queue);
       }
-    } catch (Exception e) {
-      LOG.error("Caught exception from track a queue", e);
     } finally {
       queueLock.unlock();
     }
@@ -469,8 +472,6 @@ public abstract class SchedulerMetrics {
         schedulerHistogramList.add(histogram);
         histogramTimerMap.put(histogram, schedulerHandleTimerMap.get(e));
       }
-    } catch(Exception e) {
-      LOG.error("Caught exception during register scheduler metrics", e);
     } finally {
       samplerLock.unlock();
     }
@@ -514,8 +515,6 @@ public abstract class SchedulerMetrics {
             }
         );
       }
-    } catch(Exception e){
-      LOG.error("Caught exception from register node usage memory", e);
     } finally {
       samplerLock.unlock();
     }
