@@ -128,8 +128,13 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     }
     return true;
   }
-
-
+  public long function;
+  public String printData(long function){
+    if (function==-1)
+      return "N/A";
+    else
+      return String.valueOf(function);
+  }
   @Override public void render(Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.
       table("#apps").
@@ -193,16 +198,16 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
-      .append(appInfo.getRunningContainers() == -1 ? "N/A" : String
-         .valueOf(appInfo.getRunningContainers())).append("\",\"")
-      .append(appInfo.getAllocatedVCores() == -1 ? "N/A" : String
-        .valueOf(appInfo.getAllocatedVCores())).append("\",\"")
-      .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
-        .valueOf(appInfo.getAllocatedMB())).append("\",\"")
-      .append(appInfo.getReservedVCores() == -1 ? "N/A" : String
-        .valueOf(appInfo.getReservedVCores())).append("\",\"")
-      .append(appInfo.getReservedMB() == -1 ? "N/A" : String
-        .valueOf(appInfo.getReservedMB())).append("\",\"")
+      .append(printData(appInfo.getRunningContainers()))
+      .append("\",\"")
+      .append(printData(appInfo.getAllocatedVCores()))
+      .append("\",\"")
+      .append(printData(appInfo.getAllocatedMB()))
+      .append("\",\"")
+      .append(printData(appInfo.getReservedVCores()))
+      .append("\",\"")
+      .append(printData(appInfo.getReservedMB()))
+      .append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
