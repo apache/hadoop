@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -206,10 +207,18 @@ public class TestFilePosition extends AbstractHadoopTestBase {
     long eofOffset = fileSize;
     pos.setData(data, 0, eofOffset);
 
-    assertTrue(pos.isWithinCurrentBuffer(eofOffset));
-    assertEquals(eofOffset, pos.absolute());
+    assertThat(pos.isWithinCurrentBuffer(eofOffset))
+        .describedAs("EOF offset %d should be within the current buffer", eofOffset)
+        .isTrue();
+    assertThat(pos.absolute())
+        .describedAs("absolute() should return the EOF offset")
+        .isEqualTo(eofOffset);
 
-    assertTrue(pos.setAbsolute(eofOffset));
-    assertEquals(eofOffset, pos.absolute());
+    assertThat(pos.setAbsolute(eofOffset))
+        .describedAs("setAbsolute() should return true on the EOF offset %d", eofOffset)
+        .isTrue();
+    assertThat(pos.absolute())
+        .describedAs("absolute() should return the EOF offset")
+        .isEqualTo(eofOffset);
   }
 }
