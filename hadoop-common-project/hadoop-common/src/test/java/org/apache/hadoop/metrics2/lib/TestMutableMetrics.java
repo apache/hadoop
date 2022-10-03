@@ -442,11 +442,11 @@ public class TestMutableMetrics {
   }
 
   /**
-   * Test {@link MutableGaugeFloat#incr()}
+   * Test {@link MutableGaugeFloat#incr()}.
    */
   @Test(timeout = 30000)
   public void testMutableGaugeFloat() {
-    MutableGaugeFloat mgf = new MutableGaugeFloat(Context,3.2f);
+    MutableGaugeFloat mgf = new MutableGaugeFloat(Context, 3.2f);
     assertEquals(3.2f, mgf.value(), 0.0);
     mgf.incr();
     assertEquals(4.2f, mgf.value(), 0.0);
