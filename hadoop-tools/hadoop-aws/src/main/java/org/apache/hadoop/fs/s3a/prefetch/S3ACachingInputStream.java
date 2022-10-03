@@ -114,7 +114,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       return true;
     }
 
-    if(filePosition.isValid()) {
+    if (filePosition.isValid()) {
       // We are jumping out of the current buffer. There are two cases to consider:
       if (filePosition.bufferFullyRead()) {
         // This buffer was fully read:
