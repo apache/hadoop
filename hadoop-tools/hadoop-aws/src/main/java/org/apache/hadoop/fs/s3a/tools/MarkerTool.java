@@ -964,7 +964,6 @@ public final class MarkerTool extends S3GuardTool {
      * @param source Source FileSystem
      * @return the builder class after scanning source FS
      */
-    // please update what are we returning exactly here
     public ScanArgsBuilder withSourceFS(final FileSystem source) {
       this.sourceFS = source;
       return this;
@@ -1015,8 +1014,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    //Please explain the parameter b
-    /** Consider only markers in nonauth paths as errors.
+    /** Consider only markers in non-authoritative paths as errors.
+     *  @param b True if tool should only consider markers in non-authoritative paths
      * @return builder class for method chaining
      */
     public ScanArgsBuilder withNonAuth(final boolean b) {
