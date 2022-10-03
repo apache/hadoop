@@ -122,6 +122,7 @@ public class SubClusterHeartbeatRequestPBImpl
     maybeInitBuilder();
     if (subClusterId == null) {
       builder.clearSubClusterId();
+      return;
     }
     this.subClusterId = subClusterId;
     builder.setSubClusterId(convertToProtoFormat(subClusterId));

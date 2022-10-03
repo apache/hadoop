@@ -150,6 +150,7 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
     maybeInitBuilder();
     if (paramHomeSubCluster == null) {
       builder.clearHomeSubCluster();
+      return;
     }
     this.homeSubCluster = paramHomeSubCluster;
     builder.setHomeSubCluster(convertToProtoFormat(paramHomeSubCluster));

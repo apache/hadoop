@@ -118,6 +118,7 @@ public class SubClusterRegisterRequestPBImpl extends SubClusterRegisterRequest {
     maybeInitBuilder();
     if (subClusterInfo == null) {
       builder.clearSubClusterInfo();
+      return;
     }
     this.subClusterInfo = subClusterInfo;
     builder.setSubClusterInfo(convertToProtoFormat(subClusterInfo));
