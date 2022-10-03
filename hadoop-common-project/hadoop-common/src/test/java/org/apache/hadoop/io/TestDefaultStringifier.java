@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class TestDefaultStringifier {
 
@@ -104,12 +105,15 @@ public class TestDefaultStringifier {
 
     String keyName = "test.defaultstringifier.key2";
 
-    Integer[] array = new Integer[] {1,2,3,4,5}, emptyArray = new Integer[] {};
+    Integer[] array = new Integer[] {1,2,3,4,5};
 
 
-    DefaultStringifier.storeArray(conf, emptyArray, keyName);
-    assertEquals(0
-        , DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class).length);
+    try {
+      DefaultStringifier.storeArray(conf, new Integer[] {}, keyName);
+      fail("Should have thrown an IndexOutOfBoundsException");
+    } catch (IndexOutOfBoundsException e) {
+      // pass
+    }
     DefaultStringifier.storeArray(conf, array, keyName);
 
     Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
