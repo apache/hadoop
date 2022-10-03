@@ -4905,6 +4905,16 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Return root path
+   * @param path
+   * @return
+   * @throws IOException
+   */
+  public Path getEnclosingRoot(Path path) throws IOException {
+    return this.makeQualified(new Path("/"));
+  }
+
+  /**
    * Create a multipart uploader.
    * @param basePath file path under which all files are uploaded
    * @return a MultipartUploaderBuilder object to build the uploader

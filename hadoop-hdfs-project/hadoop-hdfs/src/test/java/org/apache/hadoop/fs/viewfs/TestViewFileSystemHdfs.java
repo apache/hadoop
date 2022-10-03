@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -49,6 +50,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
+import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -80,7 +82,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   private static FileSystem fHdfs2;
   private FileSystem fsTarget2;
   Path targetTestRoot2;
-  
+
   @Override
   protected FileSystemTestHelper createFileSystemHelper() {
     return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
@@ -105,14 +107,14 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     SupportsBlocks = true;
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
-    
+
     cluster =
         new MiniDFSCluster.Builder(CONF).nnTopology(
                 MiniDFSNNTopology.simpleFederatedTopology(2))
             .numDataNodes(2)
             .build();
     cluster.waitClusterUp();
-    
+
     fHdfs = cluster.getFileSystem(0);
     fHdfs2 = cluster.getFileSystem(1);
     fHdfs.getConf().set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
@@ -120,16 +122,16 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     fHdfs2.getConf().set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
         FsConstants.VIEWFS_URI.toString());
 
-    defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
+    defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" +
         UserGroupInformation.getCurrentUser().getShortUserName()));
-    defaultWorkingDirectory2 = fHdfs2.makeQualified( new Path("/user/" + 
+    defaultWorkingDirectory2 = fHdfs2.makeQualified( new Path("/user/" +
         UserGroupInformation.getCurrentUser().getShortUserName()));
-    
+
     fHdfs.mkdirs(defaultWorkingDirectory);
     fHdfs2.mkdirs(defaultWorkingDirectory2);
   }
 
-      
+
   @AfterClass
   public static void ClusterShutdownAtEnd() throws Exception {
     if (cluster != null) {
@@ -166,7 +168,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   int getExpectedDirPaths() {
     return 8;
   }
-  
+
   @Override
   int getExpectedMountPoints() {
     return 9;
@@ -174,7 +176,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 2; // Mount points to 2 unique hdfs 
+    return 2; // Mount points to 2 unique hdfs
   }
 
   @Override
@@ -505,5 +507,30 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
     assertEquals(fs.getFileStatus(subDirOfInternalDir).getPermission(),
         fs.getFileStatus(subDirOfRealDir).getPermission());
+  }
+
+  @Test
+  public void testEnclosingRootsBase() throws Exception {
+    final Path zone = new Path("/data/EZ");
+    fsTarget.mkdirs(zone);
+    final Path zone1 = new Path("/data/EZ/zone1");
+    fsTarget.mkdirs(zone1);
+
+    DFSTestUtil.createKey("test_key", cluster, 0, CONF);
+    HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+    final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
+        EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+    hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+    RemoteIterator<EncryptionZone> zones = hdfsAdmin.listEncryptionZones();
+    assertEquals(fsView.getEnclosingRoot(zone), new Path("/data"));
+    assertEquals(fsView.getEnclosingRoot(zone1), zone1);
+
+    Path nn02Ez = new Path("/mountOnNn2/EZ");
+    fsTarget2.mkdirs(nn02Ez);
+    assertEquals(fsView.getEnclosingRoot((nn02Ez)), new Path("/mountOnNn2"));
+    HdfsAdmin hdfsAdmin2 = new HdfsAdmin(cluster.getURI(1), CONF);
+    DFSTestUtil.createKey("test_key", cluster, 1, CONF);
+    hdfsAdmin2.createEncryptionZone(nn02Ez, "test_key", provisionTrash);
+    assertEquals(fsView.getEnclosingRoot((nn02Ez)), nn02Ez);
   }
 }

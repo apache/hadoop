@@ -2110,4 +2110,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       return executorService.submit(() -> load(type));
     }
   }
+
+  @Override // ClientProtocol
+  public String getEnclosingRoot(String src) throws IOException {
+    // need to resolve this src to a mount point in RBF and return the max this and the enclosing root from nn
+    return clientProto.getEnclosingRoot(src);
+  }
 }

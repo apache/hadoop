@@ -1370,6 +1370,14 @@ public class ViewFileSystem extends FileSystem {
     }
   }
 
+  @Override
+  public Path getEnclosingRoot(Path path) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path), true);
+    Path fullPath = new Path(res.resolvedPath);
+    Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+    return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
+  }
+
   /**
    * An instance of this class represents an internal dir of the viewFs
    * that is internal dir of the mount table.
@@ -1918,6 +1926,14 @@ public class ViewFileSystem extends FileSystem {
         }
       }
       return allPolicies;
+    }
+
+    @Override
+    public Path getEnclosingRoot(Path path) throws IOException {
+      InodeTree.ResolveResult<FileSystem> res = fsState.resolve(path.toString(), true);
+      Path fullPath = new Path(res.resolvedPath);
+      Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+      return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
     }
   }
 

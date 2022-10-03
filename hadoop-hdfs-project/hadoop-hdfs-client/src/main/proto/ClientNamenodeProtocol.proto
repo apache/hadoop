@@ -38,9 +38,9 @@ import "erasurecoding.proto";
 import "HAServiceProtocol.proto";
 
 /**
- * The ClientNamenodeProtocol Service defines the interface between a client 
+ * The ClientNamenodeProtocol Service defines the interface between a client
  * (as runnign inside a MR Task) and the Namenode.
- * See org.apache.hadoop.hdfs.protocol.ClientProtocol for the javadoc 
+ * See org.apache.hadoop.hdfs.protocol.ClientProtocol for the javadoc
  * for each of the methods.
  * The exceptions declared in the above class also apply to this protocol.
  * Exceptions are unwrapped and thrown by the  PB libraries.
@@ -426,6 +426,14 @@ message GetPreferredBlockSizeResponseProto {
 }
 
 message GetSlowDatanodeReportRequestProto {
+}
+
+message GetEnclosingRootRequestProto {
+  required string filename = 1;
+}
+
+message GetEnclosingRootResponseProto {
+  required string enclosingRootPath = 1;
 }
 
 message GetSlowDatanodeReportResponseProto {
@@ -999,7 +1007,7 @@ service ClientNamenodeProtocol {
   rpc allowSnapshot(AllowSnapshotRequestProto)
       returns(AllowSnapshotResponseProto);
   rpc disallowSnapshot(DisallowSnapshotRequestProto)
-      returns(DisallowSnapshotResponseProto);   
+      returns(DisallowSnapshotResponseProto);
   rpc getSnapshottableDirListing(GetSnapshottableDirListingRequestProto)
       returns(GetSnapshottableDirListingResponseProto);
   rpc getSnapshotListing(GetSnapshotListingRequestProto)
@@ -1080,4 +1088,6 @@ service ClientNamenodeProtocol {
       returns(HAServiceStateResponseProto);
   rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
       returns(GetSlowDatanodeReportResponseProto);
+  rpc getEnclosingRoot(GetEnclosingRootRequestProto)
+      returns(GetEnclosingRootResponseProto);
 }

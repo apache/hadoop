@@ -1937,6 +1937,21 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public String getEnclosingRoot(String src) throws IOException {
+    Path mountPath = new Path("/");
+    if (subclusterResolver instanceof MountTableResolver) {
+      MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
+      if (mountTable.getMountPoint(src) != null) {
+        // unclear if this is the correct thing to do, probably depends on default mount point / link fallback
+        mountPath = new Path(mountTable.getMountPoint(src).getSourcePath());
+      }
+    }
+    EncryptionZone zone = getEZForPath(src);
+    Path zonePath = new Path((zone != null ? zone.getPath() : "/"));
+    return (zonePath.depth() > mountPath.depth() ? zonePath : mountPath).toString();
+  }
+
+  @Override
   public HAServiceProtocol.HAServiceState getHAServiceState() {
     if (rpcServer.isSafeMode()) {
       return HAServiceProtocol.HAServiceState.STANDBY;

@@ -763,4 +763,26 @@ public class TestRouterMountTable {
       nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
   }
+
+  @Test
+  public void testGetEnclosingRoot() throws Exception {
+
+    // Add a read only entry
+    MountTable readOnlyEntry = MountTable.newInstance(
+        "/readonly", Collections.singletonMap("ns0", "/testdir"));
+    readOnlyEntry.setReadOnly(true);
+    assertTrue(addMountTable(readOnlyEntry));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/readonly")), new Path("/readonly"));
+
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/"));
+
+    // Add a regular entry
+    MountTable regularEntry = MountTable.newInstance(
+        "/regular", Collections.singletonMap("ns0", "/testdir"));
+    assertTrue(addMountTable(regularEntry));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/regular"));
+
+    // Create a folder which should show in all locations
+    assertTrue(routerFs.mkdirs(new Path("/regular/newdir")));
+  }
 }

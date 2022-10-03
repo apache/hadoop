@@ -3941,4 +3941,32 @@ public class DistributedFileSystem extends FileSystem
       }
     }.resolve(this, absF);
   }
+
+  /* HDFS only */
+  public Path getEnclosingRoot(final Path path) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_ENCLOSING_ROOT);
+    Preconditions.checkNotNull(path);
+    Path absF = fixRelativePart(path);
+    return new FileSystemLinkResolver<Path>() {
+      @Override
+      public Path doCall(final Path p) throws IOException {
+        return dfs.getEnclosingRoot(getPathName(p));
+      }
+
+      @Override
+      public Path next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem) fs;
+          return myDfs.getEnclosingRoot(p);
+        } else {
+          throw new UnsupportedOperationException(
+              "Cannot call getEZForPath"
+                  + " on a symlink to a non-DistributedFileSystem: " + path
+                  + " -> " + p);
+        }
+      }
+    }.resolve(this, absF);
+  }
 }
