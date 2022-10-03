@@ -26,8 +26,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class TestDefaultStringifier {
 
@@ -99,7 +99,7 @@ public class TestDefaultStringifier {
   }
 
   @Test
-  public void testStoreLoadArray() throws IOException {
+  public void testStoreLoadArray() throws Exception {
     LOG.info("Testing DefaultStringifier#storeArray() and #loadArray()");
     conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
 
@@ -108,12 +108,8 @@ public class TestDefaultStringifier {
     Integer[] array = new Integer[] {1,2,3,4,5};
 
 
-    try {
-      DefaultStringifier.storeArray(conf, new Integer[] {}, keyName);
-      fail("Should have thrown an IndexOutOfBoundsException");
-    } catch (IndexOutOfBoundsException e) {
-      // pass
-    }
+    intercept(IndexOutOfBoundsException.class, () ->
+        DefaultStringifier.storeArray(conf, new Integer[] {}, keyName));
     DefaultStringifier.storeArray(conf, array, keyName);
 
     Integer[] claimedArray = DefaultStringifier.<Integer>loadArray(conf, keyName, Integer.class);
