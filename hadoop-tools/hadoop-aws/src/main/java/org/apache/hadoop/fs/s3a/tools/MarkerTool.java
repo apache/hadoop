@@ -979,8 +979,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    //Please explain the Parameter d
-    /** Purge?
+    /** Should the markers be purged? This is also enabled when using the clean flag on the CLI.
+     * @param d set to purge if true
      * @return builder class for method chaining
      */
     public ScanArgsBuilder withDoPurge(final boolean d) {
