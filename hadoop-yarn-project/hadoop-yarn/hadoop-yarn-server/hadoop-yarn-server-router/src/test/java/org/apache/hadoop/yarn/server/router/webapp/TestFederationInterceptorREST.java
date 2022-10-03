@@ -748,12 +748,14 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Test Case1: Wrong ContainerId
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "Invalid ContainerId prefix: 0",
-         () -> interceptor.getContainer(null, null, appId.toString(), appAttemptId.toString(), "0"));
+         () -> interceptor.getContainer(null, null, appId.toString(),
+         appAttemptId.toString(), "0"));
 
     // Test Case2: Correct ContainerId
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerInfo containerInfo =
-        interceptor.getContainer(null, null, appId.toString(), appAttemptId.toString(), containerId.toString());
+        interceptor.getContainer(null, null, appId.toString(),
+        appAttemptId.toString(), containerId.toString());
     Assert.assertNotNull(containerInfo);
   }
 
