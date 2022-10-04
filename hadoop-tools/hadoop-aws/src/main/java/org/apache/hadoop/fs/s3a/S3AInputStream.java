@@ -27,7 +27,7 @@ import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
@@ -139,7 +139,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   /**
    * Thread pool used for vectored IO operation.
    */
-  private final ThreadPoolExecutor unboundedThreadPool;
+  private final ExecutorService boundedThreadPool;
   private final String bucket;
   private final String key;
   private final String pathStr;
@@ -196,13 +196,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param s3Attributes object attributes
    * @param client S3 client to use
    * @param streamStatistics stream io stats.
-   * @param unboundedThreadPool thread pool to use.
+   * @param boundedThreadPool thread pool to use.
    */
   public S3AInputStream(S3AReadOpContext ctx,
                         S3ObjectAttributes s3Attributes,
                         InputStreamCallbacks client,
                         S3AInputStreamStatistics streamStatistics,
-                        ThreadPoolExecutor unboundedThreadPool) {
+                        ExecutorService boundedThreadPool) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
@@ -224,7 +224,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
     this.asyncDrainThreshold = ctx.getAsyncDrainThreshold();
-    this.unboundedThreadPool = unboundedThreadPool;
+    this.boundedThreadPool = boundedThreadPool;
     this.vectoredIOContext = context.getVectoredIOContext();
     this.threadIOStatistics = requireNonNull(ctx.getIOStatisticsAggregator());
   }
@@ -882,7 +882,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       streamStatistics.readVectoredOperationStarted(sortedRanges.size(), sortedRanges.size());
       for (FileRange range: sortedRanges) {
         ByteBuffer buffer = allocate.apply(range.getLength());
-        unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
+        boundedThreadPool.submit(() -> readSingleRange(range, buffer));
       }
     } else {
       LOG.debug("Trying to merge the ranges as they are not disjoint");
@@ -893,7 +893,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
-        unboundedThreadPool.submit(
+        boundedThreadPool.submit(
             () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
       }
     }
