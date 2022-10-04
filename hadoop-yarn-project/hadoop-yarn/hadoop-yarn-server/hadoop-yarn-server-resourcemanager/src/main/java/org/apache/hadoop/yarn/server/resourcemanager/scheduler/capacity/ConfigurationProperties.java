@@ -30,7 +30,6 @@ import java.util.Map;
 import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.hadoop.thirdparty.com.google.common.collect.Maps.filterKeys;
 
-
 /**
  * A trie storage to preprocess and store configuration properties for optimised
  * retrieval. A node is created for every key part delimited by ".".
