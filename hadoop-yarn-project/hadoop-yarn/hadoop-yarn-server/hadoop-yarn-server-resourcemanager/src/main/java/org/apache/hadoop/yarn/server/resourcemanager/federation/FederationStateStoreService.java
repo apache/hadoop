@@ -482,22 +482,23 @@ public class FederationStateStoreService extends AbstractService
         DeleteApplicationHomeSubClusterRequest.newInstance(applicationId);
 
     return ((FederationActionRetry<Boolean>) () -> {
-        boolean isAppNeedClean = true;
-        // If we need to query the StateStore
-        if (isQuery) {
-          isAppNeedClean = isApplicationNeedClean(applicationId);
+      boolean isAppNeedClean = true;
+      // If we need to query the StateStore
+      if (isQuery) {
+        isAppNeedClean = isApplicationNeedClean(applicationId);
+      }
+      // When the App needs to be cleaned up, clean up the App.
+      if (isAppNeedClean) {
+        DeleteApplicationHomeSubClusterResponse response =
+            deleteApplicationHomeSubCluster(delRequest);
+        if (response != null) {
+          LOG.info("The applicationId ={} has been successfully cleaned up.", applicationId);
+          return true;
         }
-        // When the App needs to be cleaned up, clean up the App.
-        if (isAppNeedClean) {
-          DeleteApplicationHomeSubClusterResponse response =
-              deleteApplicationHomeSubCluster(delRequest);
-          if (response != null) {
-            LOG.info("The applicationId ={} has been successfully cleaned up.", applicationId);
-            return true;
-          }
-        }
-        return false;
-      }).runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+      }
+      return false;
+    }).runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+
   }
 
   /**
