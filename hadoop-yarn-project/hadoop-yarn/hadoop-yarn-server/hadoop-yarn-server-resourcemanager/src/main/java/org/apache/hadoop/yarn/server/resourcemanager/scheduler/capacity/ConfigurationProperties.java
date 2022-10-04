@@ -109,7 +109,7 @@ public class ConfigurationProperties {
   }
 
   /**
-   * Update or create value in the nodes
+   * Update or create value in the nodes.
    * @param name name of the property
    * @param value value of the property
    */
@@ -121,7 +121,7 @@ public class ConfigurationProperties {
   }
 
   /**
-   * Delete value from nodes
+   * Delete value from nodes.
    * @param name name of the property
    */
   public void unset(String name) {
