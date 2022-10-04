@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -300,7 +299,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       ApplicationId applicationId = ApplicationId.fromString(appId);
       SubClusterId homeSubCluster = getApp(applicationId);
       ApplicationHomeSubCluster app =
-          ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), homeSubCluster);
+          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
       return app;
     } catch (Exception ex) {
       LOG.error("get homeSubCluster by appId = {}.", appId);
