@@ -102,6 +102,7 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private long heartbeatInitialDelay;
   private RMContext rmContext;
+  private FederationStateStoreClientMetrics metrics;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -150,6 +151,9 @@ public class FederationStateStoreService extends AbstractService
           YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_HEARTBEAT_INITIAL_DELAY;
     }
     LOG.info("Initialized federation membership service.");
+
+    this.metrics = FederationStateStoreClientMetrics.getMetrics();
+    LOG.info("Initialized federation statestore client metrics.");
 
     super.serviceInit(conf);
   }
@@ -253,7 +257,13 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    return stateStoreClient.getPolicyConfiguration(request);
+    try {
+      return stateStoreClient.getPolicyConfiguration(request);
+    } catch (YarnException e) {
+      LOG.error("getPolicyConfiguration error", e);
+      this.metrics.incrFailedGetCurrentVersionCount();
+      throw e;
+    }
   }
 
   @Override
