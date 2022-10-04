@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.HashSet;
 import java.util.List;

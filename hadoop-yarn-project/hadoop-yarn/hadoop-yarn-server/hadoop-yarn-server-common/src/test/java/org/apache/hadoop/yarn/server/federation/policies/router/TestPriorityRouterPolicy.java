@@ -17,8 +17,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;

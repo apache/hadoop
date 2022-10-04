@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
