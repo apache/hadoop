@@ -172,6 +172,11 @@ public class TestInitializeSharedEdits {
     assertFalse(NameNode.initializeSharedEdits(conf, false));
     assertTrue(NameNode.initializeSharedEdits(conf, false));
   }
+
+  @Test
+  public void testFormatSharedEditsIfNotFormatted() throws IOException {
+    assertFalse(NameNode.initializeSharedEdits(conf, true, true));
+  }
   
   @Test
   public void testInitializeSharedEditsConfiguresGenericConfKeys() throws IOException {

@@ -247,12 +247,67 @@ public class QuorumJournalManager implements JournalManager {
     loggers.setEpoch(myEpoch);
     return resps;
   }
-  
+
   @Override
-  public void format(NamespaceInfo nsInfo, boolean force) throws IOException {
-    QuorumCall<AsyncLogger, Void> call = loggers.format(nsInfo, force);
+  public int formatUnformattedSharedJournals(NamespaceInfo namespaceInfo) throws IOException {
     try {
-      call.waitFor(loggers.size(), loggers.size(), 0, timeoutMs,
+      List<AsyncLogger> unformatted = getUnformattedJournalNodes();
+      if (unformatted != null && !unformatted.isEmpty()) {
+        // if the size of unformatted journal nodes is a majority, then the quorum requirement
+        // is not satisfied and should throw exception here. In such a case, a manual recovery
+        // is required to re-format all journal nodes
+        if (unformatted.size() >= loggers.getMajoritySize()) {
+          throw new IOException("Majority of journal nodes are not formatted");
+        }
+        LOG.info("Trying to format " + unformatted.size() + " journal node(s)...");
+        AsyncLoggerSet journalSet = new AsyncLoggerSet(unformatted);
+        format(namespaceInfo, false, journalSet);
+        return unformatted.size();
+      }
+      return 0;
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException("Failed to check and format journal nodes", e);
+    }
+  }
+
+  List<AsyncLogger> getUnformattedJournalNodes() throws IOException {
+    QuorumCall<AsyncLogger, Boolean> call = loggers.isFormatted();
+    try {
+      call.waitFor(loggers.size(), 0, 0, timeoutMs, "hasSomeData");
+
+      if (call.countExceptions() > 0) {
+        call.rethrowException(
+            "Unable to check if journal nodes have been formatted");
+      }
+      Map<AsyncLogger, Boolean> result = call.getResults();
+      List<AsyncLogger> unformatted = Lists.newArrayList();
+      for (Entry<AsyncLogger, Boolean> asyncLogger : result.entrySet()) {
+        if (!result.get(asyncLogger)) {
+          LOG.info("Journal node " + asyncLogger + " is not formatted");
+          unformatted.add(asyncLogger.getKey());
+        } else {
+          LOG.info("Journal node " + asyncLogger + " has already been formatted");
+        }
+      }
+      return unformatted;
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted while determining if journal nodes are formatted");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for response from loggers");
+    }
+  }
+
+  @Override
+  public void format(NamespaceInfo namespaceInfo, boolean force) throws IOException {
+    format(namespaceInfo, force, loggers);
+  }
+
+  void format(NamespaceInfo nsInfo, boolean force, AsyncLoggerSet journalSet) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = journalSet.format(nsInfo, force);
+    try {
+      call.waitFor(journalSet.size(), journalSet.size(), 0, timeoutMs,
           "format");
     } catch (InterruptedException e) {
       throw new IOException("Interrupted waiting for format() response");

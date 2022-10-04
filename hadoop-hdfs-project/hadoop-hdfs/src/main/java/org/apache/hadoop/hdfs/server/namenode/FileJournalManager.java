@@ -100,6 +100,14 @@ public class FileJournalManager implements JournalManager {
 
   @Override 
   public void close() throws IOException {}
+
+  @Override
+  public int formatUnformattedSharedJournals(NamespaceInfo nsInfo) throws IOException {
+    // Formatting file journals is done by the StorageDirectory
+    // format code, since they may share their directory with
+    // checkpoints, etc.
+    throw new UnsupportedOperationException();
+  }
   
   @Override
   public void format(NamespaceInfo ns, boolean force) throws IOException {

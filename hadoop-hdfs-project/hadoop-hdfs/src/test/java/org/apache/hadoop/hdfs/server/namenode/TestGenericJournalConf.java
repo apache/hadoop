@@ -153,6 +153,11 @@ public class TestGenericJournalConf {
       DummyJournalManager.uri = u;
       DummyJournalManager.nsInfo = nsInfo; 
     }
+
+    @Override
+    public int formatUnformattedSharedJournals(NamespaceInfo namespaceInfo) {
+      return 0;
+    }
     
     @Override
     public void format(NamespaceInfo nsInfo, boolean force) throws IOException {

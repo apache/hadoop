@@ -40,6 +40,13 @@ public interface JournalManager extends Closeable, FormatConfirmable,
     LogsPurgeable {
 
   /**
+   * Format the underlying storage for new joining and replaced journals, removing any previously
+   * stored data.
+   * @param nsInfo
+   */
+  int formatUnformattedSharedJournals(NamespaceInfo nsInfo) throws IOException;
+
+  /**
    * Format the underlying storage, removing any previously
    * stored data.
    */

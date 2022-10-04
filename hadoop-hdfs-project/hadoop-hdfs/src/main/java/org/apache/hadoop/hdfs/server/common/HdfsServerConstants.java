@@ -143,6 +143,7 @@ public interface HdfsServerConstants {
     RECOVER  ("-recover"),
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive"),
+    NEWEDITSONLY("-newEditsOnly"),
     SKIPSHAREDEDITSCHECK("-skipSharedEditsCheck"),
     RENAMERESERVED("-renameReserved"),
     METADATAVERSION("-metadataVersion"),
@@ -172,6 +173,9 @@ public interface HdfsServerConstants {
     
     // Used only with recovery option
     private int force = 0;
+
+    // only handles new Shared Edits
+    private boolean newEditsOnly = false;
 
     StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
@@ -217,7 +221,11 @@ public interface HdfsServerConstants {
     public int getForce() {
       return this.force;
     }
-    
+
+    public boolean isNewEditsOnly() {
+      return newEditsOnly;
+    }
+
     public boolean getForceFormat() {
       return isForceFormat;
     }
@@ -253,6 +261,10 @@ public interface HdfsServerConstants {
       } else {
         return StartupOption.valueOf(value);
       }
+    }
+
+    public void setNewEditsOnly(boolean b) {
+      this.newEditsOnly = b;
     }
   }
 
