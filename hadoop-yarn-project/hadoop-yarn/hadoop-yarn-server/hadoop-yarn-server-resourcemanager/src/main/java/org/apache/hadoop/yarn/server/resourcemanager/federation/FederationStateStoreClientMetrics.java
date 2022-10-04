@@ -61,6 +61,20 @@ public final class FederationStateStoreClientMetrics {
   private MutableGaugeLong failedUpdateApplicationHomeSubClusterCount;
   @Metric("# of failed getApplicationHomeSubCluster count")
   private MutableGaugeLong failedGetApplicationHomeSubClusterCount;
+  @Metric("# of failed getApplicationsHomeSubCluster count")
+  private MutableGaugeLong failedGetApplicationsHomeSubClusterCount;
+  @Metric("# of failed deleteApplicationHomeSubCluster count")
+  private MutableGaugeLong failedDeleteApplicationHomeSubClusterCount;
+  @Metric("# of failed addReservationHomeSubCluster count")
+  private MutableGaugeLong failedAddReservationHomeSubClusterCount;
+  @Metric("# of failed getReservationHomeSubCluster count")
+  private MutableGaugeLong failedGetReservationHomeSubClusterCount;
+  @Metric("# of failed getReservationHomeSubCluster count")
+  private MutableGaugeLong failedGetReservationsHomeSubClusterCount;
+  @Metric("# of failed updateReservationHomeSubCluster count")
+  private MutableGaugeLong failedUpdateReservationHomeSubClusterCount;
+  @Metric("# of failed deleteReservationHomeSubCluster count")
+  private MutableGaugeLong failedDeleteReservationHomeSubClusterCount;
 
 
   /**
@@ -136,7 +150,39 @@ public final class FederationStateStoreClientMetrics {
     failedGetApplicationHomeSubClusterCount.incr();
   }
 
+  public void incrFailedGetApplicationsHomeSubClusterCount() {
+    failedGetApplicationsHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedDeleteApplicationHomeSubClusterCount() {
+    failedDeleteApplicationHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedAddReservationHomeSubClusterCount() {
+    failedAddReservationHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedGetReservationHomeSubClusterCount() {
+    failedGetReservationHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedGetReservationsHomeSubClusterCount() {
+    failedGetReservationsHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedUpdateReservationHomeSubClusterCount() {
+    failedUpdateReservationHomeSubClusterCount.incr();
+  }
+
+  public void incrFailedDeleteReservationHomeSubClusterCount() {
+    failedDeleteReservationHomeSubClusterCount.incr();
+  }
+
   public long getFailedGetCurrentVersionCount() {
     return failedGetCurrentVersionCount.value();
+  }
+
+  public long getFailedSetPolicyConfigurationCount() {
+    return failedSetPolicyConfigurationCount.value();
   }
 }

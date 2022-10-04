@@ -260,7 +260,7 @@ public class FederationStateStoreService extends AbstractService
     try {
       return stateStoreClient.getPolicyConfiguration(request);
     } catch (YarnException e) {
-      LOG.error("getPolicyConfiguration error", e);
+      LOG.error("getPolicyConfiguration error.", e);
       this.metrics.incrFailedGetCurrentVersionCount();
       throw e;
     }
@@ -269,106 +269,208 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    return stateStoreClient.setPolicyConfiguration(request);
+    try {
+      return stateStoreClient.setPolicyConfiguration(request);
+    } catch (YarnException e) {
+      LOG.error("setPolicyConfiguration error.", e);
+      this.metrics.incrFailedSetPolicyConfigurationCount();
+      throw e;
+    }
   }
 
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    return stateStoreClient.getPoliciesConfigurations(request);
+    try {
+      return stateStoreClient.getPoliciesConfigurations(request);
+    } catch (YarnException e) {
+      LOG.error("getPoliciesConfigurations error.", e);
+      this.metrics.incrFailedGetPoliciesConfigurationsCount();
+      throw e;
+    }
   }
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest registerSubClusterRequest)
       throws YarnException {
-    return stateStoreClient.registerSubCluster(registerSubClusterRequest);
+    try {
+      return stateStoreClient.registerSubCluster(registerSubClusterRequest);
+    } catch (YarnException e) {
+      LOG.error("registerSubCluster error.", e);
+      this.metrics.incrFailedRegisterSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest subClusterDeregisterRequest)
       throws YarnException {
-    return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+    try {
+      return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+    } catch (YarnException e) {
+      LOG.error("deregisterSubCluster error.", e);
+      this.metrics.incrFailedDeregisterSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
       throws YarnException {
-    return stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
+    try {
+      return stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
+    } catch (YarnException e) {
+      LOG.error("subClusterHeartbeat error.", e);
+      this.metrics.incrFailedSubClusterHeartbeatCount();
+      throw e;
+    }
   }
 
   @Override
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest subClusterRequest) throws YarnException {
-    return stateStoreClient.getSubCluster(subClusterRequest);
+    try {
+      return stateStoreClient.getSubCluster(subClusterRequest);
+    } catch (YarnException e) {
+      LOG.error("getSubCluster error.", e);
+      this.metrics.incrFailedGetSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest subClustersRequest) throws YarnException {
-    return stateStoreClient.getSubClusters(subClustersRequest);
+    try {
+      return stateStoreClient.getSubClusters(subClustersRequest);
+    } catch (YarnException e) {
+      LOG.error("getSubClusters error.", e);
+      this.metrics.incrFailedGetSubClustersCount();
+      throw e;
+    }
   }
 
   @Override
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.addApplicationHomeSubCluster(request);
+    try {
+      return stateStoreClient.addApplicationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("addApplicationHomeSubCluster error.", e);
+      this.metrics.incrFailedAddApplicationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.updateApplicationHomeSubCluster(request);
+    try {
+      return stateStoreClient.updateApplicationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("updateApplicationHomeSubCluster error.", e);
+      this.metrics.incrFailedUpdateApplicationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getApplicationHomeSubCluster(request);
+    try {
+      return stateStoreClient.getApplicationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("getApplicationHomeSubCluster error.", e);
+      this.metrics.incrFailedGetApplicationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getApplicationsHomeSubCluster(request);
+    try {
+      return stateStoreClient.getApplicationsHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("getApplicationsHomeSubCluster error.", e);
+      this.metrics.incrFailedGetApplicationsHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.deleteApplicationHomeSubCluster(request);
+    try {
+      return stateStoreClient.deleteApplicationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("deleteApplicationHomeSubCluster error.", e);
+      this.metrics.incrFailedDeleteApplicationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.addReservationHomeSubCluster(request);
+    try {
+      return stateStoreClient.addReservationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("addReservationHomeSubCluster error.", e);
+      this.metrics.incrFailedAddReservationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getReservationHomeSubCluster(request);
+    try {
+      return stateStoreClient.getReservationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("getReservationHomeSubCluster error.", e);
+      this.metrics.incrFailedGetReservationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.getReservationsHomeSubCluster(request);
+    try {
+      return stateStoreClient.getReservationsHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("getReservationsHomeSubCluster error.", e);
+      this.metrics.incrFailedGetReservationsHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.updateReservationHomeSubCluster(request);
+    try {
+      return stateStoreClient.updateReservationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("updateReservationHomeSubCluster error.", e);
+      this.metrics.incrFailedUpdateReservationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-    return stateStoreClient.deleteReservationHomeSubCluster(request);
+    try {
+      return stateStoreClient.deleteReservationHomeSubCluster(request);
+    } catch (YarnException e) {
+      LOG.error("deleteReservationHomeSubCluster error.", e);
+      this.metrics.incrFailedDeleteReservationHomeSubClusterCount();
+      throw e;
+    }
   }
 
   @Override

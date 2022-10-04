@@ -22,6 +22,8 @@ import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Unit tests for TestFederationStateStoreClientMetrics.
  */
@@ -35,8 +37,8 @@ public class TestFederationStateStoreClientMetrics {
     metrics = FederationStateStoreClientMetrics.getMetrics();
     LOG.info("Test: aggregate metrics are initialized correctly");
 
-    Assert.assertEquals(0, metrics.getFailedGetCurrentVersionCount());
-
+    assertEquals(0, metrics.getFailedGetCurrentVersionCount());
+    assertEquals(0, metrics.getFailedSetPolicyConfigurationCount());
 
     LOG.info("Test: aggregate metrics are updated correctly");
   }
