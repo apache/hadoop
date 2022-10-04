@@ -82,7 +82,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
  * CLI to manage S3Guard Metadata Store.
- * 
+ *
  * Some management tools invoke this class directly.
  */
 @InterfaceAudience.LimitedPrivate("management tools")
