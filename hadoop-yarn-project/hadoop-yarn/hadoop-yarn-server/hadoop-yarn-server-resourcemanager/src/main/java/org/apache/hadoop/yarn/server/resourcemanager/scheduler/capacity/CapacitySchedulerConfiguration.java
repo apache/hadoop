@@ -533,7 +533,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     		getMaximumApplicationMasterResourcePercent());
   }
 
-  public boolean isMaximumApplicationMasterResourcePerQueuePercentPresent(String queue) {
+  public boolean isMaximumApplicationMasterResourcePerQueuePercentSet(String queue) {
     return get(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX) != null;
   }
   public void setMaximumApplicationMasterResourcePerQueuePercent(QueuePath queue,
@@ -750,7 +750,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     return userLimitFactor;
   }
 
-  public boolean isUserLimitFactorPresent(String queue) {
+  public boolean isUserLimitFactorSet(String queue) {
     return get(getQueuePrefix(queue) + USER_LIMIT_FACTOR) != null;
   }
 

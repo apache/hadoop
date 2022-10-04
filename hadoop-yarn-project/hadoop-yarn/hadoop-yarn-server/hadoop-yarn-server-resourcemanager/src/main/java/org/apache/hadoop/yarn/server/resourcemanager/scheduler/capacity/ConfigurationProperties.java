@@ -27,8 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-
 import static org.apache.commons.lang3.StringUtils.startsWithAny;
 import static org.apache.hadoop.thirdparty.com.google.common.collect.Maps.filterKeys;
 
@@ -48,7 +46,6 @@ public class ConfigurationProperties {
   private static final Logger LOG =
       LoggerFactory.getLogger(ConfigurationProperties.class);
 
-  @VisibleForTesting
   private final Map<String, PrefixNode> nodes;
   private static final String DELIMITER = "\\.";
 
