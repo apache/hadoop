@@ -129,6 +129,7 @@ public class GetSubClusterPolicyConfigurationResponsePBImpl
       return;
     }
     this.subClusterPolicy = policyConfiguration;
+    this.builder.setPolicyConfiguration(convertToProtoFormat(policyConfiguration));
   }
 
   private SubClusterPolicyConfiguration convertFromProtoFormat(

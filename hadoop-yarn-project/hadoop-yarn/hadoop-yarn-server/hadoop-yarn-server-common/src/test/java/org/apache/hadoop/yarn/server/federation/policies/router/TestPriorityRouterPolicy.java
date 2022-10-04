@@ -93,9 +93,9 @@ public class TestPriorityRouterPolicy extends BaseRouterPoliciesTest {
     for (int i = 0; i < 5; i++) {
       SubClusterIdInfo sc = new SubClusterIdInfo("sc" + i);
 
-      SubClusterInfo sci = mock(SubClusterInfo.class);
-      when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-      when(sci.getSubClusterId()).thenReturn(sc.toId());
+      SubClusterInfo sci = SubClusterInfo.newInstance(
+          sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+          System.currentTimeMillis(), "something");
       getActiveSubclusters().put(sc.toId(), sci);
       routerWeights.put(sc, 0.0f);
       amrmWeights.put(sc, -1.0f);
