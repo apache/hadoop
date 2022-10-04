@@ -18,9 +18,6 @@
 package org.apache.hadoop.io.compress.bzip2;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Compressor;
 import org.apache.hadoop.io.compress.bzip2.Bzip2Decompressor;
 import org.apache.hadoop.test.MultithreadedTestUtil;
@@ -32,7 +29,6 @@ import java.util.Random;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
-import static org.junit.Assume.assumeTrue;
 
 public class TestBzip2CompressorDecompressor {
   

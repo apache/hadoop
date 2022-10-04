@@ -454,7 +454,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       fs.exists(rootPath);
     } catch (IOException e) {
       return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
           e.getMessage()
           );
     }

@@ -438,7 +438,7 @@ environment variables in the application's environment:
 | `YARN_CONTAINER_RUNTIME_DOCKER_DELAYED_REMOVAL` | Allows a user to request delayed deletion of the Docker container on a per container basis. If true, Docker containers will not be removed until the duration defined by yarn.nodemanager.delete.debug-delay-sec has elapsed. Administrators can disable this feature through the yarn-site property yarn.nodemanager.runtime.linux.docker.delayed-removal.allowed. This feature is disabled by default. When this feature is disabled or set to false, the container will be removed as soon as it exits. |
 | `YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE` | Enable mounting of container working directory sysfs sub-directory into Docker container /hadoop/yarn/sysfs.  This is useful for populating cluster information into container. |
 | `YARN_CONTAINER_RUNTIME_DOCKER_SERVICE_MODE` | Enable Service Mode which runs the docker container as defined by the image but does not set the user (--user and --group-add). |
-
+| `YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG` | Sets the docker client config using which docker container executor can access the remote docker image. |
 The first two are required. The remainder can be set as needed. While
 controlling the container type through environment variables is somewhat less
 than ideal, it allows applications with no awareness of YARN's Docker support
@@ -1015,6 +1015,24 @@ To run a Spark shell in Docker containers, run the following command:
 
 Note that the application master and executors are configured
 independently. In this example, we are using the `openjdk:8` image for both.
+
+When using remote container registry,
+the YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG must reference the config.json
+file containing the credentials used to authenticate.
+
+```
+DOCKER_IMAGE_NAME=hadoop-docker
+DOCKER_CLIENT_CONFIG=hdfs:///user/hadoop/config.json
+spark-submit --master yarn \
+--deploy-mode cluster \
+--conf spark.executorEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+--conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$DOCKER_IMAGE_NAME \
+--conf spark.executorEnv.YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG=$DOCKER_CLIENT_CONFIG \
+--conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_TYPE=docker \
+--conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_IMAGE=$DOCKER_IMAGE_NAME \
+--conf spark.yarn.appMasterEnv.YARN_CONTAINER_RUNTIME_DOCKER_CLIENT_CONFIG=$DOCKER_CLIENT_CONFIG \
+sparkR.R
+```
 
 Docker Container ENTRYPOINT Support
 ------------------------------------

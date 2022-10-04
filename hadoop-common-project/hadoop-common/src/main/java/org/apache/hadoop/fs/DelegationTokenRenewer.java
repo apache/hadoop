@@ -256,9 +256,8 @@ public class DelegationTokenRenewer
       try {
         action.cancel();
       } catch (InterruptedException ie) {
-        LOG.error("Interrupted while canceling token for " + fs.getUri()
-            + "filesystem");
-        LOG.debug("Exception in removeRenewAction: {}", ie);
+        LOG.error("Interrupted while canceling token for {} filesystem.", fs.getUri());
+        LOG.debug("Exception in removeRenewAction.", ie);
       }
     }
   }

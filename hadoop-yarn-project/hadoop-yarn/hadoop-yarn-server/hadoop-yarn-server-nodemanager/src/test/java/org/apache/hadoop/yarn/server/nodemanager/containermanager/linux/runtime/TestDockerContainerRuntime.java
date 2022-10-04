@@ -2383,24 +2383,37 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testLaunchContainerWithDockerTokens()
-      throws ContainerExecutionException, PrivilegedOperationException,
-      IOException {
-    // Write the JSOn to a temp file.
-    File file = File.createTempFile("docker-client-config", "runtime-test");
-    file.deleteOnExit();
-    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-    bw.write(TestDockerClientConfigHandler.JSON);
-    bw.close();
+      throws ContainerExecutionException, PrivilegedOperationException, IOException {
 
     // Get the credentials object with the Tokens.
-    Credentials credentials = DockerClientConfigHandler
-        .readCredentialsFromConfigFile(new Path(file.toURI()), conf, appId);
+    Credentials credentials = DockerClientConfigHandler.readCredentialsFromConfigFile(
+        new Path(getDockerClientConfigFile().toURI()), conf, appId);
     DataOutputBuffer dob = new DataOutputBuffer();
     credentials.writeTokenStorageToStream(dob);
     ByteBuffer tokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-    // Configure the runtime and launch the container
-    when(context.getTokens()).thenReturn(tokens);
+    testLaunchContainer(tokens, null);
+  }
+
+  @Test
+  public void testLaunchContainerWithAdditionalDockerClientConfig()
+      throws ContainerExecutionException, PrivilegedOperationException, IOException {
+    testLaunchContainer(null, getDockerClientConfigFile());
+  }
+
+  public void testLaunchContainer(ByteBuffer tokens, File dockerConfigFile)
+      throws ContainerExecutionException, PrivilegedOperationException,
+      IOException {
+    if (dockerConfigFile != null) {
+      // load the docker client config file from system environment
+      env.put(DockerLinuxContainerRuntime.ENV_DOCKER_CONTAINER_CLIENT_CONFIG,
+          dockerConfigFile.getPath());
+    }
+
+    if (tokens != null) {
+      // Configure the runtime and launch the container
+      when(context.getTokens()).thenReturn(tokens);
+    }
     DockerLinuxContainerRuntime runtime =
         new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
     runtime.initialize(conf, nmContext);
@@ -2484,6 +2497,16 @@ public class TestDockerContainerRuntime {
     Assert.assertEquals("  user=" + uidGidPair, dockerCommands.get(counter++));
     Assert.assertEquals("  workdir=/test_container_work_dir",
         dockerCommands.get(counter++));
+  }
+
+  private File getDockerClientConfigFile() throws IOException {
+    // Write the JSOn to a temp file.
+    File file = File.createTempFile("docker-client-config", "runtime-test");
+    file.deleteOnExit();
+    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+    bw.write(TestDockerClientConfigHandler.JSON);
+    bw.close();
+    return file;
   }
 
   @Test

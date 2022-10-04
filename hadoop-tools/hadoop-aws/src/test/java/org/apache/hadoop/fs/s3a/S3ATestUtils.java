@@ -40,7 +40,9 @@ import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
+import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -69,6 +71,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
@@ -572,6 +575,10 @@ public final class S3ATestUtils {
         DEFAULT_DIRECTORY_MARKER_POLICY);
     conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
 
+    boolean prefetchEnabled =
+        getTestPropertyBool(conf, PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, prefetchEnabled);
+
     return conf;
   }
 
@@ -605,6 +612,7 @@ public final class S3ATestUtils {
    * @return a set of credentials
    * @throws IOException on a failure
    */
+  @SuppressWarnings("deprecation")
   public static AWSCredentialsProvider buildAwsCredentialsProvider(
       final Configuration conf)
       throws IOException {
@@ -1456,5 +1464,50 @@ public final class S3ATestUtils {
           + s3AEncryptionMethod.getMethod()
           + " in " + secrets);
     }
+  }
+
+  /**
+   * Get the input stream statistics of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * or prefetching input stream
+   * @param in wrapper
+   * @return the statistics for the inner stream
+   */
+  public static S3AInputStreamStatistics getInputStreamStatistics(
+      FSDataInputStream in) {
+
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return ((S3AInputStream) inner).getS3AStreamStatistics();
+    } else if (inner instanceof S3APrefetchingInputStream) {
+      return ((S3APrefetchingInputStream) inner).getS3AStreamStatistics();
+    } else {
+      throw new AssertionError("Not an S3AInputStream or S3APrefetchingInputStream: " + inner);
+    }
+  }
+
+  /**
+   * Get the inner stream of an input stream.
+   * Raises an exception if the inner stream is not an S3A input stream
+   * @param in wrapper
+   * @return the inner stream
+   * @throws AssertionError if the inner stream is of the wrong type
+   */
+  public static S3AInputStream getS3AInputStream(
+          FSDataInputStream in) {
+    InputStream inner = in.getWrappedStream();
+    if (inner instanceof S3AInputStream) {
+      return (S3AInputStream) inner;
+    } else {
+      throw new AssertionError("Not an S3AInputStream: " + inner);
+    }
+  }
+
+  /**
+   * Disable Prefetching streams from S3AFileSystem in tests.
+   * @param conf Configuration to remove the prefetch property from.
+   */
+  public static void disablePrefetching(Configuration conf) {
+    removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
   }
 }

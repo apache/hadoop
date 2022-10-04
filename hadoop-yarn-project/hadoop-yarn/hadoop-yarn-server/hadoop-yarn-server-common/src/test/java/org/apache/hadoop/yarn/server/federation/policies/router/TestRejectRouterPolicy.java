@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.federation.policies.router;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
-import org.apache.hadoop.yarn.server.federation.utils.FederationPoliciesTestUtil;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,8 +38,7 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
     setMockActiveSubclusters(2);
 
     // initialize policy with context
-    FederationPoliciesTestUtil.initializePolicyContext(getPolicy(),
-        getPolicyInfo(), getActiveSubclusters());
+    setupContext();
 
   }
 
@@ -60,4 +58,21 @@ public class TestRejectRouterPolicy extends BaseRouterPoliciesTest {
     localPolicy.getHomeSubcluster(applicationSubmissionContext, null);
   }
 
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testFollowReservation() throws YarnException {
+    super.testFollowReservation();
+  }
+
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testUpdateReservation() throws YarnException {
+    super.testUpdateReservation();
+  }
+
+  @Override
+  @Test(expected = FederationPolicyException.class)
+  public void testDeleteReservation() throws Exception {
+    super.testDeleteReservation();
+  }
 }

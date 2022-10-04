@@ -58,6 +58,24 @@ public interface RpcEngine {
                   RetryPolicy connectionRetryPolicy) throws IOException;
 
   /**
+   * Construct a client-side proxy object with a ConnectionId.
+   *
+   * @param <T> Generics Type T.
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param connId input ConnectionId.
+   * @param conf input Configuration.
+   * @param factory input factory.
+   * @param alignmentContext Alignment context
+   * @throws IOException raised on errors performing I/O.
+   * @return ProtocolProxy.
+   */
+  <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+      Client.ConnectionId connId, Configuration conf, SocketFactory factory,
+      AlignmentContext alignmentContext)
+      throws IOException;
+
+  /**
    * Construct a client-side proxy object.
    *
    * @param <T> Generics Type T.

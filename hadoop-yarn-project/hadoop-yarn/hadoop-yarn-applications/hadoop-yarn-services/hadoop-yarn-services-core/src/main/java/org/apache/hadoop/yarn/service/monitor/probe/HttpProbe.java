@@ -88,8 +88,9 @@ public class HttpProbe extends DefaultProbe {
     }
     String ip = instance.getContainerStatus().getIPs().get(0);
     HttpURLConnection connection = null;
+    String hostString = urlString.replace(HOST_TOKEN, ip);
     try {
-      URL url = new URL(urlString.replace(HOST_TOKEN, ip));
+      URL url = new URL(hostString);
       connection = getConnection(url, this.timeout);
       int rc = connection.getResponseCode();
       if (rc < min || rc > max) {
@@ -101,7 +102,8 @@ public class HttpProbe extends DefaultProbe {
         status.succeed(this);
       }
     } catch (Throwable e) {
-      String error = "Probe " + urlString + " failed for IP " + ip + ": " + e;
+      String error =
+          "Probe " + hostString + " failed for IP " + ip + ": " + e;
       log.info(error, e);
       status.fail(this,
           new IOException(error, e));

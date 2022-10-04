@@ -803,7 +803,7 @@ public class SecondaryNameNode implements Runnable,
       geteditsizeOpt = new Option("geteditsize",
         "return the number of uncheckpointed transactions on the NameNode");
       checkpointOpt = OptionBuilder.withArgName("force")
-        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");;
+        .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");
       formatOpt = new Option("format", "format the local storage during startup");
       helpOpt = new Option("h", "help", false, "get help information");
       

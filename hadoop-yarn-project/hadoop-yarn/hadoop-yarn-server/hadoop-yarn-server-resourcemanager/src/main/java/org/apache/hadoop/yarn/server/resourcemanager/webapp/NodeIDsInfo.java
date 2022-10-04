@@ -24,6 +24,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.Collection;
+import java.util.HashSet;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -58,11 +61,48 @@ public class NodeIDsInfo {
     this.partitionInfo = new PartitionInfo(new ResourceInfo(resource));
   }
 
+  public NodeIDsInfo(Collection<String> nodeIdsList, PartitionInfo partitionInfo) {
+    this.nodeIDsList.addAll(nodeIdsList);
+    this.partitionInfo = partitionInfo;
+  }
+
   public ArrayList<String> getNodeIDs() {
     return nodeIDsList;
   }
 
   public PartitionInfo getPartitionInfo() {
     return partitionInfo;
+  }
+
+  /**
+   * This method will generate a new NodeIDsInfo object based on the two NodeIDsInfo objects.
+   * The information to be combined includes the node list (removed duplicate node)
+   * and partitionInfo object.
+   *
+   * @param left left NodeIDsInfo Object.
+   * @param right right NodeIDsInfo Object.
+   * @return new NodeIDsInfo Object.
+   */
+  public static NodeIDsInfo add(NodeIDsInfo left, NodeIDsInfo right) {
+    Set<String> nodes = new HashSet<>();
+    if (left != null && left.nodeIDsList != null) {
+      nodes.addAll(left.nodeIDsList);
+    }
+    if (right != null && right.nodeIDsList != null) {
+      nodes.addAll(right.nodeIDsList);
+    }
+
+    PartitionInfo leftPartitionInfo = null;
+    if (left != null) {
+      leftPartitionInfo = left.getPartitionInfo();
+    }
+
+    PartitionInfo rightPartitionInfo = null;
+    if (right != null) {
+      rightPartitionInfo = right.getPartitionInfo();
+    }
+
+    PartitionInfo info = PartitionInfo.addTo(leftPartitionInfo, rightPartitionInfo);
+    return new NodeIDsInfo(nodes, info);
   }
 }

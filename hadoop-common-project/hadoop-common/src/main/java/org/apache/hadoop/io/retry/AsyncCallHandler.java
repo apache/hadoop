@@ -28,7 +28,6 @@ import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.InterruptedIOException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.Queue;

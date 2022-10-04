@@ -23,7 +23,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.AddToClusterNodeLabelsResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.CheckForDecommissioningNodesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -185,7 +184,7 @@ public class TestRouterRMAdminService extends BaseRouterRMAdminTest {
    */
   @Test
   public void testUsersChainMapWithLRUCache()
-      throws YarnException, IOException, InterruptedException {
+      throws IOException, InterruptedException {
 
     Map<String, RequestInterceptorChainWrapper> pipelines;
     RequestInterceptorChainWrapper chain;

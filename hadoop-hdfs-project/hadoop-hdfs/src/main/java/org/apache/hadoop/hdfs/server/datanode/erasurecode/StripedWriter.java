@@ -82,8 +82,10 @@ class StripedWriter {
     assert targetStorageIds != null;
 
     writers = new StripedBlockWriter[targets.length];
-
     targetIndices = new short[targets.length];
+    Preconditions.checkArgument(
+            targetIndices.length <= dataBlkNum + parityBlkNum - reconstructor.getNumLiveBlocks(),
+            "Reconstruction work gets too much targets.");
     Preconditions.checkArgument(targetIndices.length <= parityBlkNum,
         "Too much missed striped blocks.");
     initTargetIndices();
@@ -123,13 +125,14 @@ class StripedWriter {
 
   private void initTargetIndices() {
     BitSet bitset = reconstructor.getLiveBitSet();
+    BitSet excludebitset=reconstructor.getExcludeBitSet();
 
     int m = 0;
     hasValidTargets = false;
     for (int i = 0; i < dataBlkNum + parityBlkNum; i++) {
       if (!bitset.get(i)) {
         if (reconstructor.getBlockLen(i) > 0) {
-          if (m < targets.length) {
+          if (m < targets.length && !excludebitset.get(i)) {
             targetIndices[m++] = (short)i;
             hasValidTargets = true;
           }

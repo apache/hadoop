@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;

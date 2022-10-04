@@ -455,6 +455,7 @@ public class CapacityScheduler extends
         reinitializeQueues(this.conf);
       } catch (Throwable t) {
         this.conf = oldConf;
+        reinitializeQueues(this.conf);
         refreshMaximumAllocation(
             ResourceUtils.fetchMaximumAllocationFromConfig(this.conf));
         throw new IOException("Failed to re-init queues : " + t.getMessage(),

@@ -121,7 +121,6 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 
@@ -404,11 +403,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   private static List<VolumeFailureInfo> getInitialVolumeFailureInfos(
       Collection<StorageLocation> dataLocations, DataStorage storage) {
-    Set<StorageLocation> failedLocationSet = Sets.newHashSetWithExpectedSize(
-        dataLocations.size());
-    for (StorageLocation sl: dataLocations) {
-      failedLocationSet.add(sl);
-    }
+    Set<StorageLocation> failedLocationSet = new HashSet<>(dataLocations);
     for (Iterator<Storage.StorageDirectory> it = storage.dirIterator();
          it.hasNext(); ) {
       Storage.StorageDirectory sd = it.next();
@@ -2022,6 +2017,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
         newReplicaInfo = v.addFinalizedBlock(
             bpid, replicaInfo, replicaInfo, replicaInfo.getBytesReserved());
+        if (replicaInfo instanceof ReplicaInPipeline) {
+          ((ReplicaInPipeline) replicaInfo).releaseReplicaInfoBytesReserved();
+        }
         if (v.isTransientStorage()) {
           releaseLockedMemory(
               replicaInfo.getOriginalBytesReserved()
@@ -2352,6 +2350,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         removing = volumeMap.remove(bpid, invalidBlks[i]);
         addDeletingBlock(bpid, removing.getBlockId());
         LOG.debug("Block file {} is to be deleted", removing.getBlockURI());
+        datanode.getMetrics().incrBlocksRemoved(1);
         if (removing instanceof ReplicaInPipeline) {
           ((ReplicaInPipeline) removing).releaseAllBytesReserved();
         }

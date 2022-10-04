@@ -307,6 +307,29 @@ public class WritableRpcEngine implements RpcEngine {
   }
 
   /**
+   * Construct a client-side proxy object with a ConnectionId.
+   *
+   * @param <T> Generics Type T.
+   * @param protocol input protocol.
+   * @param clientVersion input clientVersion.
+   * @param connId input ConnectionId.
+   * @param conf input Configuration.
+   * @param factory input factory.
+   * @param alignmentContext Alignment context
+   * @throws IOException raised on errors performing I/O.
+   * @return ProtocolProxy.
+   */
+  @Override
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+      Client.ConnectionId connId, Configuration conf, SocketFactory factory,
+      AlignmentContext alignmentContext)
+      throws IOException {
+    return getProxy(protocol, clientVersion, connId.getAddress(),
+        connId.getTicket(), conf, factory, connId.getRpcTimeout(),
+        connId.getRetryPolicy(), null, alignmentContext);
+  }
+
+  /**
    * Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. 
    * @param <T> Generics Type.

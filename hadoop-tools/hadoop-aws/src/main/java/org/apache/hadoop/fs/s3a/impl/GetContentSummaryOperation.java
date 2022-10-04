@@ -220,8 +220,7 @@ public class GetContentSummaryOperation extends
 
     /***
      * List all entries under a path.
-     *
-     * @param path
+     * @param path path.
      * @param recursive if the subdirectories need to be traversed recursively
      * @return an iterator over the listing.
      * @throws IOException failure

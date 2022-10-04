@@ -28,7 +28,7 @@ project (libhdfspp)
 
 cmake_minimum_required(VERSION 2.8)
 
-find_package (Boost 1.72.0 REQUIRED)
+find_package (Boost 1.72.0 REQUIRED COMPONENTS date_time)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
@@ -274,7 +274,8 @@ endif()
 
 set(LIBHDFSPP_VERSION "0.1.0")
 set(LIBHDFSPP_ALL_OBJECTS $<TARGET_OBJECTS:x_platform_obj> $<TARGET_OBJECTS:bindings_c_obj> $<TARGET_OBJECTS:fs_obj> $<TARGET_OBJECTS:rpc_obj> $<TARGET_OBJECTS:reader_obj> $<TARGET_OBJECTS:proto_obj> $<TARGET_OBJECTS:connection_obj> $<TARGET_OBJECTS:common_obj> $<TARGET_OBJECTS:uriparser2_obj>)
-if (HADOOP_BUILD)
+# HDFS-16464: We don't support building Hadoop DLL for Windows yet.
+if (HADOOP_BUILD AND NOT MSVC)
   hadoop_add_dual_library(hdfspp ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
   hadoop_target_link_dual_libraries(hdfspp
     ${LIB_DL}
@@ -282,23 +283,23 @@ if (HADOOP_BUILD)
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-  )
+    ${Boost_LIBRARIES})
   set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
   hadoop_dual_output_directory(hdfspp ${OUT_DIR})
-else (HADOOP_BUILD)
+else (HADOOP_BUILD AND NOT MSVC)
   add_library(hdfspp_static STATIC ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
-  target_link_libraries(hdfspp_static
+  target_link_libraries(hdfspp_static PUBLIC
     ${LIB_DL}
     ${PROTOBUF_LIBRARY}
     ${OPENSSL_LIBRARIES}
     ${SASL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
-    )
+    ${Boost_LIBRARIES})
   if(BUILD_SHARED_HDFSPP)
     add_library(hdfspp SHARED ${EMPTY_FILE_CC} ${LIBHDFSPP_ALL_OBJECTS})
     set_target_properties(hdfspp PROPERTIES SOVERSION ${LIBHDFSPP_VERSION})
   endif(BUILD_SHARED_HDFSPP)
-endif (HADOOP_BUILD)
+endif (HADOOP_BUILD AND NOT MSVC)
 
 # Set up make install targets
 # Can be installed to a particular location via "make DESTDIR=... install"

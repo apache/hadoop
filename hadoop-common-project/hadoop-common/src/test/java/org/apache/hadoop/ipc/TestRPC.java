@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -50,7 +52,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -289,6 +290,14 @@ public class TestRPC extends TestRpcBase {
           rpcTimeout, connectionRetryPolicy, null, null);
     }
 
+    @Override
+    public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+        ConnectionId connId, Configuration conf, SocketFactory factory,
+        AlignmentContext alignmentContext)
+        throws IOException {
+      throw new UnsupportedOperationException("This proxy is not supported");
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public <T> ProtocolProxy<T> getProxy(
@@ -299,7 +308,7 @@ public class TestRPC extends TestRpcBase {
         throws IOException {
       T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
           new Class[] { protocol }, new StoppedInvocationHandler());
-      return new ProtocolProxy<T>(protocol, proxy, false);
+      return new ProtocolProxy<>(protocol, proxy, false);
     }
 
     @Override
@@ -387,6 +396,53 @@ public class TestRPC extends TestRpcBase {
       assertEquals(addr, RPC.getServerAddress(proxy));
     } finally {
       stop(server, proxy);
+    }
+  }
+
+  @Test
+  public void testConnectionWithSocketFactory() throws IOException, ServiceException {
+    TestRpcService firstProxy = null;
+    TestRpcService secondProxy = null;
+
+    Configuration newConf = new Configuration(conf);
+    newConf.set(CommonConfigurationKeysPublic.
+        HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY, "");
+
+    RetryPolicy retryPolicy = RetryUtils.getDefaultRetryPolicy(
+        newConf, "Test.No.Such.Key",
+        true,
+        "Test.No.Such.Key", "10000,6",
+        null);
+
+    // create a server with two handlers
+    Server server = setupTestServer(newConf, 2);
+    try {
+      // create the first client
+      firstProxy = getClient(addr, newConf);
+      // create the second client
+      secondProxy = getClient(addr, newConf);
+
+      firstProxy.ping(null, newEmptyRequest());
+      secondProxy.ping(null, newEmptyRequest());
+
+      Client client = ProtobufRpcEngine2.getClient(newConf);
+      assertEquals(1, client.getConnectionIds().size());
+
+      stop(null, firstProxy, secondProxy);
+      ProtobufRpcEngine2.clearClientCache();
+
+      // create the first client with index 1
+      firstProxy = getMultipleClientWithIndex(addr, newConf, retryPolicy, 1);
+      // create the second client with index 2
+      secondProxy = getMultipleClientWithIndex(addr, newConf, retryPolicy, 2);
+      firstProxy.ping(null, newEmptyRequest());
+      secondProxy.ping(null, newEmptyRequest());
+
+      Client client2 = ProtobufRpcEngine2.getClient(newConf);
+      assertEquals(2, client2.getConnectionIds().size());
+    } finally {
+      System.out.println("Down slow rpc testing");
+      stop(server, firstProxy, secondProxy);
     }
   }
 
@@ -1162,10 +1218,8 @@ public class TestRPC extends TestRpcBase {
         .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true);
     server = setupTestServer(builder);
 
-    @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>) Whitebox
-        .getInternalState(server, "callQueue"));
-    Whitebox.setInternalState(server, "callQueue", spy);
+    CallQueueManager<Call> spy = spy(server.getCallQueue());
+    server.setCallQueue(spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1217,7 +1271,7 @@ public class TestRPC extends TestRpcBase {
     GenericTestUtils.setLogLevel(DecayRpcScheduler.LOG, Level.DEBUG);
     GenericTestUtils.setLogLevel(RPC.LOG, Level.DEBUG);
 
-    final List<Future<Void>> res = new ArrayList<Future<Void>>();
+    final List<Future<Void>> res = new ArrayList<>();
     final ExecutorService executorService =
         Executors.newFixedThreadPool(numClients);
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
@@ -1225,10 +1279,8 @@ public class TestRPC extends TestRpcBase {
     final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
     Server server = setupDecayRpcSchedulerandTestServer(ns + ".");
 
-    @SuppressWarnings("unchecked")
-    CallQueueManager<Call> spy = spy((CallQueueManager<Call>) Whitebox
-        .getInternalState(server, "callQueue"));
-    Whitebox.setInternalState(server, "callQueue", spy);
+    CallQueueManager<Call> spy = spy(server.getCallQueue());
+    server.setCallQueue(spy);
 
     Exception lastException = null;
     proxy = getClient(addr, conf);
@@ -1567,11 +1619,8 @@ public class TestRPC extends TestRpcBase {
       RPC.Builder builder = newServerBuilder(conf)
           .setQueueSizePerHandler(1).setNumHandlers(1).setVerbose(true);
       server = setupTestServer(builder);
-      Whitebox.setInternalState(
-          server, "rpcRequestClass", FakeRequestClass.class);
-      MutableCounterLong authMetric =
-          (MutableCounterLong)Whitebox.getInternalState(
-              server.getRpcMetrics(), "rpcAuthorizationSuccesses");
+      server.setRpcRequestClass(FakeRequestClass.class);
+      MutableCounterLong authMetric = server.getRpcMetrics().getRpcAuthorizationSuccesses();
 
       proxy = getClient(addr, conf);
       boolean isDisconnected = true;

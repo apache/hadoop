@@ -354,4 +354,24 @@ public final class CommitConstants {
   public static final String OPT_SUMMARY_REPORT_DIR =
       OPT_PREFIX + "summary.report.directory";
 
+  /**
+   * Experimental feature to collect thread level IO statistics.
+   * When set the committers will reset the statistics in
+   * task setup and propagate to the job committer.
+   * The job comitter will include those and its own statistics.
+   * Do not use if the execution engine is collecting statistics,
+   * as the multiple reset() operations will result in incomplete
+   * statistics.
+   * Value: {@value}.
+   */
+  public static final String S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS =
+      OPT_PREFIX + "experimental.collect.iostatistics";
+
+  /**
+   * Default value for {@link #S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS}.
+   * Value: {@value}.
+   */
+  public static final boolean S3A_COMMITTER_EXPERIMENTAL_COLLECT_IOSTATISTICS_DEFAULT =
+      false;
+
 }

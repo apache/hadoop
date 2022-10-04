@@ -1756,6 +1756,18 @@ public class TestNMLeveldbStateStoreService {
     resources = rcs.getResourceMappings().getAssignedResources("numa");
     Assert.assertEquals(numaRes, resources);
     Assert.assertEquals(numaRes, resourceMappings.getAssignedResources("numa"));
+    // test removing numa resources from state store
+    stateStore.releaseAssignedResources(containerId, "numa");
+    recoveredContainers = loadContainersState(stateStore.getContainerStateIterator());
+    resourceMappings = recoveredContainers.get(0).getResourceMappings();
+    assertTrue(resourceMappings.getAssignedResources("numa").isEmpty());
+
+    // testing calling deletion of non-existing key doesn't break anything
+    try {
+      stateStore.releaseAssignedResources(containerId, "numa");
+    }catch (RuntimeException e){
+      Assert.fail("Should not throw exception while deleting non existing key from statestore");
+    }
   }
 
   @Test

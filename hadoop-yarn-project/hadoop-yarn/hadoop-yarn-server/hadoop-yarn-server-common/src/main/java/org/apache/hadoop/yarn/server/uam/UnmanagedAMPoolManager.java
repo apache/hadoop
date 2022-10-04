@@ -22,13 +22,15 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.HashMap;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -74,6 +76,10 @@ public class UnmanagedAMPoolManager extends AbstractService {
 
   private ExecutorService threadpool;
 
+  private String dispatcherThreadName = "UnmanagedAMPoolManager-Finish-Thread";
+
+  private Thread finishApplicationThread;
+
   public UnmanagedAMPoolManager(ExecutorService threadpool) {
     super(UnmanagedAMPoolManager.class.getName());
     this.threadpool = threadpool;
@@ -94,48 +100,16 @@ public class UnmanagedAMPoolManager extends AbstractService {
    * UAMs running, force kill all of them. Do parallel kill because of
    * performance reasons.
    *
-   * TODO: move waiting for the kill to finish into a separate thread, without
-   * blocking the serviceStop.
    */
   @Override
   protected void serviceStop() throws Exception {
-    ExecutorCompletionService<KillApplicationResponse> completionService =
-        new ExecutorCompletionService<>(this.threadpool);
-    if (this.unmanagedAppMasterMap.isEmpty()) {
-      return;
+
+    if (!this.unmanagedAppMasterMap.isEmpty()) {
+      finishApplicationThread = new Thread(createForceFinishApplicationThread());
+      finishApplicationThread.setName(dispatcherThreadName);
+      finishApplicationThread.start();
     }
 
-    // Save a local copy of the key set so that it won't change with the map
-    Set<String> addressList =
-        new HashSet<>(this.unmanagedAppMasterMap.keySet());
-    LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map",
-        addressList.size());
-
-    for (final String uamId : addressList) {
-      completionService.submit(new Callable<KillApplicationResponse>() {
-        @Override
-        public KillApplicationResponse call() throws Exception {
-          try {
-            LOG.info("Force-killing UAM id " + uamId + " for application "
-                + appIdMap.get(uamId));
-            return unmanagedAppMasterMap.remove(uamId).forceKillApplication();
-          } catch (Exception e) {
-            LOG.error("Failed to kill unmanaged application master", e);
-            return null;
-          }
-        }
-      });
-    }
-
-    for (int i = 0; i < addressList.size(); ++i) {
-      try {
-        Future<KillApplicationResponse> future = completionService.take();
-        future.get();
-      } catch (Exception e) {
-        LOG.error("Failed to kill unmanaged application master", e);
-      }
-    }
-    this.appIdMap.clear();
     super.serviceStop();
   }
 
@@ -449,5 +423,121 @@ public class UnmanagedAMPoolManager extends AbstractService {
         .values()) {
       uam.drainHeartbeatThread();
     }
+  }
+
+  /**
+   * Complete FinishApplicationMaster interface calls in batches.
+   *
+   * @param request FinishApplicationMasterRequest
+   * @param appId application Id
+   * @return Returns the Map map,
+   *         the key is subClusterId, the value is FinishApplicationMasterResponse
+   */
+  public Map<String, FinishApplicationMasterResponse> batchFinishApplicationMaster(
+      FinishApplicationMasterRequest request, String appId) {
+
+    Map<String, FinishApplicationMasterResponse> responseMap = new HashMap<>();
+    Set<String> subClusterIds = this.unmanagedAppMasterMap.keySet();
+
+    if (subClusterIds != null && !subClusterIds.isEmpty()) {
+      ExecutorCompletionService<Map<String, FinishApplicationMasterResponse>> finishAppService =
+          new ExecutorCompletionService<>(this.threadpool);
+      LOG.info("Sending finish application request to {} sub-cluster RMs", subClusterIds.size());
+
+      for (final String subClusterId : subClusterIds) {
+        finishAppService.submit(() -> {
+          LOG.info("Sending finish application request to RM {}", subClusterId);
+          try {
+            FinishApplicationMasterResponse uamResponse =
+                finishApplicationMaster(subClusterId, request);
+            return Collections.singletonMap(subClusterId, uamResponse);
+          } catch (Throwable e) {
+            LOG.warn("Failed to finish unmanaged application master: " +
+                " RM address: {} ApplicationId: {}", subClusterId, appId, e);
+            return Collections.singletonMap(subClusterId, null);
+          }
+        });
+      }
+
+      for (int i = 0; i < subClusterIds.size(); ++i) {
+        try {
+          Future<Map<String, FinishApplicationMasterResponse>> future = finishAppService.take();
+          Map<String, FinishApplicationMasterResponse> uamResponse = future.get();
+          LOG.debug("Received finish application response from RM: {}", uamResponse.keySet());
+          responseMap.putAll(uamResponse);
+        } catch (Throwable e) {
+          LOG.warn("Failed to finish unmanaged application master: ApplicationId: {}", appId, e);
+        }
+      }
+    }
+
+    return responseMap;
+  }
+
+  Runnable createForceFinishApplicationThread() {
+    return () -> {
+
+      ExecutorCompletionService<Pair<String, KillApplicationResponse>> completionService =
+          new ExecutorCompletionService<>(threadpool);
+
+      // Save a local copy of the key set so that it won't change with the map
+      Set<String> addressList = new HashSet<>(unmanagedAppMasterMap.keySet());
+
+      LOG.warn("Abnormal shutdown of UAMPoolManager, still {} UAMs in map", addressList.size());
+
+      for (final String uamId : addressList) {
+        completionService.submit(() -> {
+          try {
+            ApplicationId appId = appIdMap.get(uamId);
+            LOG.info("Force-killing UAM id {} for application {}", uamId, appId);
+            UnmanagedApplicationManager applicationManager = unmanagedAppMasterMap.remove(uamId);
+            KillApplicationResponse response = applicationManager.forceKillApplication();
+            return Pair.of(uamId, response);
+          } catch (Exception e) {
+            LOG.error("Failed to kill unmanaged application master", e);
+            return Pair.of(uamId, null);
+          }
+        });
+      }
+
+      for (int i = 0; i < addressList.size(); ++i) {
+        try {
+          Future<Pair<String, KillApplicationResponse>> future = completionService.take();
+          Pair<String, KillApplicationResponse> pairs = future.get();
+          String uamId = pairs.getLeft();
+          ApplicationId appId = appIdMap.get(uamId);
+          KillApplicationResponse response = pairs.getRight();
+          if (response == null) {
+            throw new YarnException(
+                "Failed Force-killing UAM id " + uamId + " for application " + appId);
+          }
+          LOG.info("Force-killing UAM id = {} for application {} KillCompleted {}.",
+              uamId, appId, response.getIsKillCompleted());
+        } catch (Exception e) {
+          LOG.error("Failed to kill unmanaged application master", e);
+        }
+      }
+
+      appIdMap.clear();
+    };
+  }
+
+  public void unAttachUAM(String uamId) {
+    if (this.unmanagedAppMasterMap.containsKey(uamId)) {
+      UnmanagedApplicationManager appManager = this.unmanagedAppMasterMap.get(uamId);
+      appManager.shutDownConnections();
+    }
+    this.unmanagedAppMasterMap.remove(uamId);
+    this.appIdMap.remove(uamId);
+  }
+
+  @VisibleForTesting
+  protected Map<String, UnmanagedApplicationManager> getUnmanagedAppMasterMap() {
+    return unmanagedAppMasterMap;
+  }
+
+  @VisibleForTesting
+  protected Thread getFinishApplicationThread() {
+    return finishApplicationThread;
   }
 }

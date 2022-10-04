@@ -122,10 +122,21 @@ BEGIN
    WHERE applicationId = applicationID_IN;
 END //
 
-CREATE PROCEDURE sp_getApplicationsHomeSubCluster()
+CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubCluster_IN varchar(256))
 BEGIN
-   SELECT applicationId, homeSubCluster
-   FROM applicationsHomeSubCluster;
+   SELECT
+       applicationId,
+       homeSubCluster,
+       createTime
+   FROM (SELECT
+             applicationId,
+             homeSubCluster,
+             createTime,
+             @rownum := 0
+         FROM applicationshomesubcluster
+         ORDER BY createTime DESC) AS applicationshomesubcluster
+   WHERE (homeSubCluster_IN = '' OR homeSubCluster = homeSubCluster_IN)
+     AND (@rownum := @rownum + 1) <= limit_IN;
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(
@@ -157,6 +168,55 @@ CREATE PROCEDURE sp_getPolicyConfiguration(
 BEGIN
    SELECT policyType, params INTO policyType_OUT, params_OUT
    FROM policies WHERE queue = queue_IN;
+END //
+
+CREATE PROCEDURE sp_addReservationHomeSubCluster(
+   IN reservationId_IN varchar(128), IN homeSubCluster_IN varchar(256),
+   OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)
+BEGIN
+   INSERT INTO reservationsHomeSubCluster
+      (reservationId,homeSubCluster)
+      (SELECT reservationId_IN, homeSubCluster_IN
+       FROM applicationsHomeSubCluster
+       WHERE reservationId = reservationId_IN
+       HAVING COUNT(*) = 0 );
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+   SELECT homeSubCluster INTO storedHomeSubCluster_OUT
+   FROM reservationsHomeSubCluster
+   WHERE applicationId = reservationId_IN;
+END //
+
+CREATE PROCEDURE sp_getReservationHomeSubCluster(
+   IN reservationId_IN varchar(128),
+   OUT homeSubCluster_OUT varchar(256))
+BEGIN
+   SELECT homeSubCluster INTO homeSubCluster_OUT
+   FROM reservationsHomeSubCluster
+   WHERE reservationId = reservationId_IN;
+END //
+
+CREATE PROCEDURE sp_getReservationsHomeSubCluster()
+BEGIN
+   SELECT reservationId, homeSubCluster
+   FROM reservationsHomeSubCluster;
+END //
+
+CREATE PROCEDURE sp_updateReservationHomeSubCluster(
+   IN reservationId_IN varchar(128),
+   IN homeSubCluster_IN varchar(256), OUT rowCount_OUT int)
+BEGIN
+   UPDATE reservationsHomeSubCluster
+     SET homeSubCluster = homeSubCluster_IN
+   WHERE reservationId = reservationId_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_deleteReservationHomeSubCluster(
+   IN reservationId_IN varchar(128), OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM reservationsHomeSubCluster
+   WHERE reservationId = reservationId_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
 DELIMITER ;
