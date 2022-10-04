@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.store.records;
 
 import org.apache.hadoop.yarn.api.BasePBImplRecordsTest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.AddApplicationHomeSubClusterResponseProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.DeleteApplicationHomeSubClusterRequestProto;
@@ -50,9 +51,11 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.Update
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterRMTokenResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetReservationHomeSubClusterRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyRequestProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterMasterKeyResponseProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.ApplicationHomeSubClusterProto;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.AddApplicationHomeSubClusterResponsePBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.DeleteApplicationHomeSubClusterRequestPBImpl;
@@ -88,6 +91,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterStor
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenRequestPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.RouterRMTokenResponsePBImpl;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.ApplicationHomeSubClusterPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.GetReservationHomeSubClusterRequestPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -108,6 +113,7 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
     generateByNewInstance(RouterMasterKey.class);
     generateByNewInstance(YARNDelegationTokenIdentifier.class);
     generateByNewInstance(RouterStoreToken.class);
+    generateByNewInstance(ReservationId.class);
   }
 
   @Test
@@ -307,5 +313,17 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   @Test
   public void testRouterRMTokenResponse() throws Exception {
     validatePBImplRecord(RouterRMTokenResponsePBImpl.class, RouterRMTokenResponseProto.class);
+  }
+  
+  @Test
+  public void testApplicationHomeSubCluster() throws Exception {
+    validatePBImplRecord(ApplicationHomeSubClusterPBImpl.class,
+        ApplicationHomeSubClusterProto.class);
+  }
+
+  @Test
+  public void testGetReservationHomeSubClusterRequest() throws Exception {
+    validatePBImplRecord(GetReservationHomeSubClusterRequestPBImpl.class,
+        GetReservationHomeSubClusterRequestProto.class);
   }
 }

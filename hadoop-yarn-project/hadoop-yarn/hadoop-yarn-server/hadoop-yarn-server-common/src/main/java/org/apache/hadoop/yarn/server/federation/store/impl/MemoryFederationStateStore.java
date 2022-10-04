@@ -299,7 +299,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
     SubClusterId subClusterId = applications.get(applicationId);
-    return ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), subClusterId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
   }
 
   @Override
@@ -565,5 +565,15 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @VisibleForTesting
   public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
     return routerRMSecretManagerState;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterId, SubClusterInfo> getMembership() {
+    return membership;
+  }
+
+  @VisibleForTesting
+  public void setMembership(Map<SubClusterId, SubClusterInfo> membership) {
+    this.membership = membership;
   }
 }
