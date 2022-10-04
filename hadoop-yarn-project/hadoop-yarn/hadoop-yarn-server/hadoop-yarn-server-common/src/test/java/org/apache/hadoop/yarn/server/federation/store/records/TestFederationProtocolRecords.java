@@ -293,7 +293,8 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
 
   @Test
   public void testApplicationHomeSubCluster() throws Exception {
-    validatePBImplRecord(ApplicationHomeSubClusterPBImpl.class, ApplicationHomeSubClusterProto.class);
+    validatePBImplRecord(ApplicationHomeSubClusterPBImpl.class,
+        ApplicationHomeSubClusterProto.class);
   }
 
   @Test

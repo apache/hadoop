@@ -123,7 +123,6 @@ public class GetSubClusterPoliciesConfigurationsResponsePBImpl
       builder.clearPoliciesConfigurations();
     }
     this.subClusterPolicies = policyConfigurations;
-    addSubClusterPoliciesConfigurationsToProto();
   }
 
   private void initSubClusterPoliciesConfigurationsList() {
