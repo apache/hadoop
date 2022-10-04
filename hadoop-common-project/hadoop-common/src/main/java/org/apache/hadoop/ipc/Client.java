@@ -124,10 +124,26 @@ public class Client implements AutoCloseable {
     Preconditions.checkArgument(cid != RpcConstants.INVALID_CALL_ID);
     Preconditions.checkState(callId.get() == null);
     Preconditions.checkArgument(rc != RpcConstants.INVALID_RETRY_COUNT);
+    setCallIdAndRetryCountUnprotected(cid, rc, externalHandler);
+  }
 
+  public static void setCallIdAndRetryCountUnprotected(Integer cid, int rc,
+      Object externalHandler) {
     callId.set(cid);
     retryCount.set(rc);
     EXTERNAL_CALL_HANDLER.set(externalHandler);
+  }
+
+  public static int getCallId() {
+    return callId.get() != null ? callId.get() : nextCallId();
+  }
+
+  public static int getRetryCount() {
+    return retryCount.get() != null ? retryCount.get() : 0;
+  }
+
+  public static Object getExternalHandler() {
+    return EXTERNAL_CALL_HANDLER.get();
   }
 
   private final ConcurrentMap<ConnectionId, Connection> connections =

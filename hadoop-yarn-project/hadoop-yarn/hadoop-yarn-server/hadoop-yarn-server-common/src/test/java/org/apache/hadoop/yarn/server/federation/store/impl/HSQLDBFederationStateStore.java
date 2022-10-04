@@ -18,10 +18,20 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.slf4j.Logger;
@@ -41,6 +51,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       " CREATE TABLE applicationsHomeSubCluster ("
           + " applicationId varchar(64) NOT NULL,"
           + " homeSubCluster varchar(256) NOT NULL,"
+          + " createTime datetime NOT NULL,"
           + " CONSTRAINT pk_applicationId PRIMARY KEY (applicationId))";
 
   private static final String TABLE_MEMBERSHIP =
@@ -140,8 +151,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " OUT storedHomeSubCluster_OUT varchar(256), OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " INSERT INTO applicationsHomeSubCluster "
-          + " (applicationId,homeSubCluster) "
-          + " (SELECT applicationId_IN, homeSubCluster_IN"
+          + " (applicationId,homeSubCluster,createTime) "
+          + " (SELECT applicationId_IN, homeSubCluster_IN, "
+          + " NOW() AT TIME ZONE INTERVAL '0:00' HOUR TO MINUTE"
           + " FROM applicationsHomeSubCluster"
           + " WHERE applicationId = applicationId_IN"
           + " HAVING COUNT(*) = 0 );"
@@ -170,11 +182,16 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE applicationId = applicationID_IN; END";
 
   private static final String SP_GETAPPLICATIONSHOMESUBCLUSTER =
-      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster()"
+      "CREATE PROCEDURE sp_getApplicationsHomeSubCluster("
+          + "IN limit_IN int, IN homeSubCluster_IN varchar(256))"
           + " MODIFIES SQL DATA DYNAMIC RESULT SETS 1 BEGIN ATOMIC"
           + " DECLARE result CURSOR FOR"
-          + " SELECT applicationId, homeSubCluster"
-          + " FROM applicationsHomeSubCluster; OPEN result; END";
+          + " SELECT applicationId, homeSubCluster, createTime"
+          + " FROM applicationsHomeSubCluster "
+          + " WHERE ROWNUM() <= limit_IN AND "
+          + " (homeSubCluster_IN = '' OR homeSubCluster = homeSubCluster_IN) "
+          + " ORDER BY createTime desc; "
+          + " OPEN result; END";
 
   private static final String SP_DELETEAPPLICATIONHOMESUBCLUSTER =
       "CREATE PROCEDURE sp_deleteApplicationHomeSubCluster("
@@ -301,15 +318,13 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
+  private List<String> tables = new ArrayList<>();
 
   @Override
   public void init(Configuration conf) {
     try {
+      conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
       super.init(conf);
-    } catch (YarnException e1) {
-      LOG.error("ERROR: failed to init HSQLDB " + e1.getMessage());
-    }
-    try {
       conn = super.conn;
 
       LOG.info("Database Init: Start");
@@ -342,8 +357,17 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
 
       LOG.info("Database Init: Complete");
-    } catch (SQLException e) {
-      LOG.error("ERROR: failed to inizialize HSQLDB " + e.getMessage());
+    } catch (Exception e) {
+      LOG.error("ERROR: failed to initialize HSQLDB {}.", e.getMessage());
+    }
+  }
+
+  public void initConnection(Configuration conf) {
+    try {
+      super.init(conf);
+      conn = super.conn;
+    } catch (YarnException e1) {
+      LOG.error("ERROR: failed open connection to HSQLDB DB {}.", e1.getMessage());
     }
   }
 
@@ -351,9 +375,38 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
     try {
       conn.close();
     } catch (SQLException e) {
-      LOG.error(
-          "ERROR: failed to close connection to HSQLDB DB " + e.getMessage());
+      LOG.error("ERROR: failed to close connection to HSQLDB DB {}.", e.getMessage());
     }
   }
 
+  /**
+   * Extract The Create Table Sql From The Script.
+   *
+   * @param dbIdentifier database identifier, Like Mysql / SqlServer
+   * @param regex the regex
+   * @throws IOException IO exception.
+   */
+  protected void extractCreateTableSQL(String dbIdentifier, String regex) throws IOException {
+
+    String[] createTableScriptPathItems = new String[] {
+        ".", "target", "test-classes", dbIdentifier, "FederationStateStoreTables.sql" };
+    String createTableScriptPath = StringUtils.join(createTableScriptPathItems, File.separator);
+
+    String createTableSQL =
+        FileUtils.readFileToString(new File(createTableScriptPath), StandardCharsets.UTF_8);
+    Pattern p = Pattern.compile(regex);
+    Matcher m = p.matcher(createTableSQL);
+    while (m != null && m.find()) {
+      String group = m.group();
+      tables.add(group);
+    }
+  }
+
+  public List<String> getTables() {
+    return tables;
+  }
+
+  public void setTables(List<String> tables) {
+    this.tables = tables;
+  }
 }

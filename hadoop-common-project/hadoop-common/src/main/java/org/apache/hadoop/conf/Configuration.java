@@ -3593,11 +3593,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </ul>
    * @param propertyName xml property name.
    * @param out the writer to write to.
+   * @param config configuration.
    * @throws IOException raised on errors performing I/O.
    */
-  public void writeXml(@Nullable String propertyName, Writer out)
+  public void writeXml(@Nullable String propertyName, Writer out, Configuration config)
       throws IOException, IllegalArgumentException {
-    Document doc = asXmlDocument(propertyName);
+    ConfigRedactor redactor = config != null ? new ConfigRedactor(this) : null;
+    Document doc = asXmlDocument(propertyName, redactor);
 
     try {
       DOMSource source = new DOMSource(doc);
@@ -3614,11 +3616,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  public void writeXml(@Nullable String propertyName, Writer out)
+      throws IOException, IllegalArgumentException {
+    writeXml(propertyName, out, null);
+  }
+
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(@Nullable String propertyName)
-      throws IOException, IllegalArgumentException {
+  private synchronized Document asXmlDocument(@Nullable String propertyName,
+      ConfigRedactor redactor) throws IOException, IllegalArgumentException {
     Document doc;
     try {
       doc = DocumentBuilderFactory
@@ -3641,13 +3648,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             propertyName + " not found");
       } else {
         // given property is found, write single property
-        appendXMLProperty(doc, conf, propertyName);
+        appendXMLProperty(doc, conf, propertyName, redactor);
         conf.appendChild(doc.createTextNode("\n"));
       }
     } else {
       // append all elements
       for (Enumeration<Object> e = properties.keys(); e.hasMoreElements();) {
-        appendXMLProperty(doc, conf, (String)e.nextElement());
+        appendXMLProperty(doc, conf, (String)e.nextElement(), redactor);
         conf.appendChild(doc.createTextNode("\n"));
       }
     }
@@ -3663,7 +3670,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param propertyName
    */
   private synchronized void appendXMLProperty(Document doc, Element conf,
-      String propertyName) {
+      String propertyName, ConfigRedactor redactor) {
     // skip writing if given property name is empty or null
     if (!Strings.isNullOrEmpty(propertyName)) {
       String value = properties.getProperty(propertyName);
@@ -3676,8 +3683,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         propNode.appendChild(nameNode);
 
         Element valueNode = doc.createElement("value");
-        valueNode.appendChild(doc.createTextNode(
-            properties.getProperty(propertyName)));
+        String propertyValue = properties.getProperty(propertyName);
+        if (redactor != null) {
+          propertyValue = redactor.redactXml(propertyName, propertyValue);
+        }
+        valueNode.appendChild(doc.createTextNode(propertyValue));
         propNode.appendChild(valueNode);
 
         Element finalNode = doc.createElement("final");

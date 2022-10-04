@@ -51,6 +51,17 @@ public abstract class ApplicationHomeSubCluster {
     return appMapping;
   }
 
+  @Private
+  @Unstable
+  public static ApplicationHomeSubCluster newInstance(ApplicationId appId, long createTime,
+      SubClusterId homeSubCluster) {
+    ApplicationHomeSubCluster appMapping = Records.newRecord(ApplicationHomeSubCluster.class);
+    appMapping.setApplicationId(appId);
+    appMapping.setHomeSubCluster(homeSubCluster);
+    appMapping.setCreateTime(createTime);
+    return appMapping;
+  }
+
   /**
    * Get the {@link ApplicationId} representing the unique identifier of the
    * application.
@@ -90,6 +101,25 @@ public abstract class ApplicationHomeSubCluster {
   @Private
   @Unstable
   public abstract void setHomeSubCluster(SubClusterId homeSubCluster);
+
+  /**
+   * Get the create time of the subcluster.
+   *
+   * @return the state of the subcluster
+   */
+  @Public
+  @Unstable
+  public abstract long getCreateTime();
+
+  /**
+   * Set the create time of the subcluster.
+   *
+   * @param time the last heartbeat time of the subcluster
+   */
+  @Private
+  @Unstable
+  public abstract void setCreateTime(long time);
+
 
   @Override
   public boolean equals(Object obj) {
