@@ -1015,7 +1015,7 @@ public final class MarkerTool extends S3GuardTool {
     }
 
     /** Consider only markers in non-authoritative paths as errors.
-     *  @param b True if tool should only consider markers in non-authoritative paths
+     * @param b True if tool should only consider markers in non-authoritative paths
      * @return builder class for method chaining
      */
     public ScanArgsBuilder withNonAuth(final boolean b) {
