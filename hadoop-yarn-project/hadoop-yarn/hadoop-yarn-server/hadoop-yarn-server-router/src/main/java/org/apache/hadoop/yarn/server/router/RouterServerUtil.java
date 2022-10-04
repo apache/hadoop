@@ -244,4 +244,40 @@ public final class RouterServerUtil {
       throw new RuntimeException(msg);
     }
   }
+
+  /**
+   * Throws an RunTimeException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return RuntimeException
+   */
+  @Public
+  @Unstable
+  public static RuntimeException logAndReturnRunTimeException(
+      Throwable t, String errMsgFormat, Object... args) {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      return new RuntimeException(msg, t);
+    } else {
+      LOG.error(msg);
+      return new RuntimeException(msg);
+    }
+  }
+
+  /**
+   * Throws an RunTimeException due to an error.
+   *
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return RuntimeException
+   */
+  @Public
+  @Unstable
+  public static RuntimeException logAndReturnRunTimeException(
+      String errMsgFormat, Object... args) {
+    return logAndReturnRunTimeException(null, errMsgFormat, args);
+  }
 }

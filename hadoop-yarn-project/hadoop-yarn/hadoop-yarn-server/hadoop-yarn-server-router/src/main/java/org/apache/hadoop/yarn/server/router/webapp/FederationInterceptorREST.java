@@ -44,6 +44,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1002,9 +1003,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     } catch (NotFoundException e) {
       LOG.error("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
-      LOG.error("getNodes error.", e);
+      LOG.error("getNodes by states = {} error.", states, e);
     } catch (IOException e) {
-      LOG.error("getNodes error with io error.", e);
+      LOG.error("getNodes by states = {} error with io error.", states, e);
     }
 
     // Delete duplicate from all the node reports got from all the available
@@ -1175,6 +1176,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppActivitiesFailedRetrieved();
+      throw e;
+    }
+
     try {
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
@@ -1190,11 +1199,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       }
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException(e, "Unable to get subCluster by appId: %s.",
-          appId);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to get subCluster by appId: %s.", appId);
     } catch (YarnException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("getAppActivities error.", e);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getAppActivities by appId = %s error .", appId);
     }
     routerMetrics.incrGetAppActivitiesFailedRetrieved();
     throw new RuntimeException("getAppActivities Failed.");
@@ -1224,13 +1234,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.logAndThrowRunTimeException("get all active sub cluster(s) error.", e);
     } catch (IOException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("getAppStatistics error with io error.", e);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getAppStatistics error by stateQueries = %s, typeQueries = %s with io error.",
+          StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
     } catch (YarnException e) {
       routerMetrics.incrGetAppStatisticsFailedRetrieved();
-      RouterServerUtil.logAndThrowRunTimeException("getAppStatistics error.", e);
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "getAppStatistics by stateQueries = %s, typeQueries = %s with yarn error.",
+          StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
     }
     routerMetrics.incrGetAppStatisticsFailedRetrieved();
-    throw new RuntimeException("getAppStatistics Failed.");
+    throw RouterServerUtil.logAndReturnRunTimeException(
+        "getAppStatistics by stateQueries = %s, typeQueries = %s Failed.",
+        StringUtils.join(stateQueries, ","), StringUtils.join(typeQueries, ","));
   }
 
   @Override
@@ -1296,10 +1312,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowIOException("getLabelsToNodes error.", e);
+      RouterServerUtil.logAndThrowIOException(
+          e, "getLabelsToNodes by labels = %s with yarn error.", StringUtils.join(labels, ","));
     }
     routerMetrics.incrLabelsToNodesFailedRetrieved();
-    throw new RuntimeException("getLabelsToNodes Failed.");
+    throw RouterServerUtil.logAndReturnRunTimeException(
+        "getLabelsToNodes by labels = %s Failed.", StringUtils.join(labels, ","));
   }
 
   @Override
@@ -1339,7 +1357,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrClusterNodeLabelsFailedRetrieved();
-      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels error.", e);
+      RouterServerUtil.logAndThrowIOException("getClusterNodeLabels with yarn error.", e);
     }
     routerMetrics.incrClusterNodeLabelsFailedRetrieved();
     throw new RuntimeException("getClusterNodeLabels Failed.");
@@ -1368,7 +1386,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       Object[] args = new Object[]{hsrCopy, nodeId};
       ClientMethod remoteMethod = new ClientMethod("getLabelsOnNode", argsClasses, args);
       Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
-           invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
       Set<NodeLabel> hashSets = Sets.newHashSet();
       nodeToLabelsInfoMap.values().forEach(item -> hashSets.addAll(item.getNodeLabels()));
       NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo(hashSets);
@@ -1382,10 +1400,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
     } catch (YarnException e) {
       routerMetrics.incrLabelsToNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowIOException("getLabelsOnNode error.", e);
+      RouterServerUtil.logAndThrowIOException(
+          e, "getLabelsOnNode nodeId = %s with yarn error.", nodeId);
     }
     routerMetrics.incrLabelsToNodesFailedRetrieved();
-    throw new RuntimeException("getLabelsOnNode Failed.");
+    throw RouterServerUtil.logAndReturnRunTimeException(
+        "getLabelsOnNode by nodeId = %s Failed.", nodeId);
   }
 
   @Override
@@ -1395,6 +1415,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrGetAppPriorityFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppPriorityFailedRetrieved();
+      throw e;
     }
 
     try {
@@ -1428,6 +1456,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
+      throw e;
     }
 
     if (targetPriority == null) {
@@ -1467,6 +1503,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppQueueFailedRetrieved();
+      throw e;
+    }
+
     try {
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
@@ -1497,6 +1541,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateAppQueueFailedRetrieved();
+      throw e;
     }
 
     if (targetQueue == null) {
@@ -1590,6 +1642,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
+    // Check that the appId format is accurate
+    try {
+      ReservationId.parseReservationId(reservationId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrListReservationFailedRetrieved();
+      throw e;
+    }
+
     try {
       long startTime1 = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
@@ -1619,6 +1679,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrGetAppTimeoutFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppTimeoutFailedRetrieved();
+      throw e;
     }
 
     if (type == null || type.isEmpty()) {
@@ -1658,6 +1726,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
+      throw e;
+    }
+
     try {
       long startTime = clock.getTime();
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
@@ -1690,6 +1766,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
+      throw e;
     }
 
     if (appTimeout == null) {
@@ -1727,6 +1811,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     if (appId == null || appId.isEmpty()) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrAppAttemptsFailedRetrieved();
+      throw e;
     }
 
     try {
@@ -1768,9 +1860,25 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
+    // Check that the appId format is accurate
+    try {
+      ApplicationId.fromString(appId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrAppAttemptReportFailedRetrieved();
+      throw e;
+    }
+
     if (appAttemptId == null || appAttemptId.isEmpty()) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
+    }
+
+    // Check that the appAttemptId format is accurate
+    try {
+      ApplicationAttemptId.fromString(appAttemptId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrGetContainersFailedRetrieved();
+      throw e;
     }
 
     try {
