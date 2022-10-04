@@ -97,6 +97,7 @@ message GetSubClustersInfoResponseProto {
 message ApplicationHomeSubClusterProto {
   optional ApplicationIdProto application_id = 1;
   optional SubClusterIdProto home_sub_cluster = 2;
+  optional int64 create_time = 3;
 }
 
 message AddApplicationHomeSubClusterRequestProto {
@@ -123,7 +124,7 @@ message GetApplicationHomeSubClusterResponseProto {
 }
 
 message GetApplicationsHomeSubClusterRequestProto {
-
+  optional SubClusterIdProto sub_cluster_id = 1;
 }
 
 message GetApplicationsHomeSubClusterResponseProto {
