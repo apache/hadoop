@@ -22,8 +22,11 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class TestConfigurationProperties {
   private static final Map<String, String> PROPERTIES = new HashMap<>();
@@ -157,5 +160,23 @@ public class TestConfigurationProperties {
     props = configurationProperties.getPropertiesWithPrefix("root", true);
     Assert.assertFalse(props.containsKey("root.1"));
     Assert.assertEquals("TEST_VALUE_4", props.get("root.1.2.3"));
+  }
+
+  @Test
+  public void testEmptyConfCanBeReused() {
+    ConfigurationProperties conf = new ConfigurationProperties(Collections.emptyMap());
+    conf.set("root", StringUtils.SPACE);
+    conf.set("root.a", StringUtils.SPACE);
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.unset("root");
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.unset("root.a");
+    Assert.assertNull(conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
+    conf.set("root.a", StringUtils.SPACE);
+    Assert.assertEquals(StringUtils.SPACE, conf.getPropertiesWithPrefix(
+        "root.a", true).get("root.a"));
   }
 }
