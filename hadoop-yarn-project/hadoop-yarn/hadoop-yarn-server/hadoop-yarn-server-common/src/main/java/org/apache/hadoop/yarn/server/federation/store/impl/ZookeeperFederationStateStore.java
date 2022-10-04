@@ -300,7 +300,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       ApplicationId applicationId = ApplicationId.fromString(appId);
       SubClusterId homeSubCluster = getApp(applicationId);
       ApplicationHomeSubCluster app =
-          ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), homeSubCluster);
+          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
       return app;
     } catch (Exception ex) {
       LOG.error("get homeSubCluster by appId = {}.", appId);

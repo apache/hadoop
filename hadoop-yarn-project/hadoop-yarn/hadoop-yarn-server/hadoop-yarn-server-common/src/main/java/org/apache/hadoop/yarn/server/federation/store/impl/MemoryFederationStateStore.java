@@ -295,7 +295,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
   private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
     SubClusterId subClusterId = applications.get(applicationId);
-    return ApplicationHomeSubCluster.newInstance(applicationId, Time.now(), subClusterId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
   }
 
   @Override
