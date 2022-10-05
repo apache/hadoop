@@ -1344,10 +1344,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     ReservationSubmissionRequest request = ReservationSubmissionRequest.newInstance(
         rDef, QUEUE_DEDICATED_FULL, reservationId);
     return request;
- }
- 
- @Test
- public void testWebAddressWithScheme() {
+  }
+
+  @Test
+  public void testWebAddressWithScheme() {
     // The style of the web address reported by the subCluster in the heartbeat is 0.0.0.0:8000
     // We design the following 2 test cases:
     String webAppAddress = "0.0.0.0:8000";
