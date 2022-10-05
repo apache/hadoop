@@ -747,26 +747,27 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
   @Test
   public void testGetContainer() throws Exception {
-    // Submit application to multiSubCluster
+    //
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
-    context.setApplicationId(appId.toString());
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId appContainerId = ContainerId.newContainerId(appAttemptId, 1);
+    String applicationId = appId.toString();
+    String attemptId = appAttemptId.toString();
+    String containerId = appContainerId.toString();
 
+    // Submit application to multiSubCluster
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(applicationId);
     Assert.assertNotNull(interceptor.submitApplication(context, null));
 
-    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
-
     // Test Case1: Wrong ContainerId
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
-        "Invalid ContainerId prefix: 0",
-         () -> interceptor.getContainer(null, null, appId.toString(),
-         appAttemptId.toString(), "0"));
+    LambdaTestUtils.intercept(IllegalArgumentException.class, "Invalid ContainerId prefix: 0",
+        () -> interceptor.getContainer(null, null, applicationId, attemptId, "0"));
 
     // Test Case2: Correct ContainerId
-    ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
-    ContainerInfo containerInfo =
-        interceptor.getContainer(null, null, appId.toString(),
-        appAttemptId.toString(), containerId.toString());
+
+    ContainerInfo containerInfo = interceptor.getContainer(null, null, applicationId,
+        attemptId, containerId);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -814,9 +815,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Generate ApplicationAttemptId information
     Assert.assertNotNull(interceptor.submitApplication(context, null));
     ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    String appAttemptId = expectAppAttemptId.toString();
 
     org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
-        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), appAttemptId);
 
     Assert.assertNotNull(appAttemptInfo);
     Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());

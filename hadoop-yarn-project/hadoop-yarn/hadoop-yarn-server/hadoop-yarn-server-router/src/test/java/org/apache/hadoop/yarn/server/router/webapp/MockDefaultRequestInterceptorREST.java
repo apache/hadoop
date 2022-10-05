@@ -522,15 +522,15 @@ public class MockDefaultRequestInterceptorREST
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(appAttemptId);
+
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "user", "queue", "appname", "host", 124, null,
+        applicationId, attemptId, "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
 
     ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
-        ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "host", 124, "url", "oUrl", "diagnostics",
+        attemptId, "host", 124, "url", "oUrl", "diagnostics",
         YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
         newApplicationReport.getCurrentApplicationAttemptId(), 1));
 
