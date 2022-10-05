@@ -101,8 +101,8 @@ public abstract class HtmlBlock extends TextView implements SubView {
    * Initialize User Help Information Div.
    * When the user does not configure the Yarn Federation function, prompt the user.
    *
-   * @param html html page
-   * @param isEnabled true, Federation is enabled; false, Federation is not enabled
+   * @param html HTML page.
+   * @param isEnabled If federation is enabled.
    */
   protected void initUserHelpInformationDiv(Block html, boolean isEnabled) {
     if (!isEnabled) {

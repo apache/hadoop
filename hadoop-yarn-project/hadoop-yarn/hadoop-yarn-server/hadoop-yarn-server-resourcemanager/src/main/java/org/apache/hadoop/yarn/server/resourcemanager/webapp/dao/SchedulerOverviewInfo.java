@@ -50,15 +50,7 @@ public class SchedulerOverviewInfo {
 
   public SchedulerOverviewInfo(ResourceScheduler rs) {
     // Parse the schedule type
-    if (rs instanceof CapacityScheduler) {
-      this.schedulerType = "Capacity Scheduler";
-    } else if (rs instanceof FairScheduler) {
-      this.schedulerType = "Fair Scheduler";
-    } else if (rs instanceof FifoScheduler) {
-      this.schedulerType = "Fifo Scheduler";
-    } else {
-      this.schedulerType = rs.getClass().getSimpleName();
-    }
+    this.schedulerType = getSchedulerName(rs);
 
     // Parse and allocate resource information
     this.minimumAllocation = new ResourceInfo(rs.getMinimumResourceCapability());
@@ -77,6 +69,19 @@ public class SchedulerOverviewInfo {
     this.schedulerBusy = clusterMetrics.getRmSchedulerBusyPercent();
     this.rmDispatcherEventQueueSize = clusterMetrics.getRmEventQueueSize();
     this.schedulerDispatcherEventQueueSize = clusterMetrics.getSchedulerEventQueueSize();
+  }
+
+  private static String getSchedulerName(ResourceScheduler rs) {
+    if (rs instanceof CapacityScheduler) {
+      return "Capacity Scheduler";
+    }
+    if (rs instanceof FairScheduler) {
+      return "Fair Scheduler";
+    }
+    if (rs instanceof FifoScheduler) {
+      return "Fifo Scheduler";
+    }
+    return rs.getClass().getSimpleName();
   }
 
   public String getSchedulerType() {

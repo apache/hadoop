@@ -1109,18 +1109,18 @@ public class TestRMWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    verifyClusterSchedulerFifoOverView(json);
+    verifyClusterSchedulerOverView(json, "Fifo Scheduler");
   }
 
-  public void verifyClusterSchedulerFifoOverView(JSONObject json)
-      throws Exception {
+  public static void verifyClusterSchedulerOverView(
+      JSONObject json, String expectedSchedulerType) throws Exception {
 
     // why json contains 8 elements because we defined 8 fields
     assertEquals("incorrect number of elements in: " + json, 8, json.length());
 
     // 1.Verify that the schedulerType is as expected
     String schedulerType = json.getString("schedulerType");
-    assertEquals("Fifo Scheduler", schedulerType);
+    assertEquals(expectedSchedulerType, schedulerType);
 
     // 2.Verify that schedulingResourceType is as expected
     String schedulingResourceType = json.getString("schedulingResourceType");
