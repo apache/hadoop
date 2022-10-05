@@ -294,7 +294,7 @@ public class TestS3ARemoteInputStream extends AbstractHadoopTestBase {
   private static void assertAvailable(int expected, InputStream inputStream)
       throws IOException {
     assertThat(inputStream.available())
-        .describedAs("Check available bytes")
+        .describedAs("Check available bytes on stream %s", inputStream)
         .isEqualTo(expected);
   }
 }
