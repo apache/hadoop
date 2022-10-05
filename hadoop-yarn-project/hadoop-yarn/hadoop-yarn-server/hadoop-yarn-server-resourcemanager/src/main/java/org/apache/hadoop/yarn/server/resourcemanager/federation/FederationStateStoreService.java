@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.NetUtils;
@@ -78,6 +77,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,7 +103,8 @@ public class FederationStateStoreService extends AbstractService
   private long heartbeatInterval;
   private long heartbeatInitialDelay;
   private RMContext rmContext;
-  private FederationStateStoreClientMetrics metrics;
+  private final Clock clock = new MonotonicClock();
+  private FederationStateStoreServiceMetrics metrics;
 
   public FederationStateStoreService(RMContext rmContext) {
     super(FederationStateStoreService.class.getName());
@@ -152,8 +154,8 @@ public class FederationStateStoreService extends AbstractService
     }
     LOG.info("Initialized federation membership service.");
 
-    this.metrics = FederationStateStoreClientMetrics.getMetrics();
-    LOG.info("Initialized federation statestore client metrics.");
+    this.metrics = FederationStateStoreServiceMetrics.getMetrics();
+    LOG.info("Initialized federation statestore service metrics.");
 
     super.serviceInit(conf);
   }
@@ -258,10 +260,16 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
     try {
-      return stateStoreClient.getPolicyConfiguration(request);
+      long startTime = clock.getTime();
+      GetSubClusterPolicyConfigurationResponse response =
+          stateStoreClient.getPolicyConfiguration(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getPolicyConfiguration error.", e);
-      this.metrics.incrFailedGetCurrentVersionCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -270,10 +278,16 @@ public class FederationStateStoreService extends AbstractService
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
     try {
-      return stateStoreClient.setPolicyConfiguration(request);
+      long startTime = clock.getTime();
+      SetSubClusterPolicyConfigurationResponse response =
+          stateStoreClient.setPolicyConfiguration(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("setPolicyConfiguration error.", e);
-      this.metrics.incrFailedSetPolicyConfigurationCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -282,10 +296,16 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
     try {
-      return stateStoreClient.getPoliciesConfigurations(request);
+      long startTime = clock.getTime();
+      GetSubClusterPoliciesConfigurationsResponse response =
+          stateStoreClient.getPoliciesConfigurations(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getPoliciesConfigurations error.", e);
-      this.metrics.incrFailedGetPoliciesConfigurationsCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -295,10 +315,16 @@ public class FederationStateStoreService extends AbstractService
       SubClusterRegisterRequest registerSubClusterRequest)
       throws YarnException {
     try {
-      return stateStoreClient.registerSubCluster(registerSubClusterRequest);
+      long startTime = clock.getTime();
+      SubClusterRegisterResponse response =
+          stateStoreClient.registerSubCluster(registerSubClusterRequest);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("registerSubCluster error.", e);
-      this.metrics.incrFailedRegisterSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -308,10 +334,16 @@ public class FederationStateStoreService extends AbstractService
       SubClusterDeregisterRequest subClusterDeregisterRequest)
       throws YarnException {
     try {
-      return stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+      long startTime = clock.getTime();
+      SubClusterDeregisterResponse response =
+          stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("deregisterSubCluster error.", e);
-      this.metrics.incrFailedDeregisterSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -321,10 +353,16 @@ public class FederationStateStoreService extends AbstractService
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
       throws YarnException {
     try {
-      return stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
+      long startTime = clock.getTime();
+      SubClusterHeartbeatResponse response =
+          stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("subClusterHeartbeat error.", e);
-      this.metrics.incrFailedSubClusterHeartbeatCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -333,10 +371,16 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest subClusterRequest) throws YarnException {
     try {
-      return stateStoreClient.getSubCluster(subClusterRequest);
+      long startTime = clock.getTime();
+      GetSubClusterInfoResponse response =
+          stateStoreClient.getSubCluster(subClusterRequest);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getSubCluster error.", e);
-      this.metrics.incrFailedGetSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -345,10 +389,16 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest subClustersRequest) throws YarnException {
     try {
-      return stateStoreClient.getSubClusters(subClustersRequest);
+      long startTime = clock.getTime();
+      GetSubClustersInfoResponse response =
+          stateStoreClient.getSubClusters(subClustersRequest);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getSubClusters error.", e);
-      this.metrics.incrFailedGetSubClustersCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -357,10 +407,16 @@ public class FederationStateStoreService extends AbstractService
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.addApplicationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      AddApplicationHomeSubClusterResponse response =
+          stateStoreClient.addApplicationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("addApplicationHomeSubCluster error.", e);
-      this.metrics.incrFailedAddApplicationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -369,10 +425,16 @@ public class FederationStateStoreService extends AbstractService
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.updateApplicationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      UpdateApplicationHomeSubClusterResponse response =
+          stateStoreClient.updateApplicationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("updateApplicationHomeSubCluster error.", e);
-      this.metrics.incrFailedUpdateApplicationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -381,10 +443,16 @@ public class FederationStateStoreService extends AbstractService
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.getApplicationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      GetApplicationHomeSubClusterResponse response =
+          stateStoreClient.getApplicationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getApplicationHomeSubCluster error.", e);
-      this.metrics.incrFailedGetApplicationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -393,10 +461,16 @@ public class FederationStateStoreService extends AbstractService
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.getApplicationsHomeSubCluster(request);
+      long startTime = clock.getTime();
+      GetApplicationsHomeSubClusterResponse response =
+           stateStoreClient.getApplicationsHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getApplicationsHomeSubCluster error.", e);
-      this.metrics.incrFailedGetApplicationsHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -405,10 +479,16 @@ public class FederationStateStoreService extends AbstractService
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.deleteApplicationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      DeleteApplicationHomeSubClusterResponse response =
+          stateStoreClient.deleteApplicationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("deleteApplicationHomeSubCluster error.", e);
-      this.metrics.incrFailedDeleteApplicationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -417,10 +497,16 @@ public class FederationStateStoreService extends AbstractService
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.addReservationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      AddReservationHomeSubClusterResponse response =
+          stateStoreClient.addReservationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("addReservationHomeSubCluster error.", e);
-      this.metrics.incrFailedAddReservationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -429,10 +515,16 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.getReservationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      GetReservationHomeSubClusterResponse response =
+          stateStoreClient.getReservationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getReservationHomeSubCluster error.", e);
-      this.metrics.incrFailedGetReservationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -441,10 +533,16 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.getReservationsHomeSubCluster(request);
+      long startTime = clock.getTime();
+      GetReservationsHomeSubClusterResponse response =
+          stateStoreClient.getReservationsHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("getReservationsHomeSubCluster error.", e);
-      this.metrics.incrFailedGetReservationsHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -453,10 +551,16 @@ public class FederationStateStoreService extends AbstractService
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.updateReservationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      UpdateReservationHomeSubClusterResponse response =
+          stateStoreClient.updateReservationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("updateReservationHomeSubCluster error.", e);
-      this.metrics.incrFailedUpdateReservationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -465,10 +569,16 @@ public class FederationStateStoreService extends AbstractService
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
     try {
-      return stateStoreClient.deleteReservationHomeSubCluster(request);
+      long startTime = clock.getTime();
+      DeleteReservationHomeSubClusterResponse response =
+          stateStoreClient.deleteReservationHomeSubCluster(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
     } catch (YarnException e) {
       LOG.error("deleteReservationHomeSubCluster error.", e);
-      this.metrics.incrFailedDeleteReservationHomeSubClusterCount();
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
       throw e;
     }
   }
@@ -476,18 +586,51 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = clock.getTime();
+      RouterMasterKeyResponse response = stateStoreClient.storeNewMasterKey(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
+    } catch (YarnException e) {
+      LOG.error("storeNewMasterKey error.", e);
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
+      throw e;
+    }
   }
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = clock.getTime();
+      RouterMasterKeyResponse response = stateStoreClient.removeStoredMasterKey(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
+    } catch (YarnException e) {
+      LOG.error("removeStoredMasterKey error.", e);
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
+      throw e;
+    }
   }
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      long startTime = clock.getTime();
+      RouterMasterKeyResponse response = stateStoreClient.getMasterKeyByDelegationKey(request);
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          stopTime - startTime);
+      return response;
+    } catch (YarnException e) {
+      LOG.error("getMasterKeyByDelegationKey error.", e);
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
+      throw e;
+    }
   }
 }
