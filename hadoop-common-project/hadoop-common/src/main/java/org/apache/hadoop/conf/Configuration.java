@@ -127,10 +127,10 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *
  * <p>Unless explicitly turned off, Hadoop by default specifies two 
  * resources, loaded in-order from the classpath: <ol>
- * <li><tt>
+ * <li><code>
  * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
- * core-default.xml</a></tt>: Read-only defaults for hadoop.</li>
- * <li><tt>core-site.xml</tt>: Site-specific configuration for a given hadoop
+ * core-default.xml</a></code>: Read-only defaults for hadoop.</li>
+ * <li><code>core-site.xml</code>: Site-specific configuration for a given hadoop
  * installation.</li>
  * </ol>
  * Applications may add additional resources, which are loaded
@@ -150,7 +150,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *  &lt;/property&gt;</code></pre>
  *
  * Administrators typically define parameters as final in 
- * <tt>core-site.xml</tt> for values that user applications may not alter.
+ * <code>core-site.xml</code> for values that user applications may not alter.
  *
  * <h4 id="VariableExpansion">Variable Expansion</h4>
  *
@@ -182,19 +182,19 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *  &lt;/property&gt;
  *  </code></pre>
  *
- * <p>When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
+ * <p>When <code>conf.get("tempdir")</code> is called, then <code>${<i>basedir</i>}</code>
  * will be resolved to another property in this Configuration, while
- * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
+ * <code>${<i>user.name</i>}</code> would then ordinarily be resolved to the value
  * of the System property with that name.
- * <p>When <tt>conf.get("otherdir")</tt> is called, then <tt>${<i>env.BASE_DIR</i>}</tt>
- * will be resolved to the value of the <tt>${<i>BASE_DIR</i>}</tt> environment variable.
- * It supports <tt>${<i>env.NAME:-default</i>}</tt> and <tt>${<i>env.NAME-default</i>}</tt> notations.
- * The former is resolved to "default" if <tt>${<i>NAME</i>}</tt> environment variable is undefined
+ * <p>When <code>conf.get("otherdir")</code> is called, then <code>${<i>env.BASE_DIR</i>}</code>
+ * will be resolved to the value of the <code>${<i>BASE_DIR</i>}</code> environment variable.
+ * It supports <code>${<i>env.NAME:-default</i>}</code> and <code>${<i>env.NAME-default</i>}</code> notations.
+ * The former is resolved to "default" if <code>${<i>NAME</i>}</code> environment variable is undefined
  * or its value is empty.
- * The latter behaves the same way only if <tt>${<i>NAME</i>}</tt> is undefined.
+ * The latter behaves the same way only if <code>${<i>NAME</i>}</code> is undefined.
  * <p>By default, warnings will be given to any deprecated configuration 
  * parameters and these are suppressible by configuring
- * <tt>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</tt> in
+ * <code>log4j.logger.org.apache.hadoop.conf.Configuration.deprecation</code> in
  * log4j.properties file.
  *
  * <h4 id="Tags">Tags</h4>
@@ -217,9 +217,9 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
  *    &lt;tag&gt;HDFS,SECURITY&lt;/tag&gt;
  *  &lt;/property&gt;
  * </code></pre>
- * <p> Properties marked with tags can be retrieved with <tt>conf
- * .getAllPropertiesByTag("HDFS")</tt> or <tt>conf.getAllPropertiesByTags
- * (Arrays.asList("YARN","SECURITY"))</tt>.</p>
+ * <p> Properties marked with tags can be retrieved with <code>conf
+ * .getAllPropertiesByTag("HDFS")</code> or <code>conf.getAllPropertiesByTags
+ * (Arrays.asList("YARN","SECURITY"))</code>.</p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -573,7 +573,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If a key is deprecated in favor of multiple keys, they are all treated as 
    * aliases of each other, and setting any one of them resets all the others 
@@ -601,7 +601,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.
@@ -621,7 +621,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If a key is deprecated in favor of multiple keys, they are all treated as 
    * aliases of each other, and setting any one of them resets all the others 
@@ -645,7 +645,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * It does not override any existing entries in the deprecation map.
    * This is to be used only by the developers in order to add deprecation of
    * keys, and attempts to call this method after loading resources once,
-   * would lead to <tt>UnsupportedOperationException</tt>
+   * would lead to <code>UnsupportedOperationException</code>
    * 
    * If you have multiple deprecation entries to add, it is more efficient to
    * use #addDeprecations(DeprecationDelta[] deltas) instead.

@@ -56,7 +56,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * }
  * </pre>
  * <p>
- * Note that <tt>null</tt> values are {@link #append(CharSequence) append}ed
+ * Note that <code>null</code> values are {@link #append(CharSequence) append}ed
  * just like in {@link StringBuilder#append(CharSequence) original
  * implementation}.
  * <p>

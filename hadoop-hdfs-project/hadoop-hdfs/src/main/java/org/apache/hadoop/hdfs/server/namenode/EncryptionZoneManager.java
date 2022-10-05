@@ -369,7 +369,7 @@ public class EncryptionZoneManager {
   }
 
   /**
-   * Get the key name for an encryption zone. Returns null if <tt>iip</tt> is
+   * Get the key name for an encryption zone. Returns null if <code>iip</code> is
    * not within an encryption zone.
    * <p>
    * Called while holding the FSDirectory lock.

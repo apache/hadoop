@@ -205,7 +205,7 @@ public class ControlledJob {
    * is waiting to run, not during or afterwards.
    * 
    * @param dependingJob Job that this Job depends on.
-   * @return <tt>true</tt> if the Job was added.
+   * @return <code>true</code> if the Job was added.
    */
   public synchronized boolean addDependingJob(ControlledJob dependingJob) {
     if (this.state == State.WAITING) { //only allowed to add jobs when waiting

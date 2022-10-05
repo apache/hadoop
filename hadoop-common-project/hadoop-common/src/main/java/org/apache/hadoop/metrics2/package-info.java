@@ -26,7 +26,7 @@
     <li><a href="#instrumentation">Metrics Instrumentation Strategy</a></li>
     <li><a href="#migration">Migration from previous system</a></li>
   </ul>
-  <h2><a name="overview">Overview</a></h2>
+  <h2><a id="overview">Overview</a></h2>
   <p>This package provides a framework for metrics instrumentation
     and publication.
   </p>
@@ -84,9 +84,9 @@
     </dd>
   </dl>
 
-  <h2><a name="gettingstarted">Getting started</a></h2>
+  <h2><a id="gettingstarted">Getting started</a></h2>
   <h3>Implementing metrics sources</h3>
-  <table width="99%" border="1" cellspacing="0" cellpadding="4">
+  <table style="width=99% cellspacing=0 cellpadding=4" border="1">
     <caption>Implementing metrics sources</caption>
     <tbody>
       <tr>
@@ -187,7 +187,7 @@
   <pre>
   DefaultMetricsSystem.initialize("test"); // called once per application
   DefaultMetricsSystem.register(new MyStat());</pre>
-  <h2><a name="config">Metrics system configuration</a></h2>
+  <h2><a id="config">Metrics system configuration</a></h2>
   <p>Sinks are usually specified in a configuration file, say,
   "hadoop-metrics2-test.properties", as:
   </p>
@@ -209,7 +209,7 @@
     for more examples.
   </p>
 
-  <h2><a name="filtering">Metrics Filtering</a></h2>
+  <h2><a id="filtering">Metrics Filtering</a></h2>
   <p>One of the features of the default metrics system is metrics filtering
     configuration by source, context, record/tags and metrics. The least
     expensive way to filter out metrics would be at the source level, e.g.,
@@ -241,7 +241,7 @@
     level, respectively. Filters can be combined to optimize
     the filtering efficiency.</p>
 
-  <h2><a name="instrumentation">Metrics instrumentation strategy</a></h2>
+  <h2><a id="instrumentation">Metrics instrumentation strategy</a></h2>
 
   In previous examples, we showed a minimal example to use the
   metrics framework. In a larger system (like Hadoop) that allows
@@ -279,7 +279,7 @@
     </dd>
   </dl>
 
-  <h2><a name="migration">Migration from previous system</a></h2>
+  <h2><a id="migration">Migration from previous system</a></h2>
   <p>Users of the previous metrics system would notice the lack of
     <code>context</code> prefix in the configuration examples. The new
     metrics system decouples the concept for context (for grouping) with the
@@ -289,7 +289,7 @@
     configure an implementation instance per context, even if you have a
     backend that can handle multiple contexts (file, gangalia etc.):
   </p>
-  <table width="99%" border="1" cellspacing="0" cellpadding="4">
+  <table style="width=99% cellspacing=0 cellpadding=4" border="1">
     <caption>Migration from previous system</caption>
     <tbody>
       <tr>
@@ -311,7 +311,7 @@
   <p>In the new metrics system, you can simulate the previous behavior by
     using the context option in the sink options like the following:
   </p>
-  <table width="99%" border="1" cellspacing="0" cellpadding="4">
+ <table style="width=99% cellspacing=0 cellpadding=4" border="1">
     <caption>Metrics2</caption>
     <tbody>
       <tr>

@@ -36,7 +36,7 @@ public abstract class HttpResponseUtils {
 
   /**
    * Returns the response body of the HTTPResponse, if any, as an array of bytes.
-   * If response body is not available or cannot be read, returns <tt>null</tt>
+   * If response body is not available or cannot be read, returns <code>null</code>
    *
    * Note: This will cause the entire response body to be buffered in memory. A
    * malicious server may easily exhaust all the VM memory. It is strongly
@@ -73,7 +73,7 @@ public abstract class HttpResponseUtils {
 
   /**
    * Returns the response body of the HTTPResponse, if any, as a {@link String}.
-   * If response body is not available or cannot be read, returns <tt>null</tt>
+   * If response body is not available or cannot be read, returns <code>null</code>
    * The string conversion on the data is done using UTF-8.
    *
    * Note: This will cause the entire response body to be buffered in memory. A
@@ -98,17 +98,17 @@ public abstract class HttpResponseUtils {
 
   /**
    * Return the length (in bytes) of the response body, as specified in a
-   * <tt>Content-Length</tt> header.
+   * <code>Content-Length</code> header.
    *
    * <p>
-   * Return <tt>-1</tt> when the content-length is unknown.
+   * Return <code>-1</code> when the content-length is unknown.
    * </p>
    *
    * @param resp HttpResponse
-   * @return content length, if <tt>Content-Length</tt> header is available.
-   *          <tt>0</tt> indicates that the request has no body.
-   *          If <tt>Content-Length</tt> header is not present, the method
-   *          returns <tt>-1</tt>.
+   * @return content length, if <code>Content-Length</code> header is available.
+   *          <code>0</code> indicates that the request has no body.
+   *          If <code>Content-Length</code> header is not present, the method
+   *          returns <code>-1</code>.
    */
   public static long getContentLength(HttpResponse resp) {
     Header header = resp.getFirstHeader(HEADER_CONTENT_LENGTH);

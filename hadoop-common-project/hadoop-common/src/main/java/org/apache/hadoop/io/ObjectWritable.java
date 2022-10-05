@@ -401,8 +401,8 @@ public class ObjectWritable implements Writable, Configurable {
   }
 
   /**
-   * Find and load the class with given name <tt>className</tt> by first finding
-   * it in the specified <tt>conf</tt>. If the specified <tt>conf</tt> is null,
+   * Find and load the class with given name <code>className</code> by first finding
+   * it in the specified <code>conf</code>. If the specified <code>conf</code> is null,
    * try load it directly.
    *
    * @param conf configuration.

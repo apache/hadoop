@@ -41,10 +41,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * and partitioned the same way.
  *
  * A user may define new join types by setting the property
- * <tt>mapreduce.join.define.&lt;ident&gt;</tt> to a classname. 
- * In the expression <tt>mapreduce.join.expr</tt>, the identifier will be
+ * <code>mapreduce.join.define.&lt;ident&gt;</code> to a classname.
+ * In the expression <code>mapreduce.join.expr</code>, the identifier will be
  * assumed to be a ComposableRecordReader.
- * <tt>mapreduce.join.keycomparator</tt> can be a classname used to compare 
+ * <code>mapreduce.join.keycomparator</code> can be a classname used to compare
  * keys in the join.
  * @see #setFormat
  * @see JoinRecordReader
@@ -73,9 +73,9 @@ public class CompositeInputFormat<K extends WritableComparable>
    *   class ::= @see java.lang.Class#forName(java.lang.String)
    *   path  ::= @see org.apache.hadoop.fs.Path#Path(java.lang.String)
    * }
-   * Reads expression from the <tt>mapreduce.join.expr</tt> property and
-   * user-supplied join types from <tt>mapreduce.join.define.&lt;ident&gt;</tt>
-   *  types. Paths supplied to <tt>tbl</tt> are given as input paths to the
+   * Reads expression from the <code>mapreduce.join.expr</code> property and
+   * user-supplied join types from <code>mapreduce.join.define.&lt;ident&gt;</code>
+   *  types. Paths supplied to <code>tbl</code> are given as input paths to the
    * InputFormat class listed.
    * @see #compose(java.lang.String, java.lang.Class, java.lang.String...)
    */
