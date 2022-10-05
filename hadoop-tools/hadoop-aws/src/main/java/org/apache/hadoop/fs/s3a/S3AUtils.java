@@ -640,7 +640,8 @@ public final class S3AUtils {
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
 
-      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+      if (!aClass.getSimpleName().equals("EnvironmentVariableCredentialsProvider")
+          && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
         V2Migration.v1ProviderReferenced(aClass.getName());
       }
 
