@@ -1702,6 +1702,9 @@ public final class SwiftRestClient {
       }
       //re-auth, this may recurse into the same dir
       authenticate();
+
+      req.setHeader(HEADER_AUTH_KEY, getToken().getId());
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("Retrying original request");
       }
