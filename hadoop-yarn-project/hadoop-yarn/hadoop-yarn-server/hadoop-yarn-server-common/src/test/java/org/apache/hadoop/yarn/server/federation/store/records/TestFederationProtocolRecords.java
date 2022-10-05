@@ -314,7 +314,7 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   public void testRouterRMTokenResponse() throws Exception {
     validatePBImplRecord(RouterRMTokenResponsePBImpl.class, RouterRMTokenResponseProto.class);
   }
-  
+
   @Test
   public void testApplicationHomeSubCluster() throws Exception {
     validatePBImplRecord(ApplicationHomeSubClusterPBImpl.class,
