@@ -59,10 +59,8 @@ public class TestFederationStateStoreServiceMetrics {
   @Test
   public void testFederationStateStoreServiceMetricInit() {
     LOG.info("Test: aggregate metrics are initialized correctly");
-    assertEquals(0,
-        FederationStateStoreServiceMetrics.getNumSucceededCalls());
-    assertEquals(0,
-        FederationStateStoreServiceMetrics.getNumFailedCalls());
+    assertEquals(0, FederationStateStoreServiceMetrics.getNumSucceededCalls());
+    assertEquals(0, FederationStateStoreServiceMetrics.getNumFailedCalls());
     LOG.info("Test: aggregate metrics are updated correctly");
   }
 
@@ -79,8 +77,7 @@ public class TestFederationStateStoreServiceMetrics {
 
     Assert.assertEquals(totalGoodBefore + 1,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100,
-        FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
+    Assert.assertEquals(100, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
     Assert.assertEquals(apiGoodBefore + 1,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls =
@@ -95,8 +92,7 @@ public class TestFederationStateStoreServiceMetrics {
 
     Assert.assertEquals(totalGoodBefore + 2,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150,
-        FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
+    Assert.assertEquals(150, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
     Assert.assertEquals(apiGoodBefore + 2,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls2 =
