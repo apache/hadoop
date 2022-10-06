@@ -445,8 +445,7 @@ public class FederationStateStoreService extends AbstractService
           ApplicationId applicationId = applicationHomeSC.getApplicationId();
           if (!rmApps.containsKey(applicationId)) {
             try {
-              Boolean cleanUpSuccess =
-                      cleanUpFinishApplicationsWithRetries(applicationId, false);
+              Boolean cleanUpSuccess = cleanUpFinishApplicationsWithRetries(applicationId, false);
               if (cleanUpSuccess) {
                 LOG.info("application = {} has been cleaned up successfully.", applicationId);
                 successCleanUpAppCount++;
@@ -460,7 +459,7 @@ public class FederationStateStoreService extends AbstractService
 
       // print app cleanup log
       LOG.info("cleanup finished applications size = {}, number = {} successful cleanup.",
-              applicationHomeSCs.size(), successCleanUpAppCount);
+          applicationHomeSCs.size(), successCleanUpAppCount);
     } catch (Exception e) {
       LOG.error("problem during cleanup applications.", e);
     }
@@ -469,36 +468,49 @@ public class FederationStateStoreService extends AbstractService
   /**
    * Clean up the federation completed Application.
    *
-   * @param applicationId app id.
+   * @param appId app id.
    * @param isQuery true, need to query from statestore, false not query.
    * @throws Exception exception occurs.
    * @return true, successfully deleted; false, failed to delete or no need to delete
    */
-  public boolean cleanUpFinishApplicationsWithRetries(ApplicationId applicationId, boolean isQuery)
+  public boolean cleanUpFinishApplicationsWithRetries(ApplicationId appId, boolean isQuery)
       throws Exception {
 
     // Generate a request to delete data
-    DeleteApplicationHomeSubClusterRequest delRequest =
-        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId);
+    DeleteApplicationHomeSubClusterRequest request =
+        DeleteApplicationHomeSubClusterRequest.newInstance(appId);
 
-    return ((FederationActionRetry<Boolean>) () -> {
-      boolean isAppNeedClean = true;
-      // If we need to query the StateStore
-      if (isQuery) {
-        isAppNeedClean = isApplicationNeedClean(applicationId);
-      }
-      // When the App needs to be cleaned up, clean up the App.
-      if (isAppNeedClean) {
-        DeleteApplicationHomeSubClusterResponse response =
-            deleteApplicationHomeSubCluster(delRequest);
-        if (response != null) {
-          LOG.info("The applicationId ={} has been successfully cleaned up.", applicationId);
-          return true;
-        }
-      }
-      return false;
-    }).runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+    // CleanUp Finish App.
+    return ((FederationActionRetry<Boolean>) () -> invokeCleanUpFinishApp(appId, isQuery, request))
+        .runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+  }
 
+  /**
+   * CleanUp Finish App.
+   *
+   * @param applicationId app id.
+   * @param isQuery true, need to query from statestore, false not query.
+   * @param delRequest delete Application Request
+   * @return true, successfully deleted; false, failed to delete or no need to delete
+   * @throws YarnException
+   */
+  private boolean invokeCleanUpFinishApp(ApplicationId applicationId, boolean isQuery,
+      DeleteApplicationHomeSubClusterRequest delRequest) throws YarnException {
+    boolean isAppNeedClean = true;
+    // If we need to query the StateStore
+    if (isQuery) {
+      isAppNeedClean = isApplicationNeedClean(applicationId);
+    }
+    // When the App needs to be cleaned up, clean up the App.
+    if (isAppNeedClean) {
+      DeleteApplicationHomeSubClusterResponse response =
+          deleteApplicationHomeSubCluster(delRequest);
+      if (response != null) {
+        LOG.info("The applicationId = {} has been successfully cleaned up.", applicationId);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
