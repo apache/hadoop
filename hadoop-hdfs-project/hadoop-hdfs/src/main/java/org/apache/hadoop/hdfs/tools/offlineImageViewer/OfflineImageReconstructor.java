@@ -86,6 +86,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
 
+import javax.xml.XMLConstants;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
@@ -147,6 +148,9 @@ class OfflineImageReconstructor {
       InputStreamReader reader) throws XMLStreamException {
     this.out = out;
     XMLInputFactory factory = XMLInputFactory.newInstance();
+    factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+    factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
     this.events = factory.createXMLEventReader(reader);
     this.sections = new HashMap<>();
     this.sections.put(NameSectionProcessor.NAME, new NameSectionProcessor());
