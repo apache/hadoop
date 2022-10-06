@@ -28,6 +28,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -35,7 +37,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-public class TestXMLUtils {
+public class TestXMLUtils extends AbstractHadoopTestBase {
 
   @Test
   public void testSecureDocumentBuilderFactory() throws Exception {
