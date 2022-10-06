@@ -129,8 +129,8 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     return true;
   }
 
-  public String printAppInfo(long appInfoFunc) {
-    if (appInfoFunc== -1) {
+  private static String printAppInfo(long appInfoFunc) {
+    if (appInfoFunc == -1) {
       return "N/A";
     }
     return String.valueOf(appInfoFunc);
