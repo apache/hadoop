@@ -336,12 +336,16 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     JSONObject json = response.getEntity(JSONObject.class);
     String actual = json.toString(2);
     updateTestDataAutomatically(expectedResourceFilename, actual);
-    assertEquals(prettyPrintJson(getResourceAsString(expectedResourceFilename)), prettyPrintJson(actual));
+    assertEquals(
+        prettyPrintJson(getResourceAsString(expectedResourceFilename)),
+        prettyPrintJson(actual));
   }
 
   private static String prettyPrintJson(String in) throws JsonProcessingException {
     ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectMapper.readTree(in));
+    return objectMapper
+        .writerWithDefaultPrettyPrinter()
+        .writeValueAsString(objectMapper.readTree(in));
   }
 
   public static void assertJsonType(ClientResponse response) {
