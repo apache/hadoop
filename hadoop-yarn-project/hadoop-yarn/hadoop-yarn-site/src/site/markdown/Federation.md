@@ -191,7 +191,9 @@ SQL: one must setup the following parameters:
 |`yarn.federation.state-store.sql.username` | `<dbuser>` | For SQLFederationStateStore the username for the DB connection. |
 |`yarn.federation.state-store.sql.password` | `<dbpass>` | For SQLFederationStateStore the password for the DB connection. |
 
-We provide scripts for MySQL and Microsoft SQL Server.
+We provide scripts for **MySQL** and **Microsoft SQL Server**.
+
+> MySQL
 
 For MySQL, one must download the latest jar version 5.x from [MVN Repository](https://mvnrepository.com/artifact/mysql/mysql-connector-java) and add it to the CLASSPATH.
 Then the DB schema is created by executing the following SQL scripts in the database:
@@ -205,9 +207,23 @@ In the same directory we provide scripts to drop the Stored Procedures, the Tabl
 
 **Note:** the FederationStateStoreUser.sql defines a default user/password for the DB that you are **highly encouraged** to set this to a proper strong password.
 
+**The versions supported by MySQL are MySQL 5.7 and above:**
+
+1. MySQL 5.7
+2. MySQL 8.0
+
+> Microsoft SQL Server
+
 For SQL-Server, the process is similar, but the jdbc driver is already included.
 SQL-Server scripts are located in **sbin/FederationStateStore/SQLServer/**.
 
+**The versions supported by SQL-Server are SQL Server 2008 R2 and above:**
+
+1. SQL Server 2008 R2 Enterprise
+2. SQL Server 2012 Enterprise
+3. SQL Server 2016 Enterprise
+4. SQL Server 2017 Enterprise
+5. SQL Server 2019 Enterprise
 
 ####Optional:
 

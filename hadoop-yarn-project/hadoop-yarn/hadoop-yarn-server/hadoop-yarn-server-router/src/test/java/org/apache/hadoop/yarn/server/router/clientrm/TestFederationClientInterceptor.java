@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -127,6 +128,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -579,12 +581,20 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(subClusters.size(),
         response.getClusterMetrics().getNumNodeManagers());
 
+    // Clear Membership
+    Map<SubClusterId, SubClusterInfo> membership = new HashMap<>();
+    membership.putAll(stateStore.getMembership());
+    stateStore.getMembership().clear();
+
     ClientMethod remoteMethod = new ClientMethod("getClusterMetrics",
         new Class[] {GetClusterMetricsRequest.class},
         new Object[] {GetClusterMetricsRequest.newInstance()});
-    Map<SubClusterId, GetClusterMetricsResponse> clusterMetrics = interceptor.
-        invokeConcurrent(new ArrayList<>(), remoteMethod, GetClusterMetricsResponse.class);
+    Collection<GetClusterMetricsResponse> clusterMetrics = interceptor.invokeConcurrent(
+        remoteMethod, GetClusterMetricsResponse.class);
     Assert.assertTrue(clusterMetrics.isEmpty());
+
+    // Restore membership
+    stateStore.setMembership(membership);
   }
 
   /**
