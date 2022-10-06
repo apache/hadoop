@@ -175,7 +175,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   private HikariDataSource dataSource = null;
   private final Clock clock = new MonotonicClock();
   @VisibleForTesting
-  Connection conn = null;
+  private Connection conn = null;
   private int maxAppsInStateStore;
 
   @Override
@@ -195,8 +195,7 @@ public class SQLFederationStateStore implements FederationStateStore {
     try {
       Class.forName(driverClass);
     } catch (ClassNotFoundException e) {
-      FederationStateStoreUtils.logAndThrowException(LOG,
-          "Driver class not found.", e);
+      FederationStateStoreUtils.logAndThrowException(LOG, "Driver class not found.", e);
     }
 
     // Create the data source to pool connections in a thread-safe manner
@@ -207,14 +206,14 @@ public class SQLFederationStateStore implements FederationStateStore {
     FederationStateStoreUtils.setProperty(dataSource,
         FederationStateStoreUtils.FEDERATION_STORE_URL, url);
     dataSource.setMaximumPoolSize(maximumPoolSize);
-    LOG.info("Initialized connection pool to the Federation StateStore "
-        + "database at address: " + url);
+    LOG.info("Initialized connection pool to the Federation StateStore database at address: {}.",
+        url);
+
     try {
       conn = getConnection();
       LOG.debug("Connection created");
     } catch (SQLException e) {
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Not able to get Connection", e);
+      FederationStateStoreUtils.logAndThrowRetriableException(LOG, "Not able to get Connection", e);
     }
 
     maxAppsInStateStore = conf.getInt(
@@ -241,15 +240,15 @@ public class SQLFederationStateStore implements FederationStateStore {
       cstmt = getCallableStatement(CALL_SP_REGISTER_SUBCLUSTER);
 
       // Set the parameters for the stored procedure
-      cstmt.setString(1, subClusterId.getId());
-      cstmt.setString(2, subClusterInfo.getAMRMServiceAddress());
-      cstmt.setString(3, subClusterInfo.getClientRMServiceAddress());
-      cstmt.setString(4, subClusterInfo.getRMAdminServiceAddress());
-      cstmt.setString(5, subClusterInfo.getRMWebServiceAddress());
-      cstmt.setString(6, subClusterInfo.getState().toString());
-      cstmt.setLong(7, subClusterInfo.getLastStartTime());
-      cstmt.setString(8, subClusterInfo.getCapability());
-      cstmt.registerOutParameter(9, java.sql.Types.INTEGER);
+      cstmt.setString("subClusterId_IN", subClusterId.getId());
+      cstmt.setString("amRMServiceAddress_IN", subClusterInfo.getAMRMServiceAddress());
+      cstmt.setString("clientRMServiceAddress_IN", subClusterInfo.getClientRMServiceAddress());
+      cstmt.setString("rmAdminServiceAddress_IN", subClusterInfo.getRMAdminServiceAddress());
+      cstmt.setString("rmWebServiceAddress_IN", subClusterInfo.getRMWebServiceAddress());
+      cstmt.setString("state_IN", subClusterInfo.getState().toString());
+      cstmt.setLong("lastStartTime_IN", subClusterInfo.getLastStartTime());
+      cstmt.setString("capability_IN", subClusterInfo.getCapability());
+      cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
       // Execute the query
       long startTime = clock.getTime();
@@ -258,21 +257,20 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not add a new subcluster into FederationStateStore
-      if (cstmt.getInt(9) == 0) {
+      if (cstmt.getInt("rowCount_OUT") == 0) {
         String errMsg = "SubCluster " + subClusterId
             + " was not registered into the StateStore";
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
-      if (cstmt.getInt(9) != 1) {
+      if (cstmt.getInt("rowCount_OUT") != 1) {
         String errMsg = "Wrong behavior during registration of SubCluster "
             + subClusterId + " into the StateStore";
         FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
       }
 
-      LOG.info(
-          "Registered the SubCluster " + subClusterId + " into the StateStore");
+      LOG.info("Registered the SubCluster {} into the StateStore", subClusterId);
       FederationStateStoreClientMetrics
           .succeededStateStoreCall(stopTime - startTime);
 
