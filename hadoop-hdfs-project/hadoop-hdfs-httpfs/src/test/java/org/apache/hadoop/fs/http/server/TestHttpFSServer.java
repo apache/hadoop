@@ -2035,7 +2035,7 @@ public class TestHttpFSServer extends HFSTestCase {
 
     assertEquals(locations1.length, httpfsBlockLocations.length);
     for (int i = 0; i < locations1.length; i++) {
-      assertEquals(locations1.toString(), httpfsBlockLocations.toString());
+      assertEquals(locations1[i].toString(), httpfsBlockLocations[i].toString());
     }
 
     conn.getInputStream().close();

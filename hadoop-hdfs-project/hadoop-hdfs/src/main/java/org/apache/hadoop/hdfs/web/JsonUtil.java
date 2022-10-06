@@ -709,16 +709,7 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
-    if (locations == null) {
-      return null;
-    }
-    final Map<String, Object> m = new HashMap<>();
-    Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
-      blockLocations[i] = toJsonMap(locations[i]);
-    }
-    m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return toJsonString("BlockLocations", m);
+    return toJsonString("BlockLocations", JsonUtil.toJsonString(locations));
   }
 
   public static Map<String, Object> toJsonMap(BlockLocation[] locations)
@@ -726,7 +717,7 @@ public class JsonUtil {
     if (locations == null) {
       return null;
     }
-    final Map<String, Object> m = new TreeMap<>();
+    final Map<String, Object> m = new HashMap<>();
     Object[] blockLocations = new Object[locations.length];
     for (int i = 0; i < locations.length; i++) {
       blockLocations[i] = toJsonMap(locations[i]);

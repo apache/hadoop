@@ -1969,11 +1969,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void testGetFileBlockLocations() throws Exception {
     BlockLocation[] blockLocations;
-    Path testFile = null;
+    Path testFile;
     if (!this.isLocalFS()) {
       FileSystem fs = this.getHttpFSFileSystem();
       testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
-      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
+      DFSTestUtil.createFile(fs, testFile, 1, (short) 1, 0L);
       if (fs instanceof HttpFSFileSystem) {
         HttpFSFileSystem httpFS = (HttpFSFileSystem) fs;
         blockLocations = httpFS.getFileBlockLocations(testFile, 0, 1);

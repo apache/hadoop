@@ -2201,8 +2201,7 @@ public final class FSOperations {
 
   @InterfaceAudience.Private
   @SuppressWarnings("rawtypes")
-  public static class FSFileBlockLocations
-      implements FileSystemAccess.FileSystemExecutor<Map> {
+  public static class FSFileBlockLocations implements FileSystemAccess.FileSystemExecutor<Map> {
     final private Path path;
     final private long offsetValue;
     final private long lengthValue;

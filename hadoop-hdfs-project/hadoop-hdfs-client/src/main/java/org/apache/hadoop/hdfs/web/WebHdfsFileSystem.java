@@ -1899,7 +1899,7 @@ public class WebHdfsFileSystem extends FileSystem
       // parsing the exception is needed only if the client thinks the service is compatible
       if (isServerHCFSCompatible && isGetFileBlockLocationsException(e)) {
         LOG.warn("Server does not appear to support GETFILEBLOCKLOCATIONS." +
-                "Fallback to the old GET_BLOCK_LOCATIONS. Exception: " +
+                "Fallback to the old GET_BLOCK_LOCATIONS. Exception: {}",
             e.getMessage());
         isServerHCFSCompatible = false;
         locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p, offset, length);
@@ -1915,10 +1915,9 @@ public class WebHdfsFileSystem extends FileSystem
         && e.getMessage().contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString());
   }
 
-  private BlockLocation[] getFileBlockLocations(GetOpParam.Op operation,
+  private BlockLocation[] getFileBlockLocations(final GetOpParam.Op operation,
       final Path p, final long offset, final long length) throws IOException {
-    final HttpOpParam.Op op = operation;
-    return new FsPathResponseRunner<BlockLocation[]>(op, p,
+    return new FsPathResponseRunner<BlockLocation[]>(operation, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
       BlockLocation[] decodeResponse(Map<?, ?> json) throws IOException {

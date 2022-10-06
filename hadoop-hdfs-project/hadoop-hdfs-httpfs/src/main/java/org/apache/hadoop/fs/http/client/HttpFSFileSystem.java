@@ -1752,8 +1752,7 @@ public class HttpFSFileSystem extends FileSystem
 
     Map<String, Map<String, BlockLocation[]>> jsonMap =
         mapper.readValue(json.toJSONString(), rootType);
-    Map<String, BlockLocation[]> locationMap =
-        jsonMap.get(BLOCK_LOCATIONS_JSON);
+    Map<String, BlockLocation[]> locationMap = jsonMap.get(BLOCK_LOCATIONS_JSON);
     return locationMap.get(BlockLocation.class.getSimpleName());
   }
 }
