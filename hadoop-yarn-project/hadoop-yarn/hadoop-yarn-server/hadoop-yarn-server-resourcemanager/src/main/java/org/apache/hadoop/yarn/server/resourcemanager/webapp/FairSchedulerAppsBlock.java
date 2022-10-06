@@ -129,7 +129,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
     return true;
   }
 
-  public String printData(long appInfoFunc) {
+  public String printAppInfo(long appInfoFunc) {
     if (appInfoFunc== -1) {
       return "N/A";
     }
@@ -199,15 +199,15 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
-      .append(printData(appInfo.getRunningContainers()))
+      .append(printAppInfo(appInfo.getRunningContainers()))
       .append("\",\"")
-      .append(printData(appInfo.getAllocatedVCores()))
+      .append(printAppInfo(appInfo.getAllocatedVCores()))
       .append("\",\"")
-      .append(printData(appInfo.getAllocatedMB()))
+      .append(printAppInfo(appInfo.getAllocatedMB()))
       .append("\",\"")
-      .append(printData(appInfo.getReservedVCores()))
+      .append(printAppInfo(appInfo.getReservedVCores()))
       .append("\",\"")
-      .append(printData(appInfo.getReservedMB()))
+      .append(printAppInfo(appInfo.getReservedMB()))
       .append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
