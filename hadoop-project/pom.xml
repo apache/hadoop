@@ -678,6 +678,7 @@
         <version>${hadoop.version}</version>
       </dependency>
 
+      <!-- This is empty; retained only for downstream app build compatibility. -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-openstack</artifactId>

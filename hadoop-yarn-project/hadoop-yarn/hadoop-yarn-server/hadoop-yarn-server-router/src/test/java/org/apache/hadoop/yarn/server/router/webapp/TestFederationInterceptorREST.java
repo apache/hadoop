@@ -30,6 +30,8 @@ import java.util.Collections;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -89,6 +91,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -1126,5 +1129,29 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     long memory = resourceInfo.getMemorySize();
     Assert.assertEquals(1, vCore);
     Assert.assertEquals(1024, memory);
+  }
+
+  @Test
+  public void testWebAddressWithScheme() {
+    // The style of the web address reported by the subCluster in the heartbeat is 0.0.0.0:8000
+    // We design the following 2 test cases:
+    String webAppAddress = "0.0.0.0:8000";
+
+    // 1. We try to disable Https, at this point we should get the following link:
+    // http://0.0.0.0:8000
+    String expectedHttpWebAddress = "http://0.0.0.0:8000";
+    String webAppAddressWithScheme =
+        WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
+    Assert.assertEquals(expectedHttpWebAddress, webAppAddressWithScheme);
+
+    // 2. We try to enable Https，at this point we should get the following link:
+    // https://0.0.0.0:8000
+    Configuration configuration = this.getConf();
+    configuration.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
+        HttpConfig.Policy.HTTPS_ONLY.name());
+    String expectedHttpsWebAddress = "https://0.0.0.0:8000";
+    String webAppAddressWithScheme2 =
+        WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
+    Assert.assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
   }
 }
