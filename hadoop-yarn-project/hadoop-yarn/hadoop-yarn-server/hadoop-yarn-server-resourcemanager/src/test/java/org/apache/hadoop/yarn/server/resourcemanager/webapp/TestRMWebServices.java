@@ -1142,7 +1142,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     // 5.Verify that schedulerBusy is as expected
     int schedulerBusy = json.getInt("schedulerBusy");
-    Assert.assertEquals(-1, schedulerBusy);
+    assertEquals(-1, schedulerBusy);
 
     // 6.Verify that rmDispatcherEventQueueSize is as expected
     int rmDispatcherEventQueueSize = json.getInt("rmDispatcherEventQueueSize");

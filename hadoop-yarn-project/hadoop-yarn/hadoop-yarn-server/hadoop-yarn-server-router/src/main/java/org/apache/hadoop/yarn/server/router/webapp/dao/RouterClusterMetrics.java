@@ -35,7 +35,7 @@ public class RouterClusterMetrics {
   protected static final long BYTES_IN_MB = 1024 * 1024;
   private static final Logger LOG = LoggerFactory.getLogger(RouterClusterMetrics.class);
 
-  /** Application Information. **/
+  // Application Information.
   private String appsSubmitted = "N/A";
   private String appsCompleted = "N/A";
   private String appsPending = "N/A";
@@ -43,31 +43,31 @@ public class RouterClusterMetrics {
   private String appsFailed = "N/A";
   private String appsKilled = "N/A";
 
-  /** Memory Information. **/
+  // Memory Information.
   private String totalMemory = "N/A";
   private String reservedMemory = "N/A";
   private String availableMemory = "N/A";
   private String allocatedMemory = "N/A";
   private String pendingMemory = "N/A";
 
-  /** VirtualCores Information. **/
+  // VirtualCores Information.
   private String reservedVirtualCores = "N/A";
   private String availableVirtualCores = "N/A";
   private String allocatedVirtualCores = "N/A";
   private String pendingVirtualCores = "N/A";
   private String totalVirtualCores = "N/A";
 
-  /** Resources Information. **/
+  // Resources Information.
   private String usedResources = "N/A";
   private String totalResources = "N/A";
   private String reservedResources = "N/A";
   private String allocatedContainers = "N/A";
 
-  /** Resource Percent Information. **/
+  // Resource Percent Information.
   private String utilizedMBPercent = "N/A";
   private String utilizedVirtualCoresPercent = "N/A";
 
-  /** Node Information. **/
+  // Node Information.
   private String activeNodes = "N/A";
   private String decommissioningNodes = "N/A";
   private String decommissionedNodes = "N/A";
@@ -82,19 +82,19 @@ public class RouterClusterMetrics {
 
   public RouterClusterMetrics(ClusterMetricsInfo metrics) {
     if (metrics != null) {
-      /** Application Information Conversion. **/
+      // Application Information Conversion.
       conversionApplicationInformation(metrics);
 
-      /** Memory Information Conversion. **/
+      // Memory Information Conversion.
       conversionMemoryInformation(metrics);
 
-      /** Resources Information Conversion. **/
+      // Resources Information Conversion.
       conversionResourcesInformation(metrics);
 
-      /** Percent Information Conversion. **/
+      // Percent Information Conversion.
       conversionResourcesPercent(metrics);
 
-      /** Node Information Conversion. **/
+      // Node Information Conversion.
       conversionNodeInformation(metrics);
     }
   }
@@ -219,7 +219,7 @@ public class RouterClusterMetrics {
   // Metric Information Conversion
   public void conversionApplicationInformation(ClusterMetricsInfo metrics) {
     try {
-      /** Application Information. **/
+      // Application Information.
       this.appsSubmitted = String.valueOf(metrics.getAppsSubmitted());
       this.appsCompleted = String.valueOf(metrics.getAppsCompleted() +
            metrics.getAppsFailed() + metrics.getAppsKilled());
@@ -235,7 +235,7 @@ public class RouterClusterMetrics {
   // Metric Memory Information
   public void conversionMemoryInformation(ClusterMetricsInfo metrics) {
     try {
-      /** Memory Information. **/
+      // Memory Information.
       this.totalMemory = StringUtils.byteDesc(metrics.getTotalMB() * BYTES_IN_MB);
       this.reservedMemory = StringUtils.byteDesc(metrics.getReservedMB() * BYTES_IN_MB);
       this.availableMemory = StringUtils.byteDesc(metrics.getAvailableMB() * BYTES_IN_MB);
