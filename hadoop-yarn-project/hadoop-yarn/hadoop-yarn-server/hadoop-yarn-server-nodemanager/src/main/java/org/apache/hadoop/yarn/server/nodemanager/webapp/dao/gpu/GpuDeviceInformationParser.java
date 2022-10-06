@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,10 +68,7 @@ public class GpuDeviceInformationParser {
    * &lt;!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v8.dtd"> in header.
    */
   private SAXParserFactory initSaxParserFactory() throws Exception {
-    SAXParserFactory spf = SAXParserFactory.newInstance();
-    spf.setFeature(
-        "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-        false);
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     spf.setFeature("http://xml.org/sax/features/validation", false);
     return spf;
   }

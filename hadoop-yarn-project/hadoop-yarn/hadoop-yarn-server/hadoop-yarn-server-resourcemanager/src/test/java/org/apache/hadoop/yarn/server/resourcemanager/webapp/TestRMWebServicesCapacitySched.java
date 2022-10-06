@@ -47,6 +47,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -312,7 +313,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     DOMSource domSource = new DOMSource(document);
     StringWriter writer = new StringWriter();
     StreamResult result = new StreamResult(writer);
-    TransformerFactory tf = TransformerFactory.newInstance();
+    TransformerFactory tf = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = tf.newTransformer();
     transformer.setOutputProperty(OutputKeys.INDENT, "yes");
     transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
@@ -321,7 +322,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   }
 
   public static Document loadDocument(String xml) throws Exception {
-    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory factory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder builder = factory.newDocumentBuilder();
     InputSource is = new InputSource(new StringReader(xml));
     return builder.parse(is);
