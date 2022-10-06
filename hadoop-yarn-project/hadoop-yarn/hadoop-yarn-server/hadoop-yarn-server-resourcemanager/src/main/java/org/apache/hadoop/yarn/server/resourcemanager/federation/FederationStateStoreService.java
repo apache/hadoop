@@ -262,7 +262,7 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getPolicyConfiguration", GetSubClusterPolicyConfigurationResponse.class, request);
+        "getPolicyConfiguration", GetSubClusterPolicyConfigurationRequest.class, request);
     return invoke(clientMethod, GetSubClusterPolicyConfigurationResponse.class);
   }
 
@@ -270,7 +270,7 @@ public class FederationStateStoreService extends AbstractService
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "setPolicyConfiguration", SetSubClusterPolicyConfigurationResponse.class, request);
+        "setPolicyConfiguration", SetSubClusterPolicyConfigurationRequest.class, request);
     return invoke(clientMethod, SetSubClusterPolicyConfigurationResponse.class);
   }
 
@@ -278,7 +278,7 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getPoliciesConfigurations", GetSubClusterPoliciesConfigurationsResponse.class, request);
+        "getPoliciesConfigurations", GetSubClusterPoliciesConfigurationsRequest.class, request);
     return invoke(clientMethod, GetSubClusterPoliciesConfigurationsResponse.class);
   }
 
@@ -287,7 +287,7 @@ public class FederationStateStoreService extends AbstractService
       SubClusterRegisterRequest registerSubClusterRequest)
       throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "registerSubCluster", SubClusterRegisterResponse.class, registerSubClusterRequest);
+        "registerSubCluster", SubClusterRegisterRequest.class, registerSubClusterRequest);
     return invoke(clientMethod, SubClusterRegisterResponse.class);
   }
 
@@ -296,7 +296,7 @@ public class FederationStateStoreService extends AbstractService
       SubClusterDeregisterRequest subClusterDeregisterRequest)
       throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "deregisterSubCluster", SubClusterDeregisterResponse.class, subClusterDeregisterRequest);
+        "deregisterSubCluster", SubClusterDeregisterRequest.class, subClusterDeregisterRequest);
     return invoke(clientMethod, SubClusterDeregisterResponse.class);
   }
 
@@ -305,7 +305,7 @@ public class FederationStateStoreService extends AbstractService
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
       throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "subClusterHeartbeat", SubClusterHeartbeatResponse.class, subClusterHeartbeatRequest);
+        "subClusterHeartbeat", SubClusterHeartbeatRequest.class, subClusterHeartbeatRequest);
     return invoke(clientMethod, SubClusterHeartbeatResponse.class);
   }
 
@@ -313,7 +313,7 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest subClusterRequest) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getSubClusters", GetSubClusterInfoResponse.class, subClusterRequest);
+        "getSubClusters", GetSubClusterInfoRequest.class, subClusterRequest);
     return invoke(clientMethod, GetSubClusterInfoResponse.class);
   }
 
@@ -321,7 +321,7 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest subClustersRequest) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getSubClusters", GetSubClustersInfoResponse.class, subClustersRequest);
+        "getSubClusters", GetSubClustersInfoRequest.class, subClustersRequest);
     return invoke(clientMethod, GetSubClustersInfoResponse.class);
   }
 
@@ -329,7 +329,7 @@ public class FederationStateStoreService extends AbstractService
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "addApplicationHomeSubCluster", AddApplicationHomeSubClusterResponse.class, request);
+        "addApplicationHomeSubCluster", AddApplicationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, AddApplicationHomeSubClusterResponse.class);
   }
 
@@ -337,7 +337,7 @@ public class FederationStateStoreService extends AbstractService
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "updateApplicationHomeSubCluster", UpdateApplicationHomeSubClusterResponse.class, request);
+        "updateApplicationHomeSubCluster", UpdateApplicationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, UpdateApplicationHomeSubClusterResponse.class);
   }
 
@@ -345,7 +345,7 @@ public class FederationStateStoreService extends AbstractService
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-         "getApplicationHomeSubCluster", GetApplicationHomeSubClusterResponse.class, request);
+         "getApplicationHomeSubCluster", GetApplicationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, GetApplicationHomeSubClusterResponse.class);
   }
 
@@ -353,7 +353,7 @@ public class FederationStateStoreService extends AbstractService
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getApplicationsHomeSubCluster", GetApplicationsHomeSubClusterResponse.class, request);
+        "getApplicationsHomeSubCluster", GetApplicationsHomeSubClusterRequest.class, request);
     return invoke(clientMethod, GetApplicationsHomeSubClusterResponse.class);
   }
 
@@ -361,7 +361,7 @@ public class FederationStateStoreService extends AbstractService
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "deleteApplicationHomeSubCluster", DeleteApplicationHomeSubClusterResponse.class, request);
+        "deleteApplicationHomeSubCluster", DeleteApplicationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, DeleteApplicationHomeSubClusterResponse.class);
   }
 
@@ -369,7 +369,7 @@ public class FederationStateStoreService extends AbstractService
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "addReservationHomeSubCluster", AddReservationHomeSubClusterResponse.class, request);
+        "addReservationHomeSubCluster", AddReservationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, AddReservationHomeSubClusterResponse.class);
   }
 
@@ -377,7 +377,7 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getReservationHomeSubCluster", GetReservationHomeSubClusterResponse.class, request);
+        "getReservationHomeSubCluster", GetReservationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, GetReservationHomeSubClusterResponse.class);
   }
 
@@ -385,7 +385,7 @@ public class FederationStateStoreService extends AbstractService
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getReservationsHomeSubCluster", GetReservationsHomeSubClusterResponse.class, request);
+        "getReservationsHomeSubCluster", GetReservationsHomeSubClusterRequest.class, request);
     return invoke(clientMethod, GetReservationsHomeSubClusterResponse.class);
   }
 
@@ -393,7 +393,7 @@ public class FederationStateStoreService extends AbstractService
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "updateReservationHomeSubCluster", UpdateReservationHomeSubClusterResponse.class, request);
+        "updateReservationHomeSubCluster", UpdateReservationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, UpdateReservationHomeSubClusterResponse.class);
   }
 
@@ -401,7 +401,7 @@ public class FederationStateStoreService extends AbstractService
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "deleteReservationHomeSubCluster", DeleteReservationHomeSubClusterResponse.class, request);
+        "deleteReservationHomeSubCluster", DeleteReservationHomeSubClusterRequest.class, request);
     return invoke(clientMethod, DeleteReservationHomeSubClusterResponse.class);
   }
 
@@ -409,7 +409,7 @@ public class FederationStateStoreService extends AbstractService
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "storeNewMasterKey", RouterMasterKeyResponse.class, request);
+        "storeNewMasterKey", RouterMasterKeyRequest.class, request);
     return invoke(clientMethod, RouterMasterKeyResponse.class);
   }
 
@@ -417,7 +417,7 @@ public class FederationStateStoreService extends AbstractService
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "removeStoredMasterKey", RouterMasterKeyResponse.class, request);
+        "removeStoredMasterKey", RouterMasterKeyRequest.class, request);
     return invoke(clientMethod, RouterMasterKeyResponse.class);
   }
 
@@ -425,7 +425,7 @@ public class FederationStateStoreService extends AbstractService
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getMasterKeyByDelegationKey", RouterMasterKeyResponse.class, request);
+        "getMasterKeyByDelegationKey", RouterMasterKeyRequest.class, request);
     return invoke(clientMethod, RouterMasterKeyResponse.class);
   }
 

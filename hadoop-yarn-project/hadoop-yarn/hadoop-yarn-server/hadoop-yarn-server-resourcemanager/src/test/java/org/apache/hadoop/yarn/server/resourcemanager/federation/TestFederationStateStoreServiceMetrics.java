@@ -17,9 +17,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
-import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +84,8 @@ public class TestFederationStateStoreServiceMetrics {
     Assert.assertEquals(apiGoodBefore + 1,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls =
-        FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster");
+        FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod(
+        "registerSubCluster");
     Assert.assertEquals(100, latencySucceessfulCalls, 0);
 
     LOG.info("Test: Running stats correctly calculated for 2 metrics");
@@ -101,7 +100,8 @@ public class TestFederationStateStoreServiceMetrics {
     Assert.assertEquals(apiGoodBefore + 2,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls2 =
-        FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster");
+        FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod(
+        "registerSubCluster");
     Assert.assertEquals(150, latencySucceessfulCalls2, 0);
   }
 }
