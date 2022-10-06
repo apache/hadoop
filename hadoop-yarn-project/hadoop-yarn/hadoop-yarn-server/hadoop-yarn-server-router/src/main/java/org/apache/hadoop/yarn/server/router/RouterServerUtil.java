@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.slf4j.Logger;
@@ -46,6 +47,8 @@ import java.io.IOException;
 public final class RouterServerUtil {
 
   private static final String APPLICATION_ID_PREFIX = "application_";
+
+  private static final String APP_ATTEMPT_ID_PREFIX = "appattempt_";
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -285,30 +288,81 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Check applicationId is accurate.
    *
-   * @param applicationId
+   * We need to ensure that applicationId cannot be empty and
+   * can be converted to ApplicationId object normally.
+   *
+   * @param applicationId applicationId of type string
+   * @throws IllegalArgumentException If the format of the applicationId is not accurate,
+   * an IllegalArgumentException needs to be thrown.
    */
   @Public
   @Unstable
-  public static void checkApplicationIdValidate(String applicationId) {
+  public static void validateApplicationId(String applicationId)
+      throws IllegalArgumentException {
+
+    // Make Sure applicationId is not empty.
     if (applicationId == null || applicationId.isEmpty()) {
       throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
     }
 
+    // Make sure the prefix information of applicationId is accurate
     if (!applicationId.startsWith(APPLICATION_ID_PREFIX)) {
       throw new IllegalArgumentException("Invalid ApplicationId prefix: "
           + applicationId + ". The valid ApplicationId should start with prefix application");
     }
 
+    //
     int pos1 = APPLICATION_ID_PREFIX.length() - 1;
     int pos2 = applicationId.indexOf('_', pos1 + 1);
     if (pos2 < 0) {
       throw new IllegalArgumentException("Invalid ApplicationId: " + applicationId);
     }
+
     String rmId = applicationId.substring(pos1 + 1, pos2);
     String appId = applicationId.substring(pos2 + 1);
     if(!NumberUtils.isDigits(rmId) || !NumberUtils.isDigits(appId)){
       throw new IllegalArgumentException("Invalid ApplicationId: " + applicationId);
+    }
+  }
+
+  /**
+   * Check appAttemptId is accurate.
+   *
+   * @param appAttemptId
+   */
+  @Public
+  @Unstable
+  public static void validateApplicationAttemptId(String appAttemptId) {
+
+    if (appAttemptId == null || appAttemptId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
+    }
+
+    if (!appAttemptId.startsWith(APP_ATTEMPT_ID_PREFIX)) {
+      throw new IllegalArgumentException("Invalid AppAttemptId prefix: " + appAttemptId);
+    }
+
+    int pos1 = APP_ATTEMPT_ID_PREFIX.length() - 1;
+
+    int pos2 = appAttemptId.indexOf('_', pos1 + 1);
+    if (pos2 < 0) {
+      throw new IllegalArgumentException("Invalid AppAttemptId: " + appAttemptId);
+    }
+
+    int pos3 = appAttemptId.indexOf('_', pos2 + 1);
+    if (pos3 < 0) {
+      throw new IllegalArgumentException("Invalid AppAttemptId: " + appAttemptId);
+    }
+
+    String rmId = appAttemptId.substring(pos1 + 1, pos2);
+    String appId = appAttemptId.substring(pos2 + 1, pos3);
+    String attemptId = appAttemptId.substring(pos3 + 1);
+
+    if (!NumberUtils.isDigits(rmId) || !NumberUtils.isDigits(appId)
+        || !NumberUtils.isDigits(attemptId)) {
+      throw new IllegalArgumentException("Invalid AppAttemptId: " + appAttemptId);
     }
   }
 }

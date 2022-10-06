@@ -250,7 +250,7 @@ public final class RouterMetrics {
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
-  
+
   private RouterMetrics() {
     registry = new MetricsRegistry(RECORD_INFO);
     registry.tag(RECORD_INFO, "Router");
