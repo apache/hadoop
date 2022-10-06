@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +74,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.utils.FederationClientMethod;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -259,378 +261,190 @@ public class FederationStateStoreService extends AbstractService
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetSubClusterPolicyConfigurationResponse response =
-          stateStoreClient.getPolicyConfiguration(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getPolicyConfiguration error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getPolicyConfiguration", GetSubClusterPolicyConfigurationResponse.class, request);
+    return invoke(clientMethod, GetSubClusterPolicyConfigurationResponse.class);
   }
 
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      SetSubClusterPolicyConfigurationResponse response =
-          stateStoreClient.setPolicyConfiguration(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("setPolicyConfiguration error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "setPolicyConfiguration", SetSubClusterPolicyConfigurationResponse.class, request);
+    return invoke(clientMethod, SetSubClusterPolicyConfigurationResponse.class);
   }
 
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetSubClusterPoliciesConfigurationsResponse response =
-          stateStoreClient.getPoliciesConfigurations(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getPoliciesConfigurations error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getPoliciesConfigurations", GetSubClusterPoliciesConfigurationsResponse.class, request);
+    return invoke(clientMethod, GetSubClusterPoliciesConfigurationsResponse.class);
   }
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest registerSubClusterRequest)
       throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      SubClusterRegisterResponse response =
-          stateStoreClient.registerSubCluster(registerSubClusterRequest);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("registerSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "registerSubCluster", SubClusterRegisterResponse.class, registerSubClusterRequest);
+    return invoke(clientMethod, SubClusterRegisterResponse.class);
   }
 
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest subClusterDeregisterRequest)
       throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      SubClusterDeregisterResponse response =
-          stateStoreClient.deregisterSubCluster(subClusterDeregisterRequest);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("deregisterSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "deregisterSubCluster", SubClusterDeregisterResponse.class, subClusterDeregisterRequest);
+    return invoke(clientMethod, SubClusterDeregisterResponse.class);
   }
 
   @Override
   public SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest subClusterHeartbeatRequest)
       throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      SubClusterHeartbeatResponse response =
-          stateStoreClient.subClusterHeartbeat(subClusterHeartbeatRequest);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("subClusterHeartbeat error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "subClusterHeartbeat", SubClusterHeartbeatResponse.class, subClusterHeartbeatRequest);
+    return invoke(clientMethod, SubClusterHeartbeatResponse.class);
   }
 
   @Override
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest subClusterRequest) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetSubClusterInfoResponse response =
-          stateStoreClient.getSubCluster(subClusterRequest);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getSubClusters", GetSubClusterInfoResponse.class, subClusterRequest);
+    return invoke(clientMethod, GetSubClusterInfoResponse.class);
   }
 
   @Override
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest subClustersRequest) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetSubClustersInfoResponse response =
-          stateStoreClient.getSubClusters(subClustersRequest);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getSubClusters error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getSubClusters", GetSubClustersInfoResponse.class, subClustersRequest);
+    return invoke(clientMethod, GetSubClustersInfoResponse.class);
   }
 
   @Override
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      AddApplicationHomeSubClusterResponse response =
-          stateStoreClient.addApplicationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("addApplicationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "addApplicationHomeSubCluster", AddApplicationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, AddApplicationHomeSubClusterResponse.class);
   }
 
   @Override
   public UpdateApplicationHomeSubClusterResponse updateApplicationHomeSubCluster(
       UpdateApplicationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      UpdateApplicationHomeSubClusterResponse response =
-          stateStoreClient.updateApplicationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("updateApplicationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "updateApplicationHomeSubCluster", UpdateApplicationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, UpdateApplicationHomeSubClusterResponse.class);
   }
 
   @Override
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetApplicationHomeSubClusterResponse response =
-          stateStoreClient.getApplicationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getApplicationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+         "getApplicationHomeSubCluster", GetApplicationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, GetApplicationHomeSubClusterResponse.class);
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetApplicationsHomeSubClusterResponse response =
-           stateStoreClient.getApplicationsHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getApplicationsHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getApplicationsHomeSubCluster", GetApplicationsHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, GetApplicationsHomeSubClusterResponse.class);
   }
 
   @Override
   public DeleteApplicationHomeSubClusterResponse deleteApplicationHomeSubCluster(
       DeleteApplicationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      DeleteApplicationHomeSubClusterResponse response =
-          stateStoreClient.deleteApplicationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("deleteApplicationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "deleteApplicationHomeSubCluster", DeleteApplicationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, DeleteApplicationHomeSubClusterResponse.class);
   }
 
   @Override
   public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
       AddReservationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      AddReservationHomeSubClusterResponse response =
-          stateStoreClient.addReservationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("addReservationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "addReservationHomeSubCluster", AddReservationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, AddReservationHomeSubClusterResponse.class);
   }
 
   @Override
   public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
       GetReservationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetReservationHomeSubClusterResponse response =
-          stateStoreClient.getReservationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getReservationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getReservationHomeSubCluster", GetReservationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, GetReservationHomeSubClusterResponse.class);
   }
 
   @Override
   public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
       GetReservationsHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      GetReservationsHomeSubClusterResponse response =
-          stateStoreClient.getReservationsHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getReservationsHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getReservationsHomeSubCluster", GetReservationsHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, GetReservationsHomeSubClusterResponse.class);
   }
 
   @Override
   public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
       UpdateReservationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      UpdateReservationHomeSubClusterResponse response =
-          stateStoreClient.updateReservationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("updateReservationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "updateReservationHomeSubCluster", UpdateReservationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, UpdateReservationHomeSubClusterResponse.class);
   }
 
   @Override
   public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
       DeleteReservationHomeSubClusterRequest request) throws YarnException {
-    try {
-      long startTime = clock.getTime();
-      DeleteReservationHomeSubClusterResponse response =
-          stateStoreClient.deleteReservationHomeSubCluster(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("deleteReservationHomeSubCluster error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "deleteReservationHomeSubCluster", DeleteReservationHomeSubClusterResponse.class, request);
+    return invoke(clientMethod, DeleteReservationHomeSubClusterResponse.class);
   }
 
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    try {
-      long startTime = clock.getTime();
-      RouterMasterKeyResponse response = stateStoreClient.storeNewMasterKey(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("storeNewMasterKey error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "storeNewMasterKey", RouterMasterKeyResponse.class, request);
+    return invoke(clientMethod, RouterMasterKeyResponse.class);
   }
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    try {
-      long startTime = clock.getTime();
-      RouterMasterKeyResponse response = stateStoreClient.removeStoredMasterKey(request);
-      long stopTime = clock.getTime();
-      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("removeStoredMasterKey error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
-    }
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "removeStoredMasterKey", RouterMasterKeyResponse.class, request);
+    return invoke(clientMethod, RouterMasterKeyResponse.class);
   }
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
+    FederationClientMethod clientMethod = new FederationClientMethod(
+        "getMasterKeyByDelegationKey", RouterMasterKeyResponse.class, request);
+    return invoke(clientMethod, RouterMasterKeyResponse.class);
+  }
+
+  private <R> R invoke(FederationClientMethod request, Class<R> clazz)
+      throws YarnException {
     try {
       long startTime = clock.getTime();
-      RouterMasterKeyResponse response = stateStoreClient.getMasterKeyByDelegationKey(request);
+      Method method = FederationStateStore.class.
+          getMethod(request.getMethodName(), request.getTypes());
+      R result = clazz.cast(method.invoke(stateStoreClient, request.getParams()));
       long stopTime = clock.getTime();
       FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
-          stopTime - startTime);
-      return response;
-    } catch (YarnException e) {
-      LOG.error("getMasterKeyByDelegationKey error.", e);
-      FederationStateStoreServiceMetrics.failedStateStoreServiceCall();
-      throw e;
+          request.getMethodName(), stopTime - startTime);
+      return result;
+    } catch (Exception e) {
+      LOG.error("stateStoreClient call method {} error.", request.getMethodName(), e);
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall(
+          request.getMethodName());
+      throw new YarnException(e);
     }
   }
 }

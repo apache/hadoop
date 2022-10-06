@@ -124,6 +124,16 @@ public final class FederationStateStoreServiceMetrics {
     methodMetric.incr();
   }
 
+  public static void failedStateStoreServiceCall(String methodName) {
+    MutableCounterLong methodMetric = FAILED_CALLS.get(methodName);
+    if (methodMetric == null) {
+      LOG.error(UNKOWN_FAIL_ERROR_MSG, methodName);
+      return;
+    }
+    totalFailedCalls.incr();
+    methodMetric.incr();
+  }
+
   public static void succeededStateStoreServiceCall(long duration) {
     String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
     MutableRate methodMetric = SUCCESSFUL_CALLS.get(methodName);
@@ -134,6 +144,18 @@ public final class FederationStateStoreServiceMetrics {
       return;
     }
 
+    totalSucceededCalls.add(duration);
+    methodMetric.add(duration);
+    methodQuantileMetric.add(duration);
+  }
+
+  public static void succeededStateStoreServiceCall(String methodName, long duration) {
+    MutableRate methodMetric = SUCCESSFUL_CALLS.get(methodName);
+    MutableQuantiles methodQuantileMetric = QUANTILE_METRICS.get(methodName);
+    if (methodMetric == null || methodQuantileMetric == null) {
+      LOG.error(UNKNOWN_SUCCESS_ERROR_MSG, methodName);
+      return;
+    }
     totalSucceededCalls.add(duration);
     methodMetric.add(duration);
     methodQuantileMetric.add(duration);
