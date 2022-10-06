@@ -44,11 +44,12 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.TimelineCollector
 import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFileSystemTimelineWriterImpl {
   @TempDir
-  public File tmpFolder;
+  private File tmpFolder;
 
   /**
    * Unit test for PoC YARN 3264.
@@ -111,11 +112,10 @@ public class TestFileSystemTimelineWriterImpl {
       assertTrue(fs.exists(path),
           "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue(!fileStatus.isDirectory(),
-          "Specified path should be a file");
+      assertFalse(fileStatus.isDirectory(), "Specified path should be a file");
       List<String> data = readFromFile(fs, path);
       // ensure there's only one entity + 1 new line
-      assertTrue(data.size() == 2, "data size is:" + data.size());
+      assertEquals(2, data.size(), "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -131,11 +131,10 @@ public class TestFileSystemTimelineWriterImpl {
       assertTrue(fs.exists(path2),
           "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus2 = fs.getFileStatus(path2);
-      assertTrue(!fileStatus2.isDirectory(),
-          "Specified path should be a file");
+      assertFalse(fileStatus2.isDirectory(), "Specified path should be a file");
       List<String> data2 = readFromFile(fs, path2);
       // ensure there's only one entity + 1 new line
-      assertTrue(data2.size() == 2, "data size is:" + data2.size());
+      assertEquals(2, data2.size(), "data size is:" + data2.size());
       String metricToString = data2.get(0);
       // confirm the contents same as what was written
       assertEquals(metricToString,
@@ -195,10 +194,9 @@ public class TestFileSystemTimelineWriterImpl {
       assertTrue(fs.exists(path),
           "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue(!fileStatus.isDirectory(),
-          "Specified path should be a file");
+      assertFalse(fileStatus.isDirectory(), "Specified path should be a file");
       List<String> data = readFromFile(fs, path);
-      assertTrue(data.size() == 3, "data size is:" + data.size());
+      assertEquals(3, data.size(), "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -252,10 +250,9 @@ public class TestFileSystemTimelineWriterImpl {
       assertTrue(fs.exists(path),
           "Specified path(" + fileName + ") should exist: ");
       FileStatus fileStatus = fs.getFileStatus(path);
-      assertTrue(!fileStatus.isDirectory(),
-          "Specified path should be a file");
+      assertFalse(fileStatus.isDirectory(), "specified path should be a file");
       List<String> data = readFromFile(fs, path);
-      assertTrue(data.size() == 2, "data size is:" + data.size());
+      assertEquals(2, data.size(), "data size is:" + data.size());
       String d = data.get(0);
       // confirm the contents same as what was written
       assertEquals(d, TimelineUtils.dumpTimelineRecordtoJSON(entity));
@@ -280,12 +277,4 @@ public class TestFileSystemTimelineWriterImpl {
     return data;
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
-  }
 }

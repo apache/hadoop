@@ -134,14 +134,14 @@ public class TestTimelineReaderWebServicesBasicAcl {
     TimelineReaderWebServices
         .checkAccess(manager, adminUgi, entities, userKey, true);
     // admin is allowed to view other entities
-    assertTrue(entities.size() == 10);
+    assertEquals(10, entities.size());
 
     // incoming ugi is user1Ugi asking for entities
     // only user1 entities are allowed to view
     entities = createEntities(5, userKey);
     TimelineReaderWebServices
         .checkAccess(manager, user1Ugi, entities, userKey, true);
-    assertTrue(entities.size() == 1);
+    assertEquals(1, entities.size());
     assertEquals(user1, entities.iterator().next().getInfo().get(userKey));
 
     // incoming ugi is user2Ugi asking for entities
@@ -149,7 +149,7 @@ public class TestTimelineReaderWebServicesBasicAcl {
     entities = createEntities(8, userKey);
     TimelineReaderWebServices
         .checkAccess(manager, user2Ugi, entities, userKey, true);
-    assertTrue(entities.size() == 1);
+    assertEquals(1, entities.size());
     assertEquals(user2, entities.iterator().next().getInfo().get(userKey));
   }
 

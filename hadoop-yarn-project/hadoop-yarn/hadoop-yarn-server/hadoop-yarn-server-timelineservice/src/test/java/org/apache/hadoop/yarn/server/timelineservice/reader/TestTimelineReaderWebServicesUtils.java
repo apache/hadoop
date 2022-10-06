@@ -31,15 +31,13 @@ import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelineKeyVa
 import org.apache.hadoop.yarn.server.timelineservice.reader.filter.TimelinePrefixFilter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTimelineReaderWebServicesUtils {
   private static void verifyFilterList(String expr, TimelineFilterList list,
-      TimelineFilterList expectedList) throws Exception {
-    assertNotNull(list);
-    assertEquals(list, expectedList);
+      TimelineFilterList expectedList) {
+    assertEquals(expectedList, list);
   }
 
   @Test
