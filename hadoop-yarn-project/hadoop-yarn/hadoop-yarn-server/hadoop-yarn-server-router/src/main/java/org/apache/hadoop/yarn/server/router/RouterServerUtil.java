@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -43,6 +44,8 @@ import java.io.IOException;
 @Private
 @Unstable
 public final class RouterServerUtil {
+
+  private static final String APPLICATION_ID_PREFIX = "application_";
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -279,5 +282,33 @@ public final class RouterServerUtil {
   public static RuntimeException logAndReturnRunTimeException(
       String errMsgFormat, Object... args) {
     return logAndReturnRunTimeException(null, errMsgFormat, args);
+  }
+
+  /**
+   *
+   * @param applicationId
+   */
+  @Public
+  @Unstable
+  public static void checkApplicationIdValidate(String applicationId) {
+    if (applicationId == null || applicationId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
+    }
+
+    if (!applicationId.startsWith(APPLICATION_ID_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
+          + applicationId + ". The valid ApplicationId should start with prefix application");
+    }
+
+    int pos1 = APPLICATION_ID_PREFIX.length() - 1;
+    int pos2 = applicationId.indexOf('_', pos1 + 1);
+    if (pos2 < 0) {
+      throw new IllegalArgumentException("Invalid ApplicationId: " + applicationId);
+    }
+    String rmId = applicationId.substring(pos1 + 1, pos2);
+    String appId = applicationId.substring(pos2 + 1);
+    if(!NumberUtils.isDigits(rmId) || !NumberUtils.isDigits(appId)){
+      throw new IllegalArgumentException("Invalid ApplicationId: " + applicationId);
+    }
   }
 }

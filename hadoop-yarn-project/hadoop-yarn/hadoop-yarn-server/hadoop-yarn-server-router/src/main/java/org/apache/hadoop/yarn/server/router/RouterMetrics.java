@@ -250,8 +250,7 @@ public final class RouterMetrics {
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
-
-  @SuppressWarnings("checkstyle:MethodLength")
+  
   private RouterMetrics() {
     registry = new MetricsRegistry(RECORD_INFO);
     registry.tag(RECORD_INFO, "Router");
@@ -379,33 +378,26 @@ public final class RouterMetrics {
         registry.newQuantiles("listReservationLatency",
             "latency of list reservation timeouts", "ops", "latency", 10);
 
-    getAppActivitiesLatency =
-        registry.newQuantiles("getAppActivitiesLatency",
-            "latency of get app activities timeouts", "ops", "latency", 10);
+    getAppActivitiesLatency = registry.newQuantiles("getAppActivitiesLatency",
+         "latency of get app activities timeouts", "ops", "latency", 10);
 
-    getAppStatisticsLatency =
-        registry.newQuantiles("getAppStatisticsLatency",
-            "latency of get app statistics timeouts", "ops", "latency", 10);
+    getAppStatisticsLatency = registry.newQuantiles("getAppStatisticsLatency",
+         "latency of get app statistics timeouts", "ops", "latency", 10);
 
-    getAppPriorityLatency =
-        registry.newQuantiles("getAppPriorityLatency",
-            "latency of get app priority timeouts", "ops", "latency", 10);
+    getAppPriorityLatency = registry.newQuantiles("getAppPriorityLatency",
+         "latency of get app priority timeouts", "ops", "latency", 10);
 
-    getAppQueueLatency =
-        registry.newQuantiles("getAppQueueLatency",
-            "latency of get app queue timeouts", "ops", "latency", 10);
+    getAppQueueLatency = registry.newQuantiles("getAppQueueLatency",
+         "latency of get app queue timeouts", "ops", "latency", 10);
 
-    getUpdateQueueLatency =
-        registry.newQuantiles("getUpdateQueueLatency",
-            "latency of update app queue timeouts", "ops", "latency", 10);
+    getUpdateQueueLatency = registry.newQuantiles("getUpdateQueueLatency",
+        "latency of update app queue timeouts", "ops", "latency", 10);
 
-    getAppTimeoutLatency =
-        registry.newQuantiles("getAppTimeoutLatency",
-            "latency of get apptimeout timeouts", "ops", "latency", 10);
+    getAppTimeoutLatency = registry.newQuantiles("getAppTimeoutLatency",
+        "latency of get apptimeout timeouts", "ops", "latency", 10);
 
-    getAppTimeoutsLatency =
-        registry.newQuantiles("getAppTimeoutsLatency",
-            "latency of get apptimeouts timeouts", "ops", "latency", 10);
+    getAppTimeoutsLatency = registry.newQuantiles("getAppTimeoutsLatency",
+         "latency of get apptimeouts timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {

@@ -1857,14 +1857,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrAppAttemptReportFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.checkApplicationIdValidate(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptReportFailedRetrieved();
       throw e;
