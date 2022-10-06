@@ -542,7 +542,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
       throw new IOException("RMDelegationToken: " + rmDTIdentifier + "is already stored.");
     }
     rmDTState.put(rmDTIdentifier, renewDate);
-    if(!isUpdate) {
+    if (!isUpdate) {
       routerRMSecretManagerState.setDtSequenceNumber(rmDTIdentifier.getSequenceNumber());
     }
     LOG.info("Store RM-RMDT with sequence number {}.", rmDTIdentifier.getSequenceNumber());
