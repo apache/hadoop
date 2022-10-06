@@ -56,7 +56,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -1173,14 +1172,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // Only verify the app_id,
     // because the specific subCluster needs to be found according to the app_id,
     // and other verifications are directly handed over to the corresponding subCluster RM
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetAppActivitiesFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppActivitiesFailedRetrieved();
       throw e;
@@ -1414,14 +1408,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetAppPriorityFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppPriorityFailedRetrieved();
       throw e;
@@ -1455,14 +1444,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrUpdateAppPriorityFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppPriorityFailedRetrieved();
       throw e;
@@ -1500,14 +1484,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetAppQueueFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppQueueFailedRetrieved();
       throw e;
@@ -1540,14 +1519,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrUpdateAppQueueFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateAppQueueFailedRetrieved();
       throw e;
@@ -1723,14 +1697,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetAppTimeoutsFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetAppTimeoutsFailedRetrieved();
       throw e;
@@ -1765,14 +1734,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrUpdateApplicationTimeoutsRetrieved();
       throw e;
@@ -1810,14 +1774,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
 
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrAppAttemptsFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
     // Check that the appId format is accurate
     try {
-      ApplicationId.fromString(appId);
+      RouterServerUtil.validateApplicationId(appId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrAppAttemptsFailedRetrieved();
       throw e;
@@ -1831,7 +1790,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(hsr, appId);
       if (appAttemptsInfo != null) {
         long stopTime = Time.now();
-        routerMetrics.succeededAppAttemptsRetrieved((stopTime - startTime));
+        routerMetrics.succeededAppAttemptsRetrieved(stopTime - startTime);
         return appAttemptsInfo;
       }
     } catch (IllegalArgumentException e) {
@@ -1949,43 +1908,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // the same as FederationClientInterceptor#getContainerReport,
     // so use the same Metric.
 
-    // Check if appId is empty or null
-    if (appId == null || appId.isEmpty()) {
-      routerMetrics.incrGetContainerReportFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appId is empty or null.");
-    }
-
-    // Check that the appId format is accurate
+    // Check that the appId/appAttemptId/containerId format is accurate
     try {
-      ApplicationId.fromString(appId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetContainerReportFailedRetrieved();
-      throw e;
-    }
-
-    // Check if appAttemptId is empty or null
-    if (appAttemptId == null || appAttemptId.isEmpty()) {
-      routerMetrics.incrGetContainerReportFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the appAttemptId is empty or null.");
-    }
-
-    // Check that the appAttemptId format is accurate
-    try {
-      ApplicationAttemptId.fromString(appAttemptId);
-    } catch (IllegalArgumentException e) {
-      routerMetrics.incrGetContainersFailedRetrieved();
-      throw e;
-    }
-
-    // Check if containerId is empty or null
-    if (containerId == null || containerId.isEmpty()) {
-      routerMetrics.incrGetContainerReportFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the containerId is empty or null.");
-    }
-
-    // Check that the containerId format is accurate
-    try {
-      ContainerId.fromString(containerId);
+      RouterServerUtil.validateApplicationId(appId);
+      RouterServerUtil.validateApplicationAttemptId(appAttemptId);
+      RouterServerUtil.validateContainerId(containerId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrGetContainerReportFailedRetrieved();
       throw e;
@@ -2007,8 +1934,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       String msg = String.format(
           "Unable to get the AppAttempt appId: %s, appAttemptId: %s, containerId: %s.", appId,
           appAttemptId, containerId);
+      routerMetrics.incrGetContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException(msg, e);
     } catch (YarnException e) {
+      routerMetrics.incrGetContainerReportFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("getContainer Failed.", e);
     }
 
@@ -2042,14 +1971,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       HttpServletRequest req) {
 
     // Check if containerId is empty or null
-    if (containerId == null || containerId.isEmpty()) {
-      routerMetrics.incrSignalToContainerFailedRetrieved();
-      throw new IllegalArgumentException("Parameter error, the containerId is empty or null.");
-    }
-
-    // Check that the containerId format is accurate
     try {
-      ContainerId.fromString(containerId);
+      RouterServerUtil.validateContainerId(containerId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrSignalToContainerFailedRetrieved();
       throw e;
