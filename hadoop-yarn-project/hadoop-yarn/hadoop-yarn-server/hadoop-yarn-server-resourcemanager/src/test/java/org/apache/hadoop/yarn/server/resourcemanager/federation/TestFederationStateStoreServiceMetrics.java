@@ -66,7 +66,7 @@ public class TestFederationStateStoreServiceMetrics {
 
   @Test
   public void testRegisterSubClusterSuccessfulCalls() {
-    LOG.info("Test: Aggregate and method successful calls updated correctly");
+    LOG.info("Test: Aggregate and method successful calls updated correctly.");
 
     long totalGoodBefore = FederationStateStoreServiceMetrics.getNumSucceededCalls();
     long apiGoodBefore = FederationStateStoreServiceMetrics.
@@ -75,29 +75,29 @@ public class TestFederationStateStoreServiceMetrics {
     // Call the registerSubCluster method
     goodStateStore.registerSubCluster(100);
 
-    Assert.assertEquals(totalGoodBefore + 1,
+    assertEquals(totalGoodBefore + 1,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
-    Assert.assertEquals(apiGoodBefore + 1,
+    assertEquals(100, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
+    assertEquals(apiGoodBefore + 1,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls =
         FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod(
         "registerSubCluster");
-    Assert.assertEquals(100, latencySucceessfulCalls, 0);
+    assertEquals(100, latencySucceessfulCalls, 0);
 
     LOG.info("Test: Running stats correctly calculated for 2 metrics");
 
     // Call the registerSubCluster method
     goodStateStore.registerSubCluster(200);
 
-    Assert.assertEquals(totalGoodBefore + 2,
+    assertEquals(totalGoodBefore + 2,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
-    Assert.assertEquals(apiGoodBefore + 2,
+    assertEquals(150, FederationStateStoreServiceMetrics.getLatencySucceededCalls(), 0);
+    assertEquals(apiGoodBefore + 2,
         FederationStateStoreServiceMetrics.getNumSucceededCalls());
     double latencySucceessfulCalls2 =
         FederationStateStoreServiceMetrics.getLatencySucceessfulCallsForMethod(
         "registerSubCluster");
-    Assert.assertEquals(150, latencySucceessfulCalls2, 0);
+    assertEquals(150, latencySucceessfulCalls2, 0);
   }
 }

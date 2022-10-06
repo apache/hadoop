@@ -29,6 +29,7 @@ import java.util.Arrays;
 public class FederationClientMethod {
 
   private static final Logger LOG = LoggerFactory.getLogger(FederationClientMethod.class);
+
   /**
    * List of parameters: static and dynamic values, matchings types.
    */
@@ -54,7 +55,7 @@ public class FederationClientMethod {
   }
 
   public FederationClientMethod(String method, Class pTypes, Object pParams)
-          throws YarnException {
+      throws YarnException {
     this(method, new Class[]{pTypes}, new Object[]{pParams});
   }
 
