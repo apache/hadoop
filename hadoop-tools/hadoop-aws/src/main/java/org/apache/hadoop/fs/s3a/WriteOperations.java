@@ -27,14 +27,14 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -126,10 +126,10 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  CompleteMultipartUploadResult completeMPUwithRetries(
+  CompleteMultipartUploadResponse completeMPUwithRetries(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length,
       AtomicInteger errorCount,
       PutObjectOptions putOptions)
@@ -272,10 +272,10 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  CompleteMultipartUploadResult commitUpload(
+  CompleteMultipartUploadResponse commitUpload(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length)
       throws IOException;
 

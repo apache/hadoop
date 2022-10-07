@@ -34,10 +34,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.PartETag;
+
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 import org.apache.commons.lang3.StringUtils;
@@ -185,7 +188,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
 
     String uploadIdStr = new String(uploadIdBytes, 0, uploadIdBytes.length,
         Charsets.UTF_8);
-    ArrayList<PartETag> eTags = new ArrayList<>();
+    ArrayList<CompletedPart> eTags = new ArrayList<>();
     eTags.ensureCapacity(handles.size());
     long totalLength = 0;
     // built up to identify duplicates -if the size of this set is
@@ -198,7 +201,8 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
       payload.validate(uploadIdStr, filePath);
       ids.add(payload.getPartNumber());
       totalLength += payload.getLen();
-      eTags.add(new PartETag(handle.getKey(), payload.getEtag()));
+      eTags.add(
+          CompletedPart.builder().partNumber(handle.getKey()).eTag(payload.getEtag()).build());
     }
     Preconditions.checkArgument(ids.size() == count,
         "Duplicate PartHandles");
@@ -207,7 +211,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     long finalLen = totalLength;
     return context.submit(new CompletableFuture<>(),
         () -> {
-          CompleteMultipartUploadResult result =
+          CompleteMultipartUploadResponse result =
               writeOperations.commitUpload(
                   key,
                   uploadIdStr,
@@ -215,7 +219,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
                   finalLen
               );
 
-          byte[] eTag = result.getETag().getBytes(Charsets.UTF_8);
+          byte[] eTag = result.eTag().getBytes(Charsets.UTF_8);
           statistics.uploadCompleted();
           return (PathHandle) () -> ByteBuffer.wrap(eTag);
         });

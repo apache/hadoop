@@ -54,16 +54,10 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.StorageClass;
@@ -78,8 +72,14 @@ import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
@@ -88,6 +88,7 @@ import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.transfer.s3.CompletedCopy;
@@ -328,7 +329,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
-  private CannedAccessControlList cannedACL;
+  private ObjectCannedACL cannedACL;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -1168,7 +1169,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void initCannedAcls(Configuration conf) {
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
-      cannedACL = CannedAccessControlList.valueOf(cannedACLName);
+      cannedACL = ObjectCannedACL.valueOf(AWSCannedACL.valueOf(cannedACLName).toString());
     } else {
       cannedACL = null;
     }
@@ -1421,7 +1422,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  CannedAccessControlList getCannedACL() {
+  ObjectCannedACL getCannedACL() {
     return cannedACL;
   }
 
@@ -1687,9 +1688,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public CompleteMultipartUploadResult completeMultipartUpload(
+    public CompleteMultipartUploadResponse completeMultipartUpload(
         CompleteMultipartUploadRequest request) {
-      return s3.completeMultipartUpload(request);
+      return s3V2.completeMultipartUpload(request);
     }
   }
 
@@ -4338,12 +4339,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException Other IO problems
    */
   @Retries.OnceRaw
-  InitiateMultipartUploadResult initiateMultipartUpload(
-      InitiateMultipartUploadRequest request) throws IOException {
-    LOG.debug("Initiate multipart upload to {}", request.getKey());
+  CreateMultipartUploadResponse initiateMultipartUpload(
+      CreateMultipartUploadRequest request) throws IOException {
+    LOG.debug("Initiate multipart upload to {}", request.key());
     return trackDurationOfSupplier(getDurationTrackerFactory(),
         OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
-        () -> getAmazonS3Client().initiateMultipartUpload(request));
+        () -> s3V2.createMultipartUpload(request));
   }
 
   /**
@@ -5034,7 +5035,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return trackDurationAndSpan(MULTIPART_UPLOAD_LIST, prefix, null, () ->
         MultipartUtils.listMultipartUploads(
             createStoreContext(),
-            s3, prefix, maxKeys
+            s3V2, prefix, maxKeys
         ));
   }
 
@@ -5057,9 +5058,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     String p = prefix;
     return invoker.retry("listMultipartUploads", p, true, () -> {
-      ListMultipartUploadsRequest request = getRequestFactory()
-          .newListMultipartUploadsRequest(p);
-      return s3.listMultipartUploads(request).getMultipartUploads();
+      ListMultipartUploadsRequest.Builder requestBuilder = getRequestFactory()
+          .newListMultipartUploadsRequestBuilder(p);
+      return s3V2.listMultipartUploads(requestBuilder.build()).uploads();
     });
   }
 
@@ -5072,10 +5073,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
     LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
-    getAmazonS3Client().abortMultipartUpload(
-        getRequestFactory().newAbortMultipartUploadRequest(
+    s3V2.abortMultipartUpload(
+        getRequestFactory().newAbortMultipartUploadRequestBuilder(
             destKey,
-            uploadId));
+            uploadId).build());
   }
 
   /**
@@ -5087,18 +5088,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   void abortMultipartUpload(MultipartUpload upload) {
     String destKey;
     String uploadId;
-    destKey = upload.getKey();
-    uploadId = upload.getUploadId();
+    destKey = upload.key();
+    uploadId = upload.uploadId();
     if (LOG.isInfoEnabled()) {
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
       LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
-          uploadId, destKey, upload.getInitiator(),
-          df.format(upload.getInitiated()));
+          uploadId, destKey, upload.initiator(),
+          df.format(upload.initiated()));
     }
-    getAmazonS3Client().abortMultipartUpload(
-        getRequestFactory().newAbortMultipartUploadRequest(
+    s3V2.abortMultipartUpload(
+        getRequestFactory().newAbortMultipartUploadRequestBuilder(
             destKey,
-            uploadId));
+            uploadId).build());
   }
 
   /**

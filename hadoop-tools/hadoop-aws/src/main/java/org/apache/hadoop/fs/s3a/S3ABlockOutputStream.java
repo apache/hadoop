@@ -48,6 +48,7 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecut
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -419,7 +420,7 @@ class S3ABlockOutputStream extends OutputStream implements
           uploadCurrentBlock(true);
         }
         // wait for the partial uploads to finish
-        final List<PartETag> partETags =
+        final List<CompletedPart> partETags =
             multiPartUpload.waitForAllPartUploads();
         bytes = bytesSubmitted;
 
@@ -742,7 +743,7 @@ class S3ABlockOutputStream extends OutputStream implements
    */
   private class MultiPartUpload {
     private final String uploadId;
-    private final List<ListenableFuture<PartETag>> partETagsFutures;
+    private final List<ListenableFuture<CompletedPart>> partETagsFutures;
     private int partsSubmitted;
     private int partsUploaded;
     private long bytesSubmitted;
@@ -874,20 +875,22 @@ class S3ABlockOutputStream extends OutputStream implements
               block, progressListener, now());
       request.setGeneralProgressListener(callback);
       statistics.blockUploadQueued(block.dataSize());
-      ListenableFuture<PartETag> partETagFuture =
+      ListenableFuture<CompletedPart> partETagFuture =
           executorService.submit(() -> {
             // this is the queued upload operation
             // do the upload
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
+              // TODO: This needs to updated during uploadPart work. Remove PartEtag import.
               PartETag partETag = writeOperationHelper.uploadPart(request)
                   .getPartETag();
               LOG.debug("Completed upload of {} to part {}",
                   block, partETag.getETag());
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
-              return partETag;
+              return CompletedPart.builder().eTag(partETag.getETag()).partNumber(currentPartNumber)
+                  .build();
             } catch (IOException e) {
               // save immediately.
               noteUploadFailure(e);
@@ -905,7 +908,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * @return list of results
      * @throws IOException IO Problems
      */
-    private List<PartETag> waitForAllPartUploads() throws IOException {
+    private List<CompletedPart> waitForAllPartUploads() throws IOException {
       LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         return Futures.allAsList(partETagsFutures).get();
@@ -929,7 +932,7 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private void cancelAllActiveFutures() {
       LOG.debug("Cancelling futures");
-      for (ListenableFuture<PartETag> future : partETagsFutures) {
+      for (ListenableFuture<CompletedPart> future : partETagsFutures) {
         future.cancel(true);
       }
     }
@@ -941,7 +944,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * @param partETags list of partial uploads
      * @throws IOException on any problem
      */
-    private void complete(List<PartETag> partETags)
+    private void complete(List<CompletedPart> partETags)
         throws IOException {
       maybeRethrowUploadFailure();
       AtomicInteger errorCount = new AtomicInteger(0);

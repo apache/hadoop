@@ -24,16 +24,10 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
@@ -45,6 +39,8 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -52,6 +48,10 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
 /**
  * Factory for S3 objects.
@@ -80,7 +80,7 @@ public interface RequestFactory {
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  CannedAccessControlList getCannedACL();
+  ObjectCannedACL getCannedACL();
 
   /**
    * Create the AWS SDK structure used to configure SSE,
@@ -156,18 +156,18 @@ public interface RequestFactory {
   /**
    * List all multipart uploads under a prefix.
    * @param prefix prefix to list under
-   * @return the request.
+   * @return the request builder.
    */
-  ListMultipartUploadsRequest newListMultipartUploadsRequest(
+  ListMultipartUploadsRequest.Builder newListMultipartUploadsRequestBuilder(
       @Nullable String prefix);
 
   /**
    * Abort a multipart upload.
    * @param destKey destination object key
    * @param uploadId ID of initiated upload
-   * @return the request.
+   * @return the request builder.
    */
-  AbortMultipartUploadRequest newAbortMultipartUploadRequest(
+  AbortMultipartUploadRequest.Builder newAbortMultipartUploadRequestBuilder(
       String destKey,
       String uploadId);
 
@@ -175,9 +175,9 @@ public interface RequestFactory {
    * Start a multipart upload.
    * @param destKey destination object key
    * @param options options for the request
-   * @return the request.
+   * @return the request builder.
    */
-  InitiateMultipartUploadRequest newMultipartUploadRequest(
+  CreateMultipartUploadRequest.Builder newMultipartUploadRequestBuilder(
       String destKey,
       @Nullable PutObjectOptions options);
 
@@ -186,12 +186,12 @@ public interface RequestFactory {
    * @param destKey destination object key
    * @param uploadId ID of initiated upload
    * @param partETags ordered list of etags
-   * @return the request.
+   * @return the request builder.
    */
-  CompleteMultipartUploadRequest newCompleteMultipartUploadRequest(
+  CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<PartETag> partETags);
+      List<CompletedPart> partETags);
 
   /**
    * Create a HEAD request builder.

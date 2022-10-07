@@ -25,10 +25,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.PartETag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.apache.commons.lang3.StringUtils;
@@ -128,7 +128,7 @@ public class MagicCommitTracker extends PutTracker {
    */
   @Override
   public boolean aboutToComplete(String uploadId,
-      List<PartETag> parts,
+      List<CompletedPart> parts,
       long bytesWritten,
       final IOStatistics iostatistics)
       throws IOException {

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.fs.Path;
@@ -29,6 +28,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -99,10 +100,10 @@ public final class MultipartTestUtils {
           = fs.getWriteOperationHelper();
       while (uploads.hasNext()) {
         MultipartUpload upload = uploads.next();
-        LOG.debug("Cleaning up upload: {} {}", upload.getKey(),
-            truncatedUploadId(upload.getUploadId()));
-        helper.abortMultipartUpload(upload.getKey(),
-            upload.getUploadId(), true, LOG_EVENT);
+        LOG.debug("Cleaning up upload: {} {}", upload.key(),
+            truncatedUploadId(upload.uploadId()));
+        helper.abortMultipartUpload(upload.key(),
+            upload.uploadId(), true, LOG_EVENT);
       }
     } catch (IOException ioe) {
       LOG.info("Ignoring exception: ", ioe);
@@ -118,8 +119,8 @@ public final class MultipartTestUtils {
     MultipartUtils.UploadIterator uploads = fs.listUploads(key);
     while (uploads.hasNext()) {
       MultipartUpload upload = uploads.next();
-      Assert.fail("Found unexpected upload " + upload.getKey() + " " +
-          truncatedUploadId(upload.getUploadId()));
+      Assert.fail("Found unexpected upload " + upload.key() + " " +
+          truncatedUploadId(upload.uploadId()));
     }
   }
 
@@ -149,9 +150,9 @@ public final class MultipartTestUtils {
       return fs
           .listMultipartUploads(prefix).stream()
           .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
-              upload.getKey(),
-              upload.getUploadId(),
-              S3ATestUtils.LISTING_FORMAT.format(upload.getInitiated())))
+              upload.key(),
+              upload.uploadId(),
+              S3ATestUtils.LISTING_FORMAT.format(upload.initiated())))
           .collect(Collectors.toList());
     }
   }

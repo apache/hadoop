@@ -32,12 +32,13 @@ import java.util.stream.IntStream;
 
 import javax.annotation.Nullable;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.FileSystem;
@@ -155,9 +156,9 @@ public class CommitOperations extends AbstractStoreOperation
    * @param tagIds list of tags
    * @return same list, now in numbered tuples
    */
-  public static List<PartETag> toPartEtags(List<String> tagIds) {
+  public static List<CompletedPart> toPartEtags(List<String> tagIds) {
     return IntStream.range(0, tagIds.size())
-        .mapToObj(i -> new PartETag(i + 1, tagIds.get(i)))
+        .mapToObj(i -> CompletedPart.builder().partNumber(i + 1).eTag(tagIds.get(i)).build())
         .collect(Collectors.toList());
   }
 
@@ -566,7 +567,7 @@ public class CommitOperations extends AbstractStoreOperation
                 numParts, length));
       }
 
-      List<PartETag> parts = new ArrayList<>((int) numParts);
+      List<CompletedPart> parts = new ArrayList<>((int) numParts);
 
       LOG.debug("File size is {}, number of parts to upload = {}",
           length, numParts);
@@ -585,7 +586,8 @@ public class CommitOperations extends AbstractStoreOperation
         part.setLastPart(partNumber == numParts);
         UploadPartResult partResult = writeOperations.uploadPart(part);
         offset += uploadPartSize;
-        parts.add(partResult.getPartETag());
+        parts.add(
+            CompletedPart.builder().partNumber(partNumber).eTag(partResult.getETag()).build());
       }
 
       commitData.bindCommitData(parts);

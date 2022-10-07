@@ -27,11 +27,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
@@ -39,6 +34,11 @@ import com.amazonaws.services.s3.model.UploadPartResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
@@ -289,11 +289,11 @@ public class WriteOperationHelper implements WriteOperations {
     try (AuditSpan span = activateAuditSpan()) {
       return retry("initiate MultiPartUpload", destKey, true,
           () -> {
-            final InitiateMultipartUploadRequest initiateMPURequest =
-                getRequestFactory().newMultipartUploadRequest(
+            final CreateMultipartUploadRequest.Builder initiateMPURequestBuilder =
+                getRequestFactory().newMultipartUploadRequestBuilder(
                     destKey, options);
-            return owner.initiateMultipartUpload(initiateMPURequest)
-                .getUploadId();
+            return owner.initiateMultipartUpload(initiateMPURequestBuilder.build())
+                .uploadId();
           });
     }
   }
@@ -314,10 +314,10 @@ public class WriteOperationHelper implements WriteOperations {
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
-  private CompleteMultipartUploadResult finalizeMultipartUpload(
+  private CompleteMultipartUploadResponse finalizeMultipartUpload(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length,
       PutObjectOptions putOptions,
       Retried retrying) throws IOException {
@@ -326,18 +326,18 @@ public class WriteOperationHelper implements WriteOperations {
           "No upload parts in multipart upload");
     }
     try (AuditSpan span = activateAuditSpan()) {
-      CompleteMultipartUploadResult uploadResult;
+      CompleteMultipartUploadResponse uploadResult;
       uploadResult = invoker.retry("Completing multipart upload", destKey,
           true,
           retrying,
           () -> {
-            final CompleteMultipartUploadRequest request =
-                getRequestFactory().newCompleteMultipartUploadRequest(
+            final CompleteMultipartUploadRequest.Builder requestBuilder =
+                getRequestFactory().newCompleteMultipartUploadRequestBuilder(
                     destKey, uploadId, partETags);
-            return writeOperationHelperCallbacks.completeMultipartUpload(request);
+            return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
-      owner.finishedWrite(destKey, length, uploadResult.getETag(),
-          uploadResult.getVersionId(),
+      owner.finishedWrite(destKey, length, uploadResult.eTag(),
+          uploadResult.versionId(),
           putOptions);
       return uploadResult;
     }
@@ -360,10 +360,10 @@ public class WriteOperationHelper implements WriteOperations {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  public CompleteMultipartUploadResult completeMPUwithRetries(
+  public CompleteMultipartUploadResponse completeMPUwithRetries(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length,
       AtomicInteger errorCount,
       PutObjectOptions putOptions)
@@ -421,7 +421,7 @@ public class WriteOperationHelper implements WriteOperations {
   @Retries.RetryTranslated
   public void abortMultipartUpload(MultipartUpload upload)
       throws IOException {
-    invoker.retry("Aborting multipart commit", upload.getKey(), true,
+    invoker.retry("Aborting multipart commit", upload.key(), true,
         withinAuditSpan(getAuditSpan(),
             () -> owner.abortMultipartUpload(upload)));
   }
@@ -446,7 +446,7 @@ public class WriteOperationHelper implements WriteOperations {
         abortMultipartUpload(upload);
         count++;
       } catch (FileNotFoundException e) {
-        LOG.debug("Already aborted: {}", upload.getKey(), e);
+        LOG.debug("Already aborted: {}", upload.key(), e);
       }
     }
     return count;
@@ -603,10 +603,10 @@ public class WriteOperationHelper implements WriteOperations {
    * the retry count was exceeded
    */
   @Retries.RetryTranslated
-  public CompleteMultipartUploadResult commitUpload(
+  public CompleteMultipartUploadResponse commitUpload(
       String destKey,
       String uploadId,
-      List<PartETag> partETags,
+      List<CompletedPart> partETags,
       long length)
       throws IOException {
     checkNotNull(uploadId);
@@ -753,7 +753,7 @@ public class WriteOperationHelper implements WriteOperations {
      * @param request Complete multi-part upload request
      * @return completeMultipartUploadResult
      */
-    CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request);
+    CompleteMultipartUploadResponse completeMultipartUpload(CompleteMultipartUploadRequest request);
 
   }
 

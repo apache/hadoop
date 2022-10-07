@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.fs.s3a.test;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
+
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 
@@ -37,7 +38,7 @@ public class MinimalWriteOperationHelperCallbacks
   }
 
   @Override
-  public CompleteMultipartUploadResult completeMultipartUpload(
+  public CompleteMultipartUploadResponse completeMultipartUpload(
       CompleteMultipartUploadRequest request) {
     return null;
   }
