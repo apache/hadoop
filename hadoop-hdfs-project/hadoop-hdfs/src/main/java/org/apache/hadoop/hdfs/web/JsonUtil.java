@@ -709,7 +709,7 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
-    return toJsonString("BlockLocations", JsonUtil.toJsonString(locations));
+    return toJsonString("BlockLocations", JsonUtil.toJsonMap(locations));
   }
 
   public static Map<String, Object> toJsonMap(BlockLocation[] locations)
