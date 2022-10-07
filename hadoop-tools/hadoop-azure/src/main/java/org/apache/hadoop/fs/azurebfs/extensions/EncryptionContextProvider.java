@@ -64,6 +64,4 @@ public interface EncryptionContextProvider extends Destroyable {
    * @throws IOException error in fetching encryption key
    */
   ABFSKey getEncryptionKey(String path, ABFSKey encryptionContext) throws IOException;
-
-  void destroy();
 }

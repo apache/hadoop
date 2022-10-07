@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCR
 
 public class MockEncryptionContextProvider implements EncryptionContextProvider {
   private HashMap<String, String> pathToContextMap = new HashMap<>();
-  private HashMap<String, ABFSKey> contextToKeyMap = new HashMap<>();
+  private HashMap<String, byte[]> contextToKeyByteMap = new HashMap<>();
   @Override
   public void initialize(Configuration configuration, String accountName,
       String fileSystem) throws IOException {
@@ -45,9 +45,9 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     pathToContextMap.put(path, newContext);
     byte[] newKey = new byte[ENCRYPTION_KEY_LEN];
     new Random().nextBytes(newKey);
-    ABFSKey key = new MockABFSKey(newKey);
-    contextToKeyMap.put(newContext, key);
-    return new MockABFSKey(newContext.getBytes(StandardCharsets.UTF_8));
+    ABFSKey key = new ABFSKey(newKey);
+    contextToKeyByteMap.put(newContext, key.getEncoded());
+    return new ABFSKey(newContext.getBytes(StandardCharsets.UTF_8));
   }
 
   @Override
@@ -57,31 +57,12 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     if (!encryptionContextString.equals(pathToContextMap.get(path))) {
       throw new IOException("encryption context does not match path");
     }
-    return contextToKeyMap.get(encryptionContextString);
-  }
-
-  @Override
-  public void destroy() {
-    pathToContextMap = null;
-    for (ABFSKey encryptionKey : contextToKeyMap.values()) {
-      encryptionKey.destroy();
-    }
-    contextToKeyMap = null;
-  }
-
-  class MockABFSKey extends ABFSKey {
-    MockABFSKey(byte[] bytes) {
-      super(bytes);
-    }
-
-    @Override
-    public void destroy() {
-    }
+    return new ABFSKey(contextToKeyByteMap.get(encryptionContextString));
   }
 
   @VisibleForTesting
   public byte[] getEncryptionKeyForTest(String encryptionContext) {
-    return contextToKeyMap.get(encryptionContext).getEncoded();
+    return contextToKeyByteMap.get(encryptionContext);
   }
 
   @VisibleForTesting
