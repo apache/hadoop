@@ -184,8 +184,7 @@ This algorithm does not work safely or swiftly with AWS S3 storage because
 renames go from being fast, atomic operations to slow operations which can fail partway through.
 
 This then is the problem which the S3A committers address:
-
->*How to safely and reliably commit work to Amazon S3 or compatible object store.*
+*How to safely and reliably commit work to Amazon S3 or compatible object store.*
 
 
 ## Meet the S3A Committers
@@ -358,7 +357,7 @@ However, it has extra requirements of the filesystem
 with the magic directories and treat them as a special case.
 
 Now that [Amazon S3 is consistent](https://aws.amazon.com/s3/consistency/),
-the magic committer is enabled by default.
+the magic directory path rewriting is enabled by default.
 
 The Magic Committer has not been field tested to the extent of Netflix's committer;
 consider it the least mature of the committers.
@@ -523,8 +522,6 @@ Turn the magic on by setting `fs.s3a.committer.magic.enabled` to `true`:
   <value>true</value>
 </property>
 ```
-
-
 
 ### Enabling the committer
 
