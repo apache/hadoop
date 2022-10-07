@@ -18,35 +18,63 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Base64;
+
 import javax.security.auth.DestroyFailedException;
 import javax.security.auth.Destroyable;
 
-import org.apache.hadoop.util.Preconditions;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Base64;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
+import org.apache.hadoop.util.Preconditions;
 
+/**
+ * Class manages the encryptionContext and encryptionKey that needs to be added
+ * to the headers to server request if Customer-Encryption-Context is enabled in
+ * the configuration.
+ * <br>
+ * For fileCreation, the object helps in creating encryptionContext.
+ * <br>
+ * For all operations, the object helps in converting encryptionContext to
+ * encryptionKey through the implementation of EncryptionContextProvider.
+ * */
 public class EncryptionAdapter implements Destroyable {
   private final String path;
   private ABFSKey encryptionContext;
   private ABFSKey encryptionKey;
   private final EncryptionContextProvider provider;
 
+  /**
+   * Following constructor called when the encryptionContext of file is known.
+   * The server shall send encryptionContext as a String, the constructor shall
+   * convert the string into a byte-array. The converted byte-array would be used
+   * by the implementation of EncryptionContextProvider to create byte-array of
+   * encryptionKey.
+   * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       byte[] encryptionContext) throws IOException {
-    this(provider, path);
+    this.provider = provider;
+    this.path = path;
     Preconditions.checkNotNull(encryptionContext,
         "Encryption context should not be null.");
     this.encryptionContext = new ABFSKey(Base64.getDecoder().decode(encryptionContext));
     Arrays.fill(encryptionContext, (byte) 0);
+    computeKeys();
   }
 
+  /**
+   * Following constructor called in case of createPath. Since, the path is not
+   * on the server, encryptionContext is not there for the path. Implementation
+   * of the EncryptionContextProvider would be used to create encryptionContext
+   * from the path.
+   * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
       throws IOException {
     this.provider = provider;
     this.path = path;
+    computeKeys();
   }
 
   private void computeKeys() throws IOException {
@@ -62,17 +90,14 @@ public class EncryptionAdapter implements Destroyable {
   }
 
   public String getEncodedKey() throws IOException {
-    computeKeys();
     return EncodingHelper.getBase64EncodedString(encryptionKey.getEncoded());
   }
 
   public String getEncodedKeySHA() throws IOException {
-    computeKeys();
     return EncodingHelper.getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
   }
 
   public String getEncodedContext() throws IOException {
-    computeKeys();
     return EncodingHelper.getBase64EncodedString(encryptionContext.getEncoded());
   }
 

@@ -562,8 +562,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         triggerConditionalCreateOverwrite = true;
       }
 
-      EncryptionAdapter encryptionAdapter = new EncryptionAdapter(
-          client.getEncryptionContextProvider(), getRelativePath(path));
+      EncryptionAdapter encryptionAdapter = null;
+      if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+        encryptionAdapter = new EncryptionAdapter(
+            client.getEncryptionContextProvider(), getRelativePath(path));
+      }
       AbfsRestOperation op;
       if (triggerConditionalCreateOverwrite) {
         op = conditionalCreateOverwriteFile(relativePath,

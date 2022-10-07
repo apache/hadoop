@@ -22,22 +22,24 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
-public class EncodingHelper {
+/**
+ * Utility class for managing encryption of bytes or base64String conversion of
+ * bytes.
+ * */
+public final class EncodingHelper {
 
-    public static byte[] getSHA256Hash(byte[] key) {
-        try {
-            final MessageDigest digester = MessageDigest.getInstance("SHA-256");
-            return digester.digest(key);
-        } catch (NoSuchAlgorithmException ignored) {
-            /**
-             * This exception can be ignored. Reason being SHA-256 is a valid algorithm, and it is constant for all
-             * method calls.
-             */
-            return null;
-        }
+  public static byte[] getSHA256Hash(byte[] key) {
+    try {
+      final MessageDigest digester = MessageDigest.getInstance("SHA-256");
+      return digester.digest(key);
+    } catch (NoSuchAlgorithmException ignored) {
+      /*This exception can be ignored. Reason being SHA-256 is a valid algorithm,
+       and it is constant for all method calls.*/
+      throw new RuntimeException("SHA-256 algorithm not found in MessageDigest", ignored);
     }
+  }
 
-    public static String getBase64EncodedString(byte[] bytes) {
-        return Base64.getEncoder().encodeToString(bytes);
-    }
+  public static String getBase64EncodedString(byte[] bytes) {
+    return Base64.getEncoder().encodeToString(bytes);
+  }
 }
