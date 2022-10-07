@@ -1530,6 +1530,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
     // we expect to get 3 threads
+    this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
     this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE, 3);
     int minThreads2 = interceptor.getNumMinThreads(this.getConf());
     Assert.assertEquals(3, minThreads2);
@@ -1543,7 +1544,8 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(5, minThreads);
 
     // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
-    // we expect to get 3 threads
+    // we expect to get 8 threads
+    this.getConf().unset(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
     this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE, 8);
     int minThreads2 = interceptor.getNumMaxThreads(this.getConf());
     Assert.assertEquals(8, minThreads2);

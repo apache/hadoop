@@ -1814,7 +1814,7 @@ public class FederationClientInterceptor
     // we will still get the number of threads from this configuration.
     if (StringUtils.isNotBlank(threadSize)) {
       LOG.warn("{} is an deprecated property, " +
-          "please use {} to configure the minimum number of thread pool.",
+          "please remove it, use {} to configure the minimum number of thread pool.",
           YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
           YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
       return Integer.parseInt(threadSize);
@@ -1834,7 +1834,7 @@ public class FederationClientInterceptor
     // we will still get the number of threads from this configuration.
     if (StringUtils.isNotBlank(threadSize)) {
       LOG.warn("{} is an deprecated property, " +
-          "please use {} to configure the maximum number of thread pool.",
+          "please remove it, use {} to configure the maximum number of thread pool.",
           YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
           YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
       return Integer.parseInt(threadSize);
