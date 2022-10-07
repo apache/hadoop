@@ -195,7 +195,7 @@ public class FederationClientInterceptor
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router Client-" + userName + "-%d ").build();
 
-    BlockingQueue workQueue = new LinkedBlockingQueue<>();
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
@@ -1809,11 +1809,15 @@ public class FederationClientInterceptor
   protected int getNumMinThreads(Configuration conf) {
 
     String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
     if (StringUtils.isNotBlank(threadSize)) {
       LOG.warn("{} is an deprecated property, " +
-           "please use {} to configure the minimum number of thread pool.",
-              YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
-              YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+          "please use {} to configure the minimum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
     }
 
     int numMinThreads = getConf().getInt(
@@ -1825,11 +1829,15 @@ public class FederationClientInterceptor
   protected int getNumMaxThreads(Configuration conf) {
 
     String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
     if (StringUtils.isNotBlank(threadSize)) {
       LOG.warn("{} is an deprecated property, " +
           "please use {} to configure the maximum number of thread pool.",
           YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
           YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
     }
 
     int numMaxThreads = getConf().getInt(
