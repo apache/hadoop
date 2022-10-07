@@ -17,17 +17,25 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.Comparator;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -67,6 +75,14 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
@@ -77,6 +93,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
+
 /**
  * In-memory implementation of {@link FederationStateStore}.
  */
@@ -86,6 +104,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private Map<ApplicationId, SubClusterId> applications;
   private Map<ReservationId, SubClusterId> reservations;
   private Map<String, SubClusterPolicyConfiguration> policies;
+  private RouterRMDTSecretManagerState routerRMSecretManagerState;
+  private int maxAppsInStateStore;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -98,6 +118,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
     applications = new ConcurrentHashMap<ApplicationId, SubClusterId>();
     reservations = new ConcurrentHashMap<ReservationId, SubClusterId>();
     policies = new ConcurrentHashMap<String, SubClusterPolicyConfiguration>();
+    routerRMSecretManagerState = new RouterRMDTSecretManagerState();
+    maxAppsInStateStore = conf.getInt(
+        YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
   }
 
   @Override
@@ -245,22 +269,32 @@ public class MemoryFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
-    return GetApplicationHomeSubClusterResponse.newInstance(
-        ApplicationHomeSubCluster.newInstance(appId, applications.get(appId)));
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, applications.get(appId));
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    List<ApplicationHomeSubCluster> result =
-        new ArrayList<ApplicationHomeSubCluster>();
-    for (Entry<ApplicationId, SubClusterId> e : applications.entrySet()) {
-      result
-          .add(ApplicationHomeSubCluster.newInstance(e.getKey(), e.getValue()));
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
     }
 
-    GetApplicationsHomeSubClusterResponse.newInstance(result);
+    SubClusterId requestSC = request.getSubClusterId();
+    List<ApplicationHomeSubCluster> result = applications.keySet().stream()
+        .map(applicationId -> generateAppHomeSC(applicationId))
+        .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
+        .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
+        .limit(maxAppsInStateStore)
+        .collect(Collectors.toList());
+
+    LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
     return GetApplicationsHomeSubClusterResponse.newInstance(result);
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(ApplicationId applicationId) {
+    SubClusterId subClusterId = applications.get(applicationId);
+    return ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
   }
 
   @Override
@@ -364,5 +398,112 @@ public class MemoryFederationStateStore implements FederationStateStore {
     }
 
     return GetReservationsHomeSubClusterResponse.newInstance(result);
+  }
+
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationHomeSubCluster().getReservationId();
+
+    if (!reservations.containsKey(reservationId)) {
+      throw new YarnException("Reservation " + reservationId + " does not exist.");
+    }
+
+    SubClusterId subClusterId = request.getReservationHomeSubCluster().getHomeSubCluster();
+    reservations.put(reservationId, subClusterId);
+    return UpdateReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationId();
+    if (!reservations.containsKey(reservationId)) {
+      throw new YarnException("Reservation " + reservationId + " does not exist");
+    }
+    reservations.remove(reservationId);
+    return DeleteReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    // Restore the DelegationKey from the request
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+
+    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    if (rmDTMasterKeyState.contains(delegationKey)) {
+      LOG.info("Error storing info for RMDTMasterKey with keyID: {}.", delegationKey.getKeyId());
+      throw new IOException("RMDTMasterKey with keyID: " + delegationKey.getKeyId() +
+          " is already stored");
+    }
+
+    routerRMSecretManagerState.getMasterKeyState().add(delegationKey);
+    LOG.info("Store Router-RMDT master key with key id: {}. Currently rmDTMasterKeyState size: {}",
+        delegationKey.getKeyId(), rmDTMasterKeyState.size());
+
+    return RouterMasterKeyResponse.newInstance(masterKey);
+  }
+
+  @Override
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    // Restore the DelegationKey from the request
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+
+    LOG.info("Remove Router-RMDT master key with key id: {}.", delegationKey.getKeyId());
+    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    rmDTMasterKeyState.remove(delegationKey);
+
+    return RouterMasterKeyResponse.newInstance(masterKey);
+  }
+
+  @Override
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    // Restore the DelegationKey from the request
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+
+    Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
+    if (!rmDTMasterKeyState.contains(delegationKey)) {
+      throw new IOException("GetMasterKey with keyID: " + masterKey.getKeyId() +
+          " does not exist.");
+    }
+    RouterMasterKey resultRouterMasterKey = RouterMasterKey.newInstance(delegationKey.getKeyId(),
+        ByteBuffer.wrap(delegationKey.getEncodedKey()), delegationKey.getExpiryDate());
+    return RouterMasterKeyResponse.newInstance(resultRouterMasterKey);
+  }
+
+  /**
+   * Get DelegationKey By based on MasterKey.
+   *
+   * @param masterKey masterKey
+   * @return DelegationKey
+   */
+  private static DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
+    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
+    byte[] keyBytes = new byte[keyByteBuf.remaining()];
+    keyByteBuf.get(keyBytes);
+    return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+  }
+
+  @VisibleForTesting
+  public RouterRMDTSecretManagerState getRouterRMSecretManagerState() {
+    return routerRMSecretManagerState;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterId, SubClusterInfo> getMembership() {
+    return membership;
+  }
+
+  @VisibleForTesting
+  public void setMembership(Map<SubClusterId, SubClusterInfo> membership) {
+    this.membership = membership;
   }
 }

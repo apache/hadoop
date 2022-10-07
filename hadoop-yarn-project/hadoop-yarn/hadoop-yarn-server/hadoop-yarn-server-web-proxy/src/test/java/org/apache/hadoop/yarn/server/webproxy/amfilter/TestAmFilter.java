@@ -22,44 +22,45 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Enumeration;
 import java.util.Collections;
-import java.util.Map;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.servlet.FilterConfig;
-import javax.servlet.FilterChain;
+import java.util.function.Supplier;
 import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletResponse;
-import javax.servlet.ServletRequest;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.util.function.Supplier;
-import org.apache.hadoop.http.TestHttpServer;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
+
+import org.apache.hadoop.http.TestHttpServer;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test AmIpFilter. Requests to a no declared hosts should has way through
@@ -114,9 +115,10 @@ public class TestAmFilter {
     }
   }
 
-  @Test(timeout = 5000)
+  @Test
+  @Timeout(5000)
   @SuppressWarnings("deprecation")
-  public void filterNullCookies() throws Exception {
+  void filterNullCookies() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
 
     Mockito.when(request.getCookies()).thenReturn(null);
@@ -145,7 +147,7 @@ public class TestAmFilter {
   }
 
   @Test
-  public void testFindRedirectUrl() throws Exception {
+  void testFindRedirectUrl() throws Exception {
     final String rm1 = "rm1";
     final String rm2 = "rm2";
     // generate a valid URL
@@ -159,7 +161,7 @@ public class TestAmFilter {
     spy.proxyUriBases = new HashMap<>();
     spy.proxyUriBases.put(rm1, rm1Url);
     spy.proxyUriBases.put(rm2, rm2Url);
-    spy.rmUrls = new String[] { rm1, rm2 };
+    spy.rmUrls = new String[]{rm1, rm2};
 
     assertThat(spy.findRedirectUrl()).isEqualTo(rm1Url);
   }
@@ -179,8 +181,9 @@ public class TestAmFilter {
     return server.getURI().toString() + servletPath;
   }
 
-  @Test(timeout = 2000)
-  public void testProxyUpdate() throws Exception {
+  @Test
+  @Timeout(2000)
+  void testProxyUpdate() throws Exception {
     Map<String, String> params = new HashMap<>();
     params.put(AmIpFilter.PROXY_HOSTS, proxyHost);
     params.put(AmIpFilter.PROXY_URI_BASES, proxyUri);
@@ -220,9 +223,10 @@ public class TestAmFilter {
   /**
    * Test AmIpFilter
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(10000)
   @SuppressWarnings("deprecation")
-  public void testFilter() throws Exception {
+  void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();
     params.put(AmIpFilter.PROXY_HOST, proxyHost);
     params.put(AmIpFilter.PROXY_URI_BASE, proxyUri);
@@ -286,7 +290,7 @@ public class TestAmFilter {
     assertTrue(doFilterRequest.contains("HttpServletRequest"));
 
     // cookie added
-    Cookie[] cookies = new Cookie[] {
+    Cookie[] cookies = new Cookie[]{
         new Cookie(WebAppProxyServlet.PROXY_USER_COOKIE_NAME, "user")
     };
 

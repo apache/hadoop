@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -108,6 +109,8 @@ public class ConnectionPool {
 
   /** Enable using multiple physical socket or not. **/
   private final boolean enableMultiSocket;
+  /** StateID alignment context. */
+  private final PoolAlignmentContext alignmentContext;
 
   /** Map for the protocols and their protobuf implementations. */
   private final static Map<Class<?>, ProtoImpl> PROTO_MAP = new HashMap<>();
@@ -138,7 +141,8 @@ public class ConnectionPool {
 
   protected ConnectionPool(Configuration config, String address,
       UserGroupInformation user, int minPoolSize, int maxPoolSize,
-      float minActiveRatio, Class<?> proto) throws IOException {
+      float minActiveRatio, Class<?> proto, PoolAlignmentContext alignmentContext)
+      throws IOException {
 
     this.conf = config;
 
@@ -156,6 +160,8 @@ public class ConnectionPool {
     this.enableMultiSocket = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_KEY,
         RBFConfigKeys.DFS_ROUTER_NAMENODE_ENABLE_MULTIPLE_SOCKET_DEFAULT);
+
+    this.alignmentContext = alignmentContext;
 
     // Add minimum connections to the pool
     for (int i = 0; i < this.minSize; i++) {
@@ -209,6 +215,14 @@ public class ConnectionPool {
   @VisibleForTesting
   public AtomicInteger getClientIndex() {
     return this.clientIndex;
+  }
+
+  /**
+   * Get the alignment context for this pool.
+   * @return Alignment context
+   */
+  public PoolAlignmentContext getPoolAlignmentContext() {
+    return this.alignmentContext;
   }
 
   /**
@@ -398,7 +412,7 @@ public class ConnectionPool {
   public ConnectionContext newConnection() throws IOException {
     return newConnection(this.conf, this.namenodeAddress,
         this.ugi, this.protocol, this.enableMultiSocket,
-        this.socketIndex.incrementAndGet());
+        this.socketIndex.incrementAndGet(), alignmentContext);
   }
 
   /**
@@ -413,13 +427,15 @@ public class ConnectionPool {
    * @param ugi User context.
    * @param proto Interface of the protocol.
    * @param enableMultiSocket Enable multiple socket or not.
+   * @param alignmentContext Client alignment context.
    * @return proto for the target ClientProtocol that contains the user's
    *         security context.
    * @throws IOException If it cannot be created.
    */
   protected static <T> ConnectionContext newConnection(Configuration conf,
       String nnAddress, UserGroupInformation ugi, Class<T> proto,
-      boolean enableMultiSocket, int socketIndex) throws IOException {
+      boolean enableMultiSocket, int socketIndex,
+      AlignmentContext alignmentContext) throws IOException {
     if (!PROTO_MAP.containsKey(proto)) {
       String msg = "Unsupported protocol for connection to NameNode: "
           + ((proto != null) ? proto.getName() : "null");
@@ -448,10 +464,11 @@ public class ConnectionPool {
           socket, classes.protoPb, ugi, RPC.getRpcTimeout(conf),
           defaultPolicy, conf, socketIndex);
       proxy = RPC.getProtocolProxy(classes.protoPb, version, connectionId,
-          conf, factory).getProxy();
+          conf, factory, alignmentContext).getProxy();
     } else {
       proxy = RPC.getProtocolProxy(classes.protoPb, version, socket, ugi,
-          conf, factory, RPC.getRpcTimeout(conf), defaultPolicy, null).getProxy();
+          conf, factory, RPC.getRpcTimeout(conf), defaultPolicy, null,
+          alignmentContext).getProxy();
     }
 
     T client = newProtoClient(proto, classes, proxy);

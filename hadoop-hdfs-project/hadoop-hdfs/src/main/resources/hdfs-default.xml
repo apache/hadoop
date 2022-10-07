@@ -4277,14 +4277,18 @@
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault</value>
   <description>
     Class representing block placement policy for non-striped files.
-    There are four block placement policies currently being supported:
+    There are six block placement policies currently being supported:
     BlockPlacementPolicyDefault, BlockPlacementPolicyWithNodeGroup,
-    BlockPlacementPolicyRackFaultTolerant and BlockPlacementPolicyWithUpgradeDomain.
+    BlockPlacementPolicyRackFaultTolerant, BlockPlacementPolicyWithUpgradeDomain,
+    AvailableSpaceBlockPlacementPolicy and AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
     BlockPlacementPolicyDefault chooses the desired number of targets
     for placing block replicas in a default way. BlockPlacementPolicyWithNodeGroup
     places block replicas on environment with node-group layer. BlockPlacementPolicyRackFaultTolerant
     places the replicas to more racks.
     BlockPlacementPolicyWithUpgradeDomain places block replicas that honors upgrade domain policy.
+    AvailableSpaceBlockPlacementPolicy places block replicas based on space balanced policy.
+    AvailableSpaceRackFaultTolerantBlockPlacementPolicy places block replicas based on
+    space balanced rack fault tolerant policy.
     The details of placing replicas are documented in the javadoc of the corresponding policy classes.
     The default policy is BlockPlacementPolicyDefault, and the corresponding class is
     org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault.
@@ -5362,6 +5366,14 @@
     in seconds.  If this value is greater than the property
     dfs.namenode.stale.datanode.interval, then the calculated value above
     is used.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.remove.dead.datanode.batchnum</name>
+  <value>10</value>
+  <description>
+    Maximum number of datanodes removed by HeartbeatManager per scan.
   </description>
 </property>
 
@@ -6444,6 +6456,14 @@
       The amount of time the fsck client will wait to read from the namenode
       before timing out. If the namenode does not report progress more
       frequently than this time, the client will give up waiting.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.output.stream.uniq.default.key</name>
+    <value>DEFAULT</value>
+    <description>
+      The default prefix key to construct the uniqKey for one DFSOutputStream.
+      If the namespace is DEFAULT, it's best to change this conf to other value.
     </description>
   </property>
 </configuration>

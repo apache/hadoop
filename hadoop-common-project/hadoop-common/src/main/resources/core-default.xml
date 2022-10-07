@@ -131,6 +131,14 @@
 </property>
 
 <property>
+  <name>hadoop.security.resolver.impl</name>
+  <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+  <description>
+    The resolver implementation used to resolve FQDN for Kerberos
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.dns.log-slow-lookups.enabled</name>
   <value>false</value>
   <description>
@@ -576,6 +584,18 @@
     Default is 10 seconds. Units in milliseconds.
   </description>
 </property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.group.search.filter.pattern</name>
+  <value></value>
+  <description>
+    Comma separated values that needs to be substituted in the group search
+    filter during group lookup. The values are substituted in the order they
+    appear in the list, the first value will replace {0} the second {1} and
+    so on.
+  </description>
+</property>
+
 
 <property>
   <name>hadoop.security.group.mapping.providers</name>
@@ -1075,14 +1095,6 @@
 </property>
 
 <property>
-  <name>fs.viewfs.overload.scheme.target.swift.impl</name>
-  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
-  <description>The SwiftNativeFileSystem for view file system overload scheme
-   when child file system and ViewFSOverloadScheme's schemes are swift.
-  </description>
-</property>
-
-<property>
   <name>fs.viewfs.overload.scheme.target.oss.impl</name>
   <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
   <description>The AliyunOSSFileSystem for view file system overload scheme
@@ -1189,12 +1201,6 @@
   <name>fs.du.interval</name>
   <value>600000</value>
   <description>File space usage statistics refresh interval in msec.</description>
-</property>
-
-<property>
-  <name>fs.swift.impl</name>
-  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
-  <description>The implementation class of the OpenStack Swift Filesystem</description>
 </property>
 
 <property>

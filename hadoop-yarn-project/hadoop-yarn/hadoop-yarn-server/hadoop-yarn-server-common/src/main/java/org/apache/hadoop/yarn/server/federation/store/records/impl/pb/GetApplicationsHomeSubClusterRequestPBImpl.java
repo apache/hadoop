@@ -19,10 +19,13 @@ package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterRequestProto;
+import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.GetApplicationsHomeSubClusterRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
 
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 
 /**
  * Protocol buffer based implementation of
@@ -75,4 +78,37 @@ public class GetApplicationsHomeSubClusterRequestPBImpl
     return TextFormat.shortDebugString(getProto());
   }
 
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = GetApplicationsHomeSubClusterRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public SubClusterId getSubClusterId() {
+    GetApplicationsHomeSubClusterRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasSubClusterId()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getSubClusterId());
+  }
+
+  @Override
+  public void setSubClusterId(SubClusterId subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(convertToProtoFormat(subClusterId));
+  }
+
+  private SubClusterId convertFromProtoFormat(YarnServerFederationProtos.SubClusterIdProto sc) {
+    return new SubClusterIdPBImpl(sc);
+  }
+
+  private YarnServerFederationProtos.SubClusterIdProto convertToProtoFormat(SubClusterId sc) {
+    return ((SubClusterIdPBImpl) sc).getProto();
+  }
 }
