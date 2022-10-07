@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
@@ -50,6 +49,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;

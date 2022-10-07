@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -99,7 +98,7 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
         TracingHeaderFormat.ALL_ID_FORMAT, null);
     boolean isNamespaceEnabled = fs.getIsNamespaceEnabled(tracingContext);
     String path = getRelativePath(new Path("/testDir"));
-    Permissions permissions = new Permissions(isNamespaceEnabled,
+    AzureBlobFileSystemStore.Permissions permissions = new AzureBlobFileSystemStore.Permissions(isNamespaceEnabled,
         FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
 
     //request should not fail for invalid clientCorrelationID

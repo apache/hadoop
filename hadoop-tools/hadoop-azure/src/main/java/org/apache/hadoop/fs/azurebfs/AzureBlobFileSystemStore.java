@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
@@ -612,10 +613,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    */
   private AbfsRestOperation conditionalCreateOverwriteFile(final String relativePath,
       final FileSystem.Statistics statistics,
-      Permissions permissions,
+      final Permissions permissions,
       final boolean isAppendBlob,
-      EncryptionAdapter encryptionAdapter,
-      TracingContext tracingContext) throws IOException {
+      final EncryptionAdapter encryptionAdapter,
+      final TracingContext tracingContext) throws IOException {
     AbfsRestOperation op;
 
     try {
@@ -787,17 +788,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+        /**
+         * For file created with ENCRYPTION_CONTEXT, client shall receive
+         * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
+         * */
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          try {
-            encryptionAdapter = new EncryptionAdapter(
-                client.getEncryptionContextProvider(), getRelativePath(path),
-                op.getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
-                    .getBytes(StandardCharsets.UTF_8));
-          } catch (NullPointerException ex) {
+          final String fileEncryptionContext = op.getResponseHeader(
+              HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
+          if (fileEncryptionContext == null) {
             LOG.debug("EncryptionContext missing in GetPathStatus response");
-            throw new IOException(
-                "EncryptionContext not present in GetPathStatus response headers", ex);
+            throw new PathIOException(path.toString(),
+                "EncryptionContext not present in GetPathStatus response headers");
           }
+          encryptionAdapter = new EncryptionAdapter(
+              client.getEncryptionContextProvider(), getRelativePath(path),
+              fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       }
 

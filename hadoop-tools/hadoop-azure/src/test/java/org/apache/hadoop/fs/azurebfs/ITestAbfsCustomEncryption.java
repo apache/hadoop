@@ -20,7 +20,10 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Hashtable;
+import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
