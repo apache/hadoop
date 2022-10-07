@@ -36,7 +36,6 @@ import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
@@ -44,6 +43,7 @@ import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.junit.AfterClass;
@@ -80,6 +80,9 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
+
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -339,7 +342,7 @@ public class StagingTestBase {
     // created in Before
     private StagingTestBase.ClientResults results = null;
     private StagingTestBase.ClientErrors errors = null;
-    private AmazonS3 mockClient = null;
+    private Pair<AmazonS3, S3Client> mockClient = null;
 
     @Before
     public void setupJob() throws Exception {
@@ -490,7 +493,7 @@ public class StagingTestBase {
     }
 
     public List<String> getDeletePaths() {
-      return deletes.stream().map(DeleteObjectRequest::getKey).collect(
+      return deletes.stream().map(DeleteObjectRequest::key).collect(
           Collectors.toList());
     }
 
@@ -619,9 +622,10 @@ public class StagingTestBase {
    * @param errors when (if any) to fail
    * @return the mock client to patch in to a committer/FS instance
    */
-  public static AmazonS3 newMockS3Client(final ClientResults results,
+  public static Pair<AmazonS3, S3Client> newMockS3Client(final ClientResults results,
       final ClientErrors errors) {
     AmazonS3Client mockClient = mock(AmazonS3Client.class);
+    S3Client mockClientV2 = mock(S3Client.class);
     final Object lock = new Object();
 
     // initiateMultipartUpload
@@ -721,28 +725,15 @@ public class StagingTestBase {
 
     // deleteObject mocking
     doAnswer(invocation -> {
-      LOG.debug("deleteObject for {}", mockClient);
+      LOG.debug("deleteObject for {}", mockClientV2);
       synchronized (lock) {
         results.deletes.add(getArgumentAt(invocation,
             0, DeleteObjectRequest.class));
         return null;
       }
     })
-        .when(mockClient)
+        .when(mockClientV2)
         .deleteObject(any(DeleteObjectRequest.class));
-
-    // deleteObject mocking
-    doAnswer(invocation -> {
-      LOG.debug("deleteObject for {}", mockClient);
-      synchronized (lock) {
-        results.deletes.add(new DeleteObjectRequest(
-            getArgumentAt(invocation, 0, String.class),
-            getArgumentAt(invocation, 1, String.class)
-        ));
-        return null;
-      }
-    }).when(mockClient)
-        .deleteObject(any(String.class), any(String.class));
 
     // to String returns the debug information
     when(mockClient.toString()).thenAnswer(
@@ -761,7 +752,7 @@ public class StagingTestBase {
           }
         });
 
-    return mockClient;
+    return Pair.of(mockClient, mockClientV2);
   }
 
   /**

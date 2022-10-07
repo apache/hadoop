@@ -24,8 +24,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
@@ -38,19 +36,22 @@ import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 
 /**
@@ -276,18 +277,18 @@ public interface RequestFactory {
       int maxKeys);
 
   /**
-   * Create a request to delete a single object.
+   * Create a request builder to delete a single object.
    * @param key object to delete
-   * @return the request
+   * @return the request builder.
    */
-  DeleteObjectRequest newDeleteObjectRequest(String key);
+  DeleteObjectRequest.Builder newDeleteObjectRequestBuilder(String key);
 
   /**
-   * Bulk delete request.
+   * Create a request builder to delete objects in bulk.
    * @param keysToDelete list of keys to delete.
-   * @return the request
+   * @return the request builder.
    */
-  DeleteObjectsRequest newBulkDeleteRequest(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete);
+  DeleteObjectsRequest.Builder newBulkDeleteRequestBuilder(
+          List<ObjectIdentifier> keysToDelete);
 
 }

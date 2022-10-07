@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
@@ -139,6 +140,10 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     }
   }
 
+  private <T extends AwsRequest> void a(AwsRequest.Builder request) {
+    // TODO: Implement for SDK v2 requests
+  }
+
   /**
    * Analyze the request, log the output, return the info.
    * @param request request.
@@ -166,10 +171,10 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    // a(factory.newCompleteMultipartUploadRequest(path, id,
    //     new ArrayList<>()));
    // a(factory.newCopyObjectRequest(path, path2, md));
-    a(factory.newDeleteObjectRequest(path));
-    a(factory.newBulkDeleteRequest(new ArrayList<>()));
+    a(factory.newDeleteObjectRequestBuilder(path));
+    a(factory.newBulkDeleteRequestBuilder(new ArrayList<>()));
    // a(factory.newDirectoryMarkerRequest(path));
-   // a(factory.newGetObjectRequest(path));
+    a(factory.newGetObjectRequestBuilder(path));
    // a(factory.newGetObjectMetadataRequest(path));
    // a(factory.newListMultipartUploadsRequest(path));
     //TODO: Commenting out for now, new request extends AwsRequest, this can be updated once all

@@ -28,8 +28,6 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
@@ -46,6 +44,8 @@ import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -55,6 +55,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
@@ -620,17 +621,17 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public DeleteObjectRequest newDeleteObjectRequest(String key) {
-    return prepareRequest(new DeleteObjectRequest(bucket, key));
+  public DeleteObjectRequest.Builder newDeleteObjectRequestBuilder(String key) {
+    return prepareV2Request(DeleteObjectRequest.builder().bucket(bucket).key(key));
   }
 
   @Override
-  public DeleteObjectsRequest newBulkDeleteRequest(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
-    return prepareRequest(
-        new DeleteObjectsRequest(bucket)
-            .withKeys(keysToDelete)
-            .withQuiet(true));
+  public DeleteObjectsRequest.Builder newBulkDeleteRequestBuilder(
+          List<ObjectIdentifier> keysToDelete) {
+    return prepareV2Request(DeleteObjectsRequest
+        .builder()
+        .bucket(bucket)
+        .delete(d -> d.objects(keysToDelete).quiet(true)));
   }
 
   @Override

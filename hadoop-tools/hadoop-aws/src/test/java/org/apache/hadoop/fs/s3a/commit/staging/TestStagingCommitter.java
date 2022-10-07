@@ -70,6 +70,8 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
+import software.amazon.awssdk.services.s3.S3Client;
+
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.*;
@@ -112,7 +114,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   // created in Before
   private StagingTestBase.ClientResults results = null;
   private StagingTestBase.ClientErrors errors = null;
-  private AmazonS3 mockClient = null;
+  private Pair<AmazonS3, S3Client> mockClient = null;
   private File tmpDir;
 
   /**
@@ -645,7 +647,6 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
           return jobCommitter.toString();
         });
 
-
     Set<String> commits = results.getCommits()
         .stream()
         .map(commit ->
@@ -655,7 +656,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     Set<String> deletes = results.getDeletes()
         .stream()
         .map(delete ->
-            "s3a://" + delete.getBucketName() + "/" + delete.getKey())
+            "s3a://" + delete.bucket() + "/" + delete.key())
         .collect(Collectors.toSet());
 
     Assertions.assertThat(commits)
