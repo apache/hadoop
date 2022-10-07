@@ -1,5 +1,5 @@
 diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/metrics2/MetricsSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/metrics2/MetricsSystem.java
-index a277abd6e13..1d131d5db6e 100644
+index fef8c4b7e4b..8d2b9339706 100644
 --- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/metrics2/MetricsSystem.java
 +++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/metrics2/MetricsSystem.java
 @@ -42,18 +42,6 @@
@@ -14,7 +14,7 @@ index a277abd6e13..1d131d5db6e 100644
 -   *              the annotations of the source object.)
 -   * @param desc  the description of the source (or null. See above.)
 -   * @return the source object
--   * @exception MetricsException
+-   * @exception MetricsException Metrics Exception.
 -   */
 -  public abstract <T> T register(String name, String desc, T source);
 -
@@ -38,7 +38,7 @@ index a277abd6e13..1d131d5db6e 100644
 +   *              the annotations of the source object.)
 +   * @param desc  the description of the source (or null. See above.)
 +   * @return the source object
-    * @exception MetricsException
+    * @exception MetricsException Metrics Exception.
     */
 -  public abstract <T extends MetricsSink>
 -  T register(String name, String desc, T sink);
