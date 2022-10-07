@@ -184,17 +184,9 @@ public class FederationClientInterceptor
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random(System.currentTimeMillis());
 
-    int numThreads = getConf().getInt(
-        YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
+    int numMinThreads = getNumMinThreads(getConf());
 
-    int numMinThreads = getConf().getInt(
-        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
-
-    int numMaxThreads = getConf().getInt(
-        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+    int numMaxThreads = getNumMaxThreads(getConf());
 
     long keepAliveTime = getConf().getTimeDuration(
         YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
@@ -205,7 +197,7 @@ public class FederationClientInterceptor
 
     BlockingQueue workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
-            keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+        keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     final Configuration conf = this.getConf();
 
@@ -1812,5 +1804,37 @@ public class FederationClientInterceptor
             reservationId);
       }
     }
+  }
+
+  protected int getNumMinThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is an deprecated property, " +
+           "please use {} to configure the minimum number of thread pool.",
+              YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+              YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+    }
+
+    int numMinThreads = getConf().getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+    return numMinThreads;
+  }
+
+  protected int getNumMaxThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is an deprecated property, " +
+          "please use {} to configure the maximum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+    }
+
+    int numMaxThreads = getConf().getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+    return numMaxThreads;
   }
 }

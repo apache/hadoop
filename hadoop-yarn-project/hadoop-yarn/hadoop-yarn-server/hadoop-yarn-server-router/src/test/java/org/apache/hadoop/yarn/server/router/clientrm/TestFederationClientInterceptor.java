@@ -1520,4 +1520,18 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     return ReservationDefinition.newInstance(arrival, deadline,
         requests, username, "0", Priority.UNDEFINED);
   }
+
+  @Test
+  public void testGetNumMinThreads() throws Exception {
+    // If we don't configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+    // we expect to get 5 threads
+    int minThreads = interceptor.getNumMinThreads(this.getConf());
+    Assert.assertEquals(5, minThreads);
+
+    // If we configure YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+    // we expect to get 3 threads
+    this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE, 3);
+    int minThreads2 = interceptor.getNumMinThreads(this.getConf());
+    Assert.assertEquals(3, minThreads2);
+  }
 }

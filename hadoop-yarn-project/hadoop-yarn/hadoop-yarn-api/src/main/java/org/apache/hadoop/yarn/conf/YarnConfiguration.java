@@ -4117,6 +4117,18 @@ public class YarnConfiguration extends Configuration {
 
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
+  /**
+   * This configurable that controls the thread pool size of the threadpool of the interceptor.
+   * The corePoolSize(minimumPoolSize) and maximumPoolSize of the thread pool
+   * are controlled by this configurable.
+   * In order to control the thread pool more accurately, this parameter is deprecated.
+   *
+   * corePoolSize(minimumPoolSize) use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE}
+   *
+   * maximumPoolSize use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE}
+   */
   @Deprecated
   public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
       ROUTER_PREFIX + "interceptor.user.threadpool-size";
@@ -4125,17 +4137,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE = 5;
 
   public static final String ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE =
-      YARN_PREFIX + "interceptor.user-thread-pool.maximum-pool-size";
+      ROUTER_PREFIX + "interceptor.user-thread-pool.minimum-pool-size";
 
   public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE = 5;
 
   public static final String ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE =
-      YARN_PREFIX + "interceptor.user-thread-pool.maximum-pool-size";
+      ROUTER_PREFIX + "interceptor.user-thread-pool.maximum-pool-size";
 
   public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE = 10;
 
   public static final String ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
-      YARN_PREFIX + "interceptor.user-thread-pool.keep-alive-time";
+      ROUTER_PREFIX + "interceptor.user-thread-pool.keep-alive-time";
 
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
       10*1000; // 10s
