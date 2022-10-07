@@ -499,26 +499,21 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // See HADOOP-16785
       throw wrapException(path, e.getMessage(), e);
     } finally {
-      try {
-        if (encryptionAdapter != null) {
-          encryptionAdapter.destroy();
-        }
-      } catch (DestroyFailedException e) {
-        throw new IOException(
-                "Could not destroy encryptionContext: " + e.getMessage());
-      } finally {
-        if (hasLease()) {
-          lease.free();
-          lease = null;
-        }
-        lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-        buffer = null;
-        bufferIndex = 0;
-        closed = true;
-        writeOperations.clear();
-        if (hasActiveBlock()) {
-          clearActiveBlock();
-        }
+      if (encryptionAdapter != null) {
+        encryptionAdapter.destroy();
+      }
+
+      if (hasLease()) {
+        lease.free();
+        lease = null;
+      }
+      lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+      buffer = null;
+      bufferIndex = 0;
+      closed = true;
+      writeOperations.clear();
+      if (hasActiveBlock()) {
+        clearActiveBlock();
       }
     }
     LOG.debug("Closing AbfsOutputStream : {}", this);

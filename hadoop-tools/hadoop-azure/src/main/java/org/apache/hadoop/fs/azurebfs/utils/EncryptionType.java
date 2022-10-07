@@ -19,10 +19,13 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 /**
- * Enum EncryptionType to represent the level of encryption applied
+ * Enum EncryptionType to represent the level of encryption applied.
+ * GLOBAL_KEY: encrypt all files with the same client-provided key
+ * ENCRYPTION_CONTEXT: uses client-provided implementation to generate keys
+ * NONE: encryption handled entirely at server
  */
 public enum EncryptionType {
-  GLOBAL_KEY,          // encrypt all files with the same client-provided key
-  ENCRYPTION_CONTEXT,  // uses client-provided implementation to generate keys
-  NONE                 // encryption handled entirely at server
+  GLOBAL_KEY,
+  ENCRYPTION_CONTEXT,
+  NONE
 }

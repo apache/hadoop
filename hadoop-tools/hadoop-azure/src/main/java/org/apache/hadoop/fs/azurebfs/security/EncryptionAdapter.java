@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.security;
 
-
-import javax.security.auth.DestroyFailedException;
-import javax.security.auth.Destroyable;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
-import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
-import org.apache.hadoop.util.Preconditions;
 
 /**
  * Class manages the encryptionContext and encryptionKey that needs to be added
@@ -40,9 +35,9 @@ import org.apache.hadoop.util.Preconditions;
  * For all operations, the object helps in converting encryptionContext to
  * encryptionKey through the implementation of EncryptionContextProvider.
  * */
-public class EncryptionAdapter implements Destroyable {
+public class EncryptionAdapter {
   private final String path;
-  private ABFSKey encryptionContext;
+  private final ABFSKey encryptionContext;
   private ABFSKey encryptionKey;
   private final EncryptionContextProvider provider;
 
@@ -57,7 +52,7 @@ public class EncryptionAdapter implements Destroyable {
       byte[] encryptionContext) throws IOException {
     this.provider = provider;
     this.path = path;
-    Preconditions.checkNotNull(encryptionContext,
+    Objects.requireNonNull(encryptionContext,
         "Encryption context should not be null.");
     this.encryptionContext = new ABFSKey(Base64.getDecoder().decode(encryptionContext));
     Arrays.fill(encryptionContext, (byte) 0);
@@ -74,19 +69,15 @@ public class EncryptionAdapter implements Destroyable {
       throws IOException {
     this.provider = provider;
     this.path = path;
+    encryptionContext = provider.getEncryptionContext(path);
+    Objects.requireNonNull(encryptionContext,
+        "Encryption context should not be null.");
     computeKeys();
   }
 
   private void computeKeys() throws IOException {
-    if (encryptionContext == null) {
-      encryptionContext = provider.getEncryptionContext(path);
-    }
-    Preconditions.checkNotNull(encryptionContext,
-            "Encryption context should not be null.");
-    if (encryptionKey == null) {
-      encryptionKey = provider.getEncryptionKey(path, encryptionContext);
-    }
-    Preconditions.checkNotNull(encryptionKey, "Encryption key should not be null.");
+    encryptionKey = provider.getEncryptionKey(path, encryptionContext);
+    Objects.requireNonNull(encryptionKey, "Encryption key should not be null.");
   }
 
   public String getEncodedKey() throws IOException {
@@ -101,7 +92,7 @@ public class EncryptionAdapter implements Destroyable {
     return EncodingHelper.getBase64EncodedString(encryptionContext.getEncoded());
   }
 
-  public void destroy() throws DestroyFailedException {
+  public void destroy() {
     if (encryptionContext != null) {
       encryptionContext.destroy();
     }

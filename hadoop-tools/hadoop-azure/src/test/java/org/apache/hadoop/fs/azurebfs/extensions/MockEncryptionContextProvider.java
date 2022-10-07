@@ -25,7 +25,6 @@ import java.util.Random;
 import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
 
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.ENCRYPTION_KEY_LEN;
@@ -60,12 +59,10 @@ public class MockEncryptionContextProvider implements EncryptionContextProvider 
     return new ABFSKey(contextToKeyByteMap.get(encryptionContextString));
   }
 
-  @VisibleForTesting
   public byte[] getEncryptionKeyForTest(String encryptionContext) {
     return contextToKeyByteMap.get(encryptionContext);
   }
 
-  @VisibleForTesting
   public String getEncryptionContextForTest(String path) {
     return pathToContextMap.get(path);
   }

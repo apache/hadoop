@@ -36,11 +36,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.FutureCallback;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -66,10 +66,9 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
-
-import javax.security.auth.DestroyFailedException;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
@@ -90,7 +89,7 @@ public class AbfsClient implements Closeable {
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private String xMsVersion = "2019-12-12";
+  private String xMsVersion = DECEMBER_2019_API_VERSION;
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -130,7 +129,7 @@ public class AbfsClient implements Closeable {
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = "2021-04-10"; // will be default once server change deployed
+      xMsVersion = APRIL_2021_API_VERSION; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -190,7 +189,7 @@ public class AbfsClient implements Closeable {
   @Override
   public void close() throws IOException {
     if (tokenProvider instanceof Closeable) {
-      org.apache.hadoop.io.IOUtils.cleanupWithLogger(LOG,
+      IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
     }
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
@@ -278,12 +277,7 @@ public class AbfsClient implements Closeable {
     }
 
     if (encryptionAdapterCreated && encryptionAdapter != null) {
-      try {
-        encryptionAdapter.destroy();
-      } catch (DestroyFailedException e) {
-        throw new IOException(
-          "Could not destroy encryptionContext: " + e.getMessage());
-      }
+      encryptionAdapter.destroy();
     }
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));

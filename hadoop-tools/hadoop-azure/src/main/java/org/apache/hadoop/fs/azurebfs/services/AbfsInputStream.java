@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import javax.security.auth.DestroyFailedException;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,8 +26,8 @@ import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -45,8 +46,6 @@ import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-
-import javax.security.auth.DestroyFailedException;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -702,16 +701,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("Closing {}", this);
     closed = true;
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
-    try {
-      if (encryptionAdapter != null) {
-        encryptionAdapter.destroy();
-      }
-    } catch (DestroyFailedException e) {
-      throw new IOException(
-          "Could not destroy encryptionContext: " + e.getMessage());
-    } finally {
-        buffer = null; // de-reference the buffer so it can be GC'ed sooner
-      }
+    buffer = null; // de-reference the buffer so it can be GC'ed sooner
+    if (encryptionAdapter != null) {
+      encryptionAdapter.destroy();
+    }
   }
 
   /**

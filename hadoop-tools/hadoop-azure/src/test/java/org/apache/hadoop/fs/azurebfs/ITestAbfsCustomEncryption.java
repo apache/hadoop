@@ -20,9 +20,11 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -74,6 +76,8 @@ import static org.apache.hadoop.fs.permission.FsAction.ALL;
 public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   private final byte[] cpk = new byte[ENCRYPTION_KEY_LEN];
   private final String cpkSHAEncoded;
+
+  private List<AzureBlobFileSystem> fileSystemsOpenedInTest = new ArrayList<>();
 
   // Encryption type used by filesystem while creating file
   @Parameterized.Parameter
@@ -144,7 +148,6 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   }
 
   public ITestAbfsCustomEncryption() throws Exception {
-    super();
     Assume.assumeTrue("Account should be HNS enabled for CPK",
         getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
             false));
@@ -155,7 +158,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
-    AzureBlobFileSystem fs = getFS();
+    AzureBlobFileSystem fs = getOrCreateFS();
     Path testPath = path("/testFile");
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
     MockEncryptionContextProvider ecp =
@@ -216,6 +219,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         case SET_ATTR: fs.setXAttr(testPath, "attribute", "value".getBytes());
           break;
         case GET_ATTR: fs.getXAttr(testPath, "attribute");
+          break;
         default: throw new NoSuchFieldException();
         }
       });
@@ -237,21 +241,28 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
                 tracingContext).getResult();
         return client.read(path, 0, new byte[5], 0, 5, statusOp.getResponseHeader(HttpHeaderConfigurations.ETAG),
           null, encryptionAdapter, tracingContext);
-      case WRITE: return client.flush(path, 3, false, false, null,
+      case WRITE:
+        return client.flush(path, 3, false, false, null,
           null, encryptionAdapter, getTestTracingContext(fs, false));
-      case APPEND: return client.append(path, "val".getBytes(),
+      case APPEND:
+        return client.append(path, "val".getBytes(),
             new AppendRequestParameters(3, 0, 3, APPEND_MODE, false, null),
             null, encryptionAdapter, getTestTracingContext(fs, false));
-      case SET_ACL: return client.setAcl(path, AclEntry.aclSpecToString(
+      case SET_ACL:
+        return client.setAcl(path, AclEntry.aclSpecToString(
           Lists.newArrayList(aclEntry(ACCESS, USER, ALL))),
           getTestTracingContext(fs, false));
-      case LISTSTATUS: return client.listPath(path, false, 5, null,
+      case LISTSTATUS:
+        return client.listPath(path, false, 5, null,
           getTestTracingContext(fs, true));
-      case RENAME: return client.renamePath(path, new Path(path + "_2").toString(),
+      case RENAME:
+        return client.renamePath(path, new Path(path + "_2").toString(),
           null, getTestTracingContext(fs, true), null, false).getOp();
-      case DELETE: return client.deletePath(path, false, null,
+      case DELETE:
+        return client.deletePath(path, false, null,
           getTestTracingContext(fs, false));
-      case GET_ATTR: return client.getPathStatus(path, true,
+      case GET_ATTR:
+        return client.getPathStatus(path, true,
           getTestTracingContext(fs, false));
       case SET_ATTR:
         Hashtable<String, String> properties = new Hashtable<>();
@@ -275,7 +286,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         + getAccountName());
     configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName());
-    return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    fileSystemsOpenedInTest.add(fs);
+    return fs;
   }
 
   private AzureBlobFileSystem getCPKEnabledFS() throws IOException {
@@ -288,10 +301,12 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName(), cpkEncodedSHA);
     conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
-    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+    fileSystemsOpenedInTest.add(fs);
+    return fs;
   }
 
-  private AzureBlobFileSystem getFS() throws Exception {
+  private AzureBlobFileSystem getOrCreateFS() throws Exception {
     if (getFileSystem().getAbfsClient().getEncryptionType() == requestEncryptionType) {
       return getFileSystem();
     }
@@ -302,7 +317,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     } else {
       Configuration conf = getRawConfiguration();
       conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
-      return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+      AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
+      fileSystemsOpenedInTest.add(fs);
+      return fs;
     }
   }
 
@@ -322,12 +339,21 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     // verify file is encrypted by calling getPathStatus (with properties)
     // without encryption headers in request
     if (fileEncryptionType != EncryptionType.NONE) {
-      fs.getAbfsClient().setEncryptionType(EncryptionType.NONE);
-      LambdaTestUtils.intercept(IOException.class, () -> fs.getAbfsClient()
-          .getPathStatus(fs.getAbfsStore().getRelativePath(testPath), true,
+      final AbfsClient abfsClient = fs.getAbfsClient();
+      abfsClient.setEncryptionType(EncryptionType.NONE);
+      LambdaTestUtils.intercept(IOException.class, () ->
+          abfsClient.getPathStatus(fs.getAbfsStore().getRelativePath(testPath),
+              true,
               getTestTracingContext(fs, false)));
       fs.getAbfsClient().setEncryptionType(fileEncryptionType);
     }
     return fs.getAbfsClient().getEncryptionContextProvider();
+  }
+
+  @Override
+  protected void finalize() throws Throwable {
+    for(AzureBlobFileSystem azureBlobFileSystem : fileSystemsOpenedInTest) {
+      azureBlobFileSystem.close();
+    }
   }
 }
