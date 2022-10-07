@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.thirdparty.protobuf.ProtocolStringList;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -2082,8 +2083,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetEnclosingRootRequestProto req)
       throws ServiceException {
     try {
-      String enclosingRootPath = server.getEnclosingRoot(req.getFilename());
-      return GetEnclosingRootResponseProto.newBuilder().setEnclosingRootPath(enclosingRootPath)
+      Path enclosingRootPath = server.getEnclosingRoot(req.getFilename());
+      return GetEnclosingRootResponseProto.newBuilder().setEnclosingRootPath(enclosingRootPath.toString())
           .build();
     } catch (IOException e) {
       throw new ServiceException(e);

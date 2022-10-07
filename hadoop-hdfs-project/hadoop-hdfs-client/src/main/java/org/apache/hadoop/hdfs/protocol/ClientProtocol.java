@@ -1894,6 +1894,6 @@ public interface ClientProtocol {
    */
   @Idempotent
   @ReadOnly(isCoordinated = true)
-  String getEnclosingRoot(String src) throws IOException;
+  Path getEnclosingRoot(String src) throws IOException;
 
 }

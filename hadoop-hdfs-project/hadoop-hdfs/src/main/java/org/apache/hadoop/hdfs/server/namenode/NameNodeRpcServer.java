@@ -2676,7 +2676,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public String getEnclosingRoot(String src)
+  public Path getEnclosingRoot(String src)
       throws IOException {
     checkNNStartup();
     return namesystem.getEnclosingRoot(src);

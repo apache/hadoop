@@ -144,6 +144,9 @@ public class RouterClientProtocol implements ClientProtocol {
   private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
   private long mountStatusTimeOut;
+  
+  /** Default nameservice enabled */
+  private final boolean defaultNameserviceEnabled;
 
   /** Identifier for the super user. */
   private String superUser;
@@ -194,6 +197,8 @@ public class RouterClientProtocol implements ClientProtocol {
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
     this.rbfRename = new RouterFederationRename(rpcServer, conf);
+    this.defaultNameserviceEnabled = conf.getBoolean(RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE, 
+        RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT);
   }
 
   @Override
@@ -1937,8 +1942,12 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
-  public String getEnclosingRoot(String src) throws IOException {
-    Path mountPath = new Path("/");
+  public Path getEnclosingRoot(String src) throws IOException {
+    Path mountPath = null;
+    if (defaultNameserviceEnabled) {
+      mountPath = new Path("/");
+    }
+    
     if (subclusterResolver instanceof MountTableResolver) {
       MountTableResolver mountTable = (MountTableResolver) subclusterResolver;
       if (mountTable.getMountPoint(src) != null) {
@@ -1946,9 +1955,18 @@ public class RouterClientProtocol implements ClientProtocol {
         mountPath = new Path(mountTable.getMountPoint(src).getSourcePath());
       }
     }
+    
+    if (mountPath == null) {
+      throw new IOException(String.format("No mount point for %s", src));
+    }
+    
     EncryptionZone zone = getEZForPath(src);
-    Path zonePath = new Path((zone != null ? zone.getPath() : "/"));
-    return (zonePath.depth() > mountPath.depth() ? zonePath : mountPath).toString();
+    Path zonePath = new Path((zone != null ? zone.getPath() : null));
+    if (zonePath == null) {
+      return mountPath;
+    } else {
+      return zonePath.depth() > mountPath.depth() ? zonePath : mountPath;
+    }
   }
 
   @Override

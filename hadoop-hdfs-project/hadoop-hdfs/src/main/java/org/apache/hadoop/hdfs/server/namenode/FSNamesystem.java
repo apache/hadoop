@@ -9056,12 +9056,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param srcArg the path of a file or directory to get the EZ for.
    * @return the enclosing root of the path or null if none.
    */
-  String getEnclosingRoot(final String srcArg) throws IOException {
+  Path getEnclosingRoot(final String srcArg) throws IOException {
     EncryptionZone ez = getEZForPath(srcArg);
     if (ez != null) {
-      return ez.getPath();
+      return new Path(ez.getPath());
     } else {
-      return "/";
+      return new Path("/");
     }
   }
 }

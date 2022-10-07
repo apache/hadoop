@@ -3957,15 +3957,14 @@ public class DistributedFileSystem extends FileSystem
       @Override
       public Path next(final FileSystem fs, final Path p)
           throws IOException {
-        if (fs instanceof DistributedFileSystem) {
-          DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-          return myDfs.getEnclosingRoot(p);
-        } else {
+        if (!(fs instanceof DistributedFileSystem)) {
           throw new UnsupportedOperationException(
-              "Cannot call getEZForPath"
+              "Cannot call getEnclosingRoot"
                   + " on a symlink to a non-DistributedFileSystem: " + path
                   + " -> " + p);
         }
+        DistributedFileSystem myDfs = (DistributedFileSystem) fs;
+        return myDfs.getEnclosingRoot(p);
       }
     }.resolve(this, absF);
   }

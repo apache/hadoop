@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -50,7 +49,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -521,7 +519,6 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
         EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
     hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
-    RemoteIterator<EncryptionZone> zones = hdfsAdmin.listEncryptionZones();
     assertEquals(fsView.getEnclosingRoot(zone), new Path("/data"));
     assertEquals(fsView.getEnclosingRoot(zone1), zone1);
 
@@ -532,5 +529,6 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     DFSTestUtil.createKey("test_key", cluster, 1, CONF);
     hdfsAdmin2.createEncryptionZone(nn02Ez, "test_key", provisionTrash);
     assertEquals(fsView.getEnclosingRoot((nn02Ez)), nn02Ez);
+    assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")), nn02Ez);
   }
 }

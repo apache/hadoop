@@ -2110,7 +2110,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public String getEnclosingRoot(String filename) throws IOException {
+  public Path getEnclosingRoot(String filename) throws IOException {
     final GetEnclosingRootRequestProto.Builder builder =
         GetEnclosingRootRequestProto.newBuilder();
     builder.setFilename(filename);
@@ -2118,7 +2118,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     try {
       final GetEnclosingRootResponseProto response =
           rpcProxy.getEnclosingRoot(null, req);
-      return response.getEnclosingRootPath();
+      return new Path(response.getEnclosingRootPath());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
