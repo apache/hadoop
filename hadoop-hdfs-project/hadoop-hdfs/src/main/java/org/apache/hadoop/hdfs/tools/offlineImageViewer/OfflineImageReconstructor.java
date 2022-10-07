@@ -56,6 +56,7 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -86,7 +87,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.StringUtils;
 
-import javax.xml.XMLConstants;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
