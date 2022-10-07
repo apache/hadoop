@@ -44,7 +44,7 @@ triggerRun()
 
   if [ -z "$accountName" ]; then
     logOutput "ERROR: Test account not configured. Re-run the script and choose SET_OR_CHANGE_TEST_ACCOUNT to configure the test account."
-    exit 0;
+    exit 1;
   fi
   accountConfigFile=$accountSettingsFolderName/$accountName$accountConfigFileSuffix
   rm -rf $combtestfile

@@ -616,6 +616,14 @@ Below are the pre-requiste steps to follow:
     fs.azure.nonHnsTestAccountName
   azure-auth-keys.xml is listed in .gitignore, so any accidental account name leak is prevented.
 
+```
+XInclude is supported, so for extra security secrets may be
+kept out of the source tree then referenced through an an XInclude element:
+
+      <include xmlns="http://www.w3.org/2001/XInclude"
+        href="/users/self/.secrets/auth-keys.xml" />
+```
+
 2. Create account config files (one config file per account) in folder:
 
         ./src/test/resources/accountSettings/
@@ -631,8 +639,9 @@ Below are the pre-requiste steps to follow:
 ```bash
 Choose action:
 [Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]
-1) SET_ACTIVE_TEST_CONFIG  3) CLEAN_UP_OLD_TEST_CONTAINERS
-2) RUN_TEST
+1) SET_ACTIVE_TEST_CONFIG               4) SET_OR_CHANGE_TEST_ACCOUNT
+2) RUN_TEST                             5) PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
+3) CLEAN_UP_OLD_TEST_CONTAINERS
 #? 2
 ```
 Enter 1: for setting active combination for IDE test run/single mvn test class runs.
@@ -642,21 +651,24 @@ Enter 2: for choosing the combination to choose for mvn full test suite.
 Enter 3: For clean-up of any abruptly ending test leaving auto generated test
 container on the account.
 
+Enter 4: To create/modify the config file that decides the account to use for specific test combination.
+
+Enter 5: To print the log4j paths the last test runs.
+
 On next prompt, current list of combinations to choose are provided.
 Sample for Run_TEST action:
 ```bash
-#Enter parallel test run thread count [default - 8]: 4
-
+Enter parallel test run process count [default - 8]: 4
 Set the active test combination to run the action:
-1) HNS-OAuth     3) nonHNS-SharedKey      5) All
-2) HNS-SharedKey 4) AppendBlob-HNS-OAuth  6) Quit
+1) HNS-OAuth               3) nonHNS-SharedKey        5) AllCombinationsTestRun
+2) HNS-SharedKey           4) AppendBlob-HNS-OAuth    6) Quit
 #? 1
 
 Combination specific property setting: [ key=fs.azure.account.auth.type , value=OAuth ]
 
-Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: "storeaccountname" for combination "HNS-OAuth"
-Running test for combination HNS-OAuth on account storeaccountname[ThreadCount=4]
-Result can be seen in dev-support/testlogs/2021-06-21_22-28-22/Test-Logs-HNS-OAuth.txt
+Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: snvijayacontracttest for combination HNS-OAuth
+Running test for combination HNS-OAuth on account snvijayacontracttest [ProcessCount=4]
+Test run report can be seen in dev-support/testlogs/2022-10-07_05-23-22/Test-Logs-HNS-OAuth.txt
 ````
 
 Provide the option for the action chosen first.
