@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -152,7 +153,7 @@ public final class MultipartTestUtils {
           .map(upload -> String.format("Upload to %s with ID %s; initiated %s",
               upload.key(),
               upload.uploadId(),
-              S3ATestUtils.LISTING_FORMAT.format(upload.initiated())))
+              S3ATestUtils.LISTING_FORMAT.format(Date.from(upload.initiated()))))
           .collect(Collectors.toList());
     }
   }

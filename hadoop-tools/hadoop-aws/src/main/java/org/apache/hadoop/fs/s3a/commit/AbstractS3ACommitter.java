@@ -1297,7 +1297,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       DateFormat df = DateFormat.getDateTimeInstance();
       pending.forEach(u ->
           LOG.info("[{}] {}",
-              df.format(u.initiated()),
+              df.format(Date.from(u.initiated())),
               u.key()));
       if (shouldAbortUploadsInCleanup()) {
         LOG.warn("This committer will abort these uploads in job cleanup");

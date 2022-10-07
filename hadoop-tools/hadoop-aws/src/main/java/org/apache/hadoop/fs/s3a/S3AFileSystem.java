@@ -5094,7 +5094,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
       LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
           uploadId, destKey, upload.initiator(),
-          df.format(upload.initiated()));
+          df.format(Date.from(upload.initiated())));
     }
     s3V2.abortMultipartUpload(
         getRequestFactory().newAbortMultipartUploadRequestBuilder(
