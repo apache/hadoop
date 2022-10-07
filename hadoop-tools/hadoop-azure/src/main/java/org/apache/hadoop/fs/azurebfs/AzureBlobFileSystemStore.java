@@ -819,7 +819,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Add statistics for InputStream
       return new AbfsInputStream(client, statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
-          parameters.map(OpenFileParameters::getOptions), encryptionAdapter),
+          parameters.map(OpenFileParameters::getOptions),
+          encryptionAdapter),
           eTag, tracingContext);
     }
   }
@@ -883,12 +884,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       AbfsLease lease = maybeCreateLease(relativePath, tracingContext);
       EncryptionAdapter encryptionAdapter = null;
       if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-        byte[] encryptionContext = op.getResult()
-            .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT)
-            .getBytes(StandardCharsets.UTF_8);
+        final String encryptionContext = op.getResult()
+            .getResponseHeader(
+                HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
+        if (encryptionContext == null) {
+          throw new PathIOException(path.toString(),
+              "File doesn't have encryptionContext.");
+        }
         encryptionAdapter = new EncryptionAdapter(
             client.getEncryptionContextProvider(), getRelativePath(path),
-            encryptionContext);
+            encryptionContext.getBytes(StandardCharsets.UTF_8));
       }
 
       return new AbfsOutputStream(
@@ -1659,16 +1664,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           abfsConfiguration.createEncryptionContextProvider();
       if (encryptionContextProvider != null) {
         if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
-          throw new IOException(
+          throw new PathIOException(uri.getPath(),
               "Both global key and encryption context are set, only one allowed");
         }
         encryptionContextProvider.initialize(
             abfsConfiguration.getRawConfiguration(), accountName,
             fileSystemName);
       } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
-        if (abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA() != null) {
-        } else {
-          throw new IOException(
+        if (abfsConfiguration.getEncodedClientProvidedEncryptionKeySHA() == null) {
+          throw new PathIOException(uri.getPath(),
               "Encoded SHA256 hash must be provided for global encryption");
         }
       }
@@ -1720,7 +1724,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
-  public String convertXmsPropertiesToCommaSeparatedString(final Hashtable<String,
+  @VisibleForTesting
+   String convertXmsPropertiesToCommaSeparatedString(final Map<String,
       String> properties) throws
           CharacterCodingException {
     StringBuilder commaSeparatedProperties = new StringBuilder();
@@ -1911,7 +1916,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  public static class Permissions {
+  /**
+   * Permissions class contain provided permission and umask in octalNotation.
+   * If the object is created for namespace-disabled, the permission and umask
+   * would be null.
+   * */
+  public static final class Permissions {
     private final String permission;
     private final String umask;
 
@@ -1929,6 +1939,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     private String getOctalNotation(FsPermission fsPermission) {
       Preconditions.checkNotNull(fsPermission, "fsPermission");
       return String.format(AbfsHttpConstants.PERMISSION_FORMAT, fsPermission.toOctal());
+    }
+
+    public Boolean hasPermission() {
+      return permission != null && !permission.isEmpty();
+    }
+
+    public Boolean hasUmask() {
+      return umask != null && !umask.isEmpty();
     }
 
     public String getPermission() {

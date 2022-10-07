@@ -412,13 +412,13 @@ public class AbfsClient implements Closeable {
       requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
     }
 
-    if (permissions.getPermission() != null && !permissions.getPermission().isEmpty()) {
+    if (permissions.hasPermission()) {
       requestHeaders.add(
           new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS,
               permissions.getPermission()));
     }
 
-    if (permissions.getUmask() != null && !permissions.getUmask().isEmpty()) {
+    if (permissions.hasUmask()) {
       requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK,
           permissions.getUmask()));
     }
