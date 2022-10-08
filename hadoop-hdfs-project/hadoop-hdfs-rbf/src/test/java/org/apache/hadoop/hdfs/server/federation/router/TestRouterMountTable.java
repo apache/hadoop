@@ -95,6 +95,7 @@ public class TestRouterMountTable {
     conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     cluster.addRouterOverrides(conf);
     cluster.startCluster();
+    cluster.startCluster();
     cluster.startRouters();
     cluster.waitClusterUp();
 

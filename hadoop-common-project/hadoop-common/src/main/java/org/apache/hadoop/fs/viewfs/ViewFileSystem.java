@@ -1372,10 +1372,15 @@ public class ViewFileSystem extends FileSystem {
   
   @Override
   public Path getEnclosingRoot(Path path) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path), true);
-    Path fullPath = new Path(res.resolvedPath);
-    Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
-    return fixRelativePart(enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath);
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(path), true);
+    } catch (FileNotFoundException ex) {
+      throw new NotInMountpointException(path, "getEnclosingRoot");
+    }
+    Path mountPath = new Path(res.resolvedPath);
+    Path enclosingPath = res.targetFileSystem.getEnclosingRoot(new Path(getUriPath(path)));
+    return fixRelativePart(this.makeQualified(enclosingPath.depth() > mountPath.depth() ?  enclosingPath : mountPath));
   }
 
   /**
@@ -1930,10 +1935,15 @@ public class ViewFileSystem extends FileSystem {
 
     @Override
     public Path getEnclosingRoot(Path path) throws IOException {
-      InodeTree.ResolveResult<FileSystem> res = fsState.resolve(path.toString(), true);
+      InodeTree.ResolveResult<FileSystem> res;
+      try {
+        res = fsState.resolve((path.toString()), true);
+      } catch (FileNotFoundException ex) {
+        throw new NotInMountpointException(path, "getEnclosingRoot");
+      }
       Path fullPath = new Path(res.resolvedPath);
       Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
-      return (enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath).makeQualified(myUri, null);
+      return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
     }
   }
 

@@ -4907,15 +4907,19 @@ public abstract class FileSystem extends Configured
   /**
    * Return path of the enclosing root for a given path
    * The enclosing root path is a common ancestor that should be used for temp and staging dirs
-   * as well as within encryption zones and other restricted directories
+   * as well as within encryption zones and other restricted directories.
+   * 
+   * Call makeQualified on the param path to ensure the param path to ensure its part of the correct filesystem
+   * 
    * @param path file path to find the enclosing root path for
-   * @return a path to the enclosing rot
+   * @return a path to the enclosing root
    * @throws IOException
    */
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
   // Should this throw RuntimeException (instead of IO), so we can throw NotInMountpointException from viewfs/rbf?
   public Path getEnclosingRoot(Path path) throws IOException {
+    this.makeQualified(path);
     return this.makeQualified(new Path("/"));
   }
 

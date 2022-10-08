@@ -506,6 +506,14 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     assertEquals(fs.getFileStatus(subDirOfInternalDir).getPermission(),
         fs.getFileStatus(subDirOfRealDir).getPermission());
   }
+  
+  private Path getViewFsPath(Path path, FileSystem fs) {
+    return fs.makeQualified(path);
+  }
+
+  private Path getViewFsPath(String path, FileSystem fs) {
+    return getViewFsPath(new Path(path), fs);
+  }
 
   @Test
   public void testEnclosingRootsBase() throws Exception {
@@ -519,16 +527,46 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     final EnumSet<CreateEncryptionZoneFlag> provisionTrash =
         EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
     hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
-    assertEquals(fsView.getEnclosingRoot(zone), new Path("/data"));
-    assertEquals(fsView.getEnclosingRoot(zone1), zone1);
+    assertEquals(fsView.getEnclosingRoot(zone), getViewFsPath("/data", fsView));
+    assertEquals(fsView.getEnclosingRoot(zone1), getViewFsPath(zone1, fsView));
 
     Path nn02Ez = new Path("/mountOnNn2/EZ");
     fsTarget2.mkdirs(nn02Ez);
-    assertEquals(fsView.getEnclosingRoot((nn02Ez)), new Path("/mountOnNn2"));
+    assertEquals(fsView.getEnclosingRoot((nn02Ez)), getViewFsPath("/mountOnNn2", fsView));
     HdfsAdmin hdfsAdmin2 = new HdfsAdmin(cluster.getURI(1), CONF);
     DFSTestUtil.createKey("test_key", cluster, 1, CONF);
     hdfsAdmin2.createEncryptionZone(nn02Ez, "test_key", provisionTrash);
-    assertEquals(fsView.getEnclosingRoot((nn02Ez)), nn02Ez);
-    assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")), nn02Ez);
+    assertEquals(fsView.getEnclosingRoot((nn02Ez)), getViewFsPath(nn02Ez, fsView));
+    assertEquals(fsView.getEnclosingRoot(new Path(nn02Ez, "dir/dir2/file")), getViewFsPath(nn02Ez, fsView));
+    
+    // With viewfs:// scheme
+    assertEquals(fsView.getEnclosingRoot(fsView.getWorkingDirectory()), getViewFsPath("/user", fsView));
+  }
+  
+  @Test
+  public void testEnclosingRootFailure() throws IOException {
+    try {
+      fsView.getEnclosingRoot(new Path("/does/not/exist"));
+      fail("Not a mount point");
+    } catch (NotInMountpointException ex) {
+      // expected
+    }
+    
+    final Path zone = new Path("/data/EZ");
+    Path fs1 = fsTarget.makeQualified(zone);
+    try {
+      fsTarget2.getEnclosingRoot(fs1);
+      fail("Wrong filesystem");
+    } catch (IllegalArgumentException ex) {
+      // expected
+    }
+
+    try {
+      fsTarget2.getEnclosingRoot(new Path("/"));
+      fail("Wrong filesystem");
+    } catch (IllegalArgumentException ex) {
+      // expected
+    }
+
   }
 }

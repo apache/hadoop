@@ -1961,10 +1961,10 @@ public class RouterClientProtocol implements ClientProtocol {
     }
     
     EncryptionZone zone = getEZForPath(src);
-    Path zonePath = new Path((zone != null ? zone.getPath() : null));
-    if (zonePath == null) {
+    if (zone == null) {
       return mountPath;
     } else {
+      Path zonePath = new Path(zone.getPath());
       return zonePath.depth() > mountPath.depth() ? zonePath : mountPath;
     }
   }
