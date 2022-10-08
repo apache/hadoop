@@ -1233,7 +1233,8 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void set(String name, String value) {
     super.set(name, value);
     if (configurationProperties != null) {
-      configurationProperties.set(name, value);
+      //The super#get method used cause the super#set contains some logic
+      configurationProperties.set(super.get(name), value);
     }
   }
 
