@@ -727,7 +727,7 @@ public final class FederationStateStoreFacade {
     return stateStore;
   }
 
-  /**
+  /*
    * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
    * @param newKey Key used for generating and verifying delegation tokens

@@ -112,6 +112,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
       schedulerCommons.handle(schedulerEvent);
     } catch(Exception e){
       LOG.error("Caught exception while handling scheduler event", e);
+      throw e;
     }
   }
 

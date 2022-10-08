@@ -248,7 +248,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           e);
     }
 
-    interceptorInstance.setWebAppAddress("http://" + webAppAddress);
+    String webAppAddresswithScheme =
+        WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
+    interceptorInstance.setWebAppAddress(webAppAddresswithScheme);
     interceptorInstance.setSubClusterId(subClusterId);
     interceptors.put(subClusterId, interceptorInstance);
     return interceptorInstance;
