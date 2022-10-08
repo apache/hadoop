@@ -44,6 +44,7 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
 
   private ApplicationId applicationId = null;
   private SubClusterId homeSubCluster = null;
+  private long createTime = 0L;
 
   public ApplicationHomeSubClusterPBImpl() {
     builder = ApplicationHomeSubClusterProto.newBuilder();
@@ -110,6 +111,9 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
   @Override
   public ApplicationId getApplicationId() {
     ApplicationHomeSubClusterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.applicationId != null) {
+      return this.applicationId;
+    }
     if (!p.hasApplicationId()) {
       return null;
     }
@@ -125,6 +129,7 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
       return;
     }
     this.applicationId = applicationId;
+    builder.setApplicationId(convertToProtoFormat(applicationId));
   }
 
   @Override
@@ -141,22 +146,34 @@ public class ApplicationHomeSubClusterPBImpl extends ApplicationHomeSubCluster {
   }
 
   @Override
-  public void setHomeSubCluster(SubClusterId homeSubCluster) {
+  public void setHomeSubCluster(SubClusterId paramHomeSubCluster) {
     maybeInitBuilder();
-    if (homeSubCluster == null) {
+    if (paramHomeSubCluster == null) {
       builder.clearHomeSubCluster();
+      return;
     }
-    this.homeSubCluster = homeSubCluster;
+    this.homeSubCluster = paramHomeSubCluster;
+    builder.setHomeSubCluster(convertToProtoFormat(paramHomeSubCluster));
   }
 
   @Override
   public long getCreateTime() {
-    return 0;
+    ApplicationHomeSubClusterProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.createTime != 0) {
+      return this.createTime;
+    }
+    if (!p.hasCreateTime()) {
+      return 0;
+    }
+    this.createTime = p.getCreateTime();
+    return this.createTime;
   }
 
   @Override
   public void setCreateTime(long time) {
-
+    maybeInitBuilder();
+    this.createTime = time;
+    builder.setCreateTime(time);
   }
 
   private SubClusterId convertFromProtoFormat(SubClusterIdProto subClusterId) {

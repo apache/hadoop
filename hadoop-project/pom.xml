@@ -678,6 +678,7 @@
         <version>${hadoop.version}</version>
       </dependency>
 
+      <!-- This is empty; retained only for downstream app build compatibility. -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-openstack</artifactId>
@@ -1498,7 +1499,7 @@
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
-        <version>1.1</version>
+        <version>1.5.1</version>
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>

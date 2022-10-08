@@ -41,9 +41,12 @@ import org.xml.sax.InputSource;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.util.XMLUtils;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.junit.Assert.*;
@@ -223,8 +226,7 @@ public class TestConfServlet {
     ConfServlet.writeResponse(getTestConf(), sw, "xml");
     String xml = sw.toString();
 
-    DocumentBuilderFactory docBuilderFactory 
-      = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docBuilderFactory = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = builder.parse(new InputSource(new StringReader(xml)));
     NodeList nameNodes = doc.getElementsByTagName("name");
