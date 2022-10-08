@@ -5028,20 +5028,20 @@
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.maximum-pool-size</name>
-    <value>10</value>
+    <value>5</value>
     <description>
       This configuration is used to set the default value of maximumPoolSize
       of the thread pool of the interceptor.
-      Default is 10.
+      Default is 5.
     </description>
   </property>
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
-    <value>10s</value>
+    <value>0s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
-      Default is 10s.
+      Default is 0s.
     </description>
   </property>
 

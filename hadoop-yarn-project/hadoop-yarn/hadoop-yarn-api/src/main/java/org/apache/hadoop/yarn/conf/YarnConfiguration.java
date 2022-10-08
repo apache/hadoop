@@ -4176,9 +4176,9 @@ public class YarnConfiguration extends Configuration {
    * This configuration is used to set the default value of maximumPoolSize
    * of the thread pool of the interceptor.
    *
-   * Default is 10.
+   * Default is 5.
    */
-  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE = 10;
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE = 5;
 
   /**
    * This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
