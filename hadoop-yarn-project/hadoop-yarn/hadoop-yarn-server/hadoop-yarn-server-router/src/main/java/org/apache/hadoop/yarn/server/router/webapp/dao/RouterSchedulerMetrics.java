@@ -31,10 +31,10 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class RouterSchedulerMetrics {
 
-  /** Metrics Log. **/
+  // Metrics Log.
   private static final Logger LOG = LoggerFactory.getLogger(RouterSchedulerMetrics.class);
 
-  /** Scheduler Information. **/
+  // Scheduler Information.
   private String subCluster = "N/A";
   private String schedulerType = "N/A";
   private String schedulingResourceType = "N/A";

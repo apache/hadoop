@@ -50,8 +50,8 @@ public class RouterInfo {
     this.id = ts;
     this.state = router.getServiceState();
     Configuration configuration = router.getConfig();
-    this.routerStateStoreName =
-        configuration.get(YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
+    this.routerStateStoreName = configuration.get(
+        YarnConfiguration.FEDERATION_STATESTORE_CLIENT_CLASS,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS);
     this.routerVersion = YarnVersionInfo.getVersion();
     this.routerBuildVersion = YarnVersionInfo.getBuildVersion();

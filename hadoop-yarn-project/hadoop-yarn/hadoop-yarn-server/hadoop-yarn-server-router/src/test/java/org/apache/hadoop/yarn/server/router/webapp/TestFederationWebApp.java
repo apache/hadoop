@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class TestFederationWebApp extends TestRouterWebServicesREST{
+public class TestFederationWebApp extends TestRouterWebServicesREST {
 
   @Test
   public void testFederationWebViewNotEnable()

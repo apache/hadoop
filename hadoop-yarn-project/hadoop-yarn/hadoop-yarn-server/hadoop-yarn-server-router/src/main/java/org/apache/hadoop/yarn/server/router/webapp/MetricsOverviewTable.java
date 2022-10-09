@@ -194,7 +194,6 @@ public class MetricsOverviewTable extends RouterBlock {
           td(UNAVAILABLE)
           .__();
     } else {
-      //
       initSubClusterOverViewTable(metrics, fsMetricsScheduleTr, subclusters);
     }
 
