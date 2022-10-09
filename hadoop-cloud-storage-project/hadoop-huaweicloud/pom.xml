@@ -29,7 +29,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <esdk.version>3.20.4.2</esdk.version>
+    <esdk.version>3.22.3.1</esdk.version>
   </properties>
 
   <profiles>
@@ -161,10 +161,6 @@
       <artifactId>esdk-obs-java</artifactId>
       <version>${esdk.version}</version>
       <exclusions>
-        <exclusion>
-          <artifactId>okio</artifactId>
-          <groupId>com.squareup.okio</groupId>
-        </exclusion>
         <exclusion>
           <artifactId>log4j-core</artifactId>
           <groupId>org.apache.logging.log4j</groupId>
