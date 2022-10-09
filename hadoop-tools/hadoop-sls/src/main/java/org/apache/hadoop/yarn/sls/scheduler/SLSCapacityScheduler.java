@@ -108,9 +108,9 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
   @Override
   public void handle(SchedulerEvent schedulerEvent) {
-    try{
+    try {
       schedulerCommons.handle(schedulerEvent);
-    } catch(Exception e){
+    } catch(Exception e) {
       LOG.error("Caught exception while handling scheduler event", e);
       throw e;
     }
