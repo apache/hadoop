@@ -852,7 +852,7 @@ Return the help for an individual command.
 ====================================================
 
 The Hadoop FileSystem shell works with Object Stores such as Amazon S3,
-Azure WASB and OpenStack Swift.
+Azure ABFS and Google GCS.
 
 
 

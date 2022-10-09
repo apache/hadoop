@@ -135,7 +135,6 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.s3a.impl");
     xmlPropsToSkipCompare.
         add("fs.viewfs.overload.scheme.target.swebhdfs.impl");
-    xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.swift.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.webhdfs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.wasb.impl");
 
@@ -223,8 +222,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("hadoop.common.configuration.version");
     // - org.apache.hadoop.fs.FileSystem
     xmlPropsToSkipCompare.add("fs.har.impl.disable.cache");
-    // - org.apache.hadoop.fs.FileSystem#getFileSystemClass()
-    xmlPropsToSkipCompare.add("fs.swift.impl");
+
     // - package org.apache.hadoop.tracing.TraceUtils ?
     xmlPropsToSkipCompare.add("hadoop.htrace.span.receiver.classes");
     // Private keys
