@@ -1095,14 +1095,6 @@
 </property>
 
 <property>
-  <name>fs.viewfs.overload.scheme.target.swift.impl</name>
-  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
-  <description>The SwiftNativeFileSystem for view file system overload scheme
-   when child file system and ViewFSOverloadScheme's schemes are swift.
-  </description>
-</property>
-
-<property>
   <name>fs.viewfs.overload.scheme.target.oss.impl</name>
   <value>org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem</value>
   <description>The AliyunOSSFileSystem for view file system overload scheme
@@ -1209,12 +1201,6 @@
   <name>fs.du.interval</name>
   <value>600000</value>
   <description>File space usage statistics refresh interval in msec.</description>
-</property>
-
-<property>
-  <name>fs.swift.impl</name>
-  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
-  <description>The implementation class of the OpenStack Swift Filesystem</description>
 </property>
 
 <property>
