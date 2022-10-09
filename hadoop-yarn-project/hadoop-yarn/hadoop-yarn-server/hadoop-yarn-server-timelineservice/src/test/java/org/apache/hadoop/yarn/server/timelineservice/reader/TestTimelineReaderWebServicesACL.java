@@ -18,32 +18,13 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-
 import javax.ws.rs.core.MediaType;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TestFileSystemTimelineReaderImpl;
-import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
-import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -52,6 +33,24 @@ import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TestFileSystemTimelineReaderImpl;
+import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineReader;
+import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Tests ACL check while retrieving entity-types per application.
@@ -66,17 +65,17 @@ public class TestTimelineReaderWebServicesACL {
   private TimelineReaderServer server;
   private static final String ADMIN = "yarn";
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TestFileSystemTimelineReaderImpl.initializeDataDirectory(ROOT_DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     FileUtils.deleteDirectory(new File(ROOT_DIR));
   }
 
-  @Before
+  @BeforeEach
   public void init() throws Exception {
     try {
       Configuration config = new YarnConfiguration();
@@ -97,11 +96,11 @@ public class TestTimelineReaderWebServicesACL {
       server.start();
       serverPort = server.getWebServerPort();
     } catch (Exception e) {
-      Assert.fail("Web server failed to start");
+      fail("Web server failed to start");
     }
   }
 
-  @After
+  @AfterEach
   public void stop() throws Exception {
     if (server != null) {
       server.stop();
@@ -141,35 +140,35 @@ public class TestTimelineReaderWebServicesACL {
   }
 
   @Test
-  public void testGetEntityTypes() throws Exception {
+  void testGetEntityTypes() throws Exception {
     Client client = createClient();
     try {
-      String unAuthorizedUser ="user2";
+      String unAuthorizedUser = "user2";
       URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+unAuthorizedUser);
+          "timeline/apps/app1/entity-types?user.name=" + unAuthorizedUser);
       String msg = "User " + unAuthorizedUser
           + " is not allowed to read TimelineService V2 data.";
       ClientResponse resp = verifyHttpResponse(client, uri, Status.FORBIDDEN);
       assertTrue(resp.getEntity(String.class).contains(msg));
 
-      String authorizedUser ="user1";
+      String authorizedUser = "user1";
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser);
       verifyHttpResponse(client, uri, Status.OK);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+ADMIN);
+          "timeline/apps/app1/entity-types?user.name=" + ADMIN);
       verifyHttpResponse(client, uri, Status.OK);
 
       // Verify with Query Parameter userid
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser
-          + "&userid="+authorizedUser);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser
+          + "&userid=" + authorizedUser);
       verifyHttpResponse(client, uri, Status.OK);
 
       uri = URI.create("http://localhost:" + serverPort + "/ws/v2/" +
-          "timeline/apps/app1/entity-types?user.name="+authorizedUser
-          + "&userid="+unAuthorizedUser);
+          "timeline/apps/app1/entity-types?user.name=" + authorizedUser
+          + "&userid=" + unAuthorizedUser);
       verifyHttpResponse(client, uri, Status.FORBIDDEN);
     } finally {
       client.destroy();

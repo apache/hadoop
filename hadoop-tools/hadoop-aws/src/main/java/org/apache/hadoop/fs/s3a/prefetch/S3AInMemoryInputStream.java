@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
+import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -86,7 +87,12 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
       return false;
     }
 
-    if (!getFilePosition().isValid()) {
+    FilePosition filePosition = getFilePosition();
+    if (filePosition.isValid()) {
+      // Update current position (lazy seek).
+      filePosition.setAbsolute(getNextReadPos());
+    } else {
+      // Read entire file into buffer.
       buffer.clear();
       int numBytesRead =
           getReader().read(buffer, 0, buffer.capacity());
@@ -94,9 +100,9 @@ public class S3AInMemoryInputStream extends S3ARemoteInputStream {
         return false;
       }
       BufferData data = new BufferData(0, buffer);
-      getFilePosition().setData(data, 0, getSeekTargetPos());
+      filePosition.setData(data, 0, getNextReadPos());
     }
 
-    return getFilePosition().buffer().hasRemaining();
+    return filePosition.buffer().hasRemaining();
   }
 }
