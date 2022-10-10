@@ -127,9 +127,8 @@ public class TestSystemServiceManagerImpl {
       Iterator<Service> iterator = services.iterator();
       while (iterator.hasNext()) {
         Service next = iterator.next();
-        assertTrue(
-            serviceNames.contains(next.getName()), "Service name doesn't exist in expected userService "
-                + serviceNames);
+        assertTrue(serviceNames.contains(next.getName()),
+            "Service name doesn't exist in expected userService " + serviceNames);
       }
     }
   }

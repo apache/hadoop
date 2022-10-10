@@ -163,27 +163,29 @@ public class TestApiServer {
         actual.getStatus(),
         "Get service is ");
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(), "Response code don't match");
-    assertEquals("Service " + serviceName + " not found",
-        serviceStatus.getDiagnostics(),
+    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(),
+        "Response code don't match");
+    assertEquals("Service " + serviceName + " not found", serviceStatus.getDiagnostics(),
         "Response diagnostics don't match");
   }
 
   @Test
   void testBadGetService2() {
     final Response actual = apiServer.getService(request, null);
-    assertEquals(Response.status(Status.NOT_FOUND).build().getStatus(),
-        actual.getStatus(),
+    assertEquals(Response.status(Status.NOT_FOUND).build().getStatus(), actual.getStatus(),
         "Get service is ");
     ServiceStatus serviceStatus = (ServiceStatus) actual.getEntity();
-    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(), "Response code don't match");
-    assertEquals("Service name cannot be null.", serviceStatus.getDiagnostics(), "Response diagnostics don't match");
+    assertEquals(RestApiConstants.ERROR_CODE_APP_NAME_INVALID, serviceStatus.getCode(),
+        "Response code don't match");
+    assertEquals("Service name cannot be null.", serviceStatus.getDiagnostics(),
+        "Response diagnostics don't match");
   }
 
   @Test
   void testGoodGetService() {
     final Response actual = apiServer.getService(request, "jenkins");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "Get service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "Get service is ");
   }
 
   @Test
@@ -223,14 +225,15 @@ public class TestApiServer {
   @Test
   void testGoodDeleteService() {
     final Response actual = apiServer.deleteService(request, "jenkins");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "Delete service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "Delete service is ");
   }
 
   @Test
   void testDeleteStoppedService() {
-    final Response actual = apiServer.deleteService(request,
-        "jenkins-already-stopped");
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "Delete service is ");
+    final Response actual = apiServer.deleteService(request, "jenkins-already-stopped");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "Delete service is ");
   }
 
   @Test
@@ -255,7 +258,8 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "update service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "update service is ");
   }
 
   @Test
@@ -308,7 +312,8 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "flex service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "flex service is ");
   }
 
   @Test
@@ -360,7 +365,8 @@ public class TestApiServer {
     service.setComponents(components);
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "start service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "start service is ");
   }
 
   @Test
@@ -399,7 +405,8 @@ public class TestApiServer {
     System.out.println("before stop");
     final Response actual = apiServer.updateService(request, "jenkins",
         service);
-    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(), "stop service is ");
+    assertEquals(Response.status(Status.OK).build().getStatus(), actual.getStatus(),
+        "stop service is ");
   }
 
   @Test
@@ -455,7 +462,8 @@ public class TestApiServer {
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
         actual.getStatus(),
         "Update component should have failed with 400 bad request");
-    assertEquals("No component data provided", serviceStatus.getDiagnostics(), "Update component should have failed with no data error");
+    assertEquals("No component data provided", serviceStatus.getDiagnostics(),
+        "Update component should have failed with no data error");
 
     Component comp = new Component();
     actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
@@ -464,7 +472,8 @@ public class TestApiServer {
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
         actual.getStatus(),
         "Update component should have failed with 400 bad request");
-    assertEquals("No container count provided", serviceStatus.getDiagnostics(), "Update component should have failed with no count error");
+    assertEquals("No container count provided", serviceStatus.getDiagnostics(),
+        "Update component should have failed with no count error");
 
     comp.setNumberOfContainers(-1L);
     actual = apiServer.updateComponent(request, "jenkins", "jenkins-master",
@@ -473,7 +482,8 @@ public class TestApiServer {
     assertEquals(Response.status(Status.BAD_REQUEST).build().getStatus(),
         actual.getStatus(),
         "Update component should have failed with 400 bad request");
-    assertEquals("Invalid number of containers specified -1", serviceStatus.getDiagnostics(), "Update component should have failed with no count error");
+    assertEquals("Invalid number of containers specified -1", serviceStatus.getDiagnostics(),
+        "Update component should have failed with no count error");
 
     comp.setName("jenkins-slave");
     comp.setNumberOfContainers(1L);

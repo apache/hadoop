@@ -51,9 +51,6 @@ public class TestCleanupAfterKill extends ServiceTestUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCleanupAfterKill.class);
 
-  @TempDir
-  public File tmpFolder;
-
   @BeforeEach
   public void setup() throws Exception {
     File tmpYarnDir = new File("target", "tmp");
