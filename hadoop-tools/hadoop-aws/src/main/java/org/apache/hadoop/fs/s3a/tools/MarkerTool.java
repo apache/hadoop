@@ -37,7 +37,6 @@ import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,7 +178,9 @@ public final class MarkerTool extends S3GuardTool {
       + " <PATH>\n"
       + "\t" + PURPOSE + "\n\n";
 
-  /** Will be overridden in run(), but during tests needs to avoid NPEs. */
+  /**
+   * Will be overridden in run(), but during tests needs to avoid NPEs.
+   */
   private PrintStream out = System.out;
 
   /**
@@ -475,17 +476,23 @@ public final class MarkerTool extends S3GuardTool {
           '}';
     }
 
-    /** @return Exit code to report. */
+    /**
+     * @return Exit code to report.
+     */
     public int getExitCode() {
       return exitCode;
     }
 
-    /** @return Tracker which did the scan. */
+    /**
+     * @return Tracker which did the scan.
+     */
     public DirMarkerTracker getTracker() {
       return tracker;
     }
 
-    /** @return Summary of purge. Null if none took place. */
+    /**
+     * @return Summary of purge. Null if none took place.
+     */
     public MarkerPurgeSummary getPurgeSummary() {
       return purgeSummary;
     }
@@ -718,10 +725,14 @@ public final class MarkerTool extends S3GuardTool {
    */
   public static final class MarkerPurgeSummary {
 
-    /** Number of markers deleted. */
+    /**
+     * Number of markers deleted.
+     */
     private int markersDeleted;
 
-    /** Number of delete requests issued. */
+    /**
+     * Number of delete requests issued.
+     */
     private int deleteRequests;
 
     /**
@@ -838,7 +849,6 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Execute the marker tool, with no checks on return codes.
-   *
    * @param scanArgs set of args for the scanner.
    * @throws IOException IO failure
    * @return the result
@@ -859,25 +869,39 @@ public final class MarkerTool extends S3GuardTool {
    */
   public static final class ScanArgs {
 
-    /** Source FS; must be or wrap an S3A FS. */
+    /**
+     * Source FS; must be or wrap an S3A FS.
+     */
     private final FileSystem sourceFS;
 
-    /** Path to scan. */
+    /**
+     * Path to scan.
+     */
     private final Path path;
 
-    /** Purge? */
+    /**
+     * Purge?
+     */
     private final boolean doPurge;
 
-    /** Min marker count (ignored on purge). */
+    /**
+     * Min marker count (ignored on purge).
+     */
     private final int minMarkerCount;
 
-    /** Max marker count (ignored on purge). */
+    /**
+     * Max marker count (ignored on purge).
+     */
     private final int maxMarkerCount;
 
-    /** Limit of files to scan; 0 for 'unlimited'. */
+    /**
+     * Limit of files to scan; 0 for 'unlimited'.
+     */
     private final int limit;
 
-    /** Consider only markers in nonauth paths as errors. */
+    /**
+     * Consider only markers in nonauth paths as errors.
+     */
     private final boolean nonAuth;
 
     /**
@@ -939,28 +963,43 @@ public final class MarkerTool extends S3GuardTool {
    */
   public static final class ScanArgsBuilder {
 
-    /** Source FS; must be or wrap an S3A FS. */
+    /**
+     * Source FS; must be or wrap an S3A FS.
+     */
     private FileSystem sourceFS;
 
-    /** Path to scan. */
+    /**
+     * Path to scan.
+     */
     private Path path;
 
-    /** Purge? */
+    /**
+     * Purge?
+     */
     private boolean doPurge = false;
 
-    /** Min marker count (ignored on purge). */
+    /**
+     * Min marker count (ignored on purge).
+     */
     private int minMarkerCount = 0;
 
-    /** Max marker count (ignored on purge). */
+    /**
+     * Max marker count (ignored on purge).
+     */
     private int maxMarkerCount = 0;
 
-    /** Limit of files to scan; 0 for 'unlimited'. */
+    /**
+     * Limit of files to scan; 0 for 'unlimited'.
+     */
     private int limit = UNLIMITED_LISTING;
 
-    /** Consider only markers in nonauth paths as errors. */
+    /**
+     * Consider only markers in nonauth paths as errors.
+     */
     private boolean nonAuth = false;
 
-    /** Source FS; must be or wrap an S3A FS.
+    /**
+     * Source FS; must be or wrap an S3A FS.
      * @param source Source FileSystem
      * @return the builder class after scanning source FS
      */
@@ -969,7 +1008,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Path to scan.
+    /**
+     * Path to scan.
      * @param p path to scan
      * @return builder class for method chaining
      */
@@ -978,7 +1018,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Should the markers be purged? This is also enabled when using the clean flag on the CLI.
+    /**
+     * Should the markers be purged? This is also enabled when using the clean flag on the CLI.
      * @param d set to purge if true
      * @return builder class for method chaining
      */
@@ -987,7 +1028,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Min marker count an audit must find (ignored on purge).
+    /**
+     * Min marker count an audit must find (ignored on purge).
      * @param min Minimum Marker Count (default 0)
      * @return builder class for method chaining
      */
@@ -996,7 +1038,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Max marker count an audit must find (ignored on purge).
+    /**
+     * Max marker count an audit must find (ignored on purge).
      * @param max Maximum Marker Count (default 0)
      * @return builder class for method chaining
      */
@@ -1005,7 +1048,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Limit of files to scan; 0 for 'unlimited'.
+    /**
+     * Limit of files to scan; 0 for 'unlimited'.
      * @param l Limit of files to scan
      * @return builder class for method chaining
      */
@@ -1014,7 +1058,8 @@ public final class MarkerTool extends S3GuardTool {
       return this;
     }
 
-    /** Consider only markers in non-authoritative paths as errors.
+    /**
+     * Consider only markers in non-authoritative paths as errors.
      * @param b True if tool should only consider markers in non-authoritative paths
      * @return builder class for method chaining
      */
