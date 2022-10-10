@@ -20,14 +20,17 @@ package org.apache.hadoop.oncrpc;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,9 +42,11 @@ public class SimpleTcpServer {
       LoggerFactory.getLogger(SimpleTcpServer.class);
   protected final int port;
   protected int boundPort = -1; // Will be set after server starts
-  protected final SimpleChannelUpstreamHandler rpcProgram;
+  protected final ChannelInboundHandlerAdapter rpcProgram;
   private ServerBootstrap server;
   private Channel ch;
+  private EventLoopGroup bossGroup;
+  private EventLoopGroup workerGroup;
 
   /** The maximum number of I/O worker threads */
   protected final int workerCount;
@@ -57,37 +62,32 @@ public class SimpleTcpServer {
     this.workerCount = workercount;
   }
 
-  public void run() {
+  public void run() throws InterruptedException {
     // Configure the Server.
-    ChannelFactory factory;
-    if (workerCount == 0) {
-      // Use default workers: 2 * the number of available processors
-      factory = new NioServerSocketChannelFactory(
-          Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
-    } else {
-      factory = new NioServerSocketChannelFactory(
-          Executors.newCachedThreadPool(), Executors.newCachedThreadPool(),
-          workerCount);
-    }
+    bossGroup = new NioEventLoopGroup();
+    workerGroup = new NioEventLoopGroup(workerCount, Executors.newCachedThreadPool());
 
-    server = new ServerBootstrap(factory);
-    server.setPipelineFactory(new ChannelPipelineFactory() {
+    server = new ServerBootstrap();
 
+    server.group(bossGroup, workerGroup)
+        .channel(NioServerSocketChannel.class)
+        .childHandler(new ChannelInitializer<SocketChannel>() {
       @Override
-      public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(RpcUtil.constructRpcFrameDecoder(),
+      protected void initChannel(SocketChannel ch) throws Exception {
+        ChannelPipeline p = ch.pipeline();
+        p.addLast(RpcUtil.constructRpcFrameDecoder(),
             RpcUtil.STAGE_RPC_MESSAGE_PARSER, rpcProgram,
             RpcUtil.STAGE_RPC_TCP_RESPONSE);
-      }
-    });
-    server.setOption("child.tcpNoDelay", true);
-    server.setOption("child.keepAlive", true);
-    server.setOption("child.reuseAddress", true);
-    server.setOption("reuseAddress", true);
+      }})
+        .childOption(ChannelOption.TCP_NODELAY, true)
+        .childOption(ChannelOption.SO_KEEPALIVE, true)
+        .childOption(ChannelOption.SO_REUSEADDR, true)
+        .option(ChannelOption.SO_REUSEADDR, true);
 
     // Listen to TCP port
-    ch = server.bind(new InetSocketAddress(port));
-    InetSocketAddress socketAddr = (InetSocketAddress) ch.getLocalAddress();
+    ChannelFuture f = server.bind(new InetSocketAddress(port)).sync();
+    ch = f.channel();
+    InetSocketAddress socketAddr = (InetSocketAddress) ch.localAddress();
     boundPort = socketAddr.getPort();
 
     LOG.info("Started listening to TCP requests at port " + boundPort + " for "
@@ -102,9 +102,17 @@ public class SimpleTcpServer {
   public void shutdown() {
     if (ch != null) {
       ch.close().awaitUninterruptibly();
+      ch = null;
     }
-    if (server != null) {
-      server.releaseExternalResources();
+
+    if (workerGroup != null) {
+      workerGroup.shutdownGracefully();
+      workerGroup = null;
+    }
+
+    if (bossGroup != null) {
+      bossGroup.shutdownGracefully();
+      bossGroup = null;
     }
   }
 }
