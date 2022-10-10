@@ -26,7 +26,7 @@ public enum AWSCannedACL {
   PublicRead("PUBLIC_READ"),
   PublicReadWrite("PUBLIC_READ_WRITE"),
   AuthenticatedRead("AUTHENTICATED_READ"),
-  AWS_EXEC_READ("aws-exec-read"),
+  AwsExecRead("AWS_EXEC_READ"),
   BucketOwnerRead("BUCKET_OWNER_READ"),
   BucketOwnerFullControl("BUCKET_OWNER_FULL_CONTROL");
 

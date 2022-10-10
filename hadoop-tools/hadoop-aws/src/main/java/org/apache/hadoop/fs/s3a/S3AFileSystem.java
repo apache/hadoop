@@ -54,13 +54,11 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -91,6 +89,7 @@ import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.transfer.s3.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.Copy;
@@ -1071,12 +1070,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .toUpperCase(Locale.US);
     StorageClass storageClass = null;
     if (!storageClassConf.isEmpty()) {
-      try {
         storageClass = StorageClass.fromValue(storageClassConf);
-      } catch (IllegalArgumentException e) {
-        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
-            STORAGE_CLASS, storageClassConf);
-      }
+
+        if (storageClass.equals(StorageClass.UNKNOWN_TO_SDK_VERSION)) {
+          LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+              STORAGE_CLASS, storageClassConf);
+          storageClass = null;
+        }
+
     } else {
       LOG.debug("Unset storage class property {}; falling back to default storage class",
           STORAGE_CLASS);

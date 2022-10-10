@@ -35,7 +35,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -58,6 +57,7 @@ import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.utils.Md5Utils;
 
 import org.apache.hadoop.fs.PathIOException;
@@ -271,10 +271,6 @@ public class RequestFactoryImpl implements RequestFactory {
     HeaderProcessing.cloneObjectMetadata(srcom, dstom, copyObjectRequestBuilder);
     copyEncryptionParameters(copyObjectRequestBuilder);
 
-    if (cannedACL != null) {
-      copyObjectRequestBuilder.acl(cannedACL);
-    }
-
     copyObjectRequestBuilder
         .metadata(dstom)
         .metadataDirective(MetadataDirective.REPLACE)
@@ -337,7 +333,7 @@ public class RequestFactoryImpl implements RequestFactory {
 
     PutObjectRequest.Builder putObjectRequestBuilder =
         buildPutObjectRequest(length, isDirectoryMarker);
-    putObjectRequestBuilder.bucket(getBucket()).key(key).acl(cannedACL);
+    putObjectRequestBuilder.bucket(getBucket()).key(key);
 
     if (options != null) {
       putObjectRequestBuilder.metadata(options.getHeaders());
@@ -346,7 +342,7 @@ public class RequestFactoryImpl implements RequestFactory {
     putEncryptionParameters(putObjectRequestBuilder);
 
     if (storageClass != null) {
-      putObjectRequestBuilder.storageClass(storageClass.toString());
+      putObjectRequestBuilder.storageClass(storageClass);
     }
 
     return prepareV2Request(putObjectRequestBuilder);
@@ -355,6 +351,8 @@ public class RequestFactoryImpl implements RequestFactory {
   private PutObjectRequest.Builder buildPutObjectRequest(long length, boolean isDirectoryMarker) {
 
     PutObjectRequest.Builder putObjectRequestBuilder = PutObjectRequest.builder();
+
+    putObjectRequestBuilder.acl(cannedACL);
 
     if (length >= 0) {
       putObjectRequestBuilder.contentLength(length);
@@ -401,9 +399,6 @@ public class RequestFactoryImpl implements RequestFactory {
         .contentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
 
     putEncryptionParameters(putObjectRequestBuilder);
-    if(cannedACL != null) {
-      putObjectRequestBuilder.acl(cannedACL.toString());
-    }
 
     return prepareV2Request(putObjectRequestBuilder);
   }
@@ -472,7 +467,7 @@ public class RequestFactoryImpl implements RequestFactory {
     multipartUploadEncryptionParameters(requestBuilder);
 
     if (storageClass != null) {
-      requestBuilder.storageClass(storageClass.toString());
+      requestBuilder.storageClass(storageClass);
     }
 
     return prepareV2Request(requestBuilder);
