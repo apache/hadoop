@@ -791,7 +791,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contentLength = Long.parseLong(
             op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
         eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-        /**
+        /*
          * For file created with ENCRYPTION_CONTEXT, client shall receive
          * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
          * */
@@ -1727,7 +1727,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
   }
 
-  @VisibleForTesting
+  /**
+   * Convert properties stored in a Map into a comma separated string. For map
+   * <key1:value1; key2:value2: keyN:valueN>, method would convert to:
+   * key1=value1,key2=value,...,keyN=valueN
+   * */
+   @VisibleForTesting
    String convertXmsPropertiesToCommaSeparatedString(final Map<String,
       String> properties) throws
           CharacterCodingException {

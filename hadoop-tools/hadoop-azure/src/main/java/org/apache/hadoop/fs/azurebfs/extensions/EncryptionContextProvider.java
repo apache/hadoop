@@ -30,9 +30,9 @@ import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
  *   <li>
  *     To create new encryptionContext from a given path: To be used in case of
  *     create file as there is no encryptionContext in remote server to refer to
- *     for encryptionKey creation
+ *     for encryptionKey creation.
  *   </li>
- *   <li>To create encryptionKey using encryptionContext</li>
+ *   <li>To create encryptionKey using encryptionContext.</li>
  * </ul>
  * */
 public interface EncryptionContextProvider extends Destroyable {

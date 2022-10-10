@@ -35,6 +35,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -271,7 +272,7 @@ public class AbfsClient implements Closeable {
             false, tracingContext).getResult()
             .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
         if (responseHeaderEncryptionContext == null) {
-          throw new IOException(
+          throw new PathIOException(path,
               "EncryptionContext not present in GetPathStatus response");
         }
         encryptionContext = responseHeaderEncryptionContext.getBytes(
@@ -426,10 +427,10 @@ public class AbfsClient implements Closeable {
    * @param eTag: required in case of overwrite of file / directory. Path would be
    * overwritten only if the provided eTag is equal to the one present in backend for
    * the path.
-   * @param: encryptionAdapter: object that contains the encryptionContext and
+   * @param encryptionAdapter: object that contains the encryptionContext and
    * encryptionKey created from the developer provided implementation of
    * {@link org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider}
-   * @param: tracingContext: Object of {@link org.apache.hadoop.fs.azurebfs.utils.TracingContext}
+   * @param tracingContext: Object of {@link org.apache.hadoop.fs.azurebfs.utils.TracingContext}
    * correlating to the current fs.create() request.
    * */
   public AbfsRestOperation createPath(final String path, final boolean isFile,
