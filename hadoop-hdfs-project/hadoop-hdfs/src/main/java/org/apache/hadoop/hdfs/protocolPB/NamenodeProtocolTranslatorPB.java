@@ -51,14 +51,13 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -107,63 +106,39 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
         .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
         .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval).build();
-    try {
-      return PBHelper.convert(rpcProxy.getBlocks(NULL_CONTROLLER, req)
-          .getBlocks());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(ipc(() -> rpcProxy.getBlocks(NULL_CONTROLLER, req)
+        .getBlocks()));
   }
 
   @Override
   public ExportedBlockKeys getBlockKeys() throws IOException {
-    try {
-      GetBlockKeysResponseProto rsp = rpcProxy.getBlockKeys(NULL_CONTROLLER,
-          VOID_GET_BLOCKKEYS_REQUEST);
-      return rsp.hasKeys() ? PBHelper.convert(rsp.getKeys()) : null;
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    GetBlockKeysResponseProto rsp = ipc(() -> rpcProxy.getBlockKeys(NULL_CONTROLLER,
+        VOID_GET_BLOCKKEYS_REQUEST));
+    return rsp.hasKeys() ? PBHelper.convert(rsp.getKeys()) : null;
   }
 
   @Override
   public long getTransactionID() throws IOException {
-    try {
-      return rpcProxy.getTransactionId(NULL_CONTROLLER,
-          VOID_GET_TRANSACTIONID_REQUEST).getTxId();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return ipc(() -> rpcProxy.getTransactionId(NULL_CONTROLLER,
+        VOID_GET_TRANSACTIONID_REQUEST).getTxId());
   }
 
   @Override
   public long getMostRecentCheckpointTxId() throws IOException {
-    try {
-      return rpcProxy.getMostRecentCheckpointTxId(NULL_CONTROLLER,
-          GetMostRecentCheckpointTxIdRequestProto.getDefaultInstance()).getTxId();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return ipc(() -> rpcProxy.getMostRecentCheckpointTxId(NULL_CONTROLLER,
+        GetMostRecentCheckpointTxIdRequestProto.getDefaultInstance()).getTxId());
   }
 
   @Override
   public CheckpointSignature rollEditLog() throws IOException {
-    try {
-      return PBHelper.convert(rpcProxy.rollEditLog(NULL_CONTROLLER,
-          VOID_ROLL_EDITLOG_REQUEST).getSignature());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(ipc(() -> rpcProxy.rollEditLog(NULL_CONTROLLER,
+        VOID_ROLL_EDITLOG_REQUEST).getSignature()));
   }
 
   @Override
   public NamespaceInfo versionRequest() throws IOException {
-    try {
-      return PBHelper.convert(rpcProxy.versionRequest(NULL_CONTROLLER,
-          VOID_VERSION_REQUEST).getInfo());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(ipc(() -> rpcProxy.versionRequest(NULL_CONTROLLER,
+        VOID_VERSION_REQUEST).getInfo()));
   }
 
   @Override
@@ -172,11 +147,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     ErrorReportRequestProto req = ErrorReportRequestProto.newBuilder()
         .setErrorCode(errorCode).setMsg(msg)
         .setRegistration(PBHelper.convert(registration)).build();
-    try {
-      rpcProxy.errorReport(NULL_CONTROLLER, req);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.errorReport(NULL_CONTROLLER, req));
   }
 
   @Override
@@ -184,13 +155,9 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       NamenodeRegistration registration) throws IOException {
     RegisterRequestProto req = RegisterRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration)).build();
-    try {
-      return PBHelper.convert(
-          rpcProxy.registerSubordinateNamenode(NULL_CONTROLLER, req)
-          .getRegistration());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(
+        ipc(() -> rpcProxy.registerSubordinateNamenode(NULL_CONTROLLER, req)
+            .getRegistration()));
   }
 
   @Override
@@ -199,11 +166,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     StartCheckpointRequestProto req = StartCheckpointRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration)).build();
     NamenodeCommandProto cmd;
-    try {
-      cmd = rpcProxy.startCheckpoint(NULL_CONTROLLER, req).getCommand();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    cmd = ipc(() -> rpcProxy.startCheckpoint(NULL_CONTROLLER, req).getCommand());
     return PBHelper.convert(cmd);
   }
 
@@ -213,11 +176,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     EndCheckpointRequestProto req = EndCheckpointRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration))
         .setSignature(PBHelper.convert(sig)).build();
-    try {
-      rpcProxy.endCheckpoint(NULL_CONTROLLER, req);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.endCheckpoint(NULL_CONTROLLER, req));
   }
 
   @Override
@@ -225,12 +184,8 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       throws IOException {
     GetEditLogManifestRequestProto req = GetEditLogManifestRequestProto
         .newBuilder().setSinceTxId(sinceTxId).build();
-    try {
-      return PBHelper.convert(rpcProxy.getEditLogManifest(NULL_CONTROLLER, req)
-          .getManifest());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(ipc(() -> rpcProxy.getEditLogManifest(NULL_CONTROLLER, req)
+        .getManifest()));
   }
 
   @Override
@@ -244,38 +199,26 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   public boolean isUpgradeFinalized() throws IOException {
     IsUpgradeFinalizedRequestProto req = IsUpgradeFinalizedRequestProto
         .newBuilder().build();
-    try {
-      IsUpgradeFinalizedResponseProto response = rpcProxy.isUpgradeFinalized(
-          NULL_CONTROLLER, req);
-      return response.getIsUpgradeFinalized();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    IsUpgradeFinalizedResponseProto response = ipc(() -> rpcProxy.isUpgradeFinalized(
+        NULL_CONTROLLER, req));
+    return response.getIsUpgradeFinalized();
   }
 
   @Override
   public boolean isRollingUpgrade() throws IOException {
     IsRollingUpgradeRequestProto req = IsRollingUpgradeRequestProto
         .newBuilder().build();
-    try {
-      IsRollingUpgradeResponseProto response = rpcProxy.isRollingUpgrade(
-          NULL_CONTROLLER, req);
-      return response.getIsRollingUpgrade();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    IsRollingUpgradeResponseProto response = ipc(() -> rpcProxy.isRollingUpgrade(
+        NULL_CONTROLLER, req));
+    return response.getIsRollingUpgrade();
   }
 
   @Override
   public Long getNextSPSPath() throws IOException {
     GetNextSPSPathRequestProto req =
         GetNextSPSPathRequestProto.newBuilder().build();
-    try {
-      GetNextSPSPathResponseProto nextSPSPath =
-          rpcProxy.getNextSPSPath(NULL_CONTROLLER, req);
-      return nextSPSPath.hasSpsPath() ? nextSPSPath.getSpsPath() : null;
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    GetNextSPSPathResponseProto nextSPSPath =
+        ipc(() -> rpcProxy.getNextSPSPath(NULL_CONTROLLER, req));
+    return nextSPSPath.hasSpsPath() ? nextSPSPath.getSpsPath() : null;
   }
 }

@@ -20,16 +20,19 @@ package org.apache.hadoop.tools.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import org.apache.hadoop.ipc.ProtobufHelper;
+
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
 
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 public class GetUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, GetUserMappingsProtocol, Closeable {
@@ -53,11 +56,7 @@ public class GetUserMappingsProtocolClientSideTranslatorPB implements
     GetGroupsForUserRequestProto request = GetGroupsForUserRequestProto
         .newBuilder().setUser(user).build();
     GetGroupsForUserResponseProto resp;
-    try {
-      resp = rpcProxy.getGroupsForUser(NULL_CONTROLLER, request);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    resp = ipc(() -> rpcProxy.getGroupsForUser(NULL_CONTROLLER, request));
     return resp.getGroupsList().toArray(new String[resp.getGroupsCount()]);
   }
 
