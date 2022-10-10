@@ -230,6 +230,23 @@ public class AbfsClient implements Closeable {
     return requestHeaders;
   }
 
+  /**
+   * This method adds following headers:
+   * <ol>
+   *   <li>X_MS_ENCRYPTION_KEY</li>
+   *   <li>X_MS_ENCRYPTION_KEY_SHA256</li>
+   *   <li>X_MS_ENCRYPTION_ALGORITHM</li>
+   * </ol>
+   * Above headers have to be added in following operations:
+   * <ol>
+   *   <li>createPath</li>
+   *   <li>append</li>
+   *   <li>flush</li>
+   *   <li>setPathProperties</li>
+   *   <li>getPathStatus for fs.setXAttr and fs.getXAttr</li>
+   *   <li>read</li>
+   * </ol>
+   * */
   private void addEncryptionKeyRequestHeaders(String path,
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
@@ -250,15 +267,16 @@ public class AbfsClient implements Closeable {
       } else if (encryptionAdapter == null) {
         // get encryption context from GetPathStatus response header
         byte[] encryptionContext;
-        try {
-          encryptionContext = getPathStatus(path, false, tracingContext)
-              .getResult().getResponseHeader(X_MS_ENCRYPTION_CONTEXT)
-              .getBytes(StandardCharsets.UTF_8);
-        } catch (NullPointerException e) {
-          LOG.debug("EncryptionContext not present in GetPathStatus response.");
+        final String responseHeaderEncryptionContext = getPathStatus(path,
+            false, tracingContext).getResult()
+            .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
+        if (responseHeaderEncryptionContext == null) {
           throw new IOException(
-              "EncryptionContext not present in GetPathStatus response", e);
+              "EncryptionContext not present in GetPathStatus response");
         }
+        encryptionContext = responseHeaderEncryptionContext.getBytes(
+            StandardCharsets.UTF_8);
+
         try {
           encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
               new Path(path).toUri().getPath(), encryptionContext);
@@ -392,10 +410,32 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Method for calling createPath API to the backend. Method can be called from:
+   * <ol>
+   *   <li>create new file</li>
+   *   <li>overwrite file</li>
+   *   <li>create new directory</li>
+   * </ol>
+   *
+   * @param path: path of the file / directory to be created / overwritten.
+   * @param isFile: defines if file or directory has to be created / overwritten.
+   * @param overwrite: defines if the file / directory to be overwritten.
+   * @param permissions: contains permission and umask
+   * @param isAppendBlob: defines if directory in the path is enabled for appendBlob
+   * @param eTag: required in case of overwrite of file / directory. Path would be
+   * overwritten only if the provided eTag is equal to the one present in backend for
+   * the path.
+   * @param: encryptionAdapter: object that contains the encryptionContext and
+   * encryptionKey created from the developer provided implementation of
+   * {@link org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider}
+   * @param: tracingContext: Object of {@link org.apache.hadoop.fs.azurebfs.utils.TracingContext}
+   * correlating to the current fs.create() request.
+   * */
   public AbfsRestOperation createPath(final String path, final boolean isFile,
       final boolean overwrite, final Permissions permissions,
       final boolean isAppendBlob, final String eTag,
-      EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
+      final EncryptionAdapter encryptionAdapter, final TracingContext tracingContext)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
