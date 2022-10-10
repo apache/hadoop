@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.oncrpc;
 
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.List;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.frame.FrameDecoder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,16 +45,16 @@ public final class RpcUtil {
 
   public static void sendRpcResponse(ChannelHandlerContext ctx,
       RpcResponse response) {
-    Channels.fireMessageReceived(ctx, response);
+    ctx.fireChannelRead(response);
   }
 
-  public static FrameDecoder constructRpcFrameDecoder() {
+  public static ByteToMessageDecoder constructRpcFrameDecoder() {
     return new RpcFrameDecoder();
   }
 
-  public static final SimpleChannelUpstreamHandler STAGE_RPC_MESSAGE_PARSER = new RpcMessageParserStage();
-  public static final SimpleChannelUpstreamHandler STAGE_RPC_TCP_RESPONSE = new RpcTcpResponseStage();
-  public static final SimpleChannelUpstreamHandler STAGE_RPC_UDP_RESPONSE = new RpcUdpResponseStage();
+  public static final ChannelInboundHandlerAdapter STAGE_RPC_MESSAGE_PARSER = new RpcMessageParserStage();
+  public static final ChannelInboundHandlerAdapter STAGE_RPC_TCP_RESPONSE = new RpcTcpResponseStage();
+  public static final ChannelInboundHandlerAdapter STAGE_RPC_UDP_RESPONSE = new RpcUdpResponseStage();
 
   /**
    * An RPC client can separate a RPC message into several frames (i.e.,
@@ -62,44 +64,39 @@ public final class RpcUtil {
    * RpcFrameDecoder is a stateful pipeline stage. It has to be constructed for
    * each RPC client.
    */
-  static class RpcFrameDecoder extends FrameDecoder {
+  static class RpcFrameDecoder extends ByteToMessageDecoder {
     public static final Logger LOG =
         LoggerFactory.getLogger(RpcFrameDecoder.class);
-    private ChannelBuffer currentFrame;
+    private volatile boolean isLast;
 
     @Override
-    protected Object decode(ChannelHandlerContext ctx, Channel channel,
-        ChannelBuffer buf) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buf,
+        List<Object> out) {
 
-      if (buf.readableBytes() < 4)
-        return null;
+      if (buf.readableBytes() < 4) {
+        return;
+      }
 
       buf.markReaderIndex();
 
       byte[] fragmentHeader = new byte[4];
       buf.readBytes(fragmentHeader);
       int length = XDR.fragmentSize(fragmentHeader);
-      boolean isLast = XDR.isLastFragment(fragmentHeader);
+      isLast = XDR.isLastFragment(fragmentHeader);
 
       if (buf.readableBytes() < length) {
         buf.resetReaderIndex();
-        return null;
+        return;
       }
 
-      ChannelBuffer newFragment = buf.readSlice(length);
-      if (currentFrame == null) {
-        currentFrame = newFragment;
-      } else {
-        currentFrame = ChannelBuffers.wrappedBuffer(currentFrame, newFragment);
-      }
+      ByteBuf newFragment = buf.readSlice(length);
+      newFragment.retain();
+      out.add(newFragment);
+    }
 
-      if (isLast) {
-        ChannelBuffer completeFrame = currentFrame;
-        currentFrame = null;
-        return completeFrame;
-      } else {
-        return null;
-      }
+    @VisibleForTesting
+    public boolean isLast() {
+      return isLast;
     }
   }
 
@@ -107,30 +104,44 @@ public final class RpcUtil {
    * RpcMessageParserStage parses the network bytes and encapsulates the RPC
    * request into a RpcInfo instance.
    */
-  static final class RpcMessageParserStage extends SimpleChannelUpstreamHandler {
+  @ChannelHandler.Sharable
+  static final class RpcMessageParserStage extends ChannelInboundHandlerAdapter {
     private static final Logger LOG = LoggerFactory
         .getLogger(RpcMessageParserStage.class);
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      ChannelBuffer buf = (ChannelBuffer) e.getMessage();
-      ByteBuffer b = buf.toByteBuffer().asReadOnlyBuffer();
+      ByteBuf buf;
+      SocketAddress remoteAddress;
+      if (msg instanceof DatagramPacket) {
+        DatagramPacket packet = (DatagramPacket)msg;
+        buf = packet.content();
+        remoteAddress = packet.sender();
+      } else {
+        buf = (ByteBuf) msg;
+        remoteAddress = ctx.channel().remoteAddress();
+      }
+
+      ByteBuffer b = buf.nioBuffer().asReadOnlyBuffer();
       XDR in = new XDR(b, XDR.State.READING);
 
       RpcInfo info = null;
       try {
         RpcCall callHeader = RpcCall.read(in);
-        ChannelBuffer dataBuffer = ChannelBuffers.wrappedBuffer(in.buffer()
+        ByteBuf dataBuffer = Unpooled.wrappedBuffer(in.buffer()
             .slice());
-        info = new RpcInfo(callHeader, dataBuffer, ctx, e.getChannel(),
-            e.getRemoteAddress());
+
+        info = new RpcInfo(callHeader, dataBuffer, ctx, ctx.channel(),
+            remoteAddress);
       } catch (Exception exc) {
-        LOG.info("Malformed RPC request from " + e.getRemoteAddress());
+        LOG.info("Malformed RPC request from " + remoteAddress);
+      } finally {
+        buf.release();
       }
 
       if (info != null) {
-        Channels.fireMessageReceived(ctx, info);
+        ctx.fireChannelRead(info);
       }
     }
   }
@@ -139,16 +150,17 @@ public final class RpcUtil {
    * RpcTcpResponseStage sends an RpcResponse across the wire with the
    * appropriate fragment header.
    */
-  private static class RpcTcpResponseStage extends SimpleChannelUpstreamHandler {
+  @ChannelHandler.Sharable
+  private static class RpcTcpResponseStage extends ChannelInboundHandlerAdapter {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      RpcResponse r = (RpcResponse) e.getMessage();
+      RpcResponse r = (RpcResponse) msg;
       byte[] fragmentHeader = XDR.recordMark(r.data().readableBytes(), true);
-      ChannelBuffer header = ChannelBuffers.wrappedBuffer(fragmentHeader);
-      ChannelBuffer d = ChannelBuffers.wrappedBuffer(header, r.data());
-      e.getChannel().write(d);
+      ByteBuf header = Unpooled.wrappedBuffer(fragmentHeader);
+      ByteBuf d = Unpooled.wrappedBuffer(header, r.data());
+      ctx.channel().writeAndFlush(d);
     }
   }
 
@@ -156,14 +168,17 @@ public final class RpcUtil {
    * RpcUdpResponseStage sends an RpcResponse as a UDP packet, which does not
    * require a fragment header.
    */
+  @ChannelHandler.Sharable
   private static final class RpcUdpResponseStage extends
-      SimpleChannelUpstreamHandler {
+      ChannelInboundHandlerAdapter {
 
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+    public void channelRead(ChannelHandlerContext ctx, Object msg)
         throws Exception {
-      RpcResponse r = (RpcResponse) e.getMessage();
-      e.getChannel().write(r.data(), r.remoteAddress());
+      RpcResponse r = (RpcResponse) msg;
+      // TODO: check out https://github.com/netty/netty/issues/1282 for
+      // correct usage
+      ctx.channel().writeAndFlush(r.data());
     }
   }
 }
