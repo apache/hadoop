@@ -157,9 +157,7 @@ public final class HttpReferrerAuditHeader {
     // build the referrer up. so as to find/report problems early
     initialHeader = buildHttpReferrer();
   }
-
-  // It is building the referrer string. I have to take map of <string, string>
-  // so it can dynamically create a header for eah request
+  
   /**
    * Build the referrer string.
    * This includes dynamically evaluating all of the evaluated
