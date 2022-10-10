@@ -145,6 +145,7 @@ public class NodeManager extends CompositeService
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private boolean rmWorkPreservingRestartEnabled;
   private boolean shouldExitOnShutdownEvent = false;
+  private boolean nmDispatherMetricEnabled;
 
   private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
 
@@ -367,6 +368,10 @@ public class NodeManager extends CompositeService
     rmWorkPreservingRestartEnabled = conf.getBoolean(YarnConfiguration
             .RM_WORK_PRESERVING_RECOVERY_ENABLED,
         YarnConfiguration.DEFAULT_RM_WORK_PRESERVING_RECOVERY_ENABLED);
+
+    nmDispatherMetricEnabled = conf.getBoolean(
+        YarnConfiguration.NM_DISPATCHER_METRIC_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISPATCHER_METRIC_ENABLED);
 
     try {
       initAndStartRecoveryStore(conf);
@@ -1011,10 +1016,13 @@ public class NodeManager extends CompositeService
   @SuppressWarnings("unchecked")
   protected AsyncDispatcher createNMDispatcher() {
     dispatcher = new AsyncDispatcher("NM Event dispatcher");
-    GenericEventTypeMetrics<ContainerManagerEventType> eventTypeMetrics =
-        GenericEventTypeMetricsManager.create(
-            dispatcher.getName(), ContainerManagerEventType.class);
-    dispatcher.addMetrics(eventTypeMetrics, eventTypeMetrics.getEnumClass());
+    if (nmDispatherMetricEnabled) {
+      GenericEventTypeMetrics<ContainerManagerEventType> eventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(),
+          ContainerManagerEventType.class);
+      dispatcher.addMetrics(eventTypeMetrics, eventTypeMetrics.getEnumClass());
+      LOG.info("NM Event dispatcher Metric Initialization Completed.");
+    }
     return dispatcher;
   }
 

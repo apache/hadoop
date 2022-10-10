@@ -237,6 +237,7 @@ public class ContainerManagerImpl extends CompositeService implements
   // NM metrics publisher is set only if the timeline service v.2 is enabled
   private NMTimelinePublisher nmMetricsPublisher;
   private boolean timelineServiceV2Enabled;
+  private boolean nmDispatherMetricEnabled;
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -328,6 +329,10 @@ public class ContainerManagerImpl extends CompositeService implements
             YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS) +
         SHUTDOWN_CLEANUP_SLOP_MS;
 
+    nmDispatherMetricEnabled = conf.getBoolean(
+        YarnConfiguration.NM_DISPATCHER_METRIC_ENABLED,
+        YarnConfiguration.DEFAULT_NM_DISPATCHER_METRIC_ENABLED);
+
     super.serviceInit(conf);
     recover();
   }
@@ -336,47 +341,50 @@ public class ContainerManagerImpl extends CompositeService implements
   protected AsyncDispatcher createContainerManagerDispatcher() {
     dispatcher = new AsyncDispatcher("NM ContainerManager dispatcher");
 
-    GenericEventTypeMetrics<ContainerEventType> containerEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(dispatcher.getName(), ContainerEventType.class);
-    dispatcher.addMetrics(containerEventTypeMetrics,
-        containerEventTypeMetrics.getEnumClass());
+    if (nmDispatherMetricEnabled) {
+      GenericEventTypeMetrics<ContainerEventType> containerEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(), ContainerEventType.class);
+      dispatcher.addMetrics(containerEventTypeMetrics,
+          containerEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<LocalizationEventType> localizationEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizationEventType.class);
-    dispatcher.addMetrics(localizationEventTypeMetrics,
-        localizationEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<LocalizationEventType> localizationEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizationEventType.class);
+      dispatcher.addMetrics(localizationEventTypeMetrics,
+          localizationEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<ApplicationEventType> applicationEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(dispatcher.getName(), ApplicationEventType.class);
-    dispatcher.addMetrics(applicationEventTypeMetrics,
-        applicationEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<ApplicationEventType> applicationEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(), ApplicationEventType.class);
+      dispatcher.addMetrics(applicationEventTypeMetrics,
+          applicationEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<ContainersLauncherEventType> containersLauncherEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(
-            dispatcher.getName(), ContainersLauncherEventType.class);
-    dispatcher.addMetrics(containersLauncherEventTypeMetrics,
-        containersLauncherEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<ContainersLauncherEventType> containersLauncherEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(
+              dispatcher.getName(), ContainersLauncherEventType.class);
+      dispatcher.addMetrics(containersLauncherEventTypeMetrics,
+          containersLauncherEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<ContainerSchedulerEventType> containerSchedulerEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(
-            dispatcher.getName(), ContainerSchedulerEventType.class);
-    dispatcher.addMetrics(containerSchedulerEventTypeMetrics,
-        containerSchedulerEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<ContainerSchedulerEventType> containerSchedulerEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(
+              dispatcher.getName(), ContainerSchedulerEventType.class);
+      dispatcher.addMetrics(containerSchedulerEventTypeMetrics,
+          containerSchedulerEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<ContainersMonitorEventType> containersMonitorEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(
-            dispatcher.getName(), ContainersMonitorEventType.class);
-    dispatcher.addMetrics(containersMonitorEventTypeMetrics,
-         containersMonitorEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<ContainersMonitorEventType> containersMonitorEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(
+              dispatcher.getName(), ContainersMonitorEventType.class);
+      dispatcher.addMetrics(containersMonitorEventTypeMetrics,
+          containersMonitorEventTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<AuxServicesEventType> auxServicesEventTypeTypeMetrics =
-        GenericEventTypeMetricsManager.create(dispatcher.getName(), AuxServicesEventType.class);
-    dispatcher.addMetrics(auxServicesEventTypeTypeMetrics,
-        auxServicesEventTypeTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<AuxServicesEventType> auxServicesEventTypeTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(), AuxServicesEventType.class);
+      dispatcher.addMetrics(auxServicesEventTypeTypeMetrics,
+          auxServicesEventTypeTypeMetrics.getEnumClass());
 
-    GenericEventTypeMetrics<LocalizerEventType> localizerEventTypeMetrics =
-        GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizerEventType.class);
-    dispatcher.addMetrics(localizerEventTypeMetrics, localizerEventTypeMetrics.getEnumClass());
+      GenericEventTypeMetrics<LocalizerEventType> localizerEventTypeMetrics =
+          GenericEventTypeMetricsManager.create(dispatcher.getName(), LocalizerEventType.class);
+      dispatcher.addMetrics(localizerEventTypeMetrics, localizerEventTypeMetrics.getEnumClass());
+      LOG.info("NM ContainerManager dispatcher Metric Initialization Completed.");
+    }
 
     return dispatcher;
   }
