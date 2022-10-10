@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -65,9 +66,7 @@ class FsDatasetAsyncDiskService {
       LoggerFactory.getLogger(FsDatasetAsyncDiskService.class);
   
   // ThreadPool core pool size
-  private static final int CORE_THREADS_PER_VOLUME = 1;
-  // ThreadPool maximum pool size
-  private final int maxNumThreadsPerVolume;
+  private final int threadsPerVolume;
   // ThreadPool keep-alive time for threads over core pool size
   private static final long THREADS_KEEP_ALIVE_SECONDS = 60; 
   
@@ -90,11 +89,11 @@ class FsDatasetAsyncDiskService {
   FsDatasetAsyncDiskService(DataNode datanode, FsDatasetImpl fsdatasetImpl) {
     this.datanode = datanode;
     this.fsdatasetImpl = fsdatasetImpl;
-    maxNumThreadsPerVolume = datanode.getConf().getInt(
-      DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY,
-          DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_DEFAULT);
-    Preconditions.checkArgument(maxNumThreadsPerVolume > 0,
-        DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_MAX_THREADS_PER_VOLUME_KEY +
+    this.threadsPerVolume = datanode.getConf().getInt(
+      DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_KEY,
+          DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_DEFAULT);
+    Preconditions.checkArgument(this.threadsPerVolume > 0,
+        DFSConfigKeys.DFS_DATANODE_FSDATASETASYNCDISK_THREADS_PER_VOLUME_KEY +
           " must be a positive integer.");
   }
 
@@ -116,7 +115,7 @@ class FsDatasetAsyncDiskService {
     };
 
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
-        CORE_THREADS_PER_VOLUME, maxNumThreadsPerVolume,
+        this.threadsPerVolume, this.threadsPerVolume,
         THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(), threadFactory);
 
@@ -167,6 +166,17 @@ class FsDatasetAsyncDiskService {
       count += exec.getTaskCount() - exec.getCompletedTaskCount();
     }
     return count;
+  }
+
+  @VisibleForTesting
+  synchronized ThreadPoolExecutor getThreadPoolExecutor(FsVolumeImpl volume) {
+    if (executors == null) {
+      throw new RuntimeException("AsyncDiskService is already shutdown");
+    }
+    if (volume == null) {
+      throw new RuntimeException("A null volume does not have a executor");
+    }
+    return executors.get(volume.getStorageID());
   }
   
   /**
