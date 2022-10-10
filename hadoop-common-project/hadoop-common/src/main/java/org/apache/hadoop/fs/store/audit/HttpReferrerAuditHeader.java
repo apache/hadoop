@@ -157,7 +157,7 @@ public final class HttpReferrerAuditHeader {
     // build the referrer up. so as to find/report problems early
     initialHeader = buildHttpReferrer();
   }
-  
+
   /**
    * Build the referrer string.
    * This includes dynamically evaluating all of the evaluated
