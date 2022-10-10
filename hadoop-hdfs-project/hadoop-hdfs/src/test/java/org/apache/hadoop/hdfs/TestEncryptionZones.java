@@ -103,6 +103,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension.DelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -150,7 +151,6 @@ import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 public class TestEncryptionZones {
   static final Logger LOG = Logger.getLogger(TestEncryptionZones.class);
@@ -1731,7 +1731,7 @@ public class TestEncryptionZones {
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), pw);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
     final String xml = output.toString();
-    SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+    SAXParser parser = XMLUtils.newSecureSAXParserFactory().newSAXParser();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 
