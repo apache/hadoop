@@ -24,12 +24,15 @@ import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.Abortable;
+import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 
 import static org.junit.Assert.assertEquals;
@@ -53,23 +56,27 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
   public void testUnbuffer() throws IOException {
     // Create mock ObjectMetadata for getFileStatus()
     Path path = new Path("/file");
-    HeadObjectResponse objectMetadata = mock(HeadObjectResponse.class);
-    when(objectMetadata.contentLength()).thenReturn(1L);
-    when(objectMetadata.lastModified()).thenReturn(Instant.ofEpochMilli(2L));
-    when(objectMetadata.eTag()).thenReturn("mock-etag");
+    HeadObjectResponse objectMetadata = HeadObjectResponse.builder()
+        .contentLength(1L)
+        .lastModified(Instant.ofEpochMilli(2L))
+        .eTag("mock-etag")
+        .build();
     when(s3V2.headObject((HeadObjectRequest) any())).thenReturn(objectMetadata);
 
     // Create mock ResponseInputStream<GetObjectResponse> and GetObjectResponse for open()
-    GetObjectResponse objectResponse = mock(GetObjectResponse.class);
-    when(objectResponse.contentLength()).thenReturn(1L);
-    when(objectResponse.lastModified()).thenReturn(Instant.ofEpochMilli(2L));
-    when(objectResponse.eTag()).thenReturn("mock-etag");
-    ResponseInputStream<GetObjectResponse> objectStream = mock(ResponseInputStream.class);
-    when(objectStream.response()).thenReturn(objectResponse);
+    GetObjectResponse objectResponse = GetObjectResponse.builder()
+        .contentLength(1L)
+        .lastModified(Instant.ofEpochMilli(2L))
+        .eTag("mock-etag")
+        .build();
+    InputStream objectStream = mock(InputStream.class);
     when(objectStream.read()).thenReturn(-1);
     when(objectStream.read(any(byte[].class))).thenReturn(-1);
     when(objectStream.read(any(byte[].class), anyInt(), anyInt())).thenReturn(-1);
-    when(s3V2.getObject((GetObjectRequest) any())).thenReturn(objectStream);
+    ResponseInputStream<GetObjectResponse> getObjectResponseInputStream =
+        new ResponseInputStream(objectResponse,
+            AbortableInputStream.create(objectStream, () -> {}));
+    when(s3V2.getObject((GetObjectRequest) any())).thenReturn(getObjectResponseInputStream);
 
     // Call read and then unbuffer
     FSDataInputStream stream = fs.open(path);
