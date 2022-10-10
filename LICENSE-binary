@@ -351,7 +351,7 @@ org.codehaus.jackson:jackson-core-asl:1.9.13
 org.codehaus.jackson:jackson-jaxrs:1.9.13
 org.codehaus.jackson:jackson-mapper-asl:1.9.13
 org.codehaus.jackson:jackson-xc:1.9.13
-org.codehaus.jettison:jettison:1.1
+org.codehaus.jettison:jettison:1.5.1
 org.eclipse.jetty:jetty-annotations:9.4.48.v20220622
 org.eclipse.jetty:jetty-http:9.4.48.v20220622
 org.eclipse.jetty:jetty-io:9.4.48.v20220622
