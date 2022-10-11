@@ -800,22 +800,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String resourceType, eTag;
       long contentLength;
       EncryptionAdapter encryptionAdapter = null;
-      if (fileStatus instanceof VersionedFileStatus
-          && client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
-        path = path.makeQualified(this.uri, path);
-        Preconditions.checkArgument(fileStatus.getPath().equals(path),
-            String.format(
-                "Filestatus path [%s] does not match with given path [%s]",
-                fileStatus.getPath(), path));
-        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
-        contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
-      } else {
-        if (fileStatus != null) {
-          LOG.debug(
-              "Fallback to getPathStatus REST call as provided filestatus "
-                  + "is not of type VersionedFileStatus, or file is encrypted");
-        }
+      if(!(fileStatus instanceof VersionedFileStatus) || (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT && ((VersionedFileStatus) fileStatus).getEncryptionContext() == null)) {
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
@@ -838,6 +823,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           encryptionAdapter = new EncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
               fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
+        }
+      } else {
+        path = path.makeQualified(this.uri, path);
+        Preconditions.checkArgument(fileStatus.getPath().equals(path),
+            String.format(
+                "Filestatus path [%s] does not match with given path [%s]",
+                fileStatus.getPath(), path));
+        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+        contentLength = fileStatus.getLen();
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
+        final String encryptionContext = ((VersionedFileStatus) fileStatus).getEncryptionContext();
+        if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+          encryptionAdapter = new EncryptionAdapter(
+              client.getEncryptionContextProvider(), getRelativePath(path),
+              encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       }
 
@@ -1080,6 +1080,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String eTag = extractEtagHeader(result);
       final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
       final String permissions = result.getResponseHeader((HttpHeaderConfigurations.X_MS_PERMISSIONS));
+      final String encryptionContext = op.getResult().getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
       final boolean hasAcl = AbfsPermission.isExtendedAcl(permissions);
       final long contentLength;
       final boolean resourceIsDir;
@@ -1116,7 +1117,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               blockSize,
               DateTimeUtils.parseLastModifiedTime(lastModified),
               path,
-              eTag);
+              eTag,
+              encryptionContext);
     }
   }
 
@@ -1222,7 +1224,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                           blockSize,
                           lastModifiedMillis,
                           entryPath,
-                          entry.eTag()));
+                          entry.eTag(),
+                          null));
         }
 
         perfInfo.registerSuccess(true);
@@ -1879,11 +1882,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
      */
     private String version;
 
+    private String encryptionContext;
+
     private VersionedFileStatus(
             final String owner, final String group, final FsPermission fsPermission, final boolean hasAcl,
             final long length, final boolean isdir, final int blockReplication,
             final long blocksize, final long modificationTime, final Path path,
-            String version) {
+            final String version, final String encryptionContext) {
       super(length, isdir, blockReplication, blocksize, modificationTime, 0,
               fsPermission,
               owner,
@@ -1893,6 +1898,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               hasAcl, false, false);
 
       this.version = version;
+      this.encryptionContext = encryptionContext;
     }
 
     /** Compare if this object is equal to another object.
@@ -1943,6 +1949,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     @Override
     public String getEtag() {
       return getVersion();
+    }
+
+    public String getEncryptionContext() {
+      return encryptionContext;
     }
 
     @Override
