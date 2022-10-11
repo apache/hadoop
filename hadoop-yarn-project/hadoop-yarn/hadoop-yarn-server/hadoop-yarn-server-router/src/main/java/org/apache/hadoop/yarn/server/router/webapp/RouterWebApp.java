@@ -45,6 +45,7 @@ public class RouterWebApp extends WebApp implements YarnWebParams {
       bind(Router.class).toInstance(router);
     }
     route("/", RouterController.class);
+    route("/server", RouterController.class, "server");
     route("/cluster", RouterController.class, "about");
     route("/about", RouterController.class, "about");
     route("/apps", RouterController.class, "apps");

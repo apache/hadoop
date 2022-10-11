@@ -18,47 +18,20 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import org.apache.hadoop.yarn.webapp.Controller;
-
-import com.google.inject.Inject;
+import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
- * Controller for the Router Web UI.
+ * Server page for the Router Web UI.
  */
-public class RouterController extends Controller {
+public class ServerPage extends RouterView {
 
-  @Inject
-  RouterController(RequestContext ctx) {
-    super(ctx);
+  @Override
+  protected void preHead(Page.HTML<__> html) {
+    commonPreHead(html);
   }
 
   @Override
-  public void index() {
-    setTitle("About the YARN Router");
-    render(AboutPage.class);
-  }
-
-  public void server() {
-    setTitle("About the current router server");
-    render(ServerPage.class);
-  }
-
-  public void about() {
-    setTitle("About the Cluster");
-    render(AboutPage.class);
-  }
-
-  public void federation() {
-    render(FederationPage.class);
-  }
-
-  public void apps() {
-    setTitle("Applications");
-    render(AppsPage.class);
-  }
-
-  public void nodes() {
-    setTitle("Nodes");
-    render(NodesPage.class);
+  protected Class<? extends SubView> content() {
+    return ServerBlock.class;
   }
 }

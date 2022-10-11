@@ -31,6 +31,7 @@ public class NavBlock extends HtmlBlock {
       div("#nav").
         h3("Cluster").
         ul().
+          li().a(url("server"), "ServerInfo").__().
           li().a(url(""), "About").__().
           li().a(url("federation"), "Federation").__().
           li().a(url("nodes"), "Nodes").__().

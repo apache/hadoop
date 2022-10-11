@@ -18,47 +18,34 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import org.apache.hadoop.yarn.webapp.Controller;
-
 import com.google.inject.Inject;
+import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.view.InfoBlock;
+
+import java.util.Date;
 
 /**
- * Controller for the Router Web UI.
+ * Server block for the Router Web UI.
  */
-public class RouterController extends Controller {
+public class ServerBlock extends HtmlBlock {
 
   @Inject
-  RouterController(RequestContext ctx) {
+  ServerBlock(Router router, ViewContext ctx) {
     super(ctx);
   }
 
   @Override
-  public void index() {
-    setTitle("About the YARN Router");
-    render(AboutPage.class);
-  }
+  protected void render(Block html) {
 
-  public void server() {
-    setTitle("About the current router server");
-    render(ServerPage.class);
-  }
+    info("Router Details")
+        .__("Router started on",
+            new Date(Router.getRouterStartupTime()))
+        .__("Router Version", YarnVersionInfo.getVersion())
+        .__("Hadoop Version", VersionInfo.getVersion());
 
-  public void about() {
-    setTitle("About the Cluster");
-    render(AboutPage.class);
-  }
-
-  public void federation() {
-    render(FederationPage.class);
-  }
-
-  public void apps() {
-    setTitle("Applications");
-    render(AppsPage.class);
-  }
-
-  public void nodes() {
-    setTitle("Nodes");
-    render(NodesPage.class);
+    html.__(InfoBlock.class);
   }
 }

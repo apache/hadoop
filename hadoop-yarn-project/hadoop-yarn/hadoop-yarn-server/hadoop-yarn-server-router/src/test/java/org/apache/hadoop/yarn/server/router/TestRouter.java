@@ -18,13 +18,16 @@
 package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,6 +53,9 @@ public class TestRouter {
     conf.set("security.applicationclient.protocol.acl", aclsString);
     conf.set("security.resourcemanager-administration.protocol.acl",
         aclsString);
+    conf.set("yarn.router.clientrm.address", "0.0.0.0:1111");
+    conf.set("yarn.router.webapp.address", "0.0.0.0:1112");
+    conf.set("yarn.router.rmadmin.address", "0.0.0.0:1113");
 
     Router router = new Router();
     router.init(conf);
@@ -85,6 +91,17 @@ public class TestRouter {
         Assert.assertEquals(accessList.getAclString(), aclString);
       }
     }
+  }
+
+  @Test
+  public void testStartTime() {
+    assertNotNull(Router.getRouterStartupTime());
+  }
+
+  @Test
+  public void testVersion() {
+    assertNotNull(YarnVersionInfo.getVersion());
+    assertNotNull(VersionInfo.getVersion());
   }
 
 }
