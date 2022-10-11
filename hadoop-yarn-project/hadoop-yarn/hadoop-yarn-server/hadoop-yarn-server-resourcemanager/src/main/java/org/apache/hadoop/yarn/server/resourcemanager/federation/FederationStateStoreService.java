@@ -428,9 +428,9 @@ public class FederationStateStoreService extends AbstractService
     try {
       // Get the current RM's App list based on subClusterId
       GetApplicationsHomeSubClusterRequest request =
-              GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
+          GetApplicationsHomeSubClusterRequest.newInstance(subClusterId);
       GetApplicationsHomeSubClusterResponse response =
-              getApplicationsHomeSubCluster(request);
+          getApplicationsHomeSubCluster(request);
       List<ApplicationHomeSubCluster> applicationHomeSCs = response.getAppsHomeSubClusters();
 
       // Traverse the app list and clean up the app.
