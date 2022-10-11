@@ -22,9 +22,11 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
+import static org.apache.hadoop.util.Time.now;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ class AbfsClientThrottlingAnalyzer {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
   private static final int DEFAULT_ANALYSIS_PERIOD_MS = 10 * 1000;
+  private static final int DEFAULT_IDLE_PERIOD_MS = 20 * 1000;
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
   private static final int MAX_ANALYSIS_PERIOD_MS = 30000;
   private static final double MIN_ACCEPTABLE_ERROR_PERCENTAGE = .1;
@@ -49,6 +52,7 @@ class AbfsClientThrottlingAnalyzer {
   private String name = null;
   private Timer timer = null;
   private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
+  private AtomicLong lastExecutionTime = null;
 
   private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
@@ -85,6 +89,7 @@ class AbfsClientThrottlingAnalyzer {
         "The argument 'period' must be between 1000 and 30000.");
     this.name = name;
     this.analysisPeriodMs = period;
+    this.lastExecutionTime = new AtomicLong(now());
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
         new AbfsOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(

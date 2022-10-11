@@ -48,8 +48,6 @@ public final class AbfsClientThrottlingIntercept {
   private static boolean isAutoThrottlingEnabled = false;
   private String accountName = "";
 
-  private Long lastExecutionTime = null;
-
   private synchronized void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
     isAutoThrottlingEnabled = autoThrottlingEnabled;
   }
@@ -60,7 +58,6 @@ public final class AbfsClientThrottlingIntercept {
     this.readThrottler = new AbfsClientThrottlingAnalyzer("read");
     this.writeThrottler = new AbfsClientThrottlingAnalyzer("write");
     this.accountName = accountName;
-    this.lastExecutionTime = now();
     LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : " + "{}", accountName);
   }
 
