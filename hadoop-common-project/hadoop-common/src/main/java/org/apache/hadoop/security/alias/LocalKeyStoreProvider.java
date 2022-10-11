@@ -142,8 +142,8 @@ public abstract class LocalKeyStoreProvider extends
 
   @Override
   public void flush() throws IOException {
+    super.getWriteLock().lock();
     try {
-      super.getWriteLock().lock();
       file.createNewFile();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Resetting permissions to '" + permissions + "'");
@@ -159,10 +159,10 @@ public abstract class LocalKeyStoreProvider extends
             "-" + PosixFilePermissions.toString(permissions));
         FileUtil.setPermission(file, fsPermission);
       }
+      super.flush();
     } finally {
       super.getWriteLock().unlock();
     }
-    super.flush();
   }
 
   private static Set<PosixFilePermission> modeToPosixFilePermission(
