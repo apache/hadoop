@@ -152,6 +152,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -475,9 +476,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               path);
 
       final Hashtable<String, String> parsedXmsProperties;
+      final String relativePath = getRelativePath(path);
+      final EncryptionAdapter encryptionAdapter
+          = createEncryptionAdapterFromServerStoreContext(relativePath,
+          tracingContext);
       final AbfsRestOperation op = client
-          .getPathStatus(getRelativePath(path), true, tracingContext);
+          .getPathStatus(relativePath, true, tracingContext, encryptionAdapter);
       perfInfo.registerResult(op.getResult());
+      encryptionAdapter.destroy();
 
       final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -486,6 +492,27 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerSuccess(true);
 
       return parsedXmsProperties;
+    }
+  }
+
+  private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
+      final TracingContext tracingContext) throws IOException {
+    final String responseHeaderEncryptionContext = client.getPathStatus(path,
+            false, tracingContext, null).getResult()
+        .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
+    if (responseHeaderEncryptionContext == null) {
+      throw new PathIOException(path,
+          "EncryptionContext not present in GetPathStatus response");
+    }
+    byte[] encryptionContext = responseHeaderEncryptionContext.getBytes(
+        StandardCharsets.UTF_8);
+
+    try {
+      return new EncryptionAdapter(client.getEncryptionContextProvider(),
+          new Path(path).toUri().getPath(), encryptionContext);
+    } catch (IOException e) {
+      LOG.debug("Could not initialize EncryptionAdapter");
+      throw e;
     }
   }
 
@@ -504,9 +531,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       } catch (CharacterCodingException ex) {
         throw new InvalidAbfsRestOperationException(ex);
       }
+      final String relativePath = getRelativePath(path);
+      final EncryptionAdapter encryptionAdapter
+          = createEncryptionAdapterFromServerStoreContext(relativePath,
+          tracingContext);
       final AbfsRestOperation op = client
           .setPathProperties(getRelativePath(path), commaSeparatedProperties,
-              tracingContext);
+              tracingContext, encryptionAdapter);
+      encryptionAdapter.destroy();
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -633,7 +665,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
         // File pre-exists, fetch eTag
         try {
-          op = client.getPathStatus(relativePath, false, tracingContext);
+          op = client.getPathStatus(relativePath, false, tracingContext, null);
         } catch (AbfsRestOperationException ex) {
           if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
@@ -785,7 +817,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                   + "is not of type VersionedFileStatus, or file is encrypted");
         }
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
-            tracingContext).getResult();
+            tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
         contentLength = Long.parseLong(
@@ -861,7 +893,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String relativePath = getRelativePath(path);
 
       final AbfsRestOperation op = client
-          .getPathStatus(relativePath, false, tracingContext);
+          .getPathStatus(relativePath, false, tracingContext, null);
       perfInfo.registerResult(op.getResult());
 
       final String resourceType = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
@@ -1038,7 +1070,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       } else {
         perfInfo.registerCallee("getPathStatus");
-        op = client.getPathStatus(getRelativePath(path), false, tracingContext);
+        op = client.getPathStatus(getRelativePath(path), false, tracingContext, null);
       }
 
       perfInfo.registerResult(op.getResult());

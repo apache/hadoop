@@ -265,27 +265,6 @@ public class AbfsClient implements Closeable {
         // get new context for create file request
         requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_CONTEXT,
             encryptionAdapter.getEncodedContext()));
-      } else if (encryptionAdapter == null) {
-        // get encryption context from GetPathStatus response header
-        byte[] encryptionContext;
-        final String responseHeaderEncryptionContext = getPathStatus(path,
-            false, tracingContext).getResult()
-            .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
-        if (responseHeaderEncryptionContext == null) {
-          throw new PathIOException(path,
-              "EncryptionContext not present in GetPathStatus response");
-        }
-        encryptionContext = responseHeaderEncryptionContext.getBytes(
-            StandardCharsets.UTF_8);
-
-        try {
-          encryptionAdapter = new EncryptionAdapter(encryptionContextProvider,
-              new Path(path).toUri().getPath(), encryptionContext);
-          encryptionAdapterCreated = true;
-        } catch (IOException e) {
-          LOG.debug("Could not initialize EncryptionAdapter");
-          throw e;
-        }
       }
       // else use cached encryption keys from input/output streams
       encodedKey = encryptionAdapter.getEncodedKey();
@@ -658,7 +637,7 @@ public class AbfsClient implements Closeable {
           // Doing a HEAD call resolves the incomplete metadata state and
           // then we can retry the rename operation.
           AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
-              tracingContext);
+              tracingContext, null);
           isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
@@ -724,7 +703,7 @@ public class AbfsClient implements Closeable {
 
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
-            false, tracingContext);
+            false, tracingContext, null);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
         return result.getStatusCode() == HttpURLConnection.HTTP_OK
@@ -819,7 +798,7 @@ public class AbfsClient implements Closeable {
       throws IOException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
-      final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext);
+      final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext, null);
       if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
         String fileLength = destStatusOp.getResult().getResponseHeader(
             HttpHeaderConfigurations.CONTENT_LENGTH);
@@ -869,11 +848,11 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation setPathProperties(final String path, final String properties,
-                                             TracingContext tracingContext)
+                                             final TracingContext tracingContext, final EncryptionAdapter encryptionAdapter)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        null, tracingContext);
+        encryptionAdapter, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -897,7 +876,8 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation getPathStatus(final String path,
-      final boolean includeProperties, TracingContext tracingContext)
+      final boolean includeProperties, final TracingContext tracingContext,
+      final EncryptionAdapter encryptionAdapter)
       throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
@@ -910,7 +890,7 @@ public class AbfsClient implements Closeable {
       abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_STATUS);
       operation = SASTokenProvider.GET_STATUS_OPERATION;
     } else {
-      addEncryptionKeyRequestHeaders(path, requestHeaders, false, null,
+      addEncryptionKeyRequestHeaders(path, requestHeaders, false, encryptionAdapter,
           tracingContext);
     }
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));

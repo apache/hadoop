@@ -27,6 +27,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -58,6 +59,7 @@ import org.apache.hadoop.util.Lists;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_KEY_SHA256;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_REQUEST_SERVER_ENCRYPTED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_SERVER_ENCRYPTED;
@@ -238,7 +240,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case READ:
         TracingContext tracingContext = getTestTracingContext(fs, true);
         AbfsHttpOperation statusOp = client.getPathStatus(path, false,
-                tracingContext).getResult();
+                tracingContext, null).getResult();
         return client.read(path, 0, new byte[5], 0, 5, statusOp.getResponseHeader(HttpHeaderConfigurations.ETAG),
           null, encryptionAdapter, tracingContext);
       case WRITE:
@@ -263,19 +265,43 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           getTestTracingContext(fs, false));
       case GET_ATTR:
         return client.getPathStatus(path, true,
-          getTestTracingContext(fs, false));
+            getTestTracingContext(fs, false),
+            createEncryptionAdapterFromServerStoreContext(path,
+                getTestTracingContext(fs, false), client));
       case SET_ATTR:
         Hashtable<String, String> properties = new Hashtable<>();
         properties.put("key", "{ value: valueTest }");
         return client.setPathProperties(path, fs.getAbfsStore()
                 .convertXmsPropertiesToCommaSeparatedString(properties),
-            getTestTracingContext(fs, false));
+            getTestTracingContext(fs, false),
+            createEncryptionAdapterFromServerStoreContext(path,
+                getTestTracingContext(fs, false), client));
       case SET_PERMISSION:
         return client.setPermission(path, FsPermission.getDefault().toString(),
             getTestTracingContext(fs, false));
       default: throw new NoSuchFieldException();
       }
     }
+  }
+
+  private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
+      final TracingContext tracingContext,
+      final AbfsClient client) throws IOException {
+    if(client.getEncryptionType() != ENCRYPTION_CONTEXT) {
+      return null;
+    }
+    final String responseHeaderEncryptionContext = client.getPathStatus(path,
+            false, tracingContext, null).getResult()
+        .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
+    if (responseHeaderEncryptionContext == null) {
+      throw new PathIOException(path,
+          "EncryptionContext not present in GetPathStatus response");
+    }
+    byte[] encryptionContext = responseHeaderEncryptionContext.getBytes(
+        StandardCharsets.UTF_8);
+
+    return new EncryptionAdapter(client.getEncryptionContextProvider(),
+        new Path(path).toUri().getPath(), encryptionContext);
   }
 
   private AzureBlobFileSystem getECProviderEnabledFS() throws Exception {
@@ -342,9 +368,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       final AbfsClient abfsClient = fs.getAbfsClient();
       abfsClient.setEncryptionType(EncryptionType.NONE);
       LambdaTestUtils.intercept(IOException.class, () ->
-          abfsClient.getPathStatus(fs.getAbfsStore().getRelativePath(testPath),
+          abfsClient.getPathStatus(relativePath,
               true,
-              getTestTracingContext(fs, false)));
+              getTestTracingContext(fs, false),
+              createEncryptionAdapterFromServerStoreContext(relativePath,
+                  getTestTracingContext(fs, false), abfsClient)));
       fs.getAbfsClient().setEncryptionType(fileEncryptionType);
     }
     return fs.getAbfsClient().getEncryptionContextProvider();
