@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.net.URI;
