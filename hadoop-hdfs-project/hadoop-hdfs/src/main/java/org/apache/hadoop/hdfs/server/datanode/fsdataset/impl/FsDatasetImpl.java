@@ -2401,7 +2401,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
-   * Remove Replica from ReplicaMap
+   * Remove Replica from ReplicaMap.
    *
    * @param block
    * @param volume
