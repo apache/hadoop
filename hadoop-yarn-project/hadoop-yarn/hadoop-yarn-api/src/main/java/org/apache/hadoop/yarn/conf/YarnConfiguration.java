@@ -4194,6 +4194,11 @@ public class YarnConfiguration extends Configuration {
       ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
   public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;
 
+  /** Enable cross origin (CORS) support. **/
+  public static final String ROUTER_WEBAPP_ENABLE_CORS_FILTER =
+      ROUTER_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
