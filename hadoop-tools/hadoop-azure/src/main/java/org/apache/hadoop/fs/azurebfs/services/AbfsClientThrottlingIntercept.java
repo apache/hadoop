@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
@@ -124,7 +125,8 @@ public final class AbfsClientThrottlingIntercept {
     if (!isAutoThrottlingEnabled) {
       return;
     }
-
+    readThrottler.getLastExecutionTime().set(now());
+    writeThrottler.getLastExecutionTime().set(now());
     switch (operationType) {
       case ReadFile:
         if (readThrottler.suspendIfNecessary()

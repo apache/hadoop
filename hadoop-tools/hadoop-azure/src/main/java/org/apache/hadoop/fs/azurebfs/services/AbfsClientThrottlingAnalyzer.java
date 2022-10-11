@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
@@ -53,6 +54,8 @@ class AbfsClientThrottlingAnalyzer {
   private Timer timer = null;
   private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
   private AtomicLong lastExecutionTime = null;
+
+  private AtomicBoolean isAccountIdle = null;
 
   private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
@@ -90,6 +93,7 @@ class AbfsClientThrottlingAnalyzer {
     this.name = name;
     this.analysisPeriodMs = period;
     this.lastExecutionTime = new AtomicLong(now());
+    this.isAccountIdle = new AtomicBoolean(false);
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
         new AbfsOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(
@@ -136,6 +140,10 @@ class AbfsClientThrottlingAnalyzer {
   @VisibleForTesting
   int getSleepDuration() {
     return sleepDuration;
+  }
+
+  public AtomicLong getLastExecutionTime() {
+    return lastExecutionTime;
   }
 
   private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
@@ -242,6 +250,9 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
+        if (now - lastExecutionTime.get() >= DEFAULT_IDLE_PERIOD_MS) {
+          timer.cancel();
+        }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {
           AbfsOperationMetrics oldMetrics = blobMetrics.getAndSet(
               new AbfsOperationMetrics(now));
