@@ -79,6 +79,7 @@ public class Router extends CompositeService {
   private WebApp webApp;
   @VisibleForTesting
   protected String webAppAddress;
+  private static long clusterTimeStamp = System.currentTimeMillis();
 
   /**
    * Priority of the Router shutdown hook.
@@ -236,5 +237,9 @@ public class Router extends CompositeService {
       name = InetAddress.getLocalHost().getHostName();
     }
     return name;
+  }
+
+  public static long getClusterTimeStamp() {
+    return clusterTimeStamp;
   }
 }
