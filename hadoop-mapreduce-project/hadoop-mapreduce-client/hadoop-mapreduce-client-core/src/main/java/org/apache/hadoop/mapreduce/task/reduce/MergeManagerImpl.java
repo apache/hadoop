@@ -881,7 +881,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   }
 
   @VisibleForTesting
-  public OnDiskMerger getOnDiskMerger() {
+  protected OnDiskMerger getOnDiskMerger() {
     return onDiskMerger;
   }
 }
