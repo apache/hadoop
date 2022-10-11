@@ -4061,6 +4061,17 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS = 1000;
 
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-count";
+
+  public static final int DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT = 1;
+
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-sleep-time";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      TimeUnit.SECONDS.toMillis(1);
+
   public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
 
   public static final String ROUTER_BIND_HOST = ROUTER_PREFIX + "bind-host";
