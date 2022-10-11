@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.applications.unmanagedamlauncher;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -72,7 +73,7 @@ public class TestUnmanagedAMLauncher {
       LOG.info("MiniYARN ResourceManager published web address: " +
                yarnClusterConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS));
       String webapp = yarnClusterConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS);
-      assertTrue(!webapp.startsWith("0.0.0.0"),
+      assertFalse(webapp.startsWith("0.0.0.0"),
           "Web app address still unbound to a host at " + webapp);
       LOG.info("Yarn webapp is at " + webapp);
       URL url = Thread.currentThread().getContextClassLoader()
@@ -152,7 +153,7 @@ public class TestUnmanagedAMLauncher {
             YarnApplicationAttemptState attemptState =
                 rmClient.getApplicationAttemptReport(attemptId)
                     .getYarnApplicationAttemptState();
-            assertEquals(attemptState, YarnApplicationAttemptState.LAUNCHED);
+            assertEquals(YarnApplicationAttemptState.LAUNCHED, attemptState);
             super.launchAM(attemptId);
           }
         };
