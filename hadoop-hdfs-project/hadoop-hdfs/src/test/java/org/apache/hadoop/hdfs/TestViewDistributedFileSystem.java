@@ -54,7 +54,7 @@ public class TestViewDistributedFileSystem extends TestDistributedFileSystem{
             .getInternalState(FileSystem
                 .getStatistics(HdfsConstants.HDFS_URI_SCHEME,
                     ViewDistributedFileSystem.class), "threadData");
-    data.set(null);
+    data.remove();
     super.testStatistics();
   }
 
