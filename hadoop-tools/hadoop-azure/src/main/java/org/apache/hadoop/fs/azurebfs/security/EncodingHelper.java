@@ -32,10 +32,11 @@ public final class EncodingHelper {
     try {
       final MessageDigest digester = MessageDigest.getInstance("SHA-256");
       return digester.digest(key);
-    } catch (NoSuchAlgorithmException ignored) {
+    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
       /*This exception can be ignored. Reason being SHA-256 is a valid algorithm,
        and it is constant for all method calls.*/
-      throw new RuntimeException("SHA-256 algorithm not found in MessageDigest", ignored);
+      throw new RuntimeException("SHA-256 algorithm not found in MessageDigest",
+          noSuchAlgorithmException);
     }
   }
 

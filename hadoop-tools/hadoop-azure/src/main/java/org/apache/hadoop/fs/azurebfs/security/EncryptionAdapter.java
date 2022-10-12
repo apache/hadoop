@@ -25,12 +25,15 @@ import java.util.Objects;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
+import static org.apache.hadoop.fs.azurebfs.security.EncodingHelper.getBase64EncodedString;
+
 /**
  * Class manages the encryptionContext and encryptionKey that needs to be added
  * to the headers to server request if Customer-Encryption-Context is enabled in
  * the configuration.
  * <br>
- * For fileCreation, the object helps in creating encryptionContext.
+ * For fileCreation, the object helps in creating encryptionContext through the
+ * implementation of EncryptionContextProvider.
  * <br>
  * For all operations, the object helps in converting encryptionContext to
  * encryptionKey through the implementation of EncryptionContextProvider.
@@ -81,15 +84,15 @@ public class EncryptionAdapter {
   }
 
   public String getEncodedKey() throws IOException {
-    return EncodingHelper.getBase64EncodedString(encryptionKey.getEncoded());
+    return getBase64EncodedString(encryptionKey.getEncoded());
   }
 
   public String getEncodedKeySHA() throws IOException {
-    return EncodingHelper.getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
+    return getBase64EncodedString(EncodingHelper.getSHA256Hash(encryptionKey.getEncoded()));
   }
 
   public String getEncodedContext() throws IOException {
-    return EncodingHelper.getBase64EncodedString(encryptionContext.getEncoded());
+    return getBase64EncodedString(encryptionContext.getEncoded());
   }
 
   public void destroy() {

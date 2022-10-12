@@ -800,7 +800,18 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String resourceType, eTag;
       long contentLength;
       EncryptionAdapter encryptionAdapter = null;
-      if(!(fileStatus instanceof VersionedFileStatus) || (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT && ((VersionedFileStatus) fileStatus).getEncryptionContext() == null)) {
+      /*
+      * GetPathStatus API has to be called in case of:
+      *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
+      *       would not be there in the fileStatus object.
+      *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
+      *       have encryptionContext field when client's encryptionType is
+      *       ENCRYPTION_CONTEXT.
+      * */
+      if (!(fileStatus instanceof VersionedFileStatus) || (
+          client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT
+              && ((VersionedFileStatus) fileStatus).getEncryptionContext()
+              == null)) {
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
@@ -833,8 +844,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
         eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        final String encryptionContext = ((VersionedFileStatus) fileStatus).getEncryptionContext();
-        if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+        final String encryptionContext
+            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
+        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
           encryptionAdapter = new EncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
               encryptionContext.getBytes(StandardCharsets.UTF_8));
@@ -1968,8 +1980,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /**
    * Permissions class contain provided permission and umask in octalNotation.
-   * If the object is created for namespace-disabled, the permission and umask
-   * would be null.
+   * If the object is created for namespace-disabled account, the permission and
+   * umask would be null.
    * */
   public static final class Permissions {
     private final String permission;
@@ -2005,6 +2017,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     public String getUmask() {
       return umask;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("{\"permission\":%s, \"umask\":%s}", permission,
+          umask);
     }
   }
 
