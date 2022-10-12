@@ -35,11 +35,8 @@ import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.SLSFairScheduler;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
-import org.apache.hadoop.yarn.sls.scheduler.SLSSchedulerCommons;
 import java.util.HashMap;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class RMRunner {
   private ResourceManager rm;
@@ -48,7 +45,6 @@ public class RMRunner {
   private SLSRunner slsRunner;
   private String tableMapping;
   private Map<String, Integer> queueAppNumMap;
-  private static final Logger LOG = LoggerFactory.getLogger(SLSSchedulerCommons.class);
 
   public RMRunner(Configuration conf, SLSRunner slsRunner) {
     this.conf = conf;

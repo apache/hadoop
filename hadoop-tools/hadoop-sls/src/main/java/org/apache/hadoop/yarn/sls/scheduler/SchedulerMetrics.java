@@ -160,7 +160,6 @@ public abstract class SchedulerMetrics {
     registerClusterResourceMetrics();
     registerContainerAppNumMetrics();
     registerSchedulerMetrics();
-
     registerNodesUsageMetrics("memory");
     registerNodesUsageMetrics("vcores");
 
