@@ -18,29 +18,79 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import com.google.inject.Inject;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Navigation block for the Router Web UI.
  */
-public class NavBlock extends HtmlBlock {
+public class NavBlock extends RouterBlock {
+
+  private Router router;
+
+  @Inject
+  public NavBlock(Router router, ViewContext ctx) {
+    super(router, ctx);
+    this.router = router;
+  }
 
   @Override
   public void render(Block html) {
-    html.
-      div("#nav").
+
+    Hamlet.UL<Hamlet.DIV<Hamlet>> mainList = html.div("#nav").
         h3("Cluster").
         ul().
-          li().a(url(""), "About").__().
-          li().a(url("federation"), "Federation").__().
-          li().a(url("nodes"), "Nodes").__().
-          li().a(url("apps"), "Applications").__().
-      __().
-      h3("Tools").
-      ul().
-        li().a("/conf", "Configuration").__().
-        li().a("/logs", "Local logs").__().
-        li().a("/stacks", "Server stacks").__().
-        li().a("/jmx?qry=Hadoop:*", "Server metrics").__().__().__();
+        li().a(url(""), "About").__().
+        li().a(url("federation"), "Federation").__();
+
+    List<String> subclusters = getSubClusters();
+
+    Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList1 =
+        mainList.li().a(url("nodes"), "Nodes").ul().$style("padding:0.3em 1em 0.1em 2em");
+
+    // ### nodes info
+    subAppsList1.li().__();
+    for (String subcluster : subclusters) {
+      subAppsList1.li().a(url("nodes", subcluster), subcluster).__();
+    }
+    subAppsList1.__().__();
+
+    // ### applications info
+    mainList.li().a(url("apps"), "Applications").__();
+
+    // ### tools
+    Hamlet.DIV<Hamlet> sectionBefore = mainList.__();
+    Configuration conf = new Configuration();
+    Hamlet.UL<Hamlet.DIV<Hamlet>> tools = WebPageUtils.appendToolSection(sectionBefore, conf);
+
+    if (tools == null) {
+      return;
+    }
+
+    tools.__().__();
+  }
+
+  private List<String> getSubClusters() {
+    List<String> result = new ArrayList<>();
+    try {
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
+      subClustersInfo.values().stream().forEach(subClusterInfo -> {
+        result.add(subClusterInfo.getSubClusterId().getId());
+      });
+    } catch (Exception e) {
+      LOG.error("getSubClusters error.", e);
+    }
+    return result;
   }
 }
