@@ -191,9 +191,11 @@ public final class S3AUtils {
 
     AwsServiceException ase = (AwsServiceException) exception;
 
-    int status = ase.statusCode();
+    if (ase.awsErrorDetails() != null) {
+      message = message + ":" + ase.awsErrorDetails().errorCode();
+    }
     IOException ioe;
-    message = message + ":" + ase.awsErrorDetails().errorCode();
+    int status = ase.statusCode();
     switch (status) {
 
     case 403:
@@ -215,7 +217,7 @@ public final class S3AUtils {
     default:
       // no specific exit code. Choose an IOE subclass based on the class
       // of the caught exception
-      ioe = new IOException();
+      ioe = new IOException(message);
       break;
     }
 

@@ -150,15 +150,17 @@ public class TestS3AGetFileStatus extends AbstractS3AMockTest {
   private void setupListMocks(List<CommonPrefix> prefixes,
       List<S3Object> s3Objects) {
     // V1 list API mock
-    ListObjectsResponse v1Response = mock(ListObjectsResponse.class);
-    when(v1Response.commonPrefixes()).thenReturn(prefixes);
-    when(v1Response.contents()).thenReturn(s3Objects);
+    ListObjectsResponse v1Response = ListObjectsResponse.builder()
+        .commonPrefixes(prefixes)
+        .contents(s3Objects)
+        .build();
     when(s3V2.listObjects(any(ListObjectsRequest.class))).thenReturn(v1Response);
 
     // V2 list API mock
-    ListObjectsV2Response v2Result = mock(ListObjectsV2Response.class);
-    when(v2Result.commonPrefixes()).thenReturn(prefixes);
-    when(v2Result.contents()).thenReturn(s3Objects);
+    ListObjectsV2Response v2Result = ListObjectsV2Response.builder()
+        .commonPrefixes(prefixes)
+        .contents(s3Objects)
+        .build();
     when(s3V2.listObjectsV2(
         any(software.amazon.awssdk.services.s3.model.ListObjectsV2Request.class))).thenReturn(
         v2Result);

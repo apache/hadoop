@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 
@@ -33,6 +31,8 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -115,12 +115,12 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     }
   }
 
-  private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
+  private List<ObjectIdentifier> buildDeleteRequest(
       final String[] keys) {
-    List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
+    List<ObjectIdentifier> request = new ArrayList<>(
         keys.length);
     for (String key : keys) {
-      request.add(new DeleteObjectsRequest.KeyVersion(key));
+      request.add(ObjectIdentifier.builder().key(key).build());
     }
     return request;
   }
@@ -156,12 +156,13 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     // create a span, expect it to be activated.
     fs.getAuditSpanSource().createSpan(StoreStatisticNames.OP_DELETE,
         csvPath.toString(), null);
-    List<DeleteObjectsRequest.KeyVersion> keys
+    List<ObjectIdentifier> keys
         = buildDeleteRequest(
             new String[]{
                 fs.pathToKey(csvPath),
                 "missing-key.csv"
             });
+    // TODO:WiP: missing test?
   }
 
   /**

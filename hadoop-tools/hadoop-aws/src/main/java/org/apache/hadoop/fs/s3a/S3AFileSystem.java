@@ -54,19 +54,8 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.MultipartUpload;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -78,18 +67,35 @@ import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.transfer.s3.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.Copy;
@@ -328,7 +334,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
-  private CannedAccessControlList cannedACL;
+  private ObjectCannedACL cannedACL;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -1070,12 +1076,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .toUpperCase(Locale.US);
     StorageClass storageClass = null;
     if (!storageClassConf.isEmpty()) {
-      try {
         storageClass = StorageClass.fromValue(storageClassConf);
-      } catch (IllegalArgumentException e) {
-        LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
-            STORAGE_CLASS, storageClassConf);
-      }
+
+        if (storageClass.equals(StorageClass.UNKNOWN_TO_SDK_VERSION)) {
+          LOG.warn("Unknown storage class property {}: {}; falling back to default storage class",
+              STORAGE_CLASS, storageClassConf);
+          storageClass = null;
+        }
+
     } else {
       LOG.debug("Unset storage class property {}; falling back to default storage class",
           STORAGE_CLASS);
@@ -1168,7 +1176,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void initCannedAcls(Configuration conf) {
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
-      cannedACL = CannedAccessControlList.valueOf(cannedACLName);
+      cannedACL = ObjectCannedACL.valueOf(AWSCannedACL.valueOf(cannedACLName).toString());
     } else {
       cannedACL = null;
     }
@@ -1295,10 +1303,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Set the client -used in mocking tests to force in a different client.
    * @param client client.
    */
-  protected void setAmazonS3Client(AmazonS3 client) {
-    Preconditions.checkNotNull(client, "client");
-    LOG.debug("Setting S3 client to {}", client);
-    s3 = client;
+  protected void setAmazonS3Client(Pair<AmazonS3, S3Client> client) {
+    Preconditions.checkNotNull(client.getLeft(), "client");
+    Preconditions.checkNotNull(client.getRight(), "clientV2");
+    LOG.debug("Setting S3 client to {}", client.getLeft());
+    LOG.debug("Setting S3V2 client to {}", client.getRight());
+    s3 = client.getLeft();
+    s3V2 = client.getRight();
 
     // Need to use a new TransferManager that uses the new client.
     // Also, using a new TransferManager requires a new threadpool as the old
@@ -1421,7 +1432,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  CannedAccessControlList getCannedACL() {
+  ObjectCannedACL getCannedACL() {
     return cannedACL;
   }
 
@@ -1687,9 +1698,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
-    public CompleteMultipartUploadResult completeMultipartUpload(
+    public CompleteMultipartUploadResponse completeMultipartUpload(
         CompleteMultipartUploadRequest request) {
-      return s3.completeMultipartUpload(request);
+      return s3V2.completeMultipartUpload(request);
     }
   }
 
@@ -2288,7 +2299,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     @Override
     public void removeKeys(
-            final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+            final List<ObjectIdentifier> keysToDelete,
             final boolean deleteFakeDir)
         throws MultiObjectDeleteException, AmazonClientException, IOException {
       auditSpan.activate();
@@ -2652,7 +2663,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               changeTracker.processMetadata(headObjectResponse, operation);
             }
             return headObjectResponse;
-          } catch(AwsServiceException ase) {
+          } catch (AwsServiceException ase) {
             if (!isObjectNotFound(ase)) {
               // file not found is not considered a failure of the call,
               // so only switch the duration tracker to update failure
@@ -2805,8 +2816,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             incrementStatistic(OBJECT_DELETE_OBJECTS);
             trackDurationOfInvocation(getDurationTrackerFactory(),
                 OBJECT_DELETE_REQUEST.getSymbol(),
-                () -> s3.deleteObject(getRequestFactory()
-                    .newDeleteObjectRequest(key)));
+                () -> s3V2.deleteObject(getRequestFactory()
+                    .newDeleteObjectRequestBuilder(key)
+                    .build()));
             return null;
           });
     }
@@ -2868,40 +2880,43 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted.
-   * @throws AmazonClientException amazon-layer failure.
+   * @throws AwsServiceException amazon-layer failure.
    */
   @Retries.RetryRaw
-  private DeleteObjectsResult deleteObjects(DeleteObjectsRequest deleteRequest)
-      throws MultiObjectDeleteException, AmazonClientException, IOException {
+  private DeleteObjectsResponse deleteObjects(DeleteObjectsRequest deleteRequest)
+      throws MultiObjectDeleteException, AwsServiceException, IOException {
     incrementWriteOperations();
     BulkDeleteRetryHandler retryHandler =
         new BulkDeleteRetryHandler(createStoreContext());
-    int keyCount = deleteRequest.getKeys().size();
-    try(DurationInfo ignored =
+    int keyCount = deleteRequest.delete().objects().size();
+    try (DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 keyCount)) {
-      return invoker.retryUntranslated("delete",
-          DELETE_CONSIDERED_IDEMPOTENT,
-          (text, e, r, i) -> {
-            // handle the failure
-            retryHandler.bulkDeleteRetried(deleteRequest, e);
-          },
-          // duration is tracked in the bulk delete counters
-          trackDurationOfOperation(getDurationTrackerFactory(),
-              OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
+      DeleteObjectsResponse response =
+          invoker.retryUntranslated("delete", DELETE_CONSIDERED_IDEMPOTENT,
+              (text, e, r, i) -> {
+                // handle the failure
+                retryHandler.bulkDeleteRetried(deleteRequest, e);
+              },
+              // duration is tracked in the bulk delete counters
+              trackDurationOfOperation(getDurationTrackerFactory(),
+                  OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
                 incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
-                return s3.deleteObjects(deleteRequest);
-            }));
-    } catch (MultiObjectDeleteException e) {
-      // one or more of the keys could not be deleted.
-      // log and rethrow
-      List<MultiObjectDeleteException.DeleteError> errors = e.getErrors();
-      LOG.debug("Partial failure of delete, {} errors", errors.size(), e);
-      for (MultiObjectDeleteException.DeleteError error : errors) {
-        LOG.debug("{}: \"{}\" - {}",
-            error.getKey(), error.getCode(), error.getMessage());
+                return s3V2.deleteObjects(deleteRequest);
+              }));
+
+      if (!response.errors().isEmpty()) {
+        // one or more of the keys could not be deleted.
+        // log and then throw
+        List<S3Error> errors = response.errors();
+        LOG.debug("Partial failure of delete, {} errors", errors.size());
+        for (S3Error error : errors) {
+          LOG.debug("{}: \"{}\" - {}", error.key(), error.code(), error.message());
+        }
+        throw new MultiObjectDeleteException(errors);
       }
-      throw e;
+
+      return response;
     }
   }
 
@@ -3102,56 +3117,57 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * be deleted in a multiple object delete operation.
    * The number of rejected objects will be added to the metric
    * {@link Statistic#FILES_DELETE_REJECTED}.
-   * @throws AmazonClientException other amazon-layer failure.
+   * @throws AwsServiceException other amazon-layer failure.
    */
   @Retries.RetryRaw
   private void removeKeysS3(
-          List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          List<ObjectIdentifier> keysToDelete,
           boolean deleteFakeDir)
-      throws MultiObjectDeleteException, AmazonClientException,
-      IOException {
+      throws MultiObjectDeleteException, AwsServiceException, IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initiating delete operation for {} objects",
           keysToDelete.size());
-      for (DeleteObjectsRequest.KeyVersion key : keysToDelete) {
-        LOG.debug(" {} {}", key.getKey(),
-            key.getVersion() != null ? key.getVersion() : "");
+      for (ObjectIdentifier objectIdentifier : keysToDelete) {
+        LOG.debug(" {} {}", objectIdentifier.key(),
+            objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
       }
     }
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
     }
-    for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
-      blockRootDelete(keyVersion.getKey());
+    for (ObjectIdentifier objectIdentifier : keysToDelete) {
+      blockRootDelete(objectIdentifier.key());
     }
     try {
       if (enableMultiObjectsDelete) {
         if (keysToDelete.size() <= pageSize) {
           deleteObjects(getRequestFactory()
-                  .newBulkDeleteRequest(keysToDelete));
+              .newBulkDeleteRequestBuilder(keysToDelete)
+              .build());
         } else {
           // Multi object deletion of more than 1000 keys is not supported
           // by s3. So we are paging the keys by page size.
           LOG.debug("Partitioning the keys to delete as it is more than " +
                   "page size. Number of keys: {}, Page size: {}",
                   keysToDelete.size(), pageSize);
-          for (List<DeleteObjectsRequest.KeyVersion> batchOfKeysToDelete :
+          for (List<ObjectIdentifier> batchOfKeysToDelete :
                   Lists.partition(keysToDelete, pageSize)) {
             deleteObjects(getRequestFactory()
-                    .newBulkDeleteRequest(batchOfKeysToDelete));
+                .newBulkDeleteRequestBuilder(batchOfKeysToDelete)
+                .build());
           }
         }
       } else {
-        for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
-          deleteObject(keyVersion.getKey());
+        for (ObjectIdentifier objectIdentifier : keysToDelete) {
+          deleteObject(objectIdentifier.key());
         }
       }
     } catch (MultiObjectDeleteException ex) {
       // partial delete.
       // Update the stats with the count of the actual number of successful
       // deletions.
-      int rejected = ex.getErrors().size();
+      int rejected = ex.errors().size();
       noteDeleted(keysToDelete.size() - rejected, deleteFakeDir);
       incrementStatistic(FILES_DELETE_REJECTED, rejected);
       throw ex;
@@ -3184,15 +3200,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted in a multiple object delete operation.
-   * @throws AmazonClientException amazon-layer failure.
+   * @throws AwsServiceException amazon-layer failure.
    * @throws IOException other IO Exception.
    */
   @VisibleForTesting
   @Retries.RetryRaw
   public void removeKeys(
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final List<ObjectIdentifier> keysToDelete,
       final boolean deleteFakeDir)
-      throws MultiObjectDeleteException, AmazonClientException,
+      throws MultiObjectDeleteException, AwsServiceException,
       IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false,
             "Deleting %d keys", keysToDelete.size())) {
@@ -4338,12 +4354,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException Other IO problems
    */
   @Retries.OnceRaw
-  InitiateMultipartUploadResult initiateMultipartUpload(
-      InitiateMultipartUploadRequest request) throws IOException {
-    LOG.debug("Initiate multipart upload to {}", request.getKey());
+  CreateMultipartUploadResponse initiateMultipartUpload(
+      CreateMultipartUploadRequest request) throws IOException {
+    LOG.debug("Initiate multipart upload to {}", request.key());
     return trackDurationOfSupplier(getDurationTrackerFactory(),
         OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
-        () -> getAmazonS3Client().initiateMultipartUpload(request));
+        () -> s3V2.createMultipartUpload(request));
   }
 
   /**
@@ -4416,22 +4432,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryExceptionsSwallowed
   private void deleteUnnecessaryFakeDirectories(Path path) {
-    List<DeleteObjectsRequest.KeyVersion> keysToRemove = new ArrayList<>();
+    List<ObjectIdentifier> keysToRemove = new ArrayList<>();
     while (!path.isRoot()) {
       String key = pathToKey(path);
       key = (key.endsWith("/")) ? key : (key + "/");
       LOG.trace("To delete unnecessary fake directory {} for {}", key, path);
-      keysToRemove.add(new DeleteObjectsRequest.KeyVersion(key));
+      keysToRemove.add(ObjectIdentifier.builder().key(key).build());
       path = path.getParent();
     }
     try {
       removeKeys(keysToRemove, true);
-    } catch(AmazonClientException | IOException e) {
+    } catch (AwsServiceException | IOException e) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {
         StringBuilder sb = new StringBuilder();
-        for(DeleteObjectsRequest.KeyVersion kv : keysToRemove) {
-          sb.append(kv.getKey()).append(",");
+        for (ObjectIdentifier objectIdentifier : keysToRemove) {
+          sb.append(objectIdentifier.key()).append(",");
         }
         LOG.debug("While deleting keys {} ", sb.toString(), e);
       }
@@ -5034,7 +5050,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return trackDurationAndSpan(MULTIPART_UPLOAD_LIST, prefix, null, () ->
         MultipartUtils.listMultipartUploads(
             createStoreContext(),
-            s3, prefix, maxKeys
+            s3V2, prefix, maxKeys
         ));
   }
 
@@ -5057,9 +5073,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     String p = prefix;
     return invoker.retry("listMultipartUploads", p, true, () -> {
-      ListMultipartUploadsRequest request = getRequestFactory()
-          .newListMultipartUploadsRequest(p);
-      return s3.listMultipartUploads(request).getMultipartUploads();
+      ListMultipartUploadsRequest.Builder requestBuilder = getRequestFactory()
+          .newListMultipartUploadsRequestBuilder(p);
+      return s3V2.listMultipartUploads(requestBuilder.build()).uploads();
     });
   }
 
@@ -5072,10 +5088,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw
   void abortMultipartUpload(String destKey, String uploadId) {
     LOG.info("Aborting multipart upload {} to {}", uploadId, destKey);
-    getAmazonS3Client().abortMultipartUpload(
-        getRequestFactory().newAbortMultipartUploadRequest(
+    s3V2.abortMultipartUpload(
+        getRequestFactory().newAbortMultipartUploadRequestBuilder(
             destKey,
-            uploadId));
+            uploadId).build());
   }
 
   /**
@@ -5087,18 +5103,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   void abortMultipartUpload(MultipartUpload upload) {
     String destKey;
     String uploadId;
-    destKey = upload.getKey();
-    uploadId = upload.getUploadId();
+    destKey = upload.key();
+    uploadId = upload.uploadId();
     if (LOG.isInfoEnabled()) {
       DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
       LOG.debug("Aborting multipart upload {} to {} initiated by {} on {}",
-          uploadId, destKey, upload.getInitiator(),
-          df.format(upload.getInitiated()));
+          uploadId, destKey, upload.initiator(),
+          df.format(Date.from(upload.initiated())));
     }
-    getAmazonS3Client().abortMultipartUpload(
-        getRequestFactory().newAbortMultipartUploadRequest(
+    s3V2.abortMultipartUpload(
+        getRequestFactory().newAbortMultipartUploadRequestBuilder(
             destKey,
-            uploadId));
+            uploadId).build());
   }
 
   /**
