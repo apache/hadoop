@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
+import software.amazon.awssdk.services.s3.S3Client;
+
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -205,7 +207,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
    * @param client client.
    */
   @Override
-  public void setAmazonS3Client(AmazonS3 client) {
+  public void setAmazonS3Client(Pair<AmazonS3, S3Client> client) {
     LOG.debug("Setting S3 client to {}", client);
     super.setAmazonS3Client(client);
   }
