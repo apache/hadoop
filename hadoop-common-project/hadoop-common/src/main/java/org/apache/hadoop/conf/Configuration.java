@@ -63,6 +63,8 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -242,6 +244,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static boolean restrictSystemPropsDefault = false;
   private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
+
+  protected BiConsumer<String, String> propAddListener;
+  protected Consumer<String> propRemoveListener;
+
 
   private static class Resource {
     private final Object resource;
@@ -2923,7 +2929,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   protected synchronized Properties getProps() {
     if (properties == null) {
-      properties = new Properties();
+      properties = propAddListener != null || propRemoveListener != null
+        ? new PropWithListener()
+        : new Properties();
       loadProps(properties, 0, true);
     }
     return properties;
@@ -4060,5 +4068,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     localUR.put(key, value);
+  }
+  private class PropWithListener extends Properties {
+    @Override
+    public synchronized Object setProperty(String key, String value) {
+      propAddListener.accept(key, value);
+      return super.setProperty(key, value);
+    }
+    @Override
+    public synchronized Object remove(Object key) {
+      propRemoveListener.accept(String.valueOf(key));
+      return super.remove(key);
+    }
   }
 }

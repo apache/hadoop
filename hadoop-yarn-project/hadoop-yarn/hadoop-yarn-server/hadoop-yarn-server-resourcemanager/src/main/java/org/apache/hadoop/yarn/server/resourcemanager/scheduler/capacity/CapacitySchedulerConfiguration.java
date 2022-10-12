@@ -18,15 +18,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -43,10 +55,13 @@ import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.QueueMapping.QueueMappingBuilder;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AppPriorityACLConfigurationParser.AppPriorityACLKeyType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.WorkflowPriorityMappingsManager.WorkflowPriorityMapping;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.QueueCapacityConfigParser;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.MappingRuleCreator;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.PriorityUtilizationQueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy.QueueOrderingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.MultiNodeLookupPolicy;
@@ -477,6 +492,16 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (useLocalConfigurationProvider) {
       addResource(CS_CONFIGURATION_FILE);
     }
+    super.propRemoveListener = prop -> {
+      if (configurationProperties != null) {
+        configurationProperties.unset(prop);
+      }
+    };
+    super.propAddListener = (prop, value) -> {
+      if (configurationProperties != null) {
+        configurationProperties.set(prop, value);
+      }
+    };
   }
 
   static String getUserPrefix(String user) {
@@ -1227,23 +1252,6 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     // Props are always Strings, therefore this cast is safe
     Map<String, String> props = (Map) getProps();
     configurationProperties = new ConfigurationProperties(props, PREFIX);
-  }
-
-  @Override
-  public void set(String name, String value) {
-    super.set(name, value);
-    if (configurationProperties != null) {
-      //The super#get method used cause the super#set contains some logic
-      configurationProperties.set(super.get(name), value);
-    }
-  }
-
-  @Override
-  public void unset(String name) {
-    super.unset(name);
-    if (configurationProperties != null) {
-      configurationProperties.unset(name);
-    }
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {
