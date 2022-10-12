@@ -56,6 +56,7 @@ import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -407,7 +408,7 @@ public class ITestAzureBlobFileSystemCreate extends
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
         .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .getPathStatus(any(String.class), eq(false), any(TracingContext.class), any(
+        .getPathStatus(any(String.class), eq(false), any(TracingContext.class), nullable(
             EncryptionAdapter.class));
 
     // mock for overwrite=true

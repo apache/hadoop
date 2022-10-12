@@ -483,7 +483,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getPathStatus(relativePath, true, tracingContext, encryptionAdapter);
       perfInfo.registerResult(op.getResult());
-      encryptionAdapter.destroy();
+      if(encryptionAdapter != null) {
+        encryptionAdapter.destroy();
+      }
 
       final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
@@ -497,6 +499,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext) throws IOException {
+    if(client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
+      return null;
+    }
     final String responseHeaderEncryptionContext = client.getPathStatus(path,
             false, tracingContext, null).getResult()
         .getResponseHeader(X_MS_ENCRYPTION_CONTEXT);
@@ -538,7 +543,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .setPathProperties(getRelativePath(path), commaSeparatedProperties,
               tracingContext, encryptionAdapter);
-      encryptionAdapter.destroy();
+      if(encryptionAdapter != null) {
+        encryptionAdapter.destroy();
+      }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
