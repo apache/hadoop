@@ -19,8 +19,6 @@
 package org.apache.hadoop.fs.s3a.api;
 
 import javax.annotation.Nullable;
-import java.io.File;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,7 +27,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -53,6 +50,7 @@ import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 /**
  * Factory for S3 objects.
@@ -210,30 +208,20 @@ public interface RequestFactory {
   GetObjectRequest.Builder newGetObjectRequestBuilder(String key);
 
   /**
-   * Create and initialize a part request of a multipart upload.
-   * Exactly one of: {@code uploadStream} or {@code sourceFile}
-   * must be specified.
-   * A subset of the file may be posted, by providing the starting point
-   * in {@code offset} and a length of block in {@code size} equal to
-   * or less than the remaining bytes.
-   * @param destKey destination key of ongoing operation
-   * @param uploadId ID of ongoing upload
-   * @param partNumber current part number of the upload
-   * @param size amount of data
-   * @param uploadStream source of data to upload
-   * @param sourceFile optional source file.
-   * @param offset offset in file to start reading.
-   * @return the request.
+   * Create and initialize a part request builder of a multipart upload.
+   *
+   * @param destKey      destination key of ongoing operation
+   * @param uploadId     ID of ongoing upload
+   * @param partNumber   current part number of the upload
+   * @param size         amount of data
+   * @return the request builder.
    * @throws PathIOException if the part number is out of range.
    */
-  UploadPartRequest newUploadPartRequest(
+  UploadPartRequest.Builder newUploadPartRequestBuilder(
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
-      InputStream uploadStream,
-      File sourceFile,
-      long offset) throws PathIOException;
+      long size) throws PathIOException;
 
   /**
    * Create a S3 Select request for the destination object.

@@ -34,11 +34,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
-
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
@@ -151,18 +151,18 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
         Charsets.UTF_8);
     return context.submit(new CompletableFuture<>(),
         () -> {
-          UploadPartRequest request = writeOperations.newUploadPartRequest(key,
-              uploadIdString, partNumber, (int) lengthInBytes, inputStream,
-              null, 0L);
-          UploadPartResult result = writeOperations.uploadPart(request);
+          UploadPartRequest request = writeOperations.newUploadPartRequestBuilder(key,
+              uploadIdString, partNumber, lengthInBytes).build();
+          RequestBody body = RequestBody.fromInputStream(inputStream, lengthInBytes);
+          UploadPartResponse response = writeOperations.uploadPart(request, body);
           statistics.partPut(lengthInBytes);
-          String eTag = result.getETag();
+          String eTag = response.eTag();
           return BBPartHandle.from(
               ByteBuffer.wrap(
                   buildPartHandlePayload(
                       filePath.toUri().toString(),
                       uploadIdString,
-                      result.getPartNumber(),
+                      partNumber,
                       eTag,
                       lengthInBytes)));
         });

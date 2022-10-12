@@ -34,6 +34,7 @@ import software.amazon.awssdk.awscore.AwsRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
@@ -201,25 +202,18 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withRequestPreparer(countRequests)
+        .withMultipartPartCountLimit(2)
         .build();
 
     String path = "path";
-    String path2 = "path2";
     String id = "1";
-    File srcfile = File.createTempFile("file", "");
-    try {
-      ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
 
-      a(factory.newUploadPartRequest(path, id, 1, 0, stream, null, 0));
-      a(factory.newUploadPartRequest(path, id, 2, 128_000_000,
-          null, srcfile, 0));
-      // offset is past the EOF
-      intercept(IllegalArgumentException.class, () ->
-          factory.newUploadPartRequest(path, id, 3, 128_000_000,
-              null, srcfile, 128));
-    } finally {
-      srcfile.delete();
-    }
+    a(factory.newUploadPartRequestBuilder(path, id, 1, 0));
+    a(factory.newUploadPartRequestBuilder(path, id, 2, 128_000_000));
+    // partNumber is past the limit
+    intercept(PathIOException.class, () ->
+        factory.newUploadPartRequestBuilder(path, id, 3, 128_000_000));
+
     assertThat(countRequests.counter.get())
         .describedAs("request preparation count")
         .isEqualTo(requestsAnalyzed);

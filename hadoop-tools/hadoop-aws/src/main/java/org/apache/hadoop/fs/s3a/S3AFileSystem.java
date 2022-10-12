@@ -56,8 +56,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 
@@ -96,6 +94,8 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.Copy;
@@ -3036,23 +3036,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Upload part of a multi-partition file.
    * Increments the write and put counters.
-   * <i>Important: this call does not close any input stream in the request.</i>
+   * <i>Important: this call does not close any input stream in the body.</i>
    *
    * Retry Policy: none.
-   * @param request request
+   * @param request the upload part request.
+   * @param body the request body.
    * @return the result of the operation.
-   * @throws AmazonClientException on problems
+   * @throws AwsServiceException on problems
    */
   @Retries.OnceRaw
-  UploadPartResult uploadPart(UploadPartRequest request)
-      throws AmazonClientException {
-    long len = request.getPartSize();
+  UploadPartResponse uploadPart(UploadPartRequest request, RequestBody body)
+      throws AwsServiceException {
+    long len = request.contentLength();
     incrementPutStartStatistics(len);
     try {
-      UploadPartResult uploadPartResult = s3.uploadPart(request);
+      UploadPartResponse uploadPartResponse = s3V2.uploadPart(request, body);
       incrementPutCompletedStatistics(true, len);
-      return uploadPartResult;
-    } catch (AmazonClientException e) {
+      return uploadPartResponse;
+    } catch (AwsServiceException e) {
       incrementPutCompletedStatistics(false, len);
       throw e;
     }

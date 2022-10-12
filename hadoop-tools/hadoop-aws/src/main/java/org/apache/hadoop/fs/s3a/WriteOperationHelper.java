@@ -19,21 +19,18 @@
 package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
@@ -41,6 +38,8 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -475,45 +474,31 @@ public class WriteOperationHelper implements WriteOperations {
   }
 
   /**
-   * Create and initialize a part request of a multipart upload.
-   * Exactly one of: {@code uploadStream} or {@code sourceFile}
-   * must be specified.
-   * A subset of the file may be posted, by providing the starting point
-   * in {@code offset} and a length of block in {@code size} equal to
-   * or less than the remaining bytes.
+   * Create and initialize a part request builder of a multipart upload.
    * The part number must be less than 10000.
    * Retry policy is once-translated; to much effort
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
    * @param size amount of data
-   * @param uploadStream source of data to upload
-   * @param sourceFile optional source file.
-   * @param offset offset in file to start reading.
-   * @return the request.
+   * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid.
    * @throws PathIOException if the part number is out of range.
    */
   @Override
   @Retries.OnceTranslated
-  public UploadPartRequest newUploadPartRequest(
+  public UploadPartRequest.Builder newUploadPartRequestBuilder(
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
-      InputStream uploadStream,
-      File sourceFile,
-      Long offset) throws IOException {
+      long size) throws IOException {
     return once("upload part request", destKey,
         withinAuditSpan(getAuditSpan(), () ->
-            getRequestFactory().newUploadPartRequest(
+            getRequestFactory().newUploadPartRequestBuilder(
                 destKey,
                 uploadId,
                 partNumber,
-                size,
-                uploadStream,
-                sourceFile,
-                offset)));
+                size)));
   }
 
   /**
@@ -623,19 +608,20 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
+   * @param request the upload part request.
+   * @param body the request body.
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  public UploadPartResult uploadPart(UploadPartRequest request)
+  public UploadPartResponse uploadPart(UploadPartRequest request, RequestBody body)
       throws IOException {
-    return retry("upload part #" + request.getPartNumber()
-            + " upload ID " + request.getUploadId(),
-        request.getKey(),
+    return retry("upload part #" + request.partNumber()
+            + " upload ID " + request.uploadId(),
+        request.key(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request)));
+            () -> owner.uploadPart(request, body)));
   }
 
   /**
