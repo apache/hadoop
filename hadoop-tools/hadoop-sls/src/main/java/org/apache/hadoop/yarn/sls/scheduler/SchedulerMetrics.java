@@ -467,6 +467,9 @@ public abstract class SchedulerMetrics {
         schedulerHistogramList.add(histogram);
         histogramTimerMap.put(histogram, schedulerHandleTimerMap.get(e));
       }
+    } catch (Exception e) {
+      LOG.error("Caught exception while registering scheduler metrics", e);
+      throw e;
     } finally {
       samplerLock.unlock();
     }
