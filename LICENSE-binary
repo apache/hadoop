@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.12.262
+com.amazonaws:aws-java-sdk-bundle:1.12.316
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -343,7 +343,7 @@ org.apache.kerby:token-provider:2.0.2
 org.apache.solr:solr-solrj:8.8.2
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.6.3
-org.codehaus.jettison:jettison:1.1
+org.codehaus.jettison:jettison:1.5.1
 org.eclipse.jetty:jetty-annotations:9.4.48.v20220622
 org.eclipse.jetty:jetty-http:9.4.48.v20220622
 org.eclipse.jetty:jetty-io:9.4.48.v20220622
