@@ -510,6 +510,9 @@ public abstract class SchedulerMetrics {
             }
         );
       }
+    } catch (Exception e) {
+      LOG.error("Caught exception while registering nodes usage metrics", e);
+      throw e;
     } finally {
       samplerLock.unlock();
     }
