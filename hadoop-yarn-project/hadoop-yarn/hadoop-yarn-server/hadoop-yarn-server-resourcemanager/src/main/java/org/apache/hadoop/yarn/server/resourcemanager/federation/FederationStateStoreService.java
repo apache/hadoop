@@ -481,8 +481,9 @@ public class FederationStateStoreService extends AbstractService
         DeleteApplicationHomeSubClusterRequest.newInstance(appId);
 
     // CleanUp Finish App.
-    return ((FederationActionRetry<Boolean>) () -> invokeCleanUpFinishApp(appId, isQuery, request))
-        .runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+    return ((FederationActionRetry<Boolean>) (retry) ->
+        invokeCleanUpFinishApp(appId, isQuery, request))
+         .runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
   }
 
   /**
