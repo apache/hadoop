@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -110,6 +111,12 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     //if singleton is not enabled, for same accounts instances should return same value
     assertEquals(instance3, instance5);
+  }
+
+  @Test
+  public void testAccountIdle() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+
   }
 
   @Test

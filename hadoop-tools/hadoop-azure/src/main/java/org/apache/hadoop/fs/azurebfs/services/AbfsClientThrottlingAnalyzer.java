@@ -48,13 +48,13 @@ class AbfsClientThrottlingAnalyzer {
   private static final double SLEEP_INCREASE_FACTOR = 1.05;
   private int analysisPeriodMs;
 
+  private int idlePeriodMs;
   private volatile int sleepDuration = 0;
   private long consecutiveNoErrorCount = 0;
   private String name = null;
   private Timer timer = null;
   private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
   private AtomicLong lastExecutionTime = null;
-
   private AtomicBoolean isAccountIdle = null;
 
   private AbfsClientThrottlingAnalyzer() {
@@ -103,6 +103,15 @@ class AbfsClientThrottlingAnalyzer {
         analysisPeriodMs);
   }
 
+  public void resumeTimer() {
+    blobMetrics = new AtomicReference<AbfsOperationMetrics>(
+            new AbfsOperationMetrics(System.currentTimeMillis()));
+    timer.schedule(new TimerTaskImpl(),
+            analysisPeriodMs,
+            analysisPeriodMs);
+    isAccountIdle.set(false);
+  }
+
   /**
    * Updates metrics with results from the current storage operation.
    *
@@ -144,6 +153,10 @@ class AbfsClientThrottlingAnalyzer {
 
   public AtomicLong getLastExecutionTime() {
     return lastExecutionTime;
+  }
+
+  public AtomicBoolean getIsAccountIdle() {
+    return isAccountIdle;
   }
 
   private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
@@ -251,6 +264,7 @@ class AbfsClientThrottlingAnalyzer {
 
         long now = System.currentTimeMillis();
         if (now - lastExecutionTime.get() >= DEFAULT_IDLE_PERIOD_MS) {
+          isAccountIdle.set(true);
           timer.cancel();
         }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {

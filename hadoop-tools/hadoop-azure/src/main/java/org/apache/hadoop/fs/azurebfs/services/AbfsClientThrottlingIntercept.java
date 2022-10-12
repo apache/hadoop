@@ -125,6 +125,12 @@ public final class AbfsClientThrottlingIntercept {
     if (!isAutoThrottlingEnabled) {
       return;
     }
+    if (readThrottler.getIsAccountIdle().get()) {
+      readThrottler.resumeTimer();
+    }
+    if (writeThrottler.getIsAccountIdle().get()) {
+      writeThrottler.resumeTimer();
+    }
     readThrottler.getLastExecutionTime().set(now());
     writeThrottler.getLastExecutionTime().set(now());
     switch (operationType) {
