@@ -42,7 +42,7 @@ public class SLSFairScheduler extends FairScheduler
     implements SchedulerWrapper, Configurable {
   private final SLSSchedulerCommons schedulerCommons;
   private SLSRunner runner;
-  private static final Logger LOG = LoggerFactory.getLogger(SLSSchedulerCommons.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SLSFairScheduler.class);
 
   public SLSFairScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);

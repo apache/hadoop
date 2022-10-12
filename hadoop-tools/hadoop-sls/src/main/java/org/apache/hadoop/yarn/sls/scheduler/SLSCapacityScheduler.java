@@ -47,7 +47,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   private final SLSSchedulerCommons schedulerCommons;
   private Configuration conf;
   private SLSRunner runner;
-  private static final Logger LOG = LoggerFactory.getLogger(SLSSchedulerCommons.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SLSCapacityScheduler.class);
 
   public SLSCapacityScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);

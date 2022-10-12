@@ -161,12 +161,8 @@ public abstract class SchedulerMetrics {
     registerContainerAppNumMetrics();
     registerSchedulerMetrics();
 
-    try{
-      registerNodesUsageMetrics("memory");
-      registerNodesUsageMetrics("vcores");
-    } catch(Exception e){
-      LOG.error("Caught exception while registering scheduler metrics", e);
-    }
+    registerNodesUsageMetrics("memory");
+    registerNodesUsageMetrics("vcores");
 
     // .csv output
     initMetricsCSVOutput();

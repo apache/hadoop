@@ -111,11 +111,7 @@ public class RMRunner {
     queueAppNumMap.put(queueName, appNum);
     SchedulerMetrics metrics = wrapper.getSchedulerMetrics();
     if (metrics != null) {
-      try {
-        metrics.trackQueue(queueName);
-      } catch (Exception e) {
-        LOG.error("Caught exception while tracking a queue", e);
-      }
+      metrics.trackQueue(queueName);
     }
   }
 
