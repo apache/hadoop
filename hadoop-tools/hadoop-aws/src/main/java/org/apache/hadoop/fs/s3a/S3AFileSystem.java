@@ -2889,16 +2889,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     BulkDeleteRetryHandler retryHandler =
         new BulkDeleteRetryHandler(createStoreContext());
     int keyCount = deleteRequest.delete().objects().size();
-    try(DurationInfo ignored =
+    try (DurationInfo ignored =
             new DurationInfo(LOG, false, "DELETE %d keys",
                 keyCount)) {
       DeleteObjectsResponse response =
-          invoker.retryUntranslated("delete", DELETE_CONSIDERED_IDEMPOTENT, (text, e, r, i) -> {
+          invoker.retryUntranslated("delete", DELETE_CONSIDERED_IDEMPOTENT,
+              (text, e, r, i) -> {
                 // handle the failure
                 retryHandler.bulkDeleteRetried(deleteRequest, e);
               },
               // duration is tracked in the bulk delete counters
-              trackDurationOfOperation(getDurationTrackerFactory(), OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
+              trackDurationOfOperation(getDurationTrackerFactory(),
+                  OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
                 incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
                 return s3V2.deleteObjects(deleteRequest);
               }));
@@ -3125,17 +3127,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initiating delete operation for {} objects",
           keysToDelete.size());
-      for (ObjectIdentifier key : keysToDelete) {
-        LOG.debug(" {} {}", key.key(),
-            key.versionId() != null ? key.versionId() : "");
+      for (ObjectIdentifier objectIdentifier : keysToDelete) {
+        LOG.debug(" {} {}", objectIdentifier.key(),
+            objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
       }
     }
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
     }
-    for (ObjectIdentifier keyVersion : keysToDelete) {
-      blockRootDelete(keyVersion.key());
+    for (ObjectIdentifier objectIdentifier : keysToDelete) {
+      blockRootDelete(objectIdentifier.key());
     }
     try {
       if (enableMultiObjectsDelete) {
@@ -3157,8 +3159,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         }
       } else {
-        for (ObjectIdentifier keyVersion : keysToDelete) {
-          deleteObject(keyVersion.key());
+        for (ObjectIdentifier objectIdentifier : keysToDelete) {
+          deleteObject(objectIdentifier.key());
         }
       }
     } catch (MultiObjectDeleteException ex) {
@@ -4444,8 +4446,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {
         StringBuilder sb = new StringBuilder();
-        for (ObjectIdentifier kv : keysToRemove) {
-          sb.append(kv.key()).append(",");
+        for (ObjectIdentifier objectIdentifier : keysToRemove) {
+          sb.append(objectIdentifier.key()).append(",");
         }
         LOG.debug("While deleting keys {} ", sb.toString(), e);
       }

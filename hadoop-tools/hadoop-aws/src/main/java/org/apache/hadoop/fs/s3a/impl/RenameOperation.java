@@ -581,9 +581,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // who is trying to debug why objects are no longer there.
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initiating delete operation for {} objects", keys.size());
-      for (ObjectIdentifier key : keys) {
-        LOG.debug(" {} {}", key.key(),
-            key.versionId() != null ? key.versionId() : "");
+      for (ObjectIdentifier objectIdentifier : keys) {
+        LOG.debug(" {} {}", objectIdentifier.key(),
+            objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
       }
     }
 

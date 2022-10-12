@@ -25,6 +25,10 @@ import software.amazon.awssdk.services.s3.model.S3Error;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Exception raised in {@link S3AFileSystem#deleteObjects} when
+ * one or more of the keys could not be deleted.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class MultiObjectDeleteException extends RuntimeException {
