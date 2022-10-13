@@ -284,6 +284,16 @@ Kerberos supported in federation.
 | `yarn.router.kerberos.principal` | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in setup. |
 | `yarn.router.kerberos.principal.hostname` |  | Optional. The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
 
+Enabling CORS support:
+
+To enable cross-origin support (CORS) for the Yarn Router, please set the following configuration parameters:
+
+| Property                                  | Example                                                      | Description                                                  |
+| ----------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
+| `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
+
+
 ###ON NMs:
 
 These are extra configurations that should appear in the **conf/yarn-site.xml** at each NodeManager.

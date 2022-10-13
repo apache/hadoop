@@ -3727,6 +3727,26 @@
     <value>yarnfederation/</value>
   </property>
 
+  <property>
+    <description>
+      The number of retries to clear the app in the FederationStateStore,
+      the default value is 1, that is, after the app fails to clean up, it will retry the cleanup again.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-count</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Clear the sleep time of App retry in FederationStateStore.
+      When the app fails to clean up,
+      it will sleep for a period of time and then try to clean up.
+      The default value is 1s.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-sleep-time</name>
+    <value>1s</value>
+  </property>
+
   <!-- Other Configuration -->
 
   <property>
@@ -5006,7 +5026,18 @@
       Default is 100
     </description>
   </property>
-
+  
+  <property>
+    <name>yarn.router.webapp.cross-origin.enabled</name>
+    <value>false</value>
+    <description>
+      Flag to enable cross-origin (CORS) support for Yarn Router.
+      For Yarn Router, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+  </property>
+  
   <property>
     <name>yarn.federation.state-store.max-applications</name>
     <value>1000</value>
