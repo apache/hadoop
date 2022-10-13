@@ -713,7 +713,6 @@ public class Client implements AutoCloseable {
            * client, to ensure Server matching address of the client connection
            * to host name in principal passed.
            */
-          InetSocketAddress bindAddr = null;
           if (ticket != null && ticket.hasKerberosCredentials()) {
             KerberosInfo krbInfo = 
               remoteId.getProtocol().getAnnotation(KerberosInfo.class);
@@ -733,7 +732,7 @@ public class Client implements AutoCloseable {
             }
           }
           
-          NetUtils.connect(this.socket, server, bindAddr, connectionTimeout);
+          NetUtils.connect(this.socket, server, null, connectionTimeout);
           this.socket.setSoTimeout(soTimeout);
           return;
         } catch (ConnectTimeoutException toe) {
