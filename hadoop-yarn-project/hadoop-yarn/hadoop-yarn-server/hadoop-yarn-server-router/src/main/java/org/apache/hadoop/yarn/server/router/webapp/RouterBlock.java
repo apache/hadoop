@@ -100,7 +100,7 @@ public abstract class RouterBlock extends HtmlBlock {
     boolean isEnabled = conf.getBoolean(
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
-    return true;
+    return isEnabled;
   }
 
   /**
@@ -136,6 +136,7 @@ public abstract class RouterBlock extends HtmlBlock {
    * Get ClusterMetricsInfo By SubClusterId.
    *
    * @param subclusterId subClusterId
+   * @return SubCluster RM ClusterMetricsInfo
    */
   protected ClusterMetricsInfo getClusterMetricsInfoBySubClusterId(String subclusterId) {
     try {
