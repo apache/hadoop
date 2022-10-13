@@ -41,7 +41,6 @@ public class NavBlock extends RouterBlock {
 
   @Override
   public void render(Block html) {
-
     Hamlet.UL<Hamlet.DIV<Hamlet>> mainList = html.div("#nav").
         h3("Cluster").
         ul().

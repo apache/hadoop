@@ -35,6 +35,9 @@ public class RouterClusterMetrics {
   protected static final long BYTES_IN_MB = 1024 * 1024;
   private static final Logger LOG = LoggerFactory.getLogger(RouterClusterMetrics.class);
 
+  // webPageTitlePrefix
+  private String webPageTitlePrefix = "Federation";
+
   // Application Information.
   private String appsSubmitted = "N/A";
   private String appsCompleted = "N/A";
@@ -97,6 +100,12 @@ public class RouterClusterMetrics {
       // Node Information Conversion.
       conversionNodeInformation(metrics);
     }
+  }
+
+  public RouterClusterMetrics(ClusterMetricsInfo metrics,
+      String webPageTitlePrefix) {
+    this(metrics);
+    this.webPageTitlePrefix = webPageTitlePrefix;
   }
 
   // Get Key Metric Information
@@ -306,5 +315,9 @@ public class RouterClusterMetrics {
     } catch (Exception e) {
       LOG.error("conversionNodeInformation error.", e);
     }
+  }
+
+  public String getWebPageTitlePrefix() {
+    return webPageTitlePrefix;
   }
 }

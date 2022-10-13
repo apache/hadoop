@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.Router;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
@@ -37,6 +36,8 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
+
+import java.util.Date;
 
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
 
@@ -66,6 +67,7 @@ public class NodesBlock extends RouterBlock {
     // it means that we need to get the Node list of a subCluster.
     NodesInfo nodesInfo = null;
     if (subClusterName != null && !subClusterName.isEmpty()) {
+      initSubClusterMetricsOverviewTable(html, subClusterName);
       nodesInfo = getSubClusterNodesInfo(subClusterName);
     } else {
       // Metrics Overview Table
@@ -155,8 +157,9 @@ public class NodesBlock extends RouterBlock {
           }
           row.td().a(herfWebAppAddress, httpAddress).__();
         }
+
         row.td().br().$title(String.valueOf(info.getLastHealthUpdate())).__()
-            .__(Times.format(info.getLastHealthUpdate())).__()
+            .__(new Date(info.getLastHealthUpdate())).__()
             .td(info.getHealthReport())
             .td(String.valueOf(info.getNumContainers())).td().br()
             .$title(String.valueOf(usedMemory)).__()
