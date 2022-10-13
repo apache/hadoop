@@ -492,16 +492,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (useLocalConfigurationProvider) {
       addResource(CS_CONFIGURATION_FILE);
     }
-    super.propRemoveListener = prop -> {
-      if (configurationProperties != null) {
-        configurationProperties.unset(prop);
-      }
-    };
-    super.propAddListener = (prop, value) -> {
-      if (configurationProperties != null) {
-        configurationProperties.set(prop, value);
-      }
-    };
+    super.setPropListeners(
+        (name, value) -> {
+          if (configurationProperties != null) {
+            configurationProperties.set(name, value);
+          }
+        },
+        name -> {
+          if (configurationProperties != null) {
+            configurationProperties.unset(name);
+          }
+        }
+    );
   }
 
   static String getUserPrefix(String user) {

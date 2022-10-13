@@ -245,8 +245,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
 
-  protected BiConsumer<String, String> propAddListener;
-  protected Consumer<String> propRemoveListener;
+  private BiConsumer<String, String> propAddListener;
+  private Consumer<String> propRemoveListener;
 
 
   private static class Resource {
@@ -876,6 +876,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     this.classLoader = other.classLoader;
     this.loadDefaults = other.loadDefaults;
     setQuietMode(other.getQuietMode());
+  }
+
+  protected synchronized void setPropListeners(
+      BiConsumer<String, String> propAddListener,
+      Consumer<String> propRemoveListener
+  ) {
+    this.properties = null;
+    this.propAddListener = propAddListener;
+    this.propRemoveListener = propRemoveListener;
   }
 
   /**

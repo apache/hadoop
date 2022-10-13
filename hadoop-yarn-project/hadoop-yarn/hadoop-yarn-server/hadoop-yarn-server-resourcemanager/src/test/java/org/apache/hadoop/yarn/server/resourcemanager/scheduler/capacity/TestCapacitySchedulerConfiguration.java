@@ -17,15 +17,18 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.junit.Test;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestCapacitySchedulerConfiguration {
@@ -105,6 +108,40 @@ public class TestCapacitySchedulerConfiguration {
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getGroups().isEmpty());
     assertTrue(acl.isAllAllowed());
+  }
+
+  /**
+   * dfs.nfs.exports.allowed.hosts
+   * prop is deprecated, new we use
+   * nfs.exports.allowed.hosts
+   * instead
+   */
+  @Test
+  public void testDeprecationFeatureWorks() {
+    final String key1 = "KEY_1";
+    final String key2 = "KEY_2";
+    final String depName = "dfs.nfs.exports.allowed.hosts";
+    final String newName = "nfs.exports.allowed.hosts";
+    final CapacitySchedulerConfiguration csConf = createDefaultCsConf();
+    final ConfigurationProperties properties = csConf.getConfigurationProperties();
+
+    csConf.set(depName, key1);
+    assertEquals(key1, csConf.get(depName));
+    assertEquals(key1, csConf.get(newName));
+    assertEquals(key1, properties.getPropertiesWithPrefix(depName).values().iterator().next());
+    assertEquals(key1, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+
+    csConf.set(depName, key2);
+    assertEquals(key2, csConf.get(depName));
+    assertEquals(key2, csConf.get(newName));
+    assertEquals(key2, properties.getPropertiesWithPrefix(depName).values().iterator().next());
+    assertEquals(key2, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+
+    csConf.unset(newName);
+    assertNull(csConf.get(depName));
+    assertNull(csConf.get(newName));
+    assertTrue(properties.getPropertiesWithPrefix(depName).isEmpty());
+    assertTrue(properties.getPropertiesWithPrefix(newName).isEmpty());
   }
 
   @Test
