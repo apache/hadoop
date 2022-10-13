@@ -38,8 +38,6 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
-import java.util.List;
-
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
 
 /**
@@ -60,27 +58,23 @@ public class NodesBlock extends RouterBlock {
 
     boolean isEnabled = isYarnFederationEnabled();
 
-    // If Yarn Federation is not enabled, the user needs to be prompted.
-    initUserHelpInformationDiv(html, isEnabled);
-
-    // Metrics Overview Table
-    html.__(MetricsOverviewTable.class);
-
     // Get subClusterName
     String subClusterName = $(NODE_SC);
 
+    // We will try to get the subClusterName.
+    // If the subClusterName is not empty,
+    // it means that we need to get the Node list of a subCluster.
     NodesInfo nodesInfo = null;
-
     if (subClusterName != null && !subClusterName.isEmpty()) {
-      // If subClusterName is not empty, we need to get NodeList of subCluster
       nodesInfo = getSubClusterNodesInfo(subClusterName);
     } else {
+      // Metrics Overview Table
+      html.__(MetricsOverviewTable.class);
       nodesInfo = getYarnFederationNodesInfo(isEnabled);
     }
 
-    if (nodesInfo != null && CollectionUtils.isNotEmpty(nodesInfo.getNodes())) {
-      initYarnFederationNodesOfCluster(nodesInfo.getNodes(), html);
-    }
+    // Initialize NodeInfo List
+    initYarnFederationNodesOfCluster(nodesInfo, html);
   }
 
   private NodesInfo getYarnFederationNodesInfo(boolean isEnabled) {
@@ -123,7 +117,7 @@ public class NodesBlock extends RouterBlock {
     return nodes;
   }
 
-  private void initYarnFederationNodesOfCluster(List<NodeInfo> nodeInfos, Block html) {
+  private void initYarnFederationNodesOfCluster(NodesInfo nodesInfo, Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.table("#nodes").thead().tr()
         .th(".nodelabels", "Node Labels")
         .th(".rack", "Rack")
@@ -140,8 +134,8 @@ public class NodesBlock extends RouterBlock {
         .th(".nodeManagerVersion", "Version")
         .__().__().tbody();
 
-    if (nodeInfos != null && !nodeInfos.isEmpty()) {
-      for (NodeInfo info : nodeInfos) {
+    if (nodesInfo != null && CollectionUtils.isNotEmpty(nodesInfo.getNodes())) {
+      for (NodeInfo info : nodesInfo.getNodes()) {
         int usedMemory = (int) info.getUsedMemory();
         int availableMemory = (int) info.getAvailableMemory();
         TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();

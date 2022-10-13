@@ -39,9 +39,10 @@ import java.util.Comparator;
 public abstract class RouterBlock extends HtmlBlock {
 
   private final Router router;
-
+  private final ViewContext ctx;
   public RouterBlock(Router router, ViewContext ctx) {
     super(ctx);
+    this.ctx = ctx;
     this.router = router;
   }
 
@@ -95,5 +96,33 @@ public abstract class RouterBlock extends HtmlBlock {
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
     return isEnabled;
+  }
+
+  /**
+   * Get a list of SubClusterIds for ActiveSubClusters.
+   *
+   * @return list of SubClusterIds.
+   */
+  protected List<String> getActiveSubClusterIds() {
+    List<String> result = new ArrayList<>();
+    try {
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
+      subClustersInfo.values().stream().forEach(subClusterInfo -> {
+        result.add(subClusterInfo.getSubClusterId().getId());
+      });
+    } catch (Exception e) {
+      LOG.error("getActiveSubClusters error.", e);
+    }
+    return result;
+  }
+
+  /**
+   * @param html
+   * @param subClusterId
+   */
+  protected void initSubClusterMetricsOverviewTable(Block html, String subClusterId) {
+    MetricsOverviewTable metricsOverviewTable = new MetricsOverviewTable(this.router, this.ctx);
+    metricsOverviewTable.render(html, subClusterId);
   }
 }

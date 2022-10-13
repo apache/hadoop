@@ -65,6 +65,10 @@ public class MetricsOverviewTable extends RouterBlock {
     div.__();
   }
 
+  protected void render(Block html, String subClusterId) {
+
+  }
+
   /**
    * Init Federation Cluster Apps Metrics.
    * Contains App information, resource usage information.

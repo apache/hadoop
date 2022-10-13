@@ -20,16 +20,11 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Navigation block for the Router Web UI.
@@ -53,15 +48,15 @@ public class NavBlock extends RouterBlock {
         li().a(url(""), "About").__().
         li().a(url("federation"), "Federation").__();
 
-    List<String> subclusters = getSubClusters();
+    List<String> subClusterIds = getActiveSubClusterIds();
 
     Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList1 =
         mainList.li().a(url("nodes"), "Nodes").ul().$style("padding:0.3em 1em 0.1em 2em");
 
     // ### nodes info
     subAppsList1.li().__();
-    for (String subcluster : subclusters) {
-      subAppsList1.li().a(url("nodes", subcluster), subcluster).__();
+    for (String subClusterId : subClusterIds) {
+      subAppsList1.li().a(url("nodes", subClusterId), subClusterId).__();
     }
     subAppsList1.__().__();
 
@@ -78,19 +73,5 @@ public class NavBlock extends RouterBlock {
     }
 
     tools.__().__();
-  }
-
-  private List<String> getSubClusters() {
-    List<String> result = new ArrayList<>();
-    try {
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
-      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
-      subClustersInfo.values().stream().forEach(subClusterInfo -> {
-        result.add(subClusterInfo.getSubClusterId().getId());
-      });
-    } catch (Exception e) {
-      LOG.error("getSubClusters error.", e);
-    }
-    return result;
   }
 }
