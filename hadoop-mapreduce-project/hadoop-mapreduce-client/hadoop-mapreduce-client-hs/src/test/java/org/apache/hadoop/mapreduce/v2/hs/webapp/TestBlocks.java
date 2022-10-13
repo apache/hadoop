@@ -68,12 +68,12 @@ import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test some HtmlBlock classes
@@ -83,27 +83,25 @@ public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
 
   @Test
-  public void testPullTaskLink(){
+  void testPullTaskLink() {
     Task task = getTask(0);
     String taskId = task.getID().toString();
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
         taskId + "</a>"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId));
+    , HsJobBlock.addTaskLinks("Task failed " + taskId), "pull links doesn't work correctly");
 
-    Assert.assertEquals("pull links doesn't work correctly",
-        "Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
         taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
-        , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
-        "Job failed as tasks failed. failedMaps:1 failedReduces:0"));
+    , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
+        "Job failed as tasks failed. failedMaps:1 failedReduces:0"), "pull links doesn't work correctly");
   }
 
   /**
    * test HsTasksBlock's rendering.
    */
   @Test
-  public void testHsTasksBlock() {
+  void testHsTasksBlock() {
 
     Task task = getTask(0);
 
@@ -138,7 +136,7 @@ public class TestBlocks {
    * test AttemptsBlock's rendering.
    */
   @Test
-  public void testAttemptsBlock() {
+  void testAttemptsBlock() {
     AppContext ctx = mock(AppContext.class);
     AppForTest app = new AppForTest(ctx);
 
@@ -158,7 +156,7 @@ public class TestBlocks {
     when(attempt.getAssignedContainerID()).thenReturn(containerId);
 
     when(attempt.getAssignedContainerMgrAddress()).thenReturn(
-            "assignedContainerMgrAddress");
+        "assignedContainerMgrAddress");
     when(attempt.getNodeRackName()).thenReturn("nodeRackName");
 
     final long taStartTime = 100002L;
@@ -210,7 +208,7 @@ public class TestBlocks {
     assertFalse(data.toString().contains("Processed 128/128 records <p> \n"));
     assertTrue(data.toString().contains("Processed 128\\/128 records &lt;p&gt; \\n"));
     assertTrue(data.toString().contains(
-            "_0005_01_000001:attempt_0_0001_r_000000_0:User:"));
+        "_0005_01_000001:attempt_0_0001_r_000000_0:User:"));
     assertTrue(data.toString().contains("100002"));
     assertTrue(data.toString().contains("100010"));
     assertTrue(data.toString().contains("100011"));
@@ -242,7 +240,7 @@ public class TestBlocks {
    * test HsJobsBlock's rendering.
    */
   @Test
-  public void testHsJobsBlock() {
+  void testHsJobsBlock() {
     AppContext ctx = mock(AppContext.class);
     Map<JobId, Job> jobs = new HashMap<JobId, Job>();
     Job job = getJob();
@@ -251,7 +249,7 @@ public class TestBlocks {
 
     Controller.RequestContext rc = mock(Controller.RequestContext.class);
     ViewContext view = mock(ViewContext.class);
-    HttpServletRequest req =mock(HttpServletRequest.class);
+    HttpServletRequest req = mock(HttpServletRequest.class);
     when(rc.getRequest()).thenReturn(req);
     when(view.requestContext()).thenReturn(rc);
 
@@ -267,22 +265,23 @@ public class TestBlocks {
     assertTrue(data.toString().contains("QueueName"));
     assertTrue(data.toString().contains("SUCCEEDED"));
   }
+
   /**
    * test HsController
    */
 
   @Test
-  public void testHsController() throws Exception {
+  void testHsController() throws Exception {
     AppContext ctx = mock(AppContext.class);
-    ApplicationId appId = ApplicationIdPBImpl.newInstance(0,5);
-    
+    ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 5);
+
     when(ctx.getApplicationID()).thenReturn(appId);
 
     AppForTest app = new AppForTest(ctx);
     Configuration config = new Configuration();
     RequestContext requestCtx = mock(RequestContext.class);
     HsControllerForTest controller = new HsControllerForTest(app, config,
-            requestCtx);
+        requestCtx);
     controller.index();
     assertEquals("JobHistory", controller.get(Params.TITLE, ""));
     assertEquals(HsJobPage.class, controller.jobPage());
@@ -302,7 +301,7 @@ public class TestBlocks {
     JobId jobID = MRApps.toJobID("job_01_01");
     when(ctx.getJob(jobID)).thenReturn(job);
     when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
-            .thenReturn(true);
+        .thenReturn(true);
 
     controller.job();
     assertEquals(HsJobPage.class, controller.getClazz());

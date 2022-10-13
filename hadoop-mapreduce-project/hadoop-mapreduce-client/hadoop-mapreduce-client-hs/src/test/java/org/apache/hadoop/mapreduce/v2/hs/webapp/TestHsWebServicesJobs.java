@@ -21,10 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -54,8 +51,8 @@ import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -109,7 +106,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -126,7 +123,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobs() throws JSONException, Exception {
+  void testJobs() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").accept(MediaType.APPLICATION_JSON)
@@ -134,10 +131,10 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 1, arr.length());
+    assertEquals(1, arr.length(), "incorrect number of elements");
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getPartialJob(MRApps.toJobID(info.getString("id")));
     VerifyJobsUtils.verifyHsJobPartial(info, job);
@@ -145,7 +142,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobsSlash() throws JSONException, Exception {
+  void testJobsSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs/").accept(MediaType.APPLICATION_JSON)
@@ -153,10 +150,10 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 1, arr.length());
+    assertEquals(1, arr.length(), "incorrect number of elements");
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getPartialJob(MRApps.toJobID(info.getString("id")));
     VerifyJobsUtils.verifyHsJobPartial(info, job);
@@ -164,17 +161,17 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobsDefault() throws JSONException, Exception {
+  void testJobsDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
-    assertEquals("incorrect number of elements", 1, arr.length());
+    assertEquals(1, arr.length(), "incorrect number of elements");
     JSONObject info = arr.getJSONObject(0);
     Job job = appContext.getPartialJob(MRApps.toJobID(info.getString("id")));
     VerifyJobsUtils.verifyHsJobPartial(info, job);
@@ -182,7 +179,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobsXML() throws Exception {
+  void testJobsXML() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("mapreduce").path("jobs").accept(MediaType.APPLICATION_XML)
@@ -196,22 +193,22 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList jobs = dom.getElementsByTagName("jobs");
-    assertEquals("incorrect number of elements", 1, jobs.getLength());
+    assertEquals(1, jobs.getLength(), "incorrect number of elements");
     NodeList job = dom.getElementsByTagName("job");
-    assertEquals("incorrect number of elements", 1, job.getLength());
+    assertEquals(1, job.getLength(), "incorrect number of elements");
     verifyHsJobPartialXML(job, appContext);
   }
 
   public void verifyHsJobPartialXML(NodeList nodes, MockHistoryContext appContext) {
 
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
       Job job = appContext.getPartialJob(MRApps.toJobID(WebServicesTestUtils
           .getXmlString(element, "id")));
-      assertNotNull("Job not found - output incorrect", job);
+      assertNotNull(job, "Job not found - output incorrect");
 
       VerifyJobsUtils.verifyHsJobGeneric(job,
           WebServicesTestUtils.getXmlString(element, "id"),
@@ -230,14 +227,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   
   public void verifyHsJobXML(NodeList nodes, AppContext appContext) {
 
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
       Job job = appContext.getJob(MRApps.toJobID(WebServicesTestUtils
           .getXmlString(element, "id")));
-      assertNotNull("Job not found - output incorrect", job);
+      assertNotNull(job, "Job not found - output incorrect");
 
       VerifyJobsUtils.verifyHsJobGeneric(job,
           WebServicesTestUtils.getXmlString(element, "id"),
@@ -270,7 +267,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobId() throws JSONException, Exception {
+  void testJobId() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -282,7 +279,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("job");
       VerifyJobsUtils.verifyHsJob(info, appContext.getJob(id));
     }
@@ -290,7 +287,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdSlash() throws JSONException, Exception {
+  void testJobIdSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -302,7 +299,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("job");
 
       VerifyJobsUtils.verifyHsJob(info, appContext.getJob(id));
@@ -310,7 +307,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdDefault() throws JSONException, Exception {
+  void testJobIdDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -321,7 +318,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("job");
       VerifyJobsUtils.verifyHsJob(info, appContext.getJob(id));
     }
@@ -329,7 +326,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdNonExist() throws JSONException, Exception {
+  void testJobIdNonExist() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -343,7 +340,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -357,7 +354,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdInvalid() throws JSONException, Exception {
+  void testJobIdInvalid() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -372,7 +369,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -383,7 +380,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
 
   // verify the exception output default is JSON
   @Test
-  public void testJobIdInvalidDefault() throws JSONException, Exception {
+  void testJobIdInvalidDefault() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -397,7 +394,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -407,7 +404,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
 
   // test that the exception output works in XML
   @Test
-  public void testJobIdInvalidXML() throws JSONException, Exception {
+  void testJobIdInvalidXML() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -448,7 +445,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdInvalidBogus() throws JSONException, Exception {
+  void testJobIdInvalidBogus() throws JSONException, Exception {
     WebResource r = resource();
 
     try {
@@ -462,7 +459,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
-      assertEquals("incorrect number of elements", 3, exception.length());
+      assertEquals(3, exception.length(), "incorrect number of elements");
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
@@ -477,7 +474,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobIdXML() throws Exception {
+  void testJobIdXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -501,7 +498,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   }
 
   @Test
-  public void testJobCounters() throws JSONException, Exception {
+  void testJobCounters() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -513,14 +510,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobCounters");
       verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
 
   @Test
-  public void testJobCountersSlash() throws JSONException, Exception {
+  void testJobCountersSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -532,14 +529,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobCounters");
       verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
-  
+
   @Test
-  public void testJobCountersForKilledJob() throws Exception {
+  void testJobCountersForKilledJob() throws Exception {
     WebResource r = resource();
     appContext = new MockHistoryContext(0, 1, 1, 1, true);
     GuiceServletConfig.setInjector(Guice.createInjector(new ServletModule() {
@@ -561,7 +558,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
         serve("/*").with(GuiceContainer.class);
       }
     }));
-    
+
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
@@ -572,16 +569,16 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobCounters");
       WebServicesTestUtils.checkStringMatch("id", MRApps.toString(id),
           info.getString("id"));
-      assertTrue("Job shouldn't contain any counters", info.length() == 1);
+      assertTrue(info.length() == 1, "Job shouldn't contain any counters");
     }
   }
 
   @Test
-  public void testJobCountersDefault() throws JSONException, Exception {
+  void testJobCountersDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -593,14 +590,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobCounters");
       verifyHsJobCounters(info, appContext.getJob(id));
     }
   }
 
   @Test
-  public void testJobCountersXML() throws Exception {
+  void testJobCountersXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -625,7 +622,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
   public void verifyHsJobCounters(JSONObject info, Job job)
       throws JSONException {
 
-    assertEquals("incorrect number of elements", 2, info.length());
+    assertEquals(2, info.length(), "incorrect number of elements");
 
     WebServicesTestUtils.checkStringMatch("id", MRApps.toString(job.getID()),
         info.getString("id"));
@@ -635,22 +632,22 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
     for (int i = 0; i < counterGroups.length(); i++) {
       JSONObject counterGroup = counterGroups.getJSONObject(i);
       String name = counterGroup.getString("counterGroupName");
-      assertTrue("name not set", (name != null && !name.isEmpty()));
+      assertTrue((name != null && !name.isEmpty()), "name not set");
       JSONArray counters = counterGroup.getJSONArray("counter");
       for (int j = 0; j < counters.length(); j++) {
         JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
-        assertTrue("counter name not set",
-            (counterName != null && !counterName.isEmpty()));
+        assertTrue((counterName != null && !counterName.isEmpty()),
+            "counter name not set");
 
         long mapValue = counter.getLong("mapCounterValue");
-        assertTrue("mapCounterValue  >= 0", mapValue >= 0);
+        assertTrue(mapValue >= 0, "mapCounterValue  >= 0");
 
         long reduceValue = counter.getLong("reduceCounterValue");
-        assertTrue("reduceCounterValue  >= 0", reduceValue >= 0);
+        assertTrue(reduceValue >= 0, "reduceCounterValue  >= 0");
 
         long totalValue = counter.getLong("totalCounterValue");
-        assertTrue("totalCounterValue  >= 0", totalValue >= 0);
+        assertTrue(totalValue >= 0, "totalCounterValue  >= 0");
 
       }
     }
@@ -661,7 +658,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
 
-      assertNotNull("Job not found - output incorrect", job);
+      assertNotNull(job, "Job not found - output incorrect");
 
       WebServicesTestUtils.checkStringMatch("id", MRApps.toString(job.getID()),
           WebServicesTestUtils.getXmlString(element, "id"));
@@ -671,36 +668,36 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
 
       for (int j = 0; j < groups.getLength(); j++) {
         Element counters = (Element) groups.item(j);
-        assertNotNull("should have counters in the web service info", counters);
+        assertNotNull(counters, "should have counters in the web service info");
         String name = WebServicesTestUtils.getXmlString(counters,
             "counterGroupName");
-        assertTrue("name not set", (name != null && !name.isEmpty()));
+        assertTrue((name != null && !name.isEmpty()), "name not set");
         NodeList counterArr = counters.getElementsByTagName("counter");
         for (int z = 0; z < counterArr.getLength(); z++) {
           Element counter = (Element) counterArr.item(z);
           String counterName = WebServicesTestUtils.getXmlString(counter,
               "name");
-          assertTrue("counter name not set",
-              (counterName != null && !counterName.isEmpty()));
+          assertTrue((counterName != null && !counterName.isEmpty()),
+              "counter name not set");
 
           long mapValue = WebServicesTestUtils.getXmlLong(counter,
               "mapCounterValue");
-          assertTrue("mapCounterValue not >= 0", mapValue >= 0);
+          assertTrue(mapValue >= 0, "mapCounterValue not >= 0");
 
           long reduceValue = WebServicesTestUtils.getXmlLong(counter,
               "reduceCounterValue");
-          assertTrue("reduceCounterValue  >= 0", reduceValue >= 0);
+          assertTrue(reduceValue >= 0, "reduceCounterValue  >= 0");
 
           long totalValue = WebServicesTestUtils.getXmlLong(counter,
               "totalCounterValue");
-          assertTrue("totalCounterValue  >= 0", totalValue >= 0);
+          assertTrue(totalValue >= 0, "totalCounterValue  >= 0");
         }
       }
     }
   }
 
   @Test
-  public void testJobAttempts() throws JSONException, Exception {
+  void testJobAttempts() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -712,14 +709,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, appContext.getJob(id));
     }
   }
 
   @Test
-  public void testJobAttemptsSlash() throws JSONException, Exception {
+  void testJobAttemptsSlash() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -731,14 +728,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, appContext.getJob(id));
     }
   }
 
   @Test
-  public void testJobAttemptsDefault() throws JSONException, Exception {
+  void testJobAttemptsDefault() throws JSONException, Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -750,14 +747,14 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
-      assertEquals("incorrect number of elements", 1, json.length());
+      assertEquals(1, json.length(), "incorrect number of elements");
       JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, appContext.getJob(id));
     }
   }
 
   @Test
-  public void testJobAttemptsXML() throws Exception {
+  void testJobAttemptsXML() throws Exception {
     WebResource r = resource();
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
@@ -775,7 +772,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       is.setCharacterStream(new StringReader(xml));
       Document dom = db.parse(is);
       NodeList attempts = dom.getElementsByTagName("jobAttempts");
-      assertEquals("incorrect number of elements", 1, attempts.getLength());
+      assertEquals(1, attempts.getLength(), "incorrect number of elements");
       NodeList info = dom.getElementsByTagName("jobAttempt");
       verifyHsJobAttemptsXML(info, appContext.getJob(id));
     }
@@ -785,7 +782,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
       throws JSONException {
 
     JSONArray attempts = info.getJSONArray("jobAttempt");
-    assertEquals("incorrect number of elements", 2, attempts.length());
+    assertEquals(2, attempts.length(), "incorrect number of elements");
     for (int i = 0; i < attempts.length(); i++) {
       JSONObject attempt = attempts.getJSONObject(i);
       verifyHsJobAttemptsGeneric(job, attempt.getString("nodeHttpAddress"),
@@ -798,7 +795,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
 
   public void verifyHsJobAttemptsXML(NodeList nodes, Job job) {
 
-    assertEquals("incorrect number of elements", 2, nodes.getLength());
+    assertEquals(2, nodes.getLength(), "incorrect number of elements");
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);
       verifyHsJobAttemptsGeneric(job,
@@ -823,7 +820,7 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
         int nmPort = amInfo.getNodeManagerPort();
         WebServicesTestUtils.checkStringMatch("nodeHttpAddress", nmHost + ":"
             + nmHttpPort, nodeHttpAddress);
-        assertTrue("startime not greater than 0", startTime > 0);
+        assertTrue(startTime > 0, "startime not greater than 0");
         WebServicesTestUtils.checkStringMatch("containerId", amInfo
             .getContainerId().toString(), containerId);
 
@@ -831,10 +828,10 @@ public class TestHsWebServicesJobs extends JerseyTestBase {
             ujoin("logs", nodeId, containerId, MRApps.toString(job.getID()),
                 job.getUserName()));
 
-        assertTrue("logsLink", logsLink.contains(localLogsLink));
+        assertTrue(logsLink.contains(localLogsLink), "logsLink");
       }
     }
-    assertTrue("attempt: " + id + " was not found", attemptFound);
+    assertTrue(attemptFound, "attempt: " + id + " was not found");
   }
 
 }

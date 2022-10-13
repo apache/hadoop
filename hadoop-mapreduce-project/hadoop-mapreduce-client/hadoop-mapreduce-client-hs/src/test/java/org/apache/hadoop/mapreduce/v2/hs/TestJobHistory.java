@@ -37,16 +37,12 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static junit.framework.TestCase.assertEquals;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -64,7 +60,7 @@ public class TestJobHistory {
   JobHistory jobHistory = null;
 
   @Test
-  public void testRefreshLoadedJobCache() throws Exception {
+  void testRefreshLoadedJobCache() throws Exception {
     HistoryFileManager historyManager = mock(HistoryFileManager.class);
     jobHistory = spy(new JobHistory());
     doReturn(historyManager).when(jobHistory).createHistoryFileManager();
@@ -125,7 +121,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testTasksCacheLimit() throws Exception {
+  void testTasksCacheLimit() throws Exception {
     HistoryFileManager historyManager = mock(HistoryFileManager.class);
     jobHistory = spy(new JobHistory());
     doReturn(historyManager).when(jobHistory).createHistoryFileManager();
@@ -188,7 +184,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testJobCacheLimitLargerThanMax() throws Exception {
+  void testJobCacheLimitLargerThanMax() throws Exception {
     HistoryFileManager historyManager = mock(HistoryFileManager.class);
     JobHistory jobHistory = spy(new JobHistory());
     doReturn(historyManager).when(jobHistory).createHistoryFileManager();
@@ -233,7 +229,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testLoadedTasksEmptyConfiguration() {
+  void testLoadedTasksEmptyConfiguration() {
     Configuration conf = new Configuration();
     conf.set(JHAdminConfig.MR_HISTORY_LOADED_TASKS_CACHE_SIZE, "");
 
@@ -250,7 +246,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testLoadedTasksZeroConfiguration() {
+  void testLoadedTasksZeroConfiguration() {
     Configuration conf = new Configuration();
     conf.setInt(JHAdminConfig.MR_HISTORY_LOADED_TASKS_CACHE_SIZE, 0);
 
@@ -268,7 +264,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testLoadedTasksNegativeConfiguration() {
+  void testLoadedTasksNegativeConfiguration() {
     Configuration conf = new Configuration();
     conf.setInt(JHAdminConfig.MR_HISTORY_LOADED_TASKS_CACHE_SIZE, -1);
 
@@ -286,7 +282,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testLoadJobErrorCases() throws IOException {
+  void testLoadJobErrorCases() throws IOException {
     HistoryFileManager historyManager = mock(HistoryFileManager.class);
     jobHistory = spy(new JobHistory());
     doReturn(historyManager).when(jobHistory).createHistoryFileManager();
@@ -340,7 +336,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testRefreshJobRetentionSettings() throws IOException,
+  void testRefreshJobRetentionSettings() throws IOException,
       InterruptedException {
     String root = "mockfs://foo/";
     String historyDoneDir = root + "mapred/history/done";
@@ -447,7 +443,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testCachedStorageWaitsForFileMove() throws IOException {
+  void testCachedStorageWaitsForFileMove() throws IOException {
     HistoryFileManager historyManager = mock(HistoryFileManager.class);
     jobHistory = spy(new JobHistory());
     doReturn(historyManager).when(jobHistory).createHistoryFileManager();
@@ -473,7 +469,7 @@ public class TestJobHistory {
   }
 
   @Test
-  public void testRefreshLoadedJobCacheUnSupportedOperation() {
+  void testRefreshLoadedJobCacheUnSupportedOperation() {
     jobHistory = spy(new JobHistory());
     HistoryStorage storage = new HistoryStorage() {
 
@@ -520,7 +516,7 @@ public class TestJobHistory {
     assertTrue(th instanceof UnsupportedOperationException);
   }
   
-  @After
+  @AfterEach
   public void cleanUp() {
     if (jobHistory != null) {
       jobHistory.stop();

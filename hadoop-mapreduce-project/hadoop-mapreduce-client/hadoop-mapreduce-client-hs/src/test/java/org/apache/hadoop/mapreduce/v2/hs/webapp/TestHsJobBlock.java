@@ -39,8 +39,7 @@ import org.apache.hadoop.yarn.webapp.view.BlockForTest;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlockForTest;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,6 +48,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,7 +59,7 @@ import static org.mockito.Mockito.when;
 public class TestHsJobBlock {
 
   @Test
-  public void testHsJobBlockForOversizeJobShouldDisplayWarningMessage() {
+  void testHsJobBlockForOversizeJobShouldDisplayWarningMessage() {
     int maxAllowedTaskNum = 100;
 
     Configuration config = new Configuration();
@@ -87,13 +87,13 @@ public class TestHsJobBlock {
 
     block.getWriter().flush();
     String out = outputStream.toString();
-    Assert.assertTrue("Should display warning message for jobs that have too " +
-        "many tasks", out.contains("Any job larger than " + maxAllowedTaskNum +
-            " will not be loaded"));
+    assertTrue(out.contains("Any job larger than " + maxAllowedTaskNum +
+        " will not be loaded"), "Should display warning message for jobs that have too " +
+        "many tasks");
   }
 
   @Test
-  public void testHsJobBlockForNormalSizeJobShouldNotDisplayWarningMessage() {
+  void testHsJobBlockForNormalSizeJobShouldNotDisplayWarningMessage() {
 
     Configuration config = new Configuration();
     config.setInt(JHAdminConfig.MR_HS_LOADED_JOBS_TASKS_MAX, -1);
@@ -132,8 +132,8 @@ public class TestHsJobBlock {
     block.getWriter().flush();
     String out = outputStream.toString();
 
-    Assert.assertTrue("Should display job overview for the job.",
-        out.contains("ApplicationMaster"));
+    assertTrue(out.contains("ApplicationMaster"),
+        "Should display job overview for the job.");
   }
 
   private static HtmlBlock.Block createBlockToCreateTo(

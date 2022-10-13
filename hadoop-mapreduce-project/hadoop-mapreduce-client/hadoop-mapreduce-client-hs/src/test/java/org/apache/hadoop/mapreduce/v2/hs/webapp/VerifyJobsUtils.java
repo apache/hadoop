@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
@@ -33,7 +33,7 @@ import org.codehaus.jettison.json.JSONObject;
 public class VerifyJobsUtils {
 
   public static void verifyHsJobPartial(JSONObject info, Job job) throws JSONException {
-    assertEquals("incorrect number of elements", 12, info.length());
+    assertEquals(12, info.length(), "incorrect number of elements");
 
     // everyone access fields
     verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),
@@ -45,7 +45,7 @@ public class VerifyJobsUtils {
   }
   
   public static void verifyHsJob(JSONObject info, Job job) throws JSONException {
-    assertEquals("incorrect number of elements", 25, info.length());
+    assertEquals(25, info.length(), "incorrect number of elements");
 
     // everyone access fields
     verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),
@@ -88,15 +88,17 @@ public class VerifyJobsUtils {
         state);
     WebServicesTestUtils.checkStringMatch("queue", job.getQueueName(), queue);
 
-    assertEquals("startTime incorrect", report.getStartTime(), startTime);
-    assertEquals("finishTime incorrect", report.getFinishTime(), finishTime);
+    assertEquals(report.getStartTime(), startTime, "startTime incorrect");
+    assertEquals(report.getFinishTime(), finishTime, "finishTime incorrect");
 
-    assertEquals("mapsTotal incorrect", job.getTotalMaps(), mapsTotal);
-    assertEquals("mapsCompleted incorrect", job.getCompletedMaps(),
-        mapsCompleted);
-    assertEquals("reducesTotal incorrect", job.getTotalReduces(), reducesTotal);
-    assertEquals("reducesCompleted incorrect", job.getCompletedReduces(),
-        reducesCompleted);
+    assertEquals(job.getTotalMaps(), mapsTotal, "mapsTotal incorrect");
+    assertEquals(job.getCompletedMaps(),
+        mapsCompleted,
+        "mapsCompleted incorrect");
+    assertEquals(job.getTotalReduces(), reducesTotal, "reducesTotal incorrect");
+    assertEquals(job.getCompletedReduces(),
+        reducesCompleted,
+        "reducesCompleted incorrect");
   }
 
   public static void verifyHsJobGenericSecure(Job job, Boolean uberized,
@@ -117,25 +119,25 @@ public class VerifyJobsUtils {
     WebServicesTestUtils.checkStringMatch("diagnostics", diagString,
         diagnostics);
 
-    assertEquals("isUber incorrect", job.isUber(), uberized);
+    assertEquals(job.isUber(), uberized, "isUber incorrect");
 
     // unfortunately the following fields are all calculated in JobInfo
     // so not easily accessible without doing all the calculations again.
     // For now just make sure they are present.
 
-    assertTrue("failedReduceAttempts not >= 0", failedReduceAttempts >= 0);
-    assertTrue("killedReduceAttempts not >= 0", killedReduceAttempts >= 0);
-    assertTrue("successfulReduceAttempts not >= 0",
-        successfulReduceAttempts >= 0);
+    assertTrue(failedReduceAttempts >= 0, "failedReduceAttempts not >= 0");
+    assertTrue(killedReduceAttempts >= 0, "killedReduceAttempts not >= 0");
+    assertTrue(successfulReduceAttempts >= 0,
+        "successfulReduceAttempts not >= 0");
 
-    assertTrue("failedMapAttempts not >= 0", failedMapAttempts >= 0);
-    assertTrue("killedMapAttempts not >= 0", killedMapAttempts >= 0);
-    assertTrue("successfulMapAttempts not >= 0", successfulMapAttempts >= 0);
+    assertTrue(failedMapAttempts >= 0, "failedMapAttempts not >= 0");
+    assertTrue(killedMapAttempts >= 0, "killedMapAttempts not >= 0");
+    assertTrue(successfulMapAttempts >= 0, "successfulMapAttempts not >= 0");
 
-    assertTrue("avgMapTime not >= 0", avgMapTime >= 0);
-    assertTrue("avgReduceTime not >= 0", avgReduceTime >= 0);
-    assertTrue("avgShuffleTime not >= 0", avgShuffleTime >= 0);
-    assertTrue("avgMergeTime not >= 0", avgMergeTime >= 0);
+    assertTrue(avgMapTime >= 0, "avgMapTime not >= 0");
+    assertTrue(avgReduceTime >= 0, "avgReduceTime not >= 0");
+    assertTrue(avgShuffleTime >= 0, "avgShuffleTime not >= 0");
+    assertTrue(avgMergeTime >= 0, "avgMergeTime not >= 0");
 
   }
 
