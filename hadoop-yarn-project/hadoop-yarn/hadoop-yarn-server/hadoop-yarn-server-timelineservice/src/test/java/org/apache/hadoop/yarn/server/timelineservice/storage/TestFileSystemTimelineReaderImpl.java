@@ -74,7 +74,7 @@ public class TestFileSystemTimelineReaderImpl {
     loadEntityData(rootDir);
     // Create app flow mapping file.
     CSVFormat format =
-        CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
+        CSVFormat.Builder.create().setHeader("APP", "USER", "FLOW", "FLOWRUN").build();
     String appFlowMappingFile = rootDir + File.separator + "entities" +
         File.separator + "cluster1" + File.separator +
         FileSystemTimelineReaderImpl.APP_FLOW_MAPPING_FILE;
