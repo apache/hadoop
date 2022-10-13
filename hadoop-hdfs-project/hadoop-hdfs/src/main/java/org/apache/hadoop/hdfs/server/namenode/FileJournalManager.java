@@ -244,7 +244,8 @@ public class FileJournalManager implements JournalManager {
       if (elf.getFirstTxId() >= firstTxId) {
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId,
             elf.isInProgress()));
-      } else if (elf.getFirstTxId() < firstTxId && firstTxId <= elf.getLastTxId()) {
+      } else if (elf.getFirstTxId() < firstTxId &&
+          (firstTxId <= elf.getLastTxId() || elf.isInProgress())) {
         // If the firstTxId is in the middle of an edit log segment. Return this
         // anyway and let the caller figure out whether it wants to use it.
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId,
