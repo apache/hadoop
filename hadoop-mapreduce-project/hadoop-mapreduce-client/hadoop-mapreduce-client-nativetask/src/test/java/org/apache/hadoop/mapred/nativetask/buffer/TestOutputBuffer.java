@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.mapred.nativetask.buffer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestOutputBuffer {
 
   @Test
-  public void testOutputBuffer() {
+  void testOutputBuffer() {
     final int size = 100;
     final OutputBuffer output1 = new OutputBuffer(BufferType.DIRECT_BUFFER, size);
     assertThat(output1.getType()).isEqualTo(BufferType.DIRECT_BUFFER);

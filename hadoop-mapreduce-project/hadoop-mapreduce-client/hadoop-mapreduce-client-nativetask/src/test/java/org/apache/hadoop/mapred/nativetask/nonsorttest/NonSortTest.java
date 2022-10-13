@@ -37,34 +37,34 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class NonSortTest {
 
   @Test
-  public void nonSortTest() throws Exception {
+  void nonSortTest() throws Exception {
     Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.NONSORT_TEST_CONF);
     nativeConf.set(TestConstants.NATIVETASK_MAP_OUTPUT_SORT, "false");
     final Job nativeNonSort = getJob(nativeConf, "NativeNonSort",
-      TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
-      TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT);
+        TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
+        TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT);
     assertThat(nativeNonSort.waitForCompletion(true)).isTrue();
 
     Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     normalConf.addResource(TestConstants.NONSORT_TEST_CONF);
     final Job hadoopWithSort = getJob(normalConf, "NormalJob",
-      TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
-      TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
+        TestConstants.NATIVETASK_NONSORT_TEST_INPUTDIR,
+        TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
     assertThat(hadoopWithSort.waitForCompletion(true)).isTrue();
 
     final boolean compareRet = ResultVerifier.verify(
-      TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT,
-      TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
+        TestConstants.NATIVETASK_NONSORT_TEST_NATIVE_OUTPUT,
+        TestConstants.NATIVETASK_NONSORT_TEST_NORMAL_OUTPUT);
     assertThat(compareRet)
         .withFailMessage(
             "file compare result: if they are the same ,then return true")
@@ -72,10 +72,10 @@ public class NonSortTest {
     ResultVerifier.verifyCounters(hadoopWithSort, nativeNonSort);
   }
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     conf.addNonSortTestConf();
     final FileSystem fs = FileSystem.get(conf);
@@ -88,7 +88,7 @@ public class NonSortTest {
     fs.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_NONSORT_TEST_DIR), true);
