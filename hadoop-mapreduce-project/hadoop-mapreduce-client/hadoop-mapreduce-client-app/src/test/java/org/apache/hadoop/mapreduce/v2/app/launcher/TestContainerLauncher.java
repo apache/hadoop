@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -44,7 +45,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RestartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RollbackResponse;
-import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
@@ -93,7 +93,8 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.security.NMTokenSecretManagerInNM;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,18 +108,19 @@ public class TestContainerLauncher {
   static final Logger LOG =
       LoggerFactory.getLogger(TestContainerLauncher.class);
 
-  @Test (timeout = 10000)
-  public void testPoolSize() throws InterruptedException {
+  @Test
+  @Timeout(10000)
+  void testPoolSize() throws InterruptedException {
 
     ApplicationId appId = ApplicationId.newInstance(12345, 67);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
-      appId, 3);
+        appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
 
     AppContext context = mock(AppContext.class);
     CustomContainerLauncher containerLauncher = new CustomContainerLauncher(
-      context);
+        context);
     containerLauncher.init(new Configuration());
     containerLauncher.start();
 
@@ -127,22 +129,22 @@ public class TestContainerLauncher {
     // No events yet
     assertThat(containerLauncher.initialPoolSize).isEqualTo(
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE);
-    Assert.assertEquals(0, threadPool.getPoolSize());
-    Assert.assertEquals(containerLauncher.initialPoolSize,
-      threadPool.getCorePoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(0, threadPool.getPoolSize());
+    assertEquals(containerLauncher.initialPoolSize,
+        threadPool.getCorePoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     containerLauncher.expectedCorePoolSize = containerLauncher.initialPoolSize;
     for (int i = 0; i < 10; i++) {
       ContainerId containerId = ContainerId.newContainerId(appAttemptId, i);
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, i);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-        containerId, "host" + i + ":1234", null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+          containerId, "host" + i + ":1234", null,
+          ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
     }
     waitForEvents(containerLauncher, 10);
-    Assert.assertEquals(10, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(10, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     // Same set of hosts, so no change
     containerLauncher.finishEventHandling = true;
@@ -153,7 +155,7 @@ public class TestContainerLauncher {
           + ". Timeout is " + timeOut);
       Thread.sleep(1000);
     }
-    Assert.assertEquals(10, containerLauncher.numEventsProcessed.get());
+    assertEquals(10, containerLauncher.numEventsProcessed.get());
     containerLauncher.finishEventHandling = false;
     for (int i = 0; i < 10; i++) {
       ContainerId containerId = ContainerId.newContainerId(appAttemptId,
@@ -161,12 +163,12 @@ public class TestContainerLauncher {
       TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId,
           i + 10);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-        containerId, "host" + i + ":1234", null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+          containerId, "host" + i + ":1234", null,
+          ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
     }
     waitForEvents(containerLauncher, 20);
-    Assert.assertEquals(10, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(10, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     // Different hosts, there should be an increase in core-thread-pool size to
     // 21(11hosts+10buffer)
@@ -176,11 +178,11 @@ public class TestContainerLauncher {
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 21);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
     containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-      containerId, "host11:1234", null,
-      ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+        containerId, "host11:1234", null,
+        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
     waitForEvents(containerLauncher, 21);
-    Assert.assertEquals(11, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(11, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     containerLauncher.stop();
 
@@ -194,11 +196,12 @@ public class TestContainerLauncher {
     assertThat(containerLauncher.initialPoolSize).isEqualTo(20);
   }
 
-  @Test(timeout = 5000)
-  public void testPoolLimits() throws InterruptedException {
+  @Test
+  @Timeout(5000)
+  void testPoolLimits() throws InterruptedException {
     ApplicationId appId = ApplicationId.newInstance(12345, 67);
     ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
-      appId, 3);
+        appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
@@ -206,7 +209,7 @@ public class TestContainerLauncher {
 
     AppContext context = mock(AppContext.class);
     CustomContainerLauncher containerLauncher = new CustomContainerLauncher(
-      context);
+        context);
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT, 12);
     containerLauncher.init(conf);
@@ -218,29 +221,29 @@ public class TestContainerLauncher {
     containerLauncher.expectedCorePoolSize = containerLauncher.initialPoolSize;
     for (int i = 0; i < 10; i++) {
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-        containerId, "host" + i + ":1234", null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+          containerId, "host" + i + ":1234", null,
+          ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
     }
     waitForEvents(containerLauncher, 10);
-    Assert.assertEquals(10, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(10, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     // 4 more different hosts, but thread pool size should be capped at 12
     containerLauncher.expectedCorePoolSize = 12 ;
     for (int i = 1; i <= 4; i++) {
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-        containerId, "host1" + i + ":1234", null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+          containerId, "host1" + i + ":1234", null,
+          ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
     }
     waitForEvents(containerLauncher, 12);
-    Assert.assertEquals(12, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(12, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     // Make some threads ideal so that remaining events are also done.
     containerLauncher.finishEventHandling = true;
     waitForEvents(containerLauncher, 14);
-    Assert.assertEquals(12, threadPool.getPoolSize());
-    Assert.assertNull(containerLauncher.foundErrors);
+    assertEquals(12, threadPool.getPoolSize());
+    assertNull(containerLauncher.foundErrors);
 
     containerLauncher.stop();
   }
@@ -254,12 +257,13 @@ public class TestContainerLauncher {
           + ". It is now " + containerLauncher.numEventsProcessing.get());
       Thread.sleep(1000);
     }
-    Assert.assertEquals(expectedNumEvents,
+    assertEquals(expectedNumEvents,
       containerLauncher.numEventsProcessing.get());
   }
 
-  @Test(timeout = 15000)
-  public void testSlowNM() throws Exception {
+  @Test
+  @Timeout(15000)
+  void testSlowNM() throws Exception {
 
     conf = new Configuration();
     int maxAttempts = 1;
@@ -277,48 +281,48 @@ public class TestContainerLauncher {
     masterKey.setBytes(ByteBuffer.wrap("key".getBytes()));
     tokenSecretManager.setMasterKey(masterKey);
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-      "token");
+        "token");
     server =
         rpc.getServer(ContainerManagementProtocol.class,
-          new DummyContainerManager(), addr, conf, tokenSecretManager, 1);
+            new DummyContainerManager(), addr, conf, tokenSecretManager, 1);
     server.start();
 
     MRApp app = new MRAppWithSlowNM(tokenSecretManager);
 
     try {
-    Job job = app.submit(conf);
-    app.waitForState(job, JobState.RUNNING);
+      Job job = app.submit(conf);
+      app.waitForState(job, JobState.RUNNING);
 
-    Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+      Map<TaskId, Task> tasks = job.getTasks();
+      assertEquals(1, tasks.size(), "Num tasks is not correct");
 
-    Task task = tasks.values().iterator().next();
-    app.waitForState(task, TaskState.SCHEDULED);
+      Task task = tasks.values().iterator().next();
+      app.waitForState(task, TaskState.SCHEDULED);
 
-    Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator()
-        .next().getAttempts();
-      Assert.assertEquals("Num attempts is not correct", maxAttempts,
-          attempts.size());
+      Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator()
+          .next().getAttempts();
+      assertEquals(maxAttempts,
+          attempts.size(),
+          "Num attempts is not correct");
 
-    TaskAttempt attempt = attempts.values().iterator().next();
+      TaskAttempt attempt = attempts.values().iterator().next();
       app.waitForInternalState((TaskAttemptImpl) attempt,
           TaskAttemptStateInternal.ASSIGNED);
 
-    app.waitForState(job, JobState.FAILED);
+      app.waitForState(job, JobState.FAILED);
 
-    String diagnostics = attempt.getDiagnostics().toString();
-    LOG.info("attempt.getDiagnostics: " + diagnostics);
+      String diagnostics = attempt.getDiagnostics().toString();
+      LOG.info("attempt.getDiagnostics: " + diagnostics);
 
-      Assert.assertTrue(diagnostics.contains("Container launch failed for "
+      assertTrue(diagnostics.contains("Container launch failed for "
           + "container_0_0000_01_000000 : "));
-      Assert
-          .assertTrue(diagnostics
+      assertTrue(diagnostics
               .contains("java.net.SocketTimeoutException: 3000 millis timeout while waiting for channel"));
 
     } finally {
       server.stop();
-    app.stop();
-  }
+      app.stop();
+    }
   }
 
   private final class CustomContainerLauncher extends ContainerLauncherImpl {
@@ -440,7 +444,7 @@ public class TestContainerLauncher {
           MRApp.newContainerTokenIdentifier(request.getContainerToken());
 
       // Validate that the container is what RM is giving.
-      Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
+      assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
         containerTokenIdentifier.getNmHostAddress());
 
       StartContainersResponse response = recordFactory

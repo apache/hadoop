@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptFailEvent;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
@@ -48,7 +49,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.ContainerManagementProtocolProxyData;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the state machine with respect to Job/Task/TaskAttempt failure 
@@ -57,56 +58,59 @@ import org.junit.Test;
 @SuppressWarnings("unchecked")
 public class TestFail {
 
-  @Test
   //First attempt is failed and second attempt is passed
   //The job succeeds.
-  public void testFailTask() throws Exception {
+  @Test
+  void testFailTask() throws Exception {
     MRApp app = new MockFirstFailingAttemptMRApp(1, 0);
     Configuration conf = new Configuration();
     // this test requires two task attempts, but uberization overrides max to 1
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.SUCCEEDED);
-    Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    Map<TaskId, Task> tasks = job.getTasks();
+    assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
-    Assert.assertEquals("Task state not correct", TaskState.SUCCEEDED,
-        task.getReport().getTaskState());
+    assertEquals(TaskState.SUCCEEDED,
+        task.getReport().getTaskState(),
+        "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts =
         tasks.values().iterator().next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", 2, attempts.size());
+    assertEquals(2, attempts.size(), "Num attempts is not correct");
     //one attempt must be failed 
     //and another must have succeeded
     Iterator<TaskAttempt> it = attempts.values().iterator();
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
-        it.next().getReport().getTaskAttemptState());
-    Assert.assertEquals("Attempt state not correct", TaskAttemptState.SUCCEEDED,
-        it.next().getReport().getTaskAttemptState());
+    assertEquals(TaskAttemptState.FAILED,
+        it.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
+    assertEquals(TaskAttemptState.SUCCEEDED,
+        it.next().getReport().getTaskAttemptState(),
+        "Attempt state not correct");
   }
 
   @Test
-  public void testMapFailureMaxPercent() throws Exception {
+  void testMapFailureMaxPercent() throws Exception {
     MRApp app = new MockFirstFailingTaskMRApp(4, 0);
     Configuration conf = new Configuration();
-    
+
     //reduce the no of attempts so test run faster
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2);
     conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 1);
-    
+
     conf.setInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 20);
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.FAILED);
-    
+
     //setting the failure percentage to 25% (1/4 is 25) will
     //make the Job successful
     app = new MockFirstFailingTaskMRApp(4, 0);
     conf = new Configuration();
-    
+
     //reduce the no of attempts so test run faster
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2);
     conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 1);
-    
+
     conf.setInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 25);
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     job = app.submit(conf);
@@ -114,30 +118,30 @@ public class TestFail {
   }
 
   @Test
-  public void testReduceFailureMaxPercent() throws Exception {
+  void testReduceFailureMaxPercent() throws Exception {
     MRApp app = new MockFirstFailingTaskMRApp(2, 4);
     Configuration conf = new Configuration();
-    
+
     //reduce the no of attempts so test run faster
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 2);
-    
+
     conf.setInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 50);//no failure due to Map
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     conf.setInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, 20);
     conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 1);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.FAILED);
-    
+
     //setting the failure percentage to 25% (1/4 is 25) will
     //make the Job successful
     app = new MockFirstFailingTaskMRApp(2, 4);
     conf = new Configuration();
-    
+
     //reduce the no of attempts so test run faster
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 2);
-    
+
     conf.setInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 50);//no failure due to Map
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 1);
     conf.setInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, 25);
@@ -146,9 +150,9 @@ public class TestFail {
     app.waitForState(job, JobState.SUCCEEDED);
   }
 
-  @Test
   //All Task attempts are timed out, leading to Job failure
-  public void testTimedOutTask() throws Exception {
+  @Test
+  void testTimedOutTask() throws Exception {
     MRApp app = new TimeOutTaskMRApp(1, 0);
     Configuration conf = new Configuration();
     int maxAttempts = 2;
@@ -158,23 +162,26 @@ public class TestFail {
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.FAILED);
-    Map<TaskId,Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    Map<TaskId, Task> tasks = job.getTasks();
+    assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
-    Assert.assertEquals("Task state not correct", TaskState.FAILED,
-        task.getReport().getTaskState());
+    assertEquals(TaskState.FAILED,
+        task.getReport().getTaskState(),
+        "Task state not correct");
     Map<TaskAttemptId, TaskAttempt> attempts =
         tasks.values().iterator().next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", maxAttempts,
-        attempts.size());
+    assertEquals(maxAttempts,
+        attempts.size(),
+        "Num attempts is not correct");
     for (TaskAttempt attempt : attempts.values()) {
-      Assert.assertEquals("Attempt state not correct", TaskAttemptState.FAILED,
-          attempt.getReport().getTaskAttemptState());
+      assertEquals(TaskAttemptState.FAILED,
+          attempt.getReport().getTaskAttemptState(),
+          "Attempt state not correct");
     }
   }
 
   @Test
-  public void testTaskFailWithUnusedContainer() throws Exception {
+  void testTaskFailWithUnusedContainer() throws Exception {
     MRApp app = new MRAppWithFailingTaskAndUnusedContainer();
     Configuration conf = new Configuration();
     int maxAttempts = 1;
@@ -185,13 +192,13 @@ public class TestFail {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
     Map<TaskId, Task> tasks = job.getTasks();
-    Assert.assertEquals("Num tasks is not correct", 1, tasks.size());
+    assertEquals(1, tasks.size(), "Num tasks is not correct");
     Task task = tasks.values().iterator().next();
     app.waitForState(task, TaskState.SCHEDULED);
     Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator()
         .next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", maxAttempts, attempts
-        .size());
+    assertEquals(maxAttempts, attempts
+        .size(), "Num attempts is not correct");
     TaskAttempt attempt = attempts.values().iterator().next();
     app.waitForInternalState((TaskAttemptImpl) attempt,
         TaskAttemptStateInternal.ASSIGNED);

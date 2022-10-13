@@ -56,7 +56,8 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.event.Level;
 
 public class MRAppBenchmark {
@@ -196,12 +197,13 @@ public class MRAppBenchmark {
     }
   }
 
-  @Test(timeout = 60000)
-  public void benchmark1() throws Exception {
+  @Test
+  @Timeout(60000)
+  void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
-    System.out.println("Running benchmark with maps:"+maps +
-        " reduces:"+reduces);
+    System.out.println("Running benchmark with maps:" + maps +
+        " reduces:" + reduces);
     run(new MRApp(maps, reduces, true, this.getClass().getName(), true) {
 
       @Override
@@ -215,14 +217,13 @@ public class MRAppBenchmark {
             return new ApplicationMasterProtocol() {
 
               @Override
-              public RegisterApplicationMasterResponse
-                  registerApplicationMaster(
-                      RegisterApplicationMasterRequest request)
-                      throws IOException {
+              public RegisterApplicationMasterResponse registerApplicationMaster(
+                  RegisterApplicationMasterRequest request)
+                  throws IOException {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
                 response.setMaximumResourceCapability(Resource.newInstance(
-                  10240, 1));
+                    10240, 1));
                 response.setQueue("queue1");
                 return response;
               }
@@ -252,8 +253,8 @@ public class MRAppBenchmark {
                   for (int i = 0; i < numContainers; i++) {
                     ContainerId containerId =
                         ContainerId.newContainerId(
-                          getContext().getApplicationAttemptId(),
-                          request.getResponseId() + i);
+                            getContext().getApplicationAttemptId(),
+                            request.getResponseId() + i);
                     containers.add(Container.newInstance(containerId,
                         NodeId.newInstance(
                             "host" + containerId.getContainerId(), 2345),
@@ -275,12 +276,13 @@ public class MRAppBenchmark {
     });
   }
 
-  @Test(timeout = 60000)
-  public void benchmark2() throws Exception {
+  @Test
+  @Timeout(60000)
+  void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;
     int maxConcurrentRunningTasks = 500;
-    
+
     System.out.println("Running benchmark with throttled running tasks with " +
         "maxConcurrentRunningTasks:" + maxConcurrentRunningTasks +
         " maps:" + maps + " reduces:" + reduces);

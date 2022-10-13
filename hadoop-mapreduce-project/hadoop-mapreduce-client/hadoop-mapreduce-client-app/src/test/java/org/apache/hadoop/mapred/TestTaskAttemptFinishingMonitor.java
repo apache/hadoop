@@ -37,15 +37,16 @@ import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.SystemClock;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class TestTaskAttemptFinishingMonitor {
 
   @Test
-  public void testFinshingAttemptTimeout()
+  void testFinshingAttemptTimeout()
       throws IOException, InterruptedException {
     SystemClock clock = SystemClock.getInstance();
     Configuration conf = new Configuration();
@@ -82,12 +83,12 @@ public class TestTaskAttemptFinishingMonitor {
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(tid, 0);
     appCtx.getTaskAttemptFinishingMonitor().register(attemptId);
     int check = 0;
-    while ( !eventHandler.timedOut &&  check++ < 10 ) {
+    while (!eventHandler.timedOut &&  check++ < 10) {
       Thread.sleep(100);
     }
     taskAttemptFinishingMonitor.stop();
 
-    assertTrue("Finishing attempt didn't time out.", eventHandler.timedOut);
+    assertTrue(eventHandler.timedOut, "Finishing attempt didn't time out.");
 
   }
 

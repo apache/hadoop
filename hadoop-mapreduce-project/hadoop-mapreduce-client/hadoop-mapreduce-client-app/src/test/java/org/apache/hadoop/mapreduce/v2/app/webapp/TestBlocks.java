@@ -26,7 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.webapp.View;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -52,7 +52,8 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 
 import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -61,7 +62,7 @@ public class TestBlocks {
    * Test rendering for ConfBlock
    */
   @Test
-  public void testConfigurationBlock() throws Exception {
+  void testConfigurationBlock() throws Exception {
     AppContext ctx = mock(AppContext.class);
     Job job = mock(Job.class);
     Path path = new Path("conf");
@@ -83,7 +84,7 @@ public class TestBlocks {
     configurationBlock.render(html);
     pWriter.flush();
     assertTrue(data.toString().contains(
-            "Sorry, can't do anything without a JobID"));
+        "Sorry, can't do anything without a JobID"));
 
     configurationBlock.addParameter(AMParams.JOB_ID, "job_01_01");
     data.reset();
@@ -100,7 +101,7 @@ public class TestBlocks {
    * Test rendering for TasksBlock
    */
   @Test
-  public void testTasksBlock() throws Exception {
+  void testTasksBlock() throws Exception {
 
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
     JobId jobId = new JobIdPBImpl();
@@ -155,13 +156,13 @@ public class TestBlocks {
    * test AttemptsBlock's rendering.
    */
   @Test
-  public void testAttemptsBlock() {
+  void testAttemptsBlock() {
     AppContext ctx = mock(AppContext.class);
     AppForTest app = new AppForTest(ctx);
 
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
-    jobId.setAppId(ApplicationIdPBImpl.newInstance(0,1));
+    jobId.setAppId(ApplicationIdPBImpl.newInstance(0, 1));
 
     TaskId taskId = new TaskIdPBImpl();
     taskId.setId(0);
@@ -209,12 +210,12 @@ public class TestBlocks {
     block.render(html);
     pWriter.flush();
     assertTrue(data.toString().contains(
-        "<a href='" + block.url("task",task.getID().toString()) +"'>"
-        +"attempt_0_0001_r_000000_0</a>"));
+        "<a href='" + block.url("task", task.getID().toString()) + "'>"
+            + "attempt_0_0001_r_000000_0</a>"));
   }
 
   @Test
-  public void testSingleCounterBlock() {
+  void testSingleCounterBlock() {
     AppContext appCtx = mock(AppContext.class);
     View.ViewContext ctx = mock(View.ViewContext.class);
     JobId jobId = new JobIdPBImpl();
@@ -242,7 +243,7 @@ public class TestBlocks {
     when(reduceTask.getType()).thenReturn(TaskType.REDUCE);
 
     Map<TaskId, Task> tasks =
-            new HashMap<TaskId, Task>();
+        new HashMap<TaskId, Task>();
     tasks.put(mapTaskId, mapTask);
     tasks.put(reduceTaskId, reduceTask);
 
@@ -252,10 +253,10 @@ public class TestBlocks {
 
     // SingleCounter for map task
     SingleCounterBlockForMapTest blockForMapTest
-            = spy(new SingleCounterBlockForMapTest(appCtx, ctx));
+        = spy(new SingleCounterBlockForMapTest(appCtx, ctx));
     PrintWriter pWriterForMapTest = new PrintWriter(data);
     Block htmlForMapTest = new BlockForTest(new HtmlBlockForTest(),
-            pWriterForMapTest, 0, false);
+        pWriterForMapTest, 0, false);
     blockForMapTest.render(htmlForMapTest);
     pWriterForMapTest.flush();
     assertTrue(data.toString().contains("task_0_0001_m_000000"));
@@ -264,10 +265,10 @@ public class TestBlocks {
     data.reset();
     // SingleCounter for reduce task
     SingleCounterBlockForReduceTest blockForReduceTest
-            = spy(new SingleCounterBlockForReduceTest(appCtx, ctx));
+        = spy(new SingleCounterBlockForReduceTest(appCtx, ctx));
     PrintWriter pWriterForReduceTest = new PrintWriter(data);
     Block htmlForReduceTest = new BlockForTest(new HtmlBlockForTest(),
-            pWriterForReduceTest, 0, false);
+        pWriterForReduceTest, 0, false);
     blockForReduceTest.render(htmlForReduceTest);
     pWriterForReduceTest.flush();
     System.out.println(data.toString());

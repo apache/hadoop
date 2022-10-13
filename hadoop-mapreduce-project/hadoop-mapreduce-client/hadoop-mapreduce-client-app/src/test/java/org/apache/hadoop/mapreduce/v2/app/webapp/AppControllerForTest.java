@@ -31,7 +31,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.View;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Class AppControllerForTest overrides some methods of AppController for test

@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -53,10 +54,10 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -75,7 +76,7 @@ public class TestLocalContainerLauncher {
     fs.delete(p, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTestDirs() throws IOException {
     testWorkDir = new File("target",
         TestLocalContainerLauncher.class.getCanonicalName());
@@ -89,7 +90,7 @@ public class TestLocalContainerLauncher {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTestDirs() throws IOException {
     if (testWorkDir != null) {
       delete(testWorkDir);
@@ -97,8 +98,9 @@ public class TestLocalContainerLauncher {
   }
 
   @SuppressWarnings("rawtypes")
-  @Test(timeout=10000)
-  public void testKillJob() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testKillJob() throws Exception {
     JobConf conf = new JobConf();
     AppContext context = mock(AppContext.class);
     // a simple event handler solely to detect the container cleaned event
@@ -132,7 +134,7 @@ public class TestLocalContainerLauncher {
     Job job = mock(Job.class);
     when(job.getTotalMaps()).thenReturn(1);
     when(job.getTotalReduces()).thenReturn(0);
-    Map<JobId,Job> jobs = new HashMap<JobId,Job>();
+    Map<JobId, Job> jobs = new HashMap<JobId, Job>();
     jobs.put(jobId, job);
     // app context returns the one and only job
     when(context.getAllJobs()).thenReturn(jobs);
@@ -154,7 +156,7 @@ public class TestLocalContainerLauncher {
       public Void answer(InvocationOnMock invocation) throws Throwable {
         // sleep for a long time
         LOG.info("sleeping for 5 minutes...");
-        Thread.sleep(5*60*1000);
+        Thread.sleep(5 * 60 * 1000);
         return null;
       }
     }).when(mapTask).run(isA(JobConf.class), isA(TaskUmbilicalProtocol.class));
@@ -186,7 +188,7 @@ public class TestLocalContainerLauncher {
 
 
   @Test
-  public void testRenameMapOutputForReduce() throws Exception {
+  void testRenameMapOutputForReduce() throws Exception {
     final JobConf conf = new JobConf();
 
     final MROutputFiles mrOutputFiles = new MROutputFiles();
@@ -198,8 +200,7 @@ public class TestLocalContainerLauncher {
     final Path mapOut = mrOutputFiles.getOutputFileForWrite(1);
     conf.set(MRConfig.LOCAL_DIR, localDirs[1].toString());
     final Path mapOutIdx = mrOutputFiles.getOutputIndexFileForWrite(1);
-    Assert.assertNotEquals("Paths must be different!",
-        mapOut.getParent(), mapOutIdx.getParent());
+    assertNotEquals(mapOut.getParent(), mapOutIdx.getParent(), "Paths must be different!");
 
     // make both dirs part of LOCAL_DIR
     conf.setStrings(MRConfig.LOCAL_DIR, localDirs);

@@ -22,8 +22,9 @@ import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,8 +59,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestCheckpointPreemptionPolicy {
 
@@ -77,7 +78,7 @@ public class TestCheckpointPreemptionPolicy {
 
   private int minAlloc = 1024;
 
-  @Before
+  @BeforeEach
   @SuppressWarnings("rawtypes") // mocked generics
   public void setup() {
     ApplicationId appId = ApplicationId.newInstance(200, 1);
@@ -110,9 +111,9 @@ public class TestCheckpointPreemptionPolicy {
   }
 
   @Test
-  public void testStrictPreemptionContract() {
+  void testStrictPreemptionContract() {
 
-    final Map<ContainerId,TaskAttemptId> containers = assignedContainers;
+    final Map<ContainerId, TaskAttemptId> containers = assignedContainers;
     AMPreemptionPolicy.Context mPctxt = new AMPreemptionPolicy.Context() {
       @Override
       public TaskAttemptId getTaskAttempt(ContainerId cId) {
@@ -121,7 +122,7 @@ public class TestCheckpointPreemptionPolicy {
       @Override
       public List<Container> getContainers(TaskType t) {
         List<Container> p = new ArrayList<Container>();
-        for (Map.Entry<ContainerId,TaskAttemptId> ent :
+        for (Map.Entry<ContainerId, TaskAttemptId> ent :
             assignedContainers.entrySet()) {
           if (ent.getValue().getTaskId().getTaskType().equals(t)) {
             p.add(Container.newInstance(ent.getKey(), null, null,
@@ -153,8 +154,8 @@ public class TestCheckpointPreemptionPolicy {
 
 
   @Test
-  public void testPreemptionContract() {
-    final Map<ContainerId,TaskAttemptId> containers = assignedContainers;
+  void testPreemptionContract() {
+    final Map<ContainerId, TaskAttemptId> containers = assignedContainers;
     AMPreemptionPolicy.Context mPctxt = new AMPreemptionPolicy.Context() {
       @Override
       public TaskAttemptId getTaskAttempt(ContainerId cId) {
@@ -164,9 +165,9 @@ public class TestCheckpointPreemptionPolicy {
       @Override
       public List<Container> getContainers(TaskType t) {
         List<Container> p = new ArrayList<Container>();
-        for (Map.Entry<ContainerId,TaskAttemptId> ent :
-            assignedContainers.entrySet()){
-          if(ent.getValue().getTaskId().getTaskType().equals(t)){
+        for (Map.Entry<ContainerId, TaskAttemptId> ent :
+            assignedContainers.entrySet()) {
+          if (ent.getValue().getTaskId().getTaskType().equals(t)) {
             p.add(Container.newInstance(ent.getKey(), null, null,
                 contToResourceMap.get(ent.getKey()),
                 Priority.newInstance(0), null));
@@ -190,12 +191,12 @@ public class TestCheckpointPreemptionPolicy {
     // first round of preemption
     policy.preempt(mPctxt, pM);
     List<TaskAttemptId> preempting =
-      validatePreemption(pM, policy, supposedMemPreemption);
+        validatePreemption(pM, policy, supposedMemPreemption);
 
     // redundant message
     policy.preempt(mPctxt, pM);
     List<TaskAttemptId> preempting2 =
-      validatePreemption(pM, policy, supposedMemPreemption);
+        validatePreemption(pM, policy, supposedMemPreemption);
 
     // check that nothing got added
     assert preempting2.equals(preempting);
@@ -205,12 +206,12 @@ public class TestCheckpointPreemptionPolicy {
     policy.handleCompletedContainer(preempting.get(1));
 
     // remove from assignedContainers
-    Iterator<Map.Entry<ContainerId,TaskAttemptId>> it =
-      assignedContainers.entrySet().iterator();
+    Iterator<Map.Entry<ContainerId, TaskAttemptId>> it =
+        assignedContainers.entrySet().iterator();
     while (it.hasNext()) {
-      Map.Entry<ContainerId,TaskAttemptId> ent = it.next();
+      Map.Entry<ContainerId, TaskAttemptId> ent = it.next();
       if (ent.getValue().equals(preempting.get(0)) ||
-        ent.getValue().equals(preempting.get(1)))
+          ent.getValue().equals(preempting.get(1)))
         it.remove();
     }
 
@@ -219,7 +220,7 @@ public class TestCheckpointPreemptionPolicy {
 
     // triggers preemption of 2 more containers (i.e., the preemption set changes)
     List<TaskAttemptId> preempting3 =
-      validatePreemption(pM, policy, supposedMemPreemption);
+        validatePreemption(pM, policy, supposedMemPreemption);
     assert preempting3.equals(preempting2) == false;
   }
 
