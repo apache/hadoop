@@ -112,35 +112,35 @@ public class TestCapacitySchedulerConfiguration {
 
   /**
    * dfs.nfs.exports.allowed.hosts
-   * prop is deprecated, new we use
+   * prop is deprecated, now we use
    * nfs.exports.allowed.hosts
    * instead
    */
   @Test
   public void testDeprecationFeatureWorks() {
-    final String key1 = "KEY_1";
-    final String key2 = "KEY_2";
-    final String depName = "dfs.nfs.exports.allowed.hosts";
+    final String value1 = "VALUE_1";
+    final String value2 = "VALUE_2";
+    final String deprecatedName = "dfs.nfs.exports.allowed.hosts";
     final String newName = "nfs.exports.allowed.hosts";
     final CapacitySchedulerConfiguration csConf = createDefaultCsConf();
     final ConfigurationProperties properties = csConf.getConfigurationProperties();
 
-    csConf.set(depName, key1);
-    assertEquals(key1, csConf.get(depName));
-    assertEquals(key1, csConf.get(newName));
-    assertEquals(key1, properties.getPropertiesWithPrefix(depName).values().iterator().next());
-    assertEquals(key1, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+    csConf.set(deprecatedName, value1);
+    assertEquals(value1, csConf.get(deprecatedName));
+    assertEquals(value1, csConf.get(newName));
+    assertEquals(value1, properties.getPropertiesWithPrefix(deprecatedName).values().iterator().next());
+    assertEquals(value1, properties.getPropertiesWithPrefix(newName).values().iterator().next());
 
-    csConf.set(depName, key2);
-    assertEquals(key2, csConf.get(depName));
-    assertEquals(key2, csConf.get(newName));
-    assertEquals(key2, properties.getPropertiesWithPrefix(depName).values().iterator().next());
-    assertEquals(key2, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+    csConf.set(deprecatedName, value2);
+    assertEquals(value2, csConf.get(deprecatedName));
+    assertEquals(value2, csConf.get(newName));
+    assertEquals(value2, properties.getPropertiesWithPrefix(deprecatedName).values().iterator().next());
+    assertEquals(value2, properties.getPropertiesWithPrefix(newName).values().iterator().next());
 
     csConf.unset(newName);
-    assertNull(csConf.get(depName));
+    assertNull(csConf.get(deprecatedName));
     assertNull(csConf.get(newName));
-    assertTrue(properties.getPropertiesWithPrefix(depName).isEmpty());
+    assertTrue(properties.getPropertiesWithPrefix(deprecatedName).isEmpty());
     assertTrue(properties.getPropertiesWithPrefix(newName).isEmpty());
   }
 
