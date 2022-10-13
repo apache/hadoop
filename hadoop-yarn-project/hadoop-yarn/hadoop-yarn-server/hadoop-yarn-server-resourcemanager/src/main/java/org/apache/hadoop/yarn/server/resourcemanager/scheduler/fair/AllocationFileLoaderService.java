@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.security.Permission;
@@ -236,8 +237,7 @@ public class AllocationFileLoaderService extends AbstractService {
     LOG.info("Loading allocation file " + allocFile);
 
     // Read and parse the allocations file.
-    DocumentBuilderFactory docBuilderFactory =
-        DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docBuilderFactory = XMLUtils.newSecureDocumentBuilderFactory();
     docBuilderFactory.setIgnoringComments(true);
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = builder.parse(fs.open(allocFile));

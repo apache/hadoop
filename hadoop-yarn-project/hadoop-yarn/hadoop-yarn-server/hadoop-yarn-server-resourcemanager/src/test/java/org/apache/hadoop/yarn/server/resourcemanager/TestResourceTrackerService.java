@@ -24,6 +24,7 @@ import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenIdentifier;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.nodelabels.NodeAttributeStore;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelUtil;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
@@ -2601,7 +2602,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   private void writeToHostsXmlFile(
       File file, Pair<String, Integer>... hostsAndTimeouts) throws Exception {
     ensureFileExists(file);
-    DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbFactory = XMLUtils.newSecureDocumentBuilderFactory();
     Document doc = dbFactory.newDocumentBuilder().newDocument();
     Element hosts = doc.createElement("hosts");
     doc.appendChild(hosts);
@@ -2619,7 +2620,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         );
       }
     }
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = transformerFactory.newTransformer();
     transformer.setOutputProperty(OutputKeys.INDENT, "yes");
     transformer.transform(new DOMSource(doc), new StreamResult(file));
