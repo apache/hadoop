@@ -24,6 +24,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BA
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MIN_BACKOFF_INTERVAL;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
@@ -32,8 +33,13 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.util.Random;
+import java.util.UUID;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.junit.Assert;
 import org.junit.Test;
@@ -115,7 +121,46 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testAccountIdle() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
+    final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
+    URI defaultUri = null;
+    try {
+      defaultUri = new URI("abfss", abfsUrl, null, null, null);
+    } catch (Exception ex) {
+      throw new AssertionError(ex);
+    }
+    AzureBlobFileSystem fs = new AzureBlobFileSystem();
+    fs.initialize(defaultUri, getRawConfiguration());
+    final String TEST_PATH = "/testfile";
+    int bufferSize = 16 * ONE_KB;
+    final byte[] b = new byte[2 * bufferSize];
+    new Random().nextBytes(b);
+
+    Path testPath = path(TEST_PATH);
+    FSDataOutputStream stream = fs.create(testPath);
+    try {
+      stream.write(b);
+    } finally{
+      stream.close();
+    }
+
+
+    AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
+    Configuration config = new Configuration(getRawConfiguration());
+    String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
+    final String abfsUrl1 = this.getFileSystemName() + UUID.randomUUID() + "@" + accountName1;
+    URI defaultUri1 = null;
+    try {
+      defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);
+    } catch (Exception ex) {
+      throw new AssertionError(ex);
+    }
+    fs1.initialize(defaultUri1, getRawConfiguration());
+    FSDataOutputStream stream1 = fs1.create(testPath);
+    try {
+      stream.write(b);
+    } finally{
+      stream.close();
+    }
 
   }
 

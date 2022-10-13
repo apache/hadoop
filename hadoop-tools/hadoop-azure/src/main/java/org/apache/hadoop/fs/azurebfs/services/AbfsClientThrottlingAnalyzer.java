@@ -47,8 +47,6 @@ class AbfsClientThrottlingAnalyzer {
   private static final double SLEEP_DECREASE_FACTOR = .975;
   private static final double SLEEP_INCREASE_FACTOR = 1.05;
   private int analysisPeriodMs;
-
-  private int idlePeriodMs;
   private volatile int sleepDuration = 0;
   private long consecutiveNoErrorCount = 0;
   private String name = null;
@@ -149,6 +147,11 @@ class AbfsClientThrottlingAnalyzer {
   @VisibleForTesting
   int getSleepDuration() {
     return sleepDuration;
+  }
+
+  @VisibleForTesting
+  int getIdleTimeout() {
+    return DEFAULT_IDLE_PERIOD_MS;
   }
 
   public AtomicLong getLastExecutionTime() {
@@ -263,7 +266,7 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (now - lastExecutionTime.get() >= DEFAULT_IDLE_PERIOD_MS) {
+        if (now - lastExecutionTime.get() >= getIdleTimeout()) {
           isAccountIdle.set(true);
           timer.cancel();
         }
