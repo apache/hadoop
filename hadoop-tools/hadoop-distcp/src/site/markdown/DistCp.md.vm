@@ -581,7 +581,7 @@ $H3 MapReduce and other side-effects
 
 $H3 DistCp and Object Stores
 
-DistCp works with Object Stores such as Amazon S3, Azure WASB and OpenStack Swift.
+DistCp works with Object Stores such as Amazon S3, Azure ABFS and Google GCS.
 
 Prequisites
 
@@ -624,7 +624,7 @@ And to use `-update` to only copy changed files.
 
 ```bash
 hadoop distcp -update -numListstatusThreads 20  \
-  swift://history.cluster1/2016 \
+  s3a://history/2016 \
   hdfs://nn1:8020/history/2016
 ```
 
