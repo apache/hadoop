@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ class IndexCache {
   public IndexCache(JobConf conf) {
     this.conf = conf;
     totalMemoryAllowed =
-      conf.getInt(TTConfig.TT_INDEX_CACHE, 10) * 1024 * 1024;
+      conf.getInt(MRJobConfig.SHUFFLE_INDEX_CACHE, 10) * 1024 * 1024;
     LOG.info("IndexCache created with max memory = " + totalMemoryAllowed);
   }
 
