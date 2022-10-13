@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 public class MetricsOverviewTable extends RouterBlock {
@@ -58,7 +59,31 @@ public class MetricsOverviewTable extends RouterBlock {
     try {
       initFederationClusterAppsMetrics(div, routerClusterMetrics);
       initFederationClusterNodesMetrics(div, routerClusterMetrics);
-      initFederationClusterSchedulersMetrics(div, routerClusterMetrics);
+      List<SubClusterInfo> subClusters = getSubClusterInfoList();
+      initFederationClusterSchedulersMetrics(div, routerClusterMetrics, subClusters);
+    } catch (Exception e) {
+      LOG.error("MetricsOverviewTable init error.", e);
+    }
+    div.__();
+  }
+
+  protected void render(Block html, String subClusterId) {
+    // Initialize page styles
+    html.style(".metrics {margin-bottom:5px}");
+
+    // get subClusterId ClusterMetrics Info
+    ClusterMetricsInfo clusterMetricsInfo =
+        getClusterMetricsInfoBySubClusterId(subClusterId);
+    RouterClusterMetrics routerClusterMetrics =
+        new RouterClusterMetrics(clusterMetricsInfo, subClusterId);
+
+    // metrics div
+    Hamlet.DIV<Hamlet> div = html.div().$class("metrics");
+    try {
+      initFederationClusterAppsMetrics(div, routerClusterMetrics);
+      initFederationClusterNodesMetrics(div, routerClusterMetrics);
+      Collection<SubClusterInfo> subClusters = getSubClusterInfoList(subClusterId);
+      initFederationClusterSchedulersMetrics(div, routerClusterMetrics, subClusters);
     } catch (Exception e) {
       LOG.error("MetricsOverviewTable init error.", e);
     }
@@ -74,7 +99,7 @@ public class MetricsOverviewTable extends RouterBlock {
    */
   private void initFederationClusterAppsMetrics(Hamlet.DIV<Hamlet> div,
       RouterClusterMetrics metrics) {
-    div.h3("Federation Cluster Metrics").
+    div.h3(metrics.getWebPageTitlePrefix() + " Cluster Metrics").
         table("#metricsoverview").
         thead().$class("ui-widget-header").
         // Initialize table header information
@@ -116,7 +141,7 @@ public class MetricsOverviewTable extends RouterBlock {
    */
   private void initFederationClusterNodesMetrics(Hamlet.DIV<Hamlet> div,
       RouterClusterMetrics metrics) {
-    div.h3("Federation Cluster Nodes Metrics").
+    div.h3(metrics.getWebPageTitlePrefix() + " Cluster Nodes Metrics").
         table("#nodemetricsoverview").
         thead().$class("ui-widget-header").
         // Initialize table header information
@@ -149,17 +174,17 @@ public class MetricsOverviewTable extends RouterBlock {
    *
    * @param div data display div.
    * @param metrics data metric information.
+   * @param subclusters active subcluster List.
    * @throws YarnException yarn error.
    * @throws IOException io error.
    * @throws InterruptedException interrupt error.
    */
   private void initFederationClusterSchedulersMetrics(Hamlet.DIV<Hamlet> div,
-      RouterClusterMetrics metrics) throws YarnException, IOException, InterruptedException {
-    // Sort the SubClusters.
-    List<SubClusterInfo> subclusters = getSubClusterInfoList();
+      RouterClusterMetrics metrics, Collection<SubClusterInfo> subclusters)
+      throws YarnException, IOException, InterruptedException {
 
     Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr =
-        div.h3("Federation Scheduler Metrics").
+        div.h3(metrics.getWebPageTitlePrefix() + " Scheduler Metrics").
         table("#schedulermetricsoverview").
         thead().$class("ui-widget-header").
         tr().
@@ -202,7 +227,7 @@ public class MetricsOverviewTable extends RouterBlock {
 
   private void initSubClusterOverViewTable(RouterClusterMetrics metrics,
       Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr,
-      List<SubClusterInfo> subclusters) {
+      Collection<SubClusterInfo> subclusters) {
 
     // configuration
     Configuration config = this.router.getConfig();

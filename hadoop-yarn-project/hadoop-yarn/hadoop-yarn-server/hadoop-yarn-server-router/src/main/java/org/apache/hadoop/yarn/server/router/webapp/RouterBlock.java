@@ -33,16 +33,23 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 
 public abstract class RouterBlock extends HtmlBlock {
 
   private final Router router;
+  private final ViewContext ctx;
+  private final FederationStateStoreFacade facade;
+  private final Configuration conf;
 
   public RouterBlock(Router router, ViewContext ctx) {
     super(ctx);
+    this.ctx = ctx;
     this.router = router;
+    this.facade = FederationStateStoreFacade.getInstance();
+    this.conf = this.router.getConfig();
   }
 
   /**
@@ -51,7 +58,6 @@ public abstract class RouterBlock extends HtmlBlock {
    * @return Router ClusterMetricsInfo.
    */
   protected ClusterMetricsInfo getRouterClusterMetricsInfo() {
-    Configuration conf = this.router.getConfig();
     boolean isEnabled = isYarnFederationEnabled();
     if(isEnabled) {
       String webAppAddress = WebAppUtils.getRouterWebAppURLWithScheme(conf);
@@ -60,6 +66,7 @@ public abstract class RouterBlock extends HtmlBlock {
           .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
           RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
           conf, client);
+      client.destroy();
       return metrics;
     }
     return null;
@@ -72,7 +79,7 @@ public abstract class RouterBlock extends HtmlBlock {
    * @throws YarnException if the call to the getSubClusters is unsuccessful.
    */
   protected List<SubClusterInfo> getSubClusterInfoList() throws YarnException {
-    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+
     Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
 
     // Sort the SubClusters.
@@ -90,10 +97,81 @@ public abstract class RouterBlock extends HtmlBlock {
    * @return true, enable yarn federation; false, not enable yarn federation;
    */
   protected boolean isYarnFederationEnabled() {
-    Configuration conf = this.router.getConfig();
     boolean isEnabled = conf.getBoolean(
         YarnConfiguration.FEDERATION_ENABLED,
         YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
     return isEnabled;
+  }
+
+  /**
+   * Get a list of SubClusterIds for ActiveSubClusters.
+   *
+   * @return list of SubClusterIds.
+   */
+  protected List<String> getActiveSubClusterIds() {
+    List<String> result = new ArrayList<>();
+    try {
+      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
+      subClustersInfo.values().stream().forEach(subClusterInfo -> {
+        result.add(subClusterInfo.getSubClusterId().getId());
+      });
+    } catch (Exception e) {
+      LOG.error("getActiveSubClusters error.", e);
+    }
+    return result;
+  }
+
+  /**
+   * init SubCluster MetricsOverviewTable.
+   *
+   * @param html HTML Object.
+   * @param subclusterId subClusterId
+   */
+  protected void initSubClusterMetricsOverviewTable(Block html, String subclusterId) {
+    MetricsOverviewTable metricsOverviewTable = new MetricsOverviewTable(this.router, this.ctx);
+    metricsOverviewTable.render(html, subclusterId);
+  }
+
+  /**
+   * Get ClusterMetricsInfo By SubClusterId.
+   *
+   * @param subclusterId subClusterId
+   * @return SubCluster RM ClusterMetricsInfo
+   */
+  protected ClusterMetricsInfo getClusterMetricsInfoBySubClusterId(String subclusterId) {
+    try {
+      SubClusterId subClusterId = SubClusterId.newInstance(subclusterId);
+      SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
+      if (subClusterInfo != null) {
+        Client client = RouterWebServiceUtil.createJerseyClient(this.conf);
+        // Call the RM interface to obtain schedule information
+        String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.conf) +
+            subClusterInfo.getRMWebServiceAddress();
+        ClusterMetricsInfo metrics = RouterWebServiceUtil
+            .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
+            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+            conf, client);
+        client.destroy();
+        return metrics;
+      }
+    } catch (Exception e) {
+      LOG.error("getClusterMetricsInfoBySubClusterId subClusterId = {} error.", subclusterId, e);
+    }
+    return null;
+  }
+
+  protected Collection<SubClusterInfo> getSubClusterInfoList(String subclusterId) {
+    try {
+      SubClusterId subClusterId = SubClusterId.newInstance(subclusterId);
+      SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
+      return Collections.singletonList(subClusterInfo);
+    } catch (Exception e) {
+      LOG.error("getSubClusterInfoList subClusterId = {} error.", subclusterId, e);
+    }
+    return null;
+  }
+
+  public FederationStateStoreFacade getFacade() {
+    return facade;
   }
 }
