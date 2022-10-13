@@ -282,6 +282,8 @@ public class TestFederationClientInterceptorRetry
 
     ApplicationHomeSubCluster responseHomeSubCluster =
         getAppResponse.getApplicationHomeSubCluster();
-    Assert.assertEquals(good,responseHomeSubCluster);
+    Assert.assertNotNull(responseHomeSubCluster);
+    SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
+    Assert.assertEquals(good, respSubClusterId);
   }
 }
