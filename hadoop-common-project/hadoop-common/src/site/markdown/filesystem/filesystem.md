@@ -701,7 +701,7 @@ The behavior of the returned stream is covered in [Output](outputstream.html).
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* S3A, Swift and potentially other Object Stores do not currently change the `FS` state
+* The S3A and potentially other Object Stores connectors not currently change the `FS` state
 until the output stream `close()` operation is completed.
 This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
@@ -1225,7 +1225,7 @@ the parent directories of the destination then exist:
 There is a check for and rejection if the `parent(dest)` is a file, but
 no checks for any other ancestors.
 
-*Other Filesystems (including Swift) *
+*Other Filesystems*
 
 Other filesystems strictly reject the operation, raising a `FileNotFoundException`
 
