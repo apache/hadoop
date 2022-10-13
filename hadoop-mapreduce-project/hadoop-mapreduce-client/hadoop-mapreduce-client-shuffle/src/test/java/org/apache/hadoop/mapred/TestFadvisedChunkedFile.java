@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.RandomAccessFile;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit test for FadvisedChunkedFile.
@@ -31,7 +31,7 @@ import static org.junit.Assert.assertTrue;
 public class TestFadvisedChunkedFile {
 
   @Test
-  public void testDoubleClose() throws Exception {
+  void testDoubleClose() throws Exception {
     File absoluteFile = new File("target",
         TestFadvisedChunkedFile.class.getSimpleName()).getAbsoluteFile();
     absoluteFile.deleteOnExit();
@@ -42,11 +42,11 @@ public class TestFadvisedChunkedFile {
             f, 0, 5, 2, true,
             10, null, "foo");
 
-        assertTrue("fd not valid", f.getFD().valid());
+        assertTrue(f.getFD().valid(), "fd not valid");
         af.close();
-        assertFalse("fd still valid", f.getFD().valid());
+        assertFalse(f.getFD().valid(), "fd still valid");
         af.close();
-        assertFalse("fd still valid", f.getFD().valid());
+        assertFalse(f.getFD().valid(), "fd still valid");
       }
     } finally {
       absoluteFile.delete();
