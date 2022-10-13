@@ -425,7 +425,7 @@ public class FederationClientInterceptor
       // but if the number of Active SubClusters is less than this number at this time,
       // we should provide a high number of retry according to the number of Active SubClusters.
       int activeSubClustersCount = getActiveSubClustersCount();
-      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
 
       // Try calling the SubmitApplication method
       SubmitApplicationResponse response =
@@ -476,7 +476,7 @@ public class FederationClientInterceptor
    */
   private SubmitApplicationResponse invokeSubmitApplication(
       List<SubClusterId> blackList, SubmitApplicationRequest request, int retryCount)
-      throws YarnException {
+      throws YarnException, IOException {
 
     // The request is not checked here,
     // because the request has been checked before the method is called.
@@ -520,12 +520,14 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
       LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {} error = {}.",
           applicationId, subClusterId, e);
-      blackList.add(subClusterId);
+      if (subClusterId != null) {
+        blackList.add(subClusterId);
+      }
+      throw e;
     }
 
     // If SubmitApplicationResponse is empty, the request fails.
-    String msg = String.format("Application %s failed to be submitted SubCluster %s.",
-        applicationId, subClusterId);
+    String msg = String.format("Application %s failed to be submitted.", applicationId);
     throw new YarnException(msg);
   }
 
