@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.amazonaws.AmazonWebServiceRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +36,11 @@ import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.http.SdkHttpRequest;
 
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
@@ -300,38 +304,47 @@ public class LoggingAuditor
       referrer.set(key, value);
     }
 
+
+
     /**
-     * Before execution, the logging auditor always builds
-     * the referrer header, saves to the outer class
-     * (where {@link #getLastHeader()} can retrieve it,
+     * Before transmitting a request, the logging auditor
+     * always builds the referrer header, saves to the outer
+     * class (where {@link #getLastHeader()} can retrieve it,
      * and logs at debug.
      * If configured to add the header to the S3 logs, it will
      * be set as the HTTP referrer.
-     * @param request request
-     * @param <T> type of request.
-     * @return the request with any extra headers.
+     * @param context The current state of the execution,
+     *                including the SDK and current HTTP request.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
+     * @return The potentially-modified HTTP request that should be
+     *          sent to the service. Must not be null.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
+    public SdkHttpRequest modifyHttpRequest(Context.ModifyHttpRequest context,
+        ExecutionAttributes executionAttributes) {
+      SdkHttpRequest httpRequest = context.httpRequest();
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.
       setLastHeader(header);
       if (headerEnabled) {
         // add the referrer header
-        request.putCustomRequestHeader(HEADER_REFERRER,
-            header);
+        httpRequest = httpRequest.toBuilder()
+            .appendHeader(HEADER_REFERRER, header)
+            .build();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("[{}] {} Executing {} with {}; {}",
             currentThreadID(),
             getSpanId(),
             getOperationName(),
-            analyzer.analyze(request),
+            analyzer.analyze(context.request()),
             header);
       }
-      return request;
+      return httpRequest;
     }
 
     @Override
@@ -386,15 +399,13 @@ public class LoggingAuditor
     }
 
     @Override
-    public <T extends AmazonWebServiceRequest> T requestCreated(
-        final T request) {
+    public void requestCreated(final SdkRequest.Builder builder) {
       String error = "Creating a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(builder.build());
       LOG.info(error);
       if (LOG.isDebugEnabled()) {
         LOG.debug(error, new AuditFailureException("unaudited"));
       }
-      return request;
     }
 
     /**
@@ -402,20 +413,22 @@ public class LoggingAuditor
      * increment the failure count.
      * Some requests (e.g. copy part) are not expected in spans due
      * to how they are executed; these do not trigger failures.
-     * @param request request
-     * @param <T> type of request
-     * @return an updated request.
-     * @throws AuditFailureException if failure is enabled.
+     * @param context The current state of the execution, including
+     *                the unmodified SDK request from the service
+     *                client call.
+     * @param executionAttributes A mutable set of attributes scoped
+     *                            to one specific request/response
+     *                            cycle that can be used to give data
+     *                            to future lifecycle methods.
      */
     @Override
-    public <T extends AmazonWebServiceRequest> T beforeExecution(
-        final T request) {
-
+    public void beforeExecution(Context.BeforeExecution context,
+        ExecutionAttributes executionAttributes) {
       String error = "executing a request outside an audit span "
-          + analyzer.analyze(request);
+          + analyzer.analyze(context.request());
       final String unaudited = getSpanId() + " "
           + UNAUDITED_OPERATION + " " + error;
-      if (isRequestNotAlwaysInSpan(request)) {
+      if (isRequestNotAlwaysInSpan(context.request())) {
         // can get by auditing during a copy, so don't overreact
         LOG.debug(unaudited);
       } else {
@@ -426,7 +439,7 @@ public class LoggingAuditor
         }
       }
       // now hand off to the superclass for its normal preparation
-      return super.beforeExecution(request);
+      super.beforeExecution(context, executionAttributes);
     }
   }
 }

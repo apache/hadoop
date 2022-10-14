@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 
@@ -135,14 +136,16 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     private final AtomicLong counter = new AtomicLong();
 
     @Override
-    public <T extends AmazonWebServiceRequest> T prepareRequest(final T t) {
+    public void prepareRequest(final SdkRequest.Builder t) {
       counter.addAndGet(1);
-      return t;
     }
   }
 
-  private <T extends AwsRequest> void a(AwsRequest.Builder request) {
-    // TODO: Implement for SDK v2 requests
+  private <T extends AwsRequest> AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder request) {
+    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(request.build());
+    LOG.info("{}", info);
+    requestsAnalyzed++;
+    return info;
   }
 
   /**
@@ -167,28 +170,24 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String path = "path";
     String path2 = "path2";
     String id = "1";
-   // ObjectMetadata md = factory.newObjectMetadata(128);
-   // a(factory.newAbortMultipartUploadRequest(path, id));
-   // a(factory.newCompleteMultipartUploadRequest(path, id,
-   //     new ArrayList<>()));
-   // a(factory.newCopyObjectRequest(path, path2, md));
+    a(factory.newAbortMultipartUploadRequestBuilder(path, id));
+    a(factory.newCompleteMultipartUploadRequestBuilder(path, id,
+        new ArrayList<>()));
+    a(factory.newCopyObjectRequestBuilder(path, path2,
+        HeadObjectResponse.builder().build()));
     a(factory.newDeleteObjectRequestBuilder(path));
     a(factory.newBulkDeleteRequestBuilder(new ArrayList<>()));
-   // a(factory.newDirectoryMarkerRequest(path));
+    a(factory.newDirectoryMarkerRequest(path));
     a(factory.newGetObjectRequestBuilder(path));
-   // a(factory.newGetObjectMetadataRequest(path));
-   // a(factory.newListMultipartUploadsRequest(path));
-    //TODO: Commenting out for now, new request extends AwsRequest, this can be updated once all
-    // request factory operations are updated.
-    //a(factory.newListObjectsV1Request(path, "/", 1));
-    a(factory.newListNextBatchOfObjectsRequest(new ObjectListing()));
-    // a(factory.newListObjectsV2Request(path, "/", 1));
-    //a(factory.newMultipartUploadRequest(path, null));
-    File srcfile = new File("/tmp/a");
-//    a(factory.newPutObjectRequest(path,
-//        factory.newObjectMetadata(-1), null, srcfile));
-    ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
-   // a(factory.newPutObjectRequest(path, md, null, stream));
+    a(factory.newHeadObjectRequestBuilder(path));
+    a(factory.newListMultipartUploadsRequestBuilder(path));
+    a(factory.newListObjectsV1RequestBuilder(path, "/", 1));
+    a(factory.newListObjectsV2RequestBuilder(path, "/", 1));
+    a(factory.newMultipartUploadRequestBuilder(path, null));
+    a(factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.keepingDirs(), -1, true));
+    a(factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.deletingDirs(), 1024, false));
     a(factory.newSelectRequest(path));
   }
 

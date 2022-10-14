@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.services.s3.transfer.Transfer;
 import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 
@@ -38,6 +37,8 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.service.CompositeService;
+
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
@@ -121,7 +122,7 @@ public class NoopAuditManagerS3A extends CompositeService
   }
 
   @Override
-  public List<RequestHandler2> createRequestHandlers() throws IOException {
+  public List<ExecutionInterceptor> createExecutionInterceptors() throws IOException {
     return new ArrayList<>();
   }
 

@@ -29,10 +29,10 @@ import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.util.Lists;
@@ -1944,5 +1945,23 @@ public final class S3AUtils {
    */
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
+  }
+
+  private static final String BYTES_PREFIX = "bytes=";
+
+  public static Optional<Pair<Long, Long>> parseRange(String rangeHeader) {
+    // TODO:WiP: Surely, there is a better way.
+    if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
+      String[] values = rangeHeader.substring("bytes=".length()).split("-");
+      if (values.length == 2) {
+        try {
+          Long start = Long.parseUnsignedLong(values[0]);
+          Long end = Long.parseUnsignedLong(values[0]);
+          return Optional.of(Pair.of(start, end));
+        } catch(NumberFormatException e) {
+        }
+      }
+    }
+    return Optional.empty();
   }
 }

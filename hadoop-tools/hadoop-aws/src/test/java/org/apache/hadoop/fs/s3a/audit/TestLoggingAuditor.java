@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CopyPartRequest;
 import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,6 +27,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -131,8 +135,20 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
    */
   @Test
   public void testCopyOutsideSpanAllowed() throws Throwable {
-    getManager().beforeExecution(new CopyPartRequest());
-    getManager().beforeExecution(new CompleteMultipartUploadRequest());
+    // TODO:WiP: equivalent in v2?
+    //getManager().beforeExecution(new CopyPartRequest());
+    getManager().beforeExecution(
+        InterceptorContext.builder()
+            .request(GetBucketLocationRequest.builder().build())
+            .build(),
+        ExecutionAttributes.builder().build());
+    getManager().beforeExecution(
+        InterceptorContext.builder()
+            .request(CompleteMultipartUploadRequest.builder()
+                .multipartUpload(u -> {})
+                .build())
+            .build(),
+        ExecutionAttributes.builder().build());
   }
 
   /**

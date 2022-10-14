@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.s3.AmazonS3;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +50,7 @@ import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.util.Progressable;
 
+import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
@@ -118,9 +118,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
     root = new Path(FS_URI.toString());
   }
 
-  private static <T extends AmazonWebServiceRequest> T prepareRequest(T t) {
-    return t;
-  }
+  private static void prepareRequest(SdkRequest.Builder t) {}
 
   @Override
   public RequestFactory getRequestFactory() {
