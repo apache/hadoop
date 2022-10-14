@@ -4204,10 +4204,10 @@ public class YarnConfiguration extends Configuration {
    * This configurable is used to set the default time of keepAliveTime
    * of the thread pool of the interceptor.
    *
-   * the default value is 10s.
+   * the default value is 0s.
    */
   public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
-      10*1000; // 10s
+      TimeUnit.SECONDS.toMillis(0); // 0s
 
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
