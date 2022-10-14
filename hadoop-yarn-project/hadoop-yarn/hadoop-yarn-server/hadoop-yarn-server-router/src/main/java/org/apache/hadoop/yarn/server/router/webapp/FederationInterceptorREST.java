@@ -1642,7 +1642,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           "or reservation definition or queue.";
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
+
     String resId = resContext.getReservationId();
+
+    // Check that the resId format is accurate
+    try {
+      RouterServerUtil.validateReservationId(resId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrSubmitReservationFailedRetrieved();
+      throw e;
+    }
 
     long startTime = clock.getTime();
     for (int i = 0; i < numSubmitRetries; i++) {
@@ -1668,7 +1677,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         // If it does not exist, add it. If it exists, update it.
         Boolean exists = RouterServerUtil.existsReservationHomeSubCluster(
             federationFacade, reservationId);
-        if (!exists) {
+
+        if (!exists || i == 0) {
           RouterServerUtil.addReservationHomeSubCluster(federationFacade,
               reservationId, reservationHomeSubCluster);
         } else {
@@ -1689,6 +1699,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           return response;
         }
       } catch (Exception e) {
+        routerMetrics.incrSubmitReservationFailedRetrieved();
         LOG.warn("Unable to submit(try #{}) the Reservation {}.", i, resId, e);
       }
     }
@@ -1712,8 +1723,17 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
     }
 
-    // get ReservationId
+    // get reservationId
     String reservationId = resContext.getReservationId();
+
+    // Check that the reservationId format is accurate
+    try {
+      RouterServerUtil.validateReservationId(reservationId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
+      throw e;
+    }
+
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -1724,10 +1744,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         return response;
       }
     } catch (Exception e) {
+      routerMetrics.incrUpdateReservationFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("updateReservation Failed.", e);
     }
 
     // throw an exception
+    routerMetrics.incrUpdateReservationFailedRetrieved();
     throw new YarnRuntimeException("updateReservation Failed, reservationId = " + reservationId);
   }
 
@@ -1745,6 +1767,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // get ReservationId
     String reservationId = resContext.getReservationId();
+
+    // Check that the reservationId format is accurate
+    try {
+      RouterServerUtil.validateReservationId(reservationId);
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
+      throw e;
+    }
+
     try {
       SubClusterInfo subClusterInfo = getHomeSubClusterInfoByReservationId(reservationId);
       DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -1755,10 +1786,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         return response;
       }
     } catch (Exception e) {
+      routerMetrics.incrDeleteReservationFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("deleteReservation Failed.", e);
     }
 
     // throw an exception
+    routerMetrics.incrDeleteReservationFailedRetrieved();
     throw new YarnRuntimeException("deleteReservation Failed, reservationId = " + reservationId);
   }
 
@@ -1777,9 +1810,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
     }
 
-    // Check that the appId format is accurate
+    // Check that the reservationId format is accurate
     try {
-      ReservationId.parseReservationId(reservationId);
+      RouterServerUtil.validateReservationId(reservationId);
     } catch (IllegalArgumentException e) {
       routerMetrics.incrListReservationFailedRetrieved();
       throw e;

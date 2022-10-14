@@ -65,6 +65,8 @@ public final class RouterServerUtil {
 
   private static final String CONTAINER_PREFIX = "container_";
 
+  public static final String RESERVEIDSTR_PREFIX = "reservation_";
+
   private static final String EPOCH_PREFIX = "e";
 
   /** Disable constructor. */
@@ -574,6 +576,32 @@ public final class RouterServerUtil {
         || !NumberUtils.isDigits(attemptId) || !NumberUtils.isDigits(cid)
         || !NumberUtils.isDigits(epoch)) {
       throw new IllegalArgumentException("Invalid ContainerId: " + containerId);
+    }
+  }
+
+
+  @Public
+  @Unstable
+  public static void validateReservationId(String reservationId)
+      throws IllegalArgumentException {
+
+    if (reservationId == null || reservationId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
+    }
+
+    if (!reservationId.startsWith(RESERVEIDSTR_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+
+    String[] resFields = reservationId.split("_");
+    if (resFields.length != 3) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+
+    String clusterTimestamp = resFields[1];
+    String id = resFields[2];
+    if (!NumberUtils.isDigits(id) || !NumberUtils.isDigits(clusterTimestamp)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
     }
   }
 }
