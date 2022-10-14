@@ -410,7 +410,7 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
-      
+
       String error = "executing a request outside an audit span "
           + analyzer.analyze(request);
       final String unaudited = getSpanId() + " "
