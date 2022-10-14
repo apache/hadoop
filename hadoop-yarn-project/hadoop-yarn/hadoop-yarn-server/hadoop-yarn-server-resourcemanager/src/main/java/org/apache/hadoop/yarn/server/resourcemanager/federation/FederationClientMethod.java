@@ -94,14 +94,14 @@ public class FederationClientMethod {
   }
 
   /**
+   * We will use the invoke method to call the method in FederationStateStoreService.
    *
-   * @param clazz
-   * @param <R>
-   * @return
-   * @throws YarnException
+   * @param clazz response class. like GetSubClusterPolicyConfigurationResponse.class.
+   * @param <R> return object Class like GetSubClusterPolicyConfigurationResponse.
+   * @return The result returned after calling the interface.
+   * @throws YarnException yarn exception.
    */
-  protected <R> R invoke(Class<R> clazz)
-      throws YarnException {
+  protected <R> R invoke(Class<R> clazz) throws YarnException {
     try {
       long startTime = clock.getTime();
       Method method = FederationStateStore.class.getMethod(methodName, types);
