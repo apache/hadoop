@@ -32,6 +32,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import org.mockito.Mockito;
 
 import java.net.URI;
 import java.util.Random;
@@ -39,7 +40,6 @@ import java.util.UUID;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.junit.Assert;
 import org.junit.Test;
@@ -57,6 +57,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
   private final int retryCountBeyondMax = maxRetryCount + 1;
+  private static final int ANALYSIS_PERIOD = 3000;
 
 
   public TestExponentialRetryPolicy() throws Exception {
@@ -130,24 +131,37 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     }
     AzureBlobFileSystem fs = new AzureBlobFileSystem();
     fs.initialize(defaultUri, getRawConfiguration());
+    AbfsClientThrottlingIntercept accountIntercept = AbfsClientThrottlingInterceptFactory.getInstance(this.getAccountName(),
+            fs.getAbfsStore().getClient().getAbfsConfiguration().isAutoThrottlingEnabled(),
+            fs.getAbfsStore().getClient().getAbfsConfiguration().isSingletonEnabled());
+
+    final AbfsClientThrottlingAnalyzer readAccount1Analyser = Mockito.spy(new AbfsClientThrottlingAnalyzer("read", ANALYSIS_PERIOD));
+    final AbfsClientThrottlingAnalyzer writeAccount1Analyser = Mockito.spy(new AbfsClientThrottlingAnalyzer("write", ANALYSIS_PERIOD));
+    
     final String TEST_PATH = "/testfile";
     int bufferSize = 16 * ONE_KB;
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);
 
     Path testPath = path(TEST_PATH);
+    if(accountIntercept != null) {
+      accountIntercept.setReadThrottler(readAccount1Analyser);
+      accountIntercept.setWriteThrottler(writeAccount1Analyser);
+    }
+
+    Mockito.doReturn(1000).when(readAccount1Analyser).getIdleTimeout();
+    Mockito.doReturn(1000).when(writeAccount1Analyser).getIdleTimeout();
     FSDataOutputStream stream = fs.create(testPath);
     try {
       stream.write(b);
     } finally{
       stream.close();
     }
-
-
+    Thread.sleep(1500);
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
     Configuration config = new Configuration(getRawConfiguration());
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
-    final String abfsUrl1 = this.getFileSystemName() + UUID.randomUUID() + "@" + accountName1;
+    final String abfsUrl1 = this.getFileSystemName() + "12" + "@" + accountName1;
     URI defaultUri1 = null;
     try {
       defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);
@@ -157,11 +171,12 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     fs1.initialize(defaultUri1, getRawConfiguration());
     FSDataOutputStream stream1 = fs1.create(testPath);
     try {
-      stream.write(b);
+      stream1.write(b);
     } finally{
-      stream.close();
+      stream1.close();
     }
-
+    Thread.currentThread().sleep(1500);
+    Assert.assertEquals(readAccount1Analyser.getIsAccountIdle().get(), true);
   }
 
   @Test

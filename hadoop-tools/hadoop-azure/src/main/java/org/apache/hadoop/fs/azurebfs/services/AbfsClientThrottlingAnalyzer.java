@@ -36,7 +36,7 @@ class AbfsClientThrottlingAnalyzer {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
   private static final int DEFAULT_ANALYSIS_PERIOD_MS = 10 * 1000;
-  private static final int DEFAULT_IDLE_PERIOD_MS = 20 * 1000;
+  private static final int DEFAULT_IDLE_PERIOD_MS = 20 * 60 * 1000;
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
   private static final int MAX_ANALYSIS_PERIOD_MS = 30000;
   private static final double MIN_ACCEPTABLE_ERROR_PERCENTAGE = .1;
@@ -104,6 +104,8 @@ class AbfsClientThrottlingAnalyzer {
   public void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
             new AbfsOperationMetrics(System.currentTimeMillis()));
+    timer = new Timer(
+            String.format("abfs-timer-client-throttling-analyzer-%s", name), true);
     timer.schedule(new TimerTaskImpl(),
             analysisPeriodMs,
             analysisPeriodMs);

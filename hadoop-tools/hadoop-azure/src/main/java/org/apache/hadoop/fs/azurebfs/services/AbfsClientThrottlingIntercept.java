@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.util.Time.now;
 
 /**
@@ -66,6 +67,16 @@ public final class AbfsClientThrottlingIntercept {
   private AbfsClientThrottlingIntercept() {
     readThrottler = new AbfsClientThrottlingAnalyzer("read");
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
+  }
+
+  @VisibleForTesting
+  void setReadThrottler(AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
+    readThrottler = abfsClientThrottlingAnalyzer;
+  }
+
+  @VisibleForTesting
+  void setWriteThrottler(AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
+    writeThrottler = abfsClientThrottlingAnalyzer;
   }
 
   public static synchronized AbfsClientThrottlingIntercept initializeSingleton(boolean enableAutoThrottling) {
