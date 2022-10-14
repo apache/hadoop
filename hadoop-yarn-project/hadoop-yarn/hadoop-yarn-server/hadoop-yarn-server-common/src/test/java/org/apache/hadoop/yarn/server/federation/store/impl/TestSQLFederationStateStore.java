@@ -84,6 +84,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
         DATABASE_URL + System.currentTimeMillis());
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new HSQLDBFederationStateStore();
   }
@@ -570,5 +571,25 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   @Test(expected = NotImplementedException.class)
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     super.testRemoveStoredMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
   }
 }

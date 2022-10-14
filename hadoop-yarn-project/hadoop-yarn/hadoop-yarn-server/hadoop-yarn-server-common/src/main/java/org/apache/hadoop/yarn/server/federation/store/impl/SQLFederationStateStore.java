@@ -84,6 +84,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -136,7 +138,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       "{call sp_getApplicationHomeSubCluster(?, ?)}";
 
   private static final String CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER =
-      "{call sp_getApplicationsHomeSubCluster()}";
+      "{call sp_getApplicationsHomeSubCluster(?, ?)}";
 
   private static final String CALL_SP_SET_POLICY_CONFIGURATION =
       "{call sp_setPolicyConfiguration(?, ?, ?, ?)}";
@@ -176,6 +178,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   private final Clock clock = new MonotonicClock();
   @VisibleForTesting
   Connection conn = null;
+  private int maxAppsInStateStore;
 
   @Override
   public void init(Configuration conf) throws YarnException {
@@ -215,6 +218,10 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.logAndThrowRetriableException(LOG,
           "Not able to get Connection", e);
     }
+
+    maxAppsInStateStore = conf.getInt(
+        YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+        YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
   }
 
   @Override
@@ -748,24 +755,35 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
+    }
+
     CallableStatement cstmt = null;
     ResultSet rs = null;
-    List<ApplicationHomeSubCluster> appsHomeSubClusters =
-        new ArrayList<ApplicationHomeSubCluster>();
+    List<ApplicationHomeSubCluster> appsHomeSubClusters = new ArrayList<>();
 
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATIONS_HOME_SUBCLUSTER);
+      cstmt.setInt("limit_IN", maxAppsInStateStore);
+      String homeSubClusterIN = StringUtils.EMPTY;
+      SubClusterId subClusterId = request.getSubClusterId();
+      if (subClusterId != null) {
+        homeSubClusterIN = subClusterId.toString();
+      }
+      cstmt.setString("homeSubCluster_IN", homeSubClusterIN);
 
       // Execute the query
       long startTime = clock.getTime();
       rs = cstmt.executeQuery();
       long stopTime = clock.getTime();
 
-      while (rs.next()) {
+      while (rs.next() && appsHomeSubClusters.size() <= maxAppsInStateStore) {
 
         // Extract the output for each tuple
-        String applicationId = rs.getString(1);
-        String homeSubCluster = rs.getString(2);
+        String applicationId = rs.getString("applicationId");
+        String homeSubCluster = rs.getString("homeSubCluster");
 
         appsHomeSubClusters.add(ApplicationHomeSubCluster.newInstance(
             ApplicationId.fromString(applicationId),
@@ -783,8 +801,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt, null, rs);
     }
-    return GetApplicationsHomeSubClusterResponse
-        .newInstance(appsHomeSubClusters);
+
+    return GetApplicationsHomeSubClusterResponse.newInstance(appsHomeSubClusters);
   }
 
   @Override
@@ -1389,6 +1407,11 @@ public class SQLFederationStateStore implements FederationStateStore {
         " according to reservation" + reservationId);
   }
 
+  @VisibleForTesting
+  public Connection getConn() {
+    return conn;
+  }
+
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
@@ -1403,6 +1426,30 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }

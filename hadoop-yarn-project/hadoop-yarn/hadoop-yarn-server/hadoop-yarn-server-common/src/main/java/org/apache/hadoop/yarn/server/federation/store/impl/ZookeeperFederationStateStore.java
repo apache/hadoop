@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -80,6 +82,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -97,6 +101,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
+
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
 
 /**
  * ZooKeeper implementation of {@link FederationStateStore}.
@@ -136,6 +142,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String membershipZNode;
   private String policiesZNode;
   private String reservationsZNode;
+  private int maxAppsInStateStore;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -146,6 +153,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("Initializing ZooKeeper connection");
+
+    maxAppsInStateStore = conf.getInt(
+       YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+       YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
 
     baseZNode = conf.get(
         YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
@@ -258,24 +269,44 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    long start = clock.getTime();
-    List<ApplicationHomeSubCluster> result = new ArrayList<>();
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
+    }
 
     try {
-      for (String child : zkManager.getChildren(appsZNode)) {
-        ApplicationId appId = ApplicationId.fromString(child);
-        SubClusterId homeSubCluster = getApp(appId);
-        ApplicationHomeSubCluster app =
-            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
-        result.add(app);
-      }
+      long start = clock.getTime();
+      SubClusterId requestSC = request.getSubClusterId();
+      List<String> children = zkManager.getChildren(appsZNode);
+      List<ApplicationHomeSubCluster> result = children.stream()
+          .map(child -> generateAppHomeSC(child))
+          .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
+          .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
+          .limit(maxAppsInStateStore)
+          .collect(Collectors.toList());
+      long end = clock.getTime();
+      opDurations.addGetAppsHomeSubClusterDuration(start, end);
+      LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
+      return GetApplicationsHomeSubClusterResponse.newInstance(result);
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    long end = clock.getTime();
-    opDurations.addGetAppsHomeSubClusterDuration(start, end);
-    return GetApplicationsHomeSubClusterResponse.newInstance(result);
+
+    throw new YarnException("Cannot get app by request");
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(String appId) {
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterId homeSubCluster = getApp(applicationId);
+      ApplicationHomeSubCluster app =
+          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
+      return app;
+    } catch (Exception ex) {
+      LOG.error("get homeSubCluster by appId = {}.", appId);
+    }
+    return null;
   }
 
   @Override
@@ -869,6 +900,30 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }

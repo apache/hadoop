@@ -35,6 +35,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -200,8 +201,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    * that all the {@link AMRMClientRelayer} will be re-populated with all
    * pending requests.
    *
-   * TODO: When split-merge is not idempotent, this can lead to some
-   * over-allocation without a full cancel to RM.
    */
   private volatile boolean justRecovered;
 
@@ -357,104 +356,103 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
   @Override
   public void recover(Map<String, byte[]> recoveredDataMap) {
     super.recover(recoveredDataMap);
-    LOG.info("Recovering data for FederationInterceptor for {}",
-        this.attemptId);
+    LOG.info("Recovering data for FederationInterceptor for {}.", this.attemptId);
     this.justRecovered = true;
 
-    if (recoveredDataMap == null) {
+    if (recoveredDataMap == null || recoveredDataMap.isEmpty()) {
+      LOG.warn("recoveredDataMap isNull Or isEmpty, FederationInterceptor can't recover.");
       return;
     }
-    try {
-      if (recoveredDataMap.containsKey(NMSS_REG_REQUEST_KEY)) {
-        RegisterApplicationMasterRequestProto pb =
-            RegisterApplicationMasterRequestProto
-                .parseFrom(recoveredDataMap.get(NMSS_REG_REQUEST_KEY));
-        this.amRegistrationRequest =
-            new RegisterApplicationMasterRequestPBImpl(pb);
-        LOG.info("amRegistrationRequest recovered for {}", this.attemptId);
 
+    if (!recoveredDataMap.containsKey(NMSS_REG_REQUEST_KEY)) {
+      return;
+    }
+
+    try {
+
+      if (recoveredDataMap.containsKey(NMSS_REG_REQUEST_KEY)) {
+        byte[] appMasterRequestBytes = recoveredDataMap.get(NMSS_REG_REQUEST_KEY);
+        RegisterApplicationMasterRequestProto pb =
+            RegisterApplicationMasterRequestProto.parseFrom(appMasterRequestBytes);
+        this.amRegistrationRequest = new RegisterApplicationMasterRequestPBImpl(pb);
+        LOG.info("amRegistrationRequest recovered for {}.", this.attemptId);
         // Give the register request to homeRMRelayer for future re-registration
         this.homeRMRelayer.setAMRegistrationRequest(this.amRegistrationRequest);
       }
+
       if (recoveredDataMap.containsKey(NMSS_REG_RESPONSE_KEY)) {
+        byte[] appMasterResponseBytes = recoveredDataMap.get(NMSS_REG_RESPONSE_KEY);
         RegisterApplicationMasterResponseProto pb =
-            RegisterApplicationMasterResponseProto
-                .parseFrom(recoveredDataMap.get(NMSS_REG_RESPONSE_KEY));
-        this.amRegistrationResponse =
-            new RegisterApplicationMasterResponsePBImpl(pb);
-        LOG.info("amRegistrationResponse recovered for {}", this.attemptId);
+            RegisterApplicationMasterResponseProto.parseFrom(appMasterResponseBytes);
+        this.amRegistrationResponse = new RegisterApplicationMasterResponsePBImpl(pb);
+        LOG.info("amRegistrationResponse recovered for {}.", this.attemptId);
       }
 
       // Recover UAM amrmTokens from registry or NMSS
-      Map<String, Token<AMRMTokenIdentifier>> uamMap;
-      if (this.registryClient != null) {
-        uamMap = this.registryClient
-            .loadStateFromRegistry(this.attemptId.getApplicationId());
-        LOG.info("Found {} existing UAMs for application {} in Yarn Registry",
-            uamMap.size(), this.attemptId.getApplicationId());
-      } else {
-        uamMap = new HashMap<>();
-        for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
-          if (entry.getKey().startsWith(NMSS_SECONDARY_SC_PREFIX)) {
-            // entry for subClusterId -> UAM amrmToken
-            String scId =
-                entry.getKey().substring(NMSS_SECONDARY_SC_PREFIX.length());
-            Token<AMRMTokenIdentifier> amrmToken = new Token<>();
-            amrmToken.decodeFromUrlString(
-                new String(entry.getValue(), STRING_TO_BYTE_FORMAT));
-            uamMap.put(scId, amrmToken);
-            LOG.debug("Recovered UAM in {} from NMSS", scId);
-          }
-        }
-        LOG.info("Found {} existing UAMs for application {} in NMStateStore",
-            uamMap.size(), this.attemptId.getApplicationId());
-      }
+      Map<String, Token<AMRMTokenIdentifier>> uamMap =
+          recoverSubClusterAMRMTokenIdentifierMap(recoveredDataMap);
 
       // Re-attach the UAMs
       int containers = 0;
-      for (Map.Entry<String, Token<AMRMTokenIdentifier>> entry : uamMap
-          .entrySet()) {
-        SubClusterId subClusterId = SubClusterId.newInstance(entry.getKey());
+      AMRMProxyApplicationContext applicationContext = getApplicationContext();
+      ApplicationId applicationId = this.attemptId.getApplicationId();
+      String queue = this.amRegistrationResponse.getQueue();
+      String homeSCId = this.homeSubClusterId.getId();
+      String user = applicationContext.getUser();
 
-        // Create a config loaded with federation on and subclusterId
+      for (Map.Entry<String, Token<AMRMTokenIdentifier>> entry : uamMap.entrySet()) {
+        String keyScId = entry.getKey();
+        Token<AMRMTokenIdentifier> tokens = entry.getValue();
+        SubClusterId subClusterId = SubClusterId.newInstance(keyScId);
+
+        // Create a config loaded with federation on and subClusterId
         // for each UAM
         YarnConfiguration config = new YarnConfiguration(getConf());
-        FederationProxyProviderUtil.updateConfForFederation(config,
-            subClusterId.getId());
+        FederationProxyProviderUtil.updateConfForFederation(config, keyScId);
 
         try {
-          this.uamPool.reAttachUAM(subClusterId.getId(), config,
-              this.attemptId.getApplicationId(),
-              this.amRegistrationResponse.getQueue(),
-              getApplicationContext().getUser(), this.homeSubClusterId.getId(),
-              entry.getValue(), subClusterId.toString());
+          // ReAttachUAM
+          this.uamPool.reAttachUAM(keyScId, config, applicationId, queue, user, homeSCId,
+              tokens, keyScId);
 
-          this.secondaryRelayers.put(subClusterId.getId(),
-              this.uamPool.getAMRMClientRelayer(subClusterId.getId()));
+          // GetAMRMClientRelayer
+          this.secondaryRelayers.put(keyScId, this.uamPool.getAMRMClientRelayer(keyScId));
 
+          // RegisterApplicationMaster
           RegisterApplicationMasterResponse response =
-              this.uamPool.registerApplicationMaster(subClusterId.getId(),
-                  this.amRegistrationRequest);
+              this.uamPool.registerApplicationMaster(keyScId, this.amRegistrationRequest);
 
           // Set sub-cluster to be timed out initially
-          lastSCResponseTime.put(subClusterId,
-              clock.getTime() - subClusterTimeOut);
+          lastSCResponseTime.put(subClusterId, clock.getTime() - subClusterTimeOut);
 
           // Running containers from secondary RMs
-          for (Container container : response
-              .getContainersFromPreviousAttempts()) {
-            containerIdToSubClusterIdMap.put(container.getId(), subClusterId);
+          List<Container> previousAttempts = response.getContainersFromPreviousAttempts();
+          for (Container container : previousAttempts) {
+            ContainerId containerId = container.getId();
+            containerIdToSubClusterIdMap.put(containerId, subClusterId);
             containers++;
-            LOG.debug("  From subcluster {} running container {}",
-                subClusterId, container.getId());
+            LOG.info("From subCluster {} running container {}", subClusterId, containerId);
           }
-          LOG.info("Recovered {} running containers from UAM in {}",
-              response.getContainersFromPreviousAttempts().size(),
-              subClusterId);
+
+          LOG.info("Recovered {} running containers from UAM in {}.",
+              previousAttempts.size(), subClusterId);
 
         } catch (Exception e) {
-          LOG.error("Error reattaching UAM to " + subClusterId + " for "
-              + this.attemptId, e);
+          LOG.error("Error reattaching UAM to {} for {}.", subClusterId, this.attemptId, e);
+          // During recovery, we need to clean up the data of the bad SubCluster.
+          // This ensures that when the bad SubCluster is recovered,
+          // new Containers can still be allocated and new UAMs can be registered.
+          this.uamPool.unAttachUAM(keyScId);
+          this.secondaryRelayers.remove(keyScId);
+          this.lastSCResponseTime.remove(subClusterId);
+          List<ContainerId> containerIds =
+              containerIdToSubClusterIdMap.entrySet().stream()
+              .filter(item-> item.getValue().equals(subClusterId))
+              .map(Entry::getKey)
+              .collect(Collectors.toList());
+          for (ContainerId containerId : containerIds) {
+            containerIdToSubClusterIdMap.remove(containerId);
+          }
         }
       }
 
@@ -463,42 +461,91 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       // map as well.
       UserGroupInformation appSubmitter;
       if (UserGroupInformation.isSecurityEnabled()) {
-        appSubmitter = UserGroupInformation.createProxyUser(getApplicationContext().getUser(),
+        appSubmitter = UserGroupInformation.createProxyUser(user,
             UserGroupInformation.getLoginUser());
       } else {
-        appSubmitter = UserGroupInformation.createRemoteUser(getApplicationContext().getUser());
+        appSubmitter = UserGroupInformation.createRemoteUser(user);
       }
-      ApplicationClientProtocol rmClient =
-          createHomeRMProxy(getApplicationContext(),
-              ApplicationClientProtocol.class, appSubmitter);
 
-      GetContainersResponse response = rmClient
-          .getContainers(GetContainersRequest.newInstance(this.attemptId));
+      ApplicationClientProtocol rmClient = createHomeRMProxy(applicationContext,
+          ApplicationClientProtocol.class, appSubmitter);
+
+      GetContainersRequest request = GetContainersRequest.newInstance(this.attemptId);
+      GetContainersResponse response = rmClient.getContainers(request);
+
       for (ContainerReport container : response.getContainerList()) {
-        containerIdToSubClusterIdMap.put(container.getContainerId(),
-            this.homeSubClusterId);
+        ContainerId containerId = container.getContainerId();
+        containerIdToSubClusterIdMap.put(containerId, this.homeSubClusterId);
         containers++;
-        LOG.debug("  From home RM {} running container {}",
-            this.homeSubClusterId, container.getContainerId());
+        LOG.debug("From home RM {} running container {}.", this.homeSubClusterId, containerId);
       }
-      LOG.info("{} running containers including AM recovered from home RM {}",
+      LOG.info("{} running containers including AM recovered from home RM {}.",
           response.getContainerList().size(), this.homeSubClusterId);
 
-      LOG.info(
-          "In all {} UAMs {} running containers including AM recovered for {}",
+      LOG.info("In all {} UAMs {} running containers including AM recovered for {}.",
           uamMap.size(), containers, this.attemptId);
 
-      if (this.amRegistrationResponse != null) {
+      if (queue != null) {
         // Initialize the AMRMProxyPolicy
-        String queue = this.amRegistrationResponse.getQueue();
-        this.policyInterpreter =
-            FederationPolicyUtils.loadAMRMPolicy(queue, this.policyInterpreter,
-                getConf(), this.federationFacade, this.homeSubClusterId);
+        queue = this.amRegistrationResponse.getQueue();
+        this.policyInterpreter = FederationPolicyUtils.loadAMRMPolicy(queue, this.policyInterpreter,
+            getConf(), this.federationFacade, this.homeSubClusterId);
       }
     } catch (IOException | YarnException e) {
       throw new YarnRuntimeException(e);
     }
+  }
 
+  /**
+   * recover SubClusterAMRMTokenIdentifierMap.
+   *
+   * If registryClient is not empty, restore directly from registryClient,
+   * otherwise restore from NMSS.
+   *
+   * @param recoveredDataMap recoveredDataMap.
+   * @return subClusterAMRMTokenIdentifierMap.
+   * @throws IOException IO Exception occurs.
+   */
+  private Map<String, Token<AMRMTokenIdentifier>> recoverSubClusterAMRMTokenIdentifierMap(
+      Map<String, byte[]> recoveredDataMap) throws IOException {
+    Map<String, Token<AMRMTokenIdentifier>> uamMap;
+    ApplicationId applicationId = this.attemptId.getApplicationId();
+    if (this.registryClient != null) {
+      uamMap = this.registryClient.loadStateFromRegistry(applicationId);
+      LOG.info("Found {} existing UAMs for application {} in Yarn Registry.",
+          uamMap.size(), applicationId);
+    } else {
+      uamMap = recoverSubClusterAMRMTokenIdentifierMapFromNMSS(recoveredDataMap);
+      LOG.info("Found {} existing UAMs for application {} in NMStateStore.",
+          uamMap.size(), applicationId);
+    }
+    return uamMap;
+  }
+
+  /**
+   * recover SubClusterAMRMTokenIdentifierMap From NMSS.
+   *
+   * @param recoveredDataMap recoveredDataMap
+   * @return subClusterAMRMTokenIdentifierMap.
+   * @throws IOException IO Exception occurs.
+   */
+  private Map<String, Token<AMRMTokenIdentifier>> recoverSubClusterAMRMTokenIdentifierMapFromNMSS(
+      Map<String, byte[]> recoveredDataMap) throws IOException {
+    Map<String, Token<AMRMTokenIdentifier>> uamMap = new HashMap<>();
+    for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
+      String key = entry.getKey();
+      byte[] value = entry.getValue();
+
+      if (key.startsWith(NMSS_SECONDARY_SC_PREFIX)) {
+        // entry for subClusterId -> UAM AMRMTokenIdentifier
+        String scId = key.substring(NMSS_SECONDARY_SC_PREFIX.length());
+        Token<AMRMTokenIdentifier> aMRMTokenIdentifier = new Token<>();
+        aMRMTokenIdentifier.decodeFromUrlString(new String(value, STRING_TO_BYTE_FORMAT));
+        uamMap.put(scId, aMRMTokenIdentifier);
+        LOG.debug("Recovered UAM in {} from NMSS.", scId);
+      }
+    }
+    return uamMap;
   }
 
   /**

@@ -165,7 +165,8 @@ public class TestAllowFormat {
     String localhost = "127.0.0.1";
     InetSocketAddress nnAddr1 = new InetSocketAddress(localhost, 8020);
     InetSocketAddress nnAddr2 = new InetSocketAddress(localhost, 8020);
-    HATestUtil.setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
+    HATestUtil.setFailoverConfigurations(conf, logicalName, null,
+        nnAddr1, nnAddr2);
 
     conf.set(DFS_NAMENODE_NAME_DIR_KEY,
         new File(DFS_BASE_DIR, "name").getAbsolutePath());
