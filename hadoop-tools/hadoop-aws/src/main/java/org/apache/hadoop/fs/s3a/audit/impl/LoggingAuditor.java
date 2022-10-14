@@ -20,11 +20,13 @@ package org.apache.hadoop.fs.s3a.audit.impl;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,6 +96,7 @@ public class LoggingAuditor
    * Should the referrer header be added?
    */
   private boolean headerEnabled;
+
 
   /**
    * This is the header sent by the last S3 operation through
@@ -238,6 +241,7 @@ public class LoggingAuditor
         final CommonAuditContext context,
         final String path1,
         final String path2) {
+
       super(spanId, operationName);
 
       this.referrer = HttpReferrerAuditHeader.builder()
@@ -314,8 +318,15 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
+      if(request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange() != null) {
+        long[] rangeValue = ((GetObjectRequest) request).getRange();
+        String[] rangeKey = {"rs", "re"};
+        referrer.set(rangeKey[0], Long.toString(rangeValue[0]));
+        referrer.set(rangeKey[1], Long.toString(rangeValue[1]));
+      }
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
+
       // update the outer class's field.
       setLastHeader(header);
       if (headerEnabled) {
@@ -410,7 +421,6 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
-
       String error = "executing a request outside an audit span "
           + analyzer.analyze(request);
       final String unaudited = getSpanId() + " "

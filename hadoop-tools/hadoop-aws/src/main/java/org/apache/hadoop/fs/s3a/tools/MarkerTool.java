@@ -147,6 +147,7 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Constant to use when there is no limit on the number of
    * objects listed: {@value}.
+   * <p>
    * The value is 0 and not -1 because it allows for the limit to be
    * set on the command line {@code -limit 0}.
    * The command line parser rejects {@code -limit -1} as the -1
@@ -178,9 +179,7 @@ public final class MarkerTool extends S3GuardTool {
       + " <PATH>\n"
       + "\t" + PURPOSE + "\n\n";
 
-  /**
-   * Will be overridden in run(), but during tests needs to avoid NPEs.
-   */
+  /** Will be overridden in run(), but during tests needs to avoid NPEs. */
   private PrintStream out = System.out;
 
   /**
@@ -725,14 +724,10 @@ public final class MarkerTool extends S3GuardTool {
    */
   public static final class MarkerPurgeSummary {
 
-    /**
-     * Number of markers deleted.
-     */
+    /** Number of markers deleted. */
     private int markersDeleted;
 
-    /**
-     * Number of delete requests issued.
-     */
+    /** Number of delete requests issued. */
     private int deleteRequests;
 
     /**
@@ -849,6 +844,7 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Execute the marker tool, with no checks on return codes.
+   *
    * @param scanArgs set of args for the scanner.
    * @throws IOException IO failure
    * @return the result
@@ -864,44 +860,31 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Arguments for the scan.
+   * <p>
    * Uses a builder/argument object because too many arguments were
    * being created, and it was making maintenance harder.
    */
   public static final class ScanArgs {
 
-    /**
-     * Source FS; must be or wrap an S3A FS.
-     */
+    /** Source FS; must be or wrap an S3A FS. */
     private final FileSystem sourceFS;
 
-    /**
-     * Path to scan.
-     */
+    /** Path to scan. */
     private final Path path;
 
-    /**
-     * Purge?
-     */
+    /** Purge? */
     private final boolean doPurge;
 
-    /**
-     * Min marker count (ignored on purge).
-     */
+    /** Min marker count (ignored on purge). */
     private final int minMarkerCount;
 
-    /**
-     * Max marker count (ignored on purge).
-     */
+    /** Max marker count (ignored on purge). */
     private final int maxMarkerCount;
 
-    /**
-     * Limit of files to scan; 0 for 'unlimited'.
-     */
+    /** Limit of files to scan; 0 for 'unlimited'. */
     private final int limit;
 
-    /**
-     * Consider only markers in nonauth paths as errors.
-     */
+    /** Consider only markers in nonauth paths as errors. */
     private final boolean nonAuth;
 
     /**
@@ -963,39 +946,25 @@ public final class MarkerTool extends S3GuardTool {
    */
   public static final class ScanArgsBuilder {
 
-    /**
-     * Source FS; must be or wrap an S3A FS.
-     */
+    /** Source FS; must be or wrap an S3A FS. */
     private FileSystem sourceFS;
 
-    /**
-     * Path to scan.
-     */
+    /** Path to scan. */
     private Path path;
 
-    /**
-     * Purge?
-     */
+    /** Purge? */
     private boolean doPurge = false;
 
-    /**
-     * Min marker count (ignored on purge).
-     */
+    /** Min marker count (ignored on purge). */
     private int minMarkerCount = 0;
 
-    /**
-     * Max marker count (ignored on purge).
-     */
+    /** Max marker count (ignored on purge). */
     private int maxMarkerCount = 0;
 
-    /**
-     * Limit of files to scan; 0 for 'unlimited'.
-     */
+    /** Limit of files to scan; 0 for 'unlimited'. */
     private int limit = UNLIMITED_LISTING;
 
-    /**
-     * Consider only markers in nonauth paths as errors.
-     */
+    /** Consider only markers in nonauth paths as errors. */
     private boolean nonAuth = false;
 
     /**
