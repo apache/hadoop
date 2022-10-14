@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertNotNull;
-
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJobClientGetJob {
   
@@ -42,10 +42,10 @@ public class TestJobClientGetJob {
     os.close();
     return path;
   }
-  
+
   @SuppressWarnings("deprecation")
   @Test
-  public void testGetRunningJobFromJobClient() throws Exception {
+  void testGetRunningJobFromJobClient() throws Exception {
     JobConf conf = new JobConf();
     conf.set("mapreduce.framework.name", "local");
     FileInputFormat.addInputPath(conf, createTempFile("in", "hello"));
@@ -54,10 +54,10 @@ public class TestJobClientGetJob {
     FileOutputFormat.setOutputPath(conf, outputDir);
     JobClient jc = new JobClient(conf);
     RunningJob runningJob = jc.submitJob(conf);
-    assertNotNull("Running job", runningJob);
+    assertNotNull(runningJob, "Running job");
     // Check that the running job can be retrieved by ID
     RunningJob newRunningJob = jc.getJob(runningJob.getID());
-    assertNotNull("New running job", newRunningJob);
+    assertNotNull(newRunningJob, "New running job");
   }
 
 }

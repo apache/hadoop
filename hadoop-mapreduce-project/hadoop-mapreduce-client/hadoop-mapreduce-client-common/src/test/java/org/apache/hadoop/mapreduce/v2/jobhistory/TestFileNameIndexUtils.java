@@ -20,13 +20,13 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 
 import java.io.IOException;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestFileNameIndexUtils {
 
@@ -87,7 +87,7 @@ public class TestFileNameIndexUtils {
   private static final String JOB_START_TIME = "1317928742060";
 
   @Test
-  public void testEncodingDecodingEquivalence() throws IOException {
+  void testEncodingDecodingEquivalence() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -105,30 +105,20 @@ public class TestFileNameIndexUtils {
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
 
-    Assert.assertEquals("Job id different after encoding and decoding",
-        info.getJobId(), parsedInfo.getJobId());
-    Assert.assertEquals("Submit time different after encoding and decoding",
-        info.getSubmitTime(), parsedInfo.getSubmitTime());
-    Assert.assertEquals("User different after encoding and decoding",
-        info.getUser(), parsedInfo.getUser());
-    Assert.assertEquals("Job name different after encoding and decoding",
-        info.getJobName(), parsedInfo.getJobName());
-    Assert.assertEquals("Finish time different after encoding and decoding",
-        info.getFinishTime(), parsedInfo.getFinishTime());
-    Assert.assertEquals("Num maps different after encoding and decoding",
-        info.getNumMaps(), parsedInfo.getNumMaps());
-    Assert.assertEquals("Num reduces different after encoding and decoding",
-        info.getNumReduces(), parsedInfo.getNumReduces());
-    Assert.assertEquals("Job status different after encoding and decoding",
-        info.getJobStatus(), parsedInfo.getJobStatus());
-    Assert.assertEquals("Queue name different after encoding and decoding",
-        info.getQueueName(), parsedInfo.getQueueName());
-    Assert.assertEquals("Job start time different after encoding and decoding",
-        info.getJobStartTime(), parsedInfo.getJobStartTime());
+    assertEquals(info.getJobId(), parsedInfo.getJobId(), "Job id different after encoding and decoding");
+    assertEquals(info.getSubmitTime(), parsedInfo.getSubmitTime(), "Submit time different after encoding and decoding");
+    assertEquals(info.getUser(), parsedInfo.getUser(), "User different after encoding and decoding");
+    assertEquals(info.getJobName(), parsedInfo.getJobName(), "Job name different after encoding and decoding");
+    assertEquals(info.getFinishTime(), parsedInfo.getFinishTime(), "Finish time different after encoding and decoding");
+    assertEquals(info.getNumMaps(), parsedInfo.getNumMaps(), "Num maps different after encoding and decoding");
+    assertEquals(info.getNumReduces(), parsedInfo.getNumReduces(), "Num reduces different after encoding and decoding");
+    assertEquals(info.getJobStatus(), parsedInfo.getJobStatus(), "Job status different after encoding and decoding");
+    assertEquals(info.getQueueName(), parsedInfo.getQueueName(), "Queue name different after encoding and decoding");
+    assertEquals(info.getJobStartTime(), parsedInfo.getJobStartTime(), "Job start time different after encoding and decoding");
   }
 
   @Test
-  public void testUserNamePercentEncoding() throws IOException {
+  void testUserNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -144,12 +134,12 @@ public class TestFileNameIndexUtils {
     info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
-    Assert.assertTrue("User name not encoded correctly into job history file",
-        jobHistoryFile.contains(USER_NAME_WITH_DELIMITER_ESCAPE));
+    assertTrue(jobHistoryFile.contains(USER_NAME_WITH_DELIMITER_ESCAPE),
+        "User name not encoded correctly into job history file");
   }
 
   @Test
-  public void testTrimJobName() throws IOException {
+  void testTrimJobName() throws IOException {
     int jobNameTrimLength = 5;
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
@@ -166,12 +156,12 @@ public class TestFileNameIndexUtils {
     info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile =
-         FileNameIndexUtils.getDoneFileName(info, jobNameTrimLength);
+        FileNameIndexUtils.getDoneFileName(info, jobNameTrimLength);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
 
-    Assert.assertEquals("Job name did not get trimmed correctly",
-        info.getJobName().substring(0, jobNameTrimLength),
-        parsedInfo.getJobName());
+    assertEquals(info.getJobName().substring(0, jobNameTrimLength),
+        parsedInfo.getJobName(),
+        "Job name did not get trimmed correctly");
   }
 
   /**
@@ -179,7 +169,7 @@ public class TestFileNameIndexUtils {
    * even if there are some multibyte characters in the job name.
    */
   @Test
-  public void testJobNameWithMultibyteChars() throws IOException {
+  void testJobNameWithMultibyteChars() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -206,17 +196,17 @@ public class TestFileNameIndexUtils {
     String jobHistoryFile =
         FileNameIndexUtils.getDoneFileName(info, 50);
 
-    Assert.assertTrue(jobHistoryFile.length() <= 255);
+    assertTrue(jobHistoryFile.length() <= 255);
     String trimedJobName = jobHistoryFile.split(
         FileNameIndexUtils.DELIMITER)[3]; // 3 is index of job name
 
     // 3 x 16 < 50 < 3 x 17 so the length of trimedJobName should be 48
-    Assert.assertEquals(48, trimedJobName.getBytes(UTF_8).length);
+    assertEquals(48, trimedJobName.getBytes(UTF_8).length);
 
     // validate whether trimmedJobName by testing reversibility
     byte[] trimedJobNameInByte = trimedJobName.getBytes(UTF_8);
     String reEncodedTrimedJobName = new String(trimedJobNameInByte, UTF_8);
-    Assert.assertArrayEquals(trimedJobNameInByte,
+    assertArrayEquals(trimedJobNameInByte,
         reEncodedTrimedJobName.getBytes(UTF_8));
     sb.setLength(0);
 
@@ -231,17 +221,17 @@ public class TestFileNameIndexUtils {
     jobHistoryFile =
         FileNameIndexUtils.getDoneFileName(info, 27);
 
-    Assert.assertTrue(jobHistoryFile.length() <= 255);
+    assertTrue(jobHistoryFile.length() <= 255);
     trimedJobName = jobHistoryFile.split(
         FileNameIndexUtils.DELIMITER)[3]; // 3 is index of job name
 
     // 6 x 4 < 27 < 6 x 5 so the length of trimedJobName should be 24
-    Assert.assertEquals(24, trimedJobName.getBytes(UTF_8).length);
+    assertEquals(24, trimedJobName.getBytes(UTF_8).length);
 
     // validate whether trimmedJobName by testing reversibility
     trimedJobNameInByte = trimedJobName.getBytes(UTF_8);
     reEncodedTrimedJobName = new String(trimedJobNameInByte, UTF_8);
-    Assert.assertArrayEquals(trimedJobNameInByte,
+    assertArrayEquals(trimedJobNameInByte,
         reEncodedTrimedJobName.getBytes(UTF_8));
     sb.setLength(0);
 
@@ -256,17 +246,17 @@ public class TestFileNameIndexUtils {
     jobHistoryFile =
         FileNameIndexUtils.getDoneFileName(info, 40);
 
-    Assert.assertTrue(jobHistoryFile.length() <= 255);
+    assertTrue(jobHistoryFile.length() <= 255);
     trimedJobName = jobHistoryFile.split(
         FileNameIndexUtils.DELIMITER)[3]; // 3 is index of job name
 
     // 9 x 4 < 40 < 9 x 5 so the length of trimedJobName should be 36
-    Assert.assertEquals(36, trimedJobName.getBytes(UTF_8).length);
+    assertEquals(36, trimedJobName.getBytes(UTF_8).length);
 
     // validate whether trimmedJobName by testing reversibility
     trimedJobNameInByte = trimedJobName.getBytes(UTF_8);
     reEncodedTrimedJobName = new String(trimedJobNameInByte, UTF_8);
-    Assert.assertArrayEquals(trimedJobNameInByte,
+    assertArrayEquals(trimedJobNameInByte,
         reEncodedTrimedJobName.getBytes(UTF_8));
     sb.setLength(0);
 
@@ -281,29 +271,29 @@ public class TestFileNameIndexUtils {
     jobHistoryFile =
         FileNameIndexUtils.getDoneFileName(info, 49);
 
-    Assert.assertTrue(jobHistoryFile.length() <= 255);
+    assertTrue(jobHistoryFile.length() <= 255);
     trimedJobName = jobHistoryFile.split(
         FileNameIndexUtils.DELIMITER)[3]; // 3 is index of job name
 
     // 12 x 4 < 49 < 12 x 5 so the length of trimedJobName should be 48
-    Assert.assertEquals(48, trimedJobName.getBytes(UTF_8).length);
+    assertEquals(48, trimedJobName.getBytes(UTF_8).length);
 
     // validate whether trimmedJobName by testing reversibility
     trimedJobNameInByte = trimedJobName.getBytes(UTF_8);
     reEncodedTrimedJobName = new String(trimedJobNameInByte, UTF_8);
-    Assert.assertArrayEquals(trimedJobNameInByte,
+    assertArrayEquals(trimedJobNameInByte,
         reEncodedTrimedJobName.getBytes(UTF_8));
     sb.setLength(0);
 
     // Test for the combination of 1 to 4 bytes UTF-8 characters
     sb.append('\u732B') // cat in Kanji (encoded into 3 bytes x 3 characters)
-      .append("[") // (encoded into 1 byte x 3 characters)
-      .append('\u03BB') // small lambda (encoded into 2 bytes x 3 characters)
-      .append('/') // (encoded into 1 byte x 3 characters)
-      .append('A') // not url-encoded (1 byte x 1 character)
-      .append("\ud867\ude49") // flying fish in
-                              // Kanji (encoded into 4 bytes x 3 characters)
-      .append('\u72AC'); // dog in Kanji (encoded into 3 bytes x 3 characters)
+        .append("[") // (encoded into 1 byte x 3 characters)
+        .append('\u03BB') // small lambda (encoded into 2 bytes x 3 characters)
+        .append('/') // (encoded into 1 byte x 3 characters)
+        .append('A') // not url-encoded (1 byte x 1 character)
+        .append("\ud867\ude49") // flying fish in
+        // Kanji (encoded into 4 bytes x 3 characters)
+        .append('\u72AC'); // dog in Kanji (encoded into 3 bytes x 3 characters)
 
     longJobName = sb.toString();
     info.setJobName(longJobName);
@@ -311,23 +301,23 @@ public class TestFileNameIndexUtils {
     jobHistoryFile =
         FileNameIndexUtils.getDoneFileName(info, 23);
 
-    Assert.assertTrue(jobHistoryFile.length() <= 255);
+    assertTrue(jobHistoryFile.length() <= 255);
     trimedJobName = jobHistoryFile.split(
         FileNameIndexUtils.DELIMITER)[3]; // 3 is index of job name
 
     // total size of the first 5 characters = 22
     // 23 < total size of the first 6 characters
-    Assert.assertEquals(22, trimedJobName.getBytes(UTF_8).length);
+    assertEquals(22, trimedJobName.getBytes(UTF_8).length);
 
     // validate whether trimmedJobName by testing reversibility
     trimedJobNameInByte = trimedJobName.getBytes(UTF_8);
     reEncodedTrimedJobName = new String(trimedJobNameInByte, UTF_8);
-    Assert.assertArrayEquals(trimedJobNameInByte,
+    assertArrayEquals(trimedJobNameInByte,
         reEncodedTrimedJobName.getBytes(UTF_8));
   }
 
   @Test
-  public void testUserNamePercentDecoding() throws IOException {
+  void testUserNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -341,12 +331,11 @@ public class TestFileNameIndexUtils {
         JOB_START_TIME);
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
-    Assert.assertEquals("User name doesn't match",
-        USER_NAME_WITH_DELIMITER, info.getUser());
+    assertEquals(USER_NAME_WITH_DELIMITER, info.getUser(), "User name doesn't match");
   }
 
   @Test
-  public void testJobNamePercentEncoding() throws IOException {
+  void testJobNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -362,12 +351,12 @@ public class TestFileNameIndexUtils {
     info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
-    Assert.assertTrue("Job name not encoded correctly into job history file",
-        jobHistoryFile.contains(JOB_NAME_WITH_DELIMITER_ESCAPE));
+    assertTrue(jobHistoryFile.contains(JOB_NAME_WITH_DELIMITER_ESCAPE),
+        "Job name not encoded correctly into job history file");
   }
 
   @Test
-  public void testJobNamePercentDecoding() throws IOException {
+  void testJobNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -378,15 +367,14 @@ public class TestFileNameIndexUtils {
         NUM_REDUCES,
         JOB_STATUS,
         QUEUE_NAME,
-        JOB_START_TIME );
+        JOB_START_TIME);
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
-    Assert.assertEquals("Job name doesn't match",
-        JOB_NAME_WITH_DELIMITER, info.getJobName());
+    assertEquals(JOB_NAME_WITH_DELIMITER, info.getJobName(), "Job name doesn't match");
   }
 
   @Test
-  public void testQueueNamePercentEncoding() throws IOException {
+  void testQueueNamePercentEncoding() throws IOException {
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
@@ -402,12 +390,12 @@ public class TestFileNameIndexUtils {
     info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
-    Assert.assertTrue("Queue name not encoded correctly into job history file",
-        jobHistoryFile.contains(QUEUE_NAME_WITH_DELIMITER_ESCAPE));
+    assertTrue(jobHistoryFile.contains(QUEUE_NAME_WITH_DELIMITER_ESCAPE),
+        "Queue name not encoded correctly into job history file");
   }
 
   @Test
-  public void testQueueNamePercentDecoding() throws IOException {
+  void testQueueNamePercentDecoding() throws IOException {
     String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
         JOB_ID,
         SUBMIT_TIME,
@@ -418,15 +406,14 @@ public class TestFileNameIndexUtils {
         NUM_REDUCES,
         JOB_STATUS,
         QUEUE_NAME_WITH_DELIMITER_ESCAPE,
-        JOB_START_TIME );
+        JOB_START_TIME);
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
-    Assert.assertEquals("Queue name doesn't match",
-        QUEUE_NAME_WITH_DELIMITER, info.getQueueName());
+    assertEquals(QUEUE_NAME_WITH_DELIMITER, info.getQueueName(), "Queue name doesn't match");
   }
 
   @Test
-  public void testJobStartTimeBackwardsCompatible() throws IOException{
+  void testJobStartTimeBackwardsCompatible() throws IOException {
     String jobHistoryFile = String.format(OLD_FORMAT_BEFORE_ADD_START_TIME,
         JOB_ID,
         SUBMIT_TIME,
@@ -436,13 +423,13 @@ public class TestFileNameIndexUtils {
         NUM_MAPS,
         NUM_REDUCES,
         JOB_STATUS,
-        QUEUE_NAME );
+        QUEUE_NAME);
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
-    Assert.assertEquals(info.getJobStartTime(), info.getSubmitTime());
+    assertEquals(info.getJobStartTime(), info.getSubmitTime());
   }
 
   @Test
-  public void testJobHistoryFileNameBackwardsCompatible() throws IOException {
+  void testJobHistoryFileNameBackwardsCompatible() throws IOException {
     JobID oldJobId = JobID.forName(JOB_ID);
     JobId jobId = TypeConverter.toYarn(oldJobId);
 
@@ -462,28 +449,20 @@ public class TestFileNameIndexUtils {
         JOB_STATUS);
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
-    Assert.assertEquals("Job id incorrect after decoding old history file",
-        jobId, info.getJobId());
-    Assert.assertEquals("Submit time incorrect after decoding old history file",
-        submitTime, info.getSubmitTime());
-    Assert.assertEquals("User incorrect after decoding old history file",
-        USER_NAME, info.getUser());
-    Assert.assertEquals("Job name incorrect after decoding old history file",
-        JOB_NAME, info.getJobName());
-    Assert.assertEquals("Finish time incorrect after decoding old history file",
-        finishTime, info.getFinishTime());
-    Assert.assertEquals("Num maps incorrect after decoding old history file",
-        numMaps, info.getNumMaps());
-    Assert.assertEquals("Num reduces incorrect after decoding old history file",
-        numReduces, info.getNumReduces());
-    Assert.assertEquals("Job status incorrect after decoding old history file",
-        JOB_STATUS, info.getJobStatus());
-    Assert.assertNull("Queue name incorrect after decoding old history file",
-        info.getQueueName());
+    assertEquals(jobId, info.getJobId(), "Job id incorrect after decoding old history file");
+    assertEquals(submitTime, info.getSubmitTime(), "Submit time incorrect after decoding old history file");
+    assertEquals(USER_NAME, info.getUser(), "User incorrect after decoding old history file");
+    assertEquals(JOB_NAME, info.getJobName(), "Job name incorrect after decoding old history file");
+    assertEquals(finishTime, info.getFinishTime(), "Finish time incorrect after decoding old history file");
+    assertEquals(numMaps, info.getNumMaps(), "Num maps incorrect after decoding old history file");
+    assertEquals(numReduces, info.getNumReduces(), "Num reduces incorrect after decoding old history file");
+    assertEquals(JOB_STATUS, info.getJobStatus(), "Job status incorrect after decoding old history file");
+    assertNull(info.getQueueName(),
+        "Queue name incorrect after decoding old history file");
   }
 
   @Test
-  public void testTrimJobNameEqualsLimitLength() throws IOException {
+  void testTrimJobNameEqualsLimitLength() throws IOException {
     int jobNameTrimLength = 9;
     JobIndexInfo info = new JobIndexInfo();
     JobID oldJobId = JobID.forName(JOB_ID);
@@ -503,7 +482,7 @@ public class TestFileNameIndexUtils {
         jobNameTrimLength);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
 
-    Assert.assertEquals("Job name did not get trimmed correctly", info
-        .getJobName().substring(0, jobNameTrimLength), parsedInfo.getJobName());
+    assertEquals(info
+        .getJobName().substring(0, jobNameTrimLength), parsedInfo.getJobName(), "Job name did not get trimmed correctly");
   }
 }

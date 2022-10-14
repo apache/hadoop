@@ -22,28 +22,31 @@ import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestJobClient {
 
   final static String TEST_DIR = new File("target",
     TestJobClient.class.getSimpleName()).getAbsolutePath();
 
-  @After
+  @AfterEach
   public void tearDown() {
     FileUtil.fullyDelete(new File(TEST_DIR));
   }
 
   @Test
-  public void testGetClusterStatusWithLocalJobRunner() throws Exception {
+  void testGetClusterStatusWithLocalJobRunner() throws Exception {
     Configuration conf = new Configuration();
     conf.set(JTConfig.JT_IPC_ADDRESS, MRConfig.LOCAL_FRAMEWORK_NAME);
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
@@ -51,48 +54,48 @@ public class TestJobClient {
     ClusterStatus clusterStatus = client.getClusterStatus(true);
     Collection<String> activeTrackerNames = clusterStatus
         .getActiveTrackerNames();
-    Assert.assertEquals(0, activeTrackerNames.size());
+    assertEquals(0, activeTrackerNames.size());
     int blacklistedTrackers = clusterStatus.getBlacklistedTrackers();
-    Assert.assertEquals(0, blacklistedTrackers);
+    assertEquals(0, blacklistedTrackers);
     Collection<BlackListInfo> blackListedTrackersInfo = clusterStatus
         .getBlackListedTrackersInfo();
-    Assert.assertEquals(0, blackListedTrackersInfo.size());
+    assertEquals(0, blackListedTrackersInfo.size());
   }
 
-  @Test(timeout = 10000)
-  public void testIsJobDirValid() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testIsJobDirValid() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
     Path testDir = new Path(TEST_DIR);
     fs.mkdirs(testDir);
-    Assert.assertFalse(JobClient.isJobDirValid(testDir, fs));
+    assertFalse(JobClient.isJobDirValid(testDir, fs));
 
     Path jobconf = new Path(testDir, "job.xml");
     Path jobsplit = new Path(testDir, "job.split");
     fs.create(jobconf);
     fs.create(jobsplit);
-    Assert.assertTrue(JobClient.isJobDirValid(testDir, fs));
-    
+    assertTrue(JobClient.isJobDirValid(testDir, fs));
+
     fs.delete(jobconf, true);
     fs.delete(jobsplit, true);
   }
-  
-  @Test(timeout = 10000)
-  public void testGetStagingAreaDir() throws IOException, InterruptedException {
+
+  @Test
+  @Timeout(10000)
+  void testGetStagingAreaDir() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     JobClient client = new JobClient(conf);
 
-    Assert.assertTrue(
-        "Mismatch in paths",
-        client.getClusterHandle().getStagingAreaDir().toString()
-            .equals(client.getStagingAreaDir().toString()));
+    assertEquals(client.getClusterHandle().getStagingAreaDir().toString(), client.getStagingAreaDir().toString());
   }
 
   /**
    * Asks the compiler to check if JobClient is AutoClosable.
    */
-  @Test(timeout = 10000)
-  public void testAutoClosable() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testAutoClosable() throws IOException {
     Configuration conf = new Configuration();
     try (JobClient jobClient = new JobClient(conf)) {
     }
