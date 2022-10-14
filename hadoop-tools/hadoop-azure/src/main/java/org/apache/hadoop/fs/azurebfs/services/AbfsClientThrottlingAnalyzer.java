@@ -28,10 +28,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.util.Preconditions;
-import static org.apache.hadoop.util.Time.now;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.util.Time.now;
 
 class AbfsClientThrottlingAnalyzer {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -155,7 +156,6 @@ class AbfsClientThrottlingAnalyzer {
     return sleepDuration;
   }
 
-  @VisibleForTesting
   int getIdleTimeout() {
     return abfsConfiguration.getAccountIdleTimeout();
   }
