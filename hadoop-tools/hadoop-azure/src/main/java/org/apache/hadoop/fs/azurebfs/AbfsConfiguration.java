@@ -117,9 +117,9 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_SINGLETON_ENABLED,
-      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_SINGLETON_ENABLED)
-  private boolean isSingletonEnabled;
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED,
+      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED)
+  private boolean isAccountThrottlingEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -263,6 +263,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IDLE_TIMEOUT,
+      DefaultValue = DEFAULT_ACCOUNT_IDLE_TIMEOUT)
+  private int accountIdleTimeout;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
@@ -693,8 +697,8 @@ public class AbfsConfiguration{
     return this.azureAppendBlobDirs;
   }
 
-  public boolean isSingletonEnabled() {
-    return this.isSingletonEnabled;
+  public boolean isAccountThrottlingEnabled() {
+    return isAccountThrottlingEnabled;
   }
 
   public String getAzureInfiniteLeaseDirs() {
@@ -737,6 +741,10 @@ public class AbfsConfiguration{
 
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
+  }
+
+  public int getAccountIdleTimeout() {
+    return accountIdleTimeout;
   }
 
   public int getRateLimit() {

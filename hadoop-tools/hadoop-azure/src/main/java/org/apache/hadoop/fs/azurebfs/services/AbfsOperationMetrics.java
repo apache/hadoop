@@ -25,22 +25,34 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 class AbfsOperationMetrics {
 
-  // No of bytes which could not be transferred due to a failed operation
+  /**
+   * No of bytes which could not be transferred due to a failed operation.
+  */
   private final AtomicLong bytesFailed;
 
-  // No of bytes successfully transferred during a successful operation
+  /**
+   * No of bytes successfully transferred during a successful operation.
+   */
   private final AtomicLong bytesSuccessful;
 
-  // Total no of failed operations
+  /**
+   * Total no of failed operations.
+   */
   private final AtomicLong operationsFailed;
 
-  // Total no of successful operations
+  /**
+   * Total no of successful operations.
+   */
   private final AtomicLong operationsSuccessful;
 
-  // Time when collection of metrics ended
+  /**
+   * Time when collection of metrics ended.
+   */
   private long endTime;
 
-  // Time when the collection of metrics started
+  /**
+   * Time when the collection of metrics started.
+   */
   private final long startTime;
 
   AbfsOperationMetrics(long startTime) {
@@ -53,7 +65,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return bytes failed to transfer
+   * @return bytes failed to transfer.
    */
   AtomicLong getBytesFailed() {
     return bytesFailed;
@@ -61,7 +73,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return bytes successfully transferred
+   * @return bytes successfully transferred.
    */
   AtomicLong getBytesSuccessful() {
     return bytesSuccessful;
@@ -69,7 +81,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return no of operations failed
+   * @return no of operations failed.
    */
   AtomicLong getOperationsFailed() {
     return operationsFailed;
@@ -77,7 +89,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return no of successful operations
+   * @return no of successful operations.
    */
   AtomicLong getOperationsSuccessful() {
     return operationsSuccessful;
@@ -85,7 +97,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return end time of metric collection
+   * @return end time of metric collection.
    */
   long getEndTime() {
     return endTime;
@@ -93,7 +105,7 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @param endTime sets the end time
+   * @param endTime sets the end time.
    */
   void setEndTime(final long endTime) {
     this.endTime = endTime;
@@ -101,10 +113,9 @@ class AbfsOperationMetrics {
 
   /**
    *
-   * @return start time of metric collection
+   * @return start time of metric collection.
    */
   long getStartTime() {
     return startTime;
   }
-
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,36 +56,34 @@ public final class AbfsClientThrottlingIntercept {
   }
 
   // Hide default constructor
-  public AbfsClientThrottlingIntercept(String accountName) {
+  public AbfsClientThrottlingIntercept(String accountName, AbfsConfiguration abfsConfiguration) {
     setIsAutoThrottlingEnabled(true);
-    this.readThrottler = new AbfsClientThrottlingAnalyzer("read");
-    this.writeThrottler = new AbfsClientThrottlingAnalyzer("write");
+    this.readThrottler = new AbfsClientThrottlingAnalyzer("read", abfsConfiguration);
+    this.writeThrottler = new AbfsClientThrottlingAnalyzer("write", abfsConfiguration);
     this.accountName = accountName;
-    LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : " + "{}", accountName);
+    LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : {}", accountName);
   }
 
   // Hide default constructor
-  private AbfsClientThrottlingIntercept() {
-    readThrottler = new AbfsClientThrottlingAnalyzer("read");
-    writeThrottler = new AbfsClientThrottlingAnalyzer("write");
+  private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
+    readThrottler = new AbfsClientThrottlingAnalyzer("read", abfsConfiguration);
+    writeThrottler = new AbfsClientThrottlingAnalyzer("write", abfsConfiguration);
   }
 
-  @VisibleForTesting
-  void setReadThrottler(AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
-    readThrottler = abfsClientThrottlingAnalyzer;
+  public AbfsClientThrottlingAnalyzer getReadThrottler() {
+    return readThrottler;
   }
 
-  @VisibleForTesting
-  void setWriteThrottler(AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
-    writeThrottler = abfsClientThrottlingAnalyzer;
+  public AbfsClientThrottlingAnalyzer getWriteThrottler() {
+    return writeThrottler;
   }
 
-  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(boolean enableAutoThrottling) {
-    if (!enableAutoThrottling) {
+  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
+    if (!abfsConfiguration.isAutoThrottlingEnabled()) {
       return null;
     }
     if (singleton == null) {
-      singleton = new AbfsClientThrottlingIntercept();
+      singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
       isAutoThrottlingEnabled = true;
       LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     }
@@ -136,12 +135,14 @@ public final class AbfsClientThrottlingIntercept {
     if (!isAutoThrottlingEnabled) {
       return;
     }
+    /* Resumes the timer for the analyzer if stopped */
     if (readThrottler.getIsAccountIdle().get()) {
       readThrottler.resumeTimer();
     }
     if (writeThrottler.getIsAccountIdle().get()) {
       writeThrottler.resumeTimer();
     }
+    /* Sets the last execution time for the analyzer for this account as now */
     readThrottler.getLastExecutionTime().set(now());
     writeThrottler.getLastExecutionTime().set(now());
     switch (operationType) {

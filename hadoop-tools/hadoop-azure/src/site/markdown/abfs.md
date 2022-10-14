@@ -770,10 +770,8 @@ performance issues.
 
 ### <a name="accountlevelthrottlingoptions"></a> Account level throttling Options
 
-`fs.azure.account.singleton.enabled`: This config is used to specify whether you
-want to enable throttling at account level or not. Otherwise a single throttling
-class level instance is created. It is configured to **true** by default. You need to
-configure it to **false** if we want account level throttling.
+`fs.azure.account.idle.timeout`: This value specifies the time after which if there is no activity on the account, it
+should be declared as idle. The default value for the same is 60 seconds.
 
 ### <a name="hnscheckconfigoptions"></a> HNS Check Options
 Config `fs.azure.account.hns.enabled` provides an option to specify whether

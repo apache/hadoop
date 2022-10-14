@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,26 +43,23 @@ final class AbfsClientThrottlingInterceptFactory {
   /**
    *
    * @param accountName The account for which we need instance of throttling intercept
-   * @param isAutoThrottlingEnabled True or false based on configuration
-   * @param isSingletonEnabled True or false based on account level throttling is needed or not
+     @param abfsConfiguration The object of abfsconfiguration class
    * @return Instance of AbfsClientThrottlingIntercept class
    */
   static synchronized AbfsClientThrottlingIntercept getInstance(String accountName,
-      boolean isAutoThrottlingEnabled,
-      boolean isSingletonEnabled) {
+                                                                AbfsConfiguration abfsConfiguration) {
     AbfsClientThrottlingIntercept instance;
     // If singleton is enabled use a static instance of the intercept class for all accounts
-    if (isSingletonEnabled) {
-      instance = AbfsClientThrottlingIntercept.initializeSingleton(
-          isAutoThrottlingEnabled);
+    if (!abfsConfiguration.isAccountThrottlingEnabled()) {
+      instance = AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration);
     } else {
-      if (!isAutoThrottlingEnabled) {
+      if (!abfsConfiguration.isAutoThrottlingEnabled()) {
         return null;
       }
       // Return the instance from the map
       if (instanceMapping.get(accountName) == null) {
         LOG.debug("The accountName is: {} ", accountName);
-        instance = new AbfsClientThrottlingIntercept(accountName);
+        instance = new AbfsClientThrottlingIntercept(accountName, abfsConfiguration);
         instanceMapping.put(accountName, instance);
       } else {
         instance = instanceMapping.get(accountName);

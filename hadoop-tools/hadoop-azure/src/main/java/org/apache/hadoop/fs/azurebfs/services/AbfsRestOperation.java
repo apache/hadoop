@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -242,12 +243,10 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation = null;
-    String accountName = this.client.getAbfsConfiguration().getAccountName();
-    boolean isAutoThrottlingEnabled = this.client.getAbfsConfiguration().isAutoThrottlingEnabled();
-    boolean isSingletonEnabled = this.client.getAbfsConfiguration().isSingletonEnabled();
+    AbfsConfiguration abfsConfiguration = client.getAbfsConfiguration();
+    String accountName = abfsConfiguration.getAccountName();
     AbfsClientThrottlingIntercept intercept
-        = AbfsClientThrottlingInterceptFactory.getInstance(accountName,
-        isAutoThrottlingEnabled, isSingletonEnabled);
+        = AbfsClientThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
 
     try {
       // initialize the HTTP request and open the connection
