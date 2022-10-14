@@ -15,12 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.federation.utils;
+package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.util.Clock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 /**
@@ -28,20 +31,27 @@ import java.util.Arrays;
  */
 public class FederationClientMethod {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FederationClientMethod.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(FederationClientMethod.class);
 
   /**
    * List of parameters: static and dynamic values, matchings types.
    */
   private final Object[] params;
+
   /**
    * List of method parameters types, matches parameters.
    */
   private final Class<?>[] types;
+
   /**
    * String name of the method.
    */
   private final String methodName;
+
+  private FederationStateStore stateStoreClient = null;
+
+  private Clock clock = null;
 
   public FederationClientMethod(String method, Class<?>[] pTypes, Object... pParams)
       throws YarnException {
@@ -59,6 +69,13 @@ public class FederationClientMethod {
     this(method, new Class[]{pTypes}, new Object[]{pParams});
   }
 
+  public FederationClientMethod(String method, Class pTypes, Object pParams,
+      FederationStateStore fedStateStore, Clock fedClock) throws YarnException {
+    this(method, pTypes, pParams);
+    this.stateStoreClient = fedStateStore;
+    this.clock = fedClock;
+  }
+
   public Object[] getParams() {
     return Arrays.copyOf(this.params, this.params.length);
   }
@@ -74,5 +91,29 @@ public class FederationClientMethod {
    */
   public Class<?>[] getTypes() {
     return Arrays.copyOf(this.types, this.types.length);
+  }
+
+  /**
+   *
+   * @param clazz
+   * @param <R>
+   * @return
+   * @throws YarnException
+   */
+  protected <R> R invoke(Class<R> clazz)
+      throws YarnException {
+    try {
+      long startTime = clock.getTime();
+      Method method = FederationStateStore.class.getMethod(methodName, types);
+      R result = clazz.cast(method.invoke(stateStoreClient, params));
+      long stopTime = clock.getTime();
+      FederationStateStoreServiceMetrics.succeededStateStoreServiceCall(
+          methodName, stopTime - startTime);
+      return result;
+    } catch (Exception e) {
+      LOG.error("stateStoreClient call method {} error.", methodName, e);
+      FederationStateStoreServiceMetrics.failedStateStoreServiceCall(methodName);
+      throw new YarnException(e);
+    }
   }
 }
