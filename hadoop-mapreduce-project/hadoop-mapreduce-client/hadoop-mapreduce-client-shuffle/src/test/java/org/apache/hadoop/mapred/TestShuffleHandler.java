@@ -661,11 +661,11 @@ public class TestShuffleHandler {
     HttpURLConnection conns[] = new HttpURLConnection[connAttempts];
 
     for (int i = 0; i < connAttempts; i++) {
-      String URLstring = "http://127.0.0.1:"
+      String urlString = "http://127.0.0.1:"
           + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
           + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_"
           + i + "_0";
-      URL url = new URL(URLstring);
+      URL url = new URL(urlString);
       conns[i] = (HttpURLConnection) url.openConnection();
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
@@ -690,9 +690,9 @@ public class TestShuffleHandler {
     // This connection should be closed because it to above the limit
     try {
       rc = conns[2].getResponseCode();
-      assertEquals(ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc, "Expected a too-many-requests response code");
-      long backoff = Long.valueOf(
-          conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
+      assertEquals(ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc,
+          "Expected a too-many-requests response code");
+      long backoff = Long.valueOf(conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
       assertTrue(backoff > 0, "The backoff value cannot be negative.");
       conns[2].getInputStream();
       fail("Expected an IOException");
