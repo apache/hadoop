@@ -68,6 +68,7 @@ public class TestZookeeperFederationStateStore
 
       Configuration conf = new YarnConfiguration();
       conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+      conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
       setConf(conf);
     } catch (Exception e) {
       LOG.error("Cannot initialize ZooKeeper store", e);
@@ -183,5 +184,25 @@ public class TestZookeeperFederationStateStore
   @Test(expected = NotImplementedException.class)
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     super.testRemoveStoredMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
   }
 }

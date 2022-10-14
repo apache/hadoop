@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
+import org.apache.hadoop.fs.impl.prefetch.FilePosition;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
@@ -84,46 +85,6 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
         fileSize);
   }
 
-  /**
-   * Moves the current read position so that the next read will occur at {@code pos}.
-   *
-   * @param pos the next read will take place at this position.
-   *
-   * @throws IllegalArgumentException if pos is outside of the range [0, file size].
-   */
-  @Override
-  public void seek(long pos) throws IOException {
-    throwIfClosed();
-    throwIfInvalidSeek(pos);
-
-    // The call to setAbsolute() returns true if the target position is valid and
-    // within the current block. Therefore, no additional work is needed when we get back true.
-    if (!getFilePosition().setAbsolute(pos)) {
-      LOG.info("seek({})", getOffsetStr(pos));
-      // We could be here in two cases:
-      // -- the target position is invalid:
-      //    We ignore this case here as the next read will return an error.
-      // -- it is valid but outside of the current block.
-      if (getFilePosition().isValid()) {
-        // There are two cases to consider:
-        // -- the seek was issued after this buffer was fully read.
-        //    In this case, it is very unlikely that this buffer will be needed again;
-        //    therefore we release the buffer without caching.
-        // -- if we are jumping out of the buffer before reading it completely then
-        //    we will likely need this buffer again (as observed empirically for Parquet)
-        //    therefore we issue an async request to cache this buffer.
-        if (!getFilePosition().bufferFullyRead()) {
-          blockManager.requestCaching(getFilePosition().data());
-        } else {
-          blockManager.release(getFilePosition().data());
-        }
-        getFilePosition().invalidate();
-        blockManager.cancelPrefetches();
-      }
-      setSeekTargetPos(pos);
-    }
-  }
-
   @Override
   public void close() throws IOException {
     // Close the BlockManager first, cancelling active prefetches,
@@ -139,36 +100,45 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
       return false;
     }
 
-    if (getFilePosition().isValid() && getFilePosition()
-        .buffer()
-        .hasRemaining()) {
-      return true;
-    }
-
-    long readPos;
-    int prefetchCount;
-
-    if (getFilePosition().isValid()) {
-      // A sequential read results in a prefetch.
-      readPos = getFilePosition().absolute();
-      prefetchCount = numBlocksToPrefetch;
-    } else {
-      // A seek invalidates the current position.
-      // We prefetch only 1 block immediately after a seek operation.
-      readPos = getSeekTargetPos();
-      prefetchCount = 1;
-    }
-
+    long readPos = getNextReadPos();
     if (!getBlockData().isValidOffset(readPos)) {
       return false;
     }
 
-    if (getFilePosition().isValid()) {
-      if (getFilePosition().bufferFullyRead()) {
-        blockManager.release(getFilePosition().data());
+    // Determine whether this is an out of order read.
+    FilePosition filePosition = getFilePosition();
+    boolean outOfOrderRead = !filePosition.setAbsolute(readPos);
+
+    if (!outOfOrderRead && filePosition.buffer().hasRemaining()) {
+      // Use the current buffer.
+      return true;
+    }
+
+    if (filePosition.isValid()) {
+      // We are jumping out of the current buffer. There are two cases to consider:
+      if (filePosition.bufferFullyRead()) {
+        // This buffer was fully read:
+        // it is very unlikely that this buffer will be needed again;
+        // therefore we release the buffer without caching.
+        blockManager.release(filePosition.data());
       } else {
-        blockManager.requestCaching(getFilePosition().data());
+        // We will likely need this buffer again (as observed empirically for Parquet)
+        // therefore we issue an async request to cache this buffer.
+        blockManager.requestCaching(filePosition.data());
       }
+      filePosition.invalidate();
+    }
+
+    int prefetchCount;
+    if (outOfOrderRead) {
+      LOG.debug("lazy-seek({})", getOffsetStr(readPos));
+      blockManager.cancelPrefetches();
+
+      // We prefetch only 1 block immediately after a seek operation.
+      prefetchCount = 1;
+    } else {
+      // A sequential read results in a prefetch.
+      prefetchCount = numBlocksToPrefetch;
     }
 
     int toBlockNumber = getBlockData().getBlockNumber(readPos);
@@ -186,7 +156,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
             .trackDuration(STREAM_READ_BLOCK_ACQUIRE_AND_READ),
         () -> blockManager.get(toBlockNumber));
 
-    getFilePosition().setData(data, startOffset, readPos);
+    filePosition.setData(data, startOffset, readPos);
     return true;
   }
 
@@ -197,7 +167,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     }
 
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("fpos = (%s)%n", getFilePosition()));
+    sb.append(String.format("%s%n", super.toString()));
     sb.append(blockManager.toString());
     return sb.toString();
   }
