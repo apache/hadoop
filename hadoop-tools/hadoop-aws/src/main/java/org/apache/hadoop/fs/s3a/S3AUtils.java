@@ -640,7 +640,10 @@ public final class S3AUtils {
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
 
-      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+      // List of V1 credential providers that will be migrated with V2 upgrade
+      if (!Arrays.asList("EnvironmentVariableCredentialsProvider",
+              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
+          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
         V2Migration.v1ProviderReferenced(aClass.getName());
       }
 

@@ -185,4 +185,24 @@ public class TestZookeeperFederationStateStore
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     super.testRemoveStoredMasterKey();
   }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
+  }
 }

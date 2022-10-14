@@ -112,9 +112,6 @@ class FederationBlock extends RouterBlock {
   private void initHtmlPageFederation(Block html, boolean isEnabled) {
     List<Map<String, String>> lists = new ArrayList<>();
 
-    // If Yarn Federation is not enabled, the user needs to be prompted.
-    initUserHelpInformationDiv(html, isEnabled);
-
     // Table header
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#rms").$class("cell-border").$style("width:100%").thead().tr()

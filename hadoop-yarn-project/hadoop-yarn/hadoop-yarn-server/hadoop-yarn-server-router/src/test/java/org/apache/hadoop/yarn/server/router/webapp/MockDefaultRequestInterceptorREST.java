@@ -356,6 +356,23 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
 
+    // Try format conversion for app_id
+    ApplicationId applicationId = null;
+    try {
+      applicationId = ApplicationId.fromString(appId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
+    // Try format conversion for app_attempt_id
+    ApplicationAttemptId applicationAttemptId = null;
+    try {
+      applicationAttemptId =
+          ApplicationAttemptId.fromString(appAttemptId);
+    } catch (Exception e) {
+      throw new BadRequestException(e);
+    }
+
     // We avoid to check if the Application exists in the system because we need
     // to validate that each subCluster returns 1 container.
     ContainersInfo containers = new ContainersInfo();
@@ -466,8 +483,7 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
 
-    ContainerId newContainerId = ContainerId.newContainerId(
-        ApplicationAttemptId.fromString(appAttemptId), Integer.valueOf(containerId));
+    ContainerId newContainerId = ContainerId.fromString(containerId);
 
     Resource allocatedResource = Resource.newInstance(1024, 2);
 
@@ -518,15 +534,15 @@ public class MockDefaultRequestInterceptorREST
       throw new NotFoundException("app with id: " + appId + " not found");
     }
 
+    ApplicationAttemptId attemptId = ApplicationAttemptId.fromString(appAttemptId);
+
     ApplicationReport newApplicationReport = ApplicationReport.newInstance(
-        applicationId, ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "user", "queue", "appname", "host", 124, null,
+        applicationId, attemptId, "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 1, 2, 3, 4,
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
 
     ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
-        ApplicationAttemptId.newInstance(applicationId, Integer.parseInt(appAttemptId)),
-        "host", 124, "url", "oUrl", "diagnostics",
+        attemptId, "host", 124, "url", "oUrl", "diagnostics",
         YarnApplicationAttemptState.FINISHED, ContainerId.newContainerId(
         newApplicationReport.getCurrentApplicationAttemptId(), 1));
 
