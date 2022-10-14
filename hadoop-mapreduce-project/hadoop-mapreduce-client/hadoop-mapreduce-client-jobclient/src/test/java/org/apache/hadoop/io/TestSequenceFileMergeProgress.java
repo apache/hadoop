@@ -28,25 +28,26 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.*;
 
 import org.slf4j.Logger;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSequenceFileMergeProgress {
   private static final Logger LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
   @Test
-  public void testMergeProgressWithNoCompression() throws IOException {
+  void testMergeProgressWithNoCompression() throws IOException {
     runTest(SequenceFile.CompressionType.NONE);
   }
 
   @Test
-  public void testMergeProgressWithRecordCompression() throws IOException {
+  void testMergeProgressWithRecordCompression() throws IOException {
     runTest(SequenceFile.CompressionType.RECORD);
   }
 
   @Test
-  public void testMergeProgressWithBlockCompression() throws IOException {
+  void testMergeProgressWithBlockCompression() throws IOException {
     runTest(SequenceFile.CompressionType.BLOCK);
   }
 

@@ -39,11 +39,11 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test the Map-Reduce framework's support for the
@@ -520,7 +520,7 @@ public class TestValueIterReset {
   }
 
   @Test
-  public void testValueIterReset() {
+  void testValueIterReset() {
     try {
       Configuration conf = new Configuration();
       Job job = Job.getInstance(conf, "TestValueIterReset") ;
@@ -533,7 +533,7 @@ public class TestValueIterReset {
       job.setOutputKeyClass(IntWritable.class);
       job.setOutputValueClass(IntWritable.class);
       job.getConfiguration().
-        setInt(MRJobConfig.REDUCE_MARKRESET_BUFFER_SIZE,128);  
+          setInt(MRJobConfig.REDUCE_MARKRESET_BUFFER_SIZE, 128);
       job.setInputFormatClass(TextInputFormat.class);
       job.setOutputFormatClass(TextOutputFormat.class);
       FileInputFormat.addInputPath(job,

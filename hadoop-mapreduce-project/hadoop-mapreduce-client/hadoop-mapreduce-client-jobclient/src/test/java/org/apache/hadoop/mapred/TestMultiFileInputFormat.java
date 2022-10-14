@@ -25,12 +25,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestMultiFileInputFormat {
 
@@ -83,31 +83,31 @@ public class TestMultiFileInputFormat {
   }
 
   @Test
-  public void testFormat() throws IOException {
+  void testFormat() throws IOException {
     LOG.info("Test started");
     LOG.info("Max split count           = " + MAX_SPLIT_COUNT);
     LOG.info("Split count increment     = " + SPLIT_COUNT_INCR);
     LOG.info("Max bytes per file        = " + MAX_BYTES);
     LOG.info("Max number of files       = " + MAX_NUM_FILES);
     LOG.info("Number of files increment = " + NUM_FILES_INCR);
-    
-    MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
+
+    MultiFileInputFormat<Text, Text> format = new DummyMultiFileInputFormat();
     FileSystem fs = FileSystem.getLocal(job);
-    
-    for(int numFiles = 1; numFiles< MAX_NUM_FILES ; 
-      numFiles+= (NUM_FILES_INCR / 2) + rand.nextInt(NUM_FILES_INCR / 2)) {
-      
+
+    for (int numFiles = 1; numFiles < MAX_NUM_FILES;
+      numFiles += (NUM_FILES_INCR / 2) + rand.nextInt(NUM_FILES_INCR / 2)) {
+
       Path dir = initFiles(fs, numFiles, -1);
       BitSet bits = new BitSet(numFiles);
-      for(int i=1;i< MAX_SPLIT_COUNT ;i+= rand.nextInt(SPLIT_COUNT_INCR) + 1) {
+      for (int i = 1; i < MAX_SPLIT_COUNT; i += rand.nextInt(SPLIT_COUNT_INCR) + 1) {
         LOG.info("Running for Num Files=" + numFiles + ", split count=" + i);
-        
-        MultiFileSplit[] splits = (MultiFileSplit[])format.getSplits(job, i);
+
+        MultiFileSplit[] splits = (MultiFileSplit[]) format.getSplits(job, i);
         bits.clear();
-        
-        for(MultiFileSplit split : splits) {
+
+        for (MultiFileSplit split : splits) {
           long splitLength = 0;
-          for(Path p : split.getPaths()) {
+          for (Path p : split.getPaths()) {
             long length = fs.getContentSummary(p).getLength();
             assertEquals(length, lengths.get(p.getName()).longValue());
             splitLength += length;
@@ -127,14 +127,14 @@ public class TestMultiFileInputFormat {
   }
 
   @Test
-  public void testFormatWithLessPathsThanSplits() throws Exception {
-    MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
-    FileSystem fs = FileSystem.getLocal(job);     
-    
+  void testFormatWithLessPathsThanSplits() throws Exception {
+    MultiFileInputFormat<Text, Text> format = new DummyMultiFileInputFormat();
+    FileSystem fs = FileSystem.getLocal(job);
+
     // Test with no path
-    initFiles(fs, 0, -1);    
+    initFiles(fs, 0, -1);
     assertEquals(0, format.getSplits(job, 2).length);
-    
+
     // Test with 2 path and 4 splits
     initFiles(fs, 2, 500);
     assertEquals(2, format.getSplits(job, 4).length);

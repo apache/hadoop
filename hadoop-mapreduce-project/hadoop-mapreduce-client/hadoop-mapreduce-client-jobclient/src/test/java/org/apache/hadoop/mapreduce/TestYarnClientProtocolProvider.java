@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -42,14 +41,17 @@ import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestYarnClientProtocolProvider {
   private static final RecordFactory recordFactory = RecordFactoryProvider.
       getRecordFactory(null);
-  
+
   @Test
-  public void testClusterWithYarnClientProtocolProvider() throws Exception {
+  void testClusterWithYarnClientProtocolProvider() throws Exception {
 
     Configuration conf = new Configuration(false);
     Cluster cluster = null;
@@ -60,22 +62,22 @@ public class TestYarnClientProtocolProvider {
       throw new Exception(
           "Failed to initialize a local runner w/o a cluster framework key", e);
     }
-    
+
     try {
-      assertTrue("client is not a LocalJobRunner",
-          cluster.getClient() instanceof LocalJobRunner);
+      assertTrue(cluster.getClient() instanceof LocalJobRunner,
+          "client is not a LocalJobRunner");
     } finally {
       if (cluster != null) {
         cluster.close();
       }
     }
-    
+
     try {
       conf = new Configuration();
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       cluster = new Cluster(conf);
       ClientProtocol client = cluster.getClient();
-      assertTrue("client is a YARNRunner", client instanceof YARNRunner);
+      assertTrue(client instanceof YARNRunner, "client is a YARNRunner");
     } catch (IOException e) {
 
     } finally {
@@ -85,9 +87,9 @@ public class TestYarnClientProtocolProvider {
     }
   }
 
- 
+
   @Test
-  public void testClusterGetDelegationToken() throws Exception {
+  void testClusterGetDelegationToken() throws Exception {
 
     Configuration conf = new Configuration(false);
     Cluster cluster = null;
@@ -96,10 +98,10 @@ public class TestYarnClientProtocolProvider {
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       cluster = new Cluster(conf);
       YARNRunner yrunner = (YARNRunner) cluster.getClient();
-      GetDelegationTokenResponse getDTResponse = 
+      GetDelegationTokenResponse getDTResponse =
           recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
       org.apache.hadoop.yarn.api.records.Token rmDTToken = recordFactory.newRecordInstance(
-        org.apache.hadoop.yarn.api.records.Token.class);
+          org.apache.hadoop.yarn.api.records.Token.class);
       rmDTToken.setIdentifier(ByteBuffer.wrap(new byte[2]));
       rmDTToken.setKind("Testclusterkind");
       rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
@@ -120,8 +122,7 @@ public class TestYarnClientProtocolProvider {
       };
       yrunner.setResourceMgrDelegate(rmgrDelegate);
       Token t = cluster.getDelegationToken(new Text(" "));
-      assertTrue("Token kind is instead " + t.getKind().toString(),
-        "Testclusterkind".equals(t.getKind().toString()));
+      assertEquals("Testclusterkind", t.getKind().toString());
     } finally {
       if (cluster != null) {
         cluster.close();

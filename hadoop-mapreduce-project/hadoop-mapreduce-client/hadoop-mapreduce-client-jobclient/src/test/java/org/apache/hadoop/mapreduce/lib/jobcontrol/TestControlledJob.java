@@ -18,17 +18,17 @@
 
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
-import static org.junit.Assert.assertFalse;
-
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  */
 public class TestControlledJob {
-  
+
   @Test
-  public void testAddingDependingJobToRunningJobFails() throws Exception {
+  void testAddingDependingJobToRunningJobFails() throws Exception {
     Configuration conf = new Configuration();
     ControlledJob job1 = new ControlledJob(conf);
     job1.setJobState(ControlledJob.State.RUNNING);
@@ -36,7 +36,7 @@ public class TestControlledJob {
   }
 
   @Test
-  public void testAddingDependingJobToCompletedJobFails() throws Exception {
+  void testAddingDependingJobToCompletedJobFails() throws Exception {
     Configuration conf = new Configuration();
     ControlledJob job1 = new ControlledJob(conf);
     job1.setJobState(ControlledJob.State.SUCCESS);

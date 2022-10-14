@@ -57,9 +57,10 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,7 +214,7 @@ public class TestDFSIO implements Tool {
   private static MiniDFSCluster cluster;
   private static TestDFSIO bench;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     bench = new TestDFSIO();
     bench.getConf().setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
@@ -228,7 +229,7 @@ public class TestDFSIO implements Tool {
     testWrite();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     if(cluster == null)
       return;
@@ -243,46 +244,52 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_WRITE, execTime);
   }
 
-  @Test (timeout = 10000)
-  public void testRead() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testRead() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long execTime = bench.readTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ, execTime);
   }
 
-  @Test (timeout = 10000)
-  public void testReadRandom() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testReadRandom() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", 0);
     long execTime = bench.randomReadTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_RANDOM, execTime);
   }
 
-  @Test (timeout = 10000)
-  public void testReadBackward() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testReadBackward() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", -DEFAULT_BUFFER_SIZE);
     long execTime = bench.randomReadTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_BACKWARD, execTime);
   }
 
-  @Test (timeout = 10000)
-  public void testReadSkip() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testReadSkip() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.getConf().setLong("test.io.skip.size", 1);
     long execTime = bench.randomReadTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_SKIP, execTime);
   }
 
-  @Test (timeout = 10000)
-  public void testAppend() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testAppend() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long execTime = bench.appendTest(fs);
     bench.analyzeResult(fs, TestType.TEST_TYPE_APPEND, execTime);
   }
 
-  @Test (timeout = 60000)
-  public void testTruncate() throws Exception {
+  @Test
+  @Timeout(60000)
+  void testTruncate() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     bench.createControlFile(fs, DEFAULT_NR_BYTES / 2, DEFAULT_NR_FILES);
     long execTime = bench.truncateTest(fs);

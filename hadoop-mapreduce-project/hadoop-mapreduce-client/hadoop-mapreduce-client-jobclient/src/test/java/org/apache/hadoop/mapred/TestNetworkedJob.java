@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,7 +47,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 public class TestNetworkedJob {
   private static String TEST_ROOT_DIR = new File(System.getProperty(
@@ -56,20 +57,22 @@ public class TestNetworkedJob {
   private static Path inFile = new Path(testDir, "in");
   private static Path outDir = new Path(testDir, "out");
 
-  @Test (timeout=5000)
-  public void testGetNullCounters() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testGetNullCounters() throws Exception {
     //mock creation
     Job mockJob = mock(Job.class);
-    RunningJob underTest = new JobClient.NetworkedJob(mockJob); 
+    RunningJob underTest = new JobClient.NetworkedJob(mockJob);
 
     when(mockJob.getCounters()).thenReturn(null);
     assertNull(underTest.getCounters());
     //verification
     verify(mockJob).getCounters();
   }
-  
-  @Test (timeout=500000)
-  public void testGetJobStatus() throws IOException, InterruptedException,
+
+  @Test
+  @Timeout(500000)
+  void testGetJobStatus() throws IOException, InterruptedException,
       ClassNotFoundException {
     MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
@@ -101,11 +104,11 @@ public class TestNetworkedJob {
 
       // The following asserts read JobStatus twice and ensure the returned
       // JobStatus objects correspond to the same Job.
-      assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
-          .getJobStatus().getJobID());
-      assertEquals("Expected matching startTimes", rj.getJobStatus()
+      assertEquals(jobId, client.getJob(jobId)
+          .getJobStatus().getJobID(), "Expected matching JobIDs");
+      assertEquals(rj.getJobStatus()
           .getStartTime(), client.getJob(jobId).getJobStatus()
-          .getStartTime());
+          .getStartTime(), "Expected matching startTimes");
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);
@@ -115,13 +118,15 @@ public class TestNetworkedJob {
       }
     }
   }
-/**
- * test JobConf 
- * @throws Exception
- */
-  @SuppressWarnings( "deprecation" )
-  @Test (timeout=500000)
-  public void testNetworkedJob() throws Exception {
+
+  /**
+   * test JobConf 
+   * @throws Exception
+   */
+  @SuppressWarnings("deprecation")
+  @Test
+  @Timeout(500000)
+  void testNetworkedJob() throws Exception {
     // mock creation
     MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
@@ -175,7 +180,7 @@ public class TestNetworkedJob {
       assertEquals("", runningJob.getFailureInfo());
       assertEquals("N/A", runningJob.getJobStatus().getJobName());
       assertEquals(0, client.getMapTaskReports(jobId).length);
-      
+
       try {
         client.getSetupTaskReports(jobId);
       } catch (YarnRuntimeException e) {
@@ -248,14 +253,14 @@ public class TestNetworkedJob {
       assertEquals(2, aai.length);
       assertEquals("root", aai[0].getQueueName());
       assertEquals("root.default", aai[1].getQueueName());
-      
+
       // test JobClient
       // The following asserts read JobStatus twice and ensure the returned
       // JobStatus objects correspond to the same Job.
-      assertEquals("Expected matching JobIDs", jobId, client.getJob(jobId)
-          .getJobStatus().getJobID());
-      assertEquals("Expected matching startTimes", rj.getJobStatus()
-          .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime());
+      assertEquals(jobId, client.getJob(jobId)
+          .getJobStatus().getJobID(), "Expected matching JobIDs");
+      assertEquals(rj.getJobStatus()
+          .getStartTime(), client.getJob(jobId).getJobStatus().getStartTime(), "Expected matching startTimes");
     } finally {
       if (fileSys != null) {
         fileSys.delete(testDir, true);
@@ -271,8 +276,9 @@ public class TestNetworkedJob {
    * 
    * @throws IOException
    */
-  @Test (timeout=5000)
-  public void testBlackListInfo() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testBlackListInfo() throws IOException {
     BlackListInfo info = new BlackListInfo();
     info.setBlackListReport("blackListInfo");
     info.setReasonForBlackListing("reasonForBlackListing");
@@ -289,13 +295,15 @@ public class TestNetworkedJob {
     assertEquals("reasonForBlackListing", info2.getReasonForBlackListing());
     assertEquals("blackListInfo", info2.getBlackListReport());
   }
-/**
- *  test run from command line JobQueueClient
- * @throws Exception
- */
-  @Test (timeout=500000)
-  public void testJobQueueClient() throws Exception {
-        MiniMRClientCluster mr = null;
+
+  /**
+   *  test run from command line JobQueueClient
+   * @throws Exception
+   */
+  @Test
+  @Timeout(500000)
+  void testJobQueueClient() throws Exception {
+    MiniMRClientCluster mr = null;
     FileSystem fileSys = null;
     PrintStream oldOut = System.out;
     try {
@@ -327,13 +335,13 @@ public class TestNetworkedJob {
 
       ByteArrayOutputStream bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg = { "-list" };
+      String[] arg = {"-list"};
       jobClient.run(arg);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg1 = { "-showacls" };
+      String[] arg1 = {"-showacls"};
       jobClient.run(arg1);
       assertTrue(bytes.toString().contains("Queue acls for user :"));
       assertTrue(bytes.toString().contains(
@@ -345,7 +353,7 @@ public class TestNetworkedJob {
 
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg2 = { "-info", "default" };
+      String[] arg2 = {"-info", "default"};
       jobClient.run(arg2);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
@@ -354,7 +362,7 @@ public class TestNetworkedJob {
       // test for info , default queue and jobs
       bytes = new ByteArrayOutputStream();
       System.setOut(new PrintStream(bytes));
-      String[] arg3 = { "-info", "default", "-showJobs" };
+      String[] arg3 = {"-info", "default", "-showJobs"};
       jobClient.run(arg3);
       assertTrue(bytes.toString().contains("Queue Name : default"));
       assertTrue(bytes.toString().contains("Queue State : running"));
@@ -364,7 +372,7 @@ public class TestNetworkedJob {
       String[] arg4 = {};
       jobClient.run(arg4);
 
-      
+
     } finally {
       System.setOut(oldOut);
       if (fileSys != null) {

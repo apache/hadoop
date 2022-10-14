@@ -33,16 +33,13 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestChainMapReduce extends HadoopTestCase {
 
@@ -85,14 +82,14 @@ public class TestChainMapReduce extends HadoopTestCase {
   }
 
   @Test
-  public void testChain() throws Exception {
+  void testChain() throws Exception {
     Path inDir = new Path("testing/chain/input");
     Path outDir = new Path("testing/chain/output");
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+          .replace(' ', '+');
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }
@@ -124,23 +121,23 @@ public class TestChainMapReduce extends HadoopTestCase {
     JobConf mapAConf = new JobConf(false);
     mapAConf.set("a", "A");
     ChainMapper.addMapper(conf, AMap.class, LongWritable.class, Text.class,
-                          LongWritable.class, Text.class, true, mapAConf);
+        LongWritable.class, Text.class, true, mapAConf);
 
     ChainMapper.addMapper(conf, BMap.class, LongWritable.class, Text.class,
-                          LongWritable.class, Text.class, false, null);
+        LongWritable.class, Text.class, false, null);
 
     JobConf reduceConf = new JobConf(false);
     reduceConf.set("a", "C");
     ChainReducer.setReducer(conf, CReduce.class, LongWritable.class, Text.class,
-                            LongWritable.class, Text.class, true, reduceConf);
+        LongWritable.class, Text.class, true, reduceConf);
 
     ChainReducer.addMapper(conf, DMap.class, LongWritable.class, Text.class,
-                           LongWritable.class, Text.class, false, null);
+        LongWritable.class, Text.class, false, null);
 
     JobConf mapEConf = new JobConf(false);
     mapEConf.set("a", "E");
     ChainReducer.addMapper(conf, EMap.class, LongWritable.class, Text.class,
-                           LongWritable.class, Text.class, true, mapEConf);
+        LongWritable.class, Text.class, true, mapEConf);
 
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);

@@ -20,8 +20,10 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestUtils {
   private static final Path[] LOG_PATHS = new Path[] {
@@ -46,7 +48,7 @@ public class TestUtils {
   };
 
   @Test
-  public void testOutputFilesFilter() {
+  void testOutputFilesFilter() {
     PathFilter filter = new Utils.OutputFileUtils.OutputFilesFilter();
     for (Path p : LOG_PATHS) {
       assertFalse(filter.accept(p));
@@ -62,7 +64,7 @@ public class TestUtils {
   }
 
   @Test
-  public void testLogFilter() {
+  void testLogFilter() {
     PathFilter filter = new Utils.OutputFileUtils.OutputLogFilter();
     for (Path p : LOG_PATHS) {
       assertFalse(filter.accept(p));

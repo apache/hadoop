@@ -30,19 +30,21 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class TestQueueConfigurationParser {
-/**
- * test xml generation 
- * @throws ParserConfigurationException
- * @throws Exception 
- */
-  @Test (timeout=5000)
-  public void testQueueConfigurationParser()
+  /**
+   * test xml generation 
+   * @throws ParserConfigurationException
+   * @throws Exception 
+   */
+  @Test
+  @Timeout(5000)
+  void testQueueConfigurationParser()
       throws ParserConfigurationException, Exception {
     JobQueueInfo info = new JobQueueInfo("root", "rootInfo");
     JobQueueInfo infoChild1 = new JobQueueInfo("child1", "child1Info");
@@ -53,10 +55,10 @@ public class TestQueueConfigurationParser {
     DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory
         .newInstance();
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
-    
-    
+
+
     Document document = builder.newDocument();
-    
+
 
     // test QueueConfigurationParser.getQueueElement 
     Element e = QueueConfigurationParser.getQueueElement(document, info);
@@ -67,7 +69,7 @@ public class TestQueueConfigurationParser {
     TransformerFactory tf = TransformerFactory.newInstance();
     Transformer transformer = tf.newTransformer();
     transformer.transform(domSource, result);
-    String str= writer.toString();
+    String str = writer.toString();
     assertTrue(str
         .endsWith("<queue><name>root</name><properties/><state>running</state><queue><name>child1</name><properties/><state>running</state></queue><queue><name>child2</name><properties/><state>running</state></queue></queue>"));
   }

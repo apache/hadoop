@@ -44,8 +44,9 @@ import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 
 import org.apache.hadoop.mapred.Task.TaskReporter;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SuppressWarnings(value={"unchecked", "deprecation"})
 /**
@@ -70,7 +71,7 @@ public class TestMerge {
   private static final Path OUTPUT = new Path("/testplugin/output");
 
   @Test
-  public void testMerge() throws Exception {
+  void testMerge() throws Exception {
     MiniDFSCluster dfsCluster = null;
     MiniMRClientCluster mrCluster = null;
     FileSystem fileSystem = null;
@@ -81,7 +82,7 @@ public class TestMerge {
           .numDataNodes(NUM_HADOOP_DATA_NODES).build();
       fileSystem = dfsCluster.getFileSystem();
       mrCluster = MiniMRClientClusterFactory.create(this.getClass(),
-                                                 NUM_HADOOP_DATA_NODES, conf);
+          NUM_HADOOP_DATA_NODES, conf);
       // Generate input.
       createInput(fileSystem);
       // Run the test.

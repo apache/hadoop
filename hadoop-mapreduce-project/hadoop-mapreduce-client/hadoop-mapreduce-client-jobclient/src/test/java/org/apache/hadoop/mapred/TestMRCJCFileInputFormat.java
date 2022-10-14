@@ -26,16 +26,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -54,7 +54,7 @@ public class TestMRCJCFileInputFormat {
   }
 
   @Test
-  public void testLocality() throws Exception {
+  void testLocality() throws Exception {
     JobConf job = new JobConf(conf);
     dfs = newDFSCluster(job);
     FileSystem fs = dfs.getFileSystem();
@@ -71,14 +71,14 @@ public class TestMRCJCFileInputFormat {
     InputSplit[] splits = inFormat.getSplits(job, 1);
     FileStatus fileStatus = fs.getFileStatus(new Path(inputDir, fileName));
     BlockLocation[] locations =
-      fs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
+        fs.getFileBlockLocations(fileStatus, 0, fileStatus.getLen());
     System.out.println("Made splits");
 
     // make sure that each split is a block and the locations match
-    for(int i=0; i < splits.length; ++i) {
+    for (int i = 0; i < splits.length; ++i) {
       FileSplit fileSplit = (FileSplit) splits[i];
       System.out.println("File split: " + fileSplit);
-      for (String h: fileSplit.getLocations()) {
+      for (String h : fileSplit.getLocations()) {
         System.out.println("Location: " + h);
       }
       System.out.println("Block: " + locations[i]);
@@ -89,13 +89,12 @@ public class TestMRCJCFileInputFormat {
       assertEquals(2, blockLocs.length);
       assertEquals(2, splitLocs.length);
       assertTrue((blockLocs[0].equals(splitLocs[0]) &&
-                  blockLocs[1].equals(splitLocs[1])) ||
-                 (blockLocs[1].equals(splitLocs[0]) &&
-                  blockLocs[0].equals(splitLocs[1])));
+          blockLocs[1].equals(splitLocs[1])) ||
+          (blockLocs[1].equals(splitLocs[0]) &&
+              blockLocs[0].equals(splitLocs[1])));
     }
 
-    assertEquals("Expected value of " + FileInputFormat.NUM_INPUT_FILES,
-                 1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0));
+    assertEquals(1, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0), "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
 
   private void createInputs(FileSystem fs, Path inDir, String fileName)
@@ -114,7 +113,7 @@ public class TestMRCJCFileInputFormat {
   }
 
   @Test
-  public void testNumInputs() throws Exception {
+  void testNumInputs() throws Exception {
     JobConf job = new JobConf(conf);
     dfs = newDFSCluster(job);
     FileSystem fs = dfs.getFileSystem();
@@ -123,7 +122,7 @@ public class TestMRCJCFileInputFormat {
     Path inputDir = new Path("/foo/");
     final int numFiles = 10;
     String fileNameBase = "part-0000";
-    for (int i=0; i < numFiles; ++i) {
+    for (int i = 0; i < numFiles; ++i) {
       createInputs(fs, inputDir, fileNameBase + String.valueOf(i));
     }
     createInputs(fs, inputDir, "_meta");
@@ -135,8 +134,7 @@ public class TestMRCJCFileInputFormat {
     inFormat.configure(job);
     InputSplit[] splits = inFormat.getSplits(job, 1);
 
-    assertEquals("Expected value of " + FileInputFormat.NUM_INPUT_FILES,
-                 numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0));
+    assertEquals(numFiles, job.getLong(FileInputFormat.NUM_INPUT_FILES, 0), "Expected value of " + FileInputFormat.NUM_INPUT_FILES);
   }
   
   final Path root = new Path("/TestFileInputFormat");
@@ -163,7 +161,7 @@ public class TestMRCJCFileInputFormat {
   }
 
   @Test
-  public void testMultiLevelInput() throws Exception {
+  void testMultiLevelInput() throws Exception {
     JobConf job = new JobConf(conf);
 
     job.setBoolean("dfs.replication.considerLoad", false);
@@ -171,14 +169,14 @@ public class TestMRCJCFileInputFormat {
     dfs.waitActive();
 
     String namenode = (dfs.getFileSystem()).getUri().getHost() + ":" +
-                      (dfs.getFileSystem()).getUri().getPort();
+        (dfs.getFileSystem()).getUri().getPort();
 
     FileSystem fileSys = dfs.getFileSystem();
     if (!fileSys.mkdirs(dir1)) {
       throw new IOException("Mkdirs failed to create " + root.toString());
     }
-    writeFile(job, file1, (short)1, 1);
-    writeFile(job, file2, (short)1, 1);
+    writeFile(job, file1, (short) 1, 1);
+    writeFile(job, file2, (short) 1, 1);
 
     // split it using a CombinedFile input format
     DummyFileInputFormat inFormat = new DummyFileInputFormat();
@@ -191,8 +189,8 @@ public class TestMRCJCFileInputFormat {
     } catch (Exception e) {
       exceptionThrown = true;
     }
-    assertTrue("Exception should be thrown by default for scanning a "
-        + "directory with directories inside.", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception should be thrown by default for scanning a "
+        + "directory with directories inside.");
 
     // Enable multi-level/recursive inputs
     job.setBoolean(FileInputFormat.INPUT_DIR_RECURSIVE, true);
@@ -202,7 +200,7 @@ public class TestMRCJCFileInputFormat {
 
   @SuppressWarnings("rawtypes")
   @Test
-  public void testLastInputSplitAtSplitBoundary() throws Exception {
+  void testLastInputSplitAtSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1024l * 1024 * 1024,
         128l * 1024 * 1024);
     JobConf job = new JobConf();
@@ -216,7 +214,7 @@ public class TestMRCJCFileInputFormat {
 
   @SuppressWarnings("rawtypes")
   @Test
-  public void testLastInputSplitExceedingSplitBoundary() throws Exception {
+  void testLastInputSplitExceedingSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1027l * 1024 * 1024,
         128l * 1024 * 1024);
     JobConf job = new JobConf();
@@ -230,7 +228,7 @@ public class TestMRCJCFileInputFormat {
 
   @SuppressWarnings("rawtypes")
   @Test
-  public void testLastInputSplitSingleSplit() throws Exception {
+  void testLastInputSplitSingleSplit() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(100l * 1024 * 1024,
         128l * 1024 * 1024);
     JobConf job = new JobConf();
@@ -314,7 +312,7 @@ public class TestMRCJCFileInputFormat {
     DFSTestUtil.waitReplication(fileSys, name, replication);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (dfs != null) {
       dfs.shutdown();

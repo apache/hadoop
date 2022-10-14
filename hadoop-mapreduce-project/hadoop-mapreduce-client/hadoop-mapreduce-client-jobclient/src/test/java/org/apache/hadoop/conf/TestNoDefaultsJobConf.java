@@ -29,7 +29,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.Utils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,8 +39,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This testcase tests that a JobConf without default values submits jobs
@@ -54,7 +54,7 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
   }
 
   @Test
-  public void testNoDefaults() throws Exception {
+  void testNoDefaults() throws Exception {
     JobConf configuration = new JobConf();
     assertTrue(configuration.get("hadoop.tmp.dir", null) != null);
 
@@ -96,8 +96,8 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-                           getFileSystem().listStatus(outDir,
-                           new Utils.OutputFileUtils.OutputFilesFilter()));
+        getFileSystem().listStatus(outDir,
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

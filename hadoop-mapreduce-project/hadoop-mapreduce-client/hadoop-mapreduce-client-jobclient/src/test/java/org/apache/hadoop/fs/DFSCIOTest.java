@@ -34,12 +34,12 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
- /**
+/**
  * Distributed i/o benchmark.
  * <p>
  * This test writes into or reads from a specified number of files.
@@ -66,7 +66,7 @@ import org.slf4j.LoggerFactory;
  * <li>standard i/o rate deviation</li>
  * </ul>
  */
-@Ignore
+@Disabled
 public class DFSCIOTest {
   // Constants
   private static final Logger LOG = LoggerFactory.getLogger(DFSCIOTest.class);
@@ -98,7 +98,7 @@ public class DFSCIOTest {
    * @throws Exception
    */
   @Test
-  public void testIOs() throws Exception {
+  void testIOs() throws Exception {
     testIOs(10, 10);
   }
 

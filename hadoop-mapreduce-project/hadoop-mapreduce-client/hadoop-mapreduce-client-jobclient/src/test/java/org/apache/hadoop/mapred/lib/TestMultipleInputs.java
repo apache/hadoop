@@ -25,44 +25,45 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Map;
 
 /**
  * @see TestDelegatingInputFormat
  */
 public class TestMultipleInputs {
   @Test
-  public void testAddInputPathWithFormat() {
+  void testAddInputPathWithFormat() {
     final JobConf conf = new JobConf();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class);
     MultipleInputs.addInputPath(conf, new Path("/bar"),
         KeyValueTextInputFormat.class);
     final Map<Path, InputFormat> inputs = MultipleInputs
-       .getInputFormatMap(conf);
+        .getInputFormatMap(conf);
     assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
     assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
+        .getClass());
   }
+
   @Test
-  public void testAddInputPathWithMapper() {
+  void testAddInputPathWithMapper() {
     final JobConf conf = new JobConf();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class,
-       MapClass.class);
+        MapClass.class);
     MultipleInputs.addInputPath(conf, new Path("/bar"),
-       KeyValueTextInputFormat.class, MapClass2.class);
+        KeyValueTextInputFormat.class, MapClass2.class);
     final Map<Path, InputFormat> inputs = MultipleInputs
-       .getInputFormatMap(conf);
+        .getInputFormatMap(conf);
     final Map<Path, Class<? extends Mapper>> maps = MultipleInputs
-       .getMapperTypeMap(conf);
+        .getMapperTypeMap(conf);
 
     assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
     assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
+        .getClass());
     assertEquals(MapClass.class, maps.get(new Path("/foo")));
     assertEquals(MapClass2.class, maps.get(new Path("/bar")));
   }

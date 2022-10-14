@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -40,7 +38,8 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineTextInputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,13 +66,14 @@ public class TestCombineTextInputFormat {
   // A reporter that does nothing
   private static final Reporter voidReporter = Reporter.NULL;
 
-  @Test(timeout=10000)
-  public void testFormat() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testFormat() throws Exception {
     JobConf job = new JobConf(defaultConf);
 
     Random random = new Random();
     long seed = random.nextLong();
-    LOG.info("seed = "+seed);
+    LOG.info("seed = " + seed);
     random.setSeed(seed);
 
     localFs.delete(workDir, true);
@@ -89,23 +89,22 @@ public class TestCombineTextInputFormat {
     LongWritable key = new LongWritable();
     Text value = new Text();
     for (int i = 0; i < 3; i++) {
-      int numSplits = random.nextInt(length/20)+1;
+      int numSplits = random.nextInt(length / 20) + 1;
       LOG.info("splitting: requesting = " + numSplits);
       InputSplit[] splits = format.getSplits(job, numSplits);
       LOG.info("splitting: got =        " + splits.length);
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
-      assertEquals("We got more than one splits!", 1, splits.length);
+      assertEquals(1, splits.length, "We got more than one splits!");
       InputSplit split = splits[0];
-      assertEquals("It should be CombineFileSplit",
-        CombineFileSplit.class, split.getClass());
+      assertEquals(CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
 
       // check the split
       BitSet bits = new BitSet(length);
       LOG.debug("split= " + split);
       RecordReader<LongWritable, Text> reader =
-        format.getRecordReader(split, job, voidReporter);
+          format.getRecordReader(split, job, voidReporter);
       try {
         int count = 0;
         while (reader.next(key, value)) {
@@ -113,17 +112,17 @@ public class TestCombineTextInputFormat {
           LOG.debug("read " + v);
           if (bits.get(v)) {
             LOG.warn("conflict with " + v +
-                     " at position "+reader.getPos());
+                " at position " + reader.getPos());
           }
-          assertFalse("Key in multiple partitions.", bits.get(v));
+          assertFalse(bits.get(v), "Key in multiple partitions.");
           bits.set(v);
           count++;
         }
-        LOG.info("splits="+split+" count=" + count);
+        LOG.info("splits=" + split + " count=" + count);
       } finally {
         reader.close();
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 
@@ -206,25 +205,26 @@ public class TestCombineTextInputFormat {
   /**
    * Test using the gzip codec for reading
    */
-  @Test(timeout=10000)
-  public void testGzip() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testGzip() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir, true);
     writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip,
-              "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
+        "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-              "this is a test\nof gzip\n");
+        "this is a test\nof gzip\n");
     FileInputFormat.setInputPaths(job, workDir);
     CombineTextInputFormat format = new CombineTextInputFormat();
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals("compressed splits == 1", 1, splits.length);
+    assertEquals(1, splits.length, "compressed splits == 1");
     List<Text> results = readSplit(format, splits[0], job);
-    assertEquals("splits[0] length", 8, results.size());
+    assertEquals(8, results.size(), "splits[0] length");
 
     final String[] firstList =
-      {"the quick", "brown", "fox jumped", "over", " the lazy", " dog"};
+        {"the quick", "brown", "fox jumped", "over", " the lazy", " dog"};
     final String[] secondList = {"this is a test", "of gzip"};
     String first = results.get(0).toString();
     if (first.equals(firstList[0])) {
@@ -239,11 +239,11 @@ public class TestCombineTextInputFormat {
   private static void testResults(List<Text> results, String[] first,
     String[] second) {
     for (int i = 0; i < first.length; i++) {
-      assertEquals("splits[0]["+i+"]", first[i], results.get(i).toString());
+      assertEquals(first[i], results.get(i).toString(), "splits[0]["+i+"]");
     }
     for (int i = 0; i < second.length; i++) {
       int j = i + first.length;
-      assertEquals("splits[0]["+j+"]", second[i], results.get(j).toString());
+      assertEquals(second[i], results.get(j).toString(), "splits[0]["+j+"]");
     }
   }
 }

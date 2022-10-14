@@ -32,9 +32,9 @@ import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestMapCollection {
 
@@ -81,7 +81,7 @@ public class TestMapCollection {
       }
       len = WritableUtils.readVInt(in);
       for (int i = 0; i < len; ++i) {
-        assertEquals("Invalid byte at " + i, fillChar, in.readByte());
+        assertEquals(fillChar, in.readByte(), "Invalid byte at " + i);
       }
     }
     @Override
@@ -162,10 +162,10 @@ public class TestMapCollection {
         n2 = 0;
       }
       for (int i = s1 + n1; i < l1 - n1; ++i) {
-        assertEquals("Invalid key at " + s1, (int)KeyWritable.keyFill, b1[i]);
+        assertEquals((int)KeyWritable.keyFill, b1[i], "Invalid key at " + s1);
       }
       for (int i = s2 + n2; i < l2 - n2; ++i) {
-        assertEquals("Invalid key at " + s2, (int)KeyWritable.keyFill, b2[i]);
+        assertEquals((int)KeyWritable.keyFill, b2[i], "Invalid key at " + s2);
       }
       return l1 - l2;
     }
@@ -193,7 +193,7 @@ public class TestMapCollection {
     @Override
     protected void cleanup(Context context)
         throws IOException, InterruptedException {
-      assertEquals("Unexpected record count", expected, numrecs);
+      assertEquals(expected, numrecs, "Unexpected record count");
     }
   }
 
@@ -281,7 +281,7 @@ public class TestMapCollection {
         public float getProgress() { return (float) current / records; }
         @Override
         public void close() {
-          assertEquals("Unexpected count", records, current - 1);
+          assertEquals(records, current - 1, "Unexpected count");
         }
       };
     }
@@ -318,25 +318,25 @@ public class TestMapCollection {
     job.setSortComparatorClass(VariableComparator.class);
 
     LOG.info("Running " + name);
-    assertTrue("Job failed!", job.waitForCompletion(false));
+    assertTrue(job.waitForCompletion(false), "Job failed!");
   }
 
   @Test
-  public void testValLastByte() throws Exception {
+  void testValLastByte() throws Exception {
     // last byte of record/key is the last/first byte in the spill buffer
     runTest("vallastbyte", 128, 896, 1344, 1, 0.5f);
     runTest("keylastbyte", 512, 1024, 896, 1, 0.5f);
   }
 
   @Test
-  public void testLargeRecords() throws Exception {
+  void testLargeRecords() throws Exception {
     // maps emitting records larger than mapreduce.task.io.sort.mb
-    runTest("largerec", 100, 1024*1024, 5, 1, .8f);
-    runTest("largekeyzeroval", 1024*1024, 0, 5, 1, .8f);
+    runTest("largerec", 100, 1024 * 1024, 5, 1, .8f);
+    runTest("largekeyzeroval", 1024 * 1024, 0, 5, 1, .8f);
   }
 
   @Test
-  public void testSpillPer2B() throws Exception {
+  void testSpillPer2B() throws Exception {
     // set non-default, 100% speculative spill boundary
     runTest("fullspill2B", 1, 1, 10000, 1, 1.0f);
     runTest("fullspill200B", 100, 100, 10000, 1, 1.0f);
@@ -345,7 +345,7 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testZeroVal() throws Exception {
+  void testZeroVal() throws Exception {
     // test key/value at zero-length
     runTest("zeroval", 1, 0, 10000, 1, .8f);
     runTest("zerokey", 0, 1, 10000, 1, .8f);
@@ -354,18 +354,18 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testSingleRecord() throws Exception {
+  void testSingleRecord() throws Exception {
     runTest("singlerecord", 100, 100, 1, 1, 1.0f);
     runTest("zerokeyvalsingle", 0, 0, 1, 1, 1.0f);
   }
 
   @Test
-  public void testLowSpill() throws Exception {
+  void testLowSpill() throws Exception {
     runTest("lowspill", 4000, 96, 20, 1, 0.00390625f);
   }
 
   @Test
-  public void testSplitMetaSpill() throws Exception {
+  void testSplitMetaSpill() throws Exception {
     runTest("splitmetaspill", 7, 1, 131072, 1, 0.8f);
   }
 
@@ -399,7 +399,7 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testPostSpillMeta() throws Exception {
+  void testPostSpillMeta() throws Exception {
     // write larger records until spill, then write records that generate
     // no writes into the serialization buffer
     Configuration conf = new Configuration();
@@ -419,7 +419,7 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testLargeRecConcurrent() throws Exception {
+  void testLargeRecConcurrent() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
     Job job = Job.getInstance(conf);
@@ -488,7 +488,7 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testRandom() throws Exception {
+  void testRandom() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
     Job job = Job.getInstance(conf);
@@ -509,7 +509,7 @@ public class TestMapCollection {
   }
 
   @Test
-  public void testRandomCompress() throws Exception {
+  void testRandomCompress() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
     Job job = Job.getInstance(conf);

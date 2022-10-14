@@ -59,19 +59,19 @@ import org.apache.hadoop.mapreduce.v2.app.speculate.ExponentiallySmoothedTaskRun
 import org.apache.hadoop.mapreduce.v2.app.speculate.LegacyTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SimpleExponentialTaskRuntimeEstimator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.TaskRuntimeEstimator;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test speculation on Mini Cluster.
  */
-@Ignore
-@RunWith(Parameterized.class)
+@Disabled
 public class TestSpeculativeExecOnCluster {
   private static final Log LOG = LogFactory
       .getLog(TestSpeculativeExecOnCluster.class);
@@ -149,14 +149,13 @@ public class TestSpeculativeExecOnCluster {
   private List<String> ignoredTests;
 
 
-  @Parameterized.Parameters(name = "{index}: TaskEstimator(EstimatorClass {0})")
   public static Collection<Object[]> getTestParameters() {
-    List<String> ignoredTests = Arrays.asList(new String[] {
+    List<String> ignoredTests = Arrays.asList(new String[]{
         "stalled_run",
         "slowing_run",
         "step_stalled_run"
     });
-    return Arrays.asList(new Object[][] {
+    return Arrays.asList(new Object[][]{
         {SimpleExponentialTaskRuntimeEstimator.class, ignoredTests,
             NUM_MAP_DEFAULT, NUM_REDUCE_DEFAULT},
         {LegacyTaskRuntimeEstimator.class, ignoredTests,
@@ -164,7 +163,7 @@ public class TestSpeculativeExecOnCluster {
     });
   }
 
-  public TestSpeculativeExecOnCluster(
+  public void initTestSpeculativeExecOnCluster(
       Class<? extends TaskRuntimeEstimator> estimatorKlass,
       List<String> testToIgnore,
       Integer numMapper,
@@ -176,7 +175,7 @@ public class TestSpeculativeExecOnCluster {
 
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -204,7 +203,7 @@ public class TestSpeculativeExecOnCluster {
     chosenSleepCalc = MAP_SLEEP_CALCULATOR_TYPE_DEFAULT;
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (mrCluster != null) {
       mrCluster.stop();
@@ -226,11 +225,16 @@ public class TestSpeculativeExecOnCluster {
    * Overrides default behavior of InputSplit for testing.
    */
   public static class EmptySplit extends InputSplit implements Writable {
-    public void write(DataOutput out) throws IOException { }
-    public void readFields(DataInput in) throws IOException { }
+    public void write(DataOutput out) throws IOException {
+    }
+
+    public void readFields(DataInput in) throws IOException {
+    }
+
     public long getLength() {
       return 0L;
     }
+
     public String[] getLocations() {
       return new String[0];
     }
@@ -297,9 +301,10 @@ public class TestSpeculativeExecOnCluster {
         public IntWritable getCurrentValue() {
           return value;
         }
-        public void close() throws IOException { }
+        public void close() throws IOException {
+        }
         public float getProgress() throws IOException {
-          return count == 0 ? 100 : records / ((float)count);
+          return count == 0 ? 100 : records / ((float) count);
         }
       };
     }
@@ -321,7 +326,7 @@ public class TestSpeculativeExecOnCluster {
     private double threshold = 1.0;
     private double slowFactor = 1.0;
 
-    SleepDurationCalcImpl() {
+    void initTestSpeculativeExecOnCluster() {
 
     }
 
@@ -347,7 +352,7 @@ public class TestSpeculativeExecOnCluster {
     private double threshold = 0.4;
     private double slowFactor = 1.2;
 
-    SlowingSleepDurationCalcImpl() {
+    void initTestSpeculativeExecOnCluster() {
 
     }
 
@@ -372,7 +377,7 @@ public class TestSpeculativeExecOnCluster {
   public static class StalledSleepDurationCalcImpl implements
       SleepDurationCalculator {
 
-    StalledSleepDurationCalcImpl() {
+    void initTestSpeculativeExecOnCluster() {
 
     }
 
@@ -396,7 +401,7 @@ public class TestSpeculativeExecOnCluster {
     private double threshold = 0.4;
     private double slowFactor = 10000;
 
-    StepStalledSleepDurationCalcImpl() {
+    void initTestSpeculativeExecOnCluster() {
 
     }
 
@@ -423,11 +428,11 @@ public class TestSpeculativeExecOnCluster {
     private double[] thresholds;
     private double[] slowFactors;
 
-    DynamicSleepDurationCalcImpl() {
-      thresholds = new double[] {
+    void initTestSpeculativeExecOnCluster() {
+      thresholds = new double[]{
           0.1, 0.25, 0.4, 0.5, 0.6, 0.65, 0.7, 0.8, 0.9
       };
-      slowFactors = new double[] {
+      slowFactors = new double[]{
           2.0, 4.0, 5.0, 6.0, 10.0, 15.0, 20.0, 25.0, 30.0
       };
     }
@@ -599,8 +604,10 @@ public class TestSpeculativeExecOnCluster {
     }
   }
 
-  @Test
-  public void testExecDynamicSlowingSpeculative() throws Exception {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  void testExecDynamicSlowingSpeculative(Class<? extends TaskRuntimeEstimator> estimatorKlass, List<String> testToIgnore, Integer numMapper, Integer numReduce) throws Exception {
+    initTestSpeculativeExecOnCluster(estimatorKlass, testToIgnore, numMapper, numReduce);
     /*------------------------------------------------------------------
      * Test that Map/Red speculates because:
      * 1- all tasks have same progress rate except for task_0
@@ -623,7 +630,7 @@ public class TestSpeculativeExecOnCluster {
       return;
     }
 
-    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[] {
+    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[]{
         new EstimatorMetricsPair(SimpleExponentialTaskRuntimeEstimator.class,
             myNumMapper, myNumReduce, true),
         new EstimatorMetricsPair(LegacyTaskRuntimeEstimator.class,
@@ -642,27 +649,27 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          succeeded);
-      Assert.assertEquals(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          JobStatus.State.SUCCEEDED, job.getJobState());
+      assertTrue(
+          succeeded,
+          "Job expected to succeed with estimator " + estimatorClass.getName());
+      assertEquals(
+          JobStatus.State.SUCCEEDED, job.getJobState(), "Job expected to succeed with estimator " + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert
-          .assertEquals("Failed maps higher than 0 " + estimatorClass.getName(),
-              0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue());
+      assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator,
+          errorMessage);
+      assertEquals(0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue(), "Failed maps higher than 0 " + estimatorClass.getName());
     }
   }
 
 
-  @Test
-  public void testExecSlowNonSpeculative() throws Exception {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  void testExecSlowNonSpeculative(Class<? extends TaskRuntimeEstimator> estimatorKlass, List<String> testToIgnore, Integer numMapper, Integer numReduce) throws Exception {
+    initTestSpeculativeExecOnCluster(estimatorKlass, testToIgnore, numMapper, numReduce);
     /*------------------------------------------------------------------
      * Test that Map/Red does not speculate because:
      * 1- all tasks have same progress rate except for task_0
@@ -684,7 +691,7 @@ public class TestSpeculativeExecOnCluster {
       return;
     }
 
-    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[] {
+    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[]{
         new EstimatorMetricsPair(SimpleExponentialTaskRuntimeEstimator.class,
             myNumMapper, myNumReduce, false),
         new EstimatorMetricsPair(LegacyTaskRuntimeEstimator.class,
@@ -703,26 +710,26 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          succeeded);
-      Assert.assertEquals(
-          "Job expected to succeed with estimator " + estimatorClass.getName(),
-          JobStatus.State.SUCCEEDED, job.getJobState());
+      assertTrue(
+          succeeded,
+          "Job expected to succeed with estimator " + estimatorClass.getName());
+      assertEquals(
+          JobStatus.State.SUCCEEDED, job.getJobState(), "Job expected to succeed with estimator " + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert
-          .assertEquals("Failed maps higher than 0 " + estimatorClass.getName(),
-              0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue());
+      assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator,
+          errorMessage);
+      assertEquals(0, counters.findCounter(JobCounter.NUM_FAILED_MAPS).getValue(), "Failed maps higher than 0 " + estimatorClass.getName());
     }
   }
 
-  @Test
-  public void testExecStepStalledSpeculative() throws Exception {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  void testExecStepStalledSpeculative(Class<? extends TaskRuntimeEstimator> estimatorKlass, List<String> testToIgnore, Integer numMapper, Integer numReduce) throws Exception {
+    initTestSpeculativeExecOnCluster(estimatorKlass, testToIgnore, numMapper, numReduce);
     /*------------------------------------------------------------------
      * Test that Map/Red speculates because:
      * 1- all tasks have same progress rate except for task_0
@@ -740,7 +747,7 @@ public class TestSpeculativeExecOnCluster {
     if (ignoredTests.contains(chosenSleepCalc)) {
       return;
     }
-    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[] {
+    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[]{
         new EstimatorMetricsPair(SimpleExponentialTaskRuntimeEstimator.class,
             myNumMapper, myNumReduce, true),
         new EstimatorMetricsPair(LegacyTaskRuntimeEstimator.class,
@@ -759,26 +766,31 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      assertEquals(JobStatus.State.SUCCEEDED,
+          job.getJobState(),
+          "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert.assertEquals("Failed maps higher than 0 "
-              + estimatorClass.getName(), 0,
+      assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator,
+          errorMessage);
+      assertEquals(0,
           counters.findCounter(JobCounter.NUM_FAILED_MAPS)
-              .getValue());
+              .getValue(),
+          "Failed maps higher than 0 "
+              + estimatorClass.getName());
     }
   }
 
-  @Test
-  public void testExecStalledSpeculative() throws Exception {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  void testExecStalledSpeculative(Class<? extends TaskRuntimeEstimator> estimatorKlass, List<String> testToIgnore, Integer numMapper, Integer numReduce) throws Exception {
+    initTestSpeculativeExecOnCluster(estimatorKlass, testToIgnore, numMapper, numReduce);
     /*------------------------------------------------------------------
      * Test that Map/Red speculates because:
      * 1- all tasks have same progress rate except for task_0
@@ -797,7 +809,7 @@ public class TestSpeculativeExecOnCluster {
     if (ignoredTests.contains(chosenSleepCalc)) {
       return;
     }
-    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[] {
+    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[]{
         new EstimatorMetricsPair(SimpleExponentialTaskRuntimeEstimator.class,
             myNumMapper, myNumReduce, true),
         new EstimatorMetricsPair(LegacyTaskRuntimeEstimator.class,
@@ -816,26 +828,31 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      assertEquals(JobStatus.State.SUCCEEDED,
+          job.getJobState(),
+          "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
-      Assert.assertEquals("Failed maps higher than 0 "
-              + estimatorClass.getName(), 0,
+      assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator,
+          errorMessage);
+      assertEquals(0,
           counters.findCounter(JobCounter.NUM_FAILED_MAPS)
-              .getValue());
+              .getValue(),
+          "Failed maps higher than 0 "
+              + estimatorClass.getName());
     }
   }
 
-  @Test
-  public void testExecNonSpeculative() throws Exception {
+  @MethodSource("getTestParameters")
+  @ParameterizedTest(name = "{index}: TaskEstimator(EstimatorClass {0})")
+  void testExecNonSpeculative(Class<? extends TaskRuntimeEstimator> estimatorKlass, List<String> testToIgnore, Integer numMapper, Integer numReduce) throws Exception {
+    initTestSpeculativeExecOnCluster(estimatorKlass, testToIgnore, numMapper, numReduce);
     /*------------------------------------------------------------------
      * Test that Map/Red does not speculate because all tasks progress in the
      *    same rate.
@@ -856,7 +873,7 @@ public class TestSpeculativeExecOnCluster {
       return;
     }
 
-    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[] {
+    EstimatorMetricsPair[] estimatorPairs = new EstimatorMetricsPair[]{
         new EstimatorMetricsPair(LegacyTaskRuntimeEstimator.class,
             myNumMapper, myNumReduce, true),
         new EstimatorMetricsPair(SimpleExponentialTaskRuntimeEstimator.class,
@@ -875,17 +892,19 @@ public class TestSpeculativeExecOnCluster {
       Job job = runSpecTest();
 
       boolean succeeded = job.waitForCompletion(true);
-      Assert.assertTrue("Job expected to succeed with estimator "
-          + estimatorClass.getName(), succeeded);
-      Assert.assertEquals("Job expected to succeed with estimator "
-              + estimatorClass.getName(), JobStatus.State.SUCCEEDED,
-          job.getJobState());
+      assertTrue(succeeded, "Job expected to succeed with estimator "
+          + estimatorClass.getName());
+      assertEquals(JobStatus.State.SUCCEEDED,
+          job.getJobState(),
+          "Job expected to succeed with estimator "
+              + estimatorClass.getName());
       Counters counters = job.getCounters();
 
       String errorMessage = specEstimator.getErrorMessage(counters);
       boolean didSpeculate = specEstimator.didSpeculate(counters);
-      Assert.assertEquals(errorMessage, didSpeculate,
-          specEstimator.speculativeEstimator);
+      assertEquals(didSpeculate,
+          specEstimator.speculativeEstimator,
+          errorMessage);
     }
   }
 

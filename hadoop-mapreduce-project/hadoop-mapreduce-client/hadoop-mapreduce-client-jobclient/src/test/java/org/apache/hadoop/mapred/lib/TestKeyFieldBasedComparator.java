@@ -34,10 +34,11 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.Utils;
-import org.junit.After;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -133,13 +134,13 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }
 
   @Test
-  public void testBasicUnixComparator() throws Exception {
+  void testBasicUnixComparator() throws Exception {
     configure("-k1,1n", 1);
     configure("-k2,2n", 1);
     configure("-k2.2,2n", 2);
@@ -151,9 +152,9 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     configure("-k7,7n", 2);
     configure("-k8,8n", 1);
     configure("-k9,9", 2);
-    configure("-k11,11",2);
-    configure("-k10,10",2);
-    
+    configure("-k11,11", 2);
+    configure("-k10,10", 2);
+
     localTestWithoutMRJob("-k9,9", 1);
   }
   

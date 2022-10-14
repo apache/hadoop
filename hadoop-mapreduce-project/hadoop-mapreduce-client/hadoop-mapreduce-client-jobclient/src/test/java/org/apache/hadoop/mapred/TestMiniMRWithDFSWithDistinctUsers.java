@@ -28,10 +28,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
@@ -70,10 +71,10 @@ public class TestMiniMRWithDFSWithDistinctUsers {
       });
 
     rj.waitForCompletion();
-    Assert.assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
+    assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
 
@@ -98,17 +99,17 @@ public class TestMiniMRWithDFSWithDistinctUsers {
                            1, null, null, MR_UGI, mrConf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mr != null) { mr.shutdown();}
     if (dfs != null) { dfs.shutdown(); }
   }
-  
+
   @Test
-  public void testDistinctUsers() throws Exception {
+  void testDistinctUsers() throws Exception {
     JobConf job1 = mr.createJobConf();
-    String input = "The quick brown fox\nhas many silly\n" 
-      + "red fox sox\n";
+    String input = "The quick brown fox\nhas many silly\n"
+        + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
     Path outDir = new Path("/user/alice/output");
     TestMiniMRClasspath
@@ -129,7 +130,7 @@ public class TestMiniMRWithDFSWithDistinctUsers {
    * that it will succeed.
    */
   @Test
-  public void testMultipleSpills() throws Exception {
+  void testMultipleSpills() throws Exception {
     JobConf job1 = mr.createJobConf();
 
     // Make sure it spills twice
@@ -139,8 +140,8 @@ public class TestMiniMRWithDFSWithDistinctUsers {
     // Make sure the spill records don't fit in index cache
     job1.setInt(MRJobConfig.INDEX_CACHE_MEMORY_LIMIT, 0);
 
-    String input = "The quick brown fox\nhas many silly\n" 
-      + "red fox sox\n";
+    String input = "The quick brown fox\nhas many silly\n"
+        + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
     Path outDir = new Path("/user/alice/output");
     TestMiniMRClasspath

@@ -25,17 +25,13 @@ import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class TestTaskCommit extends HadoopTestCase {
@@ -86,14 +82,14 @@ public class TestTaskCommit extends HadoopTestCase {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     super.tearDown();
     FileUtil.fullyDelete(new File(rootDir.toString()));
   }
 
   @Test
-  public void testCommitFail() throws IOException {
+  void testCommitFail() throws IOException {
     final Path inDir = new Path(rootDir, "./input");
     final Path outDir = new Path(rootDir, "./output");
     JobConf jobConf = createJobConf();
@@ -193,7 +189,7 @@ public class TestTaskCommit extends HadoopTestCase {
       // ignore
     }
   }
-  
+
   /**
    * A test that mimics a failed task to ensure that it does
    * not get into the COMMIT_PENDING state, by using a fake
@@ -207,12 +203,12 @@ public class TestTaskCommit extends HadoopTestCase {
    * @throws Exception
    */
   @Test
-  public void testTaskCleanupDoesNotCommit() throws Exception {
+  void testTaskCleanupDoesNotCommit() throws Exception {
     // Mimic a job with a special committer that does not cleanup
     // files when a task fails.
     JobConf job = new JobConf();
     job.setOutputCommitter(CommitterWithoutCleanup.class);
-    Path outDir = new Path(rootDir, "output"); 
+    Path outDir = new Path(rootDir, "output");
     FileOutputFormat.setOutputPath(job, outDir);
 
     // Mimic job setup
@@ -221,7 +217,7 @@ public class TestTaskCommit extends HadoopTestCase {
     OutputCommitter committer = new CommitterWithoutCleanup();
     JobContext jContext = new JobContextImpl(job, attemptID.getJobID());
     committer.setupJob(jContext);
-    
+
 
     // Mimic a map task
     dummyAttemptID = "attempt_200707121733_0001_m_000001_0";
@@ -230,15 +226,15 @@ public class TestTaskCommit extends HadoopTestCase {
     task.setConf(job);
     task.localizeConfiguration(job);
     task.initialize(job, attemptID.getJobID(), Reporter.NULL, false);
-    
+
     // Mimic the map task writing some output.
     String file = "test.txt";
     FileSystem localFs = FileSystem.getLocal(job);
-    TextOutputFormat<Text, Text> theOutputFormat 
-      = new TextOutputFormat<Text, Text>();
-    RecordWriter<Text, Text> theRecordWriter = 
-      theOutputFormat.getRecordWriter(localFs,
-        job, file, Reporter.NULL);
+    TextOutputFormat<Text, Text> theOutputFormat
+        = new TextOutputFormat<Text, Text>();
+    RecordWriter<Text, Text> theRecordWriter =
+        theOutputFormat.getRecordWriter(localFs,
+            job, file, Reporter.NULL);
     theRecordWriter.write(new Text("key"), new Text("value"));
     theRecordWriter.close(Reporter.NULL);
 
@@ -250,43 +246,43 @@ public class TestTaskCommit extends HadoopTestCase {
     task.setTaskCleanupTask();
     MyUmbilical umbilical = new MyUmbilical();
     task.run(job, umbilical);
-    assertTrue("Task did not succeed", umbilical.taskDone);
+    assertTrue(umbilical.taskDone, "Task did not succeed");
   }
 
   @Test
-  public void testCommitRequiredForMapTask() throws Exception {
+  void testCommitRequiredForMapTask() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
-    assertTrue("MapTask should need commit", testTask.isCommitRequired());
+    assertTrue(testTask.isCommitRequired(), "MapTask should need commit");
   }
 
   @Test
-  public void testCommitRequiredForReduceTask() throws Exception {
+  void testCommitRequiredForReduceTask() throws Exception {
     Task testTask = createDummyTask(TaskType.REDUCE);
-    assertTrue("ReduceTask should need commit", testTask.isCommitRequired());
+    assertTrue(testTask.isCommitRequired(), "ReduceTask should need commit");
   }
 
   @Test
-  public void testCommitNotRequiredForJobSetup() throws Exception {
+  void testCommitNotRequiredForJobSetup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobSetupTask();
-    assertFalse("Job setup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Job setup task should not need commit");
   }
 
   @Test
-  public void testCommitNotRequiredForJobCleanup() throws Exception {
+  void testCommitNotRequiredForJobCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.MAP);
     testTask.setJobCleanupTask();
-    assertFalse("Job cleanup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Job cleanup task should not need commit");
   }
 
   @Test
-  public void testCommitNotRequiredForTaskCleanup() throws Exception {
+  void testCommitNotRequiredForTaskCleanup() throws Exception {
     Task testTask = createDummyTask(TaskType.REDUCE);
     testTask.setTaskCleanupTask();
-    assertFalse("Task cleanup task should not need commit", 
-        testTask.isCommitRequired());
+    assertFalse(testTask.isCommitRequired(),
+        "Task cleanup task should not need commit");
   }
 
   private Task createDummyTask(TaskType type) throws IOException, ClassNotFoundException,

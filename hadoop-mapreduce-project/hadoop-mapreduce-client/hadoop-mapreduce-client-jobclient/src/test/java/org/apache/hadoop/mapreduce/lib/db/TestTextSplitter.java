@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestTextSplitter {
 
@@ -48,9 +48,8 @@ public class TestTextSplitter {
   public void assertArrayEquals(Object [] expected, Object [] actual) {
     for (int i = 0; i < expected.length; i++) {
       try {
-        assertEquals("Failure at position " + i + "; got " + actual[i]
-            + " instead of " + expected[i] + "; actual array is " + formatArray(actual),
-            expected[i], actual[i]);
+        assertEquals(expected[i], actual[i], "Failure at position " + i + "; got " + actual[i]
+            + " instead of " + expected[i] + "; actual array is " + formatArray(actual));
       } catch (ArrayIndexOutOfBoundsException oob) {
         fail("Expected array with " + expected.length + " elements; got " + actual.length
             + ". Actual array is " + formatArray(actual));
@@ -64,66 +63,66 @@ public class TestTextSplitter {
   }
 
   @Test
-  public void testStringConvertEmpty() {
+  void testStringConvertEmpty() {
     TextSplitter splitter = new TextSplitter();
     BigDecimal emptyBigDec = splitter.stringToBigDecimal("");
     assertEquals(BigDecimal.ZERO, emptyBigDec);
   }
 
   @Test
-  public void testBigDecConvertEmpty() {
+  void testBigDecConvertEmpty() {
     TextSplitter splitter = new TextSplitter();
     String emptyStr = splitter.bigDecimalToString(BigDecimal.ZERO);
     assertEquals("", emptyStr);
   }
 
   @Test
-  public void testConvertA() {
+  void testConvertA() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("A"));
     assertEquals("A", out);
   }
 
   @Test
-  public void testConvertZ() {
+  void testConvertZ() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("Z"));
     assertEquals("Z", out);
   }
 
   @Test
-  public void testConvertThreeChars() {
+  void testConvertThreeChars() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("abc"));
     assertEquals("abc", out);
   }
 
   @Test
-  public void testConvertStr() {
+  void testConvertStr() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("big str"));
     assertEquals("big str", out);
   }
 
   @Test
-  public void testConvertChomped() {
+  void testConvertChomped() {
     TextSplitter splitter = new TextSplitter();
     String out = splitter.bigDecimalToString(splitter.stringToBigDecimal("AVeryLongStringIndeed"));
     assertEquals("AVeryLon", out);
   }
 
   @Test
-  public void testAlphabetSplit() throws SQLException {
+  void testAlphabetSplit() throws SQLException {
     // This should give us 25 splits, one per letter.
     TextSplitter splitter = new TextSplitter();
     List<String> splits = splitter.split(25, "A", "Z", "");
-    String [] expected = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-        "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+    String [] expected = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+        "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"};
     assertArrayEquals(expected, splits.toArray(new String [0]));
   }
 
   @Test
-  public void testCommonPrefix() throws SQLException {
+  void testCommonPrefix() throws SQLException {
     // Splits between 'Hand' and 'Hardy'
     TextSplitter splitter = new TextSplitter();
     List<String> splits = splitter.split(5, "nd", "rdy", "Ha");
@@ -131,7 +130,7 @@ public class TestTextSplitter {
     // ugly Unicode-isms. But do check that we get multiple splits and that it starts
     // and ends on the correct points.
     assertEquals("Hand", splits.get(0));
-    assertEquals("Hardy", splits.get(splits.size() -1));
+    assertEquals("Hardy", splits.get(splits.size() - 1));
     assertEquals(6, splits.size());
   }
 }

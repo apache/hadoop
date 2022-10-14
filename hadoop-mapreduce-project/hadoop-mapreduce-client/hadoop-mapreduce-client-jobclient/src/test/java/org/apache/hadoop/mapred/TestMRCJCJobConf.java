@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import java.io.File;
 import java.net.URLClassLoader;
 import java.net.URL;
@@ -29,9 +30,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.ClassUtil;
 
+import static org.junit.jupiter.api.Assertions.*;
 
-import static org.junit.Assert.*;
-@Ignore
+@Disabled
 public class TestMRCJCJobConf {
   private static final String JAR_RELATIVE_PATH =
     "build/test/mapred/testjar/testjob.jar";
@@ -42,7 +43,7 @@ public class TestMRCJCJobConf {
     File.separator + "test jobconf with + and spaces";
 
   @Test
-  public void testFindContainingJar() throws Exception {
+  void testFindContainingJar() throws Exception {
     testJarAtPath(JAR_RELATIVE_PATH);
   }
 
@@ -51,15 +52,15 @@ public class TestMRCJCJobConf {
    * path has a "+" sign or spaces in it
    */
   @Test
-  public void testFindContainingJarWithPlus() throws Exception {
+  void testFindContainingJarWithPlus() throws Exception {
     new File(TEST_DIR_WITH_SPECIAL_CHARS).mkdirs();
     Configuration conf = new Configuration();
 
     FileSystem localfs = FileSystem.getLocal(conf);
 
     FileUtil.copy(localfs, new Path(JAR_RELATIVE_PATH),
-                  localfs, new Path(TEST_DIR_WITH_SPECIAL_CHARS, "test.jar"),
-                  false, true, conf);
+        localfs, new Path(TEST_DIR_WITH_SPECIAL_CHARS, "test.jar"),
+        false, true, conf);
     testJarAtPath(TEST_DIR_WITH_SPECIAL_CHARS + File.separator + "test.jar");
   }
 

@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -40,8 +38,7 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("deprecation")
 public class TestJobClients {
@@ -94,11 +91,11 @@ public class TestJobClients {
   }
 
   @Test
-  public void testMapTaskReportsWithNullJob() throws Exception {
+  void testMapTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
-    JobID id = new JobID("test",0);
+    JobID id = new JobID("test", 0);
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
@@ -109,11 +106,11 @@ public class TestJobClients {
   }
 
   @Test
-  public void testReduceTaskReportsWithNullJob() throws Exception {
+  void testReduceTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
-    JobID id = new JobID("test",0);
+    JobID id = new JobID("test", 0);
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
@@ -124,11 +121,11 @@ public class TestJobClients {
   }
 
   @Test
-  public void testSetupTaskReportsWithNullJob() throws Exception {
+  void testSetupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
-    JobID id = new JobID("test",0);
+    JobID id = new JobID("test", 0);
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
@@ -139,11 +136,11 @@ public class TestJobClients {
   }
 
   @Test
-  public void testCleanupTaskReportsWithNullJob() throws Exception {
+  void testCleanupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
-    JobID id = new JobID("test",0);
+    JobID id = new JobID("test", 0);
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
@@ -154,7 +151,7 @@ public class TestJobClients {
   }
 
   @Test
-  public void testShowJob() throws Exception {
+  void testShowJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
 
     long startTime = System.currentTimeMillis();
@@ -178,7 +175,7 @@ public class TestJobClients {
 
     Job mockJob = mock(Job.class);
     when(mockJob.getTaskReports(isA(TaskType.class))).thenReturn(
-      new TaskReport[5]);
+        new TaskReport[5]);
 
     Cluster mockCluster = mock(Cluster.class);
     when(mockCluster.getJob(jobID)).thenReturn(mockJob);
@@ -186,10 +183,10 @@ public class TestJobClients {
     client.setCluster(mockCluster);
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    client.displayJobList(new JobStatus[] {mockJobStatus}, new PrintWriter(out));
+    client.displayJobList(new JobStatus[]{mockJobStatus}, new PrintWriter(out));
     String commandLineOutput = out.toString();
     System.out.println(commandLineOutput);
-    Assert.assertTrue(commandLineOutput.contains("Total jobs:1"));
+    assertTrue(commandLineOutput.contains("Total jobs:1"));
 
     verify(mockJobStatus, atLeastOnce()).getJobID();
     verify(mockJobStatus).getState();
@@ -210,11 +207,11 @@ public class TestJobClients {
   }
 
   @Test
-  public void testGetJobWithUnknownJob() throws Exception {
+  void testGetJobWithUnknownJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
     Cluster mockCluster = mock(Cluster.class);
     client.setCluster(mockCluster);
-    JobID id = new JobID("unknown",0);
+    JobID id = new JobID("unknown", 0);
 
     when(mockCluster.getJob(id)).thenReturn(null);
 
@@ -222,7 +219,7 @@ public class TestJobClients {
   }
 
   @Test
-  public void testGetJobRetry() throws Exception {
+  void testGetJobRetry() throws Exception {
 
     //To prevent the test from running for a very long time, lower the retry
     JobConf conf = new JobConf();
@@ -248,7 +245,7 @@ public class TestJobClients {
   }
 
   @Test
-  public void testGetJobRetryDefault() throws Exception {
+  void testGetJobRetryDefault() throws Exception {
 
     //To prevent the test from running for a very long time, lower the retry
     JobConf conf = new JobConf();

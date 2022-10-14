@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -48,7 +45,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +70,9 @@ public class TestCombineTextInputFormat {
     new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestCombineTextInputFormat");
 
-  @Test(timeout=10000)
-  public void testFormat() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testFormat() throws Exception {
     Job job = Job.getInstance(new Configuration(defaultConf));
 
     Random random = new Random();
@@ -93,42 +92,40 @@ public class TestCombineTextInputFormat {
     // create a combined split for the files
     CombineTextInputFormat format = new CombineTextInputFormat();
     for (int i = 0; i < 3; i++) {
-      int numSplits = random.nextInt(length/20) + 1;
+      int numSplits = random.nextInt(length / 20) + 1;
       LOG.info("splitting: requesting = " + numSplits);
       List<InputSplit> splits = format.getSplits(job);
       LOG.info("splitting: got =        " + splits.size());
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
-      assertEquals("We got more than one splits!", 1, splits.size());
+      assertEquals(1, splits.size(), "We got more than one splits!");
       InputSplit split = splits.get(0);
-      assertEquals("It should be CombineFileSplit",
-        CombineFileSplit.class, split.getClass());
+      assertEquals(CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
 
       // check the split
       BitSet bits = new BitSet(length);
       LOG.debug("split= " + split);
       TaskAttemptContext context = MapReduceTestUtil.
-        createDummyMapTaskAttemptContext(job.getConfiguration());
+          createDummyMapTaskAttemptContext(job.getConfiguration());
       RecordReader<LongWritable, Text> reader =
-        format.createRecordReader(split, context);
-      assertEquals("reader class is CombineFileRecordReader.",
-        CombineFileRecordReader.class, reader.getClass());
-      MapContext<LongWritable,Text,LongWritable,Text> mcontext =
-        new MapContextImpl<LongWritable,Text,LongWritable,Text>(job.getConfiguration(),
-        context.getTaskAttemptID(), reader, null, null,
-        MapReduceTestUtil.createDummyReporter(), split);
+          format.createRecordReader(split, context);
+      assertEquals(CombineFileRecordReader.class, reader.getClass(), "reader class is CombineFileRecordReader.");
+      MapContext<LongWritable, Text, LongWritable, Text> mcontext =
+          new MapContextImpl<LongWritable, Text, LongWritable, Text>(job.getConfiguration(),
+              context.getTaskAttemptID(), reader, null, null,
+              MapReduceTestUtil.createDummyReporter(), split);
       reader.initialize(split, mcontext);
 
       try {
         int count = 0;
         while (reader.nextKeyValue()) {
           LongWritable key = reader.getCurrentKey();
-          assertNotNull("Key should not be null.", key);
+          assertNotNull(key, "Key should not be null.");
           Text value = reader.getCurrentValue();
           final int v = Integer.parseInt(value.toString());
           LOG.debug("read " + v);
-          assertFalse("Key in multiple partitions.", bits.get(v));
+          assertFalse(bits.get(v), "Key in multiple partitions.");
           bits.set(v);
           count++;
         }
@@ -136,7 +133,7 @@ public class TestCombineTextInputFormat {
       } finally {
         reader.close();
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 
@@ -223,26 +220,27 @@ public class TestCombineTextInputFormat {
   /**
    * Test using the gzip codec for reading
    */
-  @Test(timeout=10000)
-  public void testGzip() throws IOException, InterruptedException {
+  @Test
+  @Timeout(10000)
+  void testGzip() throws IOException, InterruptedException {
     Configuration conf = new Configuration(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, conf);
     localFs.delete(workDir, true);
     writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip,
-              "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
+        "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-              "this is a test\nof gzip\n");
+        "this is a test\nof gzip\n");
     Job job = Job.getInstance(conf);
     FileInputFormat.setInputPaths(job, workDir);
     CombineTextInputFormat format = new CombineTextInputFormat();
     List<InputSplit> splits = format.getSplits(job);
-    assertEquals("compressed splits == 1", 1, splits.size());
+    assertEquals(1, splits.size(), "compressed splits == 1");
     List<Text> results = readSplit(format, splits.get(0), job);
-    assertEquals("splits[0] length", 8, results.size());
+    assertEquals(8, results.size(), "splits[0] length");
 
     final String[] firstList =
-      {"the quick", "brown", "fox jumped", "over", " the lazy", " dog"};
+        {"the quick", "brown", "fox jumped", "over", " the lazy", " dog"};
     final String[] secondList = {"this is a test", "of gzip"};
     String first = results.get(0).toString();
     if (first.equals(firstList[0])) {
@@ -257,11 +255,11 @@ public class TestCombineTextInputFormat {
   private static void testResults(List<Text> results, String[] first,
     String[] second) {
     for (int i = 0; i < first.length; i++) {
-      assertEquals("splits[0]["+i+"]", first[i], results.get(i).toString());
+      assertEquals(first[i], results.get(i).toString(), "splits[0]["+i+"]");
     }
     for (int i = 0; i < second.length; i++) {
       int j = i + first.length;
-      assertEquals("splits[0]["+j+"]", second[i], results.get(j).toString());
+      assertEquals(second[i], results.get(j).toString(), "splits[0]["+j+"]");
     }
   }
 }

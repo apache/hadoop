@@ -30,13 +30,13 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A JUnit test to test Map-Reduce job cleanup.
@@ -57,7 +57,7 @@ public class TestJobCleanup {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestJobCleanup.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     JobConf conf = new JobConf();
     fileSys = FileSystem.get(conf);
@@ -82,7 +82,7 @@ public class TestJobCleanup {
     fileSys.mkdirs(emptyInDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (fileSys != null) {
       // fileSys.delete(new Path(TEST_ROOT_DIR), true);
@@ -169,14 +169,14 @@ public class TestJobCleanup {
 
     LOG.info("Job finished : " + job.isComplete());
     Path testFile = new Path(outDir, filename);
-    assertTrue("Done file \"" + testFile + "\" missing for job " + id,
-        fileSys.exists(testFile));
+    assertTrue(fileSys.exists(testFile),
+        "Done file \"" + testFile + "\" missing for job " + id);
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for successful job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file), "File " + file + " should not be present for successful job "
+          + id);
     }
   }
 
@@ -196,19 +196,19 @@ public class TestJobCleanup {
     RunningJob job = jobClient.submitJob(jc);
     JobID id = job.getID();
     job.waitForCompletion();
-    assertEquals("Job did not fail", JobStatus.FAILED, job.getJobState());
+    assertEquals(JobStatus.FAILED, job.getJobState(), "Job did not fail");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for failed job " + id,
-          fileSys.exists(testFile));
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for failed job " + id);
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for failed job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file), "File " + file + " should not be present for failed job "
+          + id);
     }
   }
 
@@ -242,19 +242,19 @@ public class TestJobCleanup {
     job.killJob(); // kill the job
 
     job.waitForCompletion(); // wait for the job to complete
-    assertEquals("Job was not killed", JobStatus.KILLED, job.getJobState());
+    assertEquals(JobStatus.KILLED, job.getJobState(), "Job was not killed");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for job " + id,
-          fileSys.exists(testFile));
+      assertTrue(fileSys.exists(testFile),
+          "File " + testFile + " missing for job " + id);
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for killed job "
-          + id, fileSys.exists(file));
+      assertFalse(fileSys.exists(file), "File " + file + " should not be present for killed job "
+          + id);
     }
   }
 
@@ -264,18 +264,18 @@ public class TestJobCleanup {
    * @throws IOException
    */
   @Test
-  public void testDefaultCleanupAndAbort() throws IOException {
+  void testDefaultCleanupAndAbort() throws IOException {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
-        FileOutputCommitter.class, new String[] {});
+        FileOutputCommitter.class, new String[]{});
 
     // check with a failed job
     testFailedJob(null, FileOutputCommitter.class,
-        new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
 
     // check default abort job kill
     testKilledJob(null, FileOutputCommitter.class,
-        new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
 
   /**
@@ -284,21 +284,21 @@ public class TestJobCleanup {
    * @throws IOException
    */
   @Test
-  public void testCustomAbort() throws IOException {
+  void testCustomAbort() throws IOException {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
-        CommitterWithCustomAbort.class, new String[] { ABORT_FAILED_FILE_NAME,
-            ABORT_KILLED_FILE_NAME });
+        CommitterWithCustomAbort.class, new String[]{ABORT_FAILED_FILE_NAME,
+            ABORT_KILLED_FILE_NAME});
 
     // check with a failed job
     testFailedJob(ABORT_FAILED_FILE_NAME, CommitterWithCustomAbort.class,
-        new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME,
-            ABORT_KILLED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME,
+            ABORT_KILLED_FILE_NAME});
 
     // check with a killed job
     testKilledJob(ABORT_KILLED_FILE_NAME, CommitterWithCustomAbort.class,
-        new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME,
-            ABORT_FAILED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME,
+            ABORT_FAILED_FILE_NAME});
   }
 
   /**
@@ -307,20 +307,20 @@ public class TestJobCleanup {
    * compatibility testing.
    */
   @Test
-  public void testCustomCleanup() throws IOException {
+  void testCustomCleanup() throws IOException {
     // check with a successful job
      testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME,
-     CommitterWithCustomDeprecatedCleanup.class,
-     new String[] {});
+        CommitterWithCustomDeprecatedCleanup.class,
+        new String[]{});
 
-     // check with a failed job
-     testFailedJob(CUSTOM_CLEANUP_FILE_NAME,
-     CommitterWithCustomDeprecatedCleanup.class,
-     new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+    // check with a failed job
+    testFailedJob(CUSTOM_CLEANUP_FILE_NAME,
+        CommitterWithCustomDeprecatedCleanup.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
 
-     // check with a killed job
-     testKilledJob(TestJobCleanup.CUSTOM_CLEANUP_FILE_NAME,
-     CommitterWithCustomDeprecatedCleanup.class,
-     new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+    // check with a killed job
+    testKilledJob(TestJobCleanup.CUSTOM_CLEANUP_FILE_NAME,
+        CommitterWithCustomDeprecatedCleanup.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
 }

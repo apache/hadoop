@@ -33,25 +33,25 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestMRSequenceFileAsTextInputFormat {
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();
 
   @Test
-  public void testFormat() throws Exception {
+  void testFormat() throws Exception {
     Job job = Job.getInstance(conf);
     FileSystem fs = FileSystem.getLocal(conf);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = new Path(System.getProperty("test.build.data", ".") + "/mapred");
     Path file = new Path(dir, "test.seq");
-    
+
     int seed = new Random().nextInt();
     Random random = new Random(seed);
 
@@ -65,8 +65,8 @@ public class TestMRSequenceFileAsTextInputFormat {
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        SequenceFile.createWriter(fs, conf, file,
-          IntWritable.class, LongWritable.class);
+          SequenceFile.createWriter(fs, conf, file,
+              IntWritable.class, LongWritable.class);
       try {
         for (int i = 0; i < length; i++) {
           IntWritable key = new IntWritable(i);
@@ -78,37 +78,36 @@ public class TestMRSequenceFileAsTextInputFormat {
       }
 
       TaskAttemptContext context = MapReduceTestUtil.
-        createDummyMapTaskAttemptContext(job.getConfiguration());
+          createDummyMapTaskAttemptContext(job.getConfiguration());
       // try splitting the file in a variety of sizes
       InputFormat<Text, Text> format =
-        new SequenceFileAsTextInputFormat();
-      
+          new SequenceFileAsTextInputFormat();
+
       for (int i = 0; i < 3; i++) {
         // check each split
         BitSet bits = new BitSet(length);
         int numSplits =
-          random.nextInt(MAX_LENGTH / (SequenceFile.SYNC_INTERVAL / 20)) + 1;
-        FileInputFormat.setMaxInputSplitSize(job, 
-          fs.getFileStatus(file).getLen() / numSplits);
+            random.nextInt(MAX_LENGTH / (SequenceFile.SYNC_INTERVAL / 20)) + 1;
+        FileInputFormat.setMaxInputSplitSize(job,
+            fs.getFileStatus(file).getLen() / numSplits);
         for (InputSplit split : format.getSplits(job)) {
           RecordReader<Text, Text> reader =
-            format.createRecordReader(split, context);
-          MapContext<Text, Text, Text, Text> mcontext = 
-            new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(), 
-            context.getTaskAttemptID(), reader, null, null, 
-            MapReduceTestUtil.createDummyReporter(), 
-            split);
+              format.createRecordReader(split, context);
+          MapContext<Text, Text, Text, Text> mcontext =
+              new MapContextImpl<Text, Text, Text, Text>(job.getConfiguration(),
+                  context.getTaskAttemptID(), reader, null, null,
+                  MapReduceTestUtil.createDummyReporter(),
+                  split);
           reader.initialize(split, mcontext);
           Class<?> readerClass = reader.getClass();
-          assertEquals("reader class is SequenceFileAsTextRecordReader.",
-            SequenceFileAsTextRecordReader.class, readerClass);        
+          assertEquals(SequenceFileAsTextRecordReader.class, readerClass, "reader class is SequenceFileAsTextRecordReader.");
           Text key;
           try {
             int count = 0;
             while (reader.nextKeyValue()) {
               key = reader.getCurrentKey();
               int keyInt = Integer.parseInt(key.toString());
-              assertFalse("Key in multiple partitions.", bits.get(keyInt));
+              assertFalse(bits.get(keyInt), "Key in multiple partitions.");
               bits.set(keyInt);
               count++;
             }
@@ -116,7 +115,7 @@ public class TestMRSequenceFileAsTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }

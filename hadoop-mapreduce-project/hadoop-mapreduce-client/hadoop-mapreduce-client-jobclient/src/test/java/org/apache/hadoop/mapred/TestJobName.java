@@ -30,20 +30,21 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestJobName extends ClusterMapReduceTestCase {
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     setupClassBase(TestJobName.class);
   }
 
   @Test
-  public void testComplexName() throws Exception {
+  void testComplexName() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
         "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -67,8 +68,8 @@ public class TestJobName extends ClusterMapReduceTestCase {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-                           getFileSystem().listStatus(getOutputDir(),
-                           new Utils.OutputFileUtils.OutputFilesFilter()));
+        getFileSystem().listStatus(getOutputDir(),
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
     InputStream is = getFileSystem().open(outputFiles[0]);
     BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -78,7 +79,7 @@ public class TestJobName extends ClusterMapReduceTestCase {
   }
 
   @Test
-  public void testComplexNameWithRegex() throws Exception {
+  void testComplexNameWithRegex() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(),
         "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -102,8 +103,8 @@ public class TestJobName extends ClusterMapReduceTestCase {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-                           getFileSystem().listStatus(getOutputDir(),
-                           new Utils.OutputFileUtils.OutputFilesFilter()));
+        getFileSystem().listStatus(getOutputDir(),
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
     InputStream is = getFileSystem().open(outputFiles[0]);
     BufferedReader reader = new BufferedReader(new InputStreamReader(is));

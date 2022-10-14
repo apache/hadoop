@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.lib.partition;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -36,7 +34,10 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestInputSampler {
 
@@ -180,16 +181,17 @@ public class TestInputSampler {
    * Verify SplitSampler contract, that an equal number of records are taken
    * from the first splits.
    */
+  // IntWritable comparator not typesafe
   @Test
-  @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
-  public void testSplitSampler() throws Exception {
+  @SuppressWarnings("unchecked")
+  void testSplitSampler() throws Exception {
     final int TOT_SPLITS = 15;
     final int NUM_SPLITS = 5;
     final int STEP_SAMPLE = 5;
     final int NUM_SAMPLES = NUM_SPLITS * STEP_SAMPLE;
-    InputSampler.Sampler<IntWritable,NullWritable> sampler =
-      new InputSampler.SplitSampler<IntWritable,NullWritable>(
-          NUM_SAMPLES, NUM_SPLITS);
+    InputSampler.Sampler<IntWritable, NullWritable> sampler =
+        new InputSampler.SplitSampler<IntWritable, NullWritable>(
+            NUM_SAMPLES, NUM_SPLITS);
     int inits[] = new int[TOT_SPLITS];
     for (int i = 0; i < TOT_SPLITS; ++i) {
       inits[i] = i * STEP_SAMPLE;
@@ -200,7 +202,7 @@ public class TestInputSampler {
     assertEquals(NUM_SAMPLES, samples.length);
     Arrays.sort(samples, new IntWritable.Comparator());
     for (int i = 0; i < NUM_SAMPLES; ++i) {
-      assertEquals(i, ((IntWritable)samples[i]).get());
+      assertEquals(i, ((IntWritable) samples[i]).get());
     }
   }
 
@@ -208,16 +210,18 @@ public class TestInputSampler {
    * Verify SplitSampler contract in mapred.lib.InputSampler, which is added
    * back for binary compatibility of M/R 1.x
    */
-  @Test (timeout = 30000)
-  @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
-  public void testMapredSplitSampler() throws Exception {
+  // IntWritable comparator not typesafe
+  @Test
+  @Timeout(30000)
+  @SuppressWarnings("unchecked")
+  void testMapredSplitSampler() throws Exception {
     final int TOT_SPLITS = 15;
     final int NUM_SPLITS = 5;
     final int STEP_SAMPLE = 5;
     final int NUM_SAMPLES = NUM_SPLITS * STEP_SAMPLE;
-    org.apache.hadoop.mapred.lib.InputSampler.Sampler<IntWritable,NullWritable>
+    org.apache.hadoop.mapred.lib.InputSampler.Sampler<IntWritable, NullWritable>
         sampler = new org.apache.hadoop.mapred.lib.InputSampler.SplitSampler
-            <IntWritable,NullWritable>(NUM_SAMPLES, NUM_SPLITS);
+            <IntWritable, NullWritable>(NUM_SAMPLES, NUM_SPLITS);
     int inits[] = new int[TOT_SPLITS];
     for (int i = 0; i < TOT_SPLITS; ++i) {
       inits[i] = i * STEP_SAMPLE;
@@ -230,7 +234,7 @@ public class TestInputSampler {
     for (int i = 0; i < NUM_SAMPLES; ++i) {
       // mapred.lib.InputSampler.SplitSampler has a sampling step
       assertEquals(i % STEP_SAMPLE + TOT_SPLITS * (i / STEP_SAMPLE),
-          ((IntWritable)samples[i]).get());
+          ((IntWritable) samples[i]).get());
     }
   }
 
@@ -238,27 +242,28 @@ public class TestInputSampler {
    * Verify IntervalSampler contract, that samples are taken at regular
    * intervals from the given splits.
    */
+  // IntWritable comparator not typesafe
   @Test
-  @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
-  public void testIntervalSampler() throws Exception {
+  @SuppressWarnings("unchecked")
+  void testIntervalSampler() throws Exception {
     final int TOT_SPLITS = 16;
     final int PER_SPLIT_SAMPLE = 4;
     final int NUM_SAMPLES = TOT_SPLITS * PER_SPLIT_SAMPLE;
     final double FREQ = 1.0 / TOT_SPLITS;
-    InputSampler.Sampler<IntWritable,NullWritable> sampler =
-      new InputSampler.IntervalSampler<IntWritable,NullWritable>(
-          FREQ, NUM_SAMPLES);
+    InputSampler.Sampler<IntWritable, NullWritable> sampler =
+        new InputSampler.IntervalSampler<IntWritable, NullWritable>(
+            FREQ, NUM_SAMPLES);
     int inits[] = new int[TOT_SPLITS];
     for (int i = 0; i < TOT_SPLITS; ++i) {
       inits[i] = i;
     }
     Job ignored = Job.getInstance();
     Object[] samples = sampler.getSample(new TestInputSamplerIF(
-          NUM_SAMPLES, TOT_SPLITS, inits), ignored);
+        NUM_SAMPLES, TOT_SPLITS, inits), ignored);
     assertEquals(NUM_SAMPLES, samples.length);
     Arrays.sort(samples, new IntWritable.Comparator());
     for (int i = 0; i < NUM_SAMPLES; ++i) {
-      assertEquals(i, ((IntWritable)samples[i]).get());
+      assertEquals(i, ((IntWritable) samples[i]).get());
     }
   }
 
@@ -266,28 +271,30 @@ public class TestInputSampler {
    * Verify IntervalSampler in mapred.lib.InputSampler, which is added back
    * for binary compatibility of M/R 1.x
    */
-  @Test (timeout = 30000)
-  @SuppressWarnings("unchecked") // IntWritable comparator not typesafe
-  public void testMapredIntervalSampler() throws Exception {
+  // IntWritable comparator not typesafe
+  @Test
+  @Timeout(30000)
+  @SuppressWarnings("unchecked")
+  void testMapredIntervalSampler() throws Exception {
     final int TOT_SPLITS = 16;
     final int PER_SPLIT_SAMPLE = 4;
     final int NUM_SAMPLES = TOT_SPLITS * PER_SPLIT_SAMPLE;
     final double FREQ = 1.0 / TOT_SPLITS;
-    org.apache.hadoop.mapred.lib.InputSampler.Sampler<IntWritable,NullWritable>
+    org.apache.hadoop.mapred.lib.InputSampler.Sampler<IntWritable, NullWritable>
         sampler = new org.apache.hadoop.mapred.lib.InputSampler.IntervalSampler
-            <IntWritable,NullWritable>(FREQ, NUM_SAMPLES);
+            <IntWritable, NullWritable>(FREQ, NUM_SAMPLES);
     int inits[] = new int[TOT_SPLITS];
     for (int i = 0; i < TOT_SPLITS; ++i) {
       inits[i] = i;
     }
     Job ignored = Job.getInstance();
     Object[] samples = sampler.getSample(new TestInputSamplerIF(
-          NUM_SAMPLES, TOT_SPLITS, inits), ignored);
+        NUM_SAMPLES, TOT_SPLITS, inits), ignored);
     assertEquals(NUM_SAMPLES, samples.length);
     Arrays.sort(samples, new IntWritable.Comparator());
     for (int i = 0; i < NUM_SAMPLES; ++i) {
       assertEquals(i,
-          ((IntWritable)samples[i]).get());
+          ((IntWritable) samples[i]).get());
     }
   }
 

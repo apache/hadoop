@@ -26,13 +26,13 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestSequenceFileAsTextInputFormat {
   private static final Logger LOG = FileInputFormat.LOG;
@@ -41,14 +41,14 @@ public class TestSequenceFileAsTextInputFormat {
   private static Configuration conf = new Configuration();
 
   @Test
-  public void testFormat() throws Exception {
+  void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getLocal(conf);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = new Path(System.getProperty("test.build.data", ".") + "/mapred");
     Path file = new Path(dir, "test.seq");
-    
+
     Reporter reporter = Reporter.NULL;
-    
+
     int seed = new Random().nextInt();
     //LOG.info("seed = "+seed);
     Random random = new Random(seed);
@@ -59,14 +59,14 @@ public class TestSequenceFileAsTextInputFormat {
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
 
       //LOG.info("creating; entries = " + length);
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        SequenceFile.createWriter(fs, conf, file,
-                                  IntWritable.class, LongWritable.class);
+          SequenceFile.createWriter(fs, conf, file,
+              IntWritable.class, LongWritable.class);
       try {
         for (int i = 0; i < length; i++) {
           IntWritable key = new IntWritable(i);
@@ -79,11 +79,11 @@ public class TestSequenceFileAsTextInputFormat {
 
       // try splitting the file in a variety of sizes
       InputFormat<Text, Text> format =
-        new SequenceFileAsTextInputFormat();
-      
+          new SequenceFileAsTextInputFormat();
+
       for (int i = 0; i < 3; i++) {
         int numSplits =
-          random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
+            random.nextInt(MAX_LENGTH / (SequenceFile.SYNC_INTERVAL / 20)) + 1;
         //LOG.info("splitting: requesting = " + numSplits);
         InputSplit[] splits = format.getSplits(job, numSplits);
         //LOG.info("splitting: got =        " + splits.length);
@@ -92,9 +92,9 @@ public class TestSequenceFileAsTextInputFormat {
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           RecordReader<Text, Text> reader =
-            format.getRecordReader(splits[j], job, reporter);
+              format.getRecordReader(splits[j], job, reporter);
           Class readerClass = reader.getClass();
-          assertEquals("reader class is SequenceFileAsTextRecordReader.", SequenceFileAsTextRecordReader.class, readerClass);        
+          assertEquals(SequenceFileAsTextRecordReader.class, readerClass, "reader class is SequenceFileAsTextRecordReader.");
           Text value = reader.createValue();
           Text key = reader.createKey();
           try {
@@ -105,7 +105,7 @@ public class TestSequenceFileAsTextInputFormat {
               // LOG.info("@"+reader.getPos());
               // }
               int keyInt = Integer.parseInt(key.toString());
-              assertFalse("Key in multiple partitions.", bits.get(keyInt));
+              assertFalse(bits.get(keyInt), "Key in multiple partitions.");
               bits.set(keyInt);
               count++;
             }
@@ -114,7 +114,7 @@ public class TestSequenceFileAsTextInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }

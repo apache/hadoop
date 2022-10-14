@@ -22,16 +22,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for the JobConf-related parts of common's ReflectionUtils
  * class.
  */
 public class TestMRCJCReflectionUtils {
-  @Before
+  @BeforeEach
   public void setUp() {
     ReflectionUtils.clearCache();
   }
@@ -43,7 +45,7 @@ public class TestMRCJCReflectionUtils {
    * Should be removed when mapred package is removed.
    */
   @Test
-  public void testSetConf() {
+  void testSetConf() {
     JobConfigurableOb ob = new JobConfigurableOb();
     ReflectionUtils.setConf(ob, new Configuration());
     assertFalse(ob.configured);

@@ -35,9 +35,10 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestJavaSerialization {
 
@@ -58,8 +59,8 @@ public class TestJavaSerialization {
       StringTokenizer st = new StringTokenizer(value.toString());
       while (st.hasMoreTokens()) {
         String token = st.nextToken();
-        assertTrue("Invalid token; expected 'a' or 'b', got " + token,
-          token.equals("a") || token.equals("b"));
+        assertTrue(token.equals("a") || token.equals("b"),
+          "Invalid token; expected 'a' or 'b', got " + token);
         output.collect(token, 1L);
       }
     }
@@ -95,17 +96,17 @@ public class TestJavaSerialization {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testMapReduceJob() throws Exception {
+  void testMapReduceJob() throws Exception {
 
     JobConf conf = new JobConf(TestJavaSerialization.class);
     conf.setJobName("JavaSerialization");
-    
+
     FileSystem fs = FileSystem.get(conf);
     cleanAndCreateInput(fs);
 
     conf.set("io.serializations",
-    "org.apache.hadoop.io.serializer.JavaSerialization," +
-    "org.apache.hadoop.io.serializer.WritableSerialization");
+        "org.apache.hadoop.io.serializer.JavaSerialization," +
+            "org.apache.hadoop.io.serializer.WritableSerialization");
 
     conf.setInputFormat(TextInputFormat.class);
 
@@ -124,26 +125,25 @@ public class TestJavaSerialization {
 
     String inputFileContents =
         FileUtils.readFileToString(new File(INPUT_FILE.toUri().getPath()));
-    assertTrue("Input file contents not as expected; contents are '"
-        + inputFileContents + "', expected \"b a\n\" ",
-      inputFileContents.equals("b a\n"));
+    assertTrue(inputFileContents.equals("b a\n"),
+        "Input file contents not as expected; contents are '"
+            + inputFileContents + "', expected \"b a\n\" ");
 
     JobClient.runJob(conf);
 
     Path[] outputFiles =
         FileUtil.stat2Paths(fs.listStatus(OUTPUT_DIR,
-          new Utils.OutputFileUtils.OutputFilesFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
     try (InputStream is = fs.open(outputFiles[0])) {
       String reduceOutput = org.apache.commons.io.IOUtils.toString(is, StandardCharsets.UTF_8);
       String[] lines = reduceOutput.split("\n");
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "a\t1", lines[0]);
-      assertEquals("Unexpected output; received output '" + reduceOutput + "'",
-          "b\t1", lines[1]);
+      assertEquals("a\t1", lines[0], "Unexpected output; received output '" + reduceOutput + "'");
+      assertEquals("b\t1", lines[1], "Unexpected output; received output '" + reduceOutput + "'");
       assertEquals(
-          "Reduce output has extra lines; output is '" + reduceOutput + "'", 2,
-          lines.length);
+          2,
+          lines.length,
+          "Reduce output has extra lines; output is '" + reduceOutput + "'");
     }
   }
 
@@ -155,7 +155,7 @@ public class TestJavaSerialization {
    *
    */
   @Test
-  public void testWriteToSequencefile() throws Exception {
+  void testWriteToSequencefile() throws Exception {
     JobConf conf = new JobConf(TestJavaSerialization.class);
     conf.setJobName("JavaSerialization");
 
@@ -163,12 +163,12 @@ public class TestJavaSerialization {
     cleanAndCreateInput(fs);
 
     conf.set("io.serializations",
-    "org.apache.hadoop.io.serializer.JavaSerialization," +
-    "org.apache.hadoop.io.serializer.WritableSerialization");
+        "org.apache.hadoop.io.serializer.JavaSerialization," +
+            "org.apache.hadoop.io.serializer.WritableSerialization");
 
     conf.setInputFormat(TextInputFormat.class);
     // test we can write to sequence files
-    conf.setOutputFormat(SequenceFileOutputFormat.class); 
+    conf.setOutputFormat(SequenceFileOutputFormat.class);
     conf.setOutputKeyClass(String.class);
     conf.setOutputValueClass(Long.class);
     conf.setOutputKeyComparatorClass(JavaSerializationComparator.class);
@@ -185,8 +185,8 @@ public class TestJavaSerialization {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-        fs.listStatus(OUTPUT_DIR, 
-                      new Utils.OutputFileUtils.OutputFilesFilter()));
+        fs.listStatus(OUTPUT_DIR,
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     assertEquals(1, outputFiles.length);
   }
 

@@ -22,10 +22,11 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.*;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.*;
 import java.text.NumberFormat;
 
@@ -38,7 +39,7 @@ public class TestAggregates {
   }
 
   @Test
-  public void testAggregates() throws Exception {
+  void testAggregates() throws Exception {
     launch();
   }
 

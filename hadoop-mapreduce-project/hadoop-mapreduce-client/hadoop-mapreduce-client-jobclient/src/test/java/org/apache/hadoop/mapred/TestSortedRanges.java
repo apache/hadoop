@@ -18,84 +18,84 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapred.SortedRanges.Range;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSortedRanges {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestSortedRanges.class);
 
   @Test
-  public void testAdd() {
+  void testAdd() {
     SortedRanges sr = new SortedRanges();
-    sr.add(new Range(2,9));
+    sr.add(new Range(2, 9));
     assertEquals(9, sr.getIndicesCount());
-    
-    sr.add(new SortedRanges.Range(3,5));
+
+    sr.add(new SortedRanges.Range(3, 5));
     assertEquals(9, sr.getIndicesCount());
-    
-    sr.add(new SortedRanges.Range(7,1));
+
+    sr.add(new SortedRanges.Range(7, 1));
     assertEquals(9, sr.getIndicesCount());
-    
-    sr.add(new Range(1,12));
+
+    sr.add(new Range(1, 12));
     assertEquals(12, sr.getIndicesCount());
-    
-    sr.add(new Range(7,9));
+
+    sr.add(new Range(7, 9));
     assertEquals(15, sr.getIndicesCount());
-    
-    sr.add(new Range(31,10));
-    sr.add(new Range(51,10));
-    sr.add(new Range(66,10));
+
+    sr.add(new Range(31, 10));
+    sr.add(new Range(51, 10));
+    sr.add(new Range(66, 10));
     assertEquals(45, sr.getIndicesCount());
-    
-    sr.add(new Range(21,50));
+
+    sr.add(new Range(21, 50));
     assertEquals(70, sr.getIndicesCount());
-    
+
     LOG.debug(sr.toString());
-    
+
     Iterator<Long> it = sr.skipRangeIterator();
     int i = 0;
     assertEquals(i, it.next().longValue());
-    for(i=16;i<21;i++) {
+    for (i = 16; i < 21; i++) {
       assertEquals(i, it.next().longValue());
     }
     assertEquals(76, it.next().longValue());
     assertEquals(77, it.next().longValue());
-    
+
   }
 
   @Test
-  public void testRemove() {
+  void testRemove() {
     SortedRanges sr = new SortedRanges();
-    sr.add(new Range(2,19));
+    sr.add(new Range(2, 19));
     assertEquals(19, sr.getIndicesCount());
-    
-    sr.remove(new SortedRanges.Range(15,8));
+
+    sr.remove(new SortedRanges.Range(15, 8));
     assertEquals(13, sr.getIndicesCount());
-    
-    sr.remove(new SortedRanges.Range(6,5));
+
+    sr.remove(new SortedRanges.Range(6, 5));
     assertEquals(8, sr.getIndicesCount());
-    
-    sr.remove(new SortedRanges.Range(8,4));
+
+    sr.remove(new SortedRanges.Range(8, 4));
     assertEquals(7, sr.getIndicesCount());
-    
-    sr.add(new Range(18,5));
+
+    sr.add(new Range(18, 5));
     assertEquals(12, sr.getIndicesCount());
-    
-    sr.add(new Range(25,1));
+
+    sr.add(new Range(25, 1));
     assertEquals(13, sr.getIndicesCount());
-    
-    sr.remove(new SortedRanges.Range(7,24));
+
+    sr.remove(new SortedRanges.Range(7, 24));
     assertEquals(4, sr.getIndicesCount());
-    
-    sr.remove(new SortedRanges.Range(5,1));
+
+    sr.remove(new SortedRanges.Range(5, 1));
     assertEquals(3, sr.getIndicesCount());
-    
+
     LOG.debug(sr.toString());
   }
 

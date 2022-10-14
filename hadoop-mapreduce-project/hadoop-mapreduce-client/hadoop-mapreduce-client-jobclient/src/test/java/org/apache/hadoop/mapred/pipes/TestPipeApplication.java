@@ -68,10 +68,9 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestPipeApplication {
   private static File workSpace = new File("target",
@@ -85,7 +84,7 @@ public class TestPipeApplication {
    * @throws Exception
    */
   @Test
-  public void testRunner() throws Exception {
+  void testRunner() throws Exception {
 
     // clean old password files
     File[] psw = cleanTokenPasswordFile();
@@ -98,12 +97,12 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.TASK_ATTEMPT_ID, taskName);
 
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-              new Counters.Counter(), new Progress());
+          new Counters.Counter(), new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.initialize(FsConstants.LOCAL_FS_URI, conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
               new Path(workSpace + File.separator + "outfile")), IntWritable.class,
-              Text.class, null, null, true);
+          Text.class, null, null, true);
       output.setWriter(wr);
       // stub for client
       File fCommand = getFileCommand("org.apache.hadoop.mapred.pipes.PipeApplicationRunnableStub");
@@ -111,7 +110,7 @@ public class TestPipeApplication {
       conf.set(MRJobConfig.CACHE_LOCALFILES, fCommand.getAbsolutePath());
       // token for authorization
       Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       TokenCache.setJobToken(token,  conf.getCredentials());
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
@@ -131,9 +130,9 @@ public class TestPipeApplication {
       assertTrue(stdOut.contains("CURRENT_PROTOCOL_VERSION:0"));
       // check key and value classes
       assertTrue(stdOut
-              .contains("Key class:org.apache.hadoop.io.FloatWritable"));
+          .contains("Key class:org.apache.hadoop.io.FloatWritable"));
       assertTrue(stdOut
-              .contains("Value class:org.apache.hadoop.io.NullWritable"));
+          .contains("Value class:org.apache.hadoop.io.NullWritable"));
       // test have sent all data from reader
       assertTrue(stdOut.contains("value:0.0"));
       assertTrue(stdOut.contains("value:9.0"));
@@ -157,7 +156,7 @@ public class TestPipeApplication {
    */
 
   @Test
-  public void testApplication() throws Throwable {
+  void testApplication() throws Throwable {
     JobConf conf = new JobConf();
 
     RecordReader<FloatWritable, NullWritable> rReader = new Reader();
@@ -175,24 +174,24 @@ public class TestPipeApplication {
 
       // token for authorization
       Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
 
       TokenCache.setJobToken(token, conf.getCredentials());
       FakeCollector output = new FakeCollector(new Counters.Counter(),
-              new Progress());
+          new Progress());
       FileSystem fs = new RawLocalFileSystem();
       fs.initialize(FsConstants.LOCAL_FS_URI, conf);
       Writer<IntWritable, Text> wr = new Writer<IntWritable, Text>(conf, fs.create(
               new Path(workSpace.getAbsolutePath() + File.separator + "outfile")),
-              IntWritable.class, Text.class, null, null, true);
+          IntWritable.class, Text.class, null, null, true);
       output.setWriter(wr);
       conf.set(Submitter.PRESERVE_COMMANDFILE, "true");
 
       initStdOut(conf);
 
       Application<WritableComparable<IntWritable>, Writable, IntWritable, Text> application = new Application<WritableComparable<IntWritable>, Writable, IntWritable, Text>(
-              conf, rReader, output, reporter, IntWritable.class, Text.class);
+          conf, rReader, output, reporter, IntWritable.class, Text.class);
       application.getDownlink().flush();
 
       application.getDownlink().mapItem(new IntWritable(3), new Text("txt"));
@@ -215,13 +214,13 @@ public class TestPipeApplication {
       // test status MessageType.STATUS
       assertEquals(reporter.getStatus(), "PROGRESS");
       stdOut = readFile(new File(workSpace.getAbsolutePath() + File.separator
-              + "outfile"));
+          + "outfile"));
       // check MessageType.PROGRESS
       assertEquals(0.55f, rReader.getProgress(), 0.001);
       application.getDownlink().close();
       // test MessageType.OUTPUT
       Entry<IntWritable, Text> entry = output.getCollect().entrySet()
-              .iterator().next();
+          .iterator().next();
       assertEquals(123, entry.getKey().get());
       assertEquals("value", entry.getValue().toString());
       try {
@@ -248,14 +247,14 @@ public class TestPipeApplication {
    * @throws Exception
    */
   @Test
-  public void testSubmitter() throws Exception {
+  void testSubmitter() throws Exception {
 
     JobConf conf = new JobConf();
 
     File[] psw = cleanTokenPasswordFile();
 
     System.setProperty("test.build.data",
-            "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
+        "target/tmp/build/TEST_SUBMITTER_MAPPER/data");
     conf.set("hadoop.log.dir", "target/tmp");
 
     // prepare configuration
@@ -284,26 +283,26 @@ public class TestPipeApplication {
     } catch (ExitUtil.ExitException e) {
       // System.exit prohibited! output message test
       assertTrue(out.toString().contains(""));
-      assertTrue(out.toString(), out.toString().contains("pipes"));
+      assertTrue(out.toString().contains("pipes"), out.toString());
       assertTrue(out.toString().contains("[-input <path>] // Input directory"));
       assertTrue(out.toString()
-              .contains("[-output <path>] // Output directory"));
+          .contains("[-output <path>] // Output directory"));
       assertTrue(out.toString().contains("[-jar <jar file> // jar filename"));
       assertTrue(out.toString().contains(
-              "[-inputformat <class>] // InputFormat class"));
+          "[-inputformat <class>] // InputFormat class"));
       assertTrue(out.toString().contains("[-map <class>] // Java Map class"));
       assertTrue(out.toString().contains(
-              "[-partitioner <class>] // Java Partitioner"));
+          "[-partitioner <class>] // Java Partitioner"));
       assertTrue(out.toString().contains(
-              "[-reduce <class>] // Java Reduce class"));
+          "[-reduce <class>] // Java Reduce class"));
       assertTrue(out.toString().contains(
-              "[-writer <class>] // Java RecordWriter"));
+          "[-writer <class>] // Java RecordWriter"));
       assertTrue(out.toString().contains(
-              "[-program <executable>] // executable URI"));
+          "[-program <executable>] // executable URI"));
       assertTrue(out.toString().contains(
-              "[-reduces <num>] // number of reduces"));
+          "[-reduces <num>] // number of reduces"));
       assertTrue(out.toString().contains(
-              "[-lazyOutput <true/false>] // createOutputLazily"));
+          "[-lazyOutput <true/false>] // createOutputLazily"));
 
       assertTrue(out.toString().contains(
           "-conf <configuration file>        specify an application "
@@ -343,7 +342,7 @@ public class TestPipeApplication {
       String[] args = new String[22];
       File input = new File(workSpace + File.separator + "input");
       if (!input.exists()) {
-        Assert.assertTrue(input.createNewFile());
+        assertTrue(input.createNewFile());
       }
       File outPut = new File(workSpace + File.separator + "output");
       FileUtil.fullyDelete(outPut);
@@ -391,13 +390,13 @@ public class TestPipeApplication {
    * @throws Exception
    */
   @Test
-  public void testPipesReduser() throws Exception {
+  void testPipesReduser() throws Exception {
 
     File[] psw = cleanTokenPasswordFile();
     JobConf conf = new JobConf();
     try {
       Token<AMRMTokenIdentifier> token = new Token<AMRMTokenIdentifier>(
-              "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
+          "user".getBytes(), "password".getBytes(), new Text("kind"), new Text(
               "service"));
       TokenCache.setJobToken(token, conf.getCredentials());
 
@@ -412,7 +411,7 @@ public class TestPipeApplication {
       initStdOut(conf);
       conf.setBoolean(MRJobConfig.SKIP_RECORDS, true);
       CombineOutputCollector<IntWritable, Text> output = new CombineOutputCollector<IntWritable, Text>(
-              new Counters.Counter(), new Progress());
+          new Counters.Counter(), new Progress());
       Reporter reporter = new TestTaskReporter();
       List<Text> texts = new ArrayList<Text>();
       texts.add(new Text("first"));
@@ -445,7 +444,7 @@ public class TestPipeApplication {
    * test set and get data from  PipesPartitioner
    */
   @Test
-  public void testPipesPartitioner() {
+  void testPipesPartitioner() {
 
     PipesPartitioner<IntWritable, Text> partitioner = new PipesPartitioner<IntWritable, Text>();
     JobConf configuration = new JobConf();
@@ -461,7 +460,7 @@ public class TestPipeApplication {
   }
 
   @Test
-  public void testSocketCleaner() throws Exception {
+  void testSocketCleaner() throws Exception {
     ServerSocket serverSocket = setupServerSocket();
     SocketCleaner cleaner = setupCleaner(serverSocket);
     // mock ping thread, connect to server socket per second.
@@ -470,7 +469,7 @@ public class TestPipeApplication {
       try {
         Thread.sleep(1000);
         Socket clientSocket = new Socket(serverSocket.getInetAddress(),
-                                         serverSocket.getLocalPort());
+            serverSocket.getLocalPort());
         clientSocket.close();
       } catch (Exception exception) {
         // ignored...
@@ -482,7 +481,7 @@ public class TestPipeApplication {
   }
 
   @Test
-  public void testSocketTimeout() throws Exception {
+  void testSocketTimeout() throws Exception {
     ServerSocket serverSocket = setupServerSocket();
     SocketCleaner cleaner = setupCleaner(serverSocket, 100);
     try {

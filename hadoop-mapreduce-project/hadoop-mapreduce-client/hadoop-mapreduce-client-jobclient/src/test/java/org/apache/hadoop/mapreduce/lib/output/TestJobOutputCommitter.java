@@ -33,11 +33,12 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test Map-Reduce job committer.
@@ -59,14 +60,14 @@ public class TestJobOutputCommitter extends HadoopTestCase {
   private FileSystem fs;
   private Configuration conf = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     conf = createJobConf();
     fs = getFileSystem();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     fs.delete(new Path(TEST_ROOT_DIR), true);
     super.tearDown();
@@ -151,16 +152,16 @@ public class TestJobOutputCommitter extends HadoopTestCase {
     Job job = MapReduceTestUtil.createJob(conf, inDir, outDir, 1, 0);
     job.setOutputFormatClass(output);
 
-    assertTrue("Job failed!", job.waitForCompletion(true));
+    assertTrue(job.waitForCompletion(true), "Job failed!");
 
     Path testFile = new Path(outDir, filename);
-    assertTrue("Done file missing for job " + job.getJobID(), fs.exists(testFile));
+    assertTrue(fs.exists(testFile), "Done file missing for job " + job.getJobID());
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for successful job "
-          + job.getJobID(), fs.exists(file));
+      assertFalse(fs.exists(file), "File " + file + " should not be present for successful job "
+          + job.getJobID());
     }
   }
 
@@ -171,19 +172,19 @@ public class TestJobOutputCommitter extends HadoopTestCase {
     Job job = MapReduceTestUtil.createFailJob(conf, outDir, inDir);
     job.setOutputFormatClass(output);
 
-    assertFalse("Job did not fail!", job.waitForCompletion(true));
+    assertFalse(job.waitForCompletion(true), "Job did not fail!");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for failed job " + job.getJobID(),
-          fs.exists(testFile));
+      assertTrue(fs.exists(testFile),
+          "File " + testFile + " missing for failed job " + job.getJobID());
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for failed job "
-          + job.getJobID(), fs.exists(file));
+      assertFalse(fs.exists(file), "File " + file + " should not be present for failed job "
+          + job.getJobID());
     }
   }
 
@@ -203,19 +204,19 @@ public class TestJobOutputCommitter extends HadoopTestCase {
 
     job.killJob(); // kill the job
 
-    assertFalse("Job did not get kill", job.waitForCompletion(true));
+    assertFalse(job.waitForCompletion(true), "Job did not get kill");
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
-      assertTrue("File " + testFile + " missing for job " + job.getJobID(), fs
-          .exists(testFile));
+      assertTrue(fs
+          .exists(testFile), "File " + testFile + " missing for job " + job.getJobID());
     }
 
     // check if the files from the missing set exists
     for (String ex : exclude) {
       Path file = new Path(outDir, ex);
-      assertFalse("File " + file + " should not be present for killed job "
-          + job.getJobID(), fs.exists(file));
+      assertFalse(fs.exists(file), "File " + file + " should not be present for killed job "
+          + job.getJobID());
     }
   }
 
@@ -225,18 +226,18 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * @throws Exception
    */
   @Test
-  public void testDefaultCleanupAndAbort() throws Exception {
+  void testDefaultCleanupAndAbort() throws Exception {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
-                      TextOutputFormat.class, new String[] {});
+        TextOutputFormat.class, new String[]{});
 
     // check with a failed job
     testFailedJob(null, TextOutputFormat.class,
-                  new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
 
     // check default abort job kill
     testKilledJob(null, TextOutputFormat.class,
-                  new String[] { FileOutputCommitter.SUCCEEDED_FILE_NAME });
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
 
   /**
@@ -245,24 +246,24 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * @throws Exception
    */
   @Test
-  public void testCustomAbort() throws Exception {
+  void testCustomAbort() throws Exception {
     // check with a successful job
     testSuccessfulJob(FileOutputCommitter.SUCCEEDED_FILE_NAME,
-                      MyOutputFormatWithCustomAbort.class, 
-                      new String[] {ABORT_FAILED_FILE_NAME,
-                                    ABORT_KILLED_FILE_NAME});
+        MyOutputFormatWithCustomAbort.class,
+        new String[]{ABORT_FAILED_FILE_NAME,
+            ABORT_KILLED_FILE_NAME});
 
     // check with a failed job
-    testFailedJob(ABORT_FAILED_FILE_NAME, 
-                  MyOutputFormatWithCustomAbort.class, 
-                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME, 
-                                ABORT_KILLED_FILE_NAME});
+    testFailedJob(ABORT_FAILED_FILE_NAME,
+        MyOutputFormatWithCustomAbort.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME,
+            ABORT_KILLED_FILE_NAME});
 
     // check with a killed job
-    testKilledJob(ABORT_KILLED_FILE_NAME, 
-                  MyOutputFormatWithCustomAbort.class, 
-                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME, 
-                                ABORT_FAILED_FILE_NAME});
+    testKilledJob(ABORT_KILLED_FILE_NAME,
+        MyOutputFormatWithCustomAbort.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME,
+            ABORT_FAILED_FILE_NAME});
   }
 
   /**
@@ -272,20 +273,20 @@ public class TestJobOutputCommitter extends HadoopTestCase {
    * @throws Exception 
    */
   @Test
-  public void testCustomCleanup() throws Exception {
+  void testCustomCleanup() throws Exception {
     // check with a successful job
-    testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME, 
-                      MyOutputFormatWithCustomCleanup.class, 
-                      new String[] {});
+    testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME,
+        MyOutputFormatWithCustomCleanup.class,
+        new String[]{});
 
     // check with a failed job
-    testFailedJob(CUSTOM_CLEANUP_FILE_NAME, 
-                  MyOutputFormatWithCustomCleanup.class, 
-                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+    testFailedJob(CUSTOM_CLEANUP_FILE_NAME,
+        MyOutputFormatWithCustomCleanup.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
 
     // check with a killed job
-    testKilledJob(CUSTOM_CLEANUP_FILE_NAME, 
-                  MyOutputFormatWithCustomCleanup.class, 
-                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+    testKilledJob(CUSTOM_CLEANUP_FILE_NAME,
+        MyOutputFormatWithCustomCleanup.class,
+        new String[]{FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
 }

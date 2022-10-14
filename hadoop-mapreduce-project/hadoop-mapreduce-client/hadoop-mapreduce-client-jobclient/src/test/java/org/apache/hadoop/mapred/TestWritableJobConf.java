@@ -25,13 +25,13 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.util.GenericsUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.Assert.assertEquals;;
 import java.util.HashMap;
+
 import java.util.Iterator;
 import java.util.Map;
-
-import static org.junit.Assert.assertTrue;
 
 public class TestWritableJobConf {
 
@@ -57,7 +57,7 @@ public class TestWritableJobConf {
     return after;
   }
 
-  private void assertEquals(Configuration conf1, Configuration conf2) {
+  private void assertEqual(Configuration conf1, Configuration conf2) {
     // We ignore deprecated keys because after deserializing, both the
     // deprecated and the non-deprecated versions of a config are set.
     // This is consistent with both the set and the get methods.
@@ -78,33 +78,32 @@ public class TestWritableJobConf {
         map2.put(entry.getKey(), entry.getValue());
       }
     }
-
-    assertTrue(map1.equals(map2));
+    assertEquals(map1, map2);
   }
 
   @Test
-  public void testEmptyConfiguration() throws Exception {
+  void testEmptyConfiguration() throws Exception {
     JobConf conf = new JobConf();
     Configuration deser = serDeser(conf);
-    assertEquals(conf, deser);
+    assertEqual(conf, deser);
   }
 
   @Test
-  public void testNonEmptyConfiguration() throws Exception {
+  void testNonEmptyConfiguration() throws Exception {
     JobConf conf = new JobConf();
     conf.set("a", "A");
     conf.set("b", "B");
     Configuration deser = serDeser(conf);
-    assertEquals(conf, deser);
+    assertEqual(conf, deser);
   }
 
   @Test
-  public void testConfigurationWithDefaults() throws Exception {
+  void testConfigurationWithDefaults() throws Exception {
     JobConf conf = new JobConf(false);
     conf.set("a", "A");
     conf.set("b", "B");
     Configuration deser = serDeser(conf);
-    assertEquals(conf, deser);
+    assertEqual(conf, deser);
   }
   
 }

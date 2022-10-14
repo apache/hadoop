@@ -26,9 +26,10 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.lib.map.TokenCounterMapper;
 import org.apache.hadoop.mapreduce.lib.reduce.IntSumReducer;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
@@ -46,7 +47,7 @@ public class TestSingleElementChain extends HadoopTestCase {
 
   // test chain mapper and reducer by adding single mapper and reducer to chain
   @Test
-  public void testNoChain() throws Exception {
+  void testNoChain() throws Exception {
     Path inDir = new Path(localPathRoot, "testing/chain/input");
     Path outDir = new Path(localPathRoot, "testing/chain/output");
     String input = "a\nb\na\n";
@@ -64,9 +65,9 @@ public class TestSingleElementChain extends HadoopTestCase {
         IntWritable.class, Text.class, IntWritable.class, null);
 
     job.waitForCompletion(true);
-    assertTrue("Job failed", job.isSuccessful());
-    assertEquals("Outputs doesn't match", expectedOutput, MapReduceTestUtil
-        .readOutput(outDir, conf));
+    assertTrue(job.isSuccessful(), "Job failed");
+    assertEquals(expectedOutput, MapReduceTestUtil
+        .readOutput(outDir, conf), "Outputs doesn't match");
   }
 
 }

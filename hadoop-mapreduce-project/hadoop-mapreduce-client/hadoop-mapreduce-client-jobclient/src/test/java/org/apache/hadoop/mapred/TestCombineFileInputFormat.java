@@ -26,11 +26,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestCombineFileInputFormat {
   private static final Logger LOG =
@@ -57,28 +57,28 @@ public class TestCombineFileInputFormat {
     stm.write(contents.getBytes());
     stm.close();
   }
-  
+
   /**
    * Test getSplits
    */
   @Test
   @SuppressWarnings("unchecked")
-  public void testSplits() throws IOException {
+  void testSplits() throws IOException {
     JobConf job = new JobConf(defaultConf);
     localFs.delete(workDir, true);
-    writeFile(localFs, new Path(workDir, "test.txt"), 
-              "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
+    writeFile(localFs, new Path(workDir, "test.txt"),
+        "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     FileInputFormat.setInputPaths(job, workDir);
     CombineFileInputFormat format = new CombineFileInputFormat() {
       @Override
       public RecordReader getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
-        return new CombineFileRecordReader(job, (CombineFileSplit)split, reporter, CombineFileRecordReader.class);
+        return new CombineFileRecordReader(job, (CombineFileSplit) split, reporter, CombineFileRecordReader.class);
       }
     };
     final int SIZE_SPLITS = 1;
     LOG.info("Trying to getSplits with splits = " + SIZE_SPLITS);
     InputSplit[] splits = format.getSplits(job, SIZE_SPLITS);
     LOG.info("Got getSplits = " + splits.length);
-    assertEquals("splits == " + SIZE_SPLITS, SIZE_SPLITS, splits.length);
+    assertEquals(SIZE_SPLITS, splits.length, "splits == " + SIZE_SPLITS);
   }
 }

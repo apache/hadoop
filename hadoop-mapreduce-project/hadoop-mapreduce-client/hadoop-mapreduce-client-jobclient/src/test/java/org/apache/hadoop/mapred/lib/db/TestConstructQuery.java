@@ -21,9 +21,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.JobConf;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestConstructQuery {
   private String[] fieldNames = new String[] { "id", "name", "value" };
@@ -33,34 +34,36 @@ public class TestConstructQuery {
   
   private DBOutputFormat<DBWritable, NullWritable> format 
     = new DBOutputFormat<DBWritable, NullWritable>();
+
   @Test
-  public void testConstructQuery() {
+  void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
 
     actual = format.constructQuery("hadoop_output", nullFieldNames);
     assertEquals(nullExpected, actual);
   }
+
   @Test
-  public void testSetOutput() throws IOException {
+  void testSetOutput() throws IOException {
     JobConf job = new JobConf();
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);
-    
+
     DBConfiguration dbConf = new DBConfiguration(job);
     String actual = format.constructQuery(dbConf.getOutputTableName()
-        , dbConf.getOutputFieldNames());
-    
+    , dbConf.getOutputFieldNames());
+
     assertEquals(expected, actual);
-    
+
     job = new JobConf();
     dbConf = new DBConfiguration(job);
     DBOutputFormat.setOutput(job, "hadoop_output", nullFieldNames.length);
     assertNull(dbConf.getOutputFieldNames());
     assertEquals(nullFieldNames.length, dbConf.getOutputFieldCount());
-    
+
     actual = format.constructQuery(dbConf.getOutputTableName()
-        , new String[dbConf.getOutputFieldCount()]);
-    
+    , new String[dbConf.getOutputFieldCount()]);
+
     assertEquals(nullExpected, actual);
   }
   

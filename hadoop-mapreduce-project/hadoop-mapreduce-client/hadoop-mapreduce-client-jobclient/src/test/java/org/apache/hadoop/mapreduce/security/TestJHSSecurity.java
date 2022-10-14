@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.security;
 
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
@@ -27,7 +25,6 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.LambdaTestUtils;
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -52,17 +49,20 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestJHSSecurity {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestJHSSecurity.class);
-  
+
   @Test
-  public void testDelegationToken() throws Exception {
+  void testDelegationToken() throws Exception {
 
     org.apache.log4j.Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
@@ -70,14 +70,14 @@ public class TestJHSSecurity {
     final YarnConfiguration conf = new YarnConfiguration(new JobConf());
     // Just a random principle
     conf.set(JHAdminConfig.MR_HISTORY_PRINCIPAL,
-      "RandomOrc/localhost@apache.org");
+        "RandomOrc/localhost@apache.org");
 
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-      "kerberos");
+        "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    
+
     final long initialInterval = 10000l;
-    final long maxLifetime= 20000l;
+    final long maxLifetime = 20000l;
     final long renewInterval = 10000l;
 
     JobHistoryServer jobHistoryServer = null;
@@ -87,7 +87,7 @@ public class TestJHSSecurity {
       jobHistoryServer = new JobHistoryServer() {
         protected void doSecureLogin(Configuration conf) throws IOException {
           // no keytab based login
-        };
+        }
 
         @Override
         protected JHSDelegationTokenSecretManager createJHSSecretManager(
@@ -104,8 +104,8 @@ public class TestJHSSecurity {
       // Fake the authentication-method
       UserGroupInformation loggedInUser = UserGroupInformation
           .createRemoteUser("testrenewer@APACHE.ORG");
-      Assert.assertEquals("testrenewer", loggedInUser.getShortUserName());
-   // Default realm is APACHE.ORG
+      assertEquals("testrenewer", loggedInUser.getShortUserName());
+      // Default realm is APACHE.ORG
       loggedInUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
 
 
@@ -124,34 +124,34 @@ public class TestJHSSecurity {
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
-      
-   // Renew after 50% of token age.
-      while(System.currentTimeMillis() < tokenFetchTime + initialInterval / 2) {
+
+      // Renew after 50% of token age.
+      while (System.currentTimeMillis() < tokenFetchTime + initialInterval / 2) {
         Thread.sleep(500l);
       }
       long nextExpTime = renewDelegationToken(loggedInUser, hsService, token);
       long renewalTime = System.currentTimeMillis();
       LOG.info("Renewed token at: " + renewalTime + ", NextExpiryTime: "
           + nextExpTime);
-      
+
       // Wait for first expiry, but before renewed expiry.
       while (System.currentTimeMillis() > tokenFetchTime + initialInterval
           && System.currentTimeMillis() < nextExpTime) {
         Thread.sleep(500l);
       }
       Thread.sleep(50l);
-      
+
       // Valid token because of renewal.
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
-        Assert.assertEquals("Unknown job job_123456_0001", e.getMessage());
+        assertEquals("Unknown job job_123456_0001", e.getMessage());
       }
-      
+
       // Wait for expiry.
-      while(System.currentTimeMillis() < renewalTime + renewInterval) {
+      while (System.currentTimeMillis() < renewalTime + renewInterval) {
         Thread.sleep(500l);
       }
       Thread.sleep(50l);
@@ -171,12 +171,12 @@ public class TestJHSSecurity {
           loggedInUser.getShortUserName());
       tokenFetchTime = System.currentTimeMillis();
       LOG.info("Got delegation token at: " + tokenFetchTime);
- 
+
       // Now try talking to HSService using the delegation token
       clientUsingDT = getMRClientProtocol(token, jobHistoryServer
           .getClientService().getBindAddress(), "loginuser2", conf);
 
-      
+
       try {
         clientUsingDT.getJobReport(jobReportRequest);
       } catch (IOException e) {
@@ -191,8 +191,8 @@ public class TestJHSSecurity {
       if (clientUsingDT != null) {
 //        RPC.stopProxy(clientUsingDT);
         clientUsingDT = null;
-      } 
-      
+      }
+
       // Creating a new connection.
       clientUsingDT = getMRClientProtocol(token, jobHistoryServer
           .getClientService().getBindAddress(), "loginuser2", conf);
@@ -205,7 +205,6 @@ public class TestJHSSecurity {
       }
 
 
-      
     } finally {
       jobHistoryServer.stop();
     }

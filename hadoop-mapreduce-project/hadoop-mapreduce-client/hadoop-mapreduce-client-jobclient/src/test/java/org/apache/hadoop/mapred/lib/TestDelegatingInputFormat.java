@@ -30,19 +30,20 @@ import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestDelegatingInputFormat {
   @Test
-  public void testSplitting() throws Exception {
+  void testSplitting() throws Exception {
     JobConf conf = new JobConf();
     MiniDFSCluster dfs = null;
     try {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4)
-          .racks(new String[] { "/rack0", "/rack0", "/rack1", "/rack1" })
-          .hosts(new String[] { "host0", "host1", "host2", "host3" })
+          .racks(new String[]{"/rack0", "/rack0", "/rack1", "/rack1"})
+          .hosts(new String[]{"host0", "host1", "host2", "host3"})
           .build();
       FileSystem fs = dfs.getFileSystem();
 
@@ -54,47 +55,47 @@ public class TestDelegatingInputFormat {
       final int numSplits = 100;
 
       MultipleInputs.addInputPath(conf, path, TextInputFormat.class,
-         MapClass.class);
+          MapClass.class);
       MultipleInputs.addInputPath(conf, path2, TextInputFormat.class,
-         MapClass2.class);
+          MapClass2.class);
       MultipleInputs.addInputPath(conf, path3, KeyValueTextInputFormat.class,
-         MapClass.class);
+          MapClass.class);
       MultipleInputs.addInputPath(conf, path4, TextInputFormat.class,
-         MapClass2.class);
+          MapClass2.class);
       DelegatingInputFormat inFormat = new DelegatingInputFormat();
       InputSplit[] splits = inFormat.getSplits(conf, numSplits);
 
       int[] bins = new int[3];
       for (InputSplit split : splits) {
-       assertTrue(split instanceof TaggedInputSplit);
-       final TaggedInputSplit tis = (TaggedInputSplit) split;
-       int index = -1;
+        assertTrue(split instanceof TaggedInputSplit);
+        final TaggedInputSplit tis = (TaggedInputSplit) split;
+        int index = -1;
 
-       if (tis.getInputFormatClass().equals(KeyValueTextInputFormat.class)) {
-         // path3
-         index = 0;
-       } else if (tis.getMapperClass().equals(MapClass.class)) {
-         // path
-         index = 1;
-       } else {
-         // path2 and path4
-         index = 2;
-       }
+        if (tis.getInputFormatClass().equals(KeyValueTextInputFormat.class)) {
+          // path3
+          index = 0;
+        } else if (tis.getMapperClass().equals(MapClass.class)) {
+          // path
+          index = 1;
+        } else {
+          // path2 and path4
+          index = 2;
+        }
 
-       bins[index]++;
+        bins[index]++;
       }
 
       // Each bin is a unique combination of a Mapper and InputFormat, and
       // DelegatingInputFormat should split each bin into numSplits splits,
       // regardless of the number of paths that use that Mapper/InputFormat
       for (int count : bins) {
-       assertEquals(numSplits, count);
+        assertEquals(numSplits, count);
       }
 
       assertTrue(true);
     } finally {
       if (dfs != null) {
-       dfs.shutdown();
+        dfs.shutdown();
       }
     }
   }

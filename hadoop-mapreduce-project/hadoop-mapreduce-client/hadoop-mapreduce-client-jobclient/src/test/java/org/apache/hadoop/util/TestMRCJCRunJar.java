@@ -27,8 +27,9 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A test to rest the RunJar class.
@@ -42,7 +43,7 @@ public class TestMRCJCRunJar {
   private static final String CLASS_NAME = "Hello.class";
 
   @Test
-  public void testRunjar() throws Throwable {
+  void testRunjar() throws Throwable {
     File outFile = new File(TEST_ROOT_DIR, "out");
     // delete if output file already exists.
     if (outFile.exists()) {
@@ -55,7 +56,7 @@ public class TestMRCJCRunJar {
     args[1] = "org.apache.hadoop.util.Hello";
     args[2] = outFile.toString();
     RunJar.main(args);
-    Assert.assertTrue("RunJar failed", outFile.exists());
+    assertTrue(outFile.exists(), "RunJar failed");
   }
 
   private File makeTestJar() throws IOException {

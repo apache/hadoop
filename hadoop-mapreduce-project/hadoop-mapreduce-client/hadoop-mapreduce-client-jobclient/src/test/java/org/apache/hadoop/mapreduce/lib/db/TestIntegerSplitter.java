@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.mapreduce.lib.db;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestIntegerSplitter {
   private long [] toLongArray(List<Long> in) {
@@ -55,9 +55,8 @@ public class TestIntegerSplitter {
   public void assertLongArrayEquals(long [] expected, long [] actual) {
     for (int i = 0; i < expected.length; i++) {
       try {
-        assertEquals("Failure at position " + i + "; got " + actual[i]
-            + " instead of " + expected[i] + "; actual array is " + formatLongArray(actual),
-            expected[i], actual[i]);
+        assertEquals(expected[i], actual[i], "Failure at position " + i + "; got " + actual[i]
+            + " instead of " + expected[i] + "; actual array is " + formatLongArray(actual));
       } catch (ArrayIndexOutOfBoundsException oob) {
         fail("Expected array with " + expected.length + " elements; got " + actual.length
             + ". Actual array is " + formatLongArray(actual));
@@ -71,39 +70,39 @@ public class TestIntegerSplitter {
   }
 
   @Test
-  public void testEvenSplits() throws SQLException {
+  void testEvenSplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(10, 0, 100);
-    long [] expected = { 0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100 };
+    long [] expected = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
   @Test
-  public void testOddSplits() throws SQLException {
+  void testOddSplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(10, 0, 95);
-    long [] expected = { 0, 9, 18, 27, 36, 45, 54, 63, 72, 81, 90, 95 };
+    long [] expected = {0, 9, 18, 27, 36, 45, 54, 63, 72, 81, 90, 95};
     assertLongArrayEquals(expected, toLongArray(splits));
 
   }
 
   @Test
-  public void testSingletonSplit() throws SQLException {
+  void testSingletonSplit() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(1, 5, 5);
-    long [] expected = { 5, 5 };
+    long [] expected = {5, 5};
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
   @Test
-  public void testSingletonSplit2() throws SQLException {
+  void testSingletonSplit2() throws SQLException {
     // Same test, but overly-high numSplits
     List<Long> splits = new IntegerSplitter().split(5, 5, 5);
-    long [] expected = { 5, 5 };
+    long [] expected = {5, 5};
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 
   @Test
-  public void testTooManySplits() throws SQLException {
+  void testTooManySplits() throws SQLException {
     List<Long> splits = new IntegerSplitter().split(5, 3, 5);
-    long [] expected = { 3, 4, 5 };
+    long [] expected = {3, 4, 5};
     assertLongArrayEquals(expected, toLongArray(splits));
   }
 

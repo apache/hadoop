@@ -28,12 +28,15 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A JUnit test to test Job System Directory with Mini-DFS.
@@ -117,8 +120,9 @@ public class TestJobSysDirWithDFS {
     //  between Job Client & Job Tracker
     assertTrue(result.job.isSuccessful());
   }
+
   @Test
-  public void testWithDFS() throws IOException {
+  void testWithDFS() throws IOException {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
@@ -133,8 +137,11 @@ public class TestJobSysDirWithDFS {
 
       runWordCount(mr, mr.createJobConf(), conf.get("mapred.system.dir"));
     } finally {
-      if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+      if (mr != null) {
+        mr.shutdown();
       }
     }
   }

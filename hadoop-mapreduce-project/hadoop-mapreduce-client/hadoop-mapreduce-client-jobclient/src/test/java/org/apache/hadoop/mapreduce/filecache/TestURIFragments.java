@@ -20,8 +20,11 @@ package org.apache.hadoop.mapreduce.filecache;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import static org.junit.Assert.*;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestURIFragments {
 
@@ -29,87 +32,87 @@ public class TestURIFragments {
    * Tests {@link DistributedCache#checkURIs(URI[], URI[]).
    */
   @Test
-  public void testURIs() throws URISyntaxException {
+  void testURIs() throws URISyntaxException {
     assertTrue(DistributedCache.checkURIs(null, null));
 
     // uris with no fragments
-    assertFalse(DistributedCache.checkURIs(new URI[] { new URI(
-        "file://foo/bar/myCacheFile.txt") }, null));
+    assertFalse(DistributedCache.checkURIs(new URI[]{new URI(
+        "file://foo/bar/myCacheFile.txt")}, null));
     assertFalse(DistributedCache.checkURIs(null,
-        new URI[] { new URI("file://foo/bar/myCacheArchive.txt") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI[]{new URI("file://foo/bar/myCacheArchive.txt")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file"),
-        new URI("file://foo/bar/myCacheFile2.txt") }, null));
-    assertFalse(DistributedCache.checkURIs(null, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt")}, null));
+    assertFalse(DistributedCache.checkURIs(null, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] { new URI(
-        "file://foo/bar/myCacheFile.txt") }, new URI[] { new URI(
-        "file://foo/bar/myCacheArchive.txt") }));
+        new URI("file://foo/bar/myCacheArchive2.txt#archive")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{new URI(
+        "file://foo/bar/myCacheFile.txt")}, new URI[]{new URI(
+        "file://foo/bar/myCacheArchive.txt")}));
 
     // conflicts in fragment names
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file"),
-        new URI("file://foo/bar/myCacheFile2.txt#file") }, null));
-    assertFalse(DistributedCache.checkURIs(null, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file")}, null));
+    assertFalse(DistributedCache.checkURIs(null, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] { new URI(
-        "file://foo/bar/myCacheFile.txt#cache") }, new URI[] { new URI(
-        "file://foo/bar/myCacheArchive.txt#cache") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{new URI(
+        "file://foo/bar/myCacheFile.txt#cache")}, new URI[]{new URI(
+        "file://foo/bar/myCacheArchive.txt#cache")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#file2") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file2")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file"),
-        new URI("file://foo/bar/myCacheFile2.txt#file") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive1"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#cache") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#cache")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#cache"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
 
     // test ignore case
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file"),
-        new URI("file://foo/bar/myCacheFile2.txt#FILE") }, null));
-    assertFalse(DistributedCache.checkURIs(null, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#FILE")}, null));
+    assertFalse(DistributedCache.checkURIs(null, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive"),
-        new URI("file://foo/bar/myCacheArchive2.txt#ARCHIVE") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] { new URI(
-        "file://foo/bar/myCacheFile.txt#cache") }, new URI[] { new URI(
-        "file://foo/bar/myCacheArchive.txt#CACHE") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#ARCHIVE")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{new URI(
+        "file://foo/bar/myCacheFile.txt#cache")}, new URI[]{new URI(
+        "file://foo/bar/myCacheArchive.txt#CACHE")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#file2") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file2")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#ARCHIVE"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#FILE"),
-        new URI("file://foo/bar/myCacheFile2.txt#file") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive1"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
-    assertFalse(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
+    assertFalse(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#CACHE") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#CACHE")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#cache"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
 
     // allowed uri combinations
-    assertTrue(DistributedCache.checkURIs(new URI[] {
+    assertTrue(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#file2") }, null));
-    assertTrue(DistributedCache.checkURIs(null, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file2")}, null));
+    assertTrue(DistributedCache.checkURIs(null, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive1"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
-    assertTrue(DistributedCache.checkURIs(new URI[] {
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
+    assertTrue(DistributedCache.checkURIs(new URI[]{
         new URI("file://foo/bar/myCacheFile1.txt#file1"),
-        new URI("file://foo/bar/myCacheFile2.txt#file2") }, new URI[] {
+        new URI("file://foo/bar/myCacheFile2.txt#file2")}, new URI[]{
         new URI("file://foo/bar/myCacheArchive1.txt#archive1"),
-        new URI("file://foo/bar/myCacheArchive2.txt#archive2") }));
+        new URI("file://foo/bar/myCacheArchive2.txt#archive2")}));
   }
 }
