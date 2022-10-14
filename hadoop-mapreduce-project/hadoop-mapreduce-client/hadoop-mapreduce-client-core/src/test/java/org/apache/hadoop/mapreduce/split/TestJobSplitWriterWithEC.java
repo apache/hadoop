@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.split;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -40,10 +38,11 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests that maxBlockLocations default value is sufficient for RS-10-4.
@@ -60,7 +59,7 @@ public class TestJobSplitWriterWithEC {
   private Path submitDir;
   private Path testFile;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration hdfsConf = new HdfsConfiguration();
     hdfsConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
@@ -84,7 +83,7 @@ public class TestJobSplitWriterWithEC {
         fs.getUri().toString() + testFile.toString());
   }
 
-  @After
+  @AfterEach
   public void after() {
     cluster.close();
   }
@@ -121,8 +120,7 @@ public class TestJobSplitWriterWithEC {
         SplitMetaInfoReader.readSplitMetaInfo(new JobID(), fs, conf,
             submitDir);
 
-    assertEquals("Number of splits", 1, splitInfo.length);
-    assertEquals("Number of block locations", 14,
-        splitInfo[0].getLocations().length);
+    assertEquals(1, splitInfo.length, "Number of splits");
+    assertEquals(14, splitInfo[0].getLocations().length, "Number of block locations");
   }
 }

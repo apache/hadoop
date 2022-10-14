@@ -29,8 +29,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assertions;
-import org.junit.AfterClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -254,7 +255,7 @@ public class TestManifestCommitProtocol
     super.teardown();
   }
 
-  @AfterClass
+  @AfterAll
   public static void logAggregateIOStatistics() {
     LOG.info("Final IOStatistics {}",
         ioStatisticsToPrettyString(IOSTATISTICS));

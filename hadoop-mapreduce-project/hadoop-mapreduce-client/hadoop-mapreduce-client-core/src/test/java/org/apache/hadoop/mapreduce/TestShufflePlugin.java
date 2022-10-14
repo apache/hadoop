@@ -18,9 +18,8 @@
 
 package org.apache.hadoop.mapreduce;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
@@ -38,6 +37,10 @@ import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapred.ShuffleConsumerPlugin;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
   * A JUnit for testing availability and accessibility of shuffle related API.
@@ -104,14 +107,13 @@ public class TestShufflePlugin<K, V> {
       ShuffleConsumerPlugin shuffleConsumerPlugin = null;
       Class<? extends ShuffleConsumerPlugin> clazz =
         jobConf.getClass(MRConfig.SHUFFLE_CONSUMER_PLUGIN, Shuffle.class, ShuffleConsumerPlugin.class);
-      assertNotNull("Unable to get " + MRConfig.SHUFFLE_CONSUMER_PLUGIN, clazz);
+      assertNotNull(clazz, "Unable to get " + MRConfig.SHUFFLE_CONSUMER_PLUGIN);
 
       // load 3rd party plugin through core's factory method
       shuffleConsumerPlugin = ReflectionUtils.newInstance(clazz, jobConf);
-      assertNotNull("Unable to load " + MRConfig.SHUFFLE_CONSUMER_PLUGIN, shuffleConsumerPlugin);
-    }
-    catch (Exception e) {
-      assertTrue("Threw exception:" + e, false);
+      assertNotNull(shuffleConsumerPlugin, "Unable to load " + MRConfig.SHUFFLE_CONSUMER_PLUGIN);
+    } catch (Exception e) {
+      assertTrue(false, "Threw exception:" + e);
     }
   }
 
@@ -159,9 +161,8 @@ public class TestShufflePlugin<K, V> {
       shuffleConsumerPlugin.init(context);
       shuffleConsumerPlugin.run();
       shuffleConsumerPlugin.close();
-    }
-    catch (Exception e) {
-      assertTrue("Threw exception:" + e, false);
+    } catch (Exception e) {
+      assertTrue(false, "Threw exception:" + e);
     }
 
     // verify that these APIs are available for 3rd party plugins
@@ -182,9 +183,8 @@ public class TestShufflePlugin<K, V> {
     JobConf mockJobConf = mock(JobConf.class);
     try {
       mockLocalDirAllocator.getLocalPathToRead("", mockJobConf);
-    }
-    catch (Exception e) {
-      assertTrue("Threw exception:" + e, false);
+    } catch (Exception e) {
+      assertTrue(false, "Threw exception:" + e);
     }
   }
 }

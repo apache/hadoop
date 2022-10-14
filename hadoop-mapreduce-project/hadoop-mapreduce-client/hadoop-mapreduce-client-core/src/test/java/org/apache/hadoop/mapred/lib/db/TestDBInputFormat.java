@@ -31,10 +31,13 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapred.lib.db.DBConfiguration;
 import org.apache.hadoop.mapreduce.lib.db.DriverForTest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
 public class TestDBInputFormat {
 
@@ -42,7 +45,8 @@ public class TestDBInputFormat {
    * test DBInputFormat class. Class should split result for chunks
    * @throws Exception
    */
-  @Test(timeout = 10000)
+  @Test
+  @Timeout(10000)
   public void testDBInputFormat() throws Exception {
     JobConf configuration = new JobConf();
     setupDriver(configuration);
@@ -66,11 +70,12 @@ public class TestDBInputFormat {
     assertEquals(0, reader.getProgress(), 0.001);
     reader.close();
   }
-  
+
   /** 
    * test configuration for db. should works DBConfiguration.* parameters. 
    */
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testSetInput() {
     JobConf configuration = new JobConf();
 
@@ -125,7 +130,8 @@ public class TestDBInputFormat {
    * test DBRecordReader. This reader should creates keys, values, know about position.. 
    */
   @SuppressWarnings("unchecked")
-  @Test (timeout = 5000)
+  @Test
+  @Timeout(5000)
   public void testDBRecordReader() throws Exception {
 
     JobConf job = mock(JobConf.class);

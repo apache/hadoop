@@ -23,10 +23,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestJobQueueClient {
   /**
@@ -47,8 +46,8 @@ public class TestJobQueueClient {
     PrintWriter writer = new PrintWriter(bbos);
     queueClient.printJobQueueInfo(parent, writer);
 
-    Assert.assertTrue("printJobQueueInfo did not print grandchild's name",
-      bbos.toString().contains("GrandChildQueue"));
+    assertTrue(bbos.toString().contains("GrandChildQueue"),
+        "printJobQueueInfo did not print grandchild's name");
   }
 
 }

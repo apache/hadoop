@@ -18,15 +18,6 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -50,14 +41,24 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests the JobResourceUploader class with the shared cache.
@@ -74,12 +75,12 @@ public class TestJobResourceUploaderWithSharedCache {
       new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
   private String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
 
-  @Before
+  @BeforeEach
   public void cleanup() throws Exception {
     remoteFs.delete(remoteStagingDir, true);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
     // create configuration, dfs, file system
     localFs = FileSystem.getLocal(conf);
@@ -91,7 +92,7 @@ public class TestJobResourceUploaderWithSharedCache {
     remoteFs = dfs.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     try {
       if (localFs != null) {

@@ -25,9 +25,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.MethodOrderer.MethodName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
@@ -80,7 +80,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * after each test case.
  * The last test case MUST perform the cleanup.
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@TestMethodOrder(MethodName.class)
 public class TestJobThroughManifestCommitter
     extends AbstractManifestCommitterTest {
 

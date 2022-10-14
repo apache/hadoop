@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;

@@ -30,12 +30,12 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progress;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -46,7 +46,7 @@ public class TestMapTask {
           System.getProperty("java.io.tmpdir", "/tmp")),
       TestMapTask.class.getName());
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
@@ -77,11 +77,9 @@ public class TestMapTask {
     Path outputFile = mof.getOutputFile();
     FileSystem lfs = FileSystem.getLocal(conf);
     FsPermission perms = lfs.getFileStatus(outputFile).getPermission();
-    Assert.assertEquals("Incorrect output file perms",
-        (short)0640, perms.toShort());
+    assertEquals((short) 0640, perms.toShort(), "Incorrect output file perms");
     Path indexFile = mof.getOutputIndexFile();
     perms = lfs.getFileStatus(indexFile).getPermission();
-    Assert.assertEquals("Incorrect index file perms",
-        (short)0640, perms.toShort());
+    assertEquals((short) 0640, perms.toShort(), "Incorrect index file perms");
   }
 }

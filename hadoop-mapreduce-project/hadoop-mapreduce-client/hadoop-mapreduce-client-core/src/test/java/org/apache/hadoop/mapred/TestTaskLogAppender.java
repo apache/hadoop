@@ -28,19 +28,21 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestTaskLogAppender {
-/**
- * test TaskLogAppender 
- */
+  /**
+   * test TaskLogAppender 
+   */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
-  public void testTaskLogAppender(){
+  @Test
+  @Timeout(5000)
+  public void testTaskLogAppender() {
     TaskLogAppender appender= new TaskLogAppender();
     
     System.setProperty(TaskLogAppender.TASKID_PROPERTY,"attempt_01_02_m03_04_001");

@@ -27,7 +27,7 @@ import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.CommonPathCapabilities;

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.split;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +27,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestJobSplitWriter {
 
@@ -52,9 +52,8 @@ public class TestJobSplitWriter {
       JobSplit.TaskSplitMetaInfo[] infos =
           SplitMetaInfoReader.readSplitMetaInfo(new JobID(), fs, conf,
               submitDir);
-      assertEquals("unexpected number of splits", 1, infos.length);
-      assertEquals("unexpected number of split locations",
-          4, infos[0].getLocations().length);
+      assertEquals(1, infos.length, "unexpected number of splits");
+      assertEquals(4, infos[0].getLocations().length, "unexpected number of split locations");
     } finally {
       FileUtil.fullyDelete(TEST_DIR);
     }
@@ -76,9 +75,8 @@ public class TestJobSplitWriter {
       JobSplit.TaskSplitMetaInfo[] infos =
           SplitMetaInfoReader.readSplitMetaInfo(new JobID(), fs, conf,
               submitDir);
-      assertEquals("unexpected number of splits", 1, infos.length);
-      assertEquals("unexpected number of split locations",
-          4, infos[0].getLocations().length);
+      assertEquals(1, infos.length, "unexpected number of splits");
+      assertEquals(4, infos[0].getLocations().length, "unexpected number of split locations");
     } finally {
       FileUtil.fullyDelete(TEST_DIR);
     }
