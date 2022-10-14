@@ -288,7 +288,7 @@ public final class RouterServerUtil {
       RouterServerUtil.logAndThrowException(e,
           "Unable to insert the ReservationId %s into the FederationStateStore.", reservationId);
     }
- }   
+  }
 
   /**
    * Throws an RunTimeException due to an error.
@@ -406,7 +406,7 @@ public final class RouterServerUtil {
         arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
 
     return definition;
- }
+  }
    
   /*
    * Throws an RunTimeException due to an error.

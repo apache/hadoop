@@ -1295,15 +1295,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   private Response submitReservation(ReservationId reservationId)
-      throws IOException, InterruptedException, YarnException {
-
-    SubClusterId homeSubClusterId = subClusters.get(0);
-    ReservationHomeSubCluster reservationHomeSubCluster =
-        ReservationHomeSubCluster.newInstance(reservationId, homeSubClusterId);
-    AddReservationHomeSubClusterRequest request =
-        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
-    stateStore.addReservationHomeSubCluster(request);
-
+      throws IOException, InterruptedException {
     ReservationSubmissionRequestInfo resSubmissionRequestInfo =
         getReservationSubmissionRequestInfo(reservationId);
     Response response = interceptor.submitReservation(resSubmissionRequestInfo, null);
