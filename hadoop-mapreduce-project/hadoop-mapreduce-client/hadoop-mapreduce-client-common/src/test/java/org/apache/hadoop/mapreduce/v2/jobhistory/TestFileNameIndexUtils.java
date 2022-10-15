@@ -105,16 +105,26 @@ public class TestFileNameIndexUtils {
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
 
-    assertEquals(info.getJobId(), parsedInfo.getJobId(), "Job id different after encoding and decoding");
-    assertEquals(info.getSubmitTime(), parsedInfo.getSubmitTime(), "Submit time different after encoding and decoding");
-    assertEquals(info.getUser(), parsedInfo.getUser(), "User different after encoding and decoding");
-    assertEquals(info.getJobName(), parsedInfo.getJobName(), "Job name different after encoding and decoding");
-    assertEquals(info.getFinishTime(), parsedInfo.getFinishTime(), "Finish time different after encoding and decoding");
-    assertEquals(info.getNumMaps(), parsedInfo.getNumMaps(), "Num maps different after encoding and decoding");
-    assertEquals(info.getNumReduces(), parsedInfo.getNumReduces(), "Num reduces different after encoding and decoding");
-    assertEquals(info.getJobStatus(), parsedInfo.getJobStatus(), "Job status different after encoding and decoding");
-    assertEquals(info.getQueueName(), parsedInfo.getQueueName(), "Queue name different after encoding and decoding");
-    assertEquals(info.getJobStartTime(), parsedInfo.getJobStartTime(), "Job start time different after encoding and decoding");
+    assertEquals(info.getJobId(), parsedInfo.getJobId(),
+        "Job id different after encoding and decoding");
+    assertEquals(info.getSubmitTime(), parsedInfo.getSubmitTime(),
+        "Submit time different after encoding and decoding");
+    assertEquals(info.getUser(), parsedInfo.getUser(),
+        "User different after encoding and decoding");
+    assertEquals(info.getJobName(), parsedInfo.getJobName(),
+        "Job name different after encoding and decoding");
+    assertEquals(info.getFinishTime(), parsedInfo.getFinishTime(),
+        "Finish time different after encoding and decoding");
+    assertEquals(info.getNumMaps(), parsedInfo.getNumMaps(),
+        "Num maps different after encoding and decoding");
+    assertEquals(info.getNumReduces(), parsedInfo.getNumReduces(),
+        "Num reduces different after encoding and decoding");
+    assertEquals(info.getJobStatus(), parsedInfo.getJobStatus(),
+        "Job status different after encoding and decoding");
+    assertEquals(info.getQueueName(), parsedInfo.getQueueName(),
+        "Queue name different after encoding and decoding");
+    assertEquals(info.getJobStartTime(), parsedInfo.getJobStartTime(),
+        "Job start time different after encoding and decoding");
   }
 
   @Test
@@ -450,15 +460,18 @@ public class TestFileNameIndexUtils {
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
     assertEquals(jobId, info.getJobId(), "Job id incorrect after decoding old history file");
-    assertEquals(submitTime, info.getSubmitTime(), "Submit time incorrect after decoding old history file");
+    assertEquals(submitTime, info.getSubmitTime(),
+        "Submit time incorrect after decoding old history file");
     assertEquals(USER_NAME, info.getUser(), "User incorrect after decoding old history file");
     assertEquals(JOB_NAME, info.getJobName(), "Job name incorrect after decoding old history file");
-    assertEquals(finishTime, info.getFinishTime(), "Finish time incorrect after decoding old history file");
+    assertEquals(finishTime, info.getFinishTime(),
+        "Finish time incorrect after decoding old history file");
     assertEquals(numMaps, info.getNumMaps(), "Num maps incorrect after decoding old history file");
-    assertEquals(numReduces, info.getNumReduces(), "Num reduces incorrect after decoding old history file");
-    assertEquals(JOB_STATUS, info.getJobStatus(), "Job status incorrect after decoding old history file");
-    assertNull(info.getQueueName(),
-        "Queue name incorrect after decoding old history file");
+    assertEquals(numReduces, info.getNumReduces(),
+        "Num reduces incorrect after decoding old history file");
+    assertEquals(JOB_STATUS, info.getJobStatus(),
+        "Job status incorrect after decoding old history file");
+    assertNull(info.getQueueName(), "Queue name incorrect after decoding old history file");
   }
 
   @Test
@@ -482,7 +495,7 @@ public class TestFileNameIndexUtils {
         jobNameTrimLength);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
 
-    assertEquals(info
-        .getJobName().substring(0, jobNameTrimLength), parsedInfo.getJobName(), "Job name did not get trimmed correctly");
+    assertEquals(info.getJobName().substring(0, jobNameTrimLength), parsedInfo.getJobName(),
+        "Job name did not get trimmed correctly");
   }
 }

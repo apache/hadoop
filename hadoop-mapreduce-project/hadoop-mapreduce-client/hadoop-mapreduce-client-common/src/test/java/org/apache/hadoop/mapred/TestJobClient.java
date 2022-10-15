@@ -87,7 +87,8 @@ public class TestJobClient {
     Configuration conf = new Configuration();
     JobClient client = new JobClient(conf);
 
-    assertEquals(client.getClusterHandle().getStagingAreaDir().toString(), client.getStagingAreaDir().toString());
+    assertEquals(client.getClusterHandle().getStagingAreaDir().toString(),
+        client.getStagingAreaDir().toString());
   }
 
   /**

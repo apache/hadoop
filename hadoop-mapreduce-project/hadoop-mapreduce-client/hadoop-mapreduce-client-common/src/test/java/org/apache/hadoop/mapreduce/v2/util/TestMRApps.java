@@ -160,10 +160,12 @@ public class TestMRApps {
   @Test
   @Timeout(120000)
   void testTaskAttemptIDtoString() {
-    TaskAttemptId taid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
+    TaskAttemptId taid =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
     taid.setTaskId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class));
     taid.getTaskId().setTaskType(TaskType.MAP);
-    taid.getTaskId().setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
+    taid.getTaskId()
+        .setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
     taid.getTaskId().getJobId().setAppId(ApplicationId.newInstance(0, 0));
     assertEquals("attempt_0_0000_m_000000_0", MRApps.toString(taid));
   }
@@ -195,7 +197,8 @@ public class TestMRApps {
     String jobFile = MRApps.getJobFile(conf, "dummy-user",
         new JobID("dummy-job", 12345));
     assertNotNull(jobFile, "getJobFile results in null.");
-    assertEquals("/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile, "jobFile with specified user is not as expected.");
+    assertEquals("/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile,
+        "jobFile with specified user is not as expected.");
   }
 
   @Test
@@ -299,8 +302,8 @@ public class TestMRApps {
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
-    assertTrue(env_str.contains(expectedClasspath), "MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
-        + " the classpath!");
+    assertTrue(env_str.contains(expectedClasspath),
+        "MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in" + " the classpath!");
     assertFalse(env_str.startsWith(expectedClasspath),
         "MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!");
   }
@@ -315,16 +318,14 @@ public class TestMRApps {
     MRApps.setClasspath(env, conf);
     String cp = env.get("CLASSPATH");
     String appCp = env.get("APP_CLASSPATH");
-    assertFalse(cp.contains("jar" + ApplicationConstants.CLASS_PATH_SEPARATOR + "job"), "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the"
-        + " classpath!");
-    assertFalse(cp.contains("PWD"),
-        "MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!");
+    assertFalse(cp.contains("jar" + ApplicationConstants.CLASS_PATH_SEPARATOR + "job"),
+        "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the" + " classpath!");
+    assertFalse(cp.contains("PWD"), "MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!");
     String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
-            "job.jar/classes/", "job.jar/lib/*",
-            ApplicationConstants.Environment.PWD.$$() + "/*"));
-    assertEquals(expectedAppClasspath, appCp, "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
-        + " classpath!");
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*", "job.jar/classes/",
+            "job.jar/lib/*", ApplicationConstants.Environment.PWD.$$() + "/*"));
+    assertEquals(expectedAppClasspath, appCp,
+        "MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app" + " classpath!");
   }
 
   @Test
@@ -353,17 +354,19 @@ public class TestMRApps {
         Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
-            FRAMEWORK_CLASSPATH, stdClasspath));
-    assertEquals(expectedClasspath, env.get("CLASSPATH"), "Incorrect classpath with framework and no user precedence");
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), FRAMEWORK_CLASSPATH,
+            stdClasspath));
+    assertEquals(expectedClasspath, env.get("CLASSPATH"),
+        "Incorrect classpath with framework and no user precedence");
 
     env.clear();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
     MRApps.setClasspath(env, conf);
     expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
-            stdClasspath, FRAMEWORK_CLASSPATH));
-    assertEquals(expectedClasspath, env.get("CLASSPATH"), "Incorrect classpath with framework and user precedence");
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(), stdClasspath,
+            FRAMEWORK_CLASSPATH));
+    assertEquals(expectedClasspath, env.get("CLASSPATH"),
+        "Incorrect classpath with framework and user precedence");
   }
 
   @Test
@@ -541,12 +544,9 @@ public class TestMRApps {
       "/org/apache/hadoop/fake/Klass"
   };
 
-  private static final String[] DEFAULT_XMLS = new String[] {
-        "core-default.xml",
-      "mapred-default.xml",
-        "hdfs-default.xml",
-        "yarn-default.xml"
-  };
+  private static final String[] DEFAULT_XMLS =
+      new String[] {"core-default.xml", "mapred-default.xml", "hdfs-default.xml",
+          "yarn-default.xml"};
 
   @Test
   void testSystemClasses() {

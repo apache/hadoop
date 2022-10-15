@@ -142,7 +142,8 @@ public class TestTypeConverter {
     assertEquals("dummy-queue", status.getQueue(), "queue set incorrectly");
     assertEquals("dummy-tracking-url", status.getTrackingUrl(), "trackingUrl set incorrectly");
     assertEquals("dummy-user", status.getUsername(), "user set incorrectly");
-    assertEquals("dummy-tracking-url", status.getSchedulingInfo(), "schedulingInfo set incorrectly");
+    assertEquals("dummy-tracking-url", status.getSchedulingInfo(),
+        "schedulingInfo set incorrectly");
     assertEquals(6789, status.getJobID().getId(), "jobId set incorrectly");
     assertEquals(JobStatus.State.KILLED, status.getState(), "state set incorrectly");
     assertEquals(2048, status.getNeededMem(), "needed mem info set incorrectly");
