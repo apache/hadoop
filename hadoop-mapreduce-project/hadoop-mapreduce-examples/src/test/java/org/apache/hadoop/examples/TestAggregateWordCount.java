@@ -21,23 +21,20 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.apache.commons.io.IOUtils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestAggregateWordCount extends HadoopTestCase {
   public TestAggregateWordCount() throws IOException {
