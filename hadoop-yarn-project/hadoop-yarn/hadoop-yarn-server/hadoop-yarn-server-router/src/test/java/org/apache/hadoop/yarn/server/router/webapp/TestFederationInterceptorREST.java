@@ -30,6 +30,7 @@ import java.util.Collections;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.Time;
@@ -41,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -634,23 +636,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainersNotExists() {
+  public void testGetContainersNotExists() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
-    Assert.assertTrue(response.getContainers().isEmpty());
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the appAttemptId is empty or null.",
+        () -> interceptor.getContainers(null, null, appId.toString(), null));
   }
 
   @Test
-  public void testGetContainersWrongFormat() {
-    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
-
-    Assert.assertNotNull(response);
-    Assert.assertTrue(response.getContainers().isEmpty());
-
+  public void testGetContainersWrongFormat() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
-    Assert.assertTrue(response.getContainers().isEmpty());
+    // Test Case 1: appId is wrong format, appAttemptId is accurate.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid ApplicationId prefix: Application_wrong_id. " +
+        "The valid ApplicationId should start with prefix application",
+        () -> interceptor.getContainers(null, null, "Application_wrong_id", appAttempt.toString()));
+
+    // Test Case2: appId is accurate, appAttemptId is wrong format.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid AppAttemptId prefix: AppAttempt_wrong_id",
+        () -> interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id"));
   }
 
   @Test
@@ -739,20 +746,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainer()
-      throws IOException, InterruptedException, YarnException {
-    // Submit application to multiSubCluster
+  public void testGetContainer() throws Exception {
+    //
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
-    context.setApplicationId(appId.toString());
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId appContainerId = ContainerId.newContainerId(appAttemptId, 1);
+    String applicationId = appId.toString();
+    String attemptId = appAttemptId.toString();
+    String containerId = appContainerId.toString();
 
+    // Submit application to multiSubCluster
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(applicationId);
     Assert.assertNotNull(interceptor.submitApplication(context, null));
 
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
+    // Test Case1: Wrong ContainerId
+    LambdaTestUtils.intercept(IllegalArgumentException.class, "Invalid ContainerId prefix: 0",
+        () -> interceptor.getContainer(null, null, applicationId, attemptId, "0"));
 
-    ContainerInfo containerInfo = interceptor.getContainer(null, null,
-        appId.toString(), appAttemptId.toString(), "0");
+    // Test Case2: Correct ContainerId
+
+    ContainerInfo containerInfo = interceptor.getContainer(null, null, applicationId,
+        attemptId, containerId);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -800,9 +815,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Generate ApplicationAttemptId information
     Assert.assertNotNull(interceptor.submitApplication(context, null));
     ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    String appAttemptId = expectAppAttemptId.toString();
 
     org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
-        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), appAttemptId);
 
     Assert.assertNotNull(appAttemptInfo);
     Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());

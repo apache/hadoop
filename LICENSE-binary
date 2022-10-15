@@ -215,7 +215,7 @@ com.aliyun:aliyun-java-sdk-ecs:4.2.0
 com.aliyun:aliyun-java-sdk-ram:3.0.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.12.262
+com.amazonaws:aws-java-sdk-bundle:1.12.316
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -306,7 +306,7 @@ org.apache.avro:avro:1.9.2
 org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.21
 org.apache.commons:commons-configuration2:2.8.0
-org.apache.commons:commons-csv:1.0
+org.apache.commons:commons-csv:1.9.0
 org.apache.commons:commons-digester:1.8.1
 org.apache.commons:commons-lang3:3.12.0
 org.apache.commons:commons-math3:3.6.1
@@ -435,7 +435,7 @@ hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanage
 bootstrap v3.3.6
 broccoli-asset-rev v2.4.2
 broccoli-funnel v1.0.1
-datatables v1.10.19
+datatables v1.11.5
 em-helpers v0.5.13
 em-table v0.1.6
 ember v2.2.0
