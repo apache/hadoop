@@ -558,9 +558,12 @@ public class TestHsWebServicesAttempts extends JerseyTestBase {
     assertEquals(ta.getSortFinishTime(),
         mergeFinishTime,
         "mergeFinishTime wrong");
-    assertEquals(ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime, "elapsedShuffleTime wrong");
-    assertEquals(ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime, "elapsedMergeTime wrong");
-    assertEquals(ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime, "elapsedReduceTime wrong");
+    assertEquals(ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime,
+        "elapsedShuffleTime wrong");
+    assertEquals(ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime,
+        "elapsedMergeTime wrong");
+    assertEquals(ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime,
+        "elapsedReduceTime wrong");
   }
 
   @Test

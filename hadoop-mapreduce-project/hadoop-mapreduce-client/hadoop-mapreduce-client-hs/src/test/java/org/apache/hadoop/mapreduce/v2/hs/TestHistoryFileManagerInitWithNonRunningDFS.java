@@ -69,7 +69,8 @@ public class TestHistoryFileManagerInitWithNonRunningDFS {
     } catch (YarnRuntimeException yex) {
       String expectedExceptionMsg = "Timed out '" + maxJhsWaitTime +
           "ms' waiting for FileSystem to become available";
-      assertEquals(expectedExceptionMsg, yex.getMessage(), "Unexpected reconnect timeout exception message");
+      assertEquals(expectedExceptionMsg, yex.getMessage(),
+          "Unexpected reconnect timeout exception message");
     } finally {
       dfsCluster.shutdown(true);
     }

@@ -55,7 +55,8 @@ public class TestJobInfo {
   @Timeout(10000)
   void testAverageMergeTime() throws IOException {
     String historyFileName =
-        "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
+        "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1"
+            + "-SUCCEEDED-default.jhist";
     String confFileName =
         "job_1329348432655_0001_conf.xml";
     Configuration conf = new Configuration();
@@ -120,29 +121,23 @@ public class TestJobInfo {
 
     when(task1.getType()).thenReturn(TaskType.REDUCE);
     when(task2.getType()).thenReturn(TaskType.REDUCE);
-    when(task1.getAttempts()).thenReturn
-        (new HashMap<TaskAttemptId, TaskAttempt>()
-        {
-          {
-            put(taskAttemptId1, taskAttempt1);
-          }
-        });
-    when(task2.getAttempts()).thenReturn
-        (new HashMap<TaskAttemptId, TaskAttempt>()
-        {
-          {
-            put(taskAttemptId2, taskAttempt2);
-          }
-        });
+    when(task1.getAttempts()).thenReturn(new HashMap<TaskAttemptId, TaskAttempt>() {
+      {
+        put(taskAttemptId1, taskAttempt1);
+      }
+    });
+    when(task2.getAttempts()).thenReturn(new HashMap<TaskAttemptId, TaskAttempt>() {
+      {
+        put(taskAttemptId2, taskAttempt2);
+      }
+    });
 
-    when(job.getTasks()).thenReturn
-        (new HashMap<TaskId, Task>()
-        {
-          {
-            put(taskId1, task1);
-            put(taskId2, task2);
-          }
-        });
+    when(job.getTasks()).thenReturn(new HashMap<TaskId, Task>() {
+      {
+        put(taskId1, task1);
+        put(taskId2, task2);
+      }
+    });
     when(job.getID()).thenReturn(jobId);
 
     when(job.getReport()).thenReturn(jobReport);

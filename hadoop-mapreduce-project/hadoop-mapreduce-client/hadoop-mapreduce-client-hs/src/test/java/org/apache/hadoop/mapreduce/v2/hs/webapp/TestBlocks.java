@@ -76,7 +76,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Test some HtmlBlock classes
+ * Test some HtmlBlock classes.
  */
 
 public class TestBlocks {
@@ -87,14 +87,14 @@ public class TestBlocks {
     Task task = getTask(0);
     String taskId = task.getID().toString();
 
-    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>"
-    , HsJobBlock.addTaskLinks("Task failed " + taskId), "pull links doesn't work correctly");
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId + "</a>",
+        HsJobBlock.addTaskLinks("Task failed " + taskId), "pull links doesn't work correctly");
 
-    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" +
-        taskId + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0"
-    , HsJobBlock.addTaskLinks("Task failed " + taskId + "\n " +
-        "Job failed as tasks failed. failedMaps:1 failedReduces:0"), "pull links doesn't work correctly");
+    assertEquals("Task failed <a href=\"/jobhistory/task/" + taskId + "\">" + taskId
+            + "</a>\n Job failed as tasks failed. failedMaps:1 failedReduces:0",
+        HsJobBlock.addTaskLinks("Task failed " + taskId + "\n "
+            + "Job failed as tasks failed. failedMaps:1 failedReduces:0"),
+        "pull links doesn't work correctly");
   }
 
   /**
@@ -267,7 +267,7 @@ public class TestBlocks {
   }
 
   /**
-   * test HsController
+   * test HsController.
    */
 
   @Test
@@ -385,7 +385,7 @@ public class TestBlocks {
 
     JobId jobId = new JobIdPBImpl();
 
-    ApplicationId appId = ApplicationIdPBImpl.newInstance(System.currentTimeMillis(),4);
+    ApplicationId appId = ApplicationIdPBImpl.newInstance(System.currentTimeMillis(), 4);
     jobId.setAppId(appId);
     jobId.setId(1);
     when(job.getID()).thenReturn(jobId);
@@ -412,7 +412,7 @@ public class TestBlocks {
     
     JobId jobId = new JobIdPBImpl();
     jobId.setId(0);
-    jobId.setAppId(ApplicationIdPBImpl.newInstance(timestamp,1));
+    jobId.setAppId(ApplicationIdPBImpl.newInstance(timestamp, 1));
 
     TaskId taskId = new TaskIdPBImpl();
     taskId.setId(0);

@@ -55,9 +55,11 @@ import static org.mockito.Mockito.*;
 public class TestJobHistoryEntities {
 
   private final String historyFileName =
-      "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
+      "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-"
+          + "SUCCEEDED-default.jhist";
   private final String historyFileNameZeroReduceTasks =
-      "job_1416424547277_0002-1416424775281-root-TeraGen-1416424785433-2-0-SUCCEEDED-default-1416424779349.jhist";
+      "job_1416424547277_0002-1416424775281-root-TeraGen-1416424785433-2-0-"
+          + "SUCCEEDED-default-1416424779349.jhist";
   private final String confFileName = "job_1329348432655_0001_conf.xml";
   private final Configuration conf = new Configuration();
   private final JobACLsManager jobAclsManager = new JobACLsManager(conf);
@@ -74,8 +76,8 @@ public class TestJobHistoryEntities {
           .getFile());
   private CompletedJob completedJob;
 
-  public void initTestJobHistoryEntities(boolean loadTasks) throws Exception {
-    this.loadTasks = loadTasks;
+  public void initTestJobHistoryEntities(boolean tasks) throws Exception {
+    this.loadTasks = tasks;
   }
 
   public static Collection<Object[]> data() {
@@ -89,8 +91,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(100000)
-  void testCompletedJob(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testCompletedJob(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPath);
@@ -119,8 +121,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(100000)
-  void testCopmletedJobReportWithZeroTasks(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testCopmletedJobReportWithZeroTasks(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPathZeroReduces);
@@ -140,8 +142,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(10000)
-  void testCompletedTask(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testCompletedTask(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -172,8 +174,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(10000)
-  void testCompletedTaskAttempt(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testCompletedTaskAttempt(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -215,8 +217,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(30000)
-  void testGetTaskAttemptCompletionEvent(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testGetTaskAttemptCompletionEvent(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
@@ -255,8 +257,8 @@ public class TestJobHistoryEntities {
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(30000)
-  void testCompletedJobWithDiagnostics(boolean loadTasks) throws Exception {
-    initTestJobHistoryEntities(loadTasks);
+  void testCompletedJobWithDiagnostics(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     final String jobError = "Job Diagnostics";
     JobInfo jobInfo = spy(new JobInfo());
     when(jobInfo.getErrorInfo()).thenReturn(jobError);

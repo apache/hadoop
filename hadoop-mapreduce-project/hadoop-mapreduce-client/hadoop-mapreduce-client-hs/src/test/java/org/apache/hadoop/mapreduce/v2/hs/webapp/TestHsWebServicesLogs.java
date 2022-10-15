@@ -613,10 +613,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("remote-log-dir")
         .queryParam(YarnWebServiceParams.REMOTE_USER,
             USER)
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
     });
 
     List<String> collectedControllerNames = new ArrayList<>();
@@ -644,8 +642,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("remote-log-dir")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
     });
 
     List<String> collectedControllerNames = new ArrayList<>();
@@ -674,8 +671,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
             APPID_1.toString())
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
     });
 
     List<String> collectedControllerNames = new ArrayList<>();

@@ -58,7 +58,8 @@ public class TestJobIdHistoryFileInfoMap {
 
     // add it twice
     assertNull(mapWithSize.putIfAbsent(jobId, fileInfo1));
-    assertEquals(fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1), "Incorrect return on putIfAbsent()");
+    assertEquals(fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1),
+        "Incorrect return on putIfAbsent()");
 
     // check get()
     assertEquals(fileInfo1, mapWithSize.get(jobId), "Incorrect get()");

@@ -108,7 +108,7 @@ public class TestJobHistoryParsing {
   public static class MyResolver implements DNSToSwitchMapping {
     @Override
     public List<String> resolve(List<String> names) {
-      return Arrays.asList(new String[] { RACK_NAME });
+      return Arrays.asList(new String[] {RACK_NAME});
     }
 
     @Override
@@ -228,15 +228,11 @@ public class TestJobHistoryParsing {
           Integer.parseInt(jobSummaryElements.get("numMaps")),
           "Mismatch in num map slots");
       assertEquals(numReduces,
-          Integer.parseInt(jobSummaryElements.get("numReduces")),
-          "Mismatch in num reduce slots");
-      assertEquals(System.getProperty("user.name"), jobSummaryElements.get("user"), "User does not match");
-      assertEquals("default",
-          jobSummaryElements.get("queue"),
-          "Queue does not match");
-      assertEquals("SUCCEEDED",
-          jobSummaryElements.get("status"),
-          "Status does not match");
+          Integer.parseInt(jobSummaryElements.get("numReduces")), "Mismatch in num reduce slots");
+      assertEquals(System.getProperty("user.name"), jobSummaryElements.get("user"),
+          "User does not match");
+      assertEquals("default", jobSummaryElements.get("queue"), "Queue does not match");
+      assertEquals("SUCCEEDED", jobSummaryElements.get("status"), "Status does not match");
     }
 
     JobHistory jobHistory = new JobHistory();
@@ -343,10 +339,11 @@ public class TestJobHistoryParsing {
       TaskInfo taskInfo = allTasks.get(TypeConverter.fromYarn(task.getID()));
       assertNotNull(taskInfo, "TaskInfo not found");
       for (TaskAttempt taskAttempt : task.getAttempts().values()) {
-        TaskAttemptInfo taskAttemptInfo = taskInfo.getAllTaskAttempts().get(
-            TypeConverter.fromYarn((taskAttempt.getID())));
+        TaskAttemptInfo taskAttemptInfo =
+            taskInfo.getAllTaskAttempts().get(TypeConverter.fromYarn((taskAttempt.getID())));
         assertNotNull(taskAttemptInfo, "TaskAttemptInfo not found");
-        assertEquals(taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort(), "Incorrect shuffle port for task attempt");
+        assertEquals(taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort(),
+            "Incorrect shuffle port for task attempt");
         if (numMaps == numSuccessfulMaps) {
           Assert.assertEquals(MRApp.NM_HOST, taskAttemptInfo.getHostname());
           Assert.assertEquals(MRApp.NM_PORT, taskAttemptInfo.getPort());
@@ -752,8 +749,7 @@ public class TestJobHistoryParsing {
     }
   }
 
-  static class MRAppWithHistoryWithFailedAndKilledTask
-    extends MRAppWithHistory {
+  static class MRAppWithHistoryWithFailedAndKilledTask extends MRAppWithHistory {
 
     MRAppWithHistoryWithFailedAndKilledTask(int maps, int reduces,
         boolean autoComplete, String testName, boolean cleanOnStart) {
@@ -877,7 +873,7 @@ public class TestJobHistoryParsing {
   }
 
   /**
-   * Simple test some methods of JobHistory
+   * Simple test some methods of JobHistory.
    */
   @Test
   @Timeout(20000)
@@ -931,7 +927,7 @@ public class TestJobHistoryParsing {
   }
 
   /**
-   * Simple test PartialJob
+   * Simple test PartialJob.
    */
   @Test
   @Timeout(3000)
@@ -1002,14 +998,16 @@ public class TestJobHistoryParsing {
   @Test
   void testFailedJobHistoryWithoutDiagnostics() throws Exception {
     final Path histPath = new Path(getClass().getClassLoader().getResource(
-        "job_1393307629410_0001-1393307687476-user-Sleep+job-1393307723835-0-0-FAILED-default-1393307693920.jhist")
+            "job_1393307629410_0001-1393307687476-user-Sleep+job-1393307723835-"
+                + "0-0-FAILED-default-1393307693920.jhist")
         .getFile());
     final FileSystem lfs = FileSystem.getLocal(new Configuration());
     final FSDataInputStream fsdis = lfs.open(histPath);
     try {
       JobHistoryParser parser = new JobHistoryParser(fsdis);
       JobInfo info = parser.parse();
-      assertEquals(info.getJobId(), JobID.forName("job_1393307629410_0001"), "History parsed jobId incorrectly");
+      assertEquals(info.getJobId(), JobID.forName("job_1393307629410_0001"),
+          "History parsed jobId incorrectly");
       assertEquals("", info.getErrorInfo(), "Default diagnostics incorrect ");
     } finally {
       fsdis.close();
@@ -1017,56 +1015,47 @@ public class TestJobHistoryParsing {
   }
 
   /**
-   * Test compatibility of JobHistoryParser with 2.0.3-alpha history files
+   * Test compatibility of JobHistoryParser with 2.0.3-alpha history files.
    * @throws IOException
    */
   @Test
-  void testTaskAttemptUnsuccessfulCompletionWithoutCounters203() throws IOException
-  {
-    Path histPath = new Path(getClass().getClassLoader().getResource(
-        "job_2.0.3-alpha-FAILED.jhist").getFile());
-    JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
-        (new Configuration()), histPath);
+  void testTaskAttemptUnsuccessfulCompletionWithoutCounters203() throws IOException {
+    Path histPath =
+        new Path(getClass().getClassLoader().getResource("job_2.0.3-alpha-FAILED.jhist").getFile());
+    JobHistoryParser parser =
+        new JobHistoryParser(FileSystem.getLocal(new Configuration()), histPath);
     JobInfo jobInfo = parser.parse();
-    LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getSucceededMaps() + " "
-        + jobInfo.getTotalMaps() + " "
-        + jobInfo.getJobId()) ;
+    LOG.info(" job info: " + jobInfo.getJobname() + " " + jobInfo.getSucceededMaps() + " "
+        + jobInfo.getTotalMaps() + " " + jobInfo.getJobId());
   }
 
   /**
-   * Test compatibility of JobHistoryParser with 2.4.0 history files
+   * Test compatibility of JobHistoryParser with 2.4.0 history files.
    * @throws IOException
    */
   @Test
-  void testTaskAttemptUnsuccessfulCompletionWithoutCounters240() throws IOException
-  {
-    Path histPath = new Path(getClass().getClassLoader().getResource(
-        "job_2.4.0-FAILED.jhist").getFile());
-    JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
-        (new Configuration()), histPath);
+  void testTaskAttemptUnsuccessfulCompletionWithoutCounters240() throws IOException {
+    Path histPath =
+        new Path(getClass().getClassLoader().getResource("job_2.4.0-FAILED.jhist").getFile());
+    JobHistoryParser parser =
+        new JobHistoryParser(FileSystem.getLocal(new Configuration()), histPath);
     JobInfo jobInfo = parser.parse();
-    LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getSucceededMaps() + " "
-        + jobInfo.getTotalMaps() + " "
-        + jobInfo.getJobId());
+    LOG.info(" job info: " + jobInfo.getJobname() + " " + jobInfo.getSucceededMaps() + " "
+        + jobInfo.getTotalMaps() + " " + jobInfo.getJobId());
   }
 
   /**
-   * Test compatibility of JobHistoryParser with 0.23.9 history files
+   * Test compatibility of JobHistoryParser with 0.23.9 history files.
    * @throws IOException
    */
   @Test
-  void testTaskAttemptUnsuccessfulCompletionWithoutCounters0239() throws IOException
-  {
-    Path histPath = new Path(getClass().getClassLoader().getResource(
-        "job_0.23.9-FAILED.jhist").getFile());
-    JobHistoryParser parser = new JobHistoryParser(FileSystem.getLocal
-        (new Configuration()), histPath);
+  void testTaskAttemptUnsuccessfulCompletionWithoutCounters0239() throws IOException {
+    Path histPath =
+        new Path(getClass().getClassLoader().getResource("job_0.23.9-FAILED.jhist").getFile());
+    JobHistoryParser parser =
+        new JobHistoryParser(FileSystem.getLocal(new Configuration()), histPath);
     JobInfo jobInfo = parser.parse();
-    LOG.info(" job info: " + jobInfo.getJobname() + " "
-        + jobInfo.getSucceededMaps() + " "
-        + jobInfo.getTotalMaps() + " "
-        + jobInfo.getJobId()) ;
+    LOG.info(" job info: " + jobInfo.getJobname() + " " + jobInfo.getSucceededMaps() + " "
+        + jobInfo.getTotalMaps() + " " + jobInfo.getJobId());
   }
 }
