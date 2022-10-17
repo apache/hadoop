@@ -619,7 +619,6 @@ public class FederationClientInterceptor
     }
   }
 
-
   /**
    * Query SubClusterId By applicationId.
    *
