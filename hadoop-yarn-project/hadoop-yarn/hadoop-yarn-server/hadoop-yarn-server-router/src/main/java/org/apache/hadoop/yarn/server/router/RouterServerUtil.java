@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -27,14 +29,15 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.io.IOException;
 
 /**
@@ -52,6 +55,8 @@ public final class RouterServerUtil {
   private static final String CONTAINER_PREFIX = "container_";
 
   private static final String EPOCH_PREFIX = "e";
+
+  private static Random rand = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -445,5 +450,29 @@ public final class RouterServerUtil {
         || !NumberUtils.isDigits(epoch)) {
       throw new IllegalArgumentException("Invalid ContainerId: " + containerId);
     }
+  }
+
+  /**
+   * Randomly pick ActiveSubCluster.
+   * During the selection process, we will exclude SubClusters from the blacklist.
+   *
+   * @param activeSubClusters List of active subClusters.
+   * @param blackList blacklist.
+   * @return Active SubClusterId
+   */
+  public static SubClusterId getRandomActiveSubCluster(
+      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
+      throws YarnException {
+    if (MapUtils.isEmpty(activeSubClusters)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+    List<SubClusterId> list = new ArrayList<>(activeSubClusters.keySet());
+    if (CollectionUtils.isNotEmpty(blackList)) {
+      list.removeAll(blackList);
+    }
+    if (CollectionUtils.isEmpty(list)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+    return list.get(rand.nextInt(list.size()));
   }
 }

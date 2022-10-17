@@ -306,25 +306,25 @@ public class FederationClientInterceptor
     Map<SubClusterId, SubClusterInfo> subClustersActive =
         federationFacade.getSubClusters(true);
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
-      SubClusterId subClusterId = getRandomActiveSubCluster(subClustersActive);
-      LOG.info("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
-      ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
-      GetNewApplicationResponse response = null;
-      try {
-        response = clientRMProxy.getNewApplication(request);
-      } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.", subClusterId.getId(), e);
-        subClustersActive.remove(subClusterId);
-      }
+    // Try calling the getNewApplication method
+    List<SubClusterId> blacklist = new ArrayList<>();
+    int activeSubClustersCount = getActiveSubClustersCount();
+    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
+
+    try {
+      GetNewApplicationResponse response =
+          ((FederationActionRetry<GetNewApplicationResponse>) (retryCount) ->
+          invokeGetNewApplication(subClustersActive, blacklist, request, retryCount)).
+          runWithRetries(actualRetryNums, 100);
 
       if (response != null) {
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
-        RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
-            TARGET_CLIENT_RM_SERVICE, response.getApplicationId());
         return response;
       }
+    } catch (Exception e) {
+      routerMetrics.incrAppsFailedCreated();
+      RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
 
     routerMetrics.incrAppsFailedCreated();
@@ -332,6 +332,44 @@ public class FederationClientInterceptor
     RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
         TARGET_CLIENT_RM_SERVICE, errMsg);
     throw new YarnException(errMsg);
+  }
+
+  /**
+   * Invoke GetNewApplication to different subClusters.
+   *
+   * @param subClustersActive Active SubClusters
+   * @param blackList Blacklist avoid repeated calls to unavailable subCluster.
+   * @param request getNewApplicationRequest.
+   * @param retryCount number of retries.
+   * @return Get NewApplicationResponse response, If the response is empty, the request fails,
+   * if the response is not empty, the request is successful.
+   * @throws YarnException
+   * @throws IOException
+   */
+  private GetNewApplicationResponse invokeGetNewApplication(
+      Map<SubClusterId, SubClusterInfo> subClustersActive,
+      List<SubClusterId> blackList, GetNewApplicationRequest request, int retryCount)
+      throws YarnException, IOException {
+    SubClusterId subClusterId =
+        RouterServerUtil.getRandomActiveSubCluster(subClustersActive, blackList);
+    LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
+    ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
+    try {
+      GetNewApplicationResponse response = clientRMProxy.getNewApplication(request);
+      if (response != null) {
+        RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
+            TARGET_CLIENT_RM_SERVICE, response.getApplicationId());
+        return response;
+      }
+    } catch (Exception e) {
+      LOG.warn("Unable to create a new ApplicationId in SubCluster {}.", subClusterId.getId(), e);
+      blackList.add(subClusterId);
+      throw e;
+    }
+    // If SubmitApplicationResponse is empty, the request fails.
+    String msg = String.format("Unable to create a new ApplicationId in SubCluster %s.",
+        subClusterId.getId());
+    throw new YarnException(msg);
   }
 
   /**
