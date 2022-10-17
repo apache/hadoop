@@ -248,7 +248,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
         + " should still support some status probes");
 
     byte[] data = ContractTestUtils.dataset(SMALL_FILE_SIZE, 'a', 26);
-    Path smallFile = path("testStatusProbesAfterClosingStream");
+    Path smallFile = methodPath();
     ContractTestUtils.writeDataset(getFileSystem(), smallFile, data, data.length, 16, true);
 
     FSDataInputStream in = getFileSystem().open(smallFile);
@@ -290,7 +290,7 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     assertEquals("Stream stats retrieved through stream before and after closing should match",
         inputStreamStatistics, newInputStreamStatistics);
 
-    assertFalse("Not supported with prefetch", in.seekToNewSource(10));
+    assertFalse("seekToNewSource() not supported with prefetch", in.seekToNewSource(10));
 
   }
 
