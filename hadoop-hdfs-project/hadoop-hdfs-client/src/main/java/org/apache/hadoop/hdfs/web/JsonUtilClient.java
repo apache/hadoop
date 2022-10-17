@@ -155,20 +155,7 @@ public class JsonUtilClient {
     if (snapshotEnabledBit != null && snapshotEnabledBit) {
       f.add(HdfsFileStatus.Flags.SNAPSHOT_ENABLED);
     }
-
-    Map<String, Object> ecPolicyObj = (Map) m.get("ecPolicyObj");
-    ErasureCodingPolicy ecPolicy = null;
-    if (ecPolicyObj != null) {
-      Map<String, String> extraOptions = (Map) ecPolicyObj.get("extraOptions");
-      ECSchema ecSchema = new ECSchema((String) ecPolicyObj.get("codecName"),
-          (int) ((Number) ecPolicyObj.get("numDataUnits")).longValue(),
-          (int) ((Number) ecPolicyObj.get("numParityUnits")).longValue(),
-          extraOptions);
-      ecPolicy = new ErasureCodingPolicy((String) ecPolicyObj.get("name"),
-          ecSchema, (int) ((Number) ecPolicyObj.get("cellSize")).longValue(),
-          (byte) (int) ((Number) ecPolicyObj.get("id")).longValue());
-
-    }
+    ErasureCodingPolicy ecPolicy = toECPolicy((Map<?, ?>) m.get("ecPolicyObj"));
 
     final long aTime = ((Number) m.get("accessTime")).longValue();
     final long mTime = ((Number) m.get("modificationTime")).longValue();
@@ -707,8 +694,9 @@ public class JsonUtilClient {
     final LocatedBlock lastLocatedBlock = toLocatedBlock(
         (Map<?, ?>) m.get("lastLocatedBlock"));
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
+    ErasureCodingPolicy ecPolicy = toECPolicy((Map<?, ?>) m.get("ecPolicyObj"));
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
-        lastLocatedBlock, isLastBlockComplete, null, null);
+        lastLocatedBlock, isLastBlockComplete, null, ecPolicy);
   }
 
   public static Collection<BlockStoragePolicy> getStoragePolicies(
@@ -755,7 +743,8 @@ public class JsonUtilClient {
     int cellsize = ((Number) m.get("cellSize")).intValue();
     int dataunits = ((Number) m.get("numDataUnits")).intValue();
     int parityunits = ((Number) m.get("numParityUnits")).intValue();
-    ECSchema ecs = new ECSchema(codec, dataunits, parityunits);
+    Map<String, String> extraOptions = (Map<String, String>) m.get("extraOptions");
+    ECSchema ecs = new ECSchema(codec, dataunits, parityunits, extraOptions);
     return new ErasureCodingPolicy(name, ecs, cellsize, id);
   }
 

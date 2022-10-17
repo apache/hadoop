@@ -342,6 +342,9 @@ public class JsonUtil {
     m.put("locatedBlocks", toJsonArray(locatedblocks.getLocatedBlocks()));
     m.put("lastLocatedBlock", toJsonMap(locatedblocks.getLastLocatedBlock()));
     m.put("isLastBlockComplete", locatedblocks.isLastBlockComplete());
+    if (locatedblocks.getErasureCodingPolicy() != null) {
+      m.put("ecPolicyObj", getEcPolicyAsMap(locatedblocks.getErasureCodingPolicy()));
+    }
     return toJsonString(LocatedBlocks.class, m);
   }
 
