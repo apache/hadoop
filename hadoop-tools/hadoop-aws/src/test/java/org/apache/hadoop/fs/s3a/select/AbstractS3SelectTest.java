@@ -60,7 +60,9 @@ import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.select.CsvFile.ALL_QUOTES;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -278,6 +280,14 @@ public abstract class AbstractS3SelectTest extends AbstractS3ATestBase {
     return filesystem instanceof StreamCapabilities
         && ((StreamCapabilities) filesystem)
         .hasCapability(S3_SELECT_CAPABILITY);
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, STORAGE_CLASS);
+
+    return conf;
   }
 
   /**
