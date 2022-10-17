@@ -178,6 +178,7 @@ public class FederationClientInterceptor
   private ThreadPoolExecutor executorService;
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
+  private long submitIntervalTime;
 
   @Override
   public void init(String userName) {
@@ -208,6 +209,10 @@ public class FederationClientInterceptor
     numSubmitRetries = conf.getInt(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_RETRY,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY);
+
+    submitIntervalTime = conf.getTimeDuration(
+        YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
+        YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
 
     clientRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
@@ -315,7 +320,7 @@ public class FederationClientInterceptor
       GetNewApplicationResponse response =
           ((FederationActionRetry<GetNewApplicationResponse>) (retryCount) ->
           invokeGetNewApplication(subClustersActive, blacklist, request, retryCount)).
-          runWithRetries(actualRetryNums, 100);
+          runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
         long stopTime = clock.getTime();
@@ -343,8 +348,8 @@ public class FederationClientInterceptor
    * @param retryCount number of retries.
    * @return Get NewApplicationResponse response, If the response is empty, the request fails,
    * if the response is not empty, the request is successful.
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException yarn exception.
+   * @throws IOException io error.
    */
   private GetNewApplicationResponse invokeGetNewApplication(
       Map<SubClusterId, SubClusterInfo> subClustersActive,
@@ -358,10 +363,12 @@ public class FederationClientInterceptor
       GetNewApplicationResponse response = clientRMProxy.getNewApplication(request);
       if (response != null) {
         RouterAuditLogger.logSuccess(user.getShortUserName(), GET_NEW_APP,
-            TARGET_CLIENT_RM_SERVICE, response.getApplicationId());
+            TARGET_CLIENT_RM_SERVICE, response.getApplicationId(), subClusterId);
         return response;
       }
     } catch (Exception e) {
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_NEW_APP, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, e.getMessage(), subClusterId);
       LOG.warn("Unable to create a new ApplicationId in SubCluster {}.", subClusterId.getId(), e);
       blackList.add(subClusterId);
       throw e;
@@ -469,7 +476,7 @@ public class FederationClientInterceptor
       SubmitApplicationResponse response =
           ((FederationActionRetry<SubmitApplicationResponse>) (retryCount) ->
           invokeSubmitApplication(blacklist, request, retryCount)).
-          runWithRetries(actualRetryNums, 100);
+          runWithRetries(actualRetryNums, submitIntervalTime);
 
       if (response != null) {
         long stopTime = clock.getTime();
