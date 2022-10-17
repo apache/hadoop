@@ -22,8 +22,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -37,7 +37,6 @@ import static org.apache.hadoop.util.Time.now;
 class AbfsClientThrottlingAnalyzer {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingAnalyzer.class);
-  private static final int DEFAULT_ANALYSIS_PERIOD_MS = 10 * 1000;
   private static final int MIN_ANALYSIS_PERIOD_MS = 1000;
   private static final int MAX_ANALYSIS_PERIOD_MS = 30000;
   private static final double MIN_ACCEPTABLE_ERROR_PERCENTAGE = .1;
@@ -54,7 +53,7 @@ class AbfsClientThrottlingAnalyzer {
   private Timer timer = null;
   private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
   private AtomicLong lastExecutionTime = null;
-  private AtomicBoolean isAccountIdle = null;
+  private AtomicBoolean isOperationOnAccountIdle = null;
   private AbfsConfiguration abfsConfiguration = null;
   private boolean isAccountLevelThrottlingEnabled = true;
 
@@ -70,7 +69,7 @@ class AbfsClientThrottlingAnalyzer {
    * @throws IllegalArgumentException if name is null or empty.
    */
   AbfsClientThrottlingAnalyzer(String name, AbfsConfiguration abfsConfiguration) throws IllegalArgumentException {
-    this(name, DEFAULT_ANALYSIS_PERIOD_MS, abfsConfiguration);
+    this(name, abfs, abfsConfiguration);
   }
 
   /**
@@ -96,7 +95,7 @@ class AbfsClientThrottlingAnalyzer {
     this.isAccountLevelThrottlingEnabled = abfsConfiguration.isAccountThrottlingEnabled();
     this.analysisPeriodMs = period;
     this.lastExecutionTime = new AtomicLong(now());
-    this.isAccountIdle = new AtomicBoolean(false);
+    this.isOperationOnAccountIdle = new AtomicBoolean(false);
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
         new AbfsOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(
@@ -109,11 +108,10 @@ class AbfsClientThrottlingAnalyzer {
   public void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
             new AbfsOperationMetrics(System.currentTimeMillis()));
-    timer = new Timer(String.format("abfs-timer-client-throttling-analyzer-%s", name), true);
     timer.schedule(new TimerTaskImpl(),
             analysisPeriodMs,
             analysisPeriodMs);
-    isAccountIdle.set(false);
+    isOperationOnAccountIdle.set(false);
   }
 
   /**
@@ -139,6 +137,10 @@ class AbfsClientThrottlingAnalyzer {
    * @return true if Thread sleeps(Throttling occurs) else false.
    */
   public boolean suspendIfNecessary() {
+    if (isOperationOnAccountIdle.get()) {
+      resumeTimer();
+    }
+    lastExecutionTime.set(now());
     int duration = sleepDuration;
     if (duration > 0) {
       try {
@@ -156,16 +158,8 @@ class AbfsClientThrottlingAnalyzer {
     return sleepDuration;
   }
 
-  int getIdleTimeout() {
-    return abfsConfiguration.getAccountIdleTimeout();
-  }
-
-  public AtomicLong getLastExecutionTime() {
-    return lastExecutionTime;
-  }
-
-  public AtomicBoolean getIsAccountIdle() {
-    return isAccountIdle;
+  int getOperationIdleTimeout() {
+    return abfsConfiguration.getAccountOperationIdleTimeout();
   }
 
   private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
@@ -272,9 +266,10 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (isAccountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getIdleTimeout())) {
-          isAccountIdle.set(true);
-          timer.cancel();
+        if (isAccountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getOperationIdleTimeout())) {
+          isOperationOnAccountIdle.set(true);
+          this.cancel();
+          timer.purge();
           return;
         }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {

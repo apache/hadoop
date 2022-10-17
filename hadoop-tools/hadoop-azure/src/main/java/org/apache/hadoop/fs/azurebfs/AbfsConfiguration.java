@@ -264,9 +264,13 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IDLE_TIMEOUT,
-      DefaultValue = DEFAULT_ACCOUNT_IDLE_TIMEOUT)
-  private int accountIdleTimeout;
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
+      DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
+  private int accountOperationIdleTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ANALYSIS_PERIOD,
+          DefaultValue = DEFAULT_ANALYSIS_PERIOD_MS)
+  private int analysisPeriod;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
@@ -743,9 +747,9 @@ public class AbfsConfiguration{
     return this.enableAutoThrottling;
   }
 
-  public int getAccountIdleTimeout() {
-    return accountIdleTimeout;
-  }
+  public int getAccountOperationIdleTimeout() { return accountOperationIdleTimeout; }
+
+  public int getAnalysisPeriod() { return analysisPeriod; }
 
   public int getRateLimit() {
     return rateLimit;

@@ -57,31 +57,32 @@ public final class AbfsClientThrottlingIntercept {
 
   // Hide default constructor
   public AbfsClientThrottlingIntercept(String accountName, AbfsConfiguration abfsConfiguration) {
-    setIsAutoThrottlingEnabled(true);
-    this.readThrottler = new AbfsClientThrottlingAnalyzer("read", abfsConfiguration);
-    this.writeThrottler = new AbfsClientThrottlingAnalyzer("write", abfsConfiguration);
+    setIsAutoThrottlingEnabled(abfsConfiguration.isAutoThrottlingEnabled());
     this.accountName = accountName;
+    this.readThrottler = setAnalyzer("read " + accountName, abfsConfiguration);
+    this.writeThrottler = setAnalyzer("write " + accountName, abfsConfiguration);
     LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : {}", accountName);
   }
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
-    readThrottler = new AbfsClientThrottlingAnalyzer("read", abfsConfiguration);
-    writeThrottler = new AbfsClientThrottlingAnalyzer("write", abfsConfiguration);
+    readThrottler = setAnalyzer("read", abfsConfiguration);
+    writeThrottler = setAnalyzer("write", abfsConfiguration);
   }
 
-  public AbfsClientThrottlingAnalyzer getReadThrottler() {
+  private AbfsClientThrottlingAnalyzer setAnalyzer(String name, AbfsConfiguration abfsConfiguration) {
+    return new AbfsClientThrottlingAnalyzer(name, abfsConfiguration);
+  }
+
+  AbfsClientThrottlingAnalyzer getReadThrottler() {
     return readThrottler;
   }
 
-  public AbfsClientThrottlingAnalyzer getWriteThrottler() {
+  AbfsClientThrottlingAnalyzer getWriteThrottler() {
     return writeThrottler;
   }
 
   public static synchronized AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
-    if (!abfsConfiguration.isAutoThrottlingEnabled()) {
-      return null;
-    }
     if (singleton == null) {
       singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
       isAutoThrottlingEnabled = true;
@@ -135,16 +136,6 @@ public final class AbfsClientThrottlingIntercept {
     if (!isAutoThrottlingEnabled) {
       return;
     }
-    /* Resumes the timer for the analyzer if stopped */
-    if (readThrottler.getIsAccountIdle().get()) {
-      readThrottler.resumeTimer();
-    }
-    if (writeThrottler.getIsAccountIdle().get()) {
-      writeThrottler.resumeTimer();
-    }
-    /* Sets the last execution time for the analyzer for this account as now */
-    readThrottler.getLastExecutionTime().set(now());
-    writeThrottler.getLastExecutionTime().set(now());
     switch (operationType) {
       case ReadFile:
         if (readThrottler.suspendIfNecessary()

@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class to get an instance of throttling intercept class per account
+ * Class to get an instance of throttling intercept class per account.
  */
 final class AbfsClientThrottlingInterceptFactory {
 
@@ -49,13 +49,13 @@ final class AbfsClientThrottlingInterceptFactory {
   static synchronized AbfsClientThrottlingIntercept getInstance(String accountName,
                                                                 AbfsConfiguration abfsConfiguration) {
     AbfsClientThrottlingIntercept instance;
+    if (!abfsConfiguration.isAutoThrottlingEnabled()) {
+      return null;
+    }
     // If singleton is enabled use a static instance of the intercept class for all accounts
     if (!abfsConfiguration.isAccountThrottlingEnabled()) {
       instance = AbfsClientThrottlingIntercept.initializeSingleton(abfsConfiguration);
     } else {
-      if (!abfsConfiguration.isAutoThrottlingEnabled()) {
-        return null;
-      }
       // Return the instance from the map
       if (instanceMapping.get(accountName) == null) {
         LOG.debug("The accountName is: {} ", accountName);

@@ -155,7 +155,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     //4. Don't perform an operation on the account.
     Thread.sleep(90000);
 
-    //5. Peform operations on another account.
+    //5. Perform operations on another account.
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
     Configuration config = new Configuration(getRawConfiguration());
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);

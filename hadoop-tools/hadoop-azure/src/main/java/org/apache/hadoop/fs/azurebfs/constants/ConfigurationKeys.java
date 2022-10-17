@@ -117,7 +117,8 @@ public final class ConfigurationKeys {
   public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "fs.azure.createRemoteFileSystemDuringInitialization";
   public static final String AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = "fs.azure.skipUserGroupMetadataDuringInitialization";
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
-  public static final String FS_AZURE_ACCOUNT_IDLE_TIMEOUT = "fs.azure.account.idle.timeout";
+  public static final String FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT = "fs.azure.account.operation.idle.timeout";
+  public static final String FS_AZURE_ANALYSIS_PERIOD = "fs.azure.analysis.period";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
   public static final String FS_AZURE_ATOMIC_RENAME_KEY = "fs.azure.atomic.rename.key";
   /** This config ensures that during create overwrite an existing file will be

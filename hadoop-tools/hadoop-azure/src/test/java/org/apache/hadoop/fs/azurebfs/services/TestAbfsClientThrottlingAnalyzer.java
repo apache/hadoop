@@ -41,7 +41,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   private static final int MAX_ACCEPTABLE_PERCENT_DIFFERENCE = 20;
   private AbfsConfiguration abfsConfiguration;
 
-  TestAbfsClientThrottlingAnalyzer() throws IOException, IllegalAccessException {
+  public TestAbfsClientThrottlingAnalyzer() throws IOException, IllegalAccessException {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     this.abfsConfiguration = new AbfsConfiguration(configuration,
