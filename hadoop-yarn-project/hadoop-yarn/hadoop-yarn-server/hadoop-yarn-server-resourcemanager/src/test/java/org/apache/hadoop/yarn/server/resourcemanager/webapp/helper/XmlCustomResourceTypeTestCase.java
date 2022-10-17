@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
 import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.XMLUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,6 @@ import org.xml.sax.InputSource;
 
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -84,7 +84,7 @@ public class XmlCustomResourceTypeTestCase {
     try {
       String xml = response.getEntity(String.class);
       DocumentBuilder db =
-          DocumentBuilderFactory.newInstance().newDocumentBuilder();
+          XMLUtils.newSecureDocumentBuilderFactory().newDocumentBuilder();
       InputSource is = new InputSource();
       is.setCharacterStream(new StringReader(xml));
 
@@ -105,7 +105,7 @@ public class XmlCustomResourceTypeTestCase {
   public static String toXml(Node node) {
     StringWriter writer;
     try {
-      TransformerFactory tf = TransformerFactory.newInstance();
+      TransformerFactory tf = XMLUtils.newSecureTransformerFactory();
       Transformer transformer = tf.newTransformer();
       transformer.setOutputProperty(OutputKeys.INDENT, "yes");
       transformer.setOutputProperty(

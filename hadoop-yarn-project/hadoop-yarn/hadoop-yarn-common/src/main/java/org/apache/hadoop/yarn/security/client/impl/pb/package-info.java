@@ -15,37 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
-
-import java.util.ArrayList;
-import java.util.Collection;
-
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-
-@XmlRootElement(name = "nodes")
-@XmlAccessorType(XmlAccessType.FIELD)
-public class NodesInfo {
-
-  protected ArrayList<NodeInfo> node = new ArrayList<NodeInfo>();
-
-  public NodesInfo() {
-  } // JAXB needs this
-
-  public void add(NodeInfo nodeinfo) {
-    node.add(nodeinfo);
-  }
-
-  public ArrayList<NodeInfo> getNodes() {
-    return node;
-  }
-
-  public void addAll(ArrayList<NodeInfo> nodesInfo) {
-    node.addAll(nodesInfo);
-  }
-
-  public void addAll(Collection<NodeInfo> nodesInfo) {
-    node.addAll(nodesInfo);
-  }
-}
+@Public
+package org.apache.hadoop.yarn.security.client.impl.pb;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
