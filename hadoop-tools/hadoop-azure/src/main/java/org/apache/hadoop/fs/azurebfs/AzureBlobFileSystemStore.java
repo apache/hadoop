@@ -815,10 +815,26 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       *       have encryptionContext field when client's encryptionType is
       *       ENCRYPTION_CONTEXT.
       * */
-      if (!(fileStatus instanceof VersionedFileStatus) || (
-          client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT
-              && ((VersionedFileStatus) fileStatus).getEncryptionContext()
-              == null)) {
+      if ((fileStatus instanceof VersionedFileStatus) && (
+          client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
+              || ((VersionedFileStatus) fileStatus).getEncryptionContext()
+              != null)) {
+        path = path.makeQualified(this.uri, path);
+        Preconditions.checkArgument(fileStatus.getPath().equals(path),
+            String.format(
+                "Filestatus path [%s] does not match with given path [%s]",
+                fileStatus.getPath(), path));
+        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
+        contentLength = fileStatus.getLen();
+        eTag = ((VersionedFileStatus) fileStatus).getVersion();
+        final String encryptionContext
+            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
+        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+          encryptionAdapter = new EncryptionAdapter(
+              client.getEncryptionContextProvider(), getRelativePath(path),
+              encryptionContext.getBytes(StandardCharsets.UTF_8));
+        }
+      } else {
         AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
@@ -841,22 +857,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           encryptionAdapter = new EncryptionAdapter(
               client.getEncryptionContextProvider(), getRelativePath(path),
               fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
-        }
-      } else {
-        path = path.makeQualified(this.uri, path);
-        Preconditions.checkArgument(fileStatus.getPath().equals(path),
-            String.format(
-                "Filestatus path [%s] does not match with given path [%s]",
-                fileStatus.getPath(), path));
-        resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
-        contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        final String encryptionContext
-            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          encryptionAdapter = new EncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       }
 
