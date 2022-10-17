@@ -19,6 +19,9 @@ package org.apache.hadoop.hdfs.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
+
+import java.util.EnumSet;
 
 /**
  * CreateEncryptionZoneFlag is used in
