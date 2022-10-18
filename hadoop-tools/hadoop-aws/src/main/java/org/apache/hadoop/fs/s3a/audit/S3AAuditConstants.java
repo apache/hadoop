@@ -66,12 +66,12 @@ public final class S3AAuditConstants {
       "org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor";
 
   /**
-   * List of extra AWS SDK request handlers: {@value}.
+   * List of extra AWS SDK execution interceptors: {@value}.
    * These are added to the SDK request chain <i>after</i>
    * any audit service.
    */
-  public static final String AUDIT_REQUEST_HANDLERS =
-      "fs.s3a.audit.request.handlers";
+  public static final String AUDIT_EXECUTION_INTERCEPTORS =
+      "fs.s3a.audit.execution.interceptors";
 
   /**
    * Should operations outside spans be rejected?

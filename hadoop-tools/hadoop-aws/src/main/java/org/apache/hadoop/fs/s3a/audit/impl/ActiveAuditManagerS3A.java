@@ -65,7 +65,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToRequest;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.retrieveAttachedSpan;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 
 /**
  * Thread management for the active audit.
@@ -403,21 +403,21 @@ public final class ActiveAuditManagerS3A
     List<ExecutionInterceptor> executionInterceptors = new ArrayList<>();
     executionInterceptors.add(this);
 
-    // TODO:WiP: should we create an equivalent mechanism for the SDK v2?
-    // now look for any more handlers
-//    final Class<?>[] handlers = getConfig().getClasses(AUDIT_REQUEST_HANDLERS);
-//    if (handlers != null) {
-//      for (Class<?> handler : handlers) {
-//        try {
-//          Constructor<?> ctor = handler.getConstructor();
-//          requestHandlers.add((RequestHandler2)ctor.newInstance());
-//        } catch (ExceptionInInitializerError e) {
-//          throw FutureIO.unwrapInnerException(e);
-//        } catch (Exception e) {
-//          throw new IOException(e);
-//        }
-//      }
-//    }
+    // TODO: should we remove this and use Global/Service interceptors, see:
+    // https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html
+    final Class<?>[] interceptors = getConfig().getClasses(AUDIT_EXECUTION_INTERCEPTORS);
+    if (interceptors != null) {
+      for (Class<?> handler : interceptors) {
+        try {
+          Constructor<?> ctor = handler.getConstructor();
+          executionInterceptors.add((ExecutionInterceptor) ctor.newInstance());
+        } catch (ExceptionInInitializerError e) {
+          throw FutureIO.unwrapInnerException(e);
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
+    }
     return executionInterceptors;
   }
 

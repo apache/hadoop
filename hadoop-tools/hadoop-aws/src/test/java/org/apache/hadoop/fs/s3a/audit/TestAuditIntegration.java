@@ -20,14 +20,11 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
-import java.util.List;
 
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
-import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
@@ -39,7 +36,7 @@ import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToReques
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.retrieveAttachedSpan;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.createIOStatisticsStoreForAuditing;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditConfig;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStarted;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStopped;
@@ -173,14 +170,14 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   public void testRequestHandlerLoading() throws Throwable {
     Configuration conf = noopAuditConfig();
     conf.setClassLoader(this.getClass().getClassLoader());
-    conf.set(AUDIT_REQUEST_HANDLERS,
-        SimpleAWSRequestHandler.CLASS);
+    conf.set(AUDIT_EXECUTION_INTERCEPTORS,
+        SimpleAWSExecutionInterceptor.CLASS);
     AuditManagerS3A manager = AuditIntegration.createAndStartAuditManager(
         conf,
         ioStatistics);
     assertThat(manager.createExecutionInterceptors())
         .hasSize(2)
-        .hasAtLeastOneElementOfType(SimpleAWSRequestHandler.class);
+        .hasAtLeastOneElementOfType(SimpleAWSExecutionInterceptor.class);
   }
 
   @Test
