@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ANALYSIS_PERIOD;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -44,6 +45,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   public TestAbfsClientThrottlingAnalyzer() throws IOException, IllegalAccessException {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
+    configuration.setInt(FS_AZURE_ANALYSIS_PERIOD, 1000);
     this.abfsConfiguration = new AbfsConfiguration(configuration,
             "dummy");
   }
@@ -96,8 +98,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   @Test
   public void testNoMetricUpdatesThenNoWaiting() {
     AbfsClientThrottlingAnalyzer analyzer = new AbfsClientThrottlingAnalyzer(
-        "test",
-        ANALYSIS_PERIOD, abfsConfiguration);
+        "test", abfsConfiguration);
     validate(0, analyzer.getSleepDuration());
     sleep(ANALYSIS_PERIOD_PLUS_10_PERCENT);
     validate(0, analyzer.getSleepDuration());
@@ -110,8 +111,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   @Test
   public void testOnlySuccessThenNoWaiting() {
     AbfsClientThrottlingAnalyzer analyzer = new AbfsClientThrottlingAnalyzer(
-        "test",
-        ANALYSIS_PERIOD, abfsConfiguration);
+        "test", abfsConfiguration);
     analyzer.addBytesTransferred(8 * MEGABYTE, false);
     validate(0, analyzer.getSleepDuration());
     sleep(ANALYSIS_PERIOD_PLUS_10_PERCENT);
@@ -126,8 +126,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   @Test
   public void testOnlyErrorsAndWaiting() {
     AbfsClientThrottlingAnalyzer analyzer = new AbfsClientThrottlingAnalyzer(
-        "test",
-        ANALYSIS_PERIOD, abfsConfiguration);
+        "test", abfsConfiguration);
     validate(0, analyzer.getSleepDuration());
     analyzer.addBytesTransferred(4 * MEGABYTE, true);
     sleep(ANALYSIS_PERIOD_PLUS_10_PERCENT);
@@ -146,8 +145,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   @Test
   public void testSuccessAndErrorsAndWaiting() {
     AbfsClientThrottlingAnalyzer analyzer = new AbfsClientThrottlingAnalyzer(
-        "test",
-        ANALYSIS_PERIOD, abfsConfiguration);
+        "test", abfsConfiguration);
     validate(0, analyzer.getSleepDuration());
     analyzer.addBytesTransferred(8 * MEGABYTE, false);
     analyzer.addBytesTransferred(2 * MEGABYTE, true);
@@ -171,8 +169,7 @@ public class TestAbfsClientThrottlingAnalyzer {
   @Test
   public void testManySuccessAndErrorsAndWaiting() {
     AbfsClientThrottlingAnalyzer analyzer = new AbfsClientThrottlingAnalyzer(
-        "test",
-        ANALYSIS_PERIOD, abfsConfiguration);
+        "test", abfsConfiguration);
     validate(0, analyzer.getSleepDuration());
     final int numberOfRequests = 20;
     for (int i = 0; i < numberOfRequests; i++) {

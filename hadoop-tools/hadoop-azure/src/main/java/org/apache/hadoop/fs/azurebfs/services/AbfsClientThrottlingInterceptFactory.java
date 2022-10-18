@@ -41,6 +41,7 @@ final class AbfsClientThrottlingInterceptFactory {
       = new ConcurrentHashMap<>();
 
   /**
+   * Returns an instance of AbfsClientThrottlingIntercept.
    *
    * @param accountName The account for which we need instance of throttling intercept
      @param abfsConfiguration The object of abfsconfiguration class

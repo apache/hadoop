@@ -32,6 +32,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.junit.Assume;
 import org.mockito.Mockito;
 
 import java.net.URI;
@@ -124,11 +127,13 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void testAccountIdle() throws Exception {
+  public void testOperationOnAccountIdle() throws Exception {
 
     //1.Get the filesystem.
     AzureBlobFileSystem fs = getFileSystem();
     AbfsConfiguration configuration1 = fs.getAbfsStore().getClient().getAbfsConfiguration();
+    Assume.assumeTrue(configuration1.isAccountThrottlingEnabled());
+
     AbfsClientThrottlingIntercept accountIntercept = AbfsClientThrottlingInterceptFactory.getInstance(this.getAccountName(),
             configuration1);
 
@@ -142,9 +147,9 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     //2. Do an operation on the filesystem.
     FSDataOutputStream stream = fs.create(testPath);
 
-    //3. Verify the account is not idle.
+    //3. Verify the write analyzer is not idle.
     if (accountIntercept != null){
-      Assert.assertFalse(accountIntercept.getWriteThrottler().getIsAccountIdle().get());
+      Assert.assertFalse(accountIntercept.getWriteThrottler().getIsOperationOnAccountIdle().get());
     }
     try {
       stream.write(b);
@@ -154,6 +159,13 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     //4. Don't perform an operation on the account.
     Thread.sleep(90000);
+
+    FSDataInputStream streamRead = fs.open(testPath);
+    try {
+      streamRead.read(b);
+    } finally{
+      streamRead.close();
+    }
 
     //5. Perform operations on another account.
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
@@ -177,14 +189,15 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
       stream1.close();
     }
 
-    //6. Verfiy the first account is idle.
+    //6. Verfiy the write analyzer for first account is idle but the read analyzer is not idle.
     if (accountIntercept != null){
-      Assert.assertTrue(accountIntercept.getWriteThrottler().getIsAccountIdle().get());
+      Assert.assertTrue(accountIntercept.getWriteThrottler().getIsOperationOnAccountIdle().get());
+      Assert.assertFalse(accountIntercept.getReadThrottler().getIsOperationOnAccountIdle().get());
     }
 
-    //7. Verify the second account is not idle.
+    //7. Verify the write analyzer for second account is not idle.
     if (accountIntercept1 != null){
-      Assert.assertFalse(accountIntercept1.getWriteThrottler().getIsAccountIdle().get());
+      Assert.assertFalse(accountIntercept1.getWriteThrottler().getIsOperationOnAccountIdle().get());
     }
 
     //8. Again perform an operation on the first account.
@@ -195,9 +208,9 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
       stream2.close();
     }
 
-    //9. Verify the first account is not idle.
+    //9. Verify the write analyzer on first account is not idle.
     if (accountIntercept != null) {
-      Assert.assertFalse(accountIntercept.getWriteThrottler().getIsAccountIdle().get());
+      Assert.assertFalse(accountIntercept.getWriteThrottler().getIsOperationOnAccountIdle().get());
     }
   }
 

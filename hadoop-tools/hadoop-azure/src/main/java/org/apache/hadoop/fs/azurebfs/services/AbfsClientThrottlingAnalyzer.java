@@ -63,17 +63,6 @@ class AbfsClientThrottlingAnalyzer {
 
   /**
    * Creates an instance of the <code>AbfsClientThrottlingAnalyzer</code> class with
-   * the specified name.
-   *
-   * @param name a name used to identify this instance.
-   * @throws IllegalArgumentException if name is null or empty.
-   */
-  AbfsClientThrottlingAnalyzer(String name, AbfsConfiguration abfsConfiguration) throws IllegalArgumentException {
-    this(name, abfs, abfsConfiguration);
-  }
-
-  /**
-   * Creates an instance of the <code>AbfsClientThrottlingAnalyzer</code> class with
    * the specified name and period.
    *
    * @param name   A name used to identify this instance.
@@ -82,18 +71,19 @@ class AbfsClientThrottlingAnalyzer {
    * @throws IllegalArgumentException If name is null or empty.
    *                                  If period is less than 1000 or greater than 30000 milliseconds.
    */
-  AbfsClientThrottlingAnalyzer(String name, int period, AbfsConfiguration abfsConfiguration)
+  AbfsClientThrottlingAnalyzer(String name, AbfsConfiguration abfsConfiguration)
       throws IllegalArgumentException {
     Preconditions.checkArgument(
         StringUtils.isNotEmpty(name),
         "The argument 'name' cannot be null or empty.");
+    int period = abfsConfiguration.getAnalysisPeriod();
     Preconditions.checkArgument(
         period >= MIN_ANALYSIS_PERIOD_MS && period <= MAX_ANALYSIS_PERIOD_MS,
         "The argument 'period' must be between 1000 and 30000.");
     this.name = name;
     this.abfsConfiguration = abfsConfiguration;
     this.isAccountLevelThrottlingEnabled = abfsConfiguration.isAccountThrottlingEnabled();
-    this.analysisPeriodMs = period;
+    this.analysisPeriodMs = abfsConfiguration.getAnalysisPeriod();
     this.lastExecutionTime = new AtomicLong(now());
     this.isOperationOnAccountIdle = new AtomicBoolean(false);
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
@@ -160,6 +150,10 @@ class AbfsClientThrottlingAnalyzer {
 
   int getOperationIdleTimeout() {
     return abfsConfiguration.getAccountOperationIdleTimeout();
+  }
+
+  AtomicBoolean getIsOperationOnAccountIdle() {
+    return isOperationOnAccountIdle;
   }
 
   private int analyzeMetricsAndUpdateSleepDuration(AbfsOperationMetrics metrics,
