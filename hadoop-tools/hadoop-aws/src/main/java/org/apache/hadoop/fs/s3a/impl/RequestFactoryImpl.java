@@ -536,7 +536,7 @@ public class RequestFactoryImpl implements RequestFactory {
     request.setKey(key);
     generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
 
-    // TODO:WiP: revert when select is upgraded to v2
+    // TODO: revert when select is upgraded to v2
     // return prepareRequest(requestBuilder);
     return request;
   }

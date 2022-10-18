@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +58,7 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
@@ -422,9 +422,14 @@ public final class ActiveAuditManagerS3A
   }
 
   @Override
-  public TransferStateChangeListener createStateChangeListener() {
+  public TransferListener createTransferListener() {
     final WrappingAuditSpan span = activeSpan();
-    return (transfer, state) -> switchToActiveSpan(span);
+    return new TransferListener() {
+      @Override
+      public void transferInitiated(Context.TransferInitiated context) {
+        switchToActiveSpan(span);
+      }
+    };
   }
 
   @Override

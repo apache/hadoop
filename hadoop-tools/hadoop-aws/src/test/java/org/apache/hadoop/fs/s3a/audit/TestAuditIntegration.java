@@ -194,8 +194,8 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   @Test
   public void testNoopAuditManager() throws Throwable {
     AuditManagerS3A manager = AuditIntegration.stubAuditManager();
-    assertThat(manager.createStateChangeListener())
-        .describedAs("transfer state change listener")
+    assertThat(manager.createTransferListener())
+        .describedAs("transfer listener")
         .isNotNull();
   }
 

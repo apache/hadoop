@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -31,8 +30,8 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,7 +134,7 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
    */
   @Test
   public void testCopyOutsideSpanAllowed() throws Throwable {
-    // TODO:WiP: equivalent in v2?
+    // TODO: equivalent in v2?
     //getManager().beforeExecution(new CopyPartRequest());
     getManager().beforeExecution(
         InterceptorContext.builder()
@@ -157,9 +156,9 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
    */
   @Test
   public void testTransferStateListenerOutsideSpan() throws Throwable {
-    TransferStateChangeListener listener
-        = getManager().createStateChangeListener();
-    listener.transferStateChanged(null, null);
+    TransferListener listener
+        = getManager().createTransferListener();
+    listener.transferInitiated(null);
     assertHeadUnaudited();
   }
 
@@ -174,15 +173,15 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
     AuditSpan span = span();
 
     // create the listener in the span
-    TransferStateChangeListener listener
-        = getManager().createStateChangeListener();
+    TransferListener listener
+        = getManager().createTransferListener();
     span.deactivate();
 
     // head calls fail
     assertHeadUnaudited();
 
     // until the state change switches this thread back to the span
-    listener.transferStateChanged(null, null);
+    listener.transferInitiated(null);
 
     // which can be probed
     assertActiveSpan(span);

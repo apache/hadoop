@@ -1950,7 +1950,7 @@ public final class S3AUtils {
   private static final String BYTES_PREFIX = "bytes=";
 
   public static Optional<Pair<Long, Long>> parseRange(String rangeHeader) {
-    // TODO:WiP: Surely, there is a better way.
+    // TODO: Surely, there is a better way.
     if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
       String[] values = rangeHeader.substring("bytes=".length()).split("-");
       if (values.length == 2) {

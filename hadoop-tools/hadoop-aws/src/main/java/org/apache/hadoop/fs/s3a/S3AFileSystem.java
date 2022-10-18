@@ -77,17 +77,12 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -103,6 +98,7 @@ import software.amazon.awssdk.transfer.s3.CopyRequest;
 import software.amazon.awssdk.transfer.s3.FileUpload;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.UploadFileRequest;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -4269,13 +4265,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // TODO: Transfer manager currently only provides transfer listeners for upload,
     //  add progress listener for copy when this is supported.
-//    ProgressListener progressListener = progressEvent -> {
-//      switch (progressEvent.getEventType()) {
-//      case TRANSFER_PART_COMPLETED_EVENT:
+// TODO: Is the above still valid? Try to enable when logger issue is resolved.
+//    TransferListener progressListener = new TransferListener() {
+//      @Override
+//      public void transferComplete(Context.TransferComplete context) {
 //        incrementWriteOperations();
-//        break;
-//      default:
-//        break;
 //      }
 //    };
 
@@ -4319,7 +4313,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           incrementStatistic(OBJECT_COPY_REQUESTS);
 
           Copy copy = transferManagerV2.copy(
-              CopyRequest.builder().copyObjectRequest(copyObjectRequestBuilder.build()).build());
+              CopyRequest.builder()
+                  .copyObjectRequest(copyObjectRequestBuilder.build())
+// TODO: Enable when logger issue is resolved.
+//                  .overrideConfiguration(c -> c
+//                      .addListener(getAuditManager().createTransferListener())
+//                      .addListener(progressListener))
+                  .build());
 
           CompletedCopy completedCopy = copy.completionFuture().join();
 

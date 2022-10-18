@@ -24,9 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import com.amazonaws.services.s3.transfer.Transfer;
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -39,6 +36,7 @@ import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.service.CompositeService;
 
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
@@ -127,12 +125,8 @@ public class NoopAuditManagerS3A extends CompositeService
   }
 
   @Override
-  public TransferStateChangeListener createStateChangeListener() {
-    return new TransferStateChangeListener() {
-      public void transferStateChanged(final Transfer transfer,
-          final Transfer.TransferState state) {
-      }
-    };
+  public TransferListener createTransferListener() {
+    return new TransferListener() {};
   }
 
   /**
