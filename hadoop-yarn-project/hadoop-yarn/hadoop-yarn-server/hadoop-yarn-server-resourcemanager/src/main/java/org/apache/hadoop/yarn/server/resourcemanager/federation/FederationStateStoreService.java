@@ -338,7 +338,7 @@ public class FederationStateStoreService extends AbstractService
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest subClusterRequest) throws YarnException {
     FederationClientMethod clientMethod = new FederationClientMethod(
-        "getSubClusters", GetSubClusterInfoRequest.class, subClusterRequest,
+        "getSubCluster", GetSubClusterInfoRequest.class, subClusterRequest,
         stateStoreClient, clock);
     return clientMethod.invoke(GetSubClusterInfoResponse.class);
   }
