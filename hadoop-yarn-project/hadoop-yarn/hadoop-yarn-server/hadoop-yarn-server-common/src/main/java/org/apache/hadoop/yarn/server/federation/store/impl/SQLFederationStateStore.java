@@ -84,6 +84,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -1424,6 +1426,30 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }

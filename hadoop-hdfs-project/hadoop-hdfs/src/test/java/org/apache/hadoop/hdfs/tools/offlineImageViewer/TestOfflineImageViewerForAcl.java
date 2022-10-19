@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.XMLUtils;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -221,7 +223,7 @@ public class TestOfflineImageViewerForAcl {
     PrintStream o = new PrintStream(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
-    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParserFactory spf = XMLUtils.newSecureSAXParserFactory();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());

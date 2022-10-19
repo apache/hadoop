@@ -26,12 +26,14 @@ import java.util.HashSet;
 import java.util.TimeZone;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreException;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
@@ -74,6 +76,9 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.junit.After;
 import org.junit.Assert;
@@ -921,5 +926,108 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
     Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
     Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+  }
+
+  @Test
+  public void testStoreNewToken() throws IOException, YarnException {
+    // prepare parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+
+    // Verify the returned result to ensure that the returned Response is not empty
+    // and the returned result is consistent with the input parameters.
+    Assert.assertNotNull(routerRMTokenResponse);
+    RouterStoreToken storeTokenResp = routerRMTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(storeTokenResp);
+    Assert.assertEquals(storeToken.getRenewDate(), storeTokenResp.getRenewDate());
+    Assert.assertEquals(storeToken.getTokenIdentifier(), storeTokenResp.getTokenIdentifier());
+  }
+
+  @Test
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
+    int sequenceNumber = 2;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // prepare updateToken parameters
+    Long renewDate2 = Time.now();
+    int sequenceNumber2 = 3;
+    identifier.setSequenceNumber(sequenceNumber2);
+
+    // update rm-token
+    RouterStoreToken updateToken = RouterStoreToken.newInstance(identifier, renewDate2);
+    RouterRMTokenRequest updateTokenRequest = RouterRMTokenRequest.newInstance(updateToken);
+    RouterRMTokenResponse updateTokenResponse = stateStore.updateStoredToken(updateTokenRequest);
+
+    Assert.assertNotNull(updateTokenResponse);
+    RouterStoreToken updateTokenResp = updateTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(updateTokenResp);
+    Assert.assertEquals(updateToken.getRenewDate(), updateTokenResp.getRenewDate());
+    Assert.assertEquals(updateToken.getTokenIdentifier(), updateTokenResp.getTokenIdentifier());
+  }
+
+  @Test
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
+    int sequenceNumber = 3;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // remove rm-token
+    RouterRMTokenResponse removeTokenResponse = stateStore.removeStoredToken(request);
+    Assert.assertNotNull(removeTokenResponse);
+    RouterStoreToken removeTokenResp = removeTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(removeTokenResp);
+    Assert.assertEquals(removeTokenResp.getRenewDate(), storeToken.getRenewDate());
+    Assert.assertEquals(removeTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
+  }
+
+  @Test
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner4"), new Text("renewer4"), new Text("realuser4"));
+    int sequenceNumber = 4;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // getTokenByRouterStoreToken
+    RouterRMTokenResponse getRouterRMTokenResp = stateStore.getTokenByRouterStoreToken(request);
+    Assert.assertNotNull(getRouterRMTokenResp);
+    RouterStoreToken getStoreTokenResp = getRouterRMTokenResp.getRouterStoreToken();
+    Assert.assertNotNull(getStoreTokenResp);
+    Assert.assertEquals(getStoreTokenResp.getRenewDate(), storeToken.getRenewDate());
+    Assert.assertEquals(getStoreTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
   }
 }
