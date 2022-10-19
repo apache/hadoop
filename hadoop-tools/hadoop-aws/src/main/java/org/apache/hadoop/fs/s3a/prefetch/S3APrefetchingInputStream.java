@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
@@ -55,6 +56,21 @@ public class S3APrefetchingInputStream
    * Underlying input stream used for reading S3 file.
    */
   private S3ARemoteInputStream inputStream;
+
+  /**
+   * To be only used by synchronized getPos().
+   */
+  private long lastReadCurrentPos = 0;
+
+  /**
+   * To be only used by getIOStatistics().
+   */
+  private IOStatistics ioStatistics = null;
+
+  /**
+   * To be only used by getS3AStreamStatistics().
+   */
+  private S3AInputStreamStatistics inputStreamStatistics = null;
 
   /**
    * Initializes a new instance of the {@code S3APrefetchingInputStream} class.
@@ -115,14 +131,20 @@ public class S3APrefetchingInputStream
   }
 
   /**
-   * Gets the current position.
+   * Gets the current position. If the underlying S3 input stream is closed,
+   * it returns last read current position from the underlying steam. If the
+   * current position was never read and the underlying input stream is closed,
+   * this would return 0.
    *
    * @return the current position.
    * @throws IOException if there is an IO error during this operation.
    */
   @Override
   public synchronized long getPos() throws IOException {
-    return isClosed() ? 0 : inputStream.getPos();
+    if (!isClosed()) {
+      lastReadCurrentPos = inputStream.getPos();
+    }
+    return lastReadCurrentPos;
   }
 
   /**
@@ -215,11 +237,12 @@ public class S3APrefetchingInputStream
    */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @VisibleForTesting
   public S3AInputStreamStatistics getS3AStreamStatistics() {
-    if (isClosed()) {
-      return null;
+    if (!isClosed()) {
+      inputStreamStatistics = inputStream.getS3AStreamStatistics();
     }
-    return inputStream.getS3AStreamStatistics();
+    return inputStreamStatistics;
   }
 
   /**
@@ -229,10 +252,10 @@ public class S3APrefetchingInputStream
    */
   @Override
   public IOStatistics getIOStatistics() {
-    if (isClosed()) {
-      return null;
+    if (!isClosed()) {
+      ioStatistics = inputStream.getIOStatistics();
     }
-    return inputStream.getIOStatistics();
+    return ioStatistics;
   }
 
   protected boolean isClosed() {
@@ -249,7 +272,6 @@ public class S3APrefetchingInputStream
 
   @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
-    throwIfClosed();
     return false;
   }
 
