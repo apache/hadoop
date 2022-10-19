@@ -598,8 +598,7 @@ public class RouterClientRMService extends AbstractService
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
 
-    long removeScanInterval =
-        conf.getTimeDuration(
+    long removeScanInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
