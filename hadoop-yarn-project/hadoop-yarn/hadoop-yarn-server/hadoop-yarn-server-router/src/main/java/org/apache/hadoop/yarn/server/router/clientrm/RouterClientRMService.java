@@ -586,17 +586,24 @@ public class RouterClientRMService extends AbstractService
   protected RouterDelegationTokenSecretManager createRouterRMDelegationTokenSecretManager(
       Configuration conf) {
 
-    long secretKeyInterval = conf.getLong(YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
+    long secretKeyInterval = conf.getLong(
+        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
-    long tokenMaxLifetime = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+
+    long tokenMaxLifetime = conf.getLong(
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+
     long tokenRenewInterval = conf.getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+
     long removeScanInterval =
-        conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+        conf.getTimeDuration(
+        YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+
     return new RouterDelegationTokenSecretManager(secretKeyInterval,
         tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
   }
