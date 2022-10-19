@@ -236,9 +236,7 @@ public class RouterDelegationTokenSecretManager
   @Public
   @VisibleForTesting
   public synchronized Set<DelegationKey> getAllMasterKeys() {
-    HashSet<DelegationKey> keySet = new HashSet<>();
-    keySet.addAll(allKeys.values());
-    return keySet;
+    return new HashSet<>(allKeys.values());
   }
 
   @Public

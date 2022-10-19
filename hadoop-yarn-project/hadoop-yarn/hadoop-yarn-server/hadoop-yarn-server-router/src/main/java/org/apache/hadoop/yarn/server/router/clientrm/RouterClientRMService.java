@@ -517,7 +517,8 @@ public class RouterClientRMService extends AbstractService
             this.createRequestInterceptorChain();
         interceptorChain.init(user);
 
-        //
+        // We set the RouterDelegationTokenSecretManager instance to the interceptorChain
+        // and let the interceptor use it.
         if (routerDTSecretManager != null) {
           interceptorChain.setTokenSecretManager(routerDTSecretManager);
         }
@@ -589,7 +590,8 @@ public class RouterClientRMService extends AbstractService
         YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
     long tokenMaxLifetime = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
-    long tokenRenewInterval = conf.getLong(YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+    long tokenRenewInterval = conf.getLong(
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     long removeScanInterval =
         conf.getTimeDuration(YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
