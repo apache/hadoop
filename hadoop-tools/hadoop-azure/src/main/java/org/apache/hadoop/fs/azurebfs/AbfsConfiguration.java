@@ -747,9 +747,13 @@ public class AbfsConfiguration{
     return this.enableAutoThrottling;
   }
 
-  public int getAccountOperationIdleTimeout() { return accountOperationIdleTimeout; }
+  public int getAccountOperationIdleTimeout() {
+    return accountOperationIdleTimeout;
+  }
 
-  public int getAnalysisPeriod() { return analysisPeriod; }
+  public int getAnalysisPeriod() {
+    return analysisPeriod;
+  }
 
   public int getRateLimit() {
     return rateLimit;

@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
 

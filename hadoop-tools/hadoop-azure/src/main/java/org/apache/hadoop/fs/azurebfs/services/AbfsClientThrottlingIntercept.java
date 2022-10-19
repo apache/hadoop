@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
-import static org.apache.hadoop.util.Time.now;
 
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
