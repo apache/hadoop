@@ -526,7 +526,7 @@ public class DefaultRequestInterceptorREST
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr) {
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         RMQueueAclInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.QUEUES + "/" + queue

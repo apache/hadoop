@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -43,8 +45,10 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -81,6 +85,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
@@ -90,6 +95,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
@@ -100,6 +106,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
@@ -1169,5 +1177,42 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String webAppAddressWithScheme2 =
         WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
     Assert.assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
+  }
+
+  @Test
+  public void testCheckUserAccessToQueue() throws Exception {
+    // Case 1: Only queue admin user can access other user's information
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
+    LambdaTestUtils.intercept(YarnRuntimeException.class,
+        "User=non-admin doesn't haven access to queue=queue so it cannot check ACLs for other users.",
+        () -> interceptor.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr));
+
+    // Case 2: request an unknown ACL causes BAD_REQUEST
+    HttpServletRequest mockHsr1 = mockHttpServletRequestByUserName("admin");
+    LambdaTestUtils.intercept(YarnRuntimeException.class,
+        "Specified queueAclType=XYZ_ACL is not a valid type, valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}",
+        () -> interceptor.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr1));
+
+    // Case 3: get FORBIDDEN for rejected ACL
+    HttpServletRequest mockHsr2 = mockHttpServletRequestByUserName("admin");
+    RMQueueAclInfo aclInfo =
+        interceptor.checkUserAccessToQueue("queue", "jack", QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr2);
+    Assert.assertNotNull(aclInfo);
+    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    FederationRMQueueAclInfo fedAclInfo = FederationRMQueueAclInfo.class.cast(aclInfo);
+    Assert.assertNotNull(fedAclInfo);
+    List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
+    Assert.assertNotNull(aclInfos);
+    Assert.assertEquals(4, aclInfos.size());
+  }
+
+  private HttpServletRequest mockHttpServletRequestByUserName(String username) {
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getRemoteUser()).thenReturn(username);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(username);
+    when(mockHsr.getUserPrincipal()).thenReturn(principal);
+    return mockHsr;
   }
 }

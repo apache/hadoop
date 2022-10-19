@@ -45,6 +45,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1809,18 +1810,21 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr) {
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
 
     // Parameter Verification
     if (queue == null || queue.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
     }
 
     if (username == null || username.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the username is empty or null.");
     }
 
     if (queueAclType == null || queueAclType.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
       throw new IllegalArgumentException("Parameter error, the queueAclType is empty or null.");
     }
 
@@ -1838,15 +1842,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       rmQueueAclInfoMap.forEach((subClusterInfo, rMQueueAclInfo) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
         rMQueueAclInfo.setSubClusterId(subClusterId.getId());
+        aclInfo.getList().add(rMQueueAclInfo);
       });
       return aclInfo;
-
     } catch (NotFoundException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
     }
 
+    routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
     throw new RuntimeException("checkUserAccessToQueue error.");
   }
 
@@ -2062,7 +2069,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     Map<SubClusterInfo, R> results = new HashMap<>();
 
     // Send the requests in parallel
-    CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
+    CompletionService<Pair<R, Exception>> compSvc =
+        new ExecutorCompletionService<>(this.threadpool);
 
     // Error Msg
     for (final SubClusterInfo info : clusterIds) {
@@ -2074,29 +2082,35 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return ret;
+          return Pair.of(ret, null);
         } catch (Exception e) {
-          LOG.error("SubCluster {} failed to call {} method.",
-              info.getSubClusterId(), request.getMethodName(), e);
-          return null;
+          LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(), request.getMethodName(), e);
+          return Pair.of(null, e);
         }
       });
     }
 
     clusterIds.stream().forEach(clusterId -> {
       try {
-        Future<R> future = compSvc.take();
-        R response = future.get();
+        Future<Pair<R, Exception>> future = compSvc.take();
+        Pair<R, Exception> pair = future.get();
+        R response = pair.getKey();
         if (response != null) {
           results.put(clusterId, response);
         }
+
+        Exception exception = pair.getRight();
+        if (exception != null) {
+          throw exception;
+        }
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId, request.getMethodName());
-        LOG.warn(msg, e);
-        throw new YarnRuntimeException(msg, e);
+            clusterId.getSubClusterId(), request.getMethodName());
+        LOG.error(msg, e);
+        throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
+
     return results;
   }
 

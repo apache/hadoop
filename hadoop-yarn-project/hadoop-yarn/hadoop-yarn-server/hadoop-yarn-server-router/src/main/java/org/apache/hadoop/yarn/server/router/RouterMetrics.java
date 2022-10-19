@@ -121,6 +121,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetAppTimeoutFailedRetrieved;
   @Metric("# of getAppTimeouts failed to be retrieved")
   private MutableGaugeInt numGetAppTimeoutsFailedRetrieved;
+  @Metric("# of checkUserAccessToQueue failed to be retrieved")
+  private MutableGaugeInt numCheckUserAccessToQueueFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -1000,6 +1002,10 @@ public final class RouterMetrics {
     return numGetAppTimeoutsFailedRetrieved.value();
   }
 
+  public int getCheckUserAccessToQueueFailedRetrieved() {
+    return numCheckUserAccessToQueueFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -1358,5 +1364,9 @@ public final class RouterMetrics {
 
   public void incrGetAppTimeoutsFailedRetrieved() {
     numGetAppTimeoutsFailedRetrieved.incr();
+  }
+
+  public void incrCheckUserAccessToQueueFailedRetrieved() {
+    numCheckUserAccessToQueueFailedRetrieved.incr();
   }
 }

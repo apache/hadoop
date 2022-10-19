@@ -278,7 +278,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         YarnConfiguration.DEFAULT_ENABLE_REST_APP_SUBMISSIONS);
   }
 
-  RMWebServices(ResourceManager rm, Configuration conf,
+  @VisibleForTesting
+  public RMWebServices(ResourceManager rm, Configuration conf,
       HttpServletResponse response) {
     this(rm, conf);
     this.response = response;
