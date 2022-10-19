@@ -43,7 +43,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -105,6 +104,7 @@ import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -1832,55 +1832,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           HttpServletRequest.class};
       Object[] args = new Object[]{queue, username, queueAclType, hsrCopy};
       ClientMethod remoteMethod = new ClientMethod("checkUserAccessToQueue", argsClasses, args);
-      Map<SubClusterInfo, RMQueueAclInfo> rMQueueAclInfoMap =
+      Map<SubClusterInfo, RMQueueAclInfo> rmQueueAclInfoMap =
           invokeConcurrent(subClustersActive.values(), remoteMethod, RMQueueAclInfo.class);
-
-      boolean allowed = true;
-      List<String> subClusterDiagnostics = new ArrayList<>();
-      for (Map.Entry<SubClusterInfo, RMQueueAclInfo> item : rMQueueAclInfoMap.entrySet()) {
-        SubClusterInfo subClusterInfo = item.getKey();
-        RMQueueAclInfo rMQueueAclInfo = item.getValue();
-        if (subClusterInfo == null || rMQueueAclInfo == null) {
-          allowed = false;
-          subClusterDiagnostics.add("SubCluster Or RMQueueAclInfo Is Empty.");
-          break;
-        }
-        allowed = allowed && rMQueueAclInfo.isAllowed();
-        String diagnostics = rMQueueAclInfo.getDiagnostics();
-        if (diagnostics != null && !diagnostics.isEmpty()) {
-          subClusterDiagnostics.add(diagnostics);
-        }
-      }
-
-      // All subClusters have successfully returned information
-      // before the information can be merged and returned,
-      // otherwise an exception will be thrown.
-      if (subClustersActive.size() != rMQueueAclInfoMap.size()) {
-        Collection<SubClusterInfo> subClusterInfoList = subClustersActive.values()
-            .stream().filter(subClusterInfo -> !rMQueueAclInfoMap.containsKey(subClusterInfo))
-            .collect(Collectors.toList());
-        for (SubClusterInfo subClusterInfo : subClusterInfoList) {
-          SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-          subClusterDiagnostics.add(
-              String.format("SubCluster = %s call checkUserAccessToQueue Failed.",
-              subClusterId.getId()));
-        }
-      }
-
-      // If allowed==false or subClusterDiagnostics.size > 0, return an error message
-      if (!allowed || CollectionUtils.isNotEmpty(subClusterDiagnostics)) {
-        String diagnostics = StringUtils.join(subClusterDiagnostics, ",");
-        return new RMQueueAclInfo(false, username, diagnostics);
-      }
-
-      // Return verification pass information
-      return new RMQueueAclInfo(true, username, StringUtils.EMPTY);
+      FederationRMQueueAclInfo aclInfo = new FederationRMQueueAclInfo();
+      rmQueueAclInfoMap.forEach((subClusterInfo, rMQueueAclInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        rMQueueAclInfo.setSubClusterId(subClusterId.getId());
+      });
+      return aclInfo;
 
     } catch (NotFoundException e) {
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
-    } catch (YarnException e) {
-      RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
-    } catch (IOException e) {
+    } catch (YarnException | IOException e) {
       RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
     }
 
