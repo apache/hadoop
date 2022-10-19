@@ -70,7 +70,7 @@
 
     <!-- jackson versions -->
     <jackson2.version>2.12.7</jackson2.version>
-    <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
+    <jackson2.databind.version>2.13.4.1</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
