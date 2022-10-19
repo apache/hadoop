@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
@@ -1181,6 +1182,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
   @Test
   public void testCheckUserAccessToQueue() throws Exception {
+
     // Case 1: Only queue admin user can access other user's information
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
     LambdaTestUtils.intercept(YarnRuntimeException.class,
@@ -1194,17 +1196,55 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         "Specified queueAclType=XYZ_ACL is not a valid type, valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}",
         () -> interceptor.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr1));
 
+    // We design a test, admin user has ADMINISTER_QUEUE, SUBMIT_APPLICATIONS permissions,
+    // yarn user has SUBMIT_APPLICATIONS permissions, other users have no permissions
+
     // Case 3: get FORBIDDEN for rejected ACL
-    HttpServletRequest mockHsr2 = mockHttpServletRequestByUserName("admin");
+    checkUserAccessToQueueFailed("queue", "jack", QueueACL.SUBMIT_APPLICATIONS, "admin");
+    checkUserAccessToQueueFailed("queue", "jack", QueueACL.ADMINISTER_QUEUE, "admin");
+
+    // Case 4: get OK for listed ACLs
+    checkUserAccessToQueueSuccess("queue", "admin", QueueACL.ADMINISTER_QUEUE, "admin");
+    checkUserAccessToQueueSuccess("queue", "admin", QueueACL.SUBMIT_APPLICATIONS, "admin");
+
+    // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
+    checkUserAccessToQueueFailed("queue", "yarn", QueueACL.ADMINISTER_QUEUE, "admin");
+    checkUserAccessToQueueSuccess("queue", "yarn", QueueACL.SUBMIT_APPLICATIONS, "admin");
+  }
+
+  private void checkUserAccessToQueueSuccess(String queue, String userName,
+      QueueACL queueACL, String mockUser) throws AuthorizationException {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
     RMQueueAclInfo aclInfo =
-        interceptor.checkUserAccessToQueue("queue", "jack", QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr2);
+        interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
     Assert.assertNotNull(aclInfo);
     Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
     FederationRMQueueAclInfo fedAclInfo = FederationRMQueueAclInfo.class.cast(aclInfo);
-    Assert.assertNotNull(fedAclInfo);
     List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
     Assert.assertNotNull(aclInfos);
     Assert.assertEquals(4, aclInfos.size());
+    for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
+      Assert.assertTrue(rMQueueAclInfo.isAllowed());
+    }
+  }
+
+  private void checkUserAccessToQueueFailed(String queue,String userName,
+      QueueACL queueACL, String mockUser) throws AuthorizationException {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
+    RMQueueAclInfo aclInfo =
+        interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
+    Assert.assertNotNull(aclInfo);
+    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    FederationRMQueueAclInfo fedAclInfo = FederationRMQueueAclInfo.class.cast(aclInfo);
+    List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
+    Assert.assertNotNull(aclInfos);
+    Assert.assertEquals(4, aclInfos.size());
+    for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
+      Assert.assertFalse(rMQueueAclInfo.isAllowed());
+      String expectDiagnostics =
+          "User=" + userName + " doesn't have access to queue=queue with acl-type=" + queueACL.name();
+      Assert.assertEquals(expectDiagnostics, rMQueueAclInfo.getDiagnostics());
+    }
   }
 
   private HttpServletRequest mockHttpServletRequestByUserName(String username) {

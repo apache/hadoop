@@ -1830,6 +1830,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Traverse SubCluster and call checkUserAccessToQueue Api
     try {
+      long startTime = Time.now();
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       final HttpServletRequest hsrCopy = clone(hsr);
       Class[] argsClasses = new Class[]{String.class, String.class, String.class,
@@ -1844,6 +1845,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         rMQueueAclInfo.setSubClusterId(subClusterId.getId());
         aclInfo.getList().add(rMQueueAclInfo);
       });
+      long stopTime = Time.now();
+      routerMetrics.succeededCheckUserAccessToQueueRetrieved(stopTime - startTime);
       return aclInfo;
     } catch (NotFoundException e) {
       routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();

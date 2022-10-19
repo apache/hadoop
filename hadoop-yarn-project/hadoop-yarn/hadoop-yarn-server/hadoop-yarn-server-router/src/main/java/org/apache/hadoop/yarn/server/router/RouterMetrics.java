@@ -205,6 +205,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetAppTimeoutRetrieved;
   @Metric("Total number of successful Retrieved GetAppTimeouts and latency(ms)")
   private MutableRate totalSucceededGetAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved CheckUserAccessToQueue and latency(ms)")
+  private MutableRate totalSucceededCheckUserAccessToQueueRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -249,10 +251,12 @@ public final class RouterMetrics {
   private MutableQuantiles getUpdateQueueLatency;
   private MutableQuantiles getAppTimeoutLatency;
   private MutableQuantiles getAppTimeoutsLatency;
+  private MutableQuantiles checkUserAccessToQueueLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private RouterMetrics() {
     registry = new MetricsRegistry(RECORD_INFO);
     registry.tag(RECORD_INFO, "Router");
@@ -400,6 +404,9 @@ public final class RouterMetrics {
 
     getAppTimeoutsLatency = registry.newQuantiles("getAppTimeoutsLatency",
          "latency of get apptimeouts timeouts", "ops", "latency", 10);
+
+    checkUserAccessToQueueLatency = registry.newQuantiles("checkUserAccessToQueueLatency",
+        "latency of get apptimeouts timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -622,6 +629,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededCheckUserAccessToQueueRetrievedRetrieved() {
+    return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -819,6 +831,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededGetAppTimeoutsRetrieved() {
     return totalSucceededGetAppTimeoutsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCheckUserAccessToQueueRetrieved() {
+    return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
@@ -1204,6 +1221,11 @@ public final class RouterMetrics {
   public void succeededGetAppTimeoutsRetrieved(long duration) {
     totalSucceededGetAppTimeoutsRetrieved.add(duration);
     getAppTimeoutsLatency.add(duration);
+  }
+
+  public void succeededCheckUserAccessToQueueRetrieved(long duration) {
+    totalSucceededCheckUserAccessToQueueRetrieved.add(duration);
+    checkUserAccessToQueueLatency.add(duration);
   }
 
   public void incrAppsFailedCreated() {
