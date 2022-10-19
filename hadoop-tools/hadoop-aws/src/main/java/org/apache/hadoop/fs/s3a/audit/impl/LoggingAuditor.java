@@ -18,16 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.audit.impl;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.amazonaws.AmazonWebServiceRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.audit.AuditConstants;
@@ -37,20 +29,20 @@ import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.hadoop.fs.audit.AuditConstants.*;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentAuditContext;
 import static org.apache.hadoop.fs.audit.CommonAuditContext.currentThreadID;
 import static org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer.isRequestNotAlwaysInSpan;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.OUTSIDE_SPAN;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED_DEFAULT;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
 
@@ -94,6 +86,7 @@ public class LoggingAuditor
    * Should the referrer header be added?
    */
   private boolean headerEnabled;
+
 
   /**
    * This is the header sent by the last S3 operation through
@@ -238,6 +231,7 @@ public class LoggingAuditor
         final CommonAuditContext context,
         final String path1,
         final String path2) {
+
       super(spanId, operationName);
 
       this.referrer = HttpReferrerAuditHeader.builder()
@@ -314,8 +308,16 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
+      // Adding range to the header when there is GetObjectRequest
+      if(request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange() != null) {
+        long[] rangeValue = ((GetObjectRequest) request).getRange();
+        String rangeKey = "r";
+        String combinedRangeValue = "bytes=" + rangeValue[0] + "-" + rangeValue[1];
+        referrer.set(rangeKey, combinedRangeValue);
+      }
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
+
       // update the outer class's field.
       setLastHeader(header);
       if (headerEnabled) {
@@ -410,7 +412,6 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
-
       String error = "executing a request outside an audit span "
           + analyzer.analyze(request);
       final String unaudited = getSpanId() + " "

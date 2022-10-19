@@ -18,15 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import java.io.IOException;
-import java.util.Map;
-
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import org.junit.After;
-import org.junit.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
@@ -35,10 +28,17 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.junit.After;
+import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.Map;
 
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GET_FILE_STATUS;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.createIOStatisticsStoreForAuditing;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.service.ServiceOperations.stopQuietly;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -138,6 +138,11 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
         requestFactory.newGetObjectMetadataRequest("/"));
   }
 
+  protected GetObjectRequest get() {
+    return manager.beforeExecution(
+            requestFactory.newGetObjectRequest("/").withRange(8, 24));
+  }
+
   /**
    * Assert a head request fails as there is no
    * active span.
@@ -208,6 +213,17 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
     assertThat(params.get(key))
         .describedAs(key)
         .isEqualTo(expected);
+  }
+
+  /**
+   * Assert the map does not contain the key, i.e, it is null.
+   * @param params map of params
+   * @param key key
+   */
+  protected  void assertMapNotContains(final Map<String, String> params, final String key) {
+    assertThat(params.get(key))
+            .describedAs(key)
+            .isNull();
   }
 
 }

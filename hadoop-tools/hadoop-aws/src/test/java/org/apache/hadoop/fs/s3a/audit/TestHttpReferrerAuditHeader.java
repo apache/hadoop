@@ -18,37 +18,29 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.regex.Matcher;
-
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
+import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
-import org.apache.hadoop.fs.store.audit.AuditSpan;
-import org.apache.hadoop.fs.audit.CommonAuditContext;
-import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
-import org.apache.hadoop.security.UserGroupInformation;
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.regex.Matcher;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.*;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
 import static org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader.maybeStripWrappedQuotes;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_ID;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_OP;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH2;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD1;
-import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -115,6 +107,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     assertThat(span.getTimestamp())
         .describedAs("Timestamp of " + span)
         .isEqualTo(ts);
+    assertMapNotContains(params, RANGE);
 
     assertMapContains(params, PARAM_TIMESTAMP,
         Long.toString(ts));
@@ -178,6 +171,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
         .doesNotContainKey("x2");
 
   }
+
 
   /**
    * A real log entry.
@@ -307,6 +301,26 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     expectStrippedField("\"UA\"", "UA");
     expectStrippedField("\"\"\"\"", "");
     expectStrippedField("\"\"\"b\"", "b");
+  }
+
+  /**
+   * Verify that correct range is getting published in header
+   */
+  @Test
+  public void testGetObjectRange() throws Throwable {
+    AuditSpan span = span();
+    long ts = span.getTimestamp();
+    GetObjectRequest request = get();
+    Map<String, String> headers
+            = request.getCustomRequestHeaders();
+    assertThat(headers)
+            .describedAs("Custom headers")
+            .containsKey(HEADER_REFERRER);
+    String header = headers.get(HEADER_REFERRER);
+    LOG.info("Header is {}", header);
+    Map<String, String> params
+            = HttpReferrerAuditHeader.extractQueryParameters(header);
+    assertMapContains(params, RANGE, "bytes=8-24");
   }
 
   /**
