@@ -321,7 +321,6 @@ public class SQLFederationStateStore implements FederationStateStore {
             "Wrong behavior during deregistration of SubCluster %s from the StateStore.",
             subClusterId);
       }
-
       LOG.info("Deregistered the SubCluster {} state to {}.", subClusterId, state.toString());
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
 
@@ -366,14 +365,14 @@ public class SQLFederationStateStore implements FederationStateStore {
       // did not update the subcluster into FederationStateStore
       int rowCount = cstmt.getInt("rowCount_OUT");
       if (rowCount == 0) {
-        String errMsg = "SubCluster " + subClusterId + " does not exist; cannot heartbeat";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "SubCluster %s does not exist; cannot heartbeat.", subClusterId);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
       if (rowCount != 1) {
-        String errMsg = "Wrong behavior during the heartbeat of SubCluster " + subClusterId;
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during the heartbeat of SubCluster %s.", subClusterId);
       }
 
       LOG.info("Heartbeated the StateStore for the specified SubCluster {}.", subClusterId);
@@ -381,8 +380,8 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to heartbeat the StateStore for the specified SubCluster " + subClusterId, e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to heartbeat the StateStore for the specified SubCluster %s.", subClusterId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -449,14 +448,14 @@ public class SQLFederationStateStore implements FederationStateStore {
       try {
         FederationMembershipStateStoreInputValidator.checkSubClusterInfo(subClusterInfo);
       } catch (FederationStateStoreInvalidInputException e) {
-        String errMsg = "SubCluster " + subClusterId.toString() + " does not exist";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(e, LOG,
+            "SubCluster %s does not exist.", subClusterId);
       }
       LOG.debug("Got the information about the specified SubCluster {}", subClusterInfo);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to obtain the SubCluster information for " + subClusterId, e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to obtain the SubCluster information for %s.", subClusterId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -504,8 +503,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         try {
           FederationMembershipStateStoreInputValidator.checkSubClusterInfo(subClusterInfo);
         } catch (FederationStateStoreInvalidInputException e) {
-          String errMsg = "SubCluster " + subClusterId.toString() + " is not valid";
-          FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+          FederationStateStoreUtils.logAndThrowStoreException(e, LOG,
+              "SubCluster %s is not valid.", subClusterId);
         }
 
         // Filter the inactive
@@ -575,8 +574,8 @@ public class SQLFederationStateStore implements FederationStateStore {
         } else if (cstmt.getInt("rowCount_OUT") != 1) {
           // Check the ROWCOUNT value, if it is different from 1 it means the
           // call had a wrong behavior. Maybe the database is not set correctly.
-          String errMsg = "Wrong behavior during the insertion of SubCluster " + subClusterId;
-          FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+          FederationStateStoreUtils.logAndThrowStoreException(LOG,
+              "Wrong behavior during the insertion of SubCluster %s.", subClusterId);
         }
 
         LOG.info("Insert into the StateStore the application: {} in SubCluster: {}.",
@@ -585,16 +584,16 @@ public class SQLFederationStateStore implements FederationStateStore {
         // Check the ROWCOUNT value, if it is different from 0 it means the call
         // did edited the table
         if (rowCount != 0) {
-          String errMsg = "The application " + appId + " does exist but was overwritten";
-          FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+          FederationStateStoreUtils.logAndThrowStoreException(LOG,
+              "The application %s does exist but was overwritten.", appId);
         }
         LOG.info("Application: {} already present with SubCluster: {}.", appId, subClusterHome);
       }
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to insert the newly generated application " + appId, e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to insert the newly generated application %s.", appId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -635,15 +634,14 @@ public class SQLFederationStateStore implements FederationStateStore {
       // did not update the application into FederationStateStore
       int rowCount = cstmt.getInt("rowCount_OUT");
       if (rowCount == 0) {
-        String errMsg = "Application " + appId + " does not exist";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Application %s does not exist.", appId);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
       if (cstmt.getInt("rowCount_OUT") != 1) {
-        String errMsg =
-            "Wrong behavior during the update of SubCluster " + subClusterId;
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during the update of SubCluster %s.", subClusterId);
       }
 
       LOG.info("Update the SubCluster to {} for application {} in the StateStore",
@@ -651,8 +649,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to update the application " + appId, e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to update the application %s.", appId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -670,11 +668,13 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     SubClusterId homeRM = null;
 
+    ApplicationId applicationId = request.getApplicationId();
+
     try {
       cstmt = getCallableStatement(CALL_SP_GET_APPLICATION_HOME_SUBCLUSTER);
 
       // Set the parameters for the stored procedure
-      cstmt.setString("applicationId_IN", request.getApplicationId().toString());
+      cstmt.setString("applicationId_IN", applicationId.toString());
       cstmt.registerOutParameter("homeSubCluster_OUT", java.sql.Types.VARCHAR);
 
       // Execute the query
@@ -686,20 +686,20 @@ public class SQLFederationStateStore implements FederationStateStore {
       if (homeSubCluster != null) {
         homeRM = SubClusterId.newInstance(homeSubCluster);
       } else {
-        String errMsg = "Application " + request.getApplicationId() + " does not exist";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Application %s does not exist.", applicationId);
       }
 
       LOG.debug("Got the information about the specified application {}."
-          + " The AM is running in {}", request.getApplicationId(), homeRM);
+          + " The AM is running in {}", applicationId, homeRM);
 
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to obtain the application information for the specified application " +
-          request.getApplicationId(), e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to obtain the application information for the specified application %s.",
+          applicationId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -767,12 +767,12 @@ public class SQLFederationStateStore implements FederationStateStore {
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
 
     CallableStatement cstmt = null;
-
+    ApplicationId applicationId = request.getApplicationId();
     try {
       cstmt = getCallableStatement(CALL_SP_DELETE_APPLICATION_HOME_SUBCLUSTER);
 
       // Set the parameters for the stored procedure
-      cstmt.setString("applicationId_IN", request.getApplicationId().toString());
+      cstmt.setString("applicationId_IN", applicationId.toString());
       cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
       // Execute the query
@@ -784,15 +784,14 @@ public class SQLFederationStateStore implements FederationStateStore {
       // did not delete the application from FederationStateStore
       int rowCount = cstmt.getInt("rowCount_OUT");
       if (rowCount == 0) {
-        String errMsg = "Application " + request.getApplicationId() + " does not exist";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Application %s does not exist.", applicationId);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
       if (cstmt.getInt("rowCount_OUT") != 1) {
-        String errMsg = "Wrong behavior during deleting the application "
-            + request.getApplicationId();
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during deleting the application %s.", applicationId);
       }
 
       LOG.info("Delete from the StateStore the application: {}", request.getApplicationId());
@@ -800,8 +799,8 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to delete the application " + request.getApplicationId(), e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to delete the application %s.", applicationId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -849,8 +848,8 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to select the policy for the queue :" + request.getQueue(), e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to select the policy for the queue : %s." + request.getQueue());
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -887,15 +886,14 @@ public class SQLFederationStateStore implements FederationStateStore {
       // did not add a new policy into FederationStateStore
       int rowCount = cstmt.getInt("rowCount_OUT");
       if (rowCount == 0) {
-        String errMsg = "The policy " + policyConf.getQueue()
-            + " was not insert into the StateStore";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "The policy %s was not insert into the StateStore.", policyConf.getQueue());
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
       if (rowCount != 1) {
-        String errMsg = "Wrong behavior during insert the policy " + policyConf.getQueue();
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during insert the policy %s.", policyConf.getQueue());
       }
 
       LOG.info("Insert into the state store the policy for the queue: {}.", policyConf.getQueue());
@@ -903,8 +901,8 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to insert the newly generated policy for the queue :" + policyConf.getQueue(), e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to insert the newly generated policy for the queue : %s.", policyConf.getQueue());
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
