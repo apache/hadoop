@@ -226,13 +226,11 @@ public class SQLFederationStateStore implements FederationStateStore {
       SubClusterRegisterRequest registerSubClusterRequest) throws YarnException {
 
     // Input validator
-    FederationMembershipStateStoreInputValidator
-        .validate(registerSubClusterRequest);
+    FederationMembershipStateStoreInputValidator.validate(registerSubClusterRequest);
 
     CallableStatement cstmt = null;
 
-    SubClusterInfo subClusterInfo =
-        registerSubClusterRequest.getSubClusterInfo();
+    SubClusterInfo subClusterInfo = registerSubClusterRequest.getSubClusterInfo();
     SubClusterId subClusterId = subClusterInfo.getSubClusterId();
 
     try {
@@ -258,24 +256,24 @@ public class SQLFederationStateStore implements FederationStateStore {
       // did not add a new subcluster into FederationStateStore
       int rowCount = cstmt.getInt("rowCount_OUT");
       if (rowCount == 0) {
-        String errMsg = "SubCluster " + subClusterId + " was not registered into the StateStore";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "SubCluster %s was not registered into the StateStore.", subClusterId);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
       if (rowCount != 1) {
-        String errMsg = "Wrong behavior during registration of SubCluster "
-            + subClusterId + " into the StateStore";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during registration of SubCluster %s into the StateStore",
+            subClusterId);
       }
 
-      LOG.info("Registered the SubCluster {} into the StateStore", subClusterId);
+      LOG.info("Registered the SubCluster {} into the StateStore.", subClusterId);
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to register the SubCluster " + subClusterId + " into the StateStore", e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e,
+          LOG, "Unable to register the SubCluster %s into the StateStore.", subClusterId);
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
@@ -289,8 +287,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       SubClusterDeregisterRequest subClusterDeregisterRequest) throws YarnException {
 
     // Input validator
-    FederationMembershipStateStoreInputValidator
-        .validate(subClusterDeregisterRequest);
+    FederationMembershipStateStoreInputValidator.validate(subClusterDeregisterRequest);
 
     CallableStatement cstmt = null;
 
@@ -312,16 +309,17 @@ public class SQLFederationStateStore implements FederationStateStore {
 
       // Check the ROWCOUNT value, if it is equal to 0 it means the call
       // did not deregister the subcluster into FederationStateStore
-      if (cstmt.getInt("rowCount_OUT") == 0) {
-        String errMsg = "SubCluster " + subClusterId + " not found";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      int rowCount = cstmt.getInt("rowCount_OUT");
+      if (rowCount == 0) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "SubCluster %s not found.", subClusterId);
       }
       // Check the ROWCOUNT value, if it is different from 1 it means the call
       // had a wrong behavior. Maybe the database is not set correctly.
-      if (cstmt.getInt("rowCount_OUT") != 1) {
-        String errMsg = "Wrong behavior during deregistration of SubCluster "
-            + subClusterId + " from the StateStore";
-        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      if (rowCount != 1) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during deregistration of SubCluster %s from the StateStore.",
+            subClusterId);
       }
 
       LOG.info("Deregistered the SubCluster {} state to {}.", subClusterId, state.toString());
@@ -329,9 +327,8 @@ public class SQLFederationStateStore implements FederationStateStore {
 
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
-      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
-          "Unable to deregister the sub-cluster " + subClusterId +
-          " state to " + state.toString(), e);
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to deregister the sub-cluster %s state to %s.", subClusterId, state.toString());
     } finally {
       // Return to the pool the CallableStatement
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
