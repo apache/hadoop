@@ -2075,7 +2075,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     CompletionService<Pair<R, Exception>> compSvc =
         new ExecutorCompletionService<>(this.threadpool);
 
-    // Error Msg
+    // This part of the code should be able to expose the accessed Exception information.
+    // We use Pair to store related information. The left value of the Pair is the response,
+    // and the right value is the exception.
+    // If the request is normal, the response is not empty and the exception is empty;
+    // if the request is abnormal, the response is empty and the exception is not empty.
     for (final SubClusterInfo info : clusterIds) {
       compSvc.submit(() -> {
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
