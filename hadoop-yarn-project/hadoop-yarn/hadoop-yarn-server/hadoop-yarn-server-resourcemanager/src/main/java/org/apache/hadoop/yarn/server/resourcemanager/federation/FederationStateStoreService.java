@@ -502,13 +502,12 @@ public class FederationStateStoreService extends AbstractService
       throws Exception {
 
     // Generate a request to delete data
-    DeleteApplicationHomeSubClusterRequest request =
+    DeleteApplicationHomeSubClusterRequest req =
         DeleteApplicationHomeSubClusterRequest.newInstance(appId);
 
     // CleanUp Finish App.
-    return ((FederationActionRetry<Boolean>) (retry) ->
-        invokeCleanUpFinishApp(appId, isQuery, request))
-         .runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
+    return ((FederationActionRetry<Boolean>) (retry) -> invokeCleanUpFinishApp(appId, isQuery, req))
+        .runWithRetries(cleanUpRetryCountNum, cleanUpRetrySleepTime);
   }
 
   /**
