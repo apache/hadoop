@@ -130,7 +130,7 @@ abstract class BalancingPolicy {
    * Actual DFS capacity (capacity - non-DFS used) is calculated by
    * (DFS used + remaining).
    */
-  static class NodeActual extends BalancingPolicy {
+  static final class NodeActual extends BalancingPolicy {
     static final NodeActual INSTANCE = new NodeActual();
     private NodeActual() {}
 
