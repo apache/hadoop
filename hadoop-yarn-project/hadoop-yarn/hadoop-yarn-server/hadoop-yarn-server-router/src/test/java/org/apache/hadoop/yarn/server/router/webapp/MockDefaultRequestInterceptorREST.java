@@ -942,6 +942,6 @@ public class MockDefaultRequestInterceptorREST
 
     when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
     RMWebServices webSvc = new RMWebServices(mockRM, conf, mock(HttpServletResponse.class));
-    return webSvc.checkUserAccessToQueue(queue,username,queueAclType,hsr);
+    return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
   }
 }

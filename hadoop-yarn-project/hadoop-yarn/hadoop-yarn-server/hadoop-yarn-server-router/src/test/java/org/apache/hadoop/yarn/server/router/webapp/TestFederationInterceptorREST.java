@@ -1185,15 +1185,17 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // Case 1: Only queue admin user can access other user's information
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
-    LambdaTestUtils.intercept(YarnRuntimeException.class,
-        "User=non-admin doesn't haven access to queue=queue so it cannot check ACLs for other users.",
+    String errorMsg1 = "User=non-admin doesn't haven access to queue=queue " +
+        "so it cannot check ACLs for other users.";
+    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg1,
         () -> interceptor.checkUserAccessToQueue("queue", "jack",
         QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr));
 
     // Case 2: request an unknown ACL causes BAD_REQUEST
     HttpServletRequest mockHsr1 = mockHttpServletRequestByUserName("admin");
-    LambdaTestUtils.intercept(YarnRuntimeException.class,
-        "Specified queueAclType=XYZ_ACL is not a valid type, valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}",
+    String errorMsg2 = "Specified queueAclType=XYZ_ACL is not a valid type, " +
+        "valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}";
+    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg2,
         () -> interceptor.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr1));
 
     // We design a test, admin user has ADMINISTER_QUEUE, SUBMIT_APPLICATIONS permissions,
@@ -1228,7 +1230,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     }
   }
 
-  private void checkUserAccessToQueueFailed(String queue,String userName,
+  private void checkUserAccessToQueueFailed(String queue, String userName,
       QueueACL queueACL, String mockUser) throws AuthorizationException {
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
     RMQueueAclInfo aclInfo =
@@ -1241,8 +1243,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertEquals(4, aclInfos.size());
     for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
       Assert.assertFalse(rMQueueAclInfo.isAllowed());
-      String expectDiagnostics =
-          "User=" + userName + " doesn't have access to queue=queue with acl-type=" + queueACL.name();
+      String expectDiagnostics = "User=" + userName +
+          " doesn't have access to queue=queue with acl-type=" + queueACL.name();
       Assert.assertEquals(expectDiagnostics, rMQueueAclInfo.getDiagnostics());
     }
   }

@@ -2091,7 +2091,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           R ret = clazz.cast(retObj);
           return Pair.of(ret, null);
         } catch (Exception e) {
-          LOG.error("SubCluster {} failed to call {} method.", info.getSubClusterId(), request.getMethodName(), e);
+          LOG.error("SubCluster {} failed to call {} method.",
+              info.getSubClusterId(), request.getMethodName(), e);
           return Pair.of(null, e);
         }
       });

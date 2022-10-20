@@ -25,9 +25,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class RMQueueAclInfo {
-  protected Boolean allowed;
-  protected String user;
-  protected String diagnostics;
+  private Boolean allowed;
+  private String user;
+  private String diagnostics;
   private String subClusterId;
 
   public RMQueueAclInfo() {
