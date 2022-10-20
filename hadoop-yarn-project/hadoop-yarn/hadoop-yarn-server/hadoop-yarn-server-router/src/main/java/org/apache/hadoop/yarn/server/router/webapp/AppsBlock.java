@@ -188,12 +188,16 @@ public class AppsBlock extends RouterBlock {
           appsTableData.append("\"],\n");
 
         } catch (Exception e) {
-          LOG.info(
-                  "Cannot add application {}: {}", app.getAppId(), e.getMessage());
+          LOG.info("Cannot add application {}: {}", app.getAppId(), e.getMessage());
         }
       }
-      if (appsTableData.charAt(appsTableData.length() - 2) == ',') {
-        appsTableData.delete(appsTableData.length() - 2, appsTableData.length() - 1);
+
+      // The purpose of this part of the code is to remove redundant commas.
+      // If we find that the second-to-last character is a comma, we need to delete this comma.
+      int appsTableDataLength = appsTableData.length();
+      char secondToLastChar = appsTableData.charAt(appsTableDataLength - 2);
+      if (secondToLastChar == ',') {
+        appsTableData.delete(appsTableDataLength - 2, appsTableDataLength - 1);
       }
     }
 
