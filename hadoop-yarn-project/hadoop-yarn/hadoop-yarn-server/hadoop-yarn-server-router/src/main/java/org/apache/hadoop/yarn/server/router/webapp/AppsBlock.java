@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -155,49 +156,49 @@ public class AppsBlock extends RouterBlock {
     // Render the applications
     StringBuilder appsTableData = new StringBuilder("[\n");
 
-    if (appsInfo != null && CollectionUtils.isNotEmpty(appsInfo.getApps())) {
-      for (AppInfo app : appsInfo.getApps()) {
-        try {
+    if (appsInfo != null) {
+      Collection<AppInfo> apps = appsInfo.getApps();
+      if (CollectionUtils.isNotEmpty(apps)) {
+        int numApps = apps.size();
+        int i = 0;
+        for (AppInfo app : apps) {
+          try {
+            String percent = String.format("%.1f", app.getProgress() * 100.0F);
+            String trackingURL =
+                app.getTrackingUrl() == null ? "#" : app.getTrackingUrl();
 
-          String percent = String.format("%.1f", app.getProgress() * 100.0F);
-          String trackingURL =
-              app.getTrackingUrl() == null ? "#" : app.getTrackingUrl();
+            // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
+            appsTableData.append("[\"")
+                .append("<a href='").append(trackingURL).append("'>")
+                .append(app.getAppId()).append("</a>\",\"")
+                .append(escape(app.getUser())).append("\",\"")
+                .append(escape(app.getName())).append("\",\"")
+                .append(escape(app.getApplicationType())).append("\",\"")
+                .append(escape(app.getQueue())).append("\",\"")
+                .append(app.getPriority()).append("\",\"")
+                .append(app.getStartTime()).append("\",\"")
+                .append(app.getFinishTime()).append("\",\"")
+                .append(app.getState()).append("\",\"")
+                .append(app.getFinalStatus()).append("\",\"")
+                // Progress bar
+                .append("<br title='").append(percent).append("'> <div class='")
+                .append(C_PROGRESSBAR).append("' title='")
+                .append(join(percent, '%')).append("'> ").append("<div class='")
+                .append(C_PROGRESSBAR_VALUE).append("' style='")
+                .append(join("width:", percent, '%')).append("'> </div> </div>")
+                // History link
+                .append("\",\"<a href='").append(trackingURL).append("'>")
+                .append("History").append("</a>");
+            appsTableData.append("\"]\n");
 
-          // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
-          appsTableData.append("[\"")
-              .append("<a href='").append(trackingURL).append("'>")
-              .append(app.getAppId()).append("</a>\",\"")
-              .append(escape(app.getUser())).append("\",\"")
-              .append(escape(app.getName())).append("\",\"")
-              .append(escape(app.getApplicationType())).append("\",\"")
-              .append(escape(app.getQueue())).append("\",\"")
-              .append(app.getPriority()).append("\",\"")
-              .append(app.getStartTime()).append("\",\"")
-              .append(app.getFinishTime()).append("\",\"")
-              .append(app.getState()).append("\",\"")
-              .append(app.getFinalStatus()).append("\",\"")
-              // Progress bar
-              .append("<br title='").append(percent).append("'> <div class='")
-              .append(C_PROGRESSBAR).append("' title='")
-              .append(join(percent, '%')).append("'> ").append("<div class='")
-              .append(C_PROGRESSBAR_VALUE).append("' style='")
-              .append(join("width:", percent, '%')).append("'> </div> </div>")
-              // History link
-              .append("\",\"<a href='").append(trackingURL).append("'>")
-              .append("History").append("</a>");
-          appsTableData.append("\"],\n");
-
-        } catch (Exception e) {
-          LOG.info("Cannot add application {}: {}", app.getAppId(), e.getMessage());
+            if (i < numApps - 1) {
+              appsTableData.append(",");
+            }
+          } catch (Exception e) {
+            LOG.info("Cannot add application {}: {}", app.getAppId(), e.getMessage());
+          }
+          i++;
         }
-      }
-
-      // The purpose of this part of the code is to remove redundant commas.
-      // If we find that the second-to-last character is a comma, we need to delete this comma.
-      int appsTableDataLength = appsTableData.length();
-      char secondToLastChar = appsTableData.charAt(appsTableDataLength - 2);
-      if (secondToLastChar == ',') {
-        appsTableData.delete(appsTableDataLength - 2, appsTableDataLength - 1);
       }
     }
 
