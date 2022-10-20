@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
@@ -34,7 +36,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -75,7 +76,7 @@ public class TestAMWebServices extends JerseyTestBase {
     protected void configureServlets() {
 
       appContext = new MockAppContext(0, 1, 1, 1);
-      appContext.setBlacklistedNodes(Sets.newHashSet("badnode1", "badnode2"));
+      appContext.setBlacklistedNodes(new HashSet<>(Arrays.asList("badnode1", "badnode2")));
 
       bind(JAXBContextResolver.class);
       bind(AMWebServices.class);

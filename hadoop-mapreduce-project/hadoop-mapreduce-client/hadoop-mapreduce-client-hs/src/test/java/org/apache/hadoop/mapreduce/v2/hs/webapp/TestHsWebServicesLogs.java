@@ -31,7 +31,6 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
@@ -77,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -323,9 +323,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     List<ContainerLogsInfo> responseList =
         response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
-    Set<String> expectedIdStrings = Sets.newHashSet(
+    Set<String> expectedIdStrings = new HashSet<>(Arrays.asList(
         CONTAINER_1_1_1.toString(), CONTAINER_1_1_2.toString(),
-        CONTAINER_1_1_3.toString(), CONTAINER_1_2_1.toString());
+        CONTAINER_1_1_3.toString(), CONTAINER_1_2_1.toString()));
 
     assertResponseList(responseList, expectedIdStrings, false);
 
@@ -356,9 +356,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     List<ContainerLogsInfo> responseList =
         response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
-    Set<String> expectedIdStrings = Sets.newHashSet(
+    Set<String> expectedIdStrings = new HashSet<>(Arrays.asList(
         CONTAINER_2_1_1.toString(), CONTAINER_2_2_1.toString(),
-        CONTAINER_2_2_3.toString());
+        CONTAINER_2_2_3.toString()));
     assertResponseList(responseList, expectedIdStrings, true);
 
     for (ContainerLogsInfo logsInfo : responseList) {
@@ -389,9 +389,9 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     List<ContainerLogsInfo> responseList =
         response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
-    Set<String> expectedIdStrings = Sets.newHashSet(
+    Set<String> expectedIdStrings = new HashSet<>(Arrays.asList(
         CONTAINER_1_1_1.toString(), CONTAINER_1_1_2.toString(),
-        CONTAINER_1_1_3.toString());
+        CONTAINER_1_1_3.toString()));
     assertResponseList(responseList, expectedIdStrings, false);
 
     for (ContainerLogsInfo logsInfo : responseList) {
@@ -422,8 +422,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
     List<ContainerLogsInfo> responseList =
         response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
-    Set<String> expectedIdStrings = Sets.newHashSet(
-        CONTAINER_2_2_1.toString(), CONTAINER_2_2_3.toString());
+    Set<String> expectedIdStrings = new HashSet<>(Arrays.asList(
+        CONTAINER_2_2_1.toString(), CONTAINER_2_2_3.toString()));
     assertResponseList(responseList, expectedIdStrings, true);
 
     for (ContainerLogsInfo logsInfo : responseList) {

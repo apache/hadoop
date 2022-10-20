@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,7 +45,6 @@ import org.apache.hadoop.mapred.SplitLocationInfo;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -398,12 +398,9 @@ public class TestFileInputFormat {
       List<FileStatus> fetchedStatuses, final FileSystem localFs) {
     Assert.assertEquals(expectedPaths.size(), fetchedStatuses.size());
 
-    Iterable<Path> fqExpectedPaths =
-        expectedPaths.stream().map(
-            input -> localFs.makeQualified(input)).collect(Collectors.toList());
 
-
-    Set<Path> expectedPathSet = Sets.newHashSet(fqExpectedPaths);
+    Set<Path> expectedPathSet = expectedPaths.stream().map(
+            localFs::makeQualified).collect(Collectors.toSet());
     for (FileStatus fileStatus : fetchedStatuses) {
       if (!expectedPathSet.remove(localFs.makeQualified(fileStatus.getPath()))) {
         Assert.fail("Found extra fetched status: " + fileStatus.getPath());
@@ -421,7 +418,7 @@ public class TestFileInputFormat {
             input-> ((FileSplit) input).getPath().toString())
             .collect(Collectors.toList());
 
-    Set<String> expectedSet = Sets.newHashSet(expected);
+    Set<String> expectedSet = new HashSet<>(expected);
     for (String splitPathString : pathsFromSplits) {
       if (!expectedSet.remove(splitPathString)) {
         Assert.fail("Found extra split: " + splitPathString);
