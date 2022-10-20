@@ -245,7 +245,9 @@ public class RouterDelegationTokenSecretManager
     Map<RMDelegationTokenIdentifier, Long> allTokens = new HashMap<>();
     for (Map.Entry<RMDelegationTokenIdentifier,
          DelegationTokenInformation> entry : currentTokens.entrySet()) {
-      allTokens.put(entry.getKey(), entry.getValue().getRenewDate());
+      RMDelegationTokenIdentifier keyIdentifier = entry.getKey();
+      DelegationTokenInformation tokenInformation = entry.getValue();
+      allTokens.put(keyIdentifier, tokenInformation.getRenewDate());
     }
     return allTokens;
   }
