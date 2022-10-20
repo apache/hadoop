@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -527,10 +528,17 @@ public class DefaultRequestInterceptorREST
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+    RMQueueAclInfo acl = RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         RMQueueAclInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.QUEUES + "/" + queue
         + "/access", null, null, getConf(), client);
+    FederationRMQueueAclInfo fedAclInfo = new FederationRMQueueAclInfo();
+    for (int i = 1; i <= 2; i++) {
+      String sc = "SC-" + i;
+      RMQueueAclInfo acl1 = new RMQueueAclInfo(acl.isAllowed(), acl.getUser(), acl.getDiagnostics(), sc);
+      fedAclInfo.getList().add(acl1);
+    }
+    return fedAclInfo;
   }
 
   @Override

@@ -24,13 +24,14 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
+import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class FederationRMQueueAclInfo extends RMQueueAclInfo {
 
   @XmlElement(name = "subCluster")
-  private ArrayList<RMQueueAclInfo> list = new ArrayList<>();
+  private List<RMQueueAclInfo> list = new ArrayList<>();
 
   public FederationRMQueueAclInfo() {
   } // JAXB needs this
@@ -39,11 +40,11 @@ public class FederationRMQueueAclInfo extends RMQueueAclInfo {
     this.list = list;
   }
 
-  public ArrayList<RMQueueAclInfo> getList() {
+  public List<RMQueueAclInfo> getList() {
     return list;
   }
 
-  public void setList(ArrayList<RMQueueAclInfo> list) {
+  public void setList(List<RMQueueAclInfo> list) {
     this.list = list;
   }
 }
