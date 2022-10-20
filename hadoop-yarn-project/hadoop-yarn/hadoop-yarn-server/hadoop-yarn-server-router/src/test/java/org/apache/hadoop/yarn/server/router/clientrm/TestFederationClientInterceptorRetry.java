@@ -82,7 +82,7 @@ public class TestFederationClientInterceptorRetry
   private static SubClusterId bad1;
   private static SubClusterId bad2;
 
-  private static List<SubClusterId> scs = new ArrayList<SubClusterId>();
+  private static List<SubClusterId> scs = new ArrayList<>();
 
   @Override
   public void setUp() throws IOException {
@@ -119,8 +119,7 @@ public class TestFederationClientInterceptorRetry
     super.tearDown();
   }
 
-  private void setupCluster(List<SubClusterId> scsToRegister)
-      throws YarnException {
+  private void setupCluster(List<SubClusterId> scsToRegister) throws YarnException {
 
     try {
       // Clean up the StateStore before every test
@@ -137,6 +136,7 @@ public class TestFederationClientInterceptorRetry
 
   @Override
   protected YarnConfiguration createConfiguration() {
+
     YarnConfiguration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
     String mockPassThroughInterceptorClass =
@@ -164,8 +164,8 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster.
    */
   @Test
-  public void testGetNewApplicationOneBadSC()
-      throws Exception {
+  public void testGetNewApplicationOneBadSC() throws Exception {
+
     LOG.info("Test getNewApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
 
@@ -179,8 +179,8 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 2 bad SubClusters.
    */
   @Test
-  public void testGetNewApplicationTwoBadSCs()
-      throws Exception {
+  public void testGetNewApplicationTwoBadSCs() throws Exception {
+
     LOG.info("Test getNewApplication with two bad SubClusters");
     setupCluster(Arrays.asList(bad1, bad2));
 
@@ -194,8 +194,7 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster and 1 good one.
    */
   @Test
-  public void testGetNewApplicationOneBadOneGood()
-      throws YarnException, IOException {
+  public void testGetNewApplicationOneBadOneGood() throws YarnException, IOException {
 
     LOG.info("Test getNewApplication with one bad, one good SC");
     setupCluster(Arrays.asList(good, bad2));
@@ -212,8 +211,7 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 1 bad SubCluster.
    */
   @Test
-  public void testSubmitApplicationOneBadSC()
-      throws Exception {
+  public void testSubmitApplicationOneBadSC() throws Exception {
 
     LOG.info("Test submitApplication with one bad SubCluster");
     setupCluster(Arrays.asList(bad2));
@@ -226,17 +224,14 @@ public class TestFederationClientInterceptorRetry
         () -> interceptor.submitApplication(request));
   }
 
-  private SubmitApplicationRequest mockSubmitApplicationRequest(
-      ApplicationId appId) {
+  private SubmitApplicationRequest mockSubmitApplicationRequest(ApplicationId appId) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
     ApplicationSubmissionContext context = ApplicationSubmissionContext
         .newInstance(appId, MockApps.newAppName(), "q1",
-            Priority.newInstance(0), amContainerSpec, false, false, -1,
-            Resources.createResource(
-                YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
-            "MockApp");
-    SubmitApplicationRequest request = SubmitApplicationRequest
-        .newInstance(context);
+        Priority.newInstance(0), amContainerSpec, false, false, -1,
+        Resources.createResource(YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB),
+        "MockApp");
+    SubmitApplicationRequest request = SubmitApplicationRequest.newInstance(context);
     return request;
   }
 
@@ -245,9 +240,9 @@ public class TestFederationClientInterceptorRetry
    * cluster is composed of only 2 bad SubClusters.
    */
   @Test
-  public void testSubmitApplicationTwoBadSCs()
-      throws Exception {
-    System.out.println("Test submitApplication with two bad SubClusters");
+  public void testSubmitApplicationTwoBadSCs() throws Exception {
+
+    LOG.info("Test submitApplication with two bad SubClusters.");
     setupCluster(Arrays.asList(bad1, bad2));
 
     final ApplicationId appId =
@@ -265,7 +260,8 @@ public class TestFederationClientInterceptorRetry
   @Test
   public void testSubmitApplicationOneBadOneGood()
       throws YarnException, IOException, InterruptedException {
-    System.out.println("Test submitApplication with one bad, one good SC");
+
+    LOG.info("Test submitApplication with one bad, one good SC.");
     setupCluster(Arrays.asList(good, bad2));
 
     final ApplicationId appId =
