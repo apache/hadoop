@@ -147,7 +147,7 @@ public final class MarkerTool extends S3GuardTool {
   /**
    * Constant to use when there is no limit on the number of
    * objects listed: {@value}.
-   * <p></p>
+   * <p>
    * The value is 0 and not -1 because it allows for the limit to be
    * set on the command line {@code -limit 0}.
    * The command line parser rejects {@code -limit -1} as the -1
@@ -475,17 +475,23 @@ public final class MarkerTool extends S3GuardTool {
           '}';
     }
 
-    /** Exit code to report. */
+    /**
+     * @return Exit code to report.
+     */
     public int getExitCode() {
       return exitCode;
     }
 
-    /** Tracker which did the scan. */
+    /**
+     * @return Tracker which did the scan.
+     */
     public DirMarkerTracker getTracker() {
       return tracker;
     }
 
-    /** Summary of purge. Null if none took place. */
+    /**
+     * @return Summary of purge. Null if none took place.
+     */
     public MarkerPurgeSummary getPurgeSummary() {
       return purgeSummary;
     }
@@ -661,7 +667,7 @@ public final class MarkerTool extends S3GuardTool {
    * @param path path to scan
    * @param tracker tracker to update
    * @param limit limit of files to scan; -1 for 'unlimited'
-   * @return true if the scan completedly scanned the entire tree
+   * @return true if the scan completely scanned the entire tree
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
@@ -840,6 +846,7 @@ public final class MarkerTool extends S3GuardTool {
    * Execute the marker tool, with no checks on return codes.
    *
    * @param scanArgs set of args for the scanner.
+   * @throws IOException IO failure
    * @return the result
    */
   @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
@@ -853,9 +860,9 @@ public final class MarkerTool extends S3GuardTool {
 
   /**
    * Arguments for the scan.
-   * <p></p>
+   * <p>
    * Uses a builder/argument object because too many arguments were
-   * being created and it was making maintenance harder.
+   * being created, and it was making maintenance harder.
    */
   public static final class ScanArgs {
 
@@ -960,43 +967,71 @@ public final class MarkerTool extends S3GuardTool {
     /** Consider only markers in nonauth paths as errors. */
     private boolean nonAuth = false;
 
-    /** Source FS; must be or wrap an S3A FS. */
+    /**
+     * Source FS; must be or wrap an S3A FS.
+     * @param source Source FileSystem
+     * @return the builder class after scanning source FS
+     */
     public ScanArgsBuilder withSourceFS(final FileSystem source) {
       this.sourceFS = source;
       return this;
     }
 
-    /** Path to scan. */
+    /**
+     * Path to scan.
+     * @param p path to scan
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withPath(final Path p) {
       this.path = p;
       return this;
     }
 
-    /** Purge? */
+    /**
+     * Should the markers be purged? This is also enabled when using the clean flag on the CLI.
+     * @param d set to purge if true
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withDoPurge(final boolean d) {
       this.doPurge = d;
       return this;
     }
 
-    /** Min marker count (ignored on purge). */
+    /**
+     * Min marker count an audit must find (ignored on purge).
+     * @param min Minimum Marker Count (default 0)
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withMinMarkerCount(final int min) {
       this.minMarkerCount = min;
       return this;
     }
 
-    /** Max marker count (ignored on purge). */
+    /**
+     * Max marker count an audit must find (ignored on purge).
+     * @param max Maximum Marker Count (default 0)
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withMaxMarkerCount(final int max) {
       this.maxMarkerCount = max;
       return this;
     }
 
-    /** Limit of files to scan; 0 for 'unlimited'. */
+    /**
+     * Limit of files to scan; 0 for 'unlimited'.
+     * @param l Limit of files to scan
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withLimit(final int l) {
       this.limit = l;
       return this;
     }
 
-    /** Consider only markers in nonauth paths as errors. */
+    /**
+     * Consider only markers in non-authoritative paths as errors.
+     * @param b True if tool should only consider markers in non-authoritative paths
+     * @return builder class for method chaining
+     */
     public ScanArgsBuilder withNonAuth(final boolean b) {
       this.nonAuth = b;
       return this;
