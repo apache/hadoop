@@ -944,11 +944,11 @@ public class MockDefaultRequestInterceptorREST
     };
 
     when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
-    RMWebServices webSvc = new MockRMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    MockRMWebServices webSvc = new MockRMWebServices(mockRM, conf, mock(HttpServletResponse.class));
     return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
   }
 
-  class MockRMWebServices extends RMWebServices {
+  class MockRMWebServices {
 
     @Context
     private HttpServletResponse httpServletResponse;
@@ -960,7 +960,6 @@ public class MockDefaultRequestInterceptorREST
     }
 
     MockRMWebServices(ResourceManager rm, Configuration conf, HttpServletResponse response) {
-      super(rm, conf);
       this.resourceManager = rm;
       this.httpServletResponse = response;
     }
@@ -983,7 +982,6 @@ public class MockDefaultRequestInterceptorREST
       return callerUGI;
     }
 
-    @Override
     public RMQueueAclInfo checkUserAccessToQueue(
         String queue, String username, String queueAclType, HttpServletRequest hsr)
         throws AuthorizationException {
