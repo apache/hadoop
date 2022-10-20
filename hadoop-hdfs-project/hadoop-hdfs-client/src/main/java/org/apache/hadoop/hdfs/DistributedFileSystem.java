@@ -568,7 +568,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Same as
-   * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
+   * {@link #create(Path, FsPermission, EnumSet, int, short, long,
    * Progressable, ChecksumOpt)} with a few additions. First, addition of
    * favoredNodes that is a hint to where the namenode should place the file
    * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
@@ -637,12 +637,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
-   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * Progressable, ChecksumOpt, InetSocketAddress[], String, String)}, it provides a
    * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
    * EnumSet, int, short, long, Progressable)} with a few additions.
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
-   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * ChecksumOpt, InetSocketAddress[], String, String) for the descriptions of
    * additional parameters, i.e., favoredNodes, ecPolicyName and
    * storagePolicyName.
    */
