@@ -270,6 +270,7 @@ Optional:
 |`yarn.router.admin.address` | `0.0.0.0:8052` | Admin address at the router. |
 |`yarn.router.webapp.https.address` | `0.0.0.0:8091` | Secure webapp address at the router. |
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
+|`yarn.router.submit.interval.time` | `10ms` | The interval between two retry, the default value is 10ms. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |

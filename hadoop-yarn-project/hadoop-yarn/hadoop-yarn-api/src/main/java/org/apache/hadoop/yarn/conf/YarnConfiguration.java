@@ -4118,6 +4118,14 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
   /**
+   * GetNewApplication and SubmitApplication request retry interval time.
+   */
+  public static final String ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      ROUTER_PREFIX + "submit.interval.time";
+  public static final long DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      TimeUnit.MILLISECONDS.toMillis(10);
+
+  /**
    * The interceptor class used in FederationClientInterceptor should return
    * partial ApplicationReports.
    */
