@@ -529,8 +529,8 @@ public class DefaultRequestInterceptorREST
       String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         RMQueueAclInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.QUEUES + "/" + queue
-            + "/access", null, null, getConf(), client);
+        RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.QUEUES + "/" + queue
+        + "/access", null, null, getConf(), client);
   }
 
   @Override
