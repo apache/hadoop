@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecret
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 /**
  * Implements the {@link ClientRequestInterceptor} interface and provides common
  * functionality which can can be used and/or extended by other concrete
