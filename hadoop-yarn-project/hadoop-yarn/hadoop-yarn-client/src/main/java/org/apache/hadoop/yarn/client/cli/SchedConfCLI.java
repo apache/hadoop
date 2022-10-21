@@ -37,6 +37,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.dao.ConfInfo;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
@@ -190,7 +191,7 @@ public class SchedConfCLI extends Configured implements Tool {
     Source xmlInput = new StreamSource(new StringReader(input));
     StringWriter sw = new StringWriter();
     StreamResult xmlOutput = new StreamResult(sw);
-    TransformerFactory transformerFactory = TransformerFactory.newInstance();
+    TransformerFactory transformerFactory = XMLUtils.newSecureTransformerFactory();
     transformerFactory.setAttribute("indent-number", indent);
     Transformer transformer = transformerFactory.newTransformer();
     transformer.setOutputProperty(OutputKeys.INDENT, "yes");
