@@ -31,12 +31,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.event.ProgressEvent;
 import com.amazonaws.event.ProgressEventType;
 import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
@@ -48,9 +45,13 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecut
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -848,20 +849,21 @@ class S3ABlockOutputStream extends OutputStream implements
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request;
       final S3ADataBlocks.BlockUploadData uploadData;
+      final RequestBody requestBody;
       try {
         uploadData = block.startUpload();
-        request = writeOperationHelper.newUploadPartRequest(
+        requestBody = uploadData.hasFile()
+            ? RequestBody.fromFile(uploadData.getFile())
+            : RequestBody.fromInputStream(uploadData.getUploadStream(), size);
+
+        request = writeOperationHelper.newUploadPartRequestBuilder(
             key,
             uploadId,
             currentPartNumber,
-            size,
-            uploadData.getUploadStream(),
-            uploadData.getFile(),
-            0L);
-        request.setLastPart(isLast);
-      } catch (SdkBaseException aws) {
+            size).build();
+      } catch (SdkException aws) {
         // catch and translate
-        IOException e = translateException("upload", key, aws);
+        IOException e = translateExceptionV2("upload", key, aws);
         // failure to start the upload.
         noteUploadFailure(e);
         throw e;
@@ -870,10 +872,14 @@ class S3ABlockOutputStream extends OutputStream implements
         noteUploadFailure(e);
         throw e;
       }
-      BlockUploadProgress callback =
-          new BlockUploadProgress(
-              block, progressListener, now());
-      request.setGeneralProgressListener(callback);
+
+      // TODO: You cannot currently add progress listeners to requests not via the TM.
+      // See also putObject
+      // BlockUploadProgress callback =
+      //    new BlockUploadProgress(
+      //        block, progressListener, now());
+      // request.setGeneralProgressListener(callback);
+
       statistics.blockUploadQueued(block.dataSize());
       ListenableFuture<CompletedPart> partETagFuture =
           executorService.submit(() -> {
@@ -882,14 +888,15 @@ class S3ABlockOutputStream extends OutputStream implements
             try {
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
-              // TODO: This needs to updated during uploadPart work. Remove PartEtag import.
-              PartETag partETag = writeOperationHelper.uploadPart(request)
-                  .getPartETag();
+              UploadPartResponse response = writeOperationHelper
+                  .uploadPart(request, requestBody);
               LOG.debug("Completed upload of {} to part {}",
-                  block, partETag.getETag());
+                  block, response.eTag());
               LOG.debug("Stream statistics of {}", statistics);
               partsUploaded++;
-              return CompletedPart.builder().eTag(partETag.getETag()).partNumber(currentPartNumber)
+              return CompletedPart.builder()
+                  .eTag(response.eTag())
+                  .partNumber(currentPartNumber)
                   .build();
             } catch (IOException e) {
               // save immediately.

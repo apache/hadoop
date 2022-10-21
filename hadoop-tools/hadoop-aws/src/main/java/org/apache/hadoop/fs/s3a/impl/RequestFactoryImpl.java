@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.File;
-import java.io.InputStream;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +31,6 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +56,7 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.utils.Md5Utils;
 
 import org.apache.hadoop.fs.PathIOException;
@@ -245,9 +243,15 @@ public class RequestFactoryImpl implements RequestFactory {
    * request when encryption is enabled.
    * @param request upload part request
    */
-  protected void setOptionalUploadPartRequestParameters(
-      UploadPartRequest request) {
-    generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
+  protected void uploadPartEncryptionParameters(
+      UploadPartRequest.Builder builder) {
+    // TODO: review/refactor together with similar methods for other requests.
+    // need to set key to get objects encrypted with SSE_C
+    EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
+      builder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+          .sseCustomerKey(base64customerKey)
+          .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
+    });
   }
 
   private CopyObjectRequest.Builder buildCopyObjectRequest() {
@@ -521,22 +525,16 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public UploadPartRequest newUploadPartRequest(
+  public UploadPartRequest.Builder newUploadPartRequestBuilder(
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
-      InputStream uploadStream,
-      File sourceFile,
-      long offset) throws PathIOException {
+      long size) throws PathIOException {
     checkNotNull(uploadId);
-    // exactly one source must be set; xor verifies this
-    checkArgument((uploadStream != null) ^ (sourceFile != null),
-        "Data source");
     checkArgument(size >= 0, "Invalid partition size %s", size);
     checkArgument(partNumber > 0,
         "partNumber must be between 1 and %s inclusive, but is %s",
-        DEFAULT_UPLOAD_PART_COUNT_LIMIT, partNumber);
+        multipartPartCountLimit, partNumber);
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
@@ -546,29 +544,14 @@ public class RequestFactoryImpl implements RequestFactory {
       throw new PathIOException(destKey,
           String.format(pathErrorMsg, partNumber, multipartPartCountLimit));
     }
-    UploadPartRequest request = new UploadPartRequest()
-        .withBucketName(getBucket())
-        .withKey(destKey)
-        .withUploadId(uploadId)
-        .withPartNumber(partNumber)
-        .withPartSize(size);
-    if (uploadStream != null) {
-      // there's an upload stream. Bind to it.
-      request.setInputStream(uploadStream);
-    } else {
-      checkArgument(sourceFile.exists(),
-          "Source file does not exist: %s", sourceFile);
-      checkArgument(sourceFile.isFile(),
-          "Source is not a file: %s", sourceFile);
-      checkArgument(offset >= 0, "Invalid offset %s", offset);
-      long length = sourceFile.length();
-      checkArgument(offset == 0 || offset < length,
-          "Offset %s beyond length of file %s", offset, length);
-      request.setFile(sourceFile);
-      request.setFileOffset(offset);
-    }
-    setOptionalUploadPartRequestParameters(request);
-    return prepareRequest(request);
+    UploadPartRequest.Builder builder = UploadPartRequest.builder()
+        .bucket(getBucket())
+        .key(destKey)
+        .uploadId(uploadId)
+        .partNumber(partNumber)
+        .contentLength(size);
+    uploadPartEncryptionParameters(builder);
+    return prepareV2Request(builder);
   }
 
   @Override

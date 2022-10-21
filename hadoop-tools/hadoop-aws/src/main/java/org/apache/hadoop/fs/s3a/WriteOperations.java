@@ -20,23 +20,22 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -191,31 +190,20 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
       throws IOException;
 
   /**
-   * Create and initialize a part request of a multipart upload.
-   * Exactly one of: {@code uploadStream} or {@code sourceFile}
-   * must be specified.
-   * A subset of the file may be posted, by providing the starting point
-   * in {@code offset} and a length of block in {@code size} equal to
-   * or less than the remaining bytes.
+   * Create and initialize a part request builder of a multipart upload.
    * @param destKey destination key of ongoing operation
    * @param uploadId ID of ongoing upload
    * @param partNumber current part number of the upload
    * @param size amount of data
-   * @param uploadStream source of data to upload
-   * @param sourceFile optional source file.
-   * @param offset offset in file to start reading.
-   * @return the request.
+   * @return the request builder.
    * @throws IllegalArgumentException if the parameters are invalid
    * @throws PathIOException if the part number is out of range.
    */
-  UploadPartRequest newUploadPartRequest(
+  UploadPartRequest.Builder newUploadPartRequestBuilder(
       String destKey,
       String uploadId,
       int partNumber,
-      int size,
-      InputStream uploadStream,
-      File sourceFile,
-      Long offset) throws IOException;
+      long size) throws IOException;
 
   /**
    * PUT an object directly (i.e. not via the transfer manager).
@@ -281,12 +269,13 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
+   * @param request the upload part request.
+   * @param body the request body.
    * @return the result of the operation.
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  UploadPartResult uploadPart(UploadPartRequest request)
+  UploadPartResponse uploadPart(UploadPartRequest request, RequestBody body)
       throws IOException;
 
   /**

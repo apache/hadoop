@@ -29,11 +29,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
@@ -73,6 +70,7 @@ import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.test.HadoopTestBase;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -83,6 +81,8 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -655,29 +655,30 @@ public class StagingTestBase {
         });
 
     // uploadPart
-    when(mockClient.uploadPart(any(UploadPartRequest.class)))
+    when(mockClientV2.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
         .thenAnswer(invocation -> {
-          LOG.debug("uploadPart for {}", mockClient);
+          LOG.debug("uploadPart for {}", mockClientV2);
           synchronized (lock) {
             if (results.parts.size() == errors.failOnUpload) {
               if (errors.recover) {
                 errors.failOnUpload(-1);
               }
               LOG.info("Triggering upload failure");
-              throw new AmazonClientException(
-                  "Mock Fail on upload " + results.parts.size());
+              throw AwsServiceException.builder()
+                  .message("Mock Fail on upload " + results.parts.size())
+                  .build();
             }
             UploadPartRequest req = getArgumentAt(invocation,
                 0, UploadPartRequest.class);
             results.parts.add(req);
             String etag = UUID.randomUUID().toString();
-            List<String> etags = results.tagsByUpload.get(req.getUploadId());
+            List<String> etags = results.tagsByUpload.get(req.uploadId());
             if (etags == null) {
               etags = Lists.newArrayList();
-              results.tagsByUpload.put(req.getUploadId(), etags);
+              results.tagsByUpload.put(req.uploadId(), etags);
             }
             etags.add(etag);
-            return newResult(req, etag);
+            return UploadPartResponse.builder().eTag(etag).build();
           }
         });
 
@@ -685,7 +686,7 @@ public class StagingTestBase {
     when(mockClientV2
         .completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
         .thenAnswer(invocation -> {
-          LOG.debug("completeMultipartUpload for {}", mockClient);
+          LOG.debug("completeMultipartUpload for {}", mockClientV2);
           synchronized (lock) {
             if (results.commits.size() == errors.failOnCommit) {
               if (errors.recover) {
@@ -706,7 +707,7 @@ public class StagingTestBase {
 
     // abortMultipartUpload mocking
     doAnswer(invocation -> {
-      LOG.debug("abortMultipartUpload for {}", mockClient);
+      LOG.debug("abortMultipartUpload for {}", mockClientV2);
       synchronized (lock) {
         if (results.aborts.size() == errors.failOnAbort) {
           if (errors.recover) {
@@ -779,14 +780,6 @@ public class StagingTestBase {
           .statusCode(404)
           .build();
     }
-  }
-
-  private static UploadPartResult newResult(UploadPartRequest request,
-      String etag) {
-    UploadPartResult result = new UploadPartResult();
-    result.setPartNumber(request.getPartNumber());
-    result.setETag(etag);
-    return result;
   }
 
   /**
