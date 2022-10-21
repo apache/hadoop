@@ -45,6 +45,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -139,6 +140,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
+  private boolean strictModeEnabled;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -189,6 +191,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           YarnConfiguration.DEFAULT_ROUTER_APPSINFO_CACHED_COUNT);
       appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
     }
+
+    strictModeEnabled = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED);
   }
 
   private SubClusterId getRandomActiveSubCluster(
@@ -2024,9 +2030,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     Map<SubClusterInfo, R> results = new HashMap<>();
 
     // Send the requests in parallel
-    CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
+    CompletionService<Pair<R, Exception>> compSvc =
+        new ExecutorCompletionService<>(this.threadpool);
 
-    // Error Msg
+    // If there is a sub-cluster access error,
+    // we should choose whether to throw exception information according to user configuration.
+    // We use Pair to store related information. The left value of the Pair is the response,
+    // and the right value is the exception.
+    // If the request is normal, the response is not empty and the exception is empty;
+    // if the request is abnormal, the response is empty and the exception is not empty.
     for (final SubClusterInfo info : clusterIds) {
       compSvc.submit(() -> {
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -2036,27 +2048,34 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return ret;
+          return Pair.of(ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return null;
+          return Pair.of(null, e);
         }
       });
     }
 
     clusterIds.stream().forEach(clusterId -> {
       try {
-        Future<R> future = compSvc.take();
-        R response = future.get();
+        Future<Pair<R, Exception>> future = compSvc.take();
+        Pair<R, Exception> pair = future.get();
+        R response = pair.getKey();
         if (response != null) {
           results.put(clusterId, response);
         }
+        Exception exception = pair.getRight();
+        // In strict mode, as long as 1 subCluster throws an exception,
+        // we throw the exception directly.
+        if (strictModeEnabled && exception != null) {
+          throw exception;
+        }
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId, request.getMethodName());
-        LOG.warn(msg, e);
-        throw new YarnRuntimeException(msg, e);
+            clusterId.getSubClusterId(), request.getMethodName());
+        LOG.error(msg, e);
+        throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
     return results;
@@ -2118,5 +2137,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
+  }
+
+  @VisibleForTesting
+  public void setStrictModeEnabled(boolean strictModeEnabled) {
+    this.strictModeEnabled = strictModeEnabled;
   }
 }

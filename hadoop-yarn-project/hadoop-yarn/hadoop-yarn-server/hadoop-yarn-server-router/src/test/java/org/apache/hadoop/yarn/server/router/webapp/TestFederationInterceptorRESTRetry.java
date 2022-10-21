@@ -25,9 +25,12 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -80,10 +83,15 @@ public class TestFederationInterceptorRESTRetry
   @Override
   public void setUp() {
     super.setUpConfig();
+
+    Configuration conf = this.getConf();
+    // Enable strict mode
+    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED, true);
+
     interceptor = new TestableFederationInterceptorREST();
 
     stateStore = new MemoryFederationStateStore();
-    stateStore.init(this.getConf());
+    stateStore.init(conf);
     FederationStateStoreFacade.getInstance().reinitialize(stateStore,
         getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
@@ -377,15 +385,19 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 1 bad SubCluster.
    */
   @Test
-  public void testGetNodesOneBadSC()
-      throws YarnException, IOException, InterruptedException {
-
+  public void testGetNodesOneBadSC() throws Exception {
+    // Disable strict mode
+    interceptor.setStrictModeEnabled(false);
     setupCluster(Arrays.asList(bad2));
 
     NodesInfo response = interceptor.getNodes(null);
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getNodes().size());
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+
+    // enable strict mode
+    interceptor.setStrictModeEnabled(true);
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**
@@ -393,14 +405,19 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 2 bad SubClusters.
    */
   @Test
-  public void testGetNodesTwoBadSCs()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNodesTwoBadSCs() throws Exception {
+    // Disable strict mode
+    interceptor.setStrictModeEnabled(false);
     setupCluster(Arrays.asList(bad1, bad2));
 
     NodesInfo response = interceptor.getNodes(null);
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getNodes().size());
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+
+    // Enable strict mode
+    interceptor.setStrictModeEnabled(true);
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**
@@ -408,8 +425,9 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 1 bad SubCluster and a good one.
    */
   @Test
-  public void testGetNodesOneBadOneGood()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNodesOneBadOneGood() throws Exception {
+    // Disable strict mode
+    interceptor.setStrictModeEnabled(false);
     setupCluster(Arrays.asList(good, bad2));
 
     NodesInfo response = interceptor.getNodes(null);
@@ -418,7 +436,11 @@ public class TestFederationInterceptorRESTRetry
     // Check if the only node came from Good SubCluster
     Assert.assertEquals(good.getId(),
         Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+
+    // Enable strict mode
+    interceptor.setStrictModeEnabled(true);
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**

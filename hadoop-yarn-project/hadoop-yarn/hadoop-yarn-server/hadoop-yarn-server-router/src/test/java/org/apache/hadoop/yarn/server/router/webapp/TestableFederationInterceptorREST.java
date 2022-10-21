@@ -50,5 +50,4 @@ public class TestableFederationInterceptorREST
             badSC);
     interceptor.setRunning(false);
   }
-
 }

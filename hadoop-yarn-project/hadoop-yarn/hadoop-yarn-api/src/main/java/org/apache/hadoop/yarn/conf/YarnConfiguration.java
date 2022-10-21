@@ -4218,6 +4218,11 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "webapp.cross-origin.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
 
+  /** Router Interceptor Strict-Mode Enable. **/
+  public static final String ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED =
+      ROUTER_PREFIX + "interceptor.strict-mode.enable";
+  public static final boolean DEFAULT_ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED = true;
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
