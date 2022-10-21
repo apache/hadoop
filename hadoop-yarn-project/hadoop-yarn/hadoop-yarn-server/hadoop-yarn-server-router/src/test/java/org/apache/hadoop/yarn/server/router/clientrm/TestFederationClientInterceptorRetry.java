@@ -88,8 +88,6 @@ public class TestFederationClientInterceptorRetry
   @Override
   public void setUp() throws IOException {
     super.setUpConfig();
-    this.getConf().setStrings(FEDERATION_POLICY_MANAGER,
-        "org.apache.hadoop.yarn.server.router.clientrm.TestSequentialBroadcastPolicyManager");
     interceptor = new TestableFederationClientInterceptor();
 
     stateStore = new MemoryFederationStateStore();
@@ -154,7 +152,7 @@ public class TestFederationClientInterceptorRetry
             + "," + TestableFederationClientInterceptor.class.getName());
 
     conf.set(FEDERATION_POLICY_MANAGER,
-        UniformBroadcastPolicyManager.class.getName());
+        TestSequentialBroadcastPolicyManager.class.getName());
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
