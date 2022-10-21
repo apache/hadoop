@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_POLICY_MANAGER;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -87,6 +88,8 @@ public class TestFederationClientInterceptorRetry
   @Override
   public void setUp() throws IOException {
     super.setUpConfig();
+    this.getConf().setStrings(FEDERATION_POLICY_MANAGER,
+        "org.apache.hadoop.yarn.server.router.clientrm.TestSequentialBroadcastPolicyManager");
     interceptor = new TestableFederationClientInterceptor();
 
     stateStore = new MemoryFederationStateStore();
@@ -150,7 +153,7 @@ public class TestFederationClientInterceptorRetry
         mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
             + "," + TestableFederationClientInterceptor.class.getName());
 
-    conf.set(YarnConfiguration.FEDERATION_POLICY_MANAGER,
+    conf.set(FEDERATION_POLICY_MANAGER,
         UniformBroadcastPolicyManager.class.getName());
 
     // Disable StateStoreFacade cache
@@ -282,5 +285,50 @@ public class TestFederationClientInterceptorRetry
     Assert.assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
     Assert.assertEquals(good, respSubClusterId);
+  }
+
+  @Test
+  public void testSubmitApplicationTwoBadOneGood() throws Exception {
+    LOG.info("Test submitApplication with two bad, one good SC.");
+    setupCluster(Arrays.asList(bad1, bad2, good));
+    final ApplicationId appId =
+       ApplicationId.newInstance(System.currentTimeMillis(), 1);
+
+    // Use the TestSequentialRouterPolicy strategy,
+    // which will sort the SubClusterId because good=0, bad1=1, bad2=2
+    // We will get 2, 1, 0 [bad2, bad1, good]
+    // Set the retryNum to 1
+    // 1st time will use bad2, 2nd time will use bad1
+    // bad1 is updated to stateStore
+    interceptor.setNumSubmitRetries(1);
+    final SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+    LambdaTestUtils.intercept(YarnException.class, "RM is stopped",
+        () -> interceptor.submitApplication(request));
+
+    // We will get bad1
+    checkSubmitSubCluster(appId, bad1);
+
+    // Set the retryNum to 1
+    // 1st time will use bad2, 2nd time will use bad1, 3rd good
+    interceptor.setNumSubmitRetries(2);
+    SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);
+    Assert.assertNotNull(submitAppResponse);
+
+    // We will get good
+    checkSubmitSubCluster(appId, good);
+  }
+
+  private void checkSubmitSubCluster(ApplicationId appId, SubClusterId expectSubCluster)
+      throws YarnException {
+    GetApplicationHomeSubClusterRequest getAppRequest =
+        GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse getAppResponse =
+        stateStore.getApplicationHomeSubCluster(getAppRequest);
+    Assert.assertNotNull(getAppResponse);
+    Assert.assertNotNull(getAppResponse);
+    ApplicationHomeSubCluster responseHomeSubCluster = getAppResponse.getApplicationHomeSubCluster();
+    Assert.assertNotNull(responseHomeSubCluster);
+    SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
+    Assert.assertEquals(expectSubCluster, respSubClusterId);
   }
 }
