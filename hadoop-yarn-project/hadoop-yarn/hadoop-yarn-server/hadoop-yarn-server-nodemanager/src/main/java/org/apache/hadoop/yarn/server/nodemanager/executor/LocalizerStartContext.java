@@ -39,6 +39,7 @@ public final class LocalizerStartContext {
   private final String user;
   private final String appId;
   private final String locId;
+  public final String containerId;
   private final LocalDirsHandlerService dirsHandler;
 
   public static final class Builder {
@@ -47,6 +48,7 @@ public final class LocalizerStartContext {
     private String user;
     private String appId;
     private String locId;
+    private String containerId;
     private LocalDirsHandlerService dirsHandler;
 
     public Builder() {
@@ -72,6 +74,11 @@ public final class LocalizerStartContext {
       return this;
     }
 
+    public Builder setContainerId(String containerId) {
+      this.containerId = containerId;
+      return this;
+    }
+
     public Builder setLocId(String locId) {
       this.locId = locId;
       return this;
@@ -93,6 +100,7 @@ public final class LocalizerStartContext {
     this.user = builder.user;
     this.appId = builder.appId;
     this.locId = builder.locId;
+    this.containerId = builder.containerId;
     this.dirsHandler = builder.dirsHandler;
   }
 
@@ -114,6 +122,10 @@ public final class LocalizerStartContext {
 
   public String getLocId() {
     return this.locId;
+  }
+
+  public String getContainerId() {
+    return this.containerId;
   }
 
   public LocalDirsHandlerService getDirsHandler() {
