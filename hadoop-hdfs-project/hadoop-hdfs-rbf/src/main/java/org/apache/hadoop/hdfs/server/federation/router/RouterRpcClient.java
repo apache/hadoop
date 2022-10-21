@@ -998,6 +998,18 @@ public class RouterRpcClient {
   }
 
   /**
+   * Same as the above invokeSequential, but with router ugi.
+   */
+  public <T> T invokeSequentialAsRouter(
+      final List<? extends RemoteLocationContext> locations,
+      final RemoteMethod remoteMethod, Class<T> expectedResultClass,
+      Object expectedResultValue) throws IOException {
+    UserGroupInformation routerUgi = UserGroupInformation.getLoginUser();
+    return (T) invokeSequentialInternal(remoteMethod, locations, expectedResultClass,
+        expectedResultValue, routerUgi).getResult();
+  }
+
+  /**
    * Invokes sequential proxy calls to different locations. Continues to invoke
    * calls until the success condition is met, or until all locations have been
    * attempted.
@@ -1032,9 +1044,19 @@ public class RouterRpcClient {
       final RemoteMethod remoteMethod, final List<R> locations,
       Class<T> expectedResultClass, Object expectedResultValue)
       throws IOException {
+    UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+    return invokeSequentialInternal(remoteMethod, locations, expectedResultClass,
+        expectedResultValue, ugi);
+  }
 
+  /**
+   * Call invokeSequential with a configurable ugi
+   */
+  public <R extends RemoteLocationContext, T> RemoteResult invokeSequentialInternal(
+      final RemoteMethod remoteMethod, final List<R> locations,
+      Class<T> expectedResultClass, Object expectedResultValue, UserGroupInformation ugi)
+      throws IOException {
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
-    final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     final Method m = remoteMethod.getMethod();
     List<IOException> thrownExceptions = new ArrayList<>();
     Object firstResult = null;

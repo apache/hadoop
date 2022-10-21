@@ -145,6 +145,40 @@ public class TestRouterTrash {
   }
 
   @Test
+  public void testMoveToTrashAutoCreateUserHome() throws IOException, URISyntaxException, InterruptedException {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns0, MOUNT_POINT));
+    assertTrue(addMountTable(addEntry));
+    String testUser2 = "TEST_USER2";
+
+    // Set owner to TEST_USER for root dir
+    DFSClient superUserClient = nnContext.getClient();
+    superUserClient.setOwner("/", TEST_USER, TEST_USER);
+
+    // Create MOUNT_POINT
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(TEST_USER);
+    DFSClient client = nnContext.getClient(ugi);
+    client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
+    assertTrue(client.exists(MOUNT_POINT));
+    // Create test file
+    client.create(FILE, true);
+    Path filePath = new Path(FILE);
+
+    // Set owner to TEST_USER2 for the root dir so that TEST_USER does not have permission to
+    // create his home dir under root dir. Instead, the router will create the home dir for TEST_USER.
+    superUserClient.setOwner("/", testUser2, testUser2);
+
+    // Test moveToTrash by TEST_USER
+    String trashPath = "/user/" + TEST_USER + "/.Trash/Current" + FILE;
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs =
+        DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(filePath));
+    assertTrue(nnFs.exists(new Path(trashPath)));
+  }
+
+  @Test
   public void testMoveToTrashNoMountPoint() throws IOException,
       URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
