@@ -142,194 +142,154 @@ public abstract class BaseRouterRMAdminTest {
   protected RefreshQueuesResponse refreshQueues(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RefreshQueuesResponse>() {
-          @Override
-          public RefreshQueuesResponse run() throws Exception {
-            RefreshQueuesRequest req = RefreshQueuesRequest.newInstance();
-            RefreshQueuesResponse response =
-                getRouterRMAdminService().refreshQueues(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<RefreshQueuesResponse>) () -> {
+          RefreshQueuesRequest req = RefreshQueuesRequest.newInstance();
+          RefreshQueuesResponse response =
+              getRouterRMAdminService().refreshQueues(req);
+          return response;
         });
   }
 
   protected RefreshNodesResponse refreshNodes(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RefreshNodesResponse>() {
-          @Override
-          public RefreshNodesResponse run() throws Exception {
-            RefreshNodesRequest req = RefreshNodesRequest.newInstance();
-            RefreshNodesResponse response =
-                getRouterRMAdminService().refreshNodes(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<RefreshNodesResponse>) () -> {
+          RefreshNodesRequest req = RefreshNodesRequest.newInstance();
+          RefreshNodesResponse response =
+              getRouterRMAdminService().refreshNodes(req);
+          return response;
         });
   }
 
   protected RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       String user) throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user).doAs(
-        new PrivilegedExceptionAction<RefreshSuperUserGroupsConfigurationResponse>() {
-          @Override
-          public RefreshSuperUserGroupsConfigurationResponse run()
-              throws Exception {
-            RefreshSuperUserGroupsConfigurationRequest req =
-                RefreshSuperUserGroupsConfigurationRequest.newInstance();
-            RefreshSuperUserGroupsConfigurationResponse response =
-                getRouterRMAdminService()
-                    .refreshSuperUserGroupsConfiguration(req);
-            return response;
-          }
+        (PrivilegedExceptionAction<RefreshSuperUserGroupsConfigurationResponse>) () -> {
+          RefreshSuperUserGroupsConfigurationRequest req =
+              RefreshSuperUserGroupsConfigurationRequest.newInstance();
+          RefreshSuperUserGroupsConfigurationResponse response =
+              getRouterRMAdminService()
+                  .refreshSuperUserGroupsConfiguration(req);
+          return response;
         });
   }
 
   protected RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       String user) throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user).doAs(
-        new PrivilegedExceptionAction<RefreshUserToGroupsMappingsResponse>() {
-          @Override
-          public RefreshUserToGroupsMappingsResponse run() throws Exception {
-            RefreshUserToGroupsMappingsRequest req =
-                RefreshUserToGroupsMappingsRequest.newInstance();
-            RefreshUserToGroupsMappingsResponse response =
-                getRouterRMAdminService().refreshUserToGroupsMappings(req);
-            return response;
-          }
+        (PrivilegedExceptionAction<RefreshUserToGroupsMappingsResponse>) () -> {
+          RefreshUserToGroupsMappingsRequest req =
+              RefreshUserToGroupsMappingsRequest.newInstance();
+          RefreshUserToGroupsMappingsResponse response =
+              getRouterRMAdminService().refreshUserToGroupsMappings(req);
+          return response;
         });
   }
 
   protected RefreshAdminAclsResponse refreshAdminAcls(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RefreshAdminAclsResponse>() {
-          @Override
-          public RefreshAdminAclsResponse run() throws Exception {
-            RefreshAdminAclsRequest req = RefreshAdminAclsRequest.newInstance();
-            RefreshAdminAclsResponse response =
-                getRouterRMAdminService().refreshAdminAcls(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<RefreshAdminAclsResponse>) () -> {
+          RefreshAdminAclsRequest req = RefreshAdminAclsRequest.newInstance();
+          RefreshAdminAclsResponse response =
+              getRouterRMAdminService().refreshAdminAcls(req);
+          return response;
         });
   }
 
   protected RefreshServiceAclsResponse refreshServiceAcls(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RefreshServiceAclsResponse>() {
-          @Override
-          public RefreshServiceAclsResponse run() throws Exception {
-            RefreshServiceAclsRequest req =
-                RefreshServiceAclsRequest.newInstance();
-            RefreshServiceAclsResponse response =
-                getRouterRMAdminService().refreshServiceAcls(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<RefreshServiceAclsResponse>) () -> {
+          RefreshServiceAclsRequest req =
+              RefreshServiceAclsRequest.newInstance();
+          RefreshServiceAclsResponse response =
+              getRouterRMAdminService().refreshServiceAcls(req);
+          return response;
         });
   }
 
   protected UpdateNodeResourceResponse updateNodeResource(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<UpdateNodeResourceResponse>() {
-          @Override
-          public UpdateNodeResourceResponse run() throws Exception {
-            UpdateNodeResourceRequest req =
-                UpdateNodeResourceRequest.newInstance(null);
-            UpdateNodeResourceResponse response =
-                getRouterRMAdminService().updateNodeResource(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<UpdateNodeResourceResponse>) () -> {
+          UpdateNodeResourceRequest req =
+              UpdateNodeResourceRequest.newInstance(null);
+          UpdateNodeResourceResponse response =
+              getRouterRMAdminService().updateNodeResource(req);
+          return response;
         });
   }
 
   protected RefreshNodesResourcesResponse refreshNodesResources(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<RefreshNodesResourcesResponse>() {
-          @Override
-          public RefreshNodesResourcesResponse run() throws Exception {
-            RefreshNodesResourcesRequest req =
-                RefreshNodesResourcesRequest.newInstance();
-            RefreshNodesResourcesResponse response =
-                getRouterRMAdminService().refreshNodesResources(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<RefreshNodesResourcesResponse>) () -> {
+          RefreshNodesResourcesRequest req =
+              RefreshNodesResourcesRequest.newInstance();
+          RefreshNodesResourcesResponse response =
+              getRouterRMAdminService().refreshNodesResources(req);
+          return response;
         });
   }
 
   protected AddToClusterNodeLabelsResponse addToClusterNodeLabels(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<AddToClusterNodeLabelsResponse>() {
-          @Override
-          public AddToClusterNodeLabelsResponse run() throws Exception {
-            AddToClusterNodeLabelsRequest req =
-                AddToClusterNodeLabelsRequest.newInstance(null);
-            AddToClusterNodeLabelsResponse response =
-                getRouterRMAdminService().addToClusterNodeLabels(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<AddToClusterNodeLabelsResponse>) () -> {
+          AddToClusterNodeLabelsRequest req =
+              AddToClusterNodeLabelsRequest.newInstance(null);
+          AddToClusterNodeLabelsResponse response =
+              getRouterRMAdminService().addToClusterNodeLabels(req);
+          return response;
         });
   }
 
   protected RemoveFromClusterNodeLabelsResponse removeFromClusterNodeLabels(
       String user) throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user).doAs(
-        new PrivilegedExceptionAction<RemoveFromClusterNodeLabelsResponse>() {
-          @Override
-          public RemoveFromClusterNodeLabelsResponse run() throws Exception {
-            RemoveFromClusterNodeLabelsRequest req =
-                RemoveFromClusterNodeLabelsRequest.newInstance(null);
-            RemoveFromClusterNodeLabelsResponse response =
-                getRouterRMAdminService().removeFromClusterNodeLabels(req);
-            return response;
-          }
+        (PrivilegedExceptionAction<RemoveFromClusterNodeLabelsResponse>) () -> {
+          RemoveFromClusterNodeLabelsRequest req =
+              RemoveFromClusterNodeLabelsRequest.newInstance(null);
+          RemoveFromClusterNodeLabelsResponse response =
+              getRouterRMAdminService().removeFromClusterNodeLabels(req);
+          return response;
         });
   }
 
   protected ReplaceLabelsOnNodeResponse replaceLabelsOnNode(String user)
       throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user)
-        .doAs(new PrivilegedExceptionAction<ReplaceLabelsOnNodeResponse>() {
-          @Override
-          public ReplaceLabelsOnNodeResponse run() throws Exception {
-            ReplaceLabelsOnNodeRequest req = ReplaceLabelsOnNodeRequest
-                .newInstance(new HashMap<NodeId, Set<String>>());
-            ReplaceLabelsOnNodeResponse response =
-                getRouterRMAdminService().replaceLabelsOnNode(req);
-            return response;
-          }
+        .doAs((PrivilegedExceptionAction<ReplaceLabelsOnNodeResponse>) () -> {
+          ReplaceLabelsOnNodeRequest req = ReplaceLabelsOnNodeRequest
+              .newInstance(new HashMap<NodeId, Set<String>>());
+          ReplaceLabelsOnNodeResponse response =
+              getRouterRMAdminService().replaceLabelsOnNode(req);
+          return response;
         });
   }
 
   protected CheckForDecommissioningNodesResponse checkForDecommissioningNodes(
       String user) throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user).doAs(
-        new PrivilegedExceptionAction<CheckForDecommissioningNodesResponse>() {
-          @Override
-          public CheckForDecommissioningNodesResponse run() throws Exception {
-            CheckForDecommissioningNodesRequest req =
-                CheckForDecommissioningNodesRequest.newInstance();
-            CheckForDecommissioningNodesResponse response =
-                getRouterRMAdminService().checkForDecommissioningNodes(req);
-            return response;
-          }
+        (PrivilegedExceptionAction<CheckForDecommissioningNodesResponse>) () -> {
+          CheckForDecommissioningNodesRequest req =
+              CheckForDecommissioningNodesRequest.newInstance();
+          CheckForDecommissioningNodesResponse response =
+              getRouterRMAdminService().checkForDecommissioningNodes(req);
+          return response;
         });
   }
 
   protected RefreshClusterMaxPriorityResponse refreshClusterMaxPriority(
       String user) throws IOException, InterruptedException {
     return UserGroupInformation.createRemoteUser(user).doAs(
-        new PrivilegedExceptionAction<RefreshClusterMaxPriorityResponse>() {
-          @Override
-          public RefreshClusterMaxPriorityResponse run() throws Exception {
-            RefreshClusterMaxPriorityRequest req =
-                RefreshClusterMaxPriorityRequest.newInstance();
-            RefreshClusterMaxPriorityResponse response =
-                getRouterRMAdminService().refreshClusterMaxPriority(req);
-            return response;
-          }
+        (PrivilegedExceptionAction<RefreshClusterMaxPriorityResponse>) () -> {
+          RefreshClusterMaxPriorityRequest req =
+              RefreshClusterMaxPriorityRequest.newInstance();
+          RefreshClusterMaxPriorityResponse response =
+              getRouterRMAdminService().refreshClusterMaxPriority(req);
+          return response;
         });
   }
 
