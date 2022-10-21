@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -41,6 +43,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +54,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.io.IOException;
 
 /**
@@ -68,6 +75,8 @@ public final class RouterServerUtil {
   public static final String RESERVEIDSTR_PREFIX = "reservation_";
 
   private static final String EPOCH_PREFIX = "e";
+
+  private static Random rand = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -579,7 +588,6 @@ public final class RouterServerUtil {
     }
   }
 
-
   @Public
   @Unstable
   public static void validateReservationId(String reservationId)
@@ -603,5 +611,41 @@ public final class RouterServerUtil {
     if (!NumberUtils.isDigits(id) || !NumberUtils.isDigits(clusterTimestamp)) {
       throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
     }
+  }
+  
+  /**
+   * Randomly pick ActiveSubCluster.
+   * During the selection process, we will exclude SubClusters from the blacklist.
+   *
+   * @param activeSubClusters List of active subClusters.
+   * @param blackList blacklist.
+   * @return Active SubClusterId.
+   * @throws YarnException When there is no Active SubCluster,
+   * an exception will be thrown (No active SubCluster available to submit the request.)
+   */
+  public static SubClusterId getRandomActiveSubCluster(
+      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
+      throws YarnException {
+
+    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
+    if (MapUtils.isEmpty(activeSubClusters)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+
+    // Change activeSubClusters to List
+    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
+
+    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
+    if (CollectionUtils.isNotEmpty(blackList)) {
+      subClusterIds.removeAll(blackList);
+    }
+
+    // Check there are still active subcluster after removing the blacklist
+    if (CollectionUtils.isEmpty(subClusterIds)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+
+    // Randomly choose a SubCluster
+    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
 }
