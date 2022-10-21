@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
@@ -290,7 +289,7 @@ public class TestFederationClientInterceptorRetry
     LOG.info("Test submitApplication with two bad, one good SC.");
     setupCluster(Arrays.asList(bad1, bad2, good));
     final ApplicationId appId =
-       ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
 
     // Use the TestSequentialRouterPolicy strategy,
     // which will sort the SubClusterId because good=0, bad1=1, bad2=2
@@ -324,7 +323,8 @@ public class TestFederationClientInterceptorRetry
         stateStore.getApplicationHomeSubCluster(getAppRequest);
     Assert.assertNotNull(getAppResponse);
     Assert.assertNotNull(getAppResponse);
-    ApplicationHomeSubCluster responseHomeSubCluster = getAppResponse.getApplicationHomeSubCluster();
+    ApplicationHomeSubCluster responseHomeSubCluster =
+        getAppResponse.getApplicationHomeSubCluster();
     Assert.assertNotNull(responseHomeSubCluster);
     SubClusterId respSubClusterId = responseHomeSubCluster.getHomeSubCluster();
     Assert.assertEquals(expectSubCluster, respSubClusterId);

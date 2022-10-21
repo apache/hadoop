@@ -35,7 +35,7 @@ public class TestSequentialRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   public void reinitialize(FederationPolicyInitializationContext policyContext)
-    throws FederationPolicyInitializationException {
+      throws FederationPolicyInitializationException {
     FederationPolicyInitializationContextValidator.validate(policyContext,
         this.getClass().getCanonicalName());
     setPolicyContext(policyContext);
@@ -43,7 +43,7 @@ public class TestSequentialRouterPolicy extends AbstractRouterPolicy {
 
   @Override
   protected SubClusterId chooseSubCluster(String queue,
-    Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
+      Map<SubClusterId, SubClusterInfo> preSelectSubClusters) throws YarnException {
     /**
       * This strategy is only suitable for testing. We need to obtain subClusters sequentially.
       * We have 3 subClusters, 1 goodSubCluster and 2 badSubClusters.
