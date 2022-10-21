@@ -26,6 +26,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
@@ -35,11 +36,11 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides
 import static org.apache.hadoop.fs.s3a.S3AUtils.initProxySupport;
 
 /**
- * Unit tests to verify {@link S3AUtils} translates the proxy configurations
+ * Tests to verify {@link S3AUtils} translates the proxy configurations
  * are set correctly to Client configurations which are later used to construct
  * the proxy in AWS SDK.
  */
-public class TestS3AProxy extends AbstractS3ATestBase{
+public class ITestS3AProxy extends AbstractHadoopTestBase {
 
   /**
    * Verify Http proxy protocol.
@@ -73,17 +74,17 @@ public class TestS3AProxy extends AbstractS3ATestBase{
   /**
    * Assert that the configuration set for a proxy gets translated to Client
    * configuration with the correct protocol to be used by AWS SDK.
-   * @param proxyConfigForHttp Configurations used to set the proxy configs.
+   * @param proxyConfig Configuration used to set the proxy configs.
    * @param isExpectedSecured What is the expected protocol for the proxy to
    *                          be? true for https, and false for http.
    * @throws IOException
    */
-  private void verifyProxy(Configuration proxyConfigForHttp,
+  private void verifyProxy(Configuration proxyConfig,
       boolean isExpectedSecured)
       throws IOException {
     ClientConfiguration awsConf = new ClientConfiguration();
-    initProxySupport(proxyConfigForHttp,
-        getTestBucketName(getConfiguration()), awsConf);
+    initProxySupport(proxyConfig,
+        getTestBucketName(proxyConfig), awsConf);
     Assertions.assertThat(awsConf.getProxyProtocol())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? Protocol.HTTPS : Protocol.HTTP);

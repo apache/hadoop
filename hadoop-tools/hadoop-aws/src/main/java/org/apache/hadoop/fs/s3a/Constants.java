@@ -213,7 +213,7 @@ public final class Constants {
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
   /** Is the proxy secured(proxyProtocol = HTTPS)? */
-  public static final String PROXY_SECURED = "fs.s3a.proxy.secured";
+  public static final String PROXY_SECURED = "fs.s3a.proxy.ssl.enabled";
 
   /**
    * Number of times the AWS client library should retry errors before
