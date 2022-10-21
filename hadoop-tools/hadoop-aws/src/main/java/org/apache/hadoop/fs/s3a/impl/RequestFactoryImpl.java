@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.File;
-import java.io.InputStream;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -245,7 +243,7 @@ public class RequestFactoryImpl implements RequestFactory {
    * request when encryption is enabled.
    * @param request upload part request
    */
-  protected void setOptionalUploadPartRequestParameters(
+  protected void uploadPartEncryptionParameters(
       UploadPartRequest.Builder builder) {
     // TODO: review/refactor together with similar methods for other requests.
     // need to set key to get objects encrypted with SSE_C
@@ -536,7 +534,7 @@ public class RequestFactoryImpl implements RequestFactory {
     checkArgument(size >= 0, "Invalid partition size %s", size);
     checkArgument(partNumber > 0,
         "partNumber must be between 1 and %s inclusive, but is %s",
-        DEFAULT_UPLOAD_PART_COUNT_LIMIT, partNumber);
+        multipartPartCountLimit, partNumber);
 
     LOG.debug("Creating part upload request for {} #{} size {}",
         uploadId, partNumber, size);
@@ -552,7 +550,7 @@ public class RequestFactoryImpl implements RequestFactory {
         .uploadId(uploadId)
         .partNumber(partNumber)
         .contentLength(size);
-    setOptionalUploadPartRequestParameters(builder);
+    uploadPartEncryptionParameters(builder);
     return prepareV2Request(builder);
   }
 

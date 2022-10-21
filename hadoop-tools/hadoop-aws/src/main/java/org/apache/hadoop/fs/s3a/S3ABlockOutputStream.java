@@ -849,10 +849,10 @@ class S3ABlockOutputStream extends OutputStream implements
       final int currentPartNumber = partETagsFutures.size() + 1;
       final UploadPartRequest request;
       final S3ADataBlocks.BlockUploadData uploadData;
-      final RequestBody body;
+      final RequestBody requestBody;
       try {
         uploadData = block.startUpload();
-        body = uploadData.hasFile()
+        requestBody = uploadData.hasFile()
             ? RequestBody.fromFile(uploadData.getFile())
             : RequestBody.fromInputStream(uploadData.getUploadStream(), size);
 
@@ -889,7 +889,7 @@ class S3ABlockOutputStream extends OutputStream implements
               LOG.debug("Uploading part {} for id '{}'",
                   currentPartNumber, uploadId);
               UploadPartResponse response = writeOperationHelper
-                  .uploadPart(request, body);
+                  .uploadPart(request, requestBody);
               LOG.debug("Completed upload of {} to part {}",
                   block, response.eTag());
               LOG.debug("Stream statistics of {}", statistics);

@@ -575,6 +575,7 @@ public class CommitOperations extends AbstractStoreOperation
       LOG.debug("File size is {}, number of parts to upload = {}",
           length, numParts);
 
+      // Open the file to upload.
       try (InputStream fileStream = Files.newInputStream(localFile.toPath())) {
         for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
           progress.progress();
@@ -584,6 +585,7 @@ public class CommitOperations extends AbstractStoreOperation
               uploadId,
               partNumber,
               size).build();
+          // Read from the file input stream at current position.
           RequestBody body = RequestBody.fromInputStream(fileStream, size);
           UploadPartResponse response = writeOperations.uploadPart(part, body);
           offset += uploadPartSize;
