@@ -27,6 +27,8 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -63,6 +65,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.LimitInputStream;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
@@ -77,10 +80,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.XATTR_ERASURECODING_POLICY;
+
 /**
  * This class reads the protobuf-based fsimage and generates text output
  * for each inode to {@link PBImageTextWriter#out}. The sub-class can override
- * {@link getEntry()} to generate formatted string for each inode.
+ * {@link #getEntry(String, INode)} to generate formatted string for each inode.
  *
  * Since protobuf-based fsimage does not guarantee the order of inodes and
  * directories, PBImageTextWriter runs two-phase scans:
@@ -1029,4 +1034,23 @@ abstract class PBImageTextWriter implements Closeable {
       }
     }
   }
+
+  public String getErasureCodingPolicyName
+      (INodeSection.XAttrFeatureProto xattrFeatureProto) {
+    List<XAttr> xattrs =
+        FSImageFormatPBINode.Loader.loadXAttrs(xattrFeatureProto, stringTable);
+    for (XAttr xattr : xattrs) {
+      if (XATTR_ERASURECODING_POLICY.contains(xattr.getName())){
+        try{
+          ByteArrayInputStream bIn = new ByteArrayInputStream(xattr.getValue());
+          DataInputStream dIn = new DataInputStream(bIn);
+          return WritableUtils.readString(dIn);
+        } catch (IOException ioException){
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
 }

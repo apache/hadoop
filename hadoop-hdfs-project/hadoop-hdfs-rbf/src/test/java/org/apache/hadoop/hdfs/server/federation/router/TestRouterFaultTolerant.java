@@ -168,7 +168,7 @@ public class TestRouterFaultTolerant {
     }
     namenodes.clear();
 
-    routers.forEach(router ->  router.stop());
+    routers.forEach(Router::stop);
     routers.clear();
 
     if (service != null) {
@@ -582,7 +582,7 @@ public class TestRouterFaultTolerant {
   }
 
   /**
-   * Asserts that the results are the expected amount and it has both success
+   * Asserts that the results are the expected amount, and it has both success
    * and failure.
    * @param msg Message to show when the assertion fails.
    * @param expected Expected number of results.

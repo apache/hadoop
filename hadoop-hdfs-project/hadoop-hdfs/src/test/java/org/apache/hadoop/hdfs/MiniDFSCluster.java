@@ -71,6 +71,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -87,7 +88,6 @@ import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -653,7 +653,7 @@ public class MiniDFSCluster implements AutoCloseable {
   private boolean federation;
   private boolean checkExitOnShutdown = true;
   protected final int storagesPerDatanode;
-  private Set<FileSystem> fileSystems = Sets.newHashSet();
+  private Set<FileSystem> fileSystems = new HashSet<>();
 
   private List<long[]> storageCap = Lists.newLinkedList();
 
@@ -2159,10 +2159,11 @@ public class MiniDFSCluster implements AutoCloseable {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
       if (ExitUtil.terminateCalled()) {
-        LOG.error("Test resulted in an unexpected exit",
-            ExitUtil.getFirstExitException());
+        Exception cause = ExitUtil.getFirstExitException();
+        LOG.error("Test resulted in an unexpected exit", cause);
         ExitUtil.resetFirstExitException();
-        throw new AssertionError("Test resulted in an unexpected exit");
+        throw new AssertionError("Test resulted in an unexpected exit: " +
+            cause.toString(), cause);
       }
     }
     if (closeFileSystem) {
@@ -2308,6 +2309,8 @@ public class MiniDFSCluster implements AutoCloseable {
     nn.getHttpServer()
         .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     info.nameNode = nn;
+    info.nameserviceId = info.conf.get(DFS_NAMESERVICE_ID);
+    info.nnId = info.conf.get(DFS_HA_NAMENODE_ID_KEY);
     info.setStartOpt(startOpt);
     if (waitActive) {
       if (numDataNodes > 0) {

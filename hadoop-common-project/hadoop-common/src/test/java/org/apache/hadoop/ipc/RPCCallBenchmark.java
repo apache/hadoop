@@ -289,7 +289,7 @@ public class RPCCallBenchmark extends TestRpcBase implements Tool {
           long cpuNanosClient = getTotalCpuTime(ctx.getTestThreads());
           long cpuNanosServer = -1;
           if (server != null) {
-            cpuNanosServer = getTotalCpuTime(server.getHandlers());; 
+            cpuNanosServer = getTotalCpuTime(server.getHandlers());
           }
           System.out.println("====== Results ======");
           System.out.println("Options:\n" + opts);

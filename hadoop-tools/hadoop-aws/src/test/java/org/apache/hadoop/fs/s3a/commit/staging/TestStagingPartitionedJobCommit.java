@@ -34,7 +34,7 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.PathCommitException;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
-import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -67,7 +67,7 @@ public class TestStagingPartitionedJobCommit
 
     private PartitionedStagingCommitterForTesting(TaskAttemptContext context)
         throws IOException {
-      super(StagingTestBase.outputPath, context);
+      super(StagingTestBase.getOutputPath(), context);
     }
 
     /**
@@ -75,14 +75,15 @@ public class TestStagingPartitionedJobCommit
      * This is quite complex as the mock pending uploads need to be saved
      * to a filesystem for the next stage of the commit process.
      * To simulate multiple commit, more than one .pendingset file is created,
-     * @param context job context
+     * @param commitContext job context
      * @return an active commit containing a list of paths to valid pending set
      * file.
      * @throws IOException IO failure
      */
+    @SuppressWarnings("CollectionDeclaredAsConcreteClass")
     @Override
     protected ActiveCommit listPendingUploadsToCommit(
-        JobContext context) throws IOException {
+        CommitContext commitContext) throws IOException {
 
       LocalFileSystem localFS = FileSystem.getLocal(getConf());
       ActiveCommit activeCommit = new ActiveCommit(localFS,
@@ -109,17 +110,17 @@ public class TestStagingPartitionedJobCommit
         File file = File.createTempFile("staging", ".pendingset");
         file.deleteOnExit();
         Path path = new Path(file.toURI());
-        pendingSet.save(localFS, path, true);
+        pendingSet.save(localFS, path, PendingSet.serializer());
         activeCommit.add(localFS.getFileStatus(path));
       }
       return activeCommit;
     }
 
     @Override
-    protected void abortJobInternal(JobContext context,
+    protected void abortJobInternal(CommitContext commitContext,
         boolean suppressExceptions) throws IOException {
       this.aborted = true;
-      super.abortJobInternal(context, suppressExceptions);
+      super.abortJobInternal(commitContext, suppressExceptions);
     }
   }
 
@@ -242,7 +243,7 @@ public class TestStagingPartitionedJobCommit
     pathsExist(mockS3, "dateint=20161116/hour=14");
     when(mockS3
         .delete(
-            new Path(outputPath, "dateint=20161116/hour=14"),
+            new Path(getOutputPath(), "dateint=20161116/hour=14"),
             true))
         .thenThrow(new PathCommitException("fake",
             "Fake IOException for delete"));

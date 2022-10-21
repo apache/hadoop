@@ -140,6 +140,7 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
+  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -429,6 +430,57 @@ public final class Constants {
    */
   public static final String CONTENT_ENCODING = "fs.s3a.object.content.encoding";
 
+  /**
+   * S3 storage class: standard, reduced_redundancy, intelligent_tiering etc.
+   * Value {@value }.
+   */
+  public static final String STORAGE_CLASS = "fs.s3a.create.storage.class";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD = "standard";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_REDUCED_REDUNDANCY = "reduced_redundancy";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER = "glacier";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_STANDARD_INFREQUENT_ACCESS = "standard_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_ONEZONE_INFREQUENT_ACCESS = "onezone_ia";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_INTELLIGENT_TIERING = "intelligent_tiering";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_DEEP_ARCHIVE = "deep_archive";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_OUTPOSTS = "outposts";
+
+  /**
+   * S3 Storage option: {@value}.
+   */
+  public static final String STORAGE_CLASS_GLACIER_INSTANT_RETRIEVAL = "glacier_ir";
+
   // should we try to purge old multipart uploads when starting up
   public static final String PURGE_EXISTING_MULTIPART =
       "fs.s3a.multipart.purge";
@@ -681,6 +733,7 @@ public final class Constants {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1108,4 +1161,96 @@ public final class Constants {
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
+
+  /**
+   * Flag for create performance.
+   * This is *not* a configuration option; it is for use in the
+   * {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Prefix for adding a header to the object when created.
+   * The actual value must have a "." suffix and then the actual header.
+   * This is *not* a configuration option; it is only for use in the
+   * {code createFile()} builder.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_HEADER = "fs.s3a.create.header";
+
+  /**
+   * What is the smallest reasonable seek in bytes such
+   * that we group ranges together during vectored read operation.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_VECTOR_READS_MIN_SEEK_SIZE =
+          "fs.s3a.vectored.read.min.seek.size";
+
+  /**
+   * What is the largest merged read size in bytes such
+   * that we group ranges together during vectored read.
+   * Setting this value to 0 will disable merging of ranges.
+   * Value : {@value}.
+   */
+  public static final String AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE =
+          "fs.s3a.vectored.read.max.merged.size";
+
+  /**
+   * Default minimum seek in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+
+  /**
+   * Default maximum read size in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Maximum number of range reads a single input stream can have
+   * active (downloading, or queued) to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS}
+   */
+  public static final String AWS_S3_VECTOR_ACTIVE_RANGE_READS =
+          "fs.s3a.vectored.active.ranged.reads";
+
+  /**
+   * Limit of queued range data download operations during vectored
+   * read. Value: {@value}
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
+
+  /**
+   * Controls whether the prefetching input stream is enabled.
+   */
+  public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
+
+  /**
+   * Default option as to whether the prefetching input stream is enabled.
+   */
+  public static final boolean  PREFETCH_ENABLED_DEFAULT = false;
+
+  // If the default values are used, each file opened for reading will consume
+  // 64 MB of heap space (8 blocks x 8 MB each).
+
+  /**
+   * The size of a single prefetched block in number of bytes.
+   */
+  public static final String PREFETCH_BLOCK_SIZE_KEY = "fs.s3a.prefetch.block.size";
+  public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 8 * 1024 * 1024;
+
+  /**
+   * Maximum number of blocks prefetched at any given time.
+   */
+  public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
+  public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
 }

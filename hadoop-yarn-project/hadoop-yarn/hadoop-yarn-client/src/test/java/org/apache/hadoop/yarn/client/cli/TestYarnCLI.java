@@ -1928,7 +1928,7 @@ public class TestYarnCLI {
     QueueCLI cli = createAndGetQueueCLI();
     when(client.getQueueInfo(any(String.class))).thenReturn(null);
     int result = cli.run(new String[] { "-status", queueName });
-    assertEquals(-1, result);;
+    assertEquals(-1, result);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("Cannot get queue from RM by queueName = " + queueName

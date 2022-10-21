@@ -22,17 +22,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -40,6 +52,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import javax.cache.Cache;
 
 /**
  * Unit tests for FederationStateStoreFacade.
@@ -64,12 +78,14 @@ public class TestFederationStateStoreFacade {
   private FederationStateStoreTestUtil stateStoreTestUtil;
   private FederationStateStoreFacade facade =
       FederationStateStoreFacade.getInstance();
+  private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
     conf = new Configuration();
     if (!(isCachingEnabled.booleanValue())) {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
+    this.isCachingEnabled = isCachingEnabled;
   }
 
   @Before
@@ -206,4 +222,152 @@ public class TestFederationStateStoreFacade {
     Assert.assertEquals(subClusterId1, result);
   }
 
+  @Test
+  public void testGetApplicationHomeSubClusterCache() throws YarnException {
+    ApplicationId appId = ApplicationId.newInstance(clusterTs, numApps + 1);
+    SubClusterId subClusterId1 = SubClusterId.newInstance("Home1");
+
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(appId, subClusterId1);
+    SubClusterId subClusterIdAdd = facade.addApplicationHomeSubCluster(appHomeSubCluster);
+
+    SubClusterId subClusterIdByFacade = facade.getApplicationHomeSubCluster(appId);
+    Assert.assertEquals(subClusterIdByFacade, subClusterIdAdd);
+    Assert.assertEquals(subClusterId1, subClusterIdAdd);
+
+    if (isCachingEnabled.booleanValue()) {
+      Cache<Object, Object> cache = facade.getCache();
+      Object cacheKey = facade.getAppHomeSubClusterCacheRequest(appId);
+      Object subClusterIdByCache = cache.get(cacheKey);
+      Assert.assertEquals(subClusterIdByFacade, subClusterIdByCache);
+      Assert.assertEquals(subClusterId1, subClusterIdByCache);
+    }
+  }
+
+  @Test
+  public void testStoreNewMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    // store delegation key;
+    DelegationKey key = new DelegationKey(4567, 7654, "keyBytes".getBytes());
+    Set<DelegationKey> keySet = new HashSet<>();
+    keySet.add(key);
+    facade.storeNewMasterKey(key);
+
+    // check to delete delegationKey
+    facade.removeStoredMasterKey(key);
+    keySet.clear();
+
+    MemoryFederationStateStore federationStateStore =
+        (MemoryFederationStateStore) facade.getStateStore();
+    RouterRMDTSecretManagerState secretManagerState =
+        federationStateStore.getRouterRMSecretManagerState();
+    Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
+  }
+
+  @Test
+  public void testStoreNewToken() throws YarnException, IOException {
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
+    int sequenceNumber = 1;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    Assert.assertNotNull(resultStoreToken);
+    Assert.assertNotNull(resultTokenIdentifier);
+    Assert.assertNotNull(resultStoreToken.getRenewDate());
+
+    Assert.assertEquals(dtId1, resultTokenIdentifier);
+    Assert.assertEquals(renewDate1, resultStoreToken.getRenewDate());
+    Assert.assertEquals(sequenceNumber, resultTokenIdentifier.getSequenceNumber());
+  }
+
+  @Test
+  public void testUpdateNewToken() throws YarnException, IOException {
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
+    int sequenceNumber = 2;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    Long renewDate2 = Time.now();
+    int sequenceNumber2 = 3;
+    dtId1.setSequenceNumber(sequenceNumber2);
+    facade.updateStoredToken(dtId1, renewDate2);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    Assert.assertNotNull(resultStoreToken);
+    Assert.assertNotNull(resultTokenIdentifier);
+    Assert.assertNotNull(resultStoreToken.getRenewDate());
+
+    Assert.assertEquals(dtId1, resultTokenIdentifier);
+    Assert.assertEquals(renewDate2, resultStoreToken.getRenewDate());
+    Assert.assertEquals(sequenceNumber2, resultTokenIdentifier.getSequenceNumber());
+  }
+
+  @Test
+  public void testRemoveStoredToken() throws Exception {
+    // store new rm-token
+    RMDelegationTokenIdentifier dtId1 = new RMDelegationTokenIdentifier(
+        new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
+    int sequenceNumber = 3;
+    dtId1.setSequenceNumber(sequenceNumber);
+    Long renewDate1 = Time.now();
+    facade.storeNewToken(dtId1, renewDate1);
+
+    // get RouterStoreToken from StateStore
+    RouterStoreToken routerStoreToken = RouterStoreToken.newInstance(dtId1, renewDate1);
+    RouterRMTokenRequest rmTokenRequest = RouterRMTokenRequest.newInstance(routerStoreToken);
+    RouterRMTokenResponse rmTokenResponse = stateStore.getTokenByRouterStoreToken(rmTokenRequest);
+    Assert.assertNotNull(rmTokenResponse);
+
+    RouterStoreToken resultStoreToken = rmTokenResponse.getRouterStoreToken();
+    YARNDelegationTokenIdentifier resultTokenIdentifier = resultStoreToken.getTokenIdentifier();
+    Assert.assertNotNull(resultStoreToken);
+    Assert.assertNotNull(resultTokenIdentifier);
+    Assert.assertNotNull(resultStoreToken.getRenewDate());
+
+    Assert.assertEquals(dtId1, resultTokenIdentifier);
+    Assert.assertEquals(renewDate1, resultStoreToken.getRenewDate());
+    Assert.assertEquals(sequenceNumber, resultTokenIdentifier.getSequenceNumber());
+
+    // remove rm-token
+    facade.removeStoredToken(dtId1);
+
+    // Call again(getTokenByRouterStoreToken) after remove will throw IOException(not exist)
+    LambdaTestUtils.intercept(IOException.class, "RMDelegationToken: " + dtId1 + " does not exist.",
+        () -> stateStore.getTokenByRouterStoreToken(rmTokenRequest));
+  }
 }

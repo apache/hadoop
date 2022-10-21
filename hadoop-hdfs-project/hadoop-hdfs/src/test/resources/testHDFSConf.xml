@@ -16723,19 +16723,19 @@
         <!-- miniDFS cluster started in CLITestHelper is set to match this output -->
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>^Rack: \/rack1\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>^Rack: \/rack1\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack2\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack2\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack3\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack3\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
         <comparator>
           <type>RegexpAcrossOutputComparator</type>
-          <expected-output>Rack: \/rack4\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)</expected-output>
+          <expected-output>Rack: \/rack4\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service\s*127\.0\.0\.1:\d+\s\([-.a-zA-Z0-9]+\)\sIn Service</expected-output>
         </comparator>
       </comparators>
     </test>

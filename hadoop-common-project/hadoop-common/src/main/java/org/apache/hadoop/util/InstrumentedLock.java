@@ -185,6 +185,7 @@ public class InstrumentedLock implements Lock {
    *
    * @param acquireTime  - timestamp just after acquiring the lock.
    * @param releaseTime - timestamp just before releasing the lock.
+   * @param checkLockHeld checkLockHeld.
    */
   protected void check(long acquireTime, long releaseTime,
        boolean checkLockHeld) {

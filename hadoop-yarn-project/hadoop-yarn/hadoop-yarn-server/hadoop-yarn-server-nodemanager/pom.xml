@@ -200,10 +200,10 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

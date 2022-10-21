@@ -116,6 +116,7 @@ public class RequestLoggerFilter implements Filter {
     public void addCookie(Cookie cookie) {
       super.addCookie(cookie);
       List<String> cookies = getHeaderValues("Set-Cookie", false);
+      cookies.addAll(getHeaderValues("set-cookie", false));
       cookies.add(cookie.getName() + "=" + cookie.getValue());
     }
 

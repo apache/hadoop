@@ -53,6 +53,9 @@
     <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
     <!--    marker retention policy -->
     <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
+
+    <!-- Is prefetch enabled? -->
+    <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
   </properties>
 
   <profiles>
@@ -127,6 +130,8 @@
                 <!-- Markers-->
                 <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                 <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                <!-- Prefetch -->
+                <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
               </systemPropertyVariables>
             </configuration>
           </plugin>
@@ -166,6 +171,8 @@
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
 
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -215,6 +222,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -271,6 +280,8 @@
                     <!-- Markers-->
                     <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
+                    <!-- Prefetch -->
+                    <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
@@ -329,6 +340,19 @@
       </activation>
       <properties >
         <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
+      </properties>
+    </profile>
+
+    <!-- Turn on prefetching-->
+    <profile>
+      <id>prefetch</id>
+      <activation>
+        <property>
+          <name>prefetch</name>
+        </property>
+      </activation>
+      <properties>
+        <fs.s3a.prefetch.enabled>true</fs.s3a.prefetch.enabled>
       </properties>
     </profile>
 
@@ -401,6 +425,39 @@
             <configuration>
               <!-- referenced by the s3guard command -->
               <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-builtin.txt</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>banned-illegal-imports</id>
+            <phase>process-sources</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict mapreduce imports to committer code</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.impl.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.magic.*</exclusion>
+                    <exclusion>org.apache.hadoop.fs.s3a.commit.staging.*</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>org.apache.hadoop.mapreduce.**</bannedImport>
+                    <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
+                  </bannedImports>
+                </restrictImports>
+              </rules>
             </configuration>
           </execution>
         </executions>

@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -402,8 +401,7 @@ public class FifoIntraQueuePreemptionPlugin
       pending = (pending == null) ? Resources.createResource(0, 0) : pending;
       reserved = (reserved == null) ? Resources.createResource(0, 0) : reserved;
 
-      HashSet<String> partitions = new HashSet<String>(
-          app.getAppAttemptResourceUsage().getNodePartitionsSet());
+      Set<String> partitions = app.getAppAttemptResourceUsage().getExistingNodeLabels();
       partitions.addAll(app.getTotalPendingRequestsPerPartition().keySet());
 
       // Create TempAppPerQueue for further calculation.

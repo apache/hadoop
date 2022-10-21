@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
@@ -83,8 +84,11 @@ public final class ZKCuratorManager {
 
   /**
    * Utility method to fetch the ZK ACLs from the configuration.
+   *
+   * @param conf configuration.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
+   * @return acl list.
    */
   public static List<ACL> getZKAcls(Configuration conf) throws IOException {
     // Parse authentication from configuration.
@@ -102,9 +106,12 @@ public final class ZKCuratorManager {
 
   /**
    * Utility method to fetch ZK auth info from the configuration.
+   *
+   * @param conf configuration.
    * @throws java.io.IOException if the Zookeeper ACLs configuration file
    * cannot be read
    * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
+   * @return ZKAuthInfo List.
    */
   public static List<ZKUtil.ZKAuthInfo> getZKAuths(Configuration conf)
       throws IOException {
@@ -153,7 +160,9 @@ public final class ZKCuratorManager {
     CuratorFramework client = CuratorFrameworkFactory.builder()
         .connectString(zkHostPort)
         .zookeeperFactory(new HadoopZookeeperFactory(
-            conf.get(CommonConfigurationKeys.ZK_SERVER_PRINCIPAL)))
+            conf.get(CommonConfigurationKeys.ZK_SERVER_PRINCIPAL),
+            conf.get(CommonConfigurationKeys.ZK_KERBEROS_PRINCIPAL),
+            conf.get(CommonConfigurationKeys.ZK_KERBEROS_KEYTAB)))
         .sessionTimeoutMs(zkSessionTimeout)
         .retryPolicy(retryPolicy)
         .authorization(authInfos)
@@ -167,7 +176,7 @@ public final class ZKCuratorManager {
    * Get ACLs for a ZNode.
    * @param path Path of the ZNode.
    * @return The list of ACLs.
-   * @throws Exception
+   * @throws Exception If it cannot contact Zookeeper.
    */
   public List<ACL> getACL(final String path) throws Exception {
     return curator.getACL().forPath(path);
@@ -186,7 +195,7 @@ public final class ZKCuratorManager {
   /**
    * Get the data in a ZNode.
    * @param path Path of the ZNode.
-   * @param stat
+   * @param stat stat.
    * @return The data in the ZNode.
    * @throws Exception If it cannot contact Zookeeper.
    */
@@ -363,7 +372,10 @@ public final class ZKCuratorManager {
 
   /**
    * Deletes the path. Checks for existence of path as well.
+   *
    * @param path Path to be deleted.
+   * @param fencingNodePath fencingNodePath.
+   * @param fencingACL fencingACL.
    * @throws Exception if any problem occurs while performing deletion.
    */
   public void safeDelete(final String path, List<ACL> fencingACL,
@@ -436,10 +448,20 @@ public final class ZKCuratorManager {
   }
 
   public static class HadoopZookeeperFactory implements ZookeeperFactory {
+    public final static String JAAS_CLIENT_ENTRY = "HadoopZookeeperClient";
     private final String zkPrincipal;
+    private final String kerberosPrincipal;
+    private final String kerberosKeytab;
 
     public HadoopZookeeperFactory(String zkPrincipal) {
+      this(zkPrincipal, null, null);
+    }
+
+    public HadoopZookeeperFactory(String zkPrincipal, String kerberosPrincipal,
+        String kerberosKeytab) {
       this.zkPrincipal = zkPrincipal;
+      this.kerberosPrincipal = kerberosPrincipal;
+      this.kerberosKeytab = kerberosKeytab;
     }
 
     @Override
@@ -453,8 +475,32 @@ public final class ZKCuratorManager {
         zkClientConfig.setProperty(ZKClientConfig.ZK_SASL_CLIENT_USERNAME,
             zkPrincipal);
       }
+      if (zkClientConfig.isSaslClientEnabled() && !isJaasConfigurationSet(zkClientConfig)) {
+        setJaasConfiguration(zkClientConfig);
+      }
       return new ZooKeeper(connectString, sessionTimeout, watcher,
           canBeReadOnly, zkClientConfig);
+    }
+
+    private boolean isJaasConfigurationSet(ZKClientConfig zkClientConfig) {
+      String clientConfig = zkClientConfig.getProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY,
+          ZKClientConfig.LOGIN_CONTEXT_NAME_KEY_DEFAULT);
+      return javax.security.auth.login.Configuration.getConfiguration()
+          .getAppConfigurationEntry(clientConfig) != null;
+    }
+
+    private void setJaasConfiguration(ZKClientConfig zkClientConfig) throws IOException {
+      if (kerberosPrincipal == null || kerberosKeytab == null) {
+        LOG.warn("JaasConfiguration has not been set since kerberos principal "
+            + "or keytab is not specified");
+        return;
+      }
+
+      String principal = SecurityUtil.getServerPrincipal(kerberosPrincipal, "");
+      JaasConfiguration jconf = new JaasConfiguration(JAAS_CLIENT_ENTRY, principal,
+          kerberosKeytab);
+      javax.security.auth.login.Configuration.setConfiguration(jconf);
+      zkClientConfig.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY, JAAS_CLIENT_ENTRY);
     }
   }
 }

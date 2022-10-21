@@ -111,16 +111,16 @@ public class TestWhitelistBasedResolver {
     assertEquals (wqr.getDefaultProperties(),
         wqr.getServerProperties(InetAddress.getByName("10.119.103.112")));
 
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.119.103.113"));
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.119.103.113"));
 
-    assertEquals (wqr.getDefaultProperties(), wqr.getServerProperties("10.221.103.121"));
+    assertEquals(wqr.getDefaultProperties(), wqr.getServerProperties("10.221.103.121"));
 
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.221.104.0"));
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.222.103.121"));
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.223.104.0"));
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.113.221.221"));
-    assertEquals (SASL_PRIVACY_PROPS, wqr.getServerProperties("10.113.221.222"));
-    assertEquals (wqr.getDefaultProperties(), wqr.getServerProperties("127.0.0.1"));;
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.221.104.0"));
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.222.103.121"));
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.223.104.0"));
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.113.221.221"));
+    assertEquals(SASL_PRIVACY_PROPS, wqr.getServerProperties("10.113.221.222"));
+    assertEquals(wqr.getDefaultProperties(), wqr.getServerProperties("127.0.0.1"));
 
     TestFileBasedIPList.removeFile("fixedwhitelist.txt");
     TestFileBasedIPList.removeFile("variablewhitelist.txt");

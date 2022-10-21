@@ -19,10 +19,10 @@
 #ifndef NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 #define NATIVE_LIBHDFSPP_LIB_CROSS_PLATFORM_TYPES
 
-#if _WIN64
+#if defined(_WIN64)
 // Windows 64-bit.
 typedef long int ssize_t;
-#elif _WIN32
+#elif defined(_WIN32)
 // Windows 32-bit.
 typedef int ssize_t;
 #else

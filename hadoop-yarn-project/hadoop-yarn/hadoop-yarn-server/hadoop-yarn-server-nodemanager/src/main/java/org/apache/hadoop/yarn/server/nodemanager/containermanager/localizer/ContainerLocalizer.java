@@ -218,7 +218,7 @@ public class ContainerLocalizer {
 
   ExecutorService createDownloadThreadPool() {
     return HadoopExecutors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-      .setNameFormat("ContainerLocalizer Downloader").build());
+      .setNameFormat("ContainerLocalizer Downloader-" + localizerId).build());
   }
 
   CompletionService<Path> createCompletionService(ExecutorService exec) {

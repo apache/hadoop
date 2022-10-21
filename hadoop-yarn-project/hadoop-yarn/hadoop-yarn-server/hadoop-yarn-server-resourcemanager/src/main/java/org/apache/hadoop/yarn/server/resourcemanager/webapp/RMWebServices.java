@@ -202,6 +202,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ConfigVersionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerOverviewInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.WebServices;
@@ -2748,25 +2749,25 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     initForWritableEndpoints(callerUGI, true);
 
     ResourceScheduler scheduler = rm.getResourceScheduler();
-    if (isConfigurationMutable(scheduler)) {
+    if (!(scheduler instanceof MutableConfScheduler)) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by MutableConfScheduler.").build();
+    } else if (!((MutableConfScheduler) scheduler).isConfigurationMutable()) {
+      return Response.status(Status.BAD_REQUEST)
+          .entity("Configuration change only supported by mutable configuration store.").build();
+    } else {
       try {
         callerUGI.doAs((PrivilegedExceptionAction<Void>) () -> {
-          MutableConfigurationProvider provider = ((MutableConfScheduler)
-              scheduler).getMutableConfProvider();
+          MutableConfigurationProvider provider =
+              ((MutableConfScheduler) scheduler).getMutableConfProvider();
           LogMutation logMutation = applyMutation(provider, callerUGI, mutationInfo);
           return refreshQueues(provider, logMutation);
         });
       } catch (IOException e) {
         LOG.error("Exception thrown when modifying configuration.", e);
-        return Response.status(Status.BAD_REQUEST).entity(e.getMessage())
-            .build();
+        return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
       }
       return Response.status(Status.OK).entity("Configuration change successfully applied.")
-          .build();
-    } else {
-      return Response.status(Status.BAD_REQUEST)
-          .entity(String.format("Configuration change only supported by " +
-              "%s.", MutableConfScheduler.class.getSimpleName()))
           .build();
     }
   }
@@ -2941,5 +2942,15 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           .entity(e.getMessage()).build();
     }
     return Response.status(Status.OK).build();
+  }
+
+  @GET
+  @Path(RMWSConsts.SCHEDULER_OVERVIEW)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public SchedulerOverviewInfo getSchedulerOverview() {
+    initForReadableEndpoints();
+    ResourceScheduler rs = rm.getResourceScheduler();
+    return new SchedulerOverviewInfo(rs);
   }
 }

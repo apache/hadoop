@@ -82,6 +82,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * @param sum the type of Checksum engine
    * @param chunkSize maximun chunk size
    * @param checksumSize the number byte of each checksum
+   * @param verifyChecksum verify check sum.
    */
   protected FSInputChecker( Path file, int numOfRetries, 
       boolean verifyChecksum, Checksum sum, int chunkSize, int checksumSize ) {
@@ -118,6 +119,7 @@ abstract public class FSInputChecker extends FSInputStream {
    * @param len maximum number of bytes to read
    * @param checksum the data buffer into which to write checksums
    * @return number of bytes read
+   * @throws IOException raised on errors performing I/O.
    */
   abstract protected int readChunk(long pos, byte[] buf, int offset, int len,
       byte[] checksum) throws IOException;
@@ -129,7 +131,10 @@ abstract public class FSInputChecker extends FSInputStream {
    */
   abstract protected long getChunkPosition(long pos);
 
-  /** Return true if there is a need for checksum verification */
+  /**
+   * Return true if there is a need for checksum verification.
+   * @return if there is a need for checksum verification true, not false.
+   */
   protected synchronized boolean needChecksum() {
     return verifyChecksum && sum != null;
   }
@@ -357,6 +362,9 @@ abstract public class FSInputChecker extends FSInputStream {
    * Convert a checksum byte array to a long
    * This is deprecated since 0.22 since it is no longer in use
    * by this class.
+   *
+   * @param checksum check sum.
+   * @return crc.
    */
   @Deprecated
   static public long checksum2long(byte[] checksum) {

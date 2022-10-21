@@ -108,7 +108,7 @@ public class DocumentStoreTimelineReaderImpl
           "");
     } else {
       return new TimelineHealth(
-          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          TimelineHealth.TimelineHealthStatus.CONNECTION_FAILURE,
           "Timeline store reader not initialized.");
     }
   }

@@ -73,6 +73,7 @@ public class ZStandardDecompressor implements Decompressor {
 
   /**
    * Creates a new decompressor.
+   * @param bufferSize bufferSize.
    */
   public ZStandardDecompressor(int bufferSize) {
     this.directBufferSize = bufferSize;

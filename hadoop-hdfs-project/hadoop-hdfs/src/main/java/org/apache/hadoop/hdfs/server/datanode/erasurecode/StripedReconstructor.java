@@ -120,6 +120,7 @@ abstract class StripedReconstructor {
   private final CachingStrategy cachingStrategy;
   private long maxTargetLength = 0L;
   private final BitSet liveBitSet;
+  private final BitSet excludeBitSet;
 
   // metrics
   private AtomicLong bytesRead = new AtomicLong(0);
@@ -137,6 +138,12 @@ abstract class StripedReconstructor {
     for (int i = 0; i < stripedReconInfo.getLiveIndices().length; i++) {
       liveBitSet.set(stripedReconInfo.getLiveIndices()[i]);
     }
+    excludeBitSet = new BitSet(
+            ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits());
+    for (int i = 0; i < stripedReconInfo.getExcludeReconstructedIndices().length; i++) {
+      excludeBitSet.set(stripedReconInfo.getExcludeReconstructedIndices()[i]);
+    }
+
     blockGroup = stripedReconInfo.getBlockGroup();
     stripedReader = new StripedReader(this, datanode, conf, stripedReconInfo);
     cachingStrategy = CachingStrategy.newDefaultStrategy();
@@ -261,6 +268,10 @@ abstract class StripedReconstructor {
     return liveBitSet;
   }
 
+  BitSet getExcludeBitSet(){
+    return excludeBitSet;
+  }
+
   long getMaxTargetLength() {
     return maxTargetLength;
   }
@@ -275,6 +286,10 @@ abstract class StripedReconstructor {
 
   RawErasureDecoder getDecoder() {
     return decoder;
+  }
+
+  int getNumLiveBlocks(){
+    return liveBitSet.cardinality();
   }
 
   void cleanup() {

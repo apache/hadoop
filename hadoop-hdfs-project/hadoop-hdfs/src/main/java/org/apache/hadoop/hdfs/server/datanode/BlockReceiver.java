@@ -307,6 +307,17 @@ class BlockReceiver implements Closeable {
     return replicaInfo;
   }
 
+  public void releaseAnyRemainingReservedSpace() {
+    if (replicaInfo != null) {
+      if (replicaInfo.getReplicaInfo().getBytesReserved() > 0) {
+        LOG.warn("Block {} has not released the reserved bytes. "
+                + "Releasing {} bytes as part of close.", replicaInfo.getBlockId(),
+            replicaInfo.getReplicaInfo().getBytesReserved());
+        replicaInfo.releaseAllBytesReserved();
+      }
+    }
+  }
+
   /**
    * close files and release volume reference.
    */

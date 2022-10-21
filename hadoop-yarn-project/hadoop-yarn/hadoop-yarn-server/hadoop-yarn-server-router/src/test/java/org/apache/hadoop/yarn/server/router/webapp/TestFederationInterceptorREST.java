@@ -21,12 +21,28 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
 
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
@@ -35,6 +51,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -47,18 +68,45 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
  * use the {@code RouterClientRMService} pipeline test cases for testing the
  * {@code FederationInterceptor} class. The tests for
  * {@code RouterClientRMService} has been written cleverly so that it can be
- * reused to validate different request intercepter chains.
+ * reused to validate different request interceptor chains.
  */
 public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private static final Logger LOG =
@@ -116,8 +164,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String mockPassThroughInterceptorClass =
         PassThroughRESTRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.ROUTER_CLIENTRM_INTERCEPTOR_CLASS_PIPELINE,
@@ -129,6 +177,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
+    // Open AppsInfo Cache
+    conf.setBoolean(YarnConfiguration.ROUTER_APPSINFO_ENABLED, true);
+    conf.setInt(YarnConfiguration.ROUTER_APPSINFO_CACHED_COUNT, 10);
 
     return conf;
   }
@@ -160,7 +212,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -187,7 +239,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -236,7 +288,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   /**
-   * This test validates the correctness of SubmitApplication in case of of
+   * This test validates the correctness of SubmitApplication in case of
    * application in wrong format.
    */
   @Test
@@ -259,7 +311,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -286,7 +338,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     AppState appState = new AppState("KILLED");
 
     Response response =
@@ -317,7 +369,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   public void testForceKillApplicationEmptyRequest()
       throws YarnException, IOException, InterruptedException {
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
@@ -341,7 +393,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -478,7 +530,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
     ApplicationSubmissionContextInfo context =
         new ApplicationSubmissionContextInfo();
     context.setApplicationId(appId.toString());
@@ -505,7 +557,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       throws YarnException, IOException, InterruptedException {
 
     ApplicationId appId =
-        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+        ApplicationId.newInstance(Time.now(), 1);
 
     AppState response = interceptor.getAppState(null, appId.toString());
 
@@ -560,4 +612,562 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
             SubClusterRegisterRequest.newInstance(subClusterInfo));
   }
 
+  @Test
+  public void testGetContainers()
+      throws YarnException, IOException, InterruptedException {
+
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context =
+        new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Submit the application we want the report later
+    Response response = interceptor.submitApplication(context, null);
+
+    Assert.assertNotNull(response);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
+
+    ContainersInfo responseGet = interceptor.getContainers(
+        null, null, appId.toString(), appAttempt.toString());
+
+    Assert.assertEquals(4, responseGet.getContainers().size());
+  }
+
+  @Test
+  public void testGetContainersNotExists() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the appAttemptId is empty or null.",
+        () -> interceptor.getContainers(null, null, appId.toString(), null));
+  }
+
+  @Test
+  public void testGetContainersWrongFormat() throws Exception {
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
+
+    // Test Case 1: appId is wrong format, appAttemptId is accurate.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid ApplicationId prefix: Application_wrong_id. " +
+        "The valid ApplicationId should start with prefix application",
+        () -> interceptor.getContainers(null, null, "Application_wrong_id", appAttempt.toString()));
+
+    // Test Case2: appId is accurate, appAttemptId is wrong format.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid AppAttemptId prefix: AppAttempt_wrong_id",
+        () -> interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id"));
+  }
+
+  @Test
+  public void testGetNodeToLabels() throws IOException {
+    NodeToLabelsInfo info = interceptor.getNodeToLabels(null);
+    HashMap<String, NodeLabelsInfo> map = info.getNodeToLabels();
+    Assert.assertNotNull(map);
+    Assert.assertEquals(2, map.size());
+
+    NodeLabelsInfo node1Value = map.getOrDefault("node1", null);
+    Assert.assertNotNull(node1Value);
+    Assert.assertEquals(1, node1Value.getNodeLabelsName().size());
+    Assert.assertEquals("CPU", node1Value.getNodeLabelsName().get(0));
+
+    NodeLabelsInfo node2Value = map.getOrDefault("node2", null);
+    Assert.assertNotNull(node2Value);
+    Assert.assertEquals(1, node2Value.getNodeLabelsName().size());
+    Assert.assertEquals("GPU", node2Value.getNodeLabelsName().get(0));
+  }
+
+  @Test
+  public void testGetLabelsToNodes() throws Exception {
+    LabelsToNodesInfo labelsToNodesInfo = interceptor.getLabelsToNodes(null);
+    Map<NodeLabelInfo, NodeIDsInfo> map = labelsToNodesInfo.getLabelsToNodes();
+    Assert.assertNotNull(map);
+    Assert.assertEquals(3, map.size());
+
+    NodeLabel labelX = NodeLabel.newInstance("x", false);
+    NodeLabelInfo nodeLabelInfoX = new NodeLabelInfo(labelX);
+    NodeIDsInfo nodeIDsInfoX = map.get(nodeLabelInfoX);
+    Assert.assertNotNull(nodeIDsInfoX);
+    Assert.assertEquals(2, nodeIDsInfoX.getNodeIDs().size());
+    Resource resourceX =
+        nodeIDsInfoX.getPartitionInfo().getResourceAvailable().getResource();
+    Assert.assertNotNull(resourceX);
+    Assert.assertEquals(4*10, resourceX.getVirtualCores());
+    Assert.assertEquals(4*20*1024, resourceX.getMemorySize());
+
+    NodeLabel labelY = NodeLabel.newInstance("y", false);
+    NodeLabelInfo nodeLabelInfoY = new NodeLabelInfo(labelY);
+    NodeIDsInfo nodeIDsInfoY = map.get(nodeLabelInfoY);
+    Assert.assertNotNull(nodeIDsInfoY);
+    Assert.assertEquals(2, nodeIDsInfoY.getNodeIDs().size());
+    Resource resourceY =
+        nodeIDsInfoY.getPartitionInfo().getResourceAvailable().getResource();
+    Assert.assertNotNull(resourceY);
+    Assert.assertEquals(4*20, resourceY.getVirtualCores());
+    Assert.assertEquals(4*40*1024, resourceY.getMemorySize());
+  }
+
+  @Test
+  public void testGetClusterNodeLabels() throws Exception {
+    NodeLabelsInfo nodeLabelsInfo = interceptor.getClusterNodeLabels(null);
+    Assert.assertNotNull(nodeLabelsInfo);
+    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+
+    List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
+    Assert.assertNotNull(nodeLabelsName);
+    Assert.assertTrue(nodeLabelsName.contains("cpu"));
+    Assert.assertTrue(nodeLabelsName.contains("gpu"));
+
+    ArrayList<NodeLabelInfo> nodeLabelInfos = nodeLabelsInfo.getNodeLabelsInfo();
+    Assert.assertNotNull(nodeLabelInfos);
+    Assert.assertEquals(2, nodeLabelInfos.size());
+    NodeLabelInfo cpuNodeLabelInfo = new NodeLabelInfo("cpu", false);
+    Assert.assertTrue(nodeLabelInfos.contains(cpuNodeLabelInfo));
+    NodeLabelInfo gpuNodeLabelInfo = new NodeLabelInfo("gpu", false);
+    Assert.assertTrue(nodeLabelInfos.contains(gpuNodeLabelInfo));
+  }
+
+  @Test
+  public void testGetLabelsOnNode() throws Exception {
+    NodeLabelsInfo nodeLabelsInfo = interceptor.getLabelsOnNode(null, "node1");
+    Assert.assertNotNull(nodeLabelsInfo);
+    Assert.assertEquals(2, nodeLabelsInfo.getNodeLabelsName().size());
+
+    List<String> nodeLabelsName = nodeLabelsInfo.getNodeLabelsName();
+    Assert.assertNotNull(nodeLabelsName);
+    Assert.assertTrue(nodeLabelsName.contains("x"));
+    Assert.assertTrue(nodeLabelsName.contains("y"));
+
+    // null request
+    NodeLabelsInfo nodeLabelsInfo2 = interceptor.getLabelsOnNode(null, "node2");
+    Assert.assertNotNull(nodeLabelsInfo2);
+    Assert.assertEquals(0, nodeLabelsInfo2.getNodeLabelsName().size());
+  }
+
+  @Test
+  public void testGetContainer() throws Exception {
+    //
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId appContainerId = ContainerId.newContainerId(appAttemptId, 1);
+    String applicationId = appId.toString();
+    String attemptId = appAttemptId.toString();
+    String containerId = appContainerId.toString();
+
+    // Submit application to multiSubCluster
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(applicationId);
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Test Case1: Wrong ContainerId
+    LambdaTestUtils.intercept(IllegalArgumentException.class, "Invalid ContainerId prefix: 0",
+        () -> interceptor.getContainer(null, null, applicationId, attemptId, "0"));
+
+    // Test Case2: Correct ContainerId
+
+    ContainerInfo containerInfo = interceptor.getContainer(null, null, applicationId,
+        attemptId, containerId);
+    Assert.assertNotNull(containerInfo);
+  }
+
+  @Test
+  public void testGetAppAttempts()
+      throws IOException, InterruptedException, YarnException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    AppAttemptsInfo appAttemptsInfo = interceptor.getAppAttempts(null, appId.toString());
+    Assert.assertNotNull(appAttemptsInfo);
+
+    ArrayList<AppAttemptInfo> attemptLists = appAttemptsInfo.getAttempts();
+    Assert.assertNotNull(appAttemptsInfo);
+    Assert.assertEquals(2, attemptLists.size());
+
+    AppAttemptInfo attemptInfo1 = attemptLists.get(0);
+    Assert.assertNotNull(attemptInfo1);
+    Assert.assertEquals(0, attemptInfo1.getAttemptId());
+    Assert.assertEquals("AppAttemptId_0", attemptInfo1.getAppAttemptId());
+    Assert.assertEquals("LogLink_0", attemptInfo1.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo1.getFinishedTime());
+
+    AppAttemptInfo attemptInfo2 = attemptLists.get(1);
+    Assert.assertNotNull(attemptInfo2);
+    Assert.assertEquals(0, attemptInfo2.getAttemptId());
+    Assert.assertEquals("AppAttemptId_1", attemptInfo2.getAppAttemptId());
+    Assert.assertEquals("LogLink_1", attemptInfo2.getLogsLink());
+    Assert.assertEquals(1659621705L, attemptInfo2.getFinishedTime());
+  }
+
+  @Test
+  public void testGetAppAttempt()
+      throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    String appAttemptId = expectAppAttemptId.toString();
+
+    org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), appAttemptId);
+
+    Assert.assertNotNull(appAttemptInfo);
+    Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
+    Assert.assertEquals("url", appAttemptInfo.getTrackingUrl());
+    Assert.assertEquals("oUrl", appAttemptInfo.getOriginalTrackingUrl());
+    Assert.assertEquals(124, appAttemptInfo.getRpcPort());
+    Assert.assertEquals("host", appAttemptInfo.getHost());
+  }
+
+  @Test
+  public void testGetAppTimeout() throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    ApplicationTimeoutType appTimeoutType = ApplicationTimeoutType.LIFETIME;
+    AppTimeoutInfo appTimeoutInfo =
+        interceptor.getAppTimeout(null, appId.toString(), appTimeoutType.toString());
+    Assert.assertNotNull(appTimeoutInfo);
+    Assert.assertEquals(10, appTimeoutInfo.getRemainingTimeInSec());
+    Assert.assertEquals("UNLIMITED", appTimeoutInfo.getExpireTime());
+    Assert.assertEquals(appTimeoutType, appTimeoutInfo.getTimeoutType());
+  }
+
+  @Test
+  public void testGetAppTimeouts() throws IOException, InterruptedException, YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    AppTimeoutsInfo appTimeoutsInfo = interceptor.getAppTimeouts(null, appId.toString());
+    Assert.assertNotNull(appTimeoutsInfo);
+
+    List<AppTimeoutInfo> timeouts = appTimeoutsInfo.getAppTimeouts();
+    Assert.assertNotNull(timeouts);
+    Assert.assertEquals(1, timeouts.size());
+
+    AppTimeoutInfo resultAppTimeout = timeouts.get(0);
+    Assert.assertNotNull(resultAppTimeout);
+    Assert.assertEquals(10, resultAppTimeout.getRemainingTimeInSec());
+    Assert.assertEquals("UNLIMITED", resultAppTimeout.getExpireTime());
+    Assert.assertEquals(ApplicationTimeoutType.LIFETIME, resultAppTimeout.getTimeoutType());
+  }
+
+  @Test
+  public void testUpdateApplicationTimeout() throws IOException, InterruptedException,
+      YarnException {
+
+    // Generate ApplicationId information
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+
+    // Generate ApplicationAttemptId information
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    long newLifetime = 10L;
+    // update 10L seconds more to timeout
+    String timeout = Times.formatISO8601(Time.now() + newLifetime * 1000);
+    AppTimeoutInfo paramAppTimeOut = new AppTimeoutInfo();
+    paramAppTimeOut.setExpiryTime(timeout);
+    // RemainingTime = Math.max((timeoutInMillis - System.currentTimeMillis()) / 1000, 0))
+    paramAppTimeOut.setRemainingTime(newLifetime);
+    paramAppTimeOut.setTimeoutType(ApplicationTimeoutType.LIFETIME);
+
+    Response response =
+        interceptor.updateApplicationTimeout(paramAppTimeOut, null, appId.toString());
+    Assert.assertNotNull(response);
+    AppTimeoutInfo entity = (AppTimeoutInfo) response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertEquals(paramAppTimeOut.getExpireTime(), entity.getExpireTime());
+    Assert.assertEquals(paramAppTimeOut.getTimeoutType(), entity.getTimeoutType());
+    Assert.assertEquals(paramAppTimeOut.getRemainingTimeInSec(), entity.getRemainingTimeInSec());
+  }
+
+  @Test
+  public void testUpdateApplicationPriority() throws IOException, InterruptedException,
+      YarnException {
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setPriority(20);
+
+    // Submit the application we are going to kill later
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    int iPriority = 10;
+    // Set Priority for application
+    Response response = interceptor.updateApplicationPriority(
+        new AppPriority(iPriority), null, appId.toString());
+
+    Assert.assertNotNull(response);
+    AppPriority entity = (AppPriority) response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertEquals(iPriority, entity.getPriority());
+  }
+
+  @Test
+  public void testGetAppPriority() throws IOException, InterruptedException,
+      YarnException {
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    int priority = 40;
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setPriority(priority);
+
+    // Submit the application we are going to kill later
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Set Priority for application
+    AppPriority appPriority = interceptor.getAppPriority(null, appId.toString());
+    Assert.assertNotNull(appPriority);
+    Assert.assertEquals(priority, appPriority.getPriority());
+  }
+
+  @Test
+  public void testUpdateAppQueue() throws IOException, InterruptedException,
+      YarnException {
+
+    String oldQueue = "oldQueue";
+    String newQueue = "newQueue";
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setQueue(oldQueue);
+
+    // Submit the application
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Set New Queue for application
+    Response response = interceptor.updateAppQueue(new AppQueue(newQueue),
+        null, appId.toString());
+
+    Assert.assertNotNull(response);
+    AppQueue appQueue = (AppQueue) response.getEntity();
+    Assert.assertEquals(newQueue, appQueue.getQueue());
+
+    // Get AppQueue by application
+    AppQueue queue = interceptor.getAppQueue(null, appId.toString());
+    Assert.assertNotNull(queue);
+    Assert.assertEquals(newQueue, queue.getQueue());
+  }
+
+  @Test
+  public void testGetAppQueue() throws IOException, InterruptedException, YarnException {
+    String queueName = "queueName";
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setQueue(queueName);
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    // Get Queue by application
+    AppQueue queue = interceptor.getAppQueue(null, appId.toString());
+    Assert.assertNotNull(queue);
+    Assert.assertEquals(queueName, queue.getQueue());
+  }
+
+  @Test
+  public void testGetAppsInfoCache() throws IOException, InterruptedException, YarnException {
+
+    AppsInfo responseGet = interceptor.getApps(
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+    Assert.assertNotNull(responseGet);
+
+    RouterAppInfoCacheKey cacheKey = RouterAppInfoCacheKey.newInstance(
+        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+
+    LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appsInfoCache =
+        interceptor.getAppInfosCaches();
+    Assert.assertNotNull(appsInfoCache);
+    Assert.assertTrue(!appsInfoCache.isEmpty());
+    Assert.assertEquals(1, appsInfoCache.size());
+    Assert.assertTrue(appsInfoCache.containsKey(cacheKey));
+
+    AppsInfo cacheResult = appsInfoCache.get(cacheKey);
+    Assert.assertNotNull(cacheResult);
+    Assert.assertEquals(responseGet, cacheResult);
+  }
+
+  @Test
+  public void testGetAppStatistics() throws IOException, InterruptedException, YarnException {
+    AppState appStateRUNNING = new AppState(YarnApplicationState.RUNNING.name());
+
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setApplicationType("MapReduce");
+    context.setQueue("queue");
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+
+    GetApplicationHomeSubClusterRequest request =
+        GetApplicationHomeSubClusterRequest.newInstance(appId);
+    GetApplicationHomeSubClusterResponse response =
+        stateStore.getApplicationHomeSubCluster(request);
+
+    Assert.assertNotNull(response);
+    ApplicationHomeSubCluster homeSubCluster = response.getApplicationHomeSubCluster();
+
+    DefaultRequestInterceptorREST interceptorREST =
+        interceptor.getInterceptorForSubCluster(homeSubCluster.getHomeSubCluster());
+
+    MockDefaultRequestInterceptorREST mockInterceptorREST =
+        (MockDefaultRequestInterceptorREST) interceptorREST;
+    mockInterceptorREST.updateApplicationState(YarnApplicationState.RUNNING,
+        appId.toString());
+
+    Set<String> stateQueries = new HashSet<>();
+    stateQueries.add(YarnApplicationState.RUNNING.name());
+
+    Set<String> typeQueries = new HashSet<>();
+    typeQueries.add("MapReduce");
+
+    ApplicationStatisticsInfo response2 =
+        interceptor.getAppStatistics(null, stateQueries, typeQueries);
+
+    Assert.assertNotNull(response2);
+    Assert.assertFalse(response2.getStatItems().isEmpty());
+
+    StatisticsItemInfo result = response2.getStatItems().get(0);
+    Assert.assertEquals(1, result.getCount());
+    Assert.assertEquals(YarnApplicationState.RUNNING, result.getState());
+    Assert.assertEquals("MapReduce", result.getType());
+  }
+
+  @Test
+  public void testGetAppActivities() throws IOException, InterruptedException {
+    // Submit application to multiSubCluster
+    ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(appId.toString());
+    context.setApplicationType("MapReduce");
+    context.setQueue("queue");
+
+    Assert.assertNotNull(interceptor.submitApplication(context, null));
+    Set<String> prioritiesSet = Collections.singleton("0");
+    Set<String> allocationRequestIdsSet = Collections.singleton("0");
+
+    AppActivitiesInfo appActivitiesInfo =
+        interceptor.getAppActivities(null, appId.toString(), String.valueOf(Time.now()),
+        prioritiesSet, allocationRequestIdsSet, null, "-1", null, false);
+
+    Assert.assertNotNull(appActivitiesInfo);
+    Assert.assertEquals(appId.toString(), appActivitiesInfo.getApplicationId());
+    Assert.assertEquals(10, appActivitiesInfo.getAllocations().size());
+  }
+
+  @Test
+  public void testListReservation() throws Exception {
+
+    // Add ReservationId In stateStore
+    ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
+    SubClusterId homeSubClusterId = subClusters.get(0);
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, homeSubClusterId);
+    AddReservationHomeSubClusterRequest request =
+        AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
+    stateStore.addReservationHomeSubCluster(request);
+
+    // Call the listReservation method
+    String applyReservationId = reservationId.toString();
+    Response listReservationResponse = interceptor.listReservation(
+        QUEUE_DEDICATED_FULL, applyReservationId, -1, -1, false, null);
+    Assert.assertNotNull(listReservationResponse);
+    Assert.assertNotNull(listReservationResponse.getStatus());
+    Status status = Status.fromStatusCode(listReservationResponse.getStatus());
+    Assert.assertEquals(Status.OK, status);
+
+    Object entity = listReservationResponse.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertNotNull(entity instanceof ReservationListInfo);
+
+    ReservationListInfo listInfo = (ReservationListInfo) entity;
+    Assert.assertNotNull(listInfo);
+
+    List<ReservationInfo> reservationInfoList = listInfo.getReservations();
+    Assert.assertNotNull(reservationInfoList);
+    Assert.assertEquals(1, reservationInfoList.size());
+
+    ReservationInfo reservationInfo = reservationInfoList.get(0);
+    Assert.assertNotNull(reservationInfo);
+    Assert.assertEquals(applyReservationId, reservationInfo.getReservationId());
+
+    ReservationDefinitionInfo definitionInfo = reservationInfo.getReservationDefinition();
+    Assert.assertNotNull(definitionInfo);
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+    Assert.assertNotNull(reservationRequestsInfo);
+
+    ArrayList<ReservationRequestInfo> reservationRequestInfoList =
+        reservationRequestsInfo.getReservationRequest();
+    Assert.assertNotNull(reservationRequestInfoList);
+    Assert.assertEquals(1, reservationRequestInfoList.size());
+
+    ReservationRequestInfo reservationRequestInfo = reservationRequestInfoList.get(0);
+    Assert.assertNotNull(reservationRequestInfo);
+    Assert.assertEquals(4, reservationRequestInfo.getNumContainers());
+
+    ResourceInfo resourceInfo = reservationRequestInfo.getCapability();
+    Assert.assertNotNull(resourceInfo);
+
+    int vCore = resourceInfo.getvCores();
+    long memory = resourceInfo.getMemorySize();
+    Assert.assertEquals(1, vCore);
+    Assert.assertEquals(1024, memory);
+  }
+
+  @Test
+  public void testWebAddressWithScheme() {
+    // The style of the web address reported by the subCluster in the heartbeat is 0.0.0.0:8000
+    // We design the following 2 test cases:
+    String webAppAddress = "0.0.0.0:8000";
+
+    // 1. We try to disable Https, at this point we should get the following link:
+    // http://0.0.0.0:8000
+    String expectedHttpWebAddress = "http://0.0.0.0:8000";
+    String webAppAddressWithScheme =
+        WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
+    Assert.assertEquals(expectedHttpWebAddress, webAppAddressWithScheme);
+
+    // 2. We try to enable Https，at this point we should get the following link:
+    // https://0.0.0.0:8000
+    Configuration configuration = this.getConf();
+    configuration.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
+        HttpConfig.Policy.HTTPS_ONLY.name());
+    String expectedHttpsWebAddress = "https://0.0.0.0:8000";
+    String webAppAddressWithScheme2 =
+        WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
+    Assert.assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
+  }
 }

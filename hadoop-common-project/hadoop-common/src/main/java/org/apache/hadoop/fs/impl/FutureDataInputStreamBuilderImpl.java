@@ -126,6 +126,9 @@ public abstract class FutureDataInputStreamBuilderImpl
 
   /**
    * Set the size of the buffer to be used.
+   *
+   * @param bufSize buffer size.
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder bufferSize(int bufSize) {
     bufferSize = bufSize;
@@ -137,6 +140,8 @@ public abstract class FutureDataInputStreamBuilderImpl
    * This must be used after the constructor has been invoked to create
    * the actual builder: it allows for subclasses to do things after
    * construction.
+   *
+   * @return FutureDataInputStreamBuilder.
    */
   public FutureDataInputStreamBuilder builder() {
     return getThisBuilder();

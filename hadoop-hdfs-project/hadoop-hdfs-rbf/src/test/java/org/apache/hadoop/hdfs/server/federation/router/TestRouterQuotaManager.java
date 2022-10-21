@@ -75,11 +75,11 @@ public class TestRouterQuotaManager {
   public void testGetQuotaUsage() {
     RouterQuotaUsage quotaGet;
 
-    // test case1: get quota with an non-exist path
+    // test case1: get quota with a non-exist path
     quotaGet = manager.getQuotaUsage("/non-exist-path");
     assertNull(quotaGet);
 
-    // test case2: get quota from an no-quota set path
+    // test case2: get quota from a no-quota set path
     RouterQuotaUsage.Builder quota = new RouterQuotaUsage.Builder()
         .quota(HdfsConstants.QUOTA_RESET)
         .spaceQuota(HdfsConstants.QUOTA_RESET);
@@ -88,7 +88,7 @@ public class TestRouterQuotaManager {
     // it should return null
     assertNull(quotaGet);
 
-    // test case3: get quota from an quota-set path
+    // test case3: get quota from a quota-set path
     quota.quota(1);
     quota.spaceQuota(HdfsConstants.QUOTA_RESET);
     manager.put("/hasQuotaSet", quota.build());
@@ -96,24 +96,24 @@ public class TestRouterQuotaManager {
     assertEquals(1, quotaGet.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, quotaGet.getSpaceQuota());
 
-    // test case4: get quota with an non-exist child path
+    // test case4: get quota with a non-exist child path
     quotaGet = manager.getQuotaUsage("/hasQuotaSet/file");
     // it will return the nearest ancestor which quota was set
     assertEquals(1, quotaGet.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, quotaGet.getSpaceQuota());
 
-    // test case5: get quota with an child path which its parent
+    // test case5: get quota with a child path which its parent
     // wasn't quota set
     quota.quota(HdfsConstants.QUOTA_RESET);
     quota.spaceQuota(HdfsConstants.QUOTA_RESET);
     manager.put("/hasQuotaSet/noQuotaSet", quota.build());
-    // here should returns the quota of path /hasQuotaSet
+    // here should return the quota of path /hasQuotaSet
     // (the nearest ancestor which quota was set)
     quotaGet = manager.getQuotaUsage("/hasQuotaSet/noQuotaSet/file");
     assertEquals(1, quotaGet.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, quotaGet.getSpaceQuota());
 
-    // test case6: get quota with an child path which its parent was quota set
+    // test case6: get quota with a child path which its parent was quota set
     quota.quota(2);
     quota.spaceQuota(HdfsConstants.QUOTA_RESET);
     manager.put("/hasQuotaSet/hasQuotaSet", quota.build());

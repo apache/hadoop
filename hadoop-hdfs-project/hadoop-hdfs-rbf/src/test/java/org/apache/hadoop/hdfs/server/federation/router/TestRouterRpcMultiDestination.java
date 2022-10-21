@@ -75,7 +75,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 /**
- * The the RPC interface of the {@link getRouter()} implemented by
+ * The RPC interface of the {@link getRouter()} implemented by
  * {@link RouterRpcServer}.
  */
 public class TestRouterRpcMultiDestination extends TestRouterRpc {

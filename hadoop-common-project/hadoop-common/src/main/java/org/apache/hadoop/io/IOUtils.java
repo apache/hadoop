@@ -59,7 +59,8 @@ public class IOUtils {
    * @param out OutputStream to write to
    * @param buffSize the size of the buffer 
    * @param close whether or not close the InputStream and 
-   * OutputStream at the end. The streams are closed in the finally clause.  
+   * OutputStream at the end. The streams are closed in the finally clause.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out,
                                int buffSize, boolean close)
@@ -85,7 +86,8 @@ public class IOUtils {
    * 
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param buffSize the size of the buffer 
+   * @param buffSize the size of the buffer.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, int buffSize) 
     throws IOException {
@@ -107,7 +109,8 @@ public class IOUtils {
    *
    * @param in InputStrem to read from
    * @param out OutputStream to write to
-   * @param conf the Configuration object 
+   * @param conf the Configuration object.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf)
     throws IOException {
@@ -123,6 +126,7 @@ public class IOUtils {
    * @param conf the Configuration object
    * @param close whether or not close the InputStream and 
    * OutputStream at the end. The streams are closed in the finally clause.
+   * @throws IOException raised on errors performing I/O.
    */
   public static void copyBytes(InputStream in, OutputStream out, Configuration conf, boolean close)
     throws IOException {
@@ -181,6 +185,7 @@ public class IOUtils {
    * @param off - offset within buf
    * @param len - amount of data to be read
    * @return number of bytes read
+   * @throws IOException raised on errors performing I/O.
    */
   public static int wrappedReadForCompressedData(InputStream is, byte[] buf,
       int off, int len) throws IOException {
@@ -407,6 +412,7 @@ public class IOUtils {
    * once the sync is done.<br>
    * Borrowed from Uwe Schindler in LUCENE-5588
    * @param fileToSync the file to fsync
+   * @throws IOException raised on errors performing I/O.
    */
   public static void fsync(File fileToSync) throws IOException {
     if (!fileToSync.exists()) {
@@ -440,7 +446,7 @@ public class IOUtils {
    * @param isDir if true, the given file is a directory (Channel should be
    *          opened for read and ignore IOExceptions, because not all file
    *          systems and operating systems allow to fsync on a directory)
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static void fsync(FileChannel channel, boolean isDir)
       throws IOException {

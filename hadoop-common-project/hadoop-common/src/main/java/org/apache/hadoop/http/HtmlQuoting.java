@@ -80,6 +80,7 @@ public class HtmlQuoting {
    * @param buffer the byte array to take the characters from
    * @param off the index of the first byte to quote
    * @param len the number of bytes to quote
+   * @throws IOException raised on errors performing I/O.
    */
   public static void quoteHtmlChars(OutputStream output, byte[] buffer,
                                     int off, int len) throws IOException {

@@ -141,6 +141,7 @@ public final class IOStatisticsBinding {
   /**
    * Convert entry values to the string format used in logging.
    *
+   * @param <E> type of values.
    * @param name statistic name
    * @param value stat value
    * @return formatted string
@@ -178,6 +179,8 @@ public final class IOStatisticsBinding {
   /**
    * A passthrough copy operation suitable for immutable
    * types, including numbers.
+   *
+   * @param <E> type of values.
    * @param src source object
    * @return the source object
    */
@@ -437,6 +440,7 @@ public final class IOStatisticsBinding {
    * @param input input callable.
    * @param <B> return type.
    * @return the result of the operation.
+   * @throws IOException raised on errors performing I/O.
    */
   public static <B> B trackDuration(
       DurationTrackerFactory factory,

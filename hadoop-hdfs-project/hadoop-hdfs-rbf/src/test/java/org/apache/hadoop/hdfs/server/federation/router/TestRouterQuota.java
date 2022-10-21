@@ -74,8 +74,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.function.Supplier;
-
 /**
  * Tests quota behaviors in Router-based Federation.
  */
@@ -210,21 +208,17 @@ public class TestRouterQuota {
     routerClient.create("/ssquota/file", true).close();
     routerClient.create("/ssquota/subdir/file", true).close();
 
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-
-      @Override
-      public Boolean get() {
-        boolean isDsQuotaViolated = false;
-        try {
-          // append data to trigger NSQuotaExceededException
-          appendData("/ssquota/file", routerClient, BLOCK_SIZE);
-          appendData("/ssquota/subdir/file", routerClient, BLOCK_SIZE);
-        } catch (DSQuotaExceededException e) {
-          isDsQuotaViolated = true;
-        } catch (IOException ignored) {
-        }
-        return isDsQuotaViolated;
+    GenericTestUtils.waitFor(() -> {
+      boolean isDsQuotaViolated = false;
+      try {
+        // append data to trigger NSQuotaExceededException
+        appendData("/ssquota/file", routerClient, BLOCK_SIZE);
+        appendData("/ssquota/subdir/file", routerClient, BLOCK_SIZE);
+      } catch (DSQuotaExceededException e) {
+        isDsQuotaViolated = true;
+      } catch (IOException ignored) {
       }
+      return isDsQuotaViolated;
     }, 5000, 60000);
 
     // append data to destination path in real FileSystem should be okay

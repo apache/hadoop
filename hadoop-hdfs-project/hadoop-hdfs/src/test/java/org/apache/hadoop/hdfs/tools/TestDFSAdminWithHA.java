@@ -69,6 +69,20 @@ public class TestDFSAdminWithHA {
     err.reset();
   }
 
+  private void assertOutputMatches(String outMessage, String errMessage) {
+    String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
+    String output = new String(out.toByteArray(), Charsets.UTF_8);
+
+    if (!errOutput.matches(errMessage) || !output.matches(outMessage)) {
+      fail("Expected output to match '" + outMessage + " and " + errMessage +
+              "' but err_output was:\n" + errOutput + "\n and output was: \n" +
+              output);
+    }
+
+    out.reset();
+    err.reset();
+  }
+
   private void setHAConf(Configuration conf, String nn1Addr, String nn2Addr) {
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         "hdfs://" + NSID);
@@ -186,9 +200,9 @@ public class TestDFSAdminWithHA {
 //
     exitCode = admin.run(new String[] {"-saveNamespace"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "Save namespace successful for.*" + newLine
-        + "Save namespace failed for.*" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Save namespace successful for.*" + newLine;
+    String errMessage = "Save namespace failed for ([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -204,9 +218,9 @@ public class TestDFSAdminWithHA {
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "Save namespace failed for.*" + newLine
-        + "Save namespace successful for.*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Save namespace failed for ([\\s\\S]*)" + newLine;
+    String outMessage = "Save namespace successful for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -223,7 +237,7 @@ public class TestDFSAdminWithHA {
 
     exitCode = admin.run(new String[] {"-saveNamespace"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "Save namespace failed for.*";
+    message = "Save namespace failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
@@ -253,22 +267,22 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "restoreFailedStorage is set to false for.*" + newLine
-        + "restoreFailedStorage failed for.*" + newLine;
+    String outMessage = "restoreFailedStorage is set to false for.*" + newLine;
+    String errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
     // Default is false
-    assertOutputMatches(message);
+    assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage is set to true for.*" + newLine
-        + "restoreFailedStorage failed for.*" + newLine;
-    assertOutputMatches(message);
+    outMessage = "restoreFailedStorage is set to true for.*" + newLine;
+    errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage is set to false for.*" + newLine
-        + "restoreFailedStorage failed for.*" + newLine;
-    assertOutputMatches(message);
+    outMessage = "restoreFailedStorage is set to false for.*" + newLine;
+    errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -277,22 +291,22 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "restoreFailedStorage failed for.*" + newLine
-        + "restoreFailedStorage is set to false for.*" + newLine;
+    String errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
+    String outMessage = "restoreFailedStorage is set to false for.*" + newLine;
     // Default is false
-    assertOutputMatches(message);
+    assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage failed for.*" + newLine
-        + "restoreFailedStorage is set to true for.*" + newLine;
-    assertOutputMatches(message);
+    errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
+    outMessage = "restoreFailedStorage is set to true for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage failed for.*" + newLine
-        + "restoreFailedStorage is set to false for.*" + newLine;
-    assertOutputMatches(message);
+    errMessage = "restoreFailedStorage failed for ([\\s\\S]*)" + newLine;
+    outMessage = "restoreFailedStorage is set to false for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -302,18 +316,18 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-restoreFailedStorage", "check"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "restoreFailedStorage failed for.*";
+    String message = "restoreFailedStorage failed for ([\\s\\S]*)";
     // Default is false
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "true"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage failed for.*";
+    message = "restoreFailedStorage failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
 
     exitCode = admin.run(new String[] {"-restoreFailedStorage", "false"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    message = "restoreFailedStorage failed for.*";
+    message = "restoreFailedStorage failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
@@ -332,9 +346,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh nodes successful for.*" + newLine
-        + "Refresh nodes failed for.*" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Refresh nodes successful for .*" + newLine;
+    String errMessage = "Refresh nodes failed for ([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -343,9 +357,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh nodes failed for.*" + newLine
-        + "Refresh nodes successful for.*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Refresh nodes failed for ([\\s\\S]*)" + newLine;
+    String outMessage = "Refresh nodes successful for .*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -355,7 +369,7 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshNodes"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh nodes failed for.*";
+    String message = "Refresh nodes failed for ([\\s\\S]*)";
     assertOutputMatches(message + newLine + message + newLine);
   }
 
@@ -432,11 +446,11 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*" + newLine
-        + "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*failed" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Created metasave file dfs.meta in the log " +
+            "directory of namenode.*" + newLine;
+    String errMessage = "Created metasave file dfs.meta in the log " +
+            "directory of namenode.*failed" + newLine + ".*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -446,11 +460,11 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*failed" + newLine
-        + "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Created metasave file dfs.meta in the log " +
+            "directory of namenode.*failed" + newLine + ".*" + newLine;
+    String outMessage = "Created metasave file dfs.meta in the log " +
+            "directory of namenode.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -460,9 +474,8 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-metasave", "dfs.meta"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Created metasave file dfs.meta in the log directory"
-        + " of namenode.*failed";
-    assertOutputMatches(message + newLine + message + newLine);
+    String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
+    assertOutputMatches(message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -480,9 +493,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh service acl successful for.*" + newLine
-        + "Refresh service acl failed for.*" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Refresh service acl successful for.*" + newLine;
+    String errMessage = "Refresh service acl failed for([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -491,9 +504,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh service acl failed for.*" + newLine
-        + "Refresh service acl successful for.*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Refresh service acl failed for([\\s\\S]*)" + newLine;
+    String outMessage = "Refresh service acl successful for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -503,8 +516,8 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshServiceAcl"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh service acl failed for.*";
-    assertOutputMatches(message + newLine + message + newLine);
+    String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
+    assertOutputMatches(message + newLine);
   }
 
 
@@ -523,11 +536,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh user to groups mapping successful for.*"
-        + newLine
-        + "Refresh user to groups mapping failed for.*"
-        + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Refresh user to groups mapping successful for.*" + newLine;
+    String errMessage = "Refresh user to groups mapping failed for([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -536,11 +547,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh user to groups mapping failed for.*"
-        + newLine
-        + "Refresh user to groups mapping successful for.*"
-        + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Refresh user to groups mapping failed for([\\s\\S]*)" + newLine;
+    String outMessage = "Refresh user to groups mapping successful for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -550,8 +559,8 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshUserToGroupsMappings"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh user to groups mapping failed for.*";
-    assertOutputMatches(message + newLine + message + newLine);
+    String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
+    assertOutputMatches(message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -572,11 +581,11 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh super user groups configuration successful for.*"
-        + newLine
-        + "Refresh super user groups configuration failed for.*"
-        + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Refresh super user groups configuration successful for.*"
+            + newLine;
+    String errMessage = "Refresh super user groups configuration failed for([\\s\\S]*)"
+            + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -587,11 +596,11 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh super user groups configuration failed for.*"
-        + newLine
-        + "Refresh super user groups configuration successful for.*"
-        + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Refresh super user groups configuration failed for([\\s\\S]*)"
+            + newLine;
+    String outMessage = "Refresh super user groups configuration successful for.*"
+            + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -603,8 +612,8 @@ public class TestDFSAdminWithHA {
     int exitCode = admin.run(
         new String[] {"-refreshSuperUserGroupsConfiguration"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh super user groups configuration failed for.*";
-    assertOutputMatches(message + newLine + message + newLine);
+    String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
+    assertOutputMatches(message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -622,9 +631,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh call queue successful for.*" + newLine
-        + "Refresh call queue failed for.*" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Refresh call queue successful for.*" + newLine;
+    String errMessage = "Refresh call queue failed for([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -633,9 +642,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(0);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh call queue failed for.*" + newLine
-        + "Refresh call queue successful for.*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Refresh call queue failed for([\\s\\S]*)" + newLine;
+    String outMessage = "Refresh call queue successful for.*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -645,8 +654,8 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-refreshCallQueue"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Refresh call queue failed for.*";
-    assertOutputMatches(message + newLine + message + newLine);
+    String message = "([\\s\\S]*)2 exceptions([\\s\\S]*)";
+    assertOutputMatches(message + newLine);
   }
 
   @Test (timeout = 30000)
@@ -671,9 +680,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().transitionToActive(0);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Finalize upgrade successful for .*" + newLine
-        + "Finalize upgrade failed for .*" + newLine;
-    assertOutputMatches(message);
+    String outMessage = "Finalize upgrade successful for .*" + newLine;
+    String errMessage = "Finalize upgrade failed for ([\\s\\S]*)" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -683,9 +692,9 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().transitionToActive(1);
     int exitCode = admin.run(new String[] {"-finalizeUpgrade"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = "Finalize upgrade failed for .*" + newLine
-        + "Finalize upgrade successful for .*" + newLine;
-    assertOutputMatches(message);
+    String errMessage = "Finalize upgrade failed for ([\\s\\S]*)" + newLine;
+    String outMessage = "Finalize upgrade successful for .*" + newLine;
+    assertOutputMatches(outMessage, errMessage);
   }
 
   @Test (timeout = 30000)
@@ -788,7 +797,8 @@ public class TestDFSAdminWithHA {
     cluster.getDfsCluster().shutdownNameNode(1);
     int exitCode = admin.run(new String[] {"-listOpenFiles"});
     assertNotEquals(err.toString().trim(), 0, exitCode);
-    String message = ".*" + newLine + "List open files failed." + newLine;
+    String message = "List open files failed." + newLine
+            + ".*" + newLine;
     assertOutputMatches(message);
   }
 }

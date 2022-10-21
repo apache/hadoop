@@ -24,15 +24,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for HBaseTimelineStorageUtils static methos.
@@ -41,7 +43,7 @@ public class TestHBaseTimelineStorageUtils {
 
   private String hbaseConfigPath = "target/hbase-site.xml";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     // Input Hbase Configuration
     Configuration hbaseConf = new Configuration();
@@ -60,25 +62,27 @@ public class TestHBaseTimelineStorageUtils {
     os.close();
   }
 
-  @Test(expected=NullPointerException.class)
-  public void testGetTimelineServiceHBaseConfNullArgument() throws Exception {
-    HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(null);
+  @Test
+  void testGetTimelineServiceHBaseConfNullArgument() throws Exception {
+    assertThrows(NullPointerException.class, () -> {
+      HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(null);
+    });
   }
 
   @Test
-  public void testWithHbaseConfAtLocalFileSystem() throws IOException {
+  void testWithHbaseConfAtLocalFileSystem() throws IOException {
     // Verifying With Hbase Conf from Local FileSystem
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.TIMELINE_SERVICE_HBASE_CONFIGURATION_FILE,
         hbaseConfigPath);
     Configuration hbaseConfFromLocal =
         HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
-    Assert.assertEquals("Failed to read hbase config from Local FileSystem",
-        "test", hbaseConfFromLocal.get("input"));
+    assertEquals("test", hbaseConfFromLocal.get("input"),
+        "Failed to read hbase config from Local FileSystem");
   }
 
   @Test
-  public void testWithHbaseConfAtHdfsFileSystem() throws IOException {
+  void testWithHbaseConfAtHdfsFileSystem() throws IOException {
     MiniDFSCluster hdfsCluster = null;
     try {
       HdfsConfiguration hdfsConfig = new HdfsConfiguration();
@@ -95,8 +99,8 @@ public class TestHBaseTimelineStorageUtils {
           path.toString());
       Configuration hbaseConfFromHdfs =
           HBaseTimelineStorageUtils.getTimelineServiceHBaseConf(conf);
-      Assert.assertEquals("Failed to read hbase config from Hdfs FileSystem",
-          "test", hbaseConfFromHdfs.get("input"));
+      assertEquals("test", hbaseConfFromHdfs.get("input"),
+          "Failed to read hbase config from Hdfs FileSystem");
     } finally {
       if (hdfsCluster != null) {
         hdfsCluster.shutdown();

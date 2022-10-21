@@ -408,6 +408,9 @@ message CommitBlockSynchronizationResponseProto {
 message SlowPeerReportProto {
   optional string dataNodeId = 1;
   optional double aggregateLatency = 2;
+  optional double median = 3;
+  optional double mad = 4;
+  optional double upperLimitLatency = 5;
 }
 
 /**

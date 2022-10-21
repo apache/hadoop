@@ -41,13 +41,22 @@ public class InnerNodeImpl extends NodeBase implements InnerNode {
   protected final Map<String, Node> childrenMap = new HashMap<>();
   protected int numOfLeaves;
 
-  /** Construct an InnerNode from a path-like string. */
+  /**
+   * Construct an InnerNode from a path-like string.
+   * @param path input path.
+   */
   protected InnerNodeImpl(String path) {
     super(path);
   }
 
-  /** Construct an InnerNode
-   * from its name, its network location, its parent, and its level. */
+  /**
+   * Construct an InnerNode
+   * from its name, its network location, its parent, and its level.
+   * @param name input name.
+   * @param location input location.
+   * @param parent input parent.
+   * @param level input level.
+   */
   protected InnerNodeImpl(String name, String location,
       InnerNode parent, int level) {
     super(name, location, parent, level);

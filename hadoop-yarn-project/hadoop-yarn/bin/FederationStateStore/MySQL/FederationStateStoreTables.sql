@@ -22,7 +22,8 @@ USE FederationStateStore
 
 CREATE TABLE applicationsHomeSubCluster(
    applicationId varchar(64) NOT NULL,
-   homeSubCluster varchar(256) NULL,
+   homeSubCluster varchar(256) NOT NULL,
+   createTime datetime NOT NULL,
    CONSTRAINT pk_applicationId PRIMARY KEY (applicationId)
 );
 
@@ -36,7 +37,7 @@ CREATE TABLE membership(
    state varchar(32) NOT NULL,
    lastStartTime bigint NULL,
    capability varchar(6000),
-   CONSTRAINT pk_subClusterId PRIMARY KEY (subClusterId)
+   CONSTRAINT pk_subClusterId PRIMARY KEY (subClusterId),
    UNIQUE(lastStartTime)
 );
 
@@ -45,4 +46,10 @@ CREATE TABLE policies(
    policyType varchar(256) NOT NULL,
    params varbinary(32768),
    CONSTRAINT pk_queue PRIMARY KEY (queue)
+);
+
+CREATE TABLE reservationsHomeSubCluster (
+   reservationId varchar(128) NOT NULL,
+   homeSubCluster varchar(256) NOT NULL,
+   CONSTRAINT pk_reservationId PRIMARY KEY (reservationId)
 );

@@ -84,6 +84,10 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Convert CamelCase based names to lower-case names where the separator
    * is the underscore, to follow prometheus naming conventions.
+   *
+   * @param metricName metricName.
+   * @param recordName recordName.
+   * @return prometheusName.
    */
   public String prometheusName(String recordName,
                                String metricName) {

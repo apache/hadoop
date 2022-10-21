@@ -557,7 +557,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // This value uses the times of heartbeat interval to define the minimum value for stale interval.  
   public static final String DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_KEY = "dfs.namenode.stale.datanode.minimum.interval";
   public static final int DFS_NAMENODE_STALE_DATANODE_MINIMUM_INTERVAL_DEFAULT = 3; // i.e. min_interval is 3 * heartbeat_interval = 9s
-  
+  public static final String DFS_NAMENODE_REMOVE_DEAD_DATANODE_BATCHNUM_KEY
+      = "dfs.namenode.remove.dead.datanode.batchnum";
+  public static final int DFS_NAMENODE_REMOVE_BAD_BATCH_NUM_DEFAULT = 10;
   // When the percentage of stale datanodes reaches this ratio,
   // allow writing to stale nodes to prevent hotspots.
   public static final String DFS_NAMENODE_USE_STALE_DATANODE_FOR_WRITE_RATIO_KEY = "dfs.namenode.write.stale.datanode.ratio";
@@ -1404,6 +1406,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.journalnode.edits.dir.perm";
   public static final String DFS_JOURNAL_EDITS_DIR_PERMISSION_DEFAULT =
       "700";
+  public static final String  DFS_JOURNALNODE_HANDLER_COUNT_KEY =
+      "dfs.journalnode.handler.count";
+  public static final int     DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT = 5;
+
 
   public static final String  DFS_JOURNALNODE_HTTP_ADDRESS_KEY = "dfs.journalnode.http-address";
   public static final int     DFS_JOURNALNODE_HTTP_PORT_DEFAULT = 8480;

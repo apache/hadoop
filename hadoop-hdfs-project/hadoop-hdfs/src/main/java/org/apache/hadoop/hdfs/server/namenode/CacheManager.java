@@ -976,9 +976,8 @@ public class CacheManager {
   public final void processCacheReport(final DatanodeID datanodeID,
       final List<Long> blockIds) throws IOException {
     if (!enabled) {
-      LOG.debug("Ignoring cache report from {} because {} = false. " +
-              "number of blocks: {}", datanodeID,
-              DFS_NAMENODE_CACHING_ENABLED_KEY, blockIds.size());
+      LOG.debug("Ignoring cache report from {} because {} = false. number of blocks: {}",
+          datanodeID, DFS_NAMENODE_CACHING_ENABLED_KEY, blockIds.size());
       return;
     }
     namesystem.writeLock();
@@ -1003,9 +1002,8 @@ public class CacheManager {
     if (metrics != null) {
       metrics.addCacheBlockReport((int) (endTime - startTime));
     }
-    LOG.debug("Processed cache report from {}, blocks: {}, " +
-        "processing time: {} msecs", datanodeID, blockIds.size(), 
-        (endTime - startTime));
+    LOG.debug("Processed cache report from {}, blocks: {}, processing time: {} msecs",
+        datanodeID, blockIds.size(), (endTime - startTime));
   }
 
   private void processCacheReportImpl(final DatanodeDescriptor datanode,

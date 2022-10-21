@@ -76,7 +76,7 @@ class SFTPConnectionPool {
     ConnectionInfo info = con2infoMap.get(channel);
     HashSet<ChannelSftp> cons = idleConnections.get(info);
     if (cons == null) {
-      cons = new HashSet<ChannelSftp>();
+      cons = new HashSet<>();
       idleConnections.put(info, cons);
     }
     cons.add(channel);
@@ -94,7 +94,7 @@ class SFTPConnectionPool {
     Set<ChannelSftp> cons = con2infoMap.keySet();
     if (cons != null && cons.size() > 0) {
       // make a copy since we need to modify the underlying Map
-      Set<ChannelSftp> copy = new HashSet<ChannelSftp>(cons);
+      Set<ChannelSftp> copy = new HashSet<>(cons);
       // Initiate disconnect from all outstanding connections
       for (ChannelSftp con : copy) {
         try {

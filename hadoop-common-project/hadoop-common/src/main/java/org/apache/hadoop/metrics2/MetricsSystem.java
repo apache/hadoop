@@ -50,7 +50,7 @@ public abstract class MetricsSystem implements MetricsSystemMXBean {
    *              the annotations of the source object.)
    * @param desc  the description of the source (or null. See above.)
    * @return the source object
-   * @exception MetricsException
+   * @exception MetricsException Metrics Exception.
    */
   public abstract <T> T register(String name, String desc, T source);
 
@@ -65,7 +65,7 @@ public abstract class MetricsSystem implements MetricsSystemMXBean {
    * @param <T>   the actual type of the source object
    * @param source  object to register
    * @return  the source object
-   * @exception MetricsException
+   * @exception MetricsException Metrics Exception.
    */
   public <T> T register(T source) {
     return register(null, null, source);
@@ -85,7 +85,7 @@ public abstract class MetricsSystem implements MetricsSystemMXBean {
    * @param name  of the sink. Must be unique.
    * @param desc  the description of the sink
    * @return the sink
-   * @exception MetricsException
+   * @exception MetricsException Metrics Exception.
    */
   public abstract <T extends MetricsSink>
   T register(String name, String desc, T sink);

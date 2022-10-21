@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.server.federation.store.records.impl.pb;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -93,12 +95,13 @@ public class GetSubClustersInfoResponsePBImpl
   }
 
   @Override
-  public void setSubClusters(List<SubClusterInfo> subClusters) {
+  public void setSubClusters(Collection<SubClusterInfo> subClusters) {
     if (subClusters == null) {
       builder.clearSubClusterInfos();
       return;
     }
-    this.subClusterInfos = subClusters;
+    this.subClusterInfos = subClusters.stream().collect(Collectors.toList());
+    addSubClusterInfosToProto();
   }
 
   private void initSubClustersInfoList() {

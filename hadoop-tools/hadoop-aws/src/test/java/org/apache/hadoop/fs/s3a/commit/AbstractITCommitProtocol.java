@@ -71,6 +71,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_INTELLIGENT_TIERING;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter.E_SELF_GENERATED_JOB_UUID;
@@ -124,7 +126,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   private static final Text VAL_2 = new Text("val2");
 
   /** A job to abort in test case teardown. */
-  private List<JobData> abortInTeardown = new ArrayList<>(1);
+  private final List<JobData> abortInTeardown = new ArrayList<>(1);
 
   private final StandardCommitterFactory
       standardCommitterFactory = new StandardCommitterFactory();
@@ -560,7 +562,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
       describe("\ncommitting job");
       committer.commitJob(jContext);
       describe("commit complete\n");
-      verifyCommitterHasNoThreads(committer);
+
     }
   }
 
@@ -615,6 +617,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNotNull("null outputPath in committer " + committer,
         committer.getOutputPath());
 
+    // note the task attempt path.
+    Path job1TaskAttempt0Path = committer.getTaskAttemptPath(tContext);
+
     // Commit the task. This will promote data and metadata to where
     // job commits will pick it up on commit or abort.
     commitTask(committer, tContext);
@@ -634,6 +639,15 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     intercept(PathCommitException.class, "recover",
         () -> committer2.recoverTask(tContext2));
 
+    // the new task attempt path is different from the first, because the
+    // job attempt counter is used in the path
+    final Path job2TaskAttempt0Path = committer2.getTaskAttemptPath(tContext2);
+    LOG.info("Job attempt 1 task attempt path {}; attempt 2 path {}",
+        job1TaskAttempt0Path, job2TaskAttempt0Path);
+    assertNotEquals("Task attempt paths must differ",
+        job1TaskAttempt0Path,
+        job2TaskAttempt0Path);
+
     // at this point, task attempt 0 has failed to recover
     // it should be abortable though. This will be a no-op as it already
     // committed
@@ -643,7 +657,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     committer2.abortJob(jContext2, JobStatus.State.KILLED);
     // now, state of system may still have pending data
     assertNoMultipartUploadsPending(outDir);
-    verifyCommitterHasNoThreads(committer2);
+
   }
 
   protected void assertTaskAttemptPathDoesNotExist(
@@ -696,6 +710,22 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
+   * Verify storage class of output file matches the expected storage class.
+   * @param dir output directory.
+   * @param expectedStorageClass expected storage class value.
+   * @throws Exception failure.
+   */
+  private void validateStorageClass(Path dir, String expectedStorageClass) throws Exception {
+    Path expectedFile = getPart0000(dir);
+    S3AFileSystem fs = getFileSystem();
+    String actualStorageClass = fs.getObjectMetadata(expectedFile).getStorageClass();
+
+    Assertions.assertThat(actualStorageClass)
+        .describedAs("Storage class of object %s", expectedFile)
+        .isEqualToIgnoringCase(expectedStorageClass);
+  }
+
+  /**
    * Identify any path under the directory which begins with the
    * {@code "part-m-00000"} sequence.
    * @param dir directory to scan
@@ -729,7 +759,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertPathExists("Map output", expectedMapDir);
     assertIsDirectory(expectedMapDir);
     FileStatus[] files = fs.listStatus(expectedMapDir);
-    assertTrue("No files found in " + expectedMapDir, files.length > 0);
+    Assertions.assertThat(files)
+        .describedAs("Files found in " + expectedMapDir)
+        .hasSizeGreaterThan(0);
     assertPathExists("index file in " + expectedMapDir,
         new Path(expectedMapDir, MapFile.INDEX_FILE_NAME));
     assertPathExists("data file in " + expectedMapDir,
@@ -777,9 +809,9 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     try {
       applyLocatedFiles(getFileSystem().listFiles(outDir, false),
-          (status) ->
-              assertFalse("task committed file to dest :" + status,
-                  status.getPath().toString().contains("part")));
+          (status) -> Assertions.assertThat(status.getPath().toString())
+              .describedAs("task committed file to dest :" + status)
+              .doesNotContain("part"));
     } catch (FileNotFoundException ignored) {
       log().info("Outdir {} is not created by task commit phase ",
           outDir);
@@ -794,6 +826,41 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     validateContent(outDir, shouldExpectSuccessMarker(),
         committer.getUUID());
     assertNoMultipartUploadsPending(outDir);
+  }
+
+  @Test
+  public void testCommitWithStorageClassConfig() throws Exception {
+    describe("Commit with specific storage class configuration;" +
+        " expect the final file has correct storage class.");
+
+    Configuration conf = getConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
+    conf.set(STORAGE_CLASS, STORAGE_CLASS_INTELLIGENT_TIERING);
+
+    JobData jobData = startJob(false);
+    JobContext jContext = jobData.jContext;
+    TaskAttemptContext tContext = jobData.tContext;
+    AbstractS3ACommitter committer = jobData.committer;
+    validateTaskAttemptWorkingDirectory(committer, tContext);
+
+    // write output
+    writeTextOutput(tContext);
+
+    // commit task
+    dumpMultipartUploads();
+    commitTask(committer, tContext);
+
+    // commit job
+    assertMultipartUploadsPending(outDir);
+    commitJob(committer, jContext);
+
+    // validate output
+    validateContent(outDir, shouldExpectSuccessMarker(),
+        committer.getUUID());
+    assertNoMultipartUploadsPending(outDir);
+
+    // validate storage class
+    validateStorageClass(outDir, STORAGE_CLASS_INTELLIGENT_TIERING);
   }
 
   @Test
@@ -1018,27 +1085,34 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // hidden filenames (_ or . prefixes)
     describe("listing");
     FileStatus[] filtered = fs.listStatus(outDir, HIDDEN_FILE_FILTER);
-    assertEquals("listed children under " + ls,
-        1, filtered.length);
+    Assertions.assertThat(filtered)
+        .describedAs("listed children under " + ls)
+        .hasSize(1);
     FileStatus fileStatus = filtered[0];
-    assertTrue("Not the part file: " + fileStatus,
-        fileStatus.getPath().getName().startsWith(PART_00000));
+    Assertions.assertThat(fileStatus.getPath().getName())
+        .describedAs("Not a part file: " + fileStatus)
+        .startsWith(PART_00000);
 
     describe("getReaders()");
-    assertEquals("Number of MapFile.Reader entries with shared FS "
-            + outDir + " : " + ls,
-        1, getReaders(fs, outDir, conf).length);
+    Assertions.assertThat(getReaders(fs, outDir, conf))
+        .describedAs("Number of MapFile.Reader entries with shared FS %s: %s",
+            outDir, ls)
+        .hasSize(1);
 
     describe("getReaders(new FS)");
     FileSystem fs2 = FileSystem.get(outDir.toUri(), conf);
-    assertEquals("Number of MapFile.Reader entries with shared FS2 "
-            + outDir + " : " + ls,
-        1, getReaders(fs2, outDir, conf).length);
+    Assertions.assertThat(getReaders(fs2, outDir, conf))
+        .describedAs("Number of MapFile.Reader entries with shared FS2 %s: %s",
+            outDir, ls)
+        .hasSize(1);
 
     describe("MapFileOutputFormat.getReaders");
-    assertEquals("Number of MapFile.Reader entries with new FS in "
-            + outDir + " : " + ls,
-        1, MapFileOutputFormat.getReaders(outDir, conf).length);
+
+    Assertions.assertThat(MapFileOutputFormat.getReaders(outDir, conf))
+        .describedAs("Number of MapFile.Reader entries with new FS in %s: %s",
+            outDir, ls)
+        .hasSize(1);
+
   }
 
   /** Open the output generated by this format. */
@@ -1112,7 +1186,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
 
     committer.abortJob(jobData.jContext, JobStatus.State.FAILED);
     assertJobAbortCleanedUp(jobData);
-    verifyCommitterHasNoThreads(committer);
+
   }
 
   /**
@@ -1166,7 +1240,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     // try again; expect abort to be idempotent.
     committer.abortJob(jContext, JobStatus.State.FAILED);
     assertNoMultipartUploadsPending(outDir);
-    verifyCommitterHasNoThreads(committer);
+
   }
 
   public void assertPart0000DoesNotExist(Path dir) throws Exception {
@@ -1380,7 +1454,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     AbstractS3ACommitter committer2 = (AbstractS3ACommitter)
         outputFormat.getOutputCommitter(newAttempt);
     committer2.abortTask(tContext);
-    verifyCommitterHasNoThreads(committer2);
+
     assertNoMultipartUploadsPending(getOutDir());
   }
 
@@ -1724,11 +1798,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     conf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
     TaskAttemptContext tContext = new TaskAttemptContextImpl(conf,
         taskAttempt0);
-    String name = getCommitterName();
     S3ACommitterFactory factory = new S3ACommitterFactory();
-    assertEquals("Wrong committer from factory",
-        createCommitter(outDir, tContext).getClass(),
-        factory.createOutputCommitter(outDir, tContext).getClass());
+    Assertions.assertThat(factory.createOutputCommitter(outDir, tContext).getClass())
+        .describedAs("Committer from factory with name %s", getCommitterName())
+        .isEqualTo(createCommitter(outDir, tContext).getClass());
   }
 
   /**
@@ -1777,7 +1850,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   protected void commitTask(final AbstractS3ACommitter committer,
       final TaskAttemptContext tContext) throws IOException {
     committer.commitTask(tContext);
-    verifyCommitterHasNoThreads(committer);
+
   }
 
   /**
@@ -1789,15 +1862,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   protected void commitJob(final AbstractS3ACommitter committer,
       final JobContext jContext) throws IOException {
     committer.commitJob(jContext);
-    verifyCommitterHasNoThreads(committer);
+
   }
 
-  /**
-   * Verify that the committer does not have a thread pool.
-   * @param committer committer to validate.
-   */
-  protected void verifyCommitterHasNoThreads(AbstractS3ACommitter committer) {
-    assertFalse("Committer has an active thread pool",
-        committer.hasThreadPool());
-  }
 }

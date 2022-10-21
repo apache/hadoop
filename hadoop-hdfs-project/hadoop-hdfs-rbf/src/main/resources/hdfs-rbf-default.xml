@@ -135,6 +135,33 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.enable.multiple.socket</name>
+    <value>false</value>
+    <description>
+      If enable multiple downstream socket or not. If true, ConnectionPool
+      will use a new socket when creating a new connection for the same user,
+      and RouterRPCClient will get a better throughput. It's best used with
+      dfs.federation.router.max.concurrency.per.connection together to get
+      a better throughput with fewer sockets. Such as enable
+      dfs.federation.router.enable.multiple.socket and
+      set dfs.federation.router.max.concurrency.per.connection = 20.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.max.concurrency.per.connection</name>
+    <value>1</value>
+    <description>
+      The maximum number of requests that a connection can handle concurrently.
+      When the number of requests being processed by a socket is less than this value,
+      new request will be processed by this socket. When enable
+      dfs.federation.router.enable.multiple.socket, it's best
+      set this value greater than 1, such as 20, to avoid frequent
+      creation and idle sockets in the case of a NS with jitter requests.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.connection.pool.clean.ms</name>
     <value>60000</value>
     <description>
@@ -165,6 +192,16 @@
     <value>10s</value>
     <description>
       Expiration time in seconds for datanodereport.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.enable.get.dn.usage</name>
+    <value>true</value>
+    <description>
+      If true, the getNodeUsage method in RBFMetrics will return an up-to-date
+      result collecting from downstream nameservices. But it will take a long
+      time and take up thread resources. If false, it will return a mock result with all 0.
     </description>
   </property>
 
@@ -382,6 +419,14 @@
     <value>5000</value>
     <description>
       How often the Router should heartbeat into the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.health.monitor.timeout</name>
+    <value>30s</value>
+    <description>
+      Time out for Router to obtain HAServiceStatus from NameNode.
     </description>
   </property>
 
@@ -724,6 +769,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.fairness.acquire.timeout</name>
+    <value>1s</value>
+    <description>
+      The maximum time to wait for a permit.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.federation.rename.bandwidth</name>
     <value>10</value>
     <description>
@@ -779,6 +832,36 @@
     <description>
       This options has 3 values: trash (move the source path to trash), delete
       (delete the source path directly) and skip (skip both trash and deletion).
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.default</name>
+    <value>false</value>
+    <description>
+      Whether observer reads are enabled. This is a default for all nameservices.
+      The default can be inverted for individual namespace by adding them to
+      dfs.federation.router.observer.read.overrides.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.read.overrides</name>
+    <value/>
+    <description>
+      Commas separated list of namespaces for which to invert the default configuration,
+      dfs.federation.router.observer.read.default, for whether to enable observer reads.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.observer.federated.state.propagation.maxsize</name>
+    <value>5</value>
+    <description>
+      The maximum size of the federated state to send in the RPC header. Sending the federated
+      state removes the need to msync on every read call, but at the expense of having a larger
+      header. The cost tradeoff between the larger header and always msync'ing depends on the number
+      of namespaces in use and the latency of the msync requests.
     </description>
   </property>
 </configuration>
