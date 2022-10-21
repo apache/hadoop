@@ -543,7 +543,7 @@ public class FederationClientInterceptor
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
 
-      if (exists || retryCount == 0) {
+      if (!exists || retryCount == 0) {
         addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
       } else {
         updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
@@ -563,7 +563,7 @@ public class FederationClientInterceptor
     } catch (Exception e) {
       RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
-      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {} error = {}.",
+      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, subClusterId, e);
       if (subClusterId != null) {
         blackList.add(subClusterId);
