@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,8 @@ public abstract class AbstractClientRequestInterceptor
 
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected UserGroupInformation user = null;
+
+  private RouterDelegationTokenSecretManager tokenSecretManager = null;
 
   /**
    * Sets the {@link ClientRequestInterceptor} in the chain.
@@ -125,4 +128,13 @@ public abstract class AbstractClientRequestInterceptor
     }
   }
 
+  @Override
+  public RouterDelegationTokenSecretManager getTokenSecretManager() {
+    return tokenSecretManager;
+  }
+
+  @Override
+  public void setTokenSecretManager(RouterDelegationTokenSecretManager tokenSecretManager) {
+    this.tokenSecretManager = tokenSecretManager;
+  }
 }
