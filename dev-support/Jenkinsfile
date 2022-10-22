@@ -263,8 +263,8 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-                    bat 'setx PATH "%PATH%;C:\\PROGRA~1\\Git\\bin'
-                    bat 'where bash'
+//                     bat 'setx PATH "%PATH%;C:\\PROGRA~1\\Git\\bin'
+//                     bat 'where bash'
 
 //                     sh '''#!/usr/bin/env bash
 //
