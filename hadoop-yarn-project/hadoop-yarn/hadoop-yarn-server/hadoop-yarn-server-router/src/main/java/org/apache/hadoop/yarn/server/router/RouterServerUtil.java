@@ -301,6 +301,28 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Throws an YarnRuntimeException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return YarnRuntimeException
+   */
+  @Public
+  @Unstable
+  public static YarnRuntimeException logAndReturnYarnRunTimeException(
+      Throwable t, String errMsgFormat, Object... args) {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      return new YarnRuntimeException(msg, t);
+    } else {
+      LOG.error(msg);
+      return new YarnRuntimeException(msg);
+    }
+  }
+
+  /**
    * Check applicationId is accurate.
    *
    * We need to ensure that applicationId cannot be empty and
@@ -496,7 +518,6 @@ public final class RouterServerUtil {
   public static UserGroupInformation setupUser(String userName) {
     UserGroupInformation user = null;
     try {
-
       // Do not create a proxy user if user name matches the user name on
       // current UGI
       if (UserGroupInformation.isSecurityEnabled()) {
@@ -509,12 +530,8 @@ public final class RouterServerUtil {
       }
       return user;
     } catch (IOException e) {
-      String message = "Error while creating Router ClientRM Service for user:";
-      if (user != null) {
-        message += ", user: " + user;
-      }
-      LOG.warn(message);
-      throw new YarnRuntimeException(message, e);
+      throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
+          "Error while creating Router RMAdmin Service for user : %s.", user);
     }
   }
 }

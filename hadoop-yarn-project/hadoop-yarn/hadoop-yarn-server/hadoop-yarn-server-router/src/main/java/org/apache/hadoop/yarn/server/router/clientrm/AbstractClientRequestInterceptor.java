@@ -104,31 +104,7 @@ public abstract class AbstractClientRequestInterceptor
   public ClientRequestInterceptor getNextInterceptor() {
     return this.nextInterceptor;
   }
-
-  private void setupUser(String userName) {
-
-    try {
-      // Do not create a proxy user if user name matches the user name on
-      // current UGI
-      if (UserGroupInformation.isSecurityEnabled()) {
-        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
-      } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
-        user = UserGroupInformation.getCurrentUser();
-      } else {
-        user = UserGroupInformation.createProxyUser(userName,
-            UserGroupInformation.getCurrentUser());
-      }
-    } catch (IOException e) {
-      String message = "Error while creating Router ClientRM Service for user:";
-      if (user != null) {
-        message += ", user: " + user;
-      }
-
-      LOG.info(message);
-      throw new YarnRuntimeException(message, e);
-    }
-  }
-
+  
   @Override
   public RouterDelegationTokenSecretManager getTokenSecretManager() {
     return tokenSecretManager;

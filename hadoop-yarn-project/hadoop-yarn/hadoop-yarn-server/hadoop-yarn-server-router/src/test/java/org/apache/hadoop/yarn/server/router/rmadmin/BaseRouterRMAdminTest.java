@@ -88,27 +88,36 @@ public abstract class BaseRouterRMAdminTest {
 
   @Before
   public void setUp() {
-    this.conf = new YarnConfiguration();
+    this.conf = createConfiguration();
+    this.dispatcher = new AsyncDispatcher();
+    this.dispatcher.init(conf);
+    this.dispatcher.start();
+    this.rmAdminService = createAndStartRouterRMAdminService();
+    DefaultMetricsSystem.setMiniClusterMode(true);
+  }
+
+  protected Configuration getConf() {
+    return this.conf;
+  }
+
+  public void setUpConfig() {
+    this.conf = createConfiguration();
+  }
+
+  protected Configuration createConfiguration() {
+    YarnConfiguration config = new YarnConfiguration();
     String mockPassThroughInterceptorClass =
         PassThroughRMAdminRequestInterceptor.class.getName();
 
     // Create a request interceptor pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
-    this.conf.set(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
-        mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
-            + "," + mockPassThroughInterceptorClass + ","
-            + MockRMAdminRequestInterceptor.class.getName());
+    config.set(YarnConfiguration.ROUTER_RMADMIN_INTERCEPTOR_CLASS_PIPELINE,
+        mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass + "," +
+        mockPassThroughInterceptorClass + "," + MockRMAdminRequestInterceptor.class.getName());
 
-    this.conf.setInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE,
-        TEST_MAX_CACHE_SIZE);
-
-    this.dispatcher = new AsyncDispatcher();
-    this.dispatcher.init(conf);
-    this.dispatcher.start();
-    this.rmAdminService = createAndStartRouterRMAdminService();
-
-    DefaultMetricsSystem.setMiniClusterMode(true);
+    config.setInt(YarnConfiguration.ROUTER_PIPELINE_CACHE_MAX_SIZE, TEST_MAX_CACHE_SIZE);
+    return config;
   }
 
   @After
