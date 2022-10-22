@@ -273,6 +273,9 @@ pipeline {
                     bat 'dir F:'
                     bat 'dir F:\\jenkins'
                     bat 'dir F:\\jenkins\\tools'
+                    bat 'dir \\Microsoft'
+                    bat 'dir \\"Program Files"'
+                    bat 'dir \\"Program Files (x86)"'
                 }
             }
 
