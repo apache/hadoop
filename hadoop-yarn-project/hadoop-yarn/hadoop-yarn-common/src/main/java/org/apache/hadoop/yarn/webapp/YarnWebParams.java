@@ -39,6 +39,7 @@ public interface YarnWebParams {
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
   String NODE_LABEL = "node.label";
+  String NODE_SC = "node.subcluster";
   String WEB_UI_TYPE = "web.ui.type";
   String NEXT_REFRESH_INTERVAL = "next.refresh.interval";
   String ERROR_MESSAGE = "error.message";

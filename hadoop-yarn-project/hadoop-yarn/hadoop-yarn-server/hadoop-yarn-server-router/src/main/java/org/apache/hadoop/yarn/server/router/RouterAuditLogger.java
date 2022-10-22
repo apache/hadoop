@@ -197,6 +197,24 @@ public class RouterAuditLogger {
   }
 
   /**
+   * Create a readable and parsable audit log string for a failed event.
+   *
+   * @param user User who made the service request.
+   * @param operation Operation requested by the user.
+   * @param perm Target permissions.
+   * @param target The target on which the operation is being performed.
+   * @param description Some additional information as to why the operation failed.
+   * @param subClusterId SubCluster Id in which operation was performed.
+   */
+  public static void logFailure(String user, String operation, String perm,
+      String target, String description, SubClusterId subClusterId) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info(createFailureLog(user, operation, perm, target, description, null,
+          subClusterId));
+    }
+  }
+
+  /**
    * A helper api for creating an audit log for a failure event.
    */
   static String createFailureLog(String user, String operation, String perm,

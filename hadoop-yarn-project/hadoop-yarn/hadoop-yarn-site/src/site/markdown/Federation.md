@@ -270,6 +270,7 @@ Optional:
 |`yarn.router.admin.address` | `0.0.0.0:8052` | Admin address at the router. |
 |`yarn.router.webapp.https.address` | `0.0.0.0:8091` | Secure webapp address at the router. |
 |`yarn.router.submit.retry` | `3` | The number of retries in the router before we give up. |
+|`yarn.router.submit.interval.time` | `10ms` | The interval between two retry, the default value is 10ms. |
 |`yarn.federation.statestore.max-connections` | `10` | This is the maximum number of parallel connections each Router makes to the state-store. |
 |`yarn.federation.cache-ttl.secs` | `60` | The Router caches informations, and this is the time to leave before the cache is invalidated. |
 |`yarn.router.webapp.interceptor-class.pipeline` | `org.apache.hadoop.yarn.server.router.webapp.FederationInterceptorREST` | A comma-separated list of interceptor classes to be run at the router when interfacing with the client via REST interface. The last step of this pipeline must be the Federation Interceptor REST. |
@@ -283,6 +284,16 @@ Kerberos supported in federation.
 | `yarn.router.keytab.file` |  | The keytab file used by router to login as its service principal. The principal name is configured with 'yarn.router.kerberos.principal'.|
 | `yarn.router.kerberos.principal` | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in setup. |
 | `yarn.router.kerberos.principal.hostname` |  | Optional. The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
+
+Enabling CORS support:
+
+To enable cross-origin support (CORS) for the Yarn Router, please set the following configuration parameters:
+
+| Property                                  | Example                                                      | Description                                                  |
+| ----------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `hadoop.http.filter.initializers`         | `org.apache.hadoop.security.HttpCrossOriginFilterInitializer` | Optional. Set the filter to HttpCrossOriginFilterInitializer, Configure this parameter in core-site.xml. |
+| `yarn.router.webapp.cross-origin.enabled` | `true`                                                       | Optional. Enable/disable CORS filter.Configure this parameter in yarn-site.xml. |
+
 
 ###ON NMs:
 

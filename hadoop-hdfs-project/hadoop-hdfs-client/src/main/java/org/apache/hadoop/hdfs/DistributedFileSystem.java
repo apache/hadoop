@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
@@ -567,7 +568,7 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Same as
-   * {@link #create(Path, FsPermission, EnumSet<CreateFlag>, int, short, long,
+   * {@link #create(Path, FsPermission, EnumSet, int, short, long,
    * Progressable, ChecksumOpt)} with a few additions. First, addition of
    * favoredNodes that is a hint to where the namenode should place the file
    * blocks. The favored nodes hint is not persisted in HDFS. Hence it may be
@@ -636,12 +637,12 @@ public class DistributedFileSystem extends FileSystem
 
   /**
    * Similar to {@link #create(Path, FsPermission, EnumSet, int, short, long,
-   * Progressable, ChecksumOpt, InetSocketAddress[], String)}, it provides a
+   * Progressable, ChecksumOpt, InetSocketAddress[], String, String)}, it provides a
    * HDFS-specific version of {@link #createNonRecursive(Path, FsPermission,
    * EnumSet, int, short, long, Progressable)} with a few additions.
    *
    * @see #create(Path, FsPermission, EnumSet, int, short, long, Progressable,
-   * ChecksumOpt, InetSocketAddress[], String) for the descriptions of
+   * ChecksumOpt, InetSocketAddress[], String, String) for the descriptions of
    * additional parameters, i.e., favoredNodes, ecPolicyName and
    * storagePolicyName.
    */
@@ -3898,4 +3899,36 @@ public class DistributedFileSystem extends FileSystem
     return dfs.slowDatanodeReport();
   }
 
+  /**
+   * Returns LocatedBlocks of the corresponding HDFS file p from offset start
+   * for length len.
+   * This is similar to {@link #getFileBlockLocations(Path, long, long)} except
+   * that it returns LocatedBlocks rather than BlockLocation array.
+   * @param p path representing the file of interest.
+   * @param start offset
+   * @param len length
+   * @return a LocatedBlocks object
+   * @throws IOException
+   */
+  public LocatedBlocks getLocatedBlocks(Path p, long start, long len)
+      throws IOException {
+    final Path absF = fixRelativePart(p);
+    return new FileSystemLinkResolver<LocatedBlocks>() {
+      @Override
+      public LocatedBlocks doCall(final Path p) throws IOException {
+        return dfs.getLocatedBlocks(getPathName(p), start, len);
+      }
+      @Override
+      public LocatedBlocks next(final FileSystem fs, final Path p)
+          throws IOException {
+        if (fs instanceof DistributedFileSystem) {
+          DistributedFileSystem myDfs = (DistributedFileSystem)fs;
+          return myDfs.getLocatedBlocks(p, start, len);
+        }
+        throw new UnsupportedOperationException("Cannot getLocatedBlocks " +
+            "through a symlink to a non-DistributedFileSystem: " + fs + " -> "+
+            p);
+      }
+    }.resolve(this, absF);
+  }
 }

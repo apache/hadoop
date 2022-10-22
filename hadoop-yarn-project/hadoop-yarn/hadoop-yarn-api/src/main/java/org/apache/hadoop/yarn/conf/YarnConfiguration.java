@@ -4061,6 +4061,17 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS = 1000;
 
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-count";
+
+  public static final int DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT = 1;
+
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-sleep-time";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      TimeUnit.SECONDS.toMillis(1);
+
   public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
 
   public static final String ROUTER_BIND_HOST = ROUTER_PREFIX + "bind-host";
@@ -4105,6 +4116,14 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_CLIENTRM_SUBMIT_RETRY =
       ROUTER_PREFIX + "submit.retry";
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
+
+  /**
+   * GetNewApplication and SubmitApplication request retry interval time.
+   */
+  public static final String ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      ROUTER_PREFIX + "submit.interval.time";
+  public static final long DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      TimeUnit.MILLISECONDS.toMillis(10);
 
   /**
    * The interceptor class used in FederationClientInterceptor should return
@@ -4193,6 +4212,11 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_APPSINFO_CACHED_COUNT =
       ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
   public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;
+
+  /** Enable cross origin (CORS) support. **/
+  public static final String ROUTER_WEBAPP_ENABLE_CORS_FILTER =
+      ROUTER_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
 
   ////////////////////////////////
   // CSI Volume configs

@@ -183,6 +183,8 @@ public class WebHdfsFileSystem extends FileSystem
   private KeyProvider testProvider;
   private boolean isTLSKrb;
 
+  private boolean isServerHCFSCompatible = true;
+
   /**
    * Return the protocol scheme for the FileSystem.
    *
@@ -1882,18 +1884,51 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public BlockLocation[] getFileBlockLocations(final Path p,
-      final long offset, final long length) throws IOException {
+  public BlockLocation[] getFileBlockLocations(final Path p, final long offset,
+      final long length) throws IOException {
     statistics.incrementReadOps(1);
     storageStatistics.incrementOpCounter(OpType.GET_FILE_BLOCK_LOCATIONS);
+    BlockLocation[] locations;
+    try {
+      if (isServerHCFSCompatible) {
+        locations = getFileBlockLocations(GetOpParam.Op.GETFILEBLOCKLOCATIONS, p, offset, length);
+      } else {
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p, offset, length);
+      }
+    } catch (RemoteException e) {
+      // parsing the exception is needed only if the client thinks the service is compatible
+      if (isServerHCFSCompatible && isGetFileBlockLocationsException(e)) {
+        LOG.warn("Server does not appear to support GETFILEBLOCKLOCATIONS." +
+                "Fallback to the old GET_BLOCK_LOCATIONS. Exception: {}",
+            e.getMessage());
+        isServerHCFSCompatible = false;
+        locations = getFileBlockLocations(GetOpParam.Op.GET_BLOCK_LOCATIONS, p, offset, length);
+      } else {
+        throw e;
+      }
+    }
+    return locations;
+  }
 
-    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
-    return new FsPathResponseRunner<BlockLocation[]>(op, p,
+  private boolean isGetFileBlockLocationsException(RemoteException e) {
+    return e.getMessage() != null && e.getMessage().contains("Invalid value for webhdfs parameter")
+        && e.getMessage().contains(GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString());
+  }
+
+  private BlockLocation[] getFileBlockLocations(final GetOpParam.Op operation,
+      final Path p, final long offset, final long length) throws IOException {
+    return new FsPathResponseRunner<BlockLocation[]>(operation, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
-      BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return DFSUtilClient.locatedBlocks2Locations(
-            JsonUtilClient.toLocatedBlocks(json));
+      BlockLocation[] decodeResponse(Map<?, ?> json) throws IOException {
+        switch (operation) {
+        case GETFILEBLOCKLOCATIONS:
+          return JsonUtilClient.toBlockLocationArray(json);
+        case GET_BLOCK_LOCATIONS:
+          return DFSUtilClient.locatedBlocks2Locations(JsonUtilClient.toLocatedBlocks(json));
+        default:
+          throw new IOException("Unknown operation " + operation.name());
+        }
       }
     }.run();
   }
