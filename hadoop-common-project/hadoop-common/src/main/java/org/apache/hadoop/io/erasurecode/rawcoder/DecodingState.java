@@ -39,7 +39,7 @@ class DecodingState {
                            T[] outputs) {
     if (inputs.length != decoder.getNumParityUnits() +
         decoder.getNumDataUnits()) {
-      throw new IllegalArgumentException("Invalid inputs length");
+      throw new HadoopIllegalArgumentException("Invalid inputs length");
     }
 
     if (erasedIndexes.length != outputs.length) {
