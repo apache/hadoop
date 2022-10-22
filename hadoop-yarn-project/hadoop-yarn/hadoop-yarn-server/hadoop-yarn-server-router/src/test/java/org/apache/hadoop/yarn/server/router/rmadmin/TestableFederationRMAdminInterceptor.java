@@ -85,7 +85,7 @@ public class TestableFederationRMAdminInterceptor extends FederationRMAdminInter
     if (MapUtils.isNotEmpty(mockRMs)) {
       for (Map.Entry<SubClusterId, MockRM> item : mockRMs.entrySet()) {
         SubClusterId subClusterId = item.getKey();
-        // close mockRM
+        // close mockRM.
         MockRM mockRM = item.getValue();
         if (mockRM != null) {
           LOG.info("subClusterId = {} mockRM shutdown.", subClusterId);
