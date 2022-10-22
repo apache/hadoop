@@ -123,6 +123,12 @@ public abstract class DatanodeAdminMonitorBase
           DFSConfigKeys
               .DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES_DEFAULT;
     }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Activating DatanodeAdminMonitor with {} max concurrently tracked nodes.",
+          maxConcurrentTrackedNodes);
+    }
+
     processConf();
   }
 
