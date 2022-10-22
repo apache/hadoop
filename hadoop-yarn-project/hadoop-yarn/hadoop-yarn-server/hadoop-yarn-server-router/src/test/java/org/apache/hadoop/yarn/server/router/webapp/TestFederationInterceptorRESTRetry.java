@@ -86,7 +86,8 @@ public class TestFederationInterceptorRESTRetry
 
     Configuration conf = this.getConf();
     // Enable strict mode
-    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        true);
 
     interceptor = new TestableFederationInterceptorREST();
 
@@ -386,16 +387,18 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesOneBadSC() throws Exception {
-    // Disable strict mode
-    interceptor.setStrictModeEnabled(false);
+    // allowPartialResult = true,
+    // We tolerate exceptions and return normal results
+    interceptor.setAllowPartialResult(true);
     setupCluster(Arrays.asList(bad2));
 
     NodesInfo response = interceptor.getNodes(null);
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getNodes().size());
 
-    // enable strict mode
-    interceptor.setStrictModeEnabled(true);
+    // allowPartialResult = false,
+    // We do not tolerate exceptions and will throw exceptions directly
+    interceptor.setAllowPartialResult(false);
     LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
         () -> interceptor.getNodes(null));
   }
@@ -406,16 +409,18 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesTwoBadSCs() throws Exception {
-    // Disable strict mode
-    interceptor.setStrictModeEnabled(false);
+    // allowPartialResult = true,
+    // We tolerate exceptions and return normal results
+    interceptor.setAllowPartialResult(true);
     setupCluster(Arrays.asList(bad1, bad2));
 
     NodesInfo response = interceptor.getNodes(null);
     Assert.assertNotNull(response);
     Assert.assertEquals(0, response.getNodes().size());
 
-    // Enable strict mode
-    interceptor.setStrictModeEnabled(true);
+    // allowPartialResult = false,
+    // We do not tolerate exceptions and will throw exceptions directly
+    interceptor.setAllowPartialResult(false);
     LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
         () -> interceptor.getNodes(null));
   }
@@ -426,8 +431,9 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesOneBadOneGood() throws Exception {
-    // Disable strict mode
-    interceptor.setStrictModeEnabled(false);
+    // allowPartialResult = true,
+    // We tolerate exceptions and return normal results
+    interceptor.setAllowPartialResult(true);
     setupCluster(Arrays.asList(good, bad2));
 
     NodesInfo response = interceptor.getNodes(null);
@@ -437,8 +443,9 @@ public class TestFederationInterceptorRESTRetry
     Assert.assertEquals(good.getId(),
         Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
 
-    // Enable strict mode
-    interceptor.setStrictModeEnabled(true);
+    // allowPartialResult = false,
+    // We do not tolerate exceptions and will throw exceptions directly
+    interceptor.setAllowPartialResult(false);
     LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
         () -> interceptor.getNodes(null));
   }

@@ -140,7 +140,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
-  private boolean strictModeEnabled;
+  private boolean allowPartialResult;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -192,9 +192,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
     }
 
-    strictModeEnabled = conf.getBoolean(
-        YarnConfiguration.ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED,
-        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_STRICT_MODE_ENABLED);
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
   }
 
   private SubClusterId getRandomActiveSubCluster(
@@ -2066,9 +2066,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           results.put(clusterId, response);
         }
         Exception exception = pair.getRight();
-        // In strict mode, as long as 1 subCluster throws an exception,
-        // we throw the exception directly.
-        if (strictModeEnabled && exception != null) {
+        // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
+        // an exception will be thrown directly.
+        if (!allowPartialResult && exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
@@ -2140,7 +2140,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @VisibleForTesting
-  public void setStrictModeEnabled(boolean strictModeEnabled) {
-    this.strictModeEnabled = strictModeEnabled;
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }
