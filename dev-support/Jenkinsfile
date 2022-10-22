@@ -264,7 +264,7 @@ pipeline {
             steps {
                 withCredentials(getGithubCreds()) {
                     bat '''
-                    set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+                    set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
 
                     where bash.exe
                     bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
@@ -333,7 +333,7 @@ pipeline {
                 cleanup() {
                     script {
                         bat '''
-                        set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+                        set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
 
                         bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
                         bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh cleanup_ci_proc"
@@ -349,7 +349,7 @@ pipeline {
         cleanup() {
             script {
                 bat '''
-                set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+                set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
 
                 # See HADOOP-13951
                 bash.exe -c "chmod -R u+rxw %WORKSPACE%"
