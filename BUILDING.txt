@@ -515,7 +515,7 @@ Requirements:
 
 Building guidelines:
 
-This repository provides the Dockerfile for building Hadoop on Windows 10, located at
+Hadoop repository provides the Dockerfile for building Hadoop on Windows 10, located at
 dev-support/docker/Dockerfile_windows_10. It is highly recommended to use this and create the
 Docker image for building Hadoop on Windows 10, since you don't have to install anything else
 other than Docker and no additional steps are required in terms of aligning the environment with
@@ -524,6 +524,30 @@ the necessary paths etc.
 However, if you still prefer taking the route of not using Docker, this Dockerfile_windows_10 will
 still be immensely useful as a raw guide for all the steps involved in creating the environment
 needed to build Hadoop on Windows 10.
+
+Building using the Docker:
+We first need to build the Docker image for building Hadoop on Windows 10. Run this command from
+the root of the Hadoop repository.
+> docker build -t hadoop-windows-10-builder -f .\dev-support\docker\Dockerfile_windows_10 .\dev-support\docker\
+
+Start the container with the image that we just built.
+> docker run --rm -it hadoop-windows-10-builder
+
+You can now clone the Hadoop repo inside this container and proceed with the build.
+
+NOTE:
+While one may perceive the idea of mounting the locally cloned (on the host filesystem) Hadoop
+repository into the container (using the -v option), we have seen the build to fail owing to some
+files not being able to be located by Maven. Thus, we suggest cloning the Hadoop repository to a
+non-mounted folder inside the container and proceed with the build. When the build is completed,
+you may use the "docker cp" command to copy the built Hadoop tar.gz file from the docker container
+to the host filesystem.
+
+However, we noticed no build issues when the Maven repository from the host filesystem was mounted
+into the container. One may use this to greatly reduce the build time. Assuming that the Maven
+repository is located at D:\Maven\Repository in the host filesystem, one can use the following
+command to mount the same onto the default Maven repository location while launching the container.
+> docker run --rm -v D:\Maven\Repository:C:\Users\ContainerAdministrator\.m2\repository -it hadoop-windows-10-builder
 
 Building:
 
@@ -565,7 +589,9 @@ http://www.zlib.net/
 
 Build command:
 The following command builds all the modules in the Hadoop project and generates the tar.gz file in
-hadoop-dist/target upon successful build.
+hadoop-dist/target upon successful build. Run these commands from an
+"x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
+Windows start menu.
 
 > set classpath=
 > set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
