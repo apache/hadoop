@@ -255,7 +255,7 @@ pipeline {
         // isn't optional (runs for all the PRs).
         stage ('precommit-run Windows 10') {
             environment {
-                SOURCEDIR = "${WORKSPACE}/src"
+                SOURCEDIR = "%WORKSPACE%/src"
                 PATCHDIR = "${WORKSPACE}/out"
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
                 IS_OPTIONAL = 0
@@ -263,8 +263,13 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-//                     bat 'setx PATH "%PATH%;C:\\PROGRA~1\\Git\\bin'
-//                     bat 'where bash'
+                    bat '''
+                    set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+
+                    where bash.exe
+                    bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
+                    bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh run_ci"
+                    '''
 
 //                     sh '''#!/usr/bin/env bash
 //
@@ -287,7 +292,7 @@ pipeline {
                 }
             }
 
-//             post {
+            post {
 //                 always {
 //                     script {
 //                         // Publish status if it was missed (YETUS-1059)
@@ -325,16 +330,17 @@ pipeline {
 //                     }
 //                 }
 //
-//                 cleanup() {
-//                     script {
-//                         sh '''#!/usr/bin/env bash
-//
-//                         chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-//                         "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
-//                         '''
-//                     }
-//                 }
-//             }
+                cleanup() {
+                    script {
+                        bat '''
+                        set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+
+                        bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
+                        bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh cleanup_ci_proc"
+                        '''
+                    }
+                }
+            }
         }
     }
 
@@ -342,11 +348,12 @@ pipeline {
         // Jenkins pipeline jobs fill slaves on PRs without this :(
         cleanup() {
             script {
-//                 sh '''#!/usr/bin/env bash
-//
-//                 # See HADOOP-13951
-//                 chmod -R u+rxw "${WORKSPACE}"
-//                 '''
+                bat '''
+                set PATH "%PATH%;C:\\PROGRA~1\\Git\\bin
+
+                # See HADOOP-13951
+                bash.exe -c "chmod -R u+rxw %WORKSPACE%"
+                '''
                 deleteDir()
             }
         }
