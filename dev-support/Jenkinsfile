@@ -257,18 +257,17 @@ pipeline {
             environment {
                 SOURCEDIR = "%WORKSPACE%/src"
                 PATCHDIR = "${WORKSPACE}/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
                 IS_OPTIONAL = 0
             }
 
             steps {
                 withCredentials(getGithubCreds()) {
                     bat '''
-                    set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
-
-                    where bash.exe
-                    bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
-                    bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh run_ci"
+                    where C:\\PROGRA~1\\Git\\bin\\bash.exe
+                    dir F:\\jenkins\\tools\\java
+                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
+                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh run_ci"
                     '''
 
 //                     sh '''#!/usr/bin/env bash
@@ -333,10 +332,8 @@ pipeline {
                 cleanup() {
                     script {
                         bat '''
-                        set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
-
-                        bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
-                        bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh cleanup_ci_proc"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x %SOURCEDIR%/dev-support/jenkins.sh"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "%SOURCEDIR%/dev-support/jenkins.sh cleanup_ci_proc"
                         '''
                     }
                 }
@@ -349,10 +346,8 @@ pipeline {
         cleanup() {
             script {
                 bat '''
-                set PATH "%PATH%C:\\PROGRA~1\\Git\\bin;"
-
                 # See HADOOP-13951
-                bash.exe -c "chmod -R u+rxw %WORKSPACE%"
+                C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod -R u+rxw %WORKSPACE%"
                 '''
                 deleteDir()
             }
