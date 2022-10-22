@@ -188,8 +188,7 @@ function run_ci() {
   YETUS_ARGS+=("--sentinel")
 
   # test with Java 8 and 11
-  YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
-  YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
+  YETUS_ARGS+=("--java-home=/f/jenkins/tools/java/latest18")
   YETUS_ARGS+=("--multijdktests=compile")
 
   # custom javadoc goals
