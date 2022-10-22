@@ -276,6 +276,12 @@ pipeline {
                     bat 'dir \\Microsoft'
                     bat 'dir \\"Program Files"'
                     bat 'dir \\"Program Files (x86)"'
+                    bat 'dir \\"Program Files (x86)\\Microsoft Visual Studio"'
+                    bat 'echo %PATH%'
+                    bat 'where git'
+                    bat 'where bash'
+                    bat 'where powershell.exe'
+                    bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
                 }
             }
 
