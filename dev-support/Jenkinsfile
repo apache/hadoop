@@ -263,11 +263,10 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-                    bat '''
-                    dir F:\\jenkins\\tools\\java\\latest18
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
-                    '''
+//                     bat '''
+//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
+//                     '''
 
 //                     sh '''#!/usr/bin/env bash
 //
@@ -287,6 +286,8 @@ pipeline {
                     bat 'where git'
                     bat 'where powershell.exe'
                     bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
+                    bat 'where docker'
+                    bat 'docker --version'
                 }
             }
 
@@ -345,7 +346,6 @@ pipeline {
         cleanup() {
             script {
                 bat '''
-                # See HADOOP-13951
                 C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod -R u+rxw ${WORKSPACE}"
                 '''
                 deleteDir()
