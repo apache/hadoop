@@ -499,16 +499,17 @@ Requirements:
 
 * Windows 10
 * JDK 1.8
-* Maven 3.0 or later
-* Boost 1.72
-* Protocol Buffers 3.7.1
-* CMake 3.19 or newer
-* Visual Studio 2019
-* Windows SDK 8.1 (optional, if building CPU rate control for the container executor)
-* Zlib (if building native code bindings for zlib)
+* Maven 3.0 or later (maven.apache.org)
+* Boost 1.72 (boost.org)
+* Protocol Buffers 3.7.1 (https://github.com/protocolbuffers/protobuf/releases)
+* CMake 3.19 or newer (cmake.org)
+* Visual Studio 2019 (visualstudio.com)
+* Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
+                   http://msdn.microsoft.com/en-us/windows/bg162891.aspx)
+* Zlib (zlib.net, if building native code bindings for zlib)
 * Git (preferably, get this from https://git-scm.com/download/win since the package also contains
        Unix command-line tools that are needed during packaging).
-* Python (for generation of docs using 'mvn site')
+* Python (python.org, for generation of docs using 'mvn site')
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
