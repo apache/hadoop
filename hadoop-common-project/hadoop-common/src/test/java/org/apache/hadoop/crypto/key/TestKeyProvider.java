@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -62,12 +63,8 @@ public class TestKeyProvider {
     } catch (IOException e) {
       assertTrue(true);
     }
-    try {
-      KeyProvider.getBaseName(null);
-      assertTrue("should have thrown", false);
-    } catch (IOException e) {
-      assertTrue(true);
-    }
+    intercept(NullPointerException.class, () ->
+        KeyProvider.getBaseName(null));
   }
 
   @Test
