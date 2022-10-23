@@ -126,9 +126,7 @@ public class DatanodeAdminManager {
     executor.scheduleWithFixedDelay(monitor, intervalSecs, intervalSecs,
         TimeUnit.SECONDS);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Activating DatanodeAdminManager with interval {} seconds.", intervalSecs);
-    }
+    LOG.debug("Activating DatanodeAdminManager with interval {} seconds.", intervalSecs);
   }
 
   /**
