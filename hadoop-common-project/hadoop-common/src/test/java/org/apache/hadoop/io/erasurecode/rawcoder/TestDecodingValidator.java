@@ -127,7 +127,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     // decode
     try {
       backupAndEraseChunks(clonedDataChunks, parityChunks);
-    } catch (HadoopIllegalArgumentException e) {
+    } catch (IllegalArgumentException e) {
       String expected = "The erased index is out of bound";
       Assume.assumeTrue(expected, !e.toString().contains(expected));
     }
@@ -219,7 +219,7 @@ public class TestDecodingValidator extends TestRawCoderBase {
     // decode
     try {
       backupAndEraseChunks(clonedDataChunks, parityChunks);
-    } catch (HadoopIllegalArgumentException e) {
+    } catch (IllegalArgumentException e) {
       String expected = "The erased index is out of bound";
       Assume.assumeTrue(expected, !e.toString().contains(expected));
     }
