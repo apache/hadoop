@@ -541,7 +541,9 @@ repository into the container (using the -v option), we have seen the build to f
 files not being able to be located by Maven. Thus, we suggest cloning the Hadoop repository to a
 non-mounted folder inside the container and proceed with the build. When the build is completed,
 you may use the "docker cp" command to copy the built Hadoop tar.gz file from the docker container
-to the host filesystem.
+to the host filesystem. If you still would like to mount the Hadoop codebase, a workaround would
+be to copy the mounted Hadoop codebase into another folder (which doesn't point to a mount) in the
+container's filesystem and use this for building.
 
 However, we noticed no build issues when the Maven repository from the host filesystem was mounted
 into the container. One may use this to greatly reduce the build time. Assuming that the Maven
