@@ -69,7 +69,7 @@ public class TestableFederationRMAdminInterceptor extends FederationRMAdminInter
 
   // This represents an unserviceable SubCluster
   private class MockRMAdminBadService extends AdminService {
-    public MockRMAdminBadService(ResourceManager rm) {
+    MockRMAdminBadService(ResourceManager rm) {
       super(rm);
     }
 

@@ -20,13 +20,10 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
 
 /**
  * Implements the {@link ClientRequestInterceptor} interface and provides common
@@ -104,7 +101,7 @@ public abstract class AbstractClientRequestInterceptor
   public ClientRequestInterceptor getNextInterceptor() {
     return this.nextInterceptor;
   }
-  
+
   @Override
   public RouterDelegationTokenSecretManager getTokenSecretManager() {
     return tokenSecretManager;

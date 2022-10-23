@@ -17,29 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.Arrays;
+
 
 /**
  * Class to define admin method,params and arguments.
  */
 public class AdminMethod {
-
-  private static final Logger LOG = LoggerFactory.getLogger(AdminMethod.class);
 
   /**
    * List of parameters: static and dynamic values, matchings types.

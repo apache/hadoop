@@ -93,14 +93,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     super.init(userName);
 
     int numThreads = getConf().getInt(
-            YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
-            YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
+        YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
-            .setNameFormat("RPC Router Client-" + userName + "-%d ").build();
+        .setNameFormat("RPC Router RMAdminClient-" + userName + "-%d ").build();
 
-    BlockingQueue workQueue = new LinkedBlockingQueue<>();
+    BlockingQueue workQueue = new LinkedBlockingQueue<Runnable>();
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-            0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     federationFacade = FederationStateStoreFacade.getInstance();
     this.conf = this.getConf();
