@@ -570,6 +570,19 @@ To simplify the installation of Boost, Protocol buffers, OpenSSL and Zlib depend
 vcpkg (https://github.com/Microsoft/vcpkg.git). Upon cloning the vcpkg repo, checkout the commit
 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d to get the required versions of the dependencies
 mentioned above.
+> git clone https://github.com/Microsoft/vcpkg.git
+> cd vcpkg
+> git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d
+> .\bootstrap-vcpkg.bat
+> .\vcpkg.exe install boost:x64-windows
+> .\vcpkg.exe install protobuf:x64-windows
+> .\vcpkg.exe install openssl:x64-windows
+> .\vcpkg.exe install zlib:x64-windows
+
+Set the following environment variables -
+(Assuming that vcpkg was checked out at C:\vcpkg)
+> set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
+> set MAVEN_OPTS=-Xmx2048M -Xss128M
 
 All Maven goals are the same as described above with the exception that
 native code is built by enabling the 'native-win' Maven profile. -Pnative-win
