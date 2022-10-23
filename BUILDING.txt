@@ -606,7 +606,9 @@ Build command:
 The following command builds all the modules in the Hadoop project and generates the tar.gz file in
 hadoop-dist/target upon successful build. Run these commands from an
 "x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
-Windows start menu.
+Windows start menu. If you're using the Docker image from Dockerfile_windows_10, you'll be
+logged into "x64 Native Tools Command Prompt for VS 2019" automatically when you start the
+container.
 
 > set classpath=
 > set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
