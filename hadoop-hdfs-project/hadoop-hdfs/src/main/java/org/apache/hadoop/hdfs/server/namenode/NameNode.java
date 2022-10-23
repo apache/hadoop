@@ -205,6 +205,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT_DEFAULT;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -353,7 +355,8 @@ public class NameNode extends ReconfigurableBase implements
           DFS_BLOCK_INVALIDATE_LIMIT_KEY,
           DFS_DATANODE_PEER_STATS_ENABLED_KEY,
           DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
-          DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY));
+          DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2321,6 +2324,9 @@ public class NameNode extends ReconfigurableBase implements
       return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else if (property.equals(DFS_BLOCK_INVALIDATE_LIMIT_KEY)) {
       return reconfigureBlockInvalidateLimit(datanodeManager, property, newVal);
+    } else if (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT)) {
+      return reconfigureDecommissionPendingRepLimitWithBackoffMonitor(datanodeManager, property,
+          newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2601,6 +2607,24 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
+  private String reconfigureDecommissionPendingRepLimitWithBackoffMonitor(
+      final DatanodeManager datanodeManager, final String property, final String newVal)
+      throws ReconfigurationException {
+    try {
+      int pendingRepLimit = (newVal == null ?
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT_DEFAULT :
+          Integer.parseInt(newVal));
+      datanodeManager.getDatanodeAdminManager().refreshPendingRepLimit(pendingRepLimit);
+      final String updatedBlockInvalidateLimit =
+          String.valueOf(datanodeManager.getDatanodeAdminManager().getPendingRepLimit());
+      return updatedBlockInvalidateLimit;
+    } catch (NumberFormatException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    } finally {
+      LOG.info("RECONFIGURE* changed decommissionPendingRepLimitWithBackoffMonitor to "
+          + datanodeManager.getDatanodeAdminManager().getPendingRepLimit());
+    }
+  }
 
   @Override  // ReconfigurableBase
   protected Configuration getNewConf() {

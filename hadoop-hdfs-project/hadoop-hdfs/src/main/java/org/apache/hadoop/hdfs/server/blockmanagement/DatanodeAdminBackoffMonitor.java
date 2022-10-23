@@ -82,7 +82,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
   /**
    * The maximum number of blocks to hold in PendingRep at any time.
    */
-  private int pendingRepLimit;
+  private volatile int pendingRepLimit;
 
   /**
    * The list of blocks which have been placed onto the replication queue
@@ -799,6 +799,15 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       return true;
     }
     return false;
+  }
+
+
+  public int getPendingRepLimit() {
+    return pendingRepLimit;
+  }
+
+  public void setPendingRepLimit(int pendingRepLimit) {
+    this.pendingRepLimit = pendingRepLimit;
   }
 
   static class BlockStats {

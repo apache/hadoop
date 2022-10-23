@@ -419,4 +419,11 @@ public class DatanodeAdminManager {
     executor.submit(monitor).get();
   }
 
+  public void refreshPendingRepLimit(int pendingRepLimit) {
+    this.monitor.setPendingRepLimit(pendingRepLimit);
+  }
+
+  public int getPendingRepLimit() {
+    return this.monitor.getPendingRepLimit();
+  }
 }

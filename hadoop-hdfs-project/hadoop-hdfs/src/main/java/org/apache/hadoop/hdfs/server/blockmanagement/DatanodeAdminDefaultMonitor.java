@@ -138,6 +138,16 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   }
 
   @Override
+  public int getPendingRepLimit() {
+    return 0;
+  }
+
+  @Override
+  public void setPendingRepLimit(int pendingRepLimit) {
+    // nothing.
+  }
+
+  @Override
   public void run() {
     LOG.debug("DatanodeAdminMonitor is running.");
     if (!namesystem.isRunning()) {
