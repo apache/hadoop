@@ -123,7 +123,7 @@ public class EditLogTailer {
 
   /**
    * The timeout in milliseconds of calling rollEdits RPC to Active NN.
-   * @see HDFS-4176.
+   * See HDFS-4176.
    */
   private final long rollEditsTimeoutMs;
 
