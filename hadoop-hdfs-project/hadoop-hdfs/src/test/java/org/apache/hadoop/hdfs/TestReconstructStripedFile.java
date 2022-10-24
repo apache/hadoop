@@ -155,7 +155,7 @@ public class TestReconstructStripedFile {
         getPendingTimeout());
     conf.setBoolean(DFSConfigKeys.DFS_DN_EC_RECONSTRUCTION_VALIDATION_KEY,
         isValidationEnabled());
-    cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(dnNum)
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(dnNum)
         .build();
     cluster.waitActive();
 

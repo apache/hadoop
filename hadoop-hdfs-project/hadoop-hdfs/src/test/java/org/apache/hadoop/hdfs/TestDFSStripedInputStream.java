@@ -119,7 +119,7 @@ public class TestDFSStripedInputStream {
   }
 
   private void startUp() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
     for (DataNode dn : cluster.getDataNodes()) {

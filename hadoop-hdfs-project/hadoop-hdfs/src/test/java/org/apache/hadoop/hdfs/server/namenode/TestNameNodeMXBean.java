@@ -117,7 +117,7 @@ public class TestNameNodeMXBean {
     MiniDFSCluster cluster = null;
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(4).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(4).build();
       cluster.waitActive();
 
       // Set upgrade domain on the first DN.
@@ -318,7 +318,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -371,7 +371,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -474,7 +474,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestInServiceNodes");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       final FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -573,7 +573,7 @@ public class TestNameNodeMXBean {
     hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
 
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(3).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
       cluster.waitActive();
 
       FSNamesystem fsn = cluster.getNameNode().namesystem;
@@ -664,7 +664,7 @@ public class TestNameNodeMXBean {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -720,7 +720,7 @@ public class TestNameNodeMXBean {
     conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -749,7 +749,7 @@ public class TestNameNodeMXBean {
     conf.set(DFSConfigKeys.NNTOP_WINDOWS_MINUTES_KEY, "");
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFsns = new ObjectName(
@@ -776,7 +776,7 @@ public class TestNameNodeMXBean {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster.Builder(conf, baseDir).numDataNodes(0).build();
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(0).build();
       cluster.waitActive();
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanNameFs =
@@ -806,7 +806,7 @@ public class TestNameNodeMXBean {
                 .addNN(
                     new MiniDFSNNTopology.NNConf("nn2").setIpcPort(ports[1])));
 
-        cluster = new MiniDFSCluster.Builder(conf, baseDir)
+        cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
             .nnTopology(topology).numDataNodes(0)
             .build();
         break;
@@ -868,7 +868,7 @@ public class TestNameNodeMXBean {
       int dataBlocks = defaultPolicy.getNumDataUnits();
       int parityBlocks = defaultPolicy.getNumParityUnits();
       int totalSize = dataBlocks + parityBlocks;
-      cluster = new MiniDFSCluster.Builder(conf, baseDir)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
 
@@ -908,7 +908,7 @@ public class TestNameNodeMXBean {
           StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
       int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
       int totalSize = dataBlocks + parityBlocks;
-      cluster = new MiniDFSCluster.Builder(conf, baseDir)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .numDataNodes(totalSize).build();
       fs = cluster.getFileSystem();
       fs.enableErasureCodingPolicy(
@@ -1051,7 +1051,7 @@ public class TestNameNodeMXBean {
       int blockSize = stripesPerBlock * cellSize;
       conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
 
-      cluster = new MiniDFSCluster.Builder(conf, baseDir)
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
           .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(1)).
               numDataNodes(totalSize).build();
       cluster.waitActive();

@@ -402,7 +402,7 @@ public class AdminStatesBaseTest {
   protected void startCluster(int numNameNodes, int numDatanodes,
       boolean setupHostsFile, long[] nodesCapacity,
       boolean checkDataNodeHostConfig, boolean federation) throws IOException {
-    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf, baseDir)
+    MiniDFSCluster.Builder builder = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
         .numDataNodes(numDatanodes);
     if (federation) {
       builder.nnTopology(
@@ -437,7 +437,7 @@ public class AdminStatesBaseTest {
 
 
   protected void startSimpleHACluster(int numDatanodes) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf, baseDir)
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot())
         .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(
         numDatanodes).build();
     cluster.transitionToActive(0);

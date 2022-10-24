@@ -80,7 +80,7 @@ public class TestDataNodeRollingUpgrade {
   private void startCluster() throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt("dfs.blocksize", 1024*1024);
-    cluster = new Builder(conf, baseDir).numDataNodes(REPL_FACTOR).build();
+    cluster = new Builder(conf, baseDir.getRoot()).numDataNodes(REPL_FACTOR).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     nn = cluster.getNameNode(0);

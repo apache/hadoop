@@ -88,7 +88,6 @@ import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.util.Lists;
-import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -239,10 +238,6 @@ public class MiniDFSCluster implements AutoCloseable {
         conf.set(HDFS_MINIDFS_BASEDIR,
             new File(getBaseDirectory()).getAbsolutePath());
       }
-    }
-
-    public Builder(Configuration conf, TemporaryFolder baseDir) {
-      this(conf, baseDir.getRoot());
     }
 
     public Builder(Configuration conf, File basedir) {
