@@ -1102,8 +1102,8 @@ class OfflineImageReconstructor {
         }
         actualNumPools++;
         Node pool = new Node();
-        loadNodeChildren(pool, "pool fields", "");
-        processPoolXml(node);
+        loadNodeChildren(pool, "pool fields");
+        processPoolXml(pool);
       }
       long actualNumDirectives = 0;
       while (actualNumDirectives < expectedNumDirectives) {
@@ -1115,8 +1115,8 @@ class OfflineImageReconstructor {
         }
         actualNumDirectives++;
         Node pool = new Node();
-        loadNodeChildren(pool, "directive fields", "");
-        processDirectiveXml(node);
+        loadNodeChildren(pool, "directive fields");
+        processDirectiveXml(pool);
       }
       expectTagEnd(CACHE_MANAGER_SECTION_NAME);
       recordSectionLength(SectionName.CACHE_MANAGER.name());

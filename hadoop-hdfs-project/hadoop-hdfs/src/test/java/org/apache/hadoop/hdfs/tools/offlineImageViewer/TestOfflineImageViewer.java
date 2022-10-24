@@ -17,54 +17,12 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.RandomAccessFile;
-import java.io.StringReader;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.output.NullOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -72,12 +30,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
-import org.apache.hadoop.hdfs.protocol.BlockType;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyState;
+import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
@@ -100,7 +54,7 @@ import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-
+import org.apache.hadoop.util.Lists;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -117,27 +71,27 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import javax.xml.parsers.*;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.permission.AclEntryScope.ACCESS;
-import static org.apache.hadoop.fs.permission.AclEntryType.GROUP;
-import static org.apache.hadoop.fs.permission.AclEntryType.OTHER;
-import static org.apache.hadoop.fs.permission.AclEntryType.USER;
-import static org.apache.hadoop.fs.permission.FsAction.ALL;
-import static org.apache.hadoop.fs.permission.FsAction.EXECUTE;
-import static org.apache.hadoop.fs.permission.FsAction.READ_EXECUTE;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.apache.hadoop.hdfs.MiniDFSCluster.HDFS_MINIDFS_BASEDIR;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_CELL_SIZE;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_POLICY_STATE;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
-import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.*;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -1409,5 +1363,149 @@ public class TestOfflineImageViewer {
         assertEquals("v2", getXmlString(option2, "value"));
       }
     }
+  }
+
+  /**
+   * Tests that ReverseXML processor doesn't accept XML files with the CacheManagerSection contains pool or directive tag
+   */
+  @Test
+  public void testReverseXmlWithCacheManagerSection() throws Throwable {
+    File imageXml = new File(tempDir, "cacheManagerImageXml.xml");
+    try (PrintWriter writer = new PrintWriter(imageXml, "UTF-8");) {
+      writer.println("<?xml version=\"1.0\"?>");
+      writer.println("<fsimage>");
+      writer.println("<version>");
+      writer.println(String.format("<layoutVersion>%d</layoutVersion>",
+              NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION));
+      writer.println("<onDiskVersion>1</onDiskVersion>");
+      writer.println("<oivRevision>" +
+              "545bbef596c06af1c3c8dca1ce29096a64608478</oivRevision>");
+      writer.println("</version>");
+      writer.println("<NameSection>"
+              + "<namespaceId>1127691130</namespaceId>"
+              + "<genstampV1>1000</genstampV1>"
+              + "<genstampV2>1012</genstampV2>"
+              + "<genstampV1Limit>0</genstampV1Limit>"
+              + "<lastAllocatedBlockId>1073741836</lastAllocatedBlockId>"
+              + "<txid>80</txid>"
+              + "</NameSection>");
+      writer.println("<INodeSection>"
+              + "<lastInodeId>16405</lastInodeId>"
+              + "<numInodes>1</numInodes>"
+              + "<inode>"
+              + "<id>16385</id>"
+              + "<type>DIRECTORY</type>"
+              + "<name></name>"
+              + " <mtime>1458455831853</mtime>"
+              + "<permission>zhexuan:supergroup:0755</permission>"
+              + "<nsquota>9223372036854775807</nsquota>"
+              + "<dsquota>-1</dsquota>"
+              + "</inode>" + "</INodeSection>");
+      writer.println("<INodeReferenceSection>"
+              + "<ref>"
+              + "<referredId>16404</referredId>" + "<name></name>"
+              + "<dstSnapshotId>2147483646</dstSnapshotId>"
+              + "<lastSnapshotId>0</lastSnapshotId>"
+              + "</ref>"
+              + "<ref>"
+              + "<referredId>16404</referredId>"
+              + "<name>orig</name>"
+              + "<dstSnapshotId>0</dstSnapshotId>"
+              + "<lastSnapshotId>0</lastSnapshotId>"
+              + "</ref>"
+              + "</INodeReferenceSection>");
+      writer.println("<SnapshotSection>"
+              + "<snapshotCounter>1</snapshotCounter>"
+              + "<numSnapshots>1</numSnapshots>"
+              + "<snapshottableDir>"
+              + "<dir>16403</dir>"
+              + "</snapshottableDir>"
+              + "<snapshot>"
+              + "<id>0</id>"
+              + "<root>"
+              + "<id>16403</id>"
+              + "<type>DIRECTORY</type>"
+              + "<name>snapshot</name>"
+              + "<mtime>1458455831837</mtime>"
+              + "<permission>zhexuan:supergroup:0755</permission>"
+              + "<nsquota>-1</nsquota>"
+              + "<dsquota>-1</dsquota>"
+              + "</root>"
+              + "</snapshot>"
+              + "</SnapshotSection>");
+      writer.println("<INodeDirectorySection>"
+              + "<directory>"
+              + "<parent>16385</parent>"
+              + "<child>16386</child>"
+              + "<child>16391</child>"
+              + "<child>16396</child>"
+              + "<child>16402</child>"
+              + "<child>16401</child>"
+              + "<child>16403</child>"
+              + "<child>16405</child>"
+              + "<refChild>0</refChild>"
+              + "</directory>" + "</INodeDirectorySection>");
+      writer.println("<FileUnderConstructionSection></FileUnderConstructionSection>");
+      writer.println("<SnapshotDiffSection>"
+              + "<dirDiffEntry>"
+              + "<inodeId>16385</inodeId>"
+              + "<count>0</count>"
+              + "</dirDiffEntry>" + "</SnapshotDiffSection>");
+      writer.println("<SecretManagerSection>"
+              + "<currentId>2</currentId>"
+              + "<tokenSequenceNumber>1</tokenSequenceNumber>"
+              + "<numDelegationKeys>2</numDelegationKeys>"
+              + "<numTokens>1</numTokens>"
+              + "<delegationKey>"
+              + "<id>1</id>"
+              + "<key>696c8a02c617790a</key>"
+              + "<expiry>2016-03-20T06:37:19.806</expiry>"
+              + "</delegationKey>"
+              + "<delegationKey>"
+              + "<id>2</id>"
+              + "<key>11df597a666a6a2e</key>"
+              + "<expiry>2016-03-21T06:37:19.807</expiry>"
+              + "</delegationKey>"
+              + "<token>"
+              + "<owner>zhexuan</owner>"
+              + "<renewer>JobTracker</renewer>"
+              + "<realUser></realUser>"
+              + "<issueDate>2016-03-20T06:37:11.810</issueDate>"
+              + "<maxDate>2016-03-20T06:37:21.810</maxDate>"
+              + "<sequenceNumber>1</sequenceNumber>"
+              + "<masterKeyId>2</masterKeyId>"
+              + "<expiryDate>2016-03-20T06:37:16.810</expiryDate>"
+              + "</token>"
+              + "</SecretManagerSection>");
+      writer.println("<ErasureCodingSection>" +
+              "<erasureCodingPolicy>" +
+              "<policyId>1</policyId>" +
+              "<policyName>RS-6-3-1024k</policyName>" +
+              "<cellSize>1048576</cellSize>" +
+              "<policyState>DISABLED</policyState>" +
+              "<ecSchema>" +
+              "<codecName>rs</codecName>" +
+              "<dataUnits>6</dataUnits>" +
+              "<parityUnits>3</parityUnits>" +
+              "</ecSchema>" +
+              "</erasureCodingPolicy>" +
+              "</ErasureCodingSection>");
+      writer.println("<CacheManagerSection>");
+      writer.println("<nextDirectiveId>1</nextDirectiveId>");
+      writer.println("<numDirectives>0</numDirectives>");
+      writer.println("<numPools>1</numPools>");
+      writer.println("<pool>");
+      writer.println("<poolName>0</poolName>");
+      writer.println("<ownerName>1</ownerName>");
+      writer.println("<groupName>2</groupName>");
+      writer.println("<mode>3</mode>");
+      writer.println("<limit>4</limit>");
+      writer.println("<maxRelativeExpiry>455545555</maxRelativeExpiry>");
+      writer.println("</pool>");
+      writer.println("</CacheManagerSection>");
+      writer.println("</fsimage>");
+    }
+    OfflineImageReconstructor.run(imageXml.getAbsolutePath(),
+            imageXml.getAbsolutePath() + ".out");
   }
 }
