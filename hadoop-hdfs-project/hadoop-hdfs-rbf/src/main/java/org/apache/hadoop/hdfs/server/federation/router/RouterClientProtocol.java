@@ -604,7 +604,6 @@ public class RouterClientProtocol implements ClientProtocol {
         rpcServer.getLocationsForPath(src, true, false);
     final List<RemoteLocation> dstLocations =
         rpcServer.getLocationsForPath(dst, false, false);
-
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
     RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
@@ -631,7 +630,6 @@ public class RouterClientProtocol implements ClientProtocol {
         rpcServer.getLocationsForPath(src, true, false);
     final List<RemoteLocation> dstLocations =
         rpcServer.getLocationsForPath(dst, false, false);
-
     // srcLocations may be trimmed by getRenameDestinations()
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
     RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
