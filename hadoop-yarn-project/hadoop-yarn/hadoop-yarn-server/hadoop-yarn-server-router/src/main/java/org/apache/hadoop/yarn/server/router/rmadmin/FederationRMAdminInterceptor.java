@@ -98,7 +98,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router RMAdminClient-" + userName + "-%d ").build();
 
-    BlockingQueue workQueue = new LinkedBlockingQueue<Runnable>();
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>();
     this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
         0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
