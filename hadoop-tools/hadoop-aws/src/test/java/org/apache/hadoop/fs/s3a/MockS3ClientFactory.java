@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -55,6 +56,12 @@ public class MockS3ClientFactory implements S3ClientFactory {
   @Override
   public S3Client createS3ClientV2(URI uri, final S3ClientCreationParameters parameters) {
     S3Client s3 = mock(S3Client.class);
+    return s3;
+  }
+
+  @Override
+  public S3AsyncClient createS3AsyncClient(URI uri, final S3ClientCreationParameters parameters) {
+    S3AsyncClient s3 = mock(S3AsyncClient.class);
     return s3;
   }
 }

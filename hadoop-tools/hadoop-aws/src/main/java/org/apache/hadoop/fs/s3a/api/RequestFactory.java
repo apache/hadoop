@@ -22,9 +22,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazonaws.services.s3.model.SSECustomerKey;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -46,6 +43,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
@@ -77,14 +75,6 @@ public interface RequestFactory {
    * @return an ACL, if any
    */
   ObjectCannedACL getCannedACL();
-
-  /**
-   * Create the SSE-C structure for the AWS SDK, if the encryption secrets
-   * contain the information/settings for this.
-   * This will contain a secret extracted from the bucket/configuration.
-   * @return an optional customer key.
-   */
-  Optional<SSECustomerKey> generateSSECustomerKey();
 
   /**
    * Get the encryption algorithm of this endpoint.
@@ -214,12 +204,12 @@ public interface RequestFactory {
       long size) throws PathIOException;
 
   /**
-   * Create a S3 Select request for the destination object.
+   * Create a S3 Select request builder for the destination object.
    * This does not build the query.
    * @param key object key
-   * @return the request
+   * @return the request builder
    */
-  SelectObjectContentRequest newSelectRequest(String key);
+  SelectObjectContentRequest.Builder newSelectRequestBuilder(String key);
 
   /**
    * Create the (legacy) V1 list request builder.

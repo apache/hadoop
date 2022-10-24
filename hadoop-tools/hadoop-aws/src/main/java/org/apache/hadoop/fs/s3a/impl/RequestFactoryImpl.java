@@ -25,9 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.SSECustomerKey;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +49,7 @@ import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
@@ -170,20 +168,6 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   protected String getBucket() {
     return bucket;
-  }
-
-  /**
-   * Create the SSE-C structure for the AWS SDK, if the encryption secrets
-   * contain the information/settings for this.
-   * This will contain a secret extracted from the bucket/configuration.
-   * @return an optional customer key.
-   */
-  // TODO: This method can be removed during SelectObject work, as the key now comes directly from
-  //  EncryptionSecretOperations.getSSECustomerKey.
-  @Override
-  public Optional<SSECustomerKey> generateSSECustomerKey() {
-    return EncryptionSecretOperations.createSSECustomerKey(
-        encryptionSecrets);
   }
 
   /**
@@ -530,15 +514,22 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public SelectObjectContentRequest newSelectRequest(String key) {
-    SelectObjectContentRequest request = new SelectObjectContentRequest();
-    request.setBucketName(bucket);
-    request.setKey(key);
-    generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
+  public SelectObjectContentRequest.Builder newSelectRequestBuilder(String key) {
+    SelectObjectContentRequest.Builder requestBuilder =
+        SelectObjectContentRequest.builder()
+            .bucket(bucket)
+            .key(key);
 
-    // TODO: revert when select is upgraded to v2
-    // return prepareRequest(requestBuilder);
-    return request;
+      EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
+          .ifPresent(base64customerKey -> {
+            requestBuilder
+                .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+                .sseCustomerKey(base64customerKey)
+                .sseCustomerKeyMD5(Md5Utils.md5AsBase64(
+                    Base64.getDecoder().decode(base64customerKey)));
+          });
+
+    return prepareRequest(requestBuilder);
   }
 
   @Override

@@ -54,8 +54,6 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 
@@ -64,6 +62,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -88,6 +88,10 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentEventStream;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentResponse;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
@@ -289,6 +293,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private String username;
   private AmazonS3 s3;
   private S3Client s3V2;
+  private S3AsyncClient s3AsyncClient;
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
   // APIs on an uninitialized filesystem.
@@ -973,6 +978,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .createS3ClientV2(getUri(),
             parameters);
 
+    s3AsyncClient = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
+        .createS3AsyncClient(getUri(),
+            parameters);
   }
 
   /**
@@ -1689,8 +1697,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       implements WriteOperationHelper.WriteOperationHelperCallbacks {
 
     @Override
-    public SelectObjectContentResult selectObjectContent(SelectObjectContentRequest request) {
-      return s3.selectObjectContent(request);
+    public CompletableFuture<Void> selectObjectContent(
+        SelectObjectContentRequest request,
+        SelectObjectContentResponseHandler th) {
+     return s3AsyncClient.selectObjectContent(request, th);
     }
 
     @Override
@@ -1699,7 +1709,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return s3V2.completeMultipartUpload(request);
     }
   }
-
 
   /**
    * Create the read context for reading from the referenced file,
