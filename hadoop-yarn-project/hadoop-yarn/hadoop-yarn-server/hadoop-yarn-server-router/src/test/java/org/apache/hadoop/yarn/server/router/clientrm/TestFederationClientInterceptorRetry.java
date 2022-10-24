@@ -330,7 +330,7 @@ public class TestFederationClientInterceptorRetry
     // We will get bad1
     checkSubmitSubCluster(appId, bad1);
 
-    // Set the retryNum to 1
+    // Set the retryNum to 2
     // 1st time will use bad2, 2nd time will use bad1, 3rd good
     interceptor.setNumSubmitRetries(2);
     SubmitApplicationResponse submitAppResponse = interceptor.submitApplication(request);

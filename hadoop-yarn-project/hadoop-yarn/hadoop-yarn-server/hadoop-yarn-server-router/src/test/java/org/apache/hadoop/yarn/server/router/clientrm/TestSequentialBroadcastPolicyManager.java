@@ -21,6 +21,14 @@ package org.apache.hadoop.yarn.server.router.clientrm;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.BroadcastAMRMProxyPolicy;
 import org.apache.hadoop.yarn.server.federation.policies.manager.AbstractPolicyManager;
 
+/**
+ * This PolicyManager is used for testing and will contain the
+ * {@link TestSequentialRouterPolicy} policy.
+ *
+ * When we test FederationClientInterceptor Retry,
+ * we hope that SubCluster can return in a certain order, not randomly.
+ * We can view the policy description by linking to TestSequentialRouterPolicy.
+ */
 public class TestSequentialBroadcastPolicyManager extends AbstractPolicyManager {
   public TestSequentialBroadcastPolicyManager() {
     // this structurally hard-codes two compatible policies for Router and
