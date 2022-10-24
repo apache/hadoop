@@ -723,14 +723,26 @@ public class RouterClientProtocol implements ClientProtocol {
     }
   }
 
-  // Create missing user home dirs for trash paths.
-  // We assume the router is running with super-user privilege (can create
-  // user home dir in /user dir).
-  private void createUserHomeForTrashPath(List<RemoteLocation> locations) throws IOException {
+  /**
+   * Create missing user home dirs for trash paths.
+   *
+   * When there are multiple possible destination locations for a trash path,
+   * we create user home dirs at all destination locations.
+   *
+   * We assume the router is running with super-user privilege (can create
+   * user home dir in /user dir).
+   *
+   * @param src source location
+   * @param locations destination locations
+   */
+  private void createUserHomeForTrashPath(String src,
+      List<RemoteLocation> locations)
+      throws IOException {
+    List<RemoteLocation> userHomes = new ArrayList<>();
     List<RemoteLocation> missingUserHomes = new ArrayList<>();
 
-    // Identify missing trash roots
-    for(RemoteLocation loc: locations) {
+    // Get home dirs for trash paths
+    for (RemoteLocation loc : locations) {
 
       String path = loc.getDest();
       // Continue if not a trash path
@@ -738,31 +750,48 @@ public class RouterClientProtocol implements ClientProtocol {
         continue;
       }
 
-      // Check whether user home dir exists at the destination namespace
       String trashRoot = MountTableResolver.getTrashRoot();
       String userHome = new Path(trashRoot).getParent().toUri().getPath();
       RemoteLocation userHomeLoc = new RemoteLocation(loc, userHome);
-      RemoteMethod method = new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
-      HdfsFileStatus ret = rpcClient.invokeSingle(userHomeLoc, method, HdfsFileStatus.class);
+      userHomes.add(userHomeLoc);
+    }
+
+    // Use getFileInfo to identify missing user homes
+    for (RemoteLocation userHomeLoc : userHomes) {
+      RemoteMethod method =
+          new RemoteMethod("getFileInfo", new Class<?>[]{String.class},
+              new RemoteParam());
+      HdfsFileStatus ret =
+          rpcClient.invokeSingle(userHomeLoc, method, HdfsFileStatus.class);
       if (ret == null) {
         missingUserHomes.add(userHomeLoc);
       }
     }
 
-    if (!missingUserHomes.isEmpty()) {
+    // Create missing user home dirs and set owner
+    for(RemoteLocation loc: missingUserHomes) {
       // Create missing user home dirs
-      FsPermission perm = new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE, FsAction.READ_EXECUTE);
-      RemoteMethod method =
-          new RemoteMethod("mkdirs", new Class<?>[]{String.class, FsPermission.class, boolean.class}, new RemoteParam(),
-              perm, true);
-      rpcClient.invokeSequentialAsRouter(missingUserHomes, method, Boolean.class, true);
+      FsPermission perm = new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE,
+          FsAction.READ_EXECUTE);
+      RemoteMethod method = new RemoteMethod("mkdirs",
+          new Class<?>[]{String.class, FsPermission.class, boolean.class},
+          new RemoteParam(), perm, true);
+      boolean ret = rpcClient.invokeSingleAsRouter(loc, method,
+          Boolean.class, true);
+      if (!ret) {
+        LOG.warn("Failed to create user home dir for path={} at dest={}",
+            src, loc);
+        continue;
+      }
 
       // Set owner/group
       String username = RouterRpcServer.getRemoteUser().getShortUserName();
-      method = new RemoteMethod("setOwner", new Class<?>[]{String.class, String.class, String.class}, new RemoteParam(),
-          username, null);
+      method = new RemoteMethod("setOwner",
+          new Class<?>[]{String.class, String.class, String.class},
+          new RemoteParam(), username, null);
 
-      rpcClient.invokeSequentialAsRouter(missingUserHomes, method, Void.class, null);
+      rpcClient.invokeSingleAsRouter(loc, method, Void.class,
+          null);
     }
   }
 
@@ -780,7 +809,7 @@ public class RouterClientProtocol implements ClientProtocol {
     // Auto-create user home dir for a trash path.
     // moveToTrash() will first call fs.mkdirs() to create the parent dir, before calling rename()
     // to move the file into it. As a result, we need to create user home dir in mkdirs().
-    createUserHomeForTrashPath(locations);
+    createUserHomeForTrashPath(src, locations);
 
     // Create in all locations
     if (rpcServer.isPathAll(src)) {

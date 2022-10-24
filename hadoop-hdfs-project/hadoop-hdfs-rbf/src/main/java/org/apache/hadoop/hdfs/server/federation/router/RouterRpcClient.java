@@ -946,6 +946,17 @@ public class RouterRpcClient {
     return ret;
   }
 
+  // Same as invokeSingle but uses router's login identity
+  public <T> T invokeSingleAsRouter(final RemoteLocationContext location,
+      RemoteMethod remoteMethod, Class<T> expectedResultClass,
+      Object expectedResultValue) throws IOException {
+    List<RemoteLocationContext> locations = Collections.singletonList(location);
+    @SuppressWarnings("unchecked")
+    T ret = (T)invokeSequentialAsRouter(locations, remoteMethod,
+        expectedResultClass, expectedResultValue);
+    return ret;
+  }
+
   /**
    * Invokes sequential proxy calls to different locations. Continues to invoke
    * calls until a call returns without throwing a remote exception.
