@@ -24,8 +24,10 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHomeSubClusterRequest;
@@ -49,6 +52,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,14 +70,22 @@ import static org.apache.hadoop.yarn.server.federation.policies.FederationPolicy
  * It tests the case with SubClusters down and the Router logic of retries. We
  * have 1 good SubCluster and 2 bad ones for all the tests.
  */
+@RunWith(Parameterized.class)
 public class TestFederationClientInterceptorRetry
     extends BaseRouterClientRMTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFederationClientInterceptorRetry.class);
 
+  @Parameters
+  public static Collection<String[]> getParameters() {
+    return Arrays.asList(new String[][] {{UniformBroadcastPolicyManager.class.getName()},
+        {TestSequentialBroadcastPolicyManager.class.getName()}});
+  }
+
   private TestableFederationClientInterceptor interceptor;
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreUtil;
+  private String routerPolicyManagerName;
 
   private String user = "test-user";
 
@@ -83,6 +97,10 @@ public class TestFederationClientInterceptorRetry
   private static SubClusterId bad2;
 
   private static List<SubClusterId> scs = new ArrayList<>();
+
+  public TestFederationClientInterceptorRetry(String policyManagerName) {
+    this.routerPolicyManagerName = policyManagerName;
+  }
 
   @Override
   public void setUp() throws IOException {
@@ -150,8 +168,7 @@ public class TestFederationClientInterceptorRetry
         mockPassThroughInterceptorClass + "," + mockPassThroughInterceptorClass
             + "," + TestableFederationClientInterceptor.class.getName());
 
-    conf.set(FEDERATION_POLICY_MANAGER,
-        TestSequentialBroadcastPolicyManager.class.getName());
+    conf.set(FEDERATION_POLICY_MANAGER, this.routerPolicyManagerName);
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
@@ -286,7 +303,15 @@ public class TestFederationClientInterceptorRetry
 
   @Test
   public void testSubmitApplicationTwoBadOneGood() throws Exception {
+
     LOG.info("Test submitApplication with two bad, one good SC.");
+
+    // This test must require the TestSequentialRouterPolicy policy
+    if (StringUtils.equals(routerPolicyManagerName,
+        UniformBroadcastPolicyManager.class.getName())) {
+      return;
+    }
+
     setupCluster(Arrays.asList(bad1, bad2, good));
     final ApplicationId appId =
         ApplicationId.newInstance(System.currentTimeMillis(), 1);
