@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.FEDERATION_POLICY_MANAGER;
+import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -27,7 +28,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUt
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -307,10 +308,8 @@ public class TestFederationClientInterceptorRetry
     LOG.info("Test submitApplication with two bad, one good SC.");
 
     // This test must require the TestSequentialRouterPolicy policy
-    if (StringUtils.equals(routerPolicyManagerName,
-        UniformBroadcastPolicyManager.class.getName())) {
-      return;
-    }
+    Assume.assumeThat(routerPolicyManagerName,
+        is(TestSequentialBroadcastPolicyManager.class.getName()));
 
     setupCluster(Arrays.asList(bad1, bad2, good));
     final ApplicationId appId =

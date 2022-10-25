@@ -43,7 +43,8 @@ import java.util.Map;
  * We have 4 subClusters, 2 normal subClusters, 2 bad subClusters.
  * We expect to select badSubClusters first and then goodSubClusters during testing.
  * We can set the subCluster like this, good1 = [0], good2 = [1], bad1 = [2], bad2 = [3].
- * This strategy will return [3, 2, 1, 0], The selection order of subCluster is bad2, bad1, good2, good1.
+ * This strategy will return [3, 2, 1, 0],
+ * The selection order of subCluster is bad2, bad1, good2, good1.
  */
 public class TestSequentialRouterPolicy extends AbstractRouterPolicy {
 
