@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -37,6 +38,9 @@ import org.apache.hadoop.metrics2.lib.MutableMetric;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.Time.now;
+
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -67,7 +71,9 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AtomicReference<AbfsBackoffMetrics> abfsBackoffMetrics = null;
 
-  private List<AbfsReadFooterMetrics> readFooterMetricsList;
+  private List<AbfsReadFooterMetrics> readFooterMetricsList = null;
+
+  private AtomicLong lastExecutionTime = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -97,7 +103,6 @@ public class AbfsCountersImpl implements AbfsCounters {
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
       RENAME_PATH_ATTEMPTS
-
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -127,8 +132,27 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
-    abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
-    readFooterMetricsList = new ArrayList<>();
+//    abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
+//    readFooterMetricsList = new ArrayList<>();
+    lastExecutionTime = new AtomicLong(now());
+  }
+
+  @Override
+  public void initializeMetrics(MetricFormat metricFormat) {
+    switch(metricFormat) {
+    case INTERNAL_BACKOFF_METRIC_FORMAT:
+      abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
+      break;
+    case INTERNAL_FOOTER_METRIC_FORMAT:
+      readFooterMetricsList = new ArrayList<>();
+      break;
+    case INTERNAL_METRIC_FORMAT:
+      abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
+      readFooterMetricsList = new ArrayList<>();
+      break;
+    default:
+      break;
+    }
   }
 
   /**
@@ -196,12 +220,19 @@ public class AbfsCountersImpl implements AbfsCounters {
     return registry;
   }
 
+  @Override
   public AbfsBackoffMetrics getAbfsBackoffMetrics() {
-    return abfsBackoffMetrics.get();
+    return abfsBackoffMetrics != null ? abfsBackoffMetrics.get() : null;
   }
 
+  @Override
+  public AtomicLong getLastExecutionTime() {
+    return lastExecutionTime;
+  }
+
+  @Override
   public List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics() {
-    return readFooterMetricsList;
+    return readFooterMetricsList != null ? readFooterMetricsList : null;
   }
 
   /**
@@ -259,5 +290,26 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public DurationTracker trackDuration(String key) {
     return ioStatisticsStore.trackDuration(key);
+  }
+
+  private String getFooterMetrics(){
+    List<AbfsReadFooterMetrics> readFooterMetricsList = getAbfsReadFooterMetrics();
+    String readFooterMetric = "";
+    if (!readFooterMetricsList.isEmpty()) {
+      readFooterMetric = AbfsReadFooterMetrics.getFooterMetrics(readFooterMetricsList, readFooterMetric);
+    }
+    return readFooterMetric;
+  }
+
+  @Override
+  public String toString() {
+    String metric = "";
+    if (abfsBackoffMetrics != null) {
+      metric += ":BO:" + getAbfsBackoffMetrics().toString();
+    }
+    if (readFooterMetricsList != null) {
+      metric += ":FO:" + getFooterMetrics();
+    }
+    return metric;
   }
 }

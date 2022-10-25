@@ -170,48 +170,48 @@ public class AbfsBackoffMetrics {
     double percentageOfRequestsThrottled =
         ((double) totalRequestsThrottled / totalNumberOfRequests.get()) * 100;
     for (Map.Entry<String, AbfsBackoffMetrics> entry : metricsMap.entrySet()) {
-      metricString.append("#RCTSI#_").append(entry.getKey())
+      metricString.append("$RCTSI$_").append(entry.getKey())
           .append("R_").append("=")
-          .append(entry.getValue().getNumberOfRequestsSucceeded()).append(" ");
+          .append(entry.getValue().getNumberOfRequestsSucceeded()).append("");
       long totalRequests = entry.getValue().getTotalRequests().get();
       if (totalRequests > 0) {
-        metricString.append("#MMA#_").append(entry.getKey())
+        metricString.append("$MMA$_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.3f",
                 (double) entry.getValue().getMinBackoff().get() / 1000L))
-            .append("s ")
+            .append("s")
             .append(String.format("%.3f",
                 (double) entry.getValue().getMaxBackoff().get() / 1000L))
-            .append("s ")
+            .append("s")
             .append(String.format("%.3f",
                 ((double) entry.getValue().getTotalBackoff().get() / totalRequests)
                     / 1000L))
-            .append("s ");
+            .append("s");
       } else {
-        metricString.append("#MMA#_").append(entry.getKey())
-            .append("R_").append("=0s ");
+        metricString.append("$MMA$_").append(entry.getKey())
+            .append("R_").append("=0s");
       }
     }
-    metricString.append("#BWT=")
+    metricString.append("$BWT=")
         .append(numberOfBandwidthThrottledRequests)
-        .append(" #IT=")
+        .append("$IT=")
         .append(numberOfIOPSThrottledRequests)
-        .append(" #OT=")
+        .append("$OT=")
         .append(numberOfOtherThrottledRequests)
-        .append(" #%RT=")
+        .append("$RT=")
         .append(String.format("%.3f", percentageOfRequestsThrottled))
-        .append(" #NFR=")
+        .append("$NFR=")
         .append(numberOfNetworkFailedRequests)
-        .append(" #TRNR=")
+        .append("$TRNR=")
         .append(numberOfRequestsSucceededWithoutRetrying)
-        .append(" #TRF=")
+        .append("$TRF=")
         .append(numberOfRequestsFailed)
-        .append(" #TR=")
+        .append("$TR=")
         .append(totalNumberOfRequests)
-        .append(" #MRC=")
+        .append("$MRC=")
         .append(maxRetryCount);
 
-    return metricString + " ";
+    return metricString + "";
   }
 }
 

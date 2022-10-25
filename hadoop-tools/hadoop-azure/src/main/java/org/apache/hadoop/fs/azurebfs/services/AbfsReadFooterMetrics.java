@@ -147,14 +147,14 @@ public class AbfsReadFooterMetrics {
     } else {
       readFooterMetric += "NonParquet:";
     }
-    readFooterMetric += " #FR=" + avgReadFooterMetrics.getSizeReadByFirstRead()
-        + " #SR="
+    readFooterMetric += "$FR=" + avgReadFooterMetrics.getSizeReadByFirstRead()
+        + "$SR="
         + avgReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead()
-        + " #FL=" + String.format("%.3f",
+        + "$FL=" + String.format("%.3f",
         avgReadFooterMetrics.getAvgFileLength())
-        + " #RL=" + String.format("%.3f",
+        + "$RL=" + String.format("%.3f",
         avgReadFooterMetrics.getAvgReadLenRequested());
-    return readFooterMetric + " ";
+    return readFooterMetric;
   }
 
   public static String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsList, String readFooterMetric){
@@ -180,6 +180,6 @@ public class AbfsReadFooterMetrics {
       AbfsReadFooterMetrics.getNonParquetReadFooterMetricsAverage(isNonParquetList, avgNonparquetReadFooterMetrics);
       readFooterMetric += AbfsReadFooterMetrics.getReadFooterMetrics(avgNonparquetReadFooterMetrics);
     }
-    return readFooterMetric;
+    return readFooterMetric + "";
   }
 }

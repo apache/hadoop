@@ -39,6 +39,9 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
+import org.apache.hadoop.util.Preconditions;
+
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -196,8 +199,8 @@ public class AbfsRestOperation {
    */
   public void execute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-
     try {
+      abfsCounters.getLastExecutionTime().set(now());
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
           () -> completeExecute(tracingContext));
@@ -339,13 +342,21 @@ public class AbfsRestOperation {
             + httpOperation.getStatusCode() + " error code is "
             + httpOperation.getStorageErrorCode()
             + " error message is " + httpOperation.getStorageErrorMessage());
-        if (serviceErrorCode.equals(AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
-            || serviceErrorCode.equals(AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
-          abfsBackoffMetrics.getNumberOfBandwidthThrottledRequests().getAndIncrement();
-        } else if (serviceErrorCode.equals(AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
-          abfsBackoffMetrics.getNumberOfIOPSThrottledRequests().getAndIncrement();
-        } else {
-          abfsBackoffMetrics.getNumberOfOtherThrottledRequests().getAndIncrement();
+        if (abfsBackoffMetrics != null) {
+          if (serviceErrorCode.equals(
+              AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
+              || serviceErrorCode.equals(
+              AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
+            abfsBackoffMetrics.getNumberOfBandwidthThrottledRequests()
+                .getAndIncrement();
+          } else if (serviceErrorCode.equals(
+              AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
+            abfsBackoffMetrics.getNumberOfIOPSThrottledRequests()
+                .getAndIncrement();
+          } else {
+            abfsBackoffMetrics.getNumberOfOtherThrottledRequests()
+                .getAndIncrement();
+          }
         }
       }
         incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
@@ -362,7 +373,9 @@ public class AbfsRestOperation {
       hostname = httpOperation.getHost();
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+      if (abfsBackoffMetrics != null) {
+        abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+      }
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);
@@ -372,7 +385,9 @@ public class AbfsRestOperation {
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
-      abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+      if (abfsBackoffMetrics != null) {
+        abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+      }
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex);

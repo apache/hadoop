@@ -246,20 +246,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
       if (abfsReadFooterMetrics != null && firstRead && nextReadPos >= contentLength - 20 * ONE_KB) {
-        this.collectMetricsForNextRead = true;
-        this.offsetOfFirstRead = nextReadPos;
-        this.abfsReadFooterMetrics.setSizeReadByFirstRead(len + "_" + (Math.abs(contentLength - nextReadPos)));
-        this.abfsReadFooterMetrics.getFileLength().set(contentLength);
+        collectMetricsForNextRead = true;
+        offsetOfFirstRead = nextReadPos;
+        abfsReadFooterMetrics.setSizeReadByFirstRead(len + "_" + (Math.abs(contentLength - nextReadPos)));
+        abfsReadFooterMetrics.getFileLength().set(contentLength);
       }
       if (collectLenMetrics) {
         dataLenRequested += len;
         readReqCount += 1;
       }
-      if (!firstRead && collectMetricsForNextRead){
-        this.collectStreamMetrics = true;
-        this.abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + (Math.abs(nextReadPos - offsetOfFirstRead)));
-        this.collectMetricsForNextRead = false;
-        this.collectLenMetrics = true;
+      if (abfsReadFooterMetrics != null && !firstRead && collectMetricsForNextRead){
+        collectStreamMetrics = true;
+        abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + (Math.abs(nextReadPos - offsetOfFirstRead)));
+        collectMetricsForNextRead = false;
+        collectLenMetrics = true;
       }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
@@ -717,7 +717,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    if (this.collectStreamMetrics) {
+    if (collectStreamMetrics) {
       checkIsParquet(abfsReadFooterMetrics);
       if (readReqCount > 0) {
         abfsReadFooterMetrics.setAvgReadLenRequested(

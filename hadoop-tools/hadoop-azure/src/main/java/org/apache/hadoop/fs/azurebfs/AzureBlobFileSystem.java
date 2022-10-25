@@ -36,15 +36,19 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,7 +111,6 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.fs.azurebfs.utils.TracingMetricContext;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
@@ -145,6 +148,8 @@ public class AzureBlobFileSystem extends FileSystem
   private String clientCorrelationId;
   private TracingHeaderFormat tracingHeaderFormat;
   private TracingHeaderFormat tracingMetricHeaderFormat;
+  private MetricFormat metricFormat;
+  private AtomicBoolean timerStopped;
   private Listener listener;
 
   /** Name of blockFactory to be used by AbfsOutputStream. */
@@ -153,6 +158,9 @@ public class AzureBlobFileSystem extends FileSystem
   private DataBlocks.BlockFactory blockFactory;
   /** Maximum Active blocks per OutputStream. */
   private int blockOutputActiveBlocks;
+  private Timer timer = null;
+  private AzureBlobFileSystem metricFs = null;
+  private boolean metricCollectionEnabled = false;
 
   /** Rate limiting for operations which use it to throttle their IO. */
   private RateLimiting rateLimiting;
@@ -164,7 +172,6 @@ public class AzureBlobFileSystem extends FileSystem
     setConf(configuration);
 
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
-
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     abfsCounters = new AbfsCountersImpl(uri);
     // name of the blockFactory to be used.
@@ -201,7 +208,20 @@ public class AzureBlobFileSystem extends FileSystem
     clientCorrelationId = TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
+    metricFormat = abfsConfiguration.getMetricFormat();
+    timerStopped = new AtomicBoolean(false);
+    if (!metricFormat.toString().equals("")) {
+      metricCollectionEnabled = true;
+      abfsCounters.initializeMetrics(metricFormat);
+    }
     tracingMetricHeaderFormat = abfsConfiguration.getTracingMetricHeaderFormat();
+    this.timer = new Timer(
+            String.format("abfs-timer-filesystem"), true);
+    if (metricCollectionEnabled) {
+      this.timer.schedule(new TimerTaskImpl(),
+          10000,
+          10000);
+    }
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -251,6 +271,10 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public URI getUri() {
     return this.uri;
+  }
+
+  public AtomicBoolean getTimerStopped() {
+    return timerStopped;
   }
 
   public void registerListener(Listener listener1) {
@@ -676,38 +700,45 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
+    if (metricFs == null) {
+      try {
+        Configuration metricConfig = getConf();
+        String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
+        final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
+        if (abfsMetricUrl == null) {
+          return null;
+        }
+        metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+        metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+        URI metricUri;
+        try {
+          metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
+        } catch (URISyntaxException ex) {
+          throw new AssertionError(ex);
+        }
+        metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
+      } catch (AzureBlobFileSystemException ex) {
+        //do nothing
+      }
+    }
+    return metricFs;
+  }
+
   @Override
   public synchronized void close() throws IOException {
     if (isClosed) {
       return;
     }
-    TracingMetricContext tracingMetricContext  = new TracingMetricContext(clientCorrelationId,
-        fileSystemId, FSOperationType.GET_ATTR, true, tracingMetricHeaderFormat,
-        listener, abfsCounters);
-    if (!tracingMetricHeaderFormat.toString().equals("")) {
-      if (abfsCounters.getAbfsBackoffMetrics().getTotalNumberOfRequests().get() > 0) {
-        try {
-          Configuration metricConfig = getConf();
-          String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
-          final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
-          if (abfsMetricUrl == null) {
-            return;
-          }
-          metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-          metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-          URI metricUri;
-          try {
-            metricUri = new URI(getScheme(), abfsMetricUrl, null, null, null);
-          } catch (URISyntaxException ex) {
-            throw new AssertionError(ex);
-          }
-          AzureBlobFileSystem metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
-          metricFs.sendMetric(tracingMetricContext);
-        } catch (AzureBlobFileSystemException ex) {
-          //do nothing
-        }
-      }
-    }
+//    TracingContext tracingMetricContext = new TracingContext(
+//        clientCorrelationId,
+//        fileSystemId, FSOperationType.GET_ATTR, true,
+//        tracingMetricHeaderFormat,
+//        listener, abfsCounters.toString());
+//    AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
+//    if (metricFileSystem != null) {
+//      metricFileSystem.sendMetric(tracingMetricContext);
+//    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
@@ -1677,6 +1708,13 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  public void resumeTimer() {
+    timerStopped.set(false);
+    timer.schedule(new TimerTaskImpl(),
+        10000,
+        10000);
+  }
+
   /**
    * Getter for IOStatistic instance in AzureBlobFilesystem.
    *
@@ -1685,5 +1723,35 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public IOStatistics getIOStatistics() {
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
+  }
+
+  class TimerTaskImpl extends TimerTask {
+    /**
+     * Periodically analyzes a snapshot of the blob storage metrics and updates
+     * the sleepDuration in order to appropriately throttle storage operations.
+     */
+    @Override
+    public void run() {
+      try {
+        long now = System.currentTimeMillis();
+        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+        if (metricCollectionEnabled && (now - lastExecutionTime >= 60000)) {
+          TracingContext tracingMetricContext = new TracingContext(
+              clientCorrelationId,
+              fileSystemId, FSOperationType.GET_ATTR, true,
+              tracingMetricHeaderFormat,
+              listener, abfsCounters.toString());
+          AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
+          this.cancel();
+          timer.purge();
+          timerStopped.set(true);
+          if (metricFileSystem != null) {
+            abfsCounters.initializeMetrics(metricFormat);
+            metricFileSystem.sendMetric(tracingMetricContext);
+          }
+        }
+      } catch (IOException e) {
+      }
+    }
   }
 }

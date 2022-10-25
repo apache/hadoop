@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.utils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.Base64;
+import java.util.Base64.Encoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
@@ -60,6 +63,7 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
+  private String metricResults = EMPTY_STRING;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final int MAX_CLIENT_CORRELATION_ID_LENGTH = 72;
   public static final String CLIENT_CORRELATION_ID_PATTERN = "[a-zA-Z0-9-]*";
@@ -97,6 +101,15 @@ public class TracingContext {
       listener.updatePrimaryRequestID(primaryRequestId);
     }
   }
+
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      FSOperationType opType, boolean needsPrimaryReqId,
+      TracingHeaderFormat tracingHeaderFormat, Listener listener, String metricResults) {
+    this(clientCorrelationID, fileSystemID, opType, needsPrimaryReqId, tracingHeaderFormat,
+        listener);
+    this.metricResults = metricResults;
+  }
+
 
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;
@@ -157,12 +170,16 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + primaryRequestId + ":" + streamID + ":" + opType + ":"
               + retryCount;
+      header += !(metricResults.trim().isEmpty()) ? metricResults : "";
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
+      header += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     default:
-      header = clientRequestId; //case SINGLE_ID_FORMAT
+      //case SINGLE_ID_FORMAT
+      header = clientRequestId;
+      header += !(metricResults.trim().isEmpty()) ? metricResults  : "";
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
