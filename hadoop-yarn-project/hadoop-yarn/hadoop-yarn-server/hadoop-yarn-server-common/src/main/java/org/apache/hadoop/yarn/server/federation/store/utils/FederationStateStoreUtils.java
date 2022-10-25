@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateS
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,6 +162,29 @@ public final class FederationStateStoreUtils {
     throw new FederationStateStoreException(errMsg);
   }
 
+
+  /**
+   * Throws an <code>FederationStateStoreException</code> due to an error in
+   * <code>FederationStateStore</code>.
+   *
+   * @param t the throwable raised in the called class.
+   * @param log the logger interface.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @throws YarnException on failure
+   */
+  public static void logAndThrowStoreException(
+      Throwable t, Logger log, String errMsgFormat, Object... args) throws YarnException {
+    String errMsg = String.format(errMsgFormat, args);
+    if (t != null) {
+      log.error(errMsg, t);
+      throw new FederationStateStoreException(errMsg, t);
+    } else {
+      log.error(errMsg);
+      throw new FederationStateStoreException(errMsg);
+    }
+  }
+
   /**
    * Throws an <code>FederationStateStoreInvalidInputException</code> due to an
    * error in <code>FederationStateStore</code>.
@@ -278,5 +302,31 @@ public final class FederationStateStoreUtils {
     } else {
       LOG.debug("NULL Credentials specified for Store connection, so ignoring");
     }
+  }
+
+  /**
+   * Filter HomeSubCluster based on Filter SubCluster.
+   *
+   * @param filterSubCluster filter query conditions
+   * @param homeSubCluster homeSubCluster
+   * @return return true, if match filter conditions,
+   *         return false, if not match filter conditions.
+   */
+  public static boolean filterHomeSubCluster(SubClusterId filterSubCluster,
+      SubClusterId homeSubCluster) {
+
+    // If the filter condition is empty,
+    // it means that homeSubCluster needs to be added
+    if (filterSubCluster == null) {
+      return true;
+    }
+
+    // If the filter condition filterSubCluster is not empty,
+    // and filterSubCluster is equal to homeSubCluster, it needs to be added
+    if (filterSubCluster.equals(homeSubCluster)) {
+      return true;
+    }
+
+    return false;
   }
 }
