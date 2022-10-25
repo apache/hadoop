@@ -38,7 +38,7 @@ public class TestMaWoConfiguration {
     MawoConfiguration mawoConf = new MawoConfiguration();
 
     // validate Rpc server port
-    assertEquals(mawoConf.getRpcServerPort(), 5120);
+    assertEquals(5120, mawoConf.getRpcServerPort());
 
     // validate Rpc hostname
     assertEquals("localhost", mawoConf.getRpcHostName());
@@ -48,7 +48,7 @@ public class TestMaWoConfiguration {
     assertTrue(jobQueueStorage);
 
     // validate default teardownWorkerValidity Interval
-    assertEquals(mawoConf.getTeardownWorkerValidityInterval(), 120000);
+    assertEquals(120000, mawoConf.getTeardownWorkerValidityInterval());
 
     // validate Zk related configs
     assertEquals("/tmp/mawoRoot", mawoConf.getZKParentPath());
