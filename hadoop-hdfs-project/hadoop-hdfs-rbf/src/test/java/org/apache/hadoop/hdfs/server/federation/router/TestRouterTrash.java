@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -144,8 +145,63 @@ public class TestRouterTrash {
     return addResponse.getStatus();
   }
 
+  /**
+   * We manually create the trash root for TEST_USER. Then, moveToTrash
+   * shall not cause the router to create user's home dir anymore.
+   *
+   * We compare the modification of user home dir before and after moveToTrash,
+   * to verify that we don't try to re-create user home dir once it already
+   * exists. We need to pre-create the trash root, instead of user home dir,
+   * because adding a subdir to a dir will change the dir's modification time.
+   */
   @Test
-  public void testMoveToTrashAutoCreateUserHome() throws IOException, URISyntaxException, InterruptedException {
+  public void testMoveToTrashAutoCreateUserHomeAlreadyExisted()
+      throws IOException, URISyntaxException, InterruptedException {
+    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
+        Collections.singletonMap(ns0, MOUNT_POINT));
+    assertTrue(addMountTable(addEntry));
+    String testUserHome = "/user/" + TEST_USER;
+    String testUserTrashRoot = testUserHome + "/.Trash";
+
+    // Set owner to TEST_USER for root dir
+    DFSClient superUserClient = nnContext.getClient();
+    superUserClient.setOwner("/", TEST_USER, TEST_USER);
+
+    // Create MOUNT_POINT and user's trash root
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(TEST_USER);
+    DFSClient client = nnContext.getClient(ugi);
+    client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
+    assertTrue(client.exists(MOUNT_POINT));
+    client.mkdirs(testUserTrashRoot, new FsPermission("775"), true);
+    assertTrue(client.exists(testUserTrashRoot));
+
+    // Create test file
+    client.create(FILE, true);
+    Path filePath = new Path(FILE);
+
+    // Get the fileStatus before moveToTrash
+    HdfsFileStatus status = client.getFileInfo(testUserHome);
+
+    // Test moveToTrash by TEST_USER
+    String trashPath = "/user/" + TEST_USER + "/.Trash/Current" + FILE;
+    Configuration routerConf = routerContext.getConf();
+    FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    Trash trash = new Trash(fs, routerConf);
+    assertTrue(trash.moveToTrash(filePath));
+    assertTrue(nnFs.exists(new Path(trashPath)));
+
+    HdfsFileStatus status2 = client.getFileInfo(testUserHome);
+    assertEquals(status.getModificationTime(), status2.getModificationTime());
+  }
+
+  /**
+   * We set the owner of the root dir to TEST_USER2 and then have TEST_USER
+   * to move a file to trash. Router should auto-create the home dir for
+   * TEST_USER and moveToTrash should succeed.
+   */
+  @Test
+  public void testMoveToTrashAutoCreateUserHome()
+      throws IOException, URISyntaxException, InterruptedException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
         Collections.singletonMap(ns0, MOUNT_POINT));
     assertTrue(addMountTable(addEntry));
@@ -171,8 +227,7 @@ public class TestRouterTrash {
     // Test moveToTrash by TEST_USER
     String trashPath = "/user/" + TEST_USER + "/.Trash/Current" + FILE;
     Configuration routerConf = routerContext.getConf();
-    FileSystem fs =
-        DFSTestUtil.getFileSystemAs(ugi, routerConf);
+    FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
     Trash trash = new Trash(fs, routerConf);
     assertTrue(trash.moveToTrash(filePath));
     assertTrue(nnFs.exists(new Path(trashPath)));
