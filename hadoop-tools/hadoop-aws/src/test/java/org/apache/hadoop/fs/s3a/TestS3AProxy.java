@@ -31,8 +31,6 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_SECURED;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.initProxySupport;
 
 /**
@@ -66,7 +64,6 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
   @Test
   public void testProxyDefault() throws IOException {
     Configuration proxyConfigDefault = new Configuration();
-    removeBaseAndBucketOverrides(proxyConfigDefault, PROXY_SECURED);
     proxyConfigDefault.set(PROXY_HOST, "testProxyDefault");
     verifyProxy(proxyConfigDefault, false);
   }
@@ -83,8 +80,7 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
       boolean isExpectedSecured)
       throws IOException {
     ClientConfiguration awsConf = new ClientConfiguration();
-    initProxySupport(proxyConfig,
-        getTestBucketName(proxyConfig), awsConf);
+    initProxySupport(proxyConfig,"test-bucket", awsConf);
     Assertions.assertThat(awsConf.getProxyProtocol())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? Protocol.HTTPS : Protocol.HTTP);
