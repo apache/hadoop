@@ -101,6 +101,7 @@ public class TestZKDelegationTokenSecretManagerImpl
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeTokenRemovalShortSyncWithoutWatch()
       throws Exception {

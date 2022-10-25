@@ -343,10 +343,10 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
         loadFromZKCache(true);
       } catch (Exception e) {
         throw new IOException("Could not start Curator tokenCacheListener for tokens", e);
-      } 
+      }
     }
     super.startThreads();
-  }  
+  }
   /**
    * Load the CuratorCache into the in-memory map. Possible caches to be
    * loaded are keyCache and tokenCache.
