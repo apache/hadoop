@@ -147,7 +147,7 @@ public final class ExtraAssertions {
    */
   protected void assertStatusCode(AWSServiceIOException e, int code)
           throws AWSServiceIOException {
-    if (e.getStatusCode() != code) {
+    if (e.statusCode() != code) {
       throw e;
     }
   }

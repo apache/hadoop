@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
@@ -43,6 +42,8 @@ import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.io.IOUtils;
 
+import software.amazon.awssdk.core.exception.SdkException;
+
 /**
  * A list of providers.
  *
@@ -54,7 +55,7 @@ import org.apache.hadoop.io.IOUtils;
  *   an {@link AmazonClientException}, that is rethrown, rather than
  *   swallowed.</li>
  *   <li>Has some more diagnostics.</li>
- *   <li>On failure, the last "relevant" AmazonClientException raised is
+ *   <li>On failure, the last "relevant" {@link SdkException} raised is
  *   rethrown; exceptions other than 'no credentials' have priority.</li>
  *   <li>Special handling of {@link AnonymousAWSCredentials}.</li>
  * </ol>
@@ -171,7 +172,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
       return lastProvider.getCredentials();
     }
 
-    AmazonClientException lastException = null;
+    SdkException lastException = null;
     for (AWSCredentialsProvider provider : providers) {
       try {
         AWSCredentials credentials = provider.getCredentials();
@@ -196,7 +197,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
         }
         LOG.debug("No credentials from {}: {}",
             provider, e.toString());
-      } catch (AmazonClientException e) {
+      } catch (SdkException e) {
         lastException = e;
         LOG.debug("No credentials provided by {}: {}",
             provider, e.toString(), e);
@@ -229,7 +230,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
 
   /**
    * Verify that the provider list is not empty.
-   * @throws AmazonClientException if there are no providers.
+   * @throws SdkException if there are no providers.
    */
   public void checkNotEmpty() {
     if (providers.isEmpty()) {

@@ -361,7 +361,7 @@ public class ITestS3AConfiguration {
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
+      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.statusCode());
     } catch (final IllegalArgumentException e) {
       // Path style addressing does not work with AP ARNs
       if (!fs.getBucket().contains("arn:")) {

@@ -863,7 +863,7 @@ class S3ABlockOutputStream extends OutputStream implements
             size).build();
       } catch (SdkException aws) {
         // catch and translate
-        IOException e = translateExceptionV2("upload", key, aws);
+        IOException e = translateException("upload", key, aws);
         // failure to start the upload.
         noteUploadFailure(e);
         throw e;

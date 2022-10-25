@@ -50,23 +50,10 @@ public class ErrorTranslation {
    * @return true if the status code and error code mean that the
    * remote bucket is unknown.
    */
-  public static boolean isUnknownBucket(AmazonServiceException e) {
-    return e.getStatusCode() == SC_404
-        && AwsErrorCodes.E_NO_SUCH_BUCKET.equals(e.getErrorCode());
-  }
-
-  // TODO: This method will be replace isUnkownBucket() during error translation work.
-  /**
-   * Does this exception indicate that the AWS Bucket was unknown.
-   * @param e exception.
-   * @return true if the status code and error code mean that the
-   * remote bucket is unknown.
-   */
-  public static boolean isUnknownBucketV2(AwsServiceException e) {
+  public static boolean isUnknownBucket(AwsServiceException e) {
     return e.statusCode() == SC_404
         && AwsErrorCodes.E_NO_SUCH_BUCKET.equals(e.awsErrorDetails().errorCode());
   }
-
 
   /**
    * Does this exception indicate that a reference to an object
@@ -77,7 +64,7 @@ public class ErrorTranslation {
    * HEAD request returned 404 but the bucket was there.
    */
   public static boolean isObjectNotFound(AwsServiceException e) {
-    return e.statusCode() == SC_404 && !isUnknownBucketV2(e);
+    return e.statusCode() == SC_404 && !isUnknownBucket(e);
   }
 
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.util.List;
 
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,12 +32,12 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class MultiObjectDeleteException extends RuntimeException {
+public class MultiObjectDeleteException extends S3Exception {
 
   private final List<S3Error> errors;
 
   public MultiObjectDeleteException(List<S3Error> errors) {
-    super(errors.toString());
+    super(builder().message(errors.toString()));
     this.errors = errors;
   }
 

@@ -18,17 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AbortedException;
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -58,7 +51,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.exception.SdkServiceException;
+import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import javax.annotation.Nullable;
@@ -91,7 +88,6 @@ import java.util.concurrent.TimeUnit;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucketV2;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -162,7 +158,7 @@ public final class S3AUtils {
   /**
    * Translate an exception raised in an operation into an IOException.
    * The specific type of IOException depends on the class of
-   * {@link AmazonClientException} passed in, and any status codes included
+   * {@link SdkException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
    *
@@ -175,61 +171,14 @@ public final class S3AUtils {
    */
   public static IOException translateException(String operation,
       Path path,
-      AmazonClientException exception) {
+      SdkException exception) {
     return translateException(operation, path.toString(), exception);
   }
-
-  // TODO: This is a temporary and incomplete implementation of error translations, done only as
-  //  it is required by GetObjectMetadata so it can throw a FNFE. Will be done properly as part
-  //  of error translation work.
-  public static IOException translateExceptionV2(@Nullable String operation,
-      String path,
-      SdkException exception) {
-    String message = String.format("%s%s: %s",
-        operation,
-        StringUtils.isNotEmpty(path)? (" on " + path) : "",
-        exception);
-
-    AwsServiceException ase = (AwsServiceException) exception;
-
-    if (ase.awsErrorDetails() != null) {
-      message = message + ":" + ase.awsErrorDetails().errorCode();
-    }
-    IOException ioe;
-    int status = ase.statusCode();
-    switch (status) {
-
-    case 403:
-      ioe = new AccessDeniedException(path, null, message);
-      ioe.initCause(ase);
-      break;
-
-    case 404:
-      if (isUnknownBucketV2(ase)) {
-        // this is a missing bucket
-        ioe = new UnknownStoreException(path, message, ase);
-      } else {
-        // a normal unknown object
-        ioe = new FileNotFoundException(message);
-        ioe.initCause(ase);
-      }
-      break;
-
-    default:
-      // no specific exit code. Choose an IOE subclass based on the class
-      // of the caught exception
-      ioe = new IOException(message);
-      break;
-    }
-
-    return ioe;
-  }
-
 
   /**
    * Translate an exception raised in an operation into an IOException.
    * The specific type of IOException depends on the class of
-   * {@link AmazonClientException} passed in, and any status codes included
+   * {@link SdkException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
    * @param operation operation
@@ -240,12 +189,12 @@ public final class S3AUtils {
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(@Nullable String operation,
       String path,
-      SdkBaseException exception) {
+      SdkException exception) {
     String message = String.format("%s%s: %s",
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
-    if (!(exception instanceof AmazonServiceException)) {
+    if (!(exception instanceof SdkServiceException)) {
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -265,26 +214,30 @@ public final class S3AUtils {
       return new AWSClientIOException(message, exception);
     } else {
       IOException ioe;
-      AmazonServiceException ase = (AmazonServiceException) exception;
+      AwsServiceException ase = (AwsServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
-      AmazonS3Exception s3Exception = ase instanceof AmazonS3Exception
-          ? (AmazonS3Exception) ase
+      S3Exception s3Exception = ase instanceof S3Exception
+          ? (S3Exception) ase
           : null;
-      int status = ase.getStatusCode();
-      message = message + ":" + ase.getErrorCode();
+      int status = ase.statusCode();
+      if (ase.awsErrorDetails() != null) {
+        message = message + ":" + ase.awsErrorDetails().errorCode();
+      }
       switch (status) {
 
       case 301:
       case 307:
         if (s3Exception != null) {
-          if (s3Exception.getAdditionalDetails() != null &&
-              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
-            message = String.format("Received permanent redirect response to "
-                + "endpoint %s.  This likely indicates that the S3 endpoint "
-                + "configured in %s does not match the AWS region containing "
-                + "the bucket.",
-                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
-          }
+          // TODO: Can we get the endpoint in v2?
+          // Maybe not: https://github.com/aws/aws-sdk-java-v2/issues/3048
+//          if (s3Exception.getAdditionalDetails() != null &&
+//              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
+//            message = String.format("Received permanent redirect response to "
+//                + "endpoint %s.  This likely indicates that the S3 endpoint "
+//                + "configured in %s does not match the AWS region containing "
+//                + "the bucket.",
+//                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
+//          }
           ioe = new AWSRedirectException(message, s3Exception);
         } else {
           ioe = new AWSRedirectException(message, ase);
@@ -384,8 +337,8 @@ public final class S3AUtils {
       ExecutionException ee) {
     IOException ioe;
     Throwable cause = ee.getCause();
-    if (cause instanceof AmazonClientException) {
-      ioe = translateException(operation, path, (AmazonClientException) cause);
+    if (cause instanceof SdkException) {
+      ioe = translateException(operation, path, (SdkException) cause);
     } else if (cause instanceof IOException) {
       ioe = (IOException) cause;
     } else {
@@ -423,7 +376,7 @@ public final class S3AUtils {
    * @return an IOE which can be rethrown
    */
   private static InterruptedIOException translateInterruptedException(
-      SdkBaseException exception,
+      SdkException exception,
       final Exception innerCause,
       String message) {
     InterruptedIOException ioe;
@@ -434,6 +387,7 @@ public final class S3AUtils {
       if (name.endsWith(".ConnectTimeoutException")
           || name.endsWith(".ConnectionPoolTimeoutException")
           || name.endsWith("$ConnectTimeoutException")) {
+        // TODO: review in v2
         // TCP connection http timeout from the shaded or unshaded filenames
         // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
         ioe = new ConnectTimeoutException(message);
@@ -457,10 +411,10 @@ public final class S3AUtils {
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
-        || (ex instanceof AmazonServiceException
-            && 503  == ((AmazonServiceException)ex).getStatusCode())
-        || (ex instanceof SdkBaseException
-            && RetryUtils.isThrottlingException((SdkBaseException) ex));
+        || (ex instanceof AwsServiceException
+            && 503  == ((AwsServiceException)ex).statusCode())
+        || (ex instanceof SdkException
+            && RetryUtils.isThrottlingException((SdkException) ex));
   }
 
   /**
@@ -470,7 +424,8 @@ public final class S3AUtils {
    * @param ex exception
    * @return true if this is believed to be a sign the connection was broken.
    */
-  public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
+  public static boolean isMessageTranslatableToEOF(SdkException ex) {
+    // TODO: review in v2
     return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
             ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
   }
@@ -480,39 +435,18 @@ public final class S3AUtils {
    * @param e exception
    * @return string details
    */
-  public static String stringify(AmazonServiceException e) {
+  public static String stringify(AwsServiceException e) {
     StringBuilder builder = new StringBuilder(
-        String.format("%s: %s error %d: %s; %s%s%n",
-            e.getErrorType(),
-            e.getServiceName(),
-            e.getStatusCode(),
-            e.getErrorCode(),
-            e.getErrorMessage(),
-            (e.isRetryable() ? " (retryable)": "")
+        String.format("%s error %d: %s; %s%s%n",
+            e.awsErrorDetails().serviceName(),
+            e.statusCode(),
+            e.awsErrorDetails().errorCode(),
+            e.awsErrorDetails().errorMessage(),
+            (e.retryable() ? " (retryable)": "")
         ));
-    String rawResponseContent = e.getRawResponseContent();
+    String rawResponseContent = e.awsErrorDetails().rawResponse().asUtf8String();
     if (rawResponseContent != null) {
       builder.append(rawResponseContent);
-    }
-    return builder.toString();
-  }
-
-  /**
-   * Get low level details of an amazon exception for logging; multi-line.
-   * @param e exception
-   * @return string details
-   */
-  public static String stringify(AmazonS3Exception e) {
-    // get the low level details of an exception,
-    StringBuilder builder = new StringBuilder(
-        stringify((AmazonServiceException) e));
-    Map<String, String> details = e.getAdditionalDetails();
-    if (details != null) {
-      builder.append('\n');
-      for (Map.Entry<String, String> d : details.entrySet()) {
-        builder.append(d.getKey()).append('=')
-            .append(d.getValue()).append('\n');
-      }
     }
     return builder.toString();
   }
@@ -786,9 +720,9 @@ public final class S3AUtils {
       }
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
-      } else if (targetException instanceof SdkBaseException) {
+      } else if (targetException instanceof SdkException) {
         throw translateException("Instantiate " + className, "",
-            (SdkBaseException) targetException);
+            (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
         throw new IOException(className + " " + INSTANTIATION_EXCEPTION

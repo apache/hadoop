@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.junit.Test;
@@ -35,6 +34,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -655,7 +655,7 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     try (AuditSpan span = getSpanSource().createSpan(op, null, null)) {
       return call.call();
-    } catch (AmazonClientException ex) {
+    } catch (SdkException ex) {
       throw S3AUtils.translateException(op, "", ex);
     } finally {
       timer.end(op);

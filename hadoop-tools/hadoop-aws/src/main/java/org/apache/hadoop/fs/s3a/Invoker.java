@@ -24,12 +24,8 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.SdkBaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,6 +36,8 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.apache.hadoop.util.Preconditions;
+
+import software.amazon.awssdk.core.exception.SdkException;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 
@@ -122,13 +120,8 @@ public class Invoker {
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return operation.apply();
-    } catch (AmazonClientException | AwsServiceException e) {
-      // TODO: This is temporary, and will be updated during error translation work.
-      if (e instanceof  AmazonClientException) {
-        throw S3AUtils.translateException(action, path, (SdkBaseException) e);
-      } else {
-        throw S3AUtils.translateExceptionV2(action, path, (SdkException) e);
-      }
+    } catch (SdkException e) {
+      throw S3AUtils.translateException(action, path, e);
     }
   }
 
@@ -152,7 +145,7 @@ public class Invoker {
       throws IOException {
     try {
       return invokeTrackingDuration(tracker, operation);
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw S3AUtils.translateException(action, path, e);
     }
   }
@@ -193,7 +186,7 @@ public class Invoker {
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return FutureIO.awaitFuture(future);
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw S3AUtils.translateException(action, path, e);
     }
   }
@@ -473,7 +466,7 @@ public class Invoker {
         }
         // execute the operation, returning if successful
         return operation.apply();
-      } catch (IOException | SdkBaseException | AwsServiceException e) {
+      } catch (IOException | SdkException e) {
         caught = e;
       }
       // you only get here if the operation didn't complete
@@ -481,16 +474,11 @@ public class Invoker {
 
       // translate the exception into an IOE for the retry logic
       IOException translated;
-      // TODO: Update during error translation work. This is a temporary fix to allow
-      //  getObjectMetadata to throw FNFE.
       if (caught instanceof IOException) {
         translated = (IOException) caught;
-      } else if (caught instanceof SdkBaseException) {
-        translated = S3AUtils.translateException(text, "",
-            (SdkBaseException)caught);
       } else {
-        translated = S3AUtils.translateExceptionV2(text, "",
-            (AwsServiceException)caught);
+        translated = S3AUtils.translateException(text, "",
+            (SdkException) caught);
       }
 
       try {
@@ -528,14 +516,10 @@ public class Invoker {
 
     if (caught instanceof IOException) {
       throw (IOException) caught;
-      // TODO: This is temporary, and will be updated during error translation work.
-    } else if (caught instanceof SdkBaseException) {
-      throw (SdkBaseException) caught;
     } else {
-      throw (AwsServiceException) caught;
+      throw (SdkException) caught;
     }
   }
-
 
   /**
    * Execute an operation; any exception raised is simply caught and

@@ -22,11 +22,13 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.s3a.AWSS3IOException;
+import org.apache.hadoop.fs.s3a.MultiObjectDeleteException;
+
+import software.amazon.awssdk.services.s3.model.S3Error;
 
 /**
  * Support for Multi Object Deletion.
@@ -64,8 +66,8 @@ public final class MultiObjectDeleteSupport {
   public static IOException translateDeleteException(
       final String message,
       final MultiObjectDeleteException deleteException) {
-    List<MultiObjectDeleteException.DeleteError> errors
-        = deleteException.getErrors();
+    List<S3Error> errors
+        = deleteException.errors();
     LOG.info("Bulk delete operation failed to delete all objects;"
             + " failure count = {}",
         errors.size());
@@ -73,14 +75,13 @@ public final class MultiObjectDeleteSupport {
         errors.size() * 256);
     result.append(message).append(": ");
     String exitCode = "";
-    for (MultiObjectDeleteException.DeleteError error :
-        deleteException.getErrors()) {
-      String code = error.getCode();
-      String item = String.format("%s: %s%s: %s%n", code, error.getKey(),
-          (error.getVersionId() != null
-              ? (" (" + error.getVersionId() + ")")
+    for (S3Error error : deleteException.errors()) {
+      String code = error.code();
+      String item = String.format("%s: %s%s: %s%n", code, error.key(),
+          (error.versionId() != null
+              ? (" (" + error.versionId() + ")")
               : ""),
-          error.getMessage());
+          error.message());
       LOG.info(item);
       result.append(item);
       if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {

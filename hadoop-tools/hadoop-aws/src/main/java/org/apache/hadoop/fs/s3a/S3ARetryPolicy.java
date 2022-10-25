@@ -34,6 +34,7 @@ import com.amazonaws.AmazonClientException;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -238,11 +239,10 @@ public class S3ARetryPolicy implements RetryPolicy {
       boolean idempotent) throws Exception {
     Preconditions.checkArgument(exception != null, "Null exception");
     Exception ex = exception;
-    if (exception instanceof AmazonClientException) {
-      // uprate the amazon client exception for the purpose of exception
+    if (exception instanceof SdkException) {
+      // uprate the skd exception for the purpose of exception
       // processing.
-      ex = S3AUtils.translateException("", "",
-          (AmazonClientException) exception);
+      ex = S3AUtils.translateException("", "", (SdkException) exception);
     }
     return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
   }

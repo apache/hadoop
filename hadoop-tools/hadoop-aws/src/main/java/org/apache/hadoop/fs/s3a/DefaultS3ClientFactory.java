@@ -181,7 +181,9 @@ public class DefaultS3ClientFactory extends Configured
       }
     } catch (SdkClientException e) {
       // SDK refused to build.
-      throw translateException("creating AWS S3 client", uri.toString(), e);
+      // TODO: remove?
+      //throw translateException("creating AWS S3 client", uri.toString(), e);
+      throw new IOException("creating AWS S3 client: "+ uri.toString(), e);
     }
   }
 

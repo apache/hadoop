@@ -23,15 +23,16 @@ import java.net.URI;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentials;
-import org.apache.hadoop.classification.VisibleForTesting;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
+
+import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * Base class for session credential support.
@@ -116,7 +117,7 @@ public abstract class AbstractSessionCredentialsProvider
    * @throws SdkBaseException if one was raised during init
    * @throws CredentialInitializationException on other failures.
    */
-  public AWSCredentials getCredentials() throws SdkBaseException {
+  public AWSCredentials getCredentials() throws SdkException {
     // do an on-demand init then raise an AWS SDK exception if
     // there was a failure.
     try {
@@ -124,8 +125,8 @@ public abstract class AbstractSessionCredentialsProvider
         init();
       }
     } catch (IOException e) {
-      if (e.getCause() instanceof SdkBaseException) {
-        throw (SdkBaseException) e.getCause();
+      if (e.getCause() instanceof SdkException) {
+        throw (SdkException) e.getCause();
       } else {
         throw new CredentialInitializationException(e.getMessage(), e);
       }
