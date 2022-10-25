@@ -40,7 +40,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.initProxySupport;
  * are set correctly to Client configurations which are later used to construct
  * the proxy in AWS SDK.
  */
-public class ITestS3AProxy extends AbstractHadoopTestBase {
+public class TestS3AProxy extends AbstractHadoopTestBase {
 
   /**
    * Verify Http proxy protocol.
