@@ -80,7 +80,7 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
       boolean isExpectedSecured)
       throws IOException {
     ClientConfiguration awsConf = new ClientConfiguration();
-    initProxySupport(proxyConfig,"test-bucket", awsConf);
+    initProxySupport(proxyConfig, "test-bucket", awsConf);
     Assertions.assertThat(awsConf.getProxyProtocol())
         .describedAs("Proxy protocol not as expected")
         .isEqualTo(isExpectedSecured ? Protocol.HTTPS : Protocol.HTTP);
