@@ -266,6 +266,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.isTraceEnabled = LOG.isTraceEnabled();
     this.url = url;
     this.method = method;
+
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
       HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
@@ -344,6 +345,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
+
     this.statusCode = this.connection.getResponseCode();
 
     if (this.isTraceEnabled) {
