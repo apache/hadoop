@@ -220,8 +220,9 @@ public class TestRouterTrash {
     client.create(FILE, true);
     Path filePath = new Path(FILE);
 
-    // Set owner to TEST_USER2 for the root dir so that TEST_USER does not have permission to
-    // create his home dir under root dir. Instead, the router will create the home dir for TEST_USER.
+    // Set owner to TEST_USER2 for the root dir so that TEST_USER does not have
+    // permission to create his home dir under root dir. Instead, the router
+    // will create the home dir for TEST_USER.
     superUserClient.setOwner("/", testUser2, testUser2);
 
     // Test moveToTrash by TEST_USER

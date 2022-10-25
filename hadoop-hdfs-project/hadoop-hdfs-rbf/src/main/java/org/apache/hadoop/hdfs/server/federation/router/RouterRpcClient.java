@@ -1016,8 +1016,10 @@ public class RouterRpcClient {
       final RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
     UserGroupInformation routerUgi = UserGroupInformation.getLoginUser();
-    return (T) invokeSequentialInternal(remoteMethod, locations, expectedResultClass,
-        expectedResultValue, routerUgi).getResult();
+    @SuppressWarnings("unchecked")
+    T ret = (T) invokeSequentialInternal(remoteMethod, locations,
+      expectedResultClass, expectedResultValue, routerUgi).getResult();
+    return ret;
   }
 
   /**
@@ -1061,7 +1063,7 @@ public class RouterRpcClient {
   }
 
   /**
-   * Call invokeSequential with a configurable ugi
+   * Call invokeSequential with a configurable ugi.
    */
   public <R extends RemoteLocationContext, T> RemoteResult invokeSequentialInternal(
       final RemoteMethod remoteMethod, final List<R> locations,
