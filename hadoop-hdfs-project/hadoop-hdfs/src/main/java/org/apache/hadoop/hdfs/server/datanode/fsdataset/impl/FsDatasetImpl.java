@@ -1837,30 +1837,27 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     ReplicaInfo lastFoundReplicaInfo = null;
     boolean isInPipeline = false;
     do {
-      try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
-          b.getBlockPoolId())) {
-        ReplicaInfo currentReplicaInfo =
-            volumeMap.get(b.getBlockPoolId(), b.getBlockId());
-        if (currentReplicaInfo == lastFoundReplicaInfo) {
-          break;
-        } else {
-          isInPipeline = currentReplicaInfo.getState() == ReplicaState.TEMPORARY
-              || currentReplicaInfo.getState() == ReplicaState.RBW;
-          /*
-           * If the current block is not PROVIDED and old, reject.
-           * else If transfer request, then accept it.
-           * else if state is not RBW/Temporary, then reject
-           * If current block is PROVIDED, ignore the replica.
-           */
-          if (((currentReplicaInfo.getGenerationStamp() >= b
-              .getGenerationStamp()) || (!isTransfer && !isInPipeline))
-              && !isReplicaProvided(currentReplicaInfo)) {
-            throw new ReplicaAlreadyExistsException("Block " + b
-                + " already exists in state " + currentReplicaInfo.getState()
-                + " and thus cannot be created.");
-          }
-          lastFoundReplicaInfo = currentReplicaInfo;
+      ReplicaInfo currentReplicaInfo =
+          volumeMap.get(b.getBlockPoolId(), b.getBlockId());
+      if (currentReplicaInfo == lastFoundReplicaInfo) {
+        break;
+      } else {
+        isInPipeline = currentReplicaInfo.getState() == ReplicaState.TEMPORARY
+            || currentReplicaInfo.getState() == ReplicaState.RBW;
+        /*
+         * If the current block is not PROVIDED and old, reject.
+         * else If transfer request, then accept it.
+         * else if state is not RBW/Temporary, then reject
+         * If current block is PROVIDED, ignore the replica.
+         */
+        if (((currentReplicaInfo.getGenerationStamp() >= b
+            .getGenerationStamp()) || (!isTransfer && !isInPipeline))
+            && !isReplicaProvided(currentReplicaInfo)) {
+          throw new ReplicaAlreadyExistsException("Block " + b
+              + " already exists in state " + currentReplicaInfo.getState()
+              + " and thus cannot be created.");
         }
+        lastFoundReplicaInfo = currentReplicaInfo;
       }
       if (!isInPipeline) {
         continue;
@@ -1883,7 +1880,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // Stop the previous writer
       ((ReplicaInPipeline)lastFoundReplicaInfo).stopWriter(writerStopTimeoutMs);
     } while (true);
-    long holdLockTimeMs = Time.monotonicNow() - startTimeMs;
     if (lastFoundReplicaInfo != null
         && !isReplicaProvided(lastFoundReplicaInfo)) {
       // Old blockfile should be deleted synchronously as it might collide
@@ -1912,9 +1908,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return new ReplicaHandler(newReplicaInfo, ref);
     } finally {
       if (dataNodeMetrics != null) {
-        // Create temporary operation hold write lock twice.
-        long createTemporaryOpMs = Time.monotonicNow() - startHoldLockTimeMs
-            + holdLockTimeMs;
+        // Create temporary operation hold write lock once.
+        long createTemporaryOpMs = Time.monotonicNow() - startHoldLockTimeMs;
         dataNodeMetrics.addCreateTemporaryOp(createTemporaryOpMs);
       }
     }
