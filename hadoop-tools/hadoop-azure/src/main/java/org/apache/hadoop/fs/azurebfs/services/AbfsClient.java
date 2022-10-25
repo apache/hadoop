@@ -693,13 +693,12 @@ public class AbfsClient implements Closeable {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
       /*
-        If the http response code indicates a user error we retry the same append request with expect header disabled
+        If the http response code indicates a user error we retry the same append request with expect header disabled.
+        When "100-continue" header is enabled but a non Http 100 response comes, JDK fails to provide all response headers.
+        This handling is to avoid breaking of backward compatibility if someone has taken dependency on the exception message,
+        which is created using the error string present in the response header.
        */
-      if ((((AbfsRestOperationException) e).getStatusCode()
-          >= HttpURLConnection.HTTP_BAD_REQUEST
-          && ((AbfsRestOperationException) e).getStatusCode()
-              < HttpURLConnection.HTTP_INTERNAL_ERROR)
-          && reqParams.getIsExpectHeaderEnabled()) {
+      if (checkUserError(e) && reqParams.getIsExpectHeaderEnabled()) {
         reqParams.setExpectHeaderEnabled(false);
         return this.append(path, buffer, reqParams, cachedSasToken,
             tracingContext);
@@ -728,6 +727,18 @@ public class AbfsClient implements Closeable {
     }
 
     return op;
+  }
+
+  /**
+   * Returns true if the status code lies in the range of user error
+   * @param e Exception caught
+   * @return True or False
+   */
+  private boolean checkUserError(AzureBlobFileSystemException e) {
+    return ((AbfsRestOperationException) e).getStatusCode()
+        >= HttpURLConnection.HTTP_BAD_REQUEST
+        && ((AbfsRestOperationException) e).getStatusCode()
+        < HttpURLConnection.HTTP_INTERNAL_ERROR;
   }
 
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
