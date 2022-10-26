@@ -67,8 +67,8 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     super.setup();
     auxFs = getNormalFileSystem();
 
-    testRoot = path("/ITestS3AConcurrentOps");
-    testRoot = S3ATestUtils.createTestPath(testRoot);
+    // this is set to the method path, even in test setup.
+    testRoot = methodPath();
   }
 
   private S3AFileSystem getNormalFileSystem() throws Exception {

@@ -273,4 +273,15 @@ public interface S3ATestConstants {
    * AWS ireland region.
    */
   String EU_WEST_1 = "eu-west-1";
+
+  /**
+   * System property for root tests being enabled: {@value}.
+   */
+  String ROOT_TESTS_ENABLED = "fs.s3a.root.tests.enabled";
+
+
+  /**
+   * Default policy on root tests: {@value}.
+   */
+  boolean DEFAULT_ROOT_TESTS_ENABLED = true;
 }
