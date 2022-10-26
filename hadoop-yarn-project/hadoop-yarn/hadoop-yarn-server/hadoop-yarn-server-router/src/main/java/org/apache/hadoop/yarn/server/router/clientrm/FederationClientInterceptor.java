@@ -548,7 +548,7 @@ public class FederationClientInterceptor
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
 
-      if (!exists || retryCount == 0) {
+      if (exists || retryCount == 0) {
         addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
       } else {
         updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
