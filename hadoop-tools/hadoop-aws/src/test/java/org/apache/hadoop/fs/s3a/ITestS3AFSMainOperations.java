@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assert;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
@@ -56,6 +58,26 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     if (contract.getTestFileSystem() != null) {
       super.tearDown();
     }
+  }
+
+
+  @Test
+  @Override
+  public void testWDAbsolute() throws IOException {
+    Path absoluteDir = getTestRootPath(fSys, "test/existingDir");
+    fSys.mkdirs(absoluteDir);
+    fSys.setWorkingDirectory(absoluteDir);
+    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
+  }
+
+  /**
+   * Get an absolute directory for the test {@link #testWDAbsolute()}.
+   *
+   * @return a fully qualified path.
+   */
+  protected Path getAbsoluteDirectoryForWorkingDir() {
+    return new Path(new Path(fSys.getUri()),
+        createTestPath(new Path("/test/existingDir")));
   }
 
   @Override

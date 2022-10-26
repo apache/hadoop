@@ -539,6 +539,47 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
+## Testing through continuous integration
+
+Supporting 
+parallel test jobs against the same bucket
+
+For CI testing of the module, including the integration tests,
+it is generally necessary to support testing multiple PRs simultaneously.
+
+To do this
+1. A job ID must be supplied in the `job.id` property, so each job works on an isolated directory
+   tree. This should be a number or unique string, which will be used within a path element, so
+   must only contain characters valid in an S3/hadoop path element.
+2. Root directory tests need to be disabled by setting `fs.s3a.root.tests.enabled` to
+   `false`, either in the command line to maven or in the XML configurations.
+
+```
+mvn verify -T 1C -Dparallel-tests -DtestsThreadCount=14 -Dscale -Dfs.s3a.root.tests.enabled=false -Djob.id=001
+```   
+
+This parallel execution feature is only for isolated builds sharing a single S3 bucket; it does
+not support parallel builds and tests from the same local source tree.
+
+Without the root tests being executed, set up a scheduled job to purge the test bucket of all
+data on a regular basis, to keep costs down. Running the test `ITestS3AContractRootDir` is
+sufficient for this, as is a `hadoop fs` command. 
+
+```
+hadoop fs -rm -r s3a://s3a-tests-us-west-1/*
+```
+
+### Securing CI builds
+
+It's clearly unsafe to have CI infrastructure testing PRs submitted to apache github account
+with AWS credentials -which is why it isn't done by the Yetus-initiated builds.
+
+Anyone doing this privately should
+* Review patches before triggering the tests.
+* Have a dedicated IAM role with restricted access to the test bucket, any KMS keys used, and the
+  external bucket containing the CSV test file.
+* Have a build process which generates short-lived session credentials for this role.
+
 ## <a name="load"></a> Load tests.
 
 Some are designed to overload AWS services with more

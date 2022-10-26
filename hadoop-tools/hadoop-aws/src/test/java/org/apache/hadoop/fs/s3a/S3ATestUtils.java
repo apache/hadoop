@@ -606,7 +606,7 @@ public final class S3ATestUtils {
    */
   public static Path createTestPath(Path defVal) {
     String testUniqueForkId =
-        System.getProperty(S3ATestConstants.TEST_UNIQUE_FORK_ID);
+        System.getProperty(TEST_UNIQUE_FORK_ID);
     return testUniqueForkId == null ? defVal :
         new Path("/" + testUniqueForkId, "test");
   }
@@ -1736,6 +1736,15 @@ public final class S3ATestUtils {
    */
   public static void disablePrefetching(Configuration conf) {
     removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
+
+  /**
+   * Skip root tests if the system properties/config says so.
+   * @param conf configuration to check
+   */
+  public static void maybeSkipRootTests(Configuration conf) {
+    assume("Root tests disabled",
+        getTestPropertyBool(conf, ROOT_TESTS_ENABLED, DEFAULT_ROOT_TESTS_ENABLED));
   }
 
   /**
