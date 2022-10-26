@@ -735,7 +735,7 @@ public class RouterClientProtocol implements ClientProtocol {
    * @param src source location
    * @param locations destination locations
    */
-  private void createUserHomeForTrashPath(String src,
+  void createUserHomeForTrashPath(String src,
       List<RemoteLocation> locations)
       throws IOException {
     List<RemoteLocation> userHomes = new ArrayList<>();

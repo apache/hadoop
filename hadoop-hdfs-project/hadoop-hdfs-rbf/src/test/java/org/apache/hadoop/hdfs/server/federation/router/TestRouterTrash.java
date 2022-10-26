@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.*;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -51,6 +55,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.*;
+
 
 /**
  * This is a test through the Router move data to the Trash.
@@ -146,52 +152,36 @@ public class TestRouterTrash {
   }
 
   /**
-   * We manually create the trash root for TEST_USER. Then, moveToTrash
-   * shall not cause the router to create user's home dir anymore.
-   *
-   * We compare the modification of user home dir before and after moveToTrash,
-   * to verify that we don't try to re-create user home dir once it already
-   * exists. We need to pre-create the trash root, instead of user home dir,
-   * because adding a subdir to a dir will change the dir's modification time.
+   * Mock testing the case where all home dirs have already existed. In that
+   * case, we shall not call mkdirs/setOwner in CreateUserHomeForTrashPath().
    */
   @Test
-  public void testMoveToTrashAutoCreateUserHomeAlreadyExisted()
-      throws IOException, URISyntaxException, InterruptedException {
-    MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
-        Collections.singletonMap(ns0, MOUNT_POINT));
-    assertTrue(addMountTable(addEntry));
-    String testUserHome = "/user/" + TEST_USER;
-    String testUserTrashRoot = testUserHome + "/.Trash";
+  public void mockTestCreateUserHomeForTrashPath()
+      throws NoSuchFieldException, IllegalAccessException, IOException {
+    RouterRpcClient rpcClient = mock(RouterRpcClient.class);
+    HdfsFileStatus status = new HdfsFileStatus.Builder().build();
+    when(rpcClient.invokeSingle(any(RemoteLocation.class),
+        any(RemoteMethod.class), eq(HdfsFileStatus.class))).thenReturn(status);
+    RouterClientProtocol clientProcotol =
+        routerContext.getRouter().getRpcServer().getClientProtocolModule();
+    Field rpcClientField = RouterClientProtocol.class.getDeclaredField(
+        "rpcClient");
+    rpcClientField.setAccessible(true);
+    rpcClientField.set(clientProcotol, rpcClient);
 
-    // Set owner to TEST_USER for root dir
-    DFSClient superUserClient = nnContext.getClient();
-    superUserClient.setOwner("/", TEST_USER, TEST_USER);
-
-    // Create MOUNT_POINT and user's trash root
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(TEST_USER);
-    DFSClient client = nnContext.getClient(ugi);
-    client.mkdirs(MOUNT_POINT, new FsPermission("777"), true);
-    assertTrue(client.exists(MOUNT_POINT));
-    client.mkdirs(testUserTrashRoot, new FsPermission("775"), true);
-    assertTrue(client.exists(testUserTrashRoot));
-
-    // Create test file
-    client.create(FILE, true);
-    Path filePath = new Path(FILE);
-
-    // Get the fileStatus before moveToTrash
-    HdfsFileStatus status = client.getFileInfo(testUserHome);
-
-    // Test moveToTrash by TEST_USER
-    String trashPath = "/user/" + TEST_USER + "/.Trash/Current" + FILE;
-    Configuration routerConf = routerContext.getConf();
-    FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
-    Trash trash = new Trash(fs, routerConf);
-    assertTrue(trash.moveToTrash(filePath));
-    assertTrue(nnFs.exists(new Path(trashPath)));
-
-    HdfsFileStatus status2 = client.getFileInfo(testUserHome);
-    assertEquals(status.getModificationTime(), status2.getModificationTime());
+    // Need to test with the identity getRemoteUser().getShortUserName().
+    // Otherwise, it won't be considered as a trash path.
+    String trashPath =
+        "/user/" + RouterRpcServer.getRemoteUser().getShortUserName()
+            + "/.Trash" + "/Current/testfile";
+    List<RemoteLocation> locs = new ArrayList<>();
+    locs.add(new RemoteLocation(ns0, trashPath, trashPath));
+    locs.add(new RemoteLocation(ns1, trashPath, trashPath));
+    clientProcotol.createUserHomeForTrashPath(trashPath, locs);
+    verify(rpcClient, times(2)).invokeSingle(any(RemoteLocation.class),
+            any(RemoteMethod.class), eq(HdfsFileStatus.class));
+    verify(rpcClient, never()).invokeSingleAsRouter(any(RemoteLocation.class),
+        any(RemoteMethod.class), eq(Boolean.class), eq(true));
   }
 
   /**
