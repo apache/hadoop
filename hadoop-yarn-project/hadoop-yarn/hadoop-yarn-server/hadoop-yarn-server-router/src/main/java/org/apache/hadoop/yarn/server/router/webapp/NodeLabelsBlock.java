@@ -62,7 +62,7 @@ public class NodeLabelsBlock extends RouterBlock {
     Client client = RouterWebServiceUtil.createJerseyClient(conf);
     NodeLabelsInfo nodes = RouterWebServiceUtil
         .genericForward(webAddress, null, NodeLabelsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_NODE_LABELS, null, null, conf,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS, null, null, conf,
         client);
     client.destroy();
     return nodes;
@@ -87,7 +87,7 @@ public class NodeLabelsBlock extends RouterBlock {
             NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getName());
         String type = (info.getExclusivity()) ? "Exclusive Partition" : "Non Exclusive Partition";
         row = row.td(type);
-        int nActiveNMs = 0;
+        int nActiveNMs = info.getActiveNMs();
         if (nActiveNMs > 0) {
           row = row.td().a(url("nodes", "?" + YarnWebParams.NODE_LABEL + "=" + info.getName()),
               String.valueOf(nActiveNMs)).__();

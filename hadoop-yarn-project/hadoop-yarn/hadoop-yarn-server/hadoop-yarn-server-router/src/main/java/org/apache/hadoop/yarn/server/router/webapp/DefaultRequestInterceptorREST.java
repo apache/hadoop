@@ -602,4 +602,12 @@ public class DefaultRequestInterceptorREST
                 + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
             null, getConf(), client);
   }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        NodeLabelsInfo.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS,
+        null, null, getConf(), client);
+  }
 }

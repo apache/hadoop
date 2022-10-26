@@ -1276,6 +1276,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    return null;
+  }
+
+  @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     try {

@@ -31,6 +31,7 @@ public class NodeLabelInfo {
   private String name;
   private boolean exclusivity;
   private PartitionInfo partitionInfo;
+  private Integer activeNMs;
 
   public NodeLabelInfo() {
     // JAXB needs this
@@ -66,6 +67,14 @@ public class NodeLabelInfo {
 
   public PartitionInfo getPartitionInfo() {
     return partitionInfo;
+  }
+
+  public Integer getActiveNMs() {
+    return activeNMs;
+  }
+
+  public void setActiveNMs(Integer activeNMs) {
+    this.activeNMs = activeNMs;
   }
 
   @Override
