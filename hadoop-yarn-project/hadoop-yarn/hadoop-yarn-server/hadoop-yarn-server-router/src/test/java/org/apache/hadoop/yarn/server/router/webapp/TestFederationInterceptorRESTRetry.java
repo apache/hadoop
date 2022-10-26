@@ -85,9 +85,8 @@ public class TestFederationInterceptorRESTRetry
     super.setUpConfig();
 
     Configuration conf = this.getConf();
-    // Enable strict mode
-    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
-        true);
+    // Allow partial results to be returned.
+    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED, true);
 
     interceptor = new TestableFederationInterceptorREST();
 
