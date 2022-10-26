@@ -18,8 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import java.io.IOException;
+import java.util.Map;
+
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+
+import org.junit.After;
+import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
@@ -28,14 +36,6 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.junit.After;
-import org.junit.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Map;
-
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.createIOStatisticsStoreForAuditing;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
@@ -138,7 +138,12 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
         requestFactory.newGetObjectMetadataRequest("/"));
   }
 
-  protected GetObjectRequest get() {
+  /**
+   * Create a GetObject request with specified range and pass it through the
+   * manager's beforeExecution()
+   * @return the processed request
+   */
+  protected GetObjectRequest rangedGet() {
     return manager.beforeExecution(
             requestFactory.newGetObjectRequest("/").withRange(8, 24));
   }
