@@ -59,7 +59,7 @@ public interface FileRange {
    * Get any reference passed in to the file range constructor.
    * This is not used by any implementation code; it is to help
    * bind this API to libraries retrieving multiple stripes of
-   * dat in parallel.j
+   * data in parallel.
    * @return a reference or null.
    */
   Object getReference();

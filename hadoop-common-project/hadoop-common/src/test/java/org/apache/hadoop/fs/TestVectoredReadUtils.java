@@ -144,7 +144,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   public void testSortAndMerge() {
     List<FileRange> input = Arrays.asList(
         FileRange.createFileRange(3000, 100, "1"),
-        FileRange.createFileRange(2100, 100, "2"),
+        FileRange.createFileRange(2100, 100, null),
         FileRange.createFileRange(1000, 100, "3")
         );
     assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
@@ -192,7 +192,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertFileRange(range0.getUnderlying().get(0),
         1000, 100, "3");
     assertFileRange(range0.getUnderlying().get(1),
-        2100, 100, "2");
+        2100, 100, null);
     CombinedFileRange range1 = list3.get(1);
     // range[3000,3100)
     assertFileRange(range1, 3000, 100);
@@ -215,7 +215,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // range[2096,2208)
     assertFileRange(list4.get(1), 2096, 112);
     // range[2992,3104)
-    assertFileRange(list4.get(1), 2992, 112);
+    assertFileRange(list4.get(2), 2992, 112);
     assertTrue("merged output ranges are disjoint",
             VectoredReadUtils.isOrderedDisjoint(list4, 16, 700));
   }
