@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import java.util.Map;
 
 /**
- * Wrap a {@link AmazonS3Exception} as an IOE, relaying all
+ * Wrap a {@link S3Exception} as an IOE, relaying all
  * getters.
  */
 @InterfaceAudience.Public

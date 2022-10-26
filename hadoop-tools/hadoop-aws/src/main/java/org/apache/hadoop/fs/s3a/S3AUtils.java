@@ -194,7 +194,7 @@ public final class S3AUtils {
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
-    if (!(exception instanceof SdkServiceException)) {
+    if (!(exception instanceof AwsServiceException)) {
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
