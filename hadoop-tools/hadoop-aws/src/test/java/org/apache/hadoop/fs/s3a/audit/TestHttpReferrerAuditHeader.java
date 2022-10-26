@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
+import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.regex.Matcher;
+
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.Before;
@@ -25,17 +29,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URISyntaxException;
-import java.util.Map;
-import java.util.regex.Matcher;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.AWS_LOG_REGEXP_GROUPS;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.LOG_ENTRY_PATTERN;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.REFERRER_GROUP;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.VERB_GROUP;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
+import static org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader.maybeStripWrappedQuotes;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_OP;
@@ -46,14 +54,6 @@ import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_RANGE;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD0;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_THREAD1;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_TIMESTAMP;
-import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
-import static org.apache.hadoop.fs.s3a.audit.S3LogParser.AWS_LOG_REGEXP_GROUPS;
-import static org.apache.hadoop.fs.s3a.audit.S3LogParser.LOG_ENTRY_PATTERN;
-import static org.apache.hadoop.fs.s3a.audit.S3LogParser.REFERRER_GROUP;
-import static org.apache.hadoop.fs.s3a.audit.S3LogParser.VERB_GROUP;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
-import static org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader.maybeStripWrappedQuotes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
