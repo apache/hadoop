@@ -69,23 +69,22 @@ public class NodeLabelsBlock extends RouterBlock {
   }
 
   private void initYarnFederationNodeLabelsOfCluster(NodeLabelsInfo nodeLabelsInfo, Block html) {
-    Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.table("#nodelabels").
-            thead().
-            tr().
-            th(".name", "Label Name").
-            th(".type", "Label Type").
-            th(".numOfActiveNMs", "Num Of Active NMs").
-            th(".totalResource", "Total Resource").
-            __().__().
-            tbody();
 
+    Hamlet.TBODY<Hamlet.TABLE<Hamlet>> tbody = html.table("#nodelabels").
+        thead().
+        tr().
+        th(".name", "Label Name").
+        th(".type", "Label Type").
+        th(".numOfActiveNMs", "Num Of Active NMs").
+        th(".totalResource", "Total Resource").
+        __().__().
+        tbody();
 
     if (nodeLabelsInfo != null) {
       for (NodeLabelInfo info : nodeLabelsInfo.getNodeLabelsInfo()) {
         Hamlet.TR<Hamlet.TBODY<Hamlet.TABLE<Hamlet>>> row =
             tbody.tr().td(info.getName().isEmpty() ?
             NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getName());
-
         String type = (info.getExclusivity()) ? "Exclusive Partition" : "Non Exclusive Partition";
         row = row.td(type);
         int nActiveNMs = 0;

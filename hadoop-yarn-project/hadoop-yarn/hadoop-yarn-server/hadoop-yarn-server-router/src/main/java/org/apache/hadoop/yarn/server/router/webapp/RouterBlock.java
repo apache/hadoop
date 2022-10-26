@@ -178,43 +178,54 @@ public abstract class RouterBlock extends HtmlBlock {
     return facade;
   }
 
+  /**
+   * Initialize the Nodes menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
   protected void initNodesMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
       List<String> subClusterIds) {
     if (CollectionUtils.isNotEmpty(subClusterIds)) {
-      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList1 =
+      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> nodesList =
           mainList.li().a(url("nodes"), "Nodes").ul().
           $style("padding:0.3em 1em 0.1em 2em");
 
       // ### nodes info
-      subAppsList1.li().__();
+      nodesList.li().__();
       for (String subClusterId : subClusterIds) {
-        subAppsList1.li().a(url("nodes", subClusterId), subClusterId).__();
+        nodesList.li().a(url("nodes", subClusterId), subClusterId).__();
       }
-      subAppsList1.__().__();
+      nodesList.__().__();
     } else {
       mainList.li().a(url("nodes"), "Nodes").__();
     }
   }
 
+  /**
+   * Initialize the Applications menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
   protected void initApplicationsMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
       List<String> subClusterIds) {
     if (CollectionUtils.isNotEmpty(subClusterIds)) {
       Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> apps =
           mainList.li().a(url("apps"), "Applications").ul();
-
       apps.li().__();
       for (String subClusterId : subClusterIds) {
-        Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>> subAppsList3 = apps.
+        Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>> subClusterList = apps.
             li().a(url("apps", subClusterId), subClusterId);
-        Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>>> subAppsList4 =
-            subAppsList3.ul().$style("padding:0.3em 1em 0.1em 2em");
-        subAppsList4.li().__();
+        Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>>> subAppStates =
+            subClusterList.ul().$style("padding:0.3em 1em 0.1em 2em");
+        subAppStates.li().__();
         for (YarnApplicationState state : YarnApplicationState.values()) {
-          subAppsList4.
-             li().a(url("apps", subClusterId, state.toString()), state.toString()).__();
+          subAppStates.
+              li().a(url("apps", subClusterId, state.toString()), state.toString()).__();
         }
-        subAppsList4.li().__().__();
-        subAppsList3.__();
+        subAppStates.li().__().__();
+        subClusterList.__();
       }
       apps.__().__();
     } else {
