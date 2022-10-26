@@ -143,61 +143,12 @@ changeconf() {
   fi
 }
 
-<<<<<<< HEAD
-parseoptions() {
-runactivate=0
-runtests=0
-  while getopts ":c:a:t:" option; do
-    case "${option}" in
-      a)
-        if [[ "$runactivate" -eq "1" ]]; then
-          echo "-a Option is not multivalued"
-          exit 1
-        fi
-        runactivate=1
-        combination=$(basename "$OPTARG" .xml)
-        ;;
-      c)
-        runtests=1
-        combination=$(basename "$OPTARG" .xml)
-        combinations+=("$combination")
-        ;;
-      t)
-        threadcount=$OPTARG
-        ;;
-      *|?|h)
-      # shellcheck disable=SC2128
-        if [[ -z "$combinations" ]]; then
-          combinations=( $( ls $combconfsdir/*.xml ))
-        fi
-      combstr=""
-        for combconffile in "${combinations[@]}"; do
-          combname=$(basename "$combconffile" .xml)
-          combstr="${combname}, ${combstr}"
-        done
-        combstr=${combstr:0:-2}
-
-        echo "Usage: $0 [-n] [-a COMBINATION_NAME] [-c COMBINATION_NAME] [-t THREAD_COUNT]"
-        echo ""
-        echo "Where:"
-        echo "  -a COMBINATION_NAME   Specify the combination name which needs to be activated."
-        echo "                        Configured combinations: ${combstr}"
-        echo "  -c COMBINATION_NAME   Specify the combination name for test runs"
-        echo "  -t THREAD_COUNT       Specify the thread count"
-        exit 1
-        ;;
-    esac
-  done
-  if [[ "$runactivate" -eq "1" && "$runtests" -eq "1" ]]; then
-    echo "Both activate (-a option) and test run combinations (-c option) cannot be specified together"
-=======
 init() {
   checkdependencies
   if ! mvn clean install -DskipTests
   then
     echo ""
     echo "Exiting. Build failed."
->>>>>>> a996d889ec0... HADOOP-17767. ABFS: Update test scripts (#3124)
     exit 1
   fi
   starttime=$(date +"%Y-%m-%d_%H-%M-%S")
