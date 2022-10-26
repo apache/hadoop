@@ -27,10 +27,9 @@ import java.nio.channels.WritableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -39,8 +38,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.impl.prefetch.Validate.checkNotNull;
@@ -176,7 +179,8 @@ public class SingleFilePerBlockCache implements BlockCache {
    * @throws IllegalArgumentException if buffer.limit() is zero or negative.
    */
   @Override
-  public void put(int blockNumber, ByteBuffer buffer) throws IOException {
+  public void put(int blockNumber, ByteBuffer buffer, Configuration conf,
+      LocalDirAllocator localDirAllocator) throws IOException {
     if (closed) {
       return;
     }
@@ -191,7 +195,7 @@ public class SingleFilePerBlockCache implements BlockCache {
 
     Validate.checkPositiveInteger(buffer.limit(), "buffer.limit()");
 
-    Path blockFilePath = getCacheFilePath();
+    Path blockFilePath = getCacheFilePath(conf, localDirAllocator);
     long size = Files.size(blockFilePath);
     if (size != 0) {
       String message =
@@ -221,8 +225,10 @@ public class SingleFilePerBlockCache implements BlockCache {
     writeChannel.close();
   }
 
-  protected Path getCacheFilePath() throws IOException {
-    return getTempFilePath();
+  protected Path getCacheFilePath(final Configuration conf,
+      final LocalDirAllocator localDirAllocator)
+      throws IOException {
+    return getTempFilePath(conf, localDirAllocator);
   }
 
   @Override
@@ -323,9 +329,10 @@ public class SingleFilePerBlockCache implements BlockCache {
 
   private static final String CACHE_FILE_PREFIX = "fs-cache-";
 
-  public static boolean isCacheSpaceAvailable(long fileSize) {
+  public static boolean isCacheSpaceAvailable(long fileSize, Configuration conf,
+      LocalDirAllocator localDirAllocator) {
     try {
-      Path cacheFilePath = getTempFilePath();
+      Path cacheFilePath = getTempFilePath(conf, localDirAllocator);
       long freeSpace = new File(cacheFilePath.toString()).getUsableSpace();
       LOG.info("fileSize = {}, freeSpace = {}", fileSize, freeSpace);
       Files.deleteIfExists(cacheFilePath);
@@ -340,15 +347,17 @@ public class SingleFilePerBlockCache implements BlockCache {
   private static final String BINARY_FILE_SUFFIX = ".bin";
 
   // File attributes attached to any intermediate temporary file created during index creation.
-  private static final FileAttribute<Set<PosixFilePermission>> TEMP_FILE_ATTRS =
-      PosixFilePermissions.asFileAttribute(EnumSet.of(PosixFilePermission.OWNER_READ,
-          PosixFilePermission.OWNER_WRITE));
+  private static final Set<PosixFilePermission> TEMP_FILE_ATTRS =
+      ImmutableSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
 
-  private static Path getTempFilePath() throws IOException {
-    return Files.createTempFile(
-        CACHE_FILE_PREFIX,
-        BINARY_FILE_SUFFIX,
-        TEMP_FILE_ATTRS
-    );
+  private static Path getTempFilePath(final Configuration conf,
+      final LocalDirAllocator localDirAllocator) throws IOException {
+    org.apache.hadoop.fs.Path path =
+        localDirAllocator.getLocalPathForWrite(CACHE_FILE_PREFIX, conf);
+    File dir = new File(path.getParent().toUri().getPath());
+    String prefix = path.getName();
+    File tmpFile = File.createTempFile(prefix, BINARY_FILE_SUFFIX, dir);
+    Path tmpFilePath = Paths.get(tmpFile.toURI());
+    return Files.setPosixFilePermissions(tmpFilePath, TEMP_FILE_ATTRS);
   }
 }

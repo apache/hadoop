@@ -27,9 +27,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -38,6 +40,9 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+
+import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
+import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
 
 /**
  * Enhanced {@code InputStream} for reading from S3.
@@ -79,6 +84,7 @@ public class S3APrefetchingInputStream
    * @param s3Attributes attributes of the S3 object being read.
    * @param client callbacks used for interacting with the underlying S3 client.
    * @param streamStatistics statistics for this stream.
+   * @param conf the configuration.
    *
    * @throws IllegalArgumentException if context is null.
    * @throws IllegalArgumentException if s3Attributes is null.
@@ -88,7 +94,8 @@ public class S3APrefetchingInputStream
       S3AReadOpContext context,
       S3ObjectAttributes s3Attributes,
       S3AInputStream.InputStreamCallbacks client,
-      S3AInputStreamStatistics streamStatistics) {
+      S3AInputStreamStatistics streamStatistics,
+      Configuration conf) {
 
     Validate.checkNotNull(context, "context");
     Validate.checkNotNull(s3Attributes, "s3Attributes");
@@ -110,11 +117,17 @@ public class S3APrefetchingInputStream
           streamStatistics);
     } else {
       LOG.debug("Creating in caching input stream for {}", context.getPath());
+      String contextCfgItemName =
+          conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR;
+      LocalDirAllocator localDirAllocator =
+          new LocalDirAllocator(contextCfgItemName);
       this.inputStream = new S3ACachingInputStream(
           context,
           s3Attributes,
           client,
-          streamStatistics);
+          streamStatistics,
+          conf,
+          localDirAllocator);
     }
   }
 
