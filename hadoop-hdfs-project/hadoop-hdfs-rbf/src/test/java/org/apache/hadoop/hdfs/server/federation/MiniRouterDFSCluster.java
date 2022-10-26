@@ -234,11 +234,13 @@ public class MiniRouterDFSCluster {
       return DistributedFileSystem.get(conf);
     }
 
-    public FileSystem getObserverReadFileSystem() throws IOException {
+    public FileSystem getFileSystemWithObserverReadsEnabled() throws IOException {
       Configuration observerReadConf = new Configuration(conf);
-      observerReadConf.set(DFS_NAMESERVICES, observerReadConf.get(DFS_NAMESERVICES) + ",router-service");
+      observerReadConf.set(DFS_NAMESERVICES,
+          observerReadConf.get(DFS_NAMESERVICES)+ ",router-service");
       observerReadConf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
-      observerReadConf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1", getFileSystemURI().toString());
+      observerReadConf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
+          getFileSystemURI().toString());
       observerReadConf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
           + "." + "router-service", ObserverReadProxyProvider.class.getName());
       DistributedFileSystem.setDefaultUri(observerReadConf, "hdfs://router-service");

@@ -45,13 +45,13 @@ import org.junit.Test;
 
 public class TestObserverWithRouter {
 
-  public static MiniRouterDFSCluster startUpCluster(int numberOfObserver) throws Exception {
-    return startUpCluster(numberOfObserver, null);
+  public static MiniRouterDFSCluster startUpCluster(int numObservers) throws Exception {
+    return startUpCluster(numObservers, null);
   }
 
-  public static MiniRouterDFSCluster startUpCluster(int numberOfObserver, Configuration confOverrides)
+  public static MiniRouterDFSCluster startUpCluster(int numObservers,Configuration confOverrides)
       throws Exception {
-    int numberOfNamenode = 2 + numberOfObserver;
+    int numNamenodes = 2 + numObservers;
     Configuration conf = new Configuration(false);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
@@ -59,7 +59,7 @@ public class TestObserverWithRouter {
     if (confOverrides != null) {
       conf.addResource(confOverrides);
     }
-    MiniRouterDFSCluster cluster = new MiniRouterDFSCluster(true, 2, numberOfNamenode);
+    MiniRouterDFSCluster cluster = new MiniRouterDFSCluster(true, 2, numNamenodes);
     cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
@@ -69,7 +69,7 @@ public class TestObserverWithRouter {
       for (String ns : cluster.getNameservices()) {
         cluster.switchToActive(ns, NAMENODES[0]);
         cluster.switchToStandby(ns, NAMENODES[1]);
-        for (int i = 2; i < numberOfNamenode; i++) {
+        for (int i = 2; i < numNamenodes; i++) {
           cluster.switchToObserver(ns, NAMENODES[i]);
         }
       }
@@ -121,7 +121,7 @@ public class TestObserverWithRouter {
     assertEquals("First namenode should be observer", namenodes.get(0).getState(),
         FederationNamenodeServiceState.OBSERVER);
     FileSystem fileSystem = configureObserverProxyProvider
-        ? routerContext.getObserverReadFileSystem()
+        ? routerContext.getFileSystemWithObserverReadsEnabled()
         : routerContext.getFileSystem();
     Path path = new Path("/testFile");
     // Send create call
@@ -154,7 +154,7 @@ public class TestObserverWithRouter {
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
     assertEquals("First namenode should be observer", namenodes.get(0).getState(),
         FederationNamenodeServiceState.OBSERVER);
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -182,7 +182,7 @@ public class TestObserverWithRouter {
     MiniRouterDFSCluster cluster =  startUpCluster(1, confOverrides);
 
     RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
     fileSystem.open(path).close();
@@ -203,7 +203,7 @@ public class TestObserverWithRouter {
   public void testReadWhenObserverIsDown() throws Exception {
     MiniRouterDFSCluster cluster = startUpCluster(1, null);
     RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -234,7 +234,7 @@ public class TestObserverWithRouter {
   public void testMultipleObserver() throws Exception {
     MiniRouterDFSCluster cluster = startUpCluster(2, null);
     RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -377,7 +377,7 @@ public class TestObserverWithRouter {
   public void testUnavailableObserverNN() throws Exception {
     MiniRouterDFSCluster cluster = startUpCluster(2, null);
     RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     stopObserver(cluster, 2);
 
     Path path = new Path("/testFile");
@@ -418,7 +418,7 @@ public class TestObserverWithRouter {
     MiniRouterDFSCluster cluster = startUpCluster(1, null);
     RouterContext routerContext = cluster.getRandomRouter();
 
-    FileSystem fileSystem = routerContext.getObserverReadFileSystem();
+    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
 
     // Send Create call to active
