@@ -1018,7 +1018,7 @@ public class RouterRpcClient {
     UserGroupInformation routerUgi = UserGroupInformation.getLoginUser();
     @SuppressWarnings("unchecked")
     T ret = (T) invokeSequentialInternal(remoteMethod, locations,
-      expectedResultClass, expectedResultValue, routerUgi).getResult();
+        expectedResultClass, expectedResultValue, routerUgi).getResult();
     return ret;
   }
 
