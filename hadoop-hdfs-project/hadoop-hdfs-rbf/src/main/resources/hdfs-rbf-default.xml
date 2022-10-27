@@ -869,7 +869,10 @@
     <value>false</value>
     <description>
       Whether to enable routers to auto-create user home dir on the destination
-      namenodes for trash paths.
+      namenodes for trash paths. RBF moves trash files to the trash under
+      user's home dir at the same namespace where the file is stored. However,
+      the user's home dir may not be created there. This flag enables routers
+      to auto-create these missing user home dirs using router's identity.
     </description>
   </property>
 </configuration>

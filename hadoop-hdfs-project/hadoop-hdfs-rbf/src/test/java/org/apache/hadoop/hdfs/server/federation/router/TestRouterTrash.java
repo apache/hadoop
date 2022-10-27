@@ -153,27 +153,20 @@ public class TestRouterTrash {
   /**
    * Mock testing the case where all home dirs have already existed. In that
    * case, we shall not call mkdirs/setOwner in CreateUserHomeForTrashPath().
+   *
+   * This method uses mocked objects and does not talk to routers or minihdfs
+   * clusters.
    */
   @Test
   public void mockTestCreateUserHomeForTrashPath()
       throws NoSuchFieldException, IllegalAccessException, IOException {
+    // Setup RouterRpcClient mock object
     RouterRpcClient rpcClient = mock(RouterRpcClient.class);
     HdfsFileStatus status = new HdfsFileStatus.Builder().build();
     when(rpcClient.invokeSingle(any(RemoteLocation.class),
         any(RemoteMethod.class), eq(HdfsFileStatus.class))).thenReturn(status);
-    RouterClientProtocol clientProcotol =
-        routerContext.getRouter().getRpcServer().getClientProtocolModule();
-    Field rpcClientField =
-        RouterClientProtocol.class.getDeclaredField("rpcClient");
-    rpcClientField.setAccessible(true);
 
-    // Save the original RouterRpcClient before replacing with a mocked one.
-    RouterRpcClient rpcClientOriginal =
-        (RouterRpcClient) rpcClientField.get(clientProcotol);
-
-    // Set to use the mocked RouterRpcClient
-    rpcClientField.set(clientProcotol, rpcClient);
-
+    // Destination remote locations.
     // Need to test with the identity getRemoteUser().getShortUserName().
     // Otherwise, it won't be considered as a trash path.
     String trashPath =
@@ -182,14 +175,22 @@ public class TestRouterTrash {
     List<RemoteLocation> locs = new ArrayList<>();
     locs.add(new RemoteLocation(ns0, trashPath, trashPath));
     locs.add(new RemoteLocation(ns1, trashPath, trashPath));
+
+    // Setup RouterClientProtocol mock object
+    RouterClientProtocol clientProcotol = mock(RouterClientProtocol.class);
+    doCallRealMethod().when(clientProcotol)
+        .createUserHomeForTrashPath(any(String.class), eq(locs));
+    Field rpcClientField =
+        RouterClientProtocol.class.getDeclaredField("rpcClient");
+    rpcClientField.setAccessible(true);
+    // Set to use the mocked RouterRpcClient
+    rpcClientField.set(clientProcotol, rpcClient);
+
     clientProcotol.createUserHomeForTrashPath(trashPath, locs);
     verify(rpcClient, times(2)).invokeSingle(any(RemoteLocation.class),
         any(RemoteMethod.class), eq(HdfsFileStatus.class));
     verify(rpcClient, never()).invokeSingleAsRouter(any(RemoteLocation.class),
         any(RemoteMethod.class), eq(Boolean.class), eq(true));
-
-    // Restore RouterRpcClient so that other tests can continue to work.
-    rpcClientField.set(clientProcotol, rpcClientOriginal);
   }
 
   /**
