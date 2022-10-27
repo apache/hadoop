@@ -1888,7 +1888,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       invalidate(b.getBlockPoolId(), new Block[] { lastFoundReplicaInfo },
           false);
     }
-    long startHoldLockTimeMs = Time.monotonicNow();
     FsVolumeReference ref = volumes.getNextVolume(storageType, storageId, b
         .getNumBytes());
     FsVolumeImpl v = (FsVolumeImpl) ref.getVolume();
@@ -1909,7 +1908,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     } finally {
       if (dataNodeMetrics != null) {
         // Create temporary operation hold write lock once.
-        long createTemporaryOpMs = Time.monotonicNow() - startHoldLockTimeMs;
+        long createTemporaryOpMs = Time.monotonicNow() - startTimeMs;
         dataNodeMetrics.addCreateTemporaryOp(createTemporaryOpMs);
       }
     }
