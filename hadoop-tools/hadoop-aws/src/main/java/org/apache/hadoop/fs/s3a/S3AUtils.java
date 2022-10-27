@@ -1351,13 +1351,17 @@ public final class S3AUtils {
         LOG.error(msg);
         throw new IllegalArgumentException(msg);
       }
+      boolean isProxySecured = conf.getBoolean(PROXY_SECURED, false);
       awsConf.setProxyUsername(proxyUsername);
       awsConf.setProxyPassword(proxyPassword);
       awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
       awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
+      awsConf.setProxyProtocol(isProxySecured ? Protocol.HTTPS : Protocol.HTTP);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}:{} as user {} with password {} on " +
-                "domain {} as workstation {}", awsConf.getProxyHost(),
+        LOG.debug("Using proxy server {}://{}:{} as user {} with password {} "
+                + "on domain {} as workstation {}",
+            awsConf.getProxyProtocol(),
+            awsConf.getProxyHost(),
             awsConf.getProxyPort(),
             String.valueOf(awsConf.getProxyUsername()),
             awsConf.getProxyPassword(), awsConf.getProxyDomain(),

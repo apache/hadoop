@@ -314,7 +314,7 @@ public class FederationClientInterceptor
     // Try calling the getNewApplication method
     List<SubClusterId> blacklist = new ArrayList<>();
     int activeSubClustersCount = getActiveSubClustersCount();
-    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
+    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
     try {
       GetNewApplicationResponse response =
@@ -470,7 +470,7 @@ public class FederationClientInterceptor
       // but if the number of Active SubClusters is less than this number at this time,
       // we should provide a high number of retry according to the number of Active SubClusters.
       int activeSubClustersCount = getActiveSubClustersCount();
-      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
       // Try calling the SubmitApplication method
       SubmitApplicationResponse response =
@@ -484,7 +484,7 @@ public class FederationClientInterceptor
         return response;
       }
 
-    } catch (Exception e){
+    } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
@@ -543,7 +543,7 @@ public class FederationClientInterceptor
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
 
-      if (exists || retryCount == 0) {
+      if (!exists || retryCount == 0) {
         addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
       } else {
         updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
@@ -563,8 +563,8 @@ public class FederationClientInterceptor
     } catch (Exception e) {
       RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
-      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {} error = {}.",
-          applicationId, subClusterId, e);
+      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {}.",
+          applicationId, retryCount, subClusterId, e);
       if (subClusterId != null) {
         blackList.add(subClusterId);
       }
@@ -1947,5 +1947,10 @@ public class FederationClientInterceptor
             reservationId);
       }
     }
+  }
+
+  @VisibleForTesting
+  public void setNumSubmitRetries(int numSubmitRetries) {
+    this.numSubmitRetries = numSubmitRetries;
   }
 }
