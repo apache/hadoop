@@ -57,7 +57,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
-
 /**
  * This is a test through the Router move data to the Trash.
  */
