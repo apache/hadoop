@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.ResourceCommitRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.sls.SLSRunner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Private
 @Unstable
@@ -45,6 +47,7 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
   private final SLSSchedulerCommons schedulerCommons;
   private Configuration conf;
   private SLSRunner runner;
+  private static final Logger LOG = LoggerFactory.getLogger(SLSCapacityScheduler.class);
 
   public SLSCapacityScheduler() {
     schedulerCommons = new SLSSchedulerCommons(this);
@@ -105,7 +108,12 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 
   @Override
   public void handle(SchedulerEvent schedulerEvent) {
-    schedulerCommons.handle(schedulerEvent);
+    try {
+      schedulerCommons.handle(schedulerEvent);
+    } catch(Exception e) {
+      LOG.error("Caught exception while handling scheduler event", e);
+      throw e;
+    }
   }
 
   @Override
