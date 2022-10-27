@@ -39,11 +39,14 @@ import org.apache.hadoop.conf.Configuration;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.TreeMap;
+import java.util.SortedMap;
 
 public class TestDecayRpcScheduler {
   private Schedulable mockCall(String id) {
@@ -291,13 +294,18 @@ public class TestDecayRpcScheduler {
     ObjectName mxbeanName = new ObjectName(
         "Hadoop:service="+ namespace + ",name=DecayRpcScheduler");
 
-    String cvs1 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
+    ObjectMapper mapper = new ObjectMapper();
+    String json1 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
+    SortedMap<String, Integer> map1 = mapper.readValue(json1, TreeMap.class);
+    String cvs1 = mapper.writeValueAsString(map1);
     assertTrue("Get expected JMX of CallVolumeSummary before decay",
         cvs1.equals("{\"A\":6,\"B\":2,\"C\":2}"));
 
     scheduler.forceDecay();
 
-    String cvs2 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
+    String json2 = (String) mbs.getAttribute(mxbeanName, "CallVolumeSummary");
+    SortedMap<String, Integer> map2 = mapper.readValue(json2, TreeMap.class);
+    String cvs2 = mapper.writeValueAsString(map2);
     assertTrue("Get expected JMX for CallVolumeSummary after decay",
         cvs2.equals("{\"A\":3,\"B\":1,\"C\":1}"));
   }
