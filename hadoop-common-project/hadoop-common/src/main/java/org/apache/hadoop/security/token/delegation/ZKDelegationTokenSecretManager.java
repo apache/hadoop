@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -285,7 +284,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // by calling the incrSharedCount
       currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
       currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ", currentSeqNum + 1, currentMaxSeqNum);
+      LOG.info("Fetched initial range of seq num, from {} to {} ", 
+          currentSeqNum + 1, currentMaxSeqNum);
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
     }
@@ -305,14 +305,18 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
     }
     try {
       keyCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_MASTER_KEY_ROOT).build();
-      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder().forCreatesAndChanges((oldNode, node) -> {
-        try {
-          processKeyAddOrUpdate(node.getData());
-        } catch (IOException e) {
-          LOG.error("Error while processing Curator keyCacheListener " + "NODE_CREATED / NODE_CHANGED event");
-          throw new UncheckedIOException(e);
-        }
-      }).forDeletes(childData -> processKeyRemoved(childData.getPath())).build();
+      CuratorCacheListener keyCacheListener = CuratorCacheListener.builder()
+          .forCreatesAndChanges((oldNode, node) -> {
+            try {
+              processKeyAddOrUpdate(node.getData());
+            } catch (IOException e) {
+              LOG.error("Error while processing Curator keyCacheListener " 
+                  + "NODE_CREATED / NODE_CHANGED event");
+              throw new UncheckedIOException(e);
+            }
+          })
+          .forDeletes(childData -> processKeyRemoved(childData.getPath()))
+          .build();
       keyCache.listenable().addListener(keyCacheListener);
       keyCache.start();
       loadFromZKCache(false);
@@ -323,21 +327,26 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       LOG.info("TokenCache is enabled");
       try {
         tokenCache = CuratorCache.bridgeBuilder(zkClient, ZK_DTSM_TOKENS_ROOT).build();
-        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder().forCreatesAndChanges((oldNode, node) -> {
+        CuratorCacheListener tokenCacheListener = CuratorCacheListener.builder()
+            .forCreatesAndChanges((oldNode, node) -> {
               try {
                 processTokenAddOrUpdate(node.getData());
               } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener " + "NODE_CREATED / NODE_CHANGED event");
+                LOG.error("Error while processing Curator tokenCacheListener " 
+                    + "NODE_CREATED / NODE_CHANGED event");
                 throw new UncheckedIOException(e);
               }
-            }).forDeletes(childData -> {
+            })
+            .forDeletes(childData -> {
               try {
                 processTokenRemoved(childData);
               } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener " + "NODE_DELETED event");
+                LOG.error("Error while processing Curator tokenCacheListener " 
+                    + "NODE_DELETED event");
                 throw new UncheckedIOException(e);
               }
-            }).build();
+            })
+            .build();
         tokenCache.listenable().addListener(tokenCacheListener);
         tokenCache.start();
         loadFromZKCache(true);

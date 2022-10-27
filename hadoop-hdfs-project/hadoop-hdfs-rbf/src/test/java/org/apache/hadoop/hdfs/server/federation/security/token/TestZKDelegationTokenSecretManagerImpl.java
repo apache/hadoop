@@ -162,6 +162,7 @@ public class TestZKDelegationTokenSecretManagerImpl
 
   // This is very unlikely to happen in real case, but worth putting
   // the case out
+  @SuppressWarnings("unchecked")
   @Test
   public void testMultiNodeTokenRemovalLongSyncWithoutWatch()
       throws Exception {

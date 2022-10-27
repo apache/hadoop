@@ -436,7 +436,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
 
 
     protected static ZooKeeperServer getServer(ServerCnxnFactory fac) {
-      return fac.getZooKeeperServer();
+        return fac.getZooKeeperServer();
     }
 
     protected void tearDownAll() throws Exception {
