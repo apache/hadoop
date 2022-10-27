@@ -28,12 +28,13 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.hadoop.util.XMLUtils;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-
 
 public class TestQueueConfigurationParser {
 /**
@@ -64,7 +65,7 @@ public class TestQueueConfigurationParser {
     DOMSource domSource = new DOMSource(e);
     StringWriter writer = new StringWriter();
     StreamResult result = new StreamResult(writer);
-    TransformerFactory tf = TransformerFactory.newInstance();
+    TransformerFactory tf = XMLUtils.newSecureTransformerFactory();
     Transformer transformer = tf.newTransformer();
     transformer.transform(domSource, result);
     String str= writer.toString();
