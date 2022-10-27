@@ -864,4 +864,12 @@
       of namespaces in use and the latency of the msync requests.
     </description>
   </property>
+  <property>
+    <name>dfs.federation.router.trash.auto-create.user.home</name>
+    <value>false</value>
+    <description>
+      Whether to enable routers to auto-create user home dir on the destination
+      namenodes for trash paths.
+    </description>
+  </property>
 </configuration>
