@@ -284,7 +284,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // by calling the incrSharedCount
       currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
       currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
-      LOG.info("Fetched initial range of seq num, from {} to {} ", 
+      LOG.info("Fetched initial range of seq num, from {} to {} ",
           currentSeqNum + 1, currentMaxSeqNum);
     } catch (Exception e) {
       throw new IOException("Could not start Sequence Counter", e);
@@ -310,7 +310,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
             try {
               processKeyAddOrUpdate(node.getData());
             } catch (IOException e) {
-              LOG.error("Error while processing Curator keyCacheListener " 
+              LOG.error("Error while processing Curator keyCacheListener "
                   + "NODE_CREATED / NODE_CHANGED event");
               throw new UncheckedIOException(e);
             }
@@ -332,7 +332,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
               try {
                 processTokenAddOrUpdate(node.getData());
               } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener " 
+                LOG.error("Error while processing Curator tokenCacheListener "
                     + "NODE_CREATED / NODE_CHANGED event");
                 throw new UncheckedIOException(e);
               }
@@ -341,7 +341,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
               try {
                 processTokenRemoved(childData);
               } catch (IOException e) {
-                LOG.error("Error while processing Curator tokenCacheListener " 
+                LOG.error("Error while processing Curator tokenCacheListener "
                     + "NODE_DELETED event");
                 throw new UncheckedIOException(e);
               }
