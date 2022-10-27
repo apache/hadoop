@@ -91,7 +91,7 @@ public final class AuditConstants {
   public static final String PARAM_PROCESS = "ps";
 
   /**
-   * Header: Range for GET request data : {@value }.
+   * Header: Range for GET request data : {@value}.
    */
   public static final String PARAM_RANGE = "r";
 
