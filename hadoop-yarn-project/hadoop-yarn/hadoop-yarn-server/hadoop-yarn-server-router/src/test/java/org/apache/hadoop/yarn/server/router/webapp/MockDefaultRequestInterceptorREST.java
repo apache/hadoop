@@ -88,29 +88,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtil
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppState;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppTimeoutsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -885,6 +863,21 @@ public class MockDefaultRequestInterceptorREST
     }
 
     return Response.status(Status.OK).entity(resResponse).build();
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo();
+    nodeLabelInfo.setExclusivity(true);
+    nodeLabelInfo.setName("Test-Label");
+    nodeLabelInfo.setActiveNMs(10);
+    PartitionInfo partitionInfo = new PartitionInfo();
+
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    return nodeLabelsInfo;
   }
 
   private MockRM setupResourceManager() throws Exception {

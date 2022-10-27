@@ -187,7 +187,7 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
 
   @Override
   public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
-    return null;
+    return new NodeLabelsInfo();
   }
 
   @Override

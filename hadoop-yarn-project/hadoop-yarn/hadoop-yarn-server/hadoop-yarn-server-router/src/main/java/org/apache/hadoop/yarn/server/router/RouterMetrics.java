@@ -121,6 +121,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numGetAppTimeoutFailedRetrieved;
   @Metric("# of getAppTimeouts failed to be retrieved")
   private MutableGaugeInt numGetAppTimeoutsFailedRetrieved;
+  @Metric("# of getRMNodeLabels failed to be retrieved")
+  private MutableGaugeInt numGetRMNodeLabelsFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -203,6 +205,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededGetAppTimeoutRetrieved;
   @Metric("Total number of successful Retrieved GetAppTimeouts and latency(ms)")
   private MutableRate totalSucceededGetAppTimeoutsRetrieved;
+  @Metric("Total number of successful Retrieved GetRMNodeLabels and latency(ms)")
+  private MutableRate totalSucceededGetRMNodeLabelsRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -247,6 +251,7 @@ public final class RouterMetrics {
   private MutableQuantiles getUpdateQueueLatency;
   private MutableQuantiles getAppTimeoutLatency;
   private MutableQuantiles getAppTimeoutsLatency;
+  private MutableQuantiles getRMNodeLabelsLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -398,6 +403,9 @@ public final class RouterMetrics {
 
     getAppTimeoutsLatency = registry.newQuantiles("getAppTimeoutsLatency",
          "latency of get apptimeouts timeouts", "ops", "latency", 10);
+
+    getRMNodeLabelsLatency = registry.newQuantiles("getRMNodeLabelsLatency",
+        "latency of get rmnodelabels timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -620,6 +628,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetRMNodeLabelsRetrieved() {
+    return totalSucceededGetRMNodeLabelsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -820,6 +833,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetRMNodeLabelsRetrieved() {
+    return totalSucceededGetRMNodeLabelsRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -998,6 +1016,10 @@ public final class RouterMetrics {
 
   public int getAppTimeoutsFailedRetrieved() {
     return numGetAppTimeoutsFailedRetrieved.value();
+  }
+
+  public int getRMNodeLabelsFailedRetrieved() {
+    return numGetRMNodeLabelsFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1200,6 +1222,11 @@ public final class RouterMetrics {
     getAppTimeoutsLatency.add(duration);
   }
 
+  public void succeededGetRMNodeLabelsRetrieved(long duration) {
+    totalSucceededGetRMNodeLabelsRetrieved.add(duration);
+    getRMNodeLabelsLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1358,5 +1385,9 @@ public final class RouterMetrics {
 
   public void incrGetAppTimeoutsFailedRetrieved() {
     numGetAppTimeoutsFailedRetrieved.incr();
+  }
+
+  public void incrGetRMNodeLabelsFailedRetrieved() {
+    numGetRMNodeLabelsFailedRetrieved.incr();
   }
 }

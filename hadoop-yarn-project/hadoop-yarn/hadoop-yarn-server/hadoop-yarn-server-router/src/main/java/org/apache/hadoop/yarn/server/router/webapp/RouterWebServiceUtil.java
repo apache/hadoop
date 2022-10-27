@@ -34,6 +34,7 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
@@ -50,15 +51,7 @@ import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -575,5 +568,41 @@ public final class RouterWebServiceUtil {
     }
 
     return result;
+  }
+
+  public static NodeLabelsInfo mergeNodeLabelsInfo(Map<SubClusterInfo, NodeLabelsInfo> paramMap) {
+    Map<String, NodeLabelInfo> resultMap = new HashMap<>();
+    paramMap.values().stream()
+        .flatMap(nodeLabelsInfo -> nodeLabelsInfo.getNodeLabelsInfo().stream())
+        .forEach(nodeLabelInfo -> {
+          String keyLabelName = nodeLabelInfo.getName();
+          if (resultMap.containsKey(keyLabelName)) {
+            NodeLabelInfo mapNodeLabelInfo = resultMap.get(keyLabelName);
+            mapNodeLabelInfo = mergeNodeLabelInfo(mapNodeLabelInfo, nodeLabelInfo);
+            resultMap.put(keyLabelName, mapNodeLabelInfo);
+          } else {
+            resultMap.put(keyLabelName, nodeLabelInfo);
+          }
+        });
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().addAll(resultMap.values());
+    return nodeLabelsInfo;
+  }
+
+  private static NodeLabelInfo mergeNodeLabelInfo(NodeLabelInfo left, NodeLabelInfo right) {
+    NodeLabelInfo resultNodeLabelInfo = new NodeLabelInfo();
+    resultNodeLabelInfo.setName(left.getName());
+
+    int newActiveNMs = left.getActiveNMs() + right.getActiveNMs();
+    resultNodeLabelInfo.setActiveNMs(newActiveNMs);
+
+    boolean newExclusivity = left.getExclusivity() && right.getExclusivity();
+    resultNodeLabelInfo.setExclusivity(newExclusivity);
+
+    PartitionInfo leftPartition = left.getPartitionInfo();
+    PartitionInfo rightPartition = right.getPartitionInfo();
+    PartitionInfo newPartitionInfo = PartitionInfo.addTo(leftPartition, rightPartition);
+    resultNodeLabelInfo.setPartitionInfo(newPartitionInfo);
+    return resultNodeLabelInfo;
   }
 }

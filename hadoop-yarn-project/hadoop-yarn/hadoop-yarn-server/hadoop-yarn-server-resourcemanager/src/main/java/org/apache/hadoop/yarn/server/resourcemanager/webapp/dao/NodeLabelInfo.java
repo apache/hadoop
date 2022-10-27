@@ -77,6 +77,18 @@ public class NodeLabelInfo {
     this.activeNMs = activeNMs;
   }
 
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void setExclusivity(boolean exclusivity) {
+    this.exclusivity = exclusivity;
+  }
+
+  public void setPartitionInfo(PartitionInfo partitionInfo) {
+    this.partitionInfo = partitionInfo;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
