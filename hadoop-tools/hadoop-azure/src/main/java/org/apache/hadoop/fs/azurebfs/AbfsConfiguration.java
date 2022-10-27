@@ -839,8 +839,10 @@ public class AbfsConfiguration{
               getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN);
           String clientId =
               getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String clientSecret =
+                  getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
-              clientId, refreshToken);
+              clientId, clientSecret, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);

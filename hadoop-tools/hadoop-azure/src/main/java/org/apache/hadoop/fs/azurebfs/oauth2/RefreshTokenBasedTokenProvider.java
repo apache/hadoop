@@ -35,21 +35,25 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
 
   private final String clientId;
 
+  private final String clientSecret;
+
   private final String refreshToken;
 
   /**
    * Constructs a token provider based on the refresh token provided.
    *
-   * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
+   * @param clientId the client ID (GUID) of the client obtained from Azure Active Directory configuration
+   * @param clientSecret the client secret of the client obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
    */
   public RefreshTokenBasedTokenProvider(final String authEndpoint,
-      String clientId, String refreshToken) {
+      String clientId, String clientSecret, String refreshToken) {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(refreshToken, "refreshToken");
     this.authEndpoint = authEndpoint;
     this.clientId = clientId;
+    this.clientSecret = clientSecret;
     this.refreshToken = refreshToken;
   }
 
@@ -58,6 +62,6 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
   protected AzureADToken refreshToken() throws IOException {
     LOG.debug("AADToken: refreshing refresh-token based token");
     return AzureADAuthenticator
-        .getTokenUsingRefreshToken(authEndpoint, clientId, refreshToken);
+        .getTokenUsingRefreshToken(authEndpoint, clientId, clientSecret, refreshToken);
   }
 }

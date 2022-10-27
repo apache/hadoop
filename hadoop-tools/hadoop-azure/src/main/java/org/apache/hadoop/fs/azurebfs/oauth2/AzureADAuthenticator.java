@@ -168,12 +168,14 @@ public final class AzureADAuthenticator {
    */
   public static AzureADToken getTokenUsingRefreshToken(
       final String authEndpoint, final String clientId,
-      final String refreshToken) throws IOException {
+      final String clientSecret, final String refreshToken) throws IOException {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);
-    if (clientId != null) {
-      qp.add("client_id", clientId);
+    qp.add("client_id", clientId);
+
+    if (clientSecret != null) {
+      qp.add("client_secret", clientSecret);
     }
     LOG.debug("AADToken: starting to fetch token using refresh token for client ID " + clientId);
     return getTokenCall(authEndpoint, qp.serialize(), null, null);
