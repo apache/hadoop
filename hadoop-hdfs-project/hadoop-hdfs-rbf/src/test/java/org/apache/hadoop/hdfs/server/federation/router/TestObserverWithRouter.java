@@ -21,10 +21,12 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMEN
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,18 +42,44 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 
 
 public class TestObserverWithRouter {
+  private static final String SKIP_BEFORE_EACH_CLUSTER_STARTUP = "SkipBeforeEachClusterStartup";
+  private MiniRouterDFSCluster cluster;
+  private RouterContext routerContext;
+  private FileSystem fileSystem;
 
-  public static MiniRouterDFSCluster startUpCluster(int numObservers) throws Exception {
-    return startUpCluster(numObservers, null);
+  @BeforeEach
+  void init(TestInfo info) throws Exception {
+    if (info.getTags().contains(SKIP_BEFORE_EACH_CLUSTER_STARTUP)) {
+      return;
+    }
+    startUpCluster(2, null);
   }
 
-  public static MiniRouterDFSCluster startUpCluster(int numObservers,Configuration confOverrides)
-      throws Exception {
-    int numNamenodes = 2 + numObservers;
+  @AfterEach
+  public void teardown() throws IOException {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
+
+    routerContext = null;
+
+    if (fileSystem != null) {
+      fileSystem.close();
+      fileSystem = null;
+    }
+  }
+
+  public void startUpCluster(int numberOfObserver, Configuration confOverrides) throws Exception {
+    int numberOfNamenode = 2 + numberOfObserver;
     Configuration conf = new Configuration(false);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
@@ -59,7 +87,7 @@ public class TestObserverWithRouter {
     if (confOverrides != null) {
       conf.addResource(confOverrides);
     }
-    MiniRouterDFSCluster cluster = new MiniRouterDFSCluster(true, 2, numNamenodes);
+    cluster = new MiniRouterDFSCluster(true, 2, numberOfNamenode);
     cluster.addNamenodeOverrides(conf);
     // Start NNs and DNs and wait until ready
     cluster.startCluster();
@@ -69,7 +97,7 @@ public class TestObserverWithRouter {
       for (String ns : cluster.getNameservices()) {
         cluster.switchToActive(ns, NAMENODES[0]);
         cluster.switchToStandby(ns, NAMENODES[1]);
-        for (int i = 2; i < numNamenodes; i++) {
+        for (int i = 2; i < numberOfNamenode; i++) {
           cluster.switchToObserver(ns, NAMENODES[i]);
         }
       }
@@ -93,12 +121,13 @@ public class TestObserverWithRouter {
     cluster.installMockLocations();
 
     cluster.waitActiveNamespaces();
-    return cluster;
+    routerContext  = cluster.getRandomRouter();
+    fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
   }
 
   @Test
   public void testObserverRead() throws Exception {
-    internalTestObserverRead(true);
+    internalTestObserverRead();
   }
 
   /**
@@ -106,30 +135,26 @@ public class TestObserverWithRouter {
    * have reads served by Observers.
    * Fixes regression in HDFS-13522.
    */
-  @Test (expected = AssertionError.class)
+  @Test
   public void testReadWithoutObserverClientConfigurations() throws Exception {
-    internalTestObserverRead(false);
+    fileSystem.close();
+    fileSystem = routerContext.getFileSystem();
+    assertThrows(AssertionError.class, this::internalTestObserverRead);
   }
 
-  public static void internalTestObserverRead(boolean configureObserverProxyProvider)
+  public void internalTestObserverRead()
       throws Exception {
-    MiniRouterDFSCluster cluster = startUpCluster(1);
-    RouterContext routerContext = cluster.getRandomRouter();
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
     assertEquals("First namenode should be observer", namenodes.get(0).getState(),
         FederationNamenodeServiceState.OBSERVER);
-    FileSystem fileSystem = configureObserverProxyProvider
-        ? routerContext.getFileSystemWithObserverReadsEnabled()
-        : routerContext.getFileSystem();
     Path path = new Path("/testFile");
     // Send create call
     fileSystem.create(path).close();
 
     // Send read request
     fileSystem.open(path).close();
-    fileSystem.close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
@@ -140,21 +165,19 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
     // getBlockLocations should be sent to observer
     assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
-    cluster.shutdown();
   }
 
   @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testObserverReadWithoutFederatedStatePropagation() throws Exception {
     Configuration confOverrides = new Configuration(false);
     confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
-    MiniRouterDFSCluster cluster = startUpCluster(1, confOverrides);
-    RouterContext routerContext = cluster.getRandomRouter();
+    startUpCluster(2, confOverrides);
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
     assertEquals("First namenode should be observer", namenodes.get(0).getState(),
         FederationNamenodeServiceState.OBSERVER);
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -170,23 +193,19 @@ public class TestObserverWithRouter {
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     assertEquals("No call should be sent to observer", 0, rpcCountForObserver);
-    fileSystem.close();
-    cluster.shutdown();
   }
 
   @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testDisablingObserverReadUsingNameserviceOverride() throws Exception {
     // Disable observer reads using per-nameservice override
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
-    MiniRouterDFSCluster cluster =  startUpCluster(1, confOverrides);
+    startUpCluster(2, confOverrides);
 
-    RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
     fileSystem.open(path).close();
-    fileSystem.close();
 
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
@@ -196,22 +215,19 @@ public class TestObserverWithRouter {
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     assertEquals("Zero calls should be sent to observer", 0, rpcCountForObserver);
-    cluster.shutdown();
   }
 
   @Test
   public void testReadWhenObserverIsDown() throws Exception {
-    MiniRouterDFSCluster cluster = startUpCluster(1, null);
-    RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
 
     // Stop observer NN
-    int nnIndex = stopObserver(cluster, 1);
-
+    int nnIndex = stopObserver(1);
     assertNotEquals("No observer found", 3, nnIndex);
+    nnIndex = stopObserver(1);
+    assertNotEquals("No observer found", 4, nnIndex);
 
     // Send read request
     fileSystem.open(path).close();
@@ -226,21 +242,16 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
     assertEquals("No call should send to observer", 0,
         rpcCountForObserver);
-    fileSystem.close();
-    cluster.shutdown();
   }
 
   @Test
   public void testMultipleObserver() throws Exception {
-    MiniRouterDFSCluster cluster = startUpCluster(2, null);
-    RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
 
     // Stop one observer NN
-    stopObserver(cluster, 1);
+    stopObserver(1);
 
     // Send read request
     fileSystem.open(path).close();
@@ -262,7 +273,7 @@ public class TestObserverWithRouter {
         expectedObserverRpc, rpcCountForObserver);
 
     // Stop one observer NN
-    stopObserver(cluster, 1);
+    stopObserver(1);
 
     // Send read request
     fileSystem.open(path).close();
@@ -279,11 +290,9 @@ public class TestObserverWithRouter {
         .getRpcServer().getRPCMetrics().getObserverProxyOps();
     assertEquals("No call should send to observer",
         expectedObserverRpc, rpcCountForObserver);
-    fileSystem.close();
-    cluster.shutdown();
   }
 
-  private int stopObserver(MiniRouterDFSCluster cluster, int num) {
+  private int stopObserver(int num) {
     int nnIndex;
     for (nnIndex = 0; nnIndex < cluster.getNamenodes().size(); nnIndex++) {
       NameNode nameNode = cluster.getCluster().getNameNode(nnIndex);
@@ -301,9 +310,9 @@ public class TestObserverWithRouter {
   // test router observer with multiple to know which observer NN received
   // requests
   @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testMultipleObserverRouter() throws Exception {
     StateStoreDFSCluster innerCluster;
-    RouterContext routerContext;
     MembershipNamenodeResolver resolver;
 
     String ns0;
@@ -375,10 +384,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testUnavailableObserverNN() throws Exception {
-    MiniRouterDFSCluster cluster = startUpCluster(2, null);
-    RouterContext routerContext = cluster.getRandomRouter();
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
-    stopObserver(cluster, 2);
+    stopObserver(2);
 
     Path path = new Path("/testFile");
     // Send Create call to active
@@ -409,16 +415,12 @@ public class TestObserverWithRouter {
     // After attempting to communicate with unavailable observer namenode,
     // its state is updated to unavailable.
     assertTrue("There must be unavailable namenodes", hasUnavailable);
-    fileSystem.close();
-    cluster.shutdown();
   }
+
+
 
   @Test
   public void testRouterMsync() throws Exception {
-    MiniRouterDFSCluster cluster = startUpCluster(1, null);
-    RouterContext routerContext = cluster.getRandomRouter();
-
-    FileSystem fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
     Path path = new Path("/testFile");
 
     // Send Create call to active
@@ -436,7 +438,5 @@ public class TestObserverWithRouter {
     // 2 msync calls should be sent. One to each active namenode in the two namespaces.
     assertEquals("Four calls should be sent to active", 4,
         rpcCountForActive);
-    fileSystem.close();
-    cluster.shutdown();
   }
 }
