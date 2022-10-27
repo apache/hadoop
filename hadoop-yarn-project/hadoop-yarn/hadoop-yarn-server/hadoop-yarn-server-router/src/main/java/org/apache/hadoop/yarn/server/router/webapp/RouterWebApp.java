@@ -49,7 +49,7 @@ public class RouterWebApp extends WebApp implements YarnWebParams {
     route("/", RouterController.class);
     route("/cluster", RouterController.class, "about");
     route("/about", RouterController.class, "about");
-    route("/apps", RouterController.class, "apps");
+    route(pajoin("/apps", APP_SC, APP_STATE), RouterController.class, "apps");
     route(pajoin("/nodes", NODE_SC), RouterController.class, "nodes");
     route("/federation", RouterController.class, "federation");
   }

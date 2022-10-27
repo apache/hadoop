@@ -35,6 +35,7 @@ public interface YarnWebParams {
   String APP_STATE = "app.state";
   String APP_START_TIME_BEGIN = "app.started-time.begin";
   String APP_START_TIME_END = "app.started-time.end";
+  String APP_SC = "app.subcluster";
   String APPS_NUM = "apps.num";
   String QUEUE_NAME = "queue.name";
   String NODE_STATE = "node.state";
