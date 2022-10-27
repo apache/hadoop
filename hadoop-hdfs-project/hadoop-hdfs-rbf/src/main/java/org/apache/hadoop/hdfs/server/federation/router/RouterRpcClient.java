@@ -946,7 +946,12 @@ public class RouterRpcClient {
     return ret;
   }
 
-  // Same as invokeSingle but uses router's login identity
+  /**
+   * Invokes a single proxy call for a single location, using router's identity.
+   *
+   * This method is the same as invokeSingle, except that it uses router's
+   * identity.
+   */
   public <T> T invokeSingleAsRouter(final RemoteLocationContext location,
       RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
@@ -1009,7 +1014,11 @@ public class RouterRpcClient {
   }
 
   /**
-   * Same as the above invokeSequential, but with router ugi.
+   * Invokes sequential proxy calls to different locations, using router's
+   * identity.
+   *
+   * This method is the same as invokeSequential, except that it uses
+   * router's identity to make the calls.
    */
   public <T> T invokeSequentialAsRouter(
       final List<? extends RemoteLocationContext> locations,
@@ -1063,9 +1072,9 @@ public class RouterRpcClient {
   }
 
   /**
-   * Call invokeSequential with a configurable ugi.
+   * Actual implementation of invokeSequential with a configurable ugi.
    */
-  public <R extends RemoteLocationContext, T> RemoteResult invokeSequentialInternal(
+  private <R extends RemoteLocationContext, T> RemoteResult invokeSequentialInternal(
       final RemoteMethod remoteMethod, final List<R> locations,
       Class<T> expectedResultClass, Object expectedResultValue, UserGroupInformation ugi)
       throws IOException {
