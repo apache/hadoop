@@ -165,7 +165,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // the minSeek doesn't allow the first two to merge
     assertFalse("Ranges are non disjoint",
             VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
-    final List<CombinedFileRange> list2 = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)),
+    final List<CombinedFileRange> list2 = VectoredReadUtils.mergeSortedRanges(
+        Arrays.asList(sortRanges(input)),
             100, 1000, 2100);
     Assertions.assertThat(list2)
             .describedAs("merged range size")
@@ -181,7 +182,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // the maxSize doesn't allow the third range to merge
     assertFalse("Ranges are non disjoint",
             VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    final List<CombinedFileRange> list3 = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)),
+    final List<CombinedFileRange> list3 = VectoredReadUtils.mergeSortedRanges(
+        Arrays.asList(sortRanges(input)),
             100, 1001, 2099);
     Assertions.assertThat(list3)
             .describedAs("merged range size")
@@ -205,7 +207,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // test the round up and round down (the maxSize doesn't allow any merges)
     assertFalse("Ranges are non disjoint",
             VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
-    final List<CombinedFileRange> list4 = VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(input)),
+    final List<CombinedFileRange> list4 = VectoredReadUtils.mergeSortedRanges(
+        Arrays.asList(sortRanges(input)),
             16, 1001, 100);
     Assertions.assertThat(list4)
             .describedAs("merged range size")
@@ -246,7 +249,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
    * @param reference reference; may be null.
    */
   private void assertFileRange(FileRange range, long offset, int length, Object reference) {
-    assertFileRange(range, offset,length);
+    assertFileRange(range, offset, length);
     Assertions.assertThat(range.getReference())
         .describedAs("reference field of file range %s", range)
         .isEqualTo(reference);
