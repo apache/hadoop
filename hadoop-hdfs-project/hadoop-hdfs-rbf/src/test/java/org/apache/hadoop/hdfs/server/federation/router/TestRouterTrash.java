@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
@@ -165,9 +164,15 @@ public class TestRouterTrash {
         any(RemoteMethod.class), eq(HdfsFileStatus.class))).thenReturn(status);
     RouterClientProtocol clientProcotol =
         routerContext.getRouter().getRpcServer().getClientProtocolModule();
-    Field rpcClientField = RouterClientProtocol.class.getDeclaredField(
-        "rpcClient");
+    Field rpcClientField =
+        RouterClientProtocol.class.getDeclaredField("rpcClient");
     rpcClientField.setAccessible(true);
+
+    // Save the original RouterRpcClient before replacing with a mocked one.
+    RouterRpcClient rpcClientOriginal =
+        (RouterRpcClient) rpcClientField.get(clientProcotol);
+
+    // Set to use the mocked RouterRpcClient
     rpcClientField.set(clientProcotol, rpcClient);
 
     // Need to test with the identity getRemoteUser().getShortUserName().
@@ -180,9 +185,12 @@ public class TestRouterTrash {
     locs.add(new RemoteLocation(ns1, trashPath, trashPath));
     clientProcotol.createUserHomeForTrashPath(trashPath, locs);
     verify(rpcClient, times(2)).invokeSingle(any(RemoteLocation.class),
-            any(RemoteMethod.class), eq(HdfsFileStatus.class));
+        any(RemoteMethod.class), eq(HdfsFileStatus.class));
     verify(rpcClient, never()).invokeSingleAsRouter(any(RemoteLocation.class),
         any(RemoteMethod.class), eq(Boolean.class), eq(true));
+
+    // Restore RouterRpcClient so that other tests can continue to work.
+    rpcClientField.set(clientProcotol, rpcClientOriginal);
   }
 
   /**
