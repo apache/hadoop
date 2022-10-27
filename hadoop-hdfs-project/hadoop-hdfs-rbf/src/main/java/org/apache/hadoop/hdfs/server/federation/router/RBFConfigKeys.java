@@ -408,4 +408,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       DFS_ROUTER_FEDERATION_RENAME_PREFIX + "trash";
   public static final String DFS_ROUTER_FEDERATION_RENAME_TRASH_DEFAULT =
       "trash";
+
+  public static final String DFS_ROUTER_FEDERATION_TRASH_AUTO_CREATE_USER_HOME =
+      FEDERATION_ROUTER_PREFIX + "trash.auto-create.user.home";
+  public static final boolean
+      DFS_ROUTER_FEDERATION_TRASH_AUTO_CREATE_HOME_DIR_DEFAULT = false;
 }

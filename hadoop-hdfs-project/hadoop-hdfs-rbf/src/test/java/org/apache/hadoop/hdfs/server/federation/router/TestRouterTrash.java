@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
@@ -191,11 +192,18 @@ public class TestRouterTrash {
    */
   @Test
   public void testMoveToTrashAutoCreateUserHome()
-      throws IOException, URISyntaxException, InterruptedException {
+      throws IOException, URISyntaxException, InterruptedException,
+             NoSuchFieldException, IllegalAccessException {
     MountTable addEntry = MountTable.newInstance(MOUNT_POINT,
         Collections.singletonMap(ns0, MOUNT_POINT));
     assertTrue(addMountTable(addEntry));
     String testUser2 = "TEST_USER2";
+
+    RouterClientProtocol clientProcotol =
+        routerContext.getRouter().getRpcServer().getClientProtocolModule();
+    Field autoCreateUserHomeField = RouterClientProtocol.class.getDeclaredField(
+        "autoCreateUserHomeForTrash");
+    autoCreateUserHomeField.setAccessible(true);
 
     // Set owner to TEST_USER for root dir
     DFSClient superUserClient = nnContext.getClient();
@@ -220,7 +228,21 @@ public class TestRouterTrash {
     Configuration routerConf = routerContext.getConf();
     FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, routerConf);
     Trash trash = new Trash(fs, routerConf);
+
+    // Should fail when autoCreateUserHomeForTrash flag is off.
+    autoCreateUserHomeField.set(clientProcotol, false);
+    try {
+      trash.moveToTrash(filePath);
+    } catch (IOException ignored) {
+      // expected.
+    }
+    // file should still exist
+    assertTrue(nnFs.exists(filePath));
+
+    // Turn on the autoCreateUserHomeForTrash flag
+    autoCreateUserHomeField.set(clientProcotol, true);
     assertTrue(trash.moveToTrash(filePath));
+    assertFalse(nnFs.exists(filePath));
     assertTrue(nnFs.exists(new Path(trashPath)));
   }
 

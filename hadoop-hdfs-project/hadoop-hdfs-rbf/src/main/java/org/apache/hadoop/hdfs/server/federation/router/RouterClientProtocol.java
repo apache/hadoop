@@ -140,6 +140,8 @@ public class RouterClientProtocol implements ClientProtocol {
   private volatile long serverDefaultsLastUpdate;
   private final long serverDefaultsValidityPeriod;
 
+  /** Whether the router should auto-create home dir for a trash path. */
+  private final boolean autoCreateUserHomeForTrash;
   /** If it requires response from all subclusters. */
   private final boolean allowPartialList;
   /** Time out when getting the mount statistics. */
@@ -166,6 +168,9 @@ public class RouterClientProtocol implements ClientProtocol {
     this.subclusterResolver = rpcServer.getSubclusterResolver();
     this.namenodeResolver = rpcServer.getNamenodeResolver();
 
+    this.autoCreateUserHomeForTrash = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_FEDERATION_TRASH_AUTO_CREATE_USER_HOME,
+        RBFConfigKeys.DFS_ROUTER_FEDERATION_TRASH_AUTO_CREATE_HOME_DIR_DEFAULT);
     this.allowPartialList = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST,
         RBFConfigKeys.DFS_ROUTER_ALLOW_PARTIAL_LIST_DEFAULT);
@@ -809,7 +814,9 @@ public class RouterClientProtocol implements ClientProtocol {
     // Auto-create user home dir for a trash path.
     // moveToTrash() will first call fs.mkdirs() to create the parent dir, before calling rename()
     // to move the file into it. As a result, we need to create user home dir in mkdirs().
-    createUserHomeForTrashPath(src, locations);
+    if (autoCreateUserHomeForTrash) {
+      createUserHomeForTrashPath(src, locations);
+    }
 
     // Create in all locations
     if (rpcServer.isPathAll(src)) {
