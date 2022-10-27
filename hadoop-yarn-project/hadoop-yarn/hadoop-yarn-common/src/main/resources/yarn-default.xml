@@ -5074,8 +5074,8 @@
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
       Default is 0s.
     </description>
-  </property>   
- 
+  </property>
+
   <property>
     <name>yarn.router.submit.interval.time</name>
     <value>10ms</value>

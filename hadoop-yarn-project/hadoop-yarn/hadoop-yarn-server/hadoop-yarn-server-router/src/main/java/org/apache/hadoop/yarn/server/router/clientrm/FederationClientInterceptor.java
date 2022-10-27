@@ -1993,7 +1993,7 @@ public class FederationClientInterceptor
         YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
     return numMaxThreads;
   }
-  
+
   @VisibleForTesting
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
