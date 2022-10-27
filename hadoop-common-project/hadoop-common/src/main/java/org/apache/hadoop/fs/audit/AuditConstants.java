@@ -94,7 +94,7 @@ public final class AuditConstants {
    * Header: Range for GET request data : {@value }.
    */
   public static final String PARAM_RANGE = "r";
-  
+
   /**
    * Task Attempt ID query header: {@value}.
    */
