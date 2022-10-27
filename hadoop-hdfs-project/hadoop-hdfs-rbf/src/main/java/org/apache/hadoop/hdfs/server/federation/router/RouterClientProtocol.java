@@ -789,7 +789,7 @@ public class RouterClientProtocol implements ClientProtocol {
         continue;
       }
 
-      // Set owner/group
+      // Set owner
       String username = RouterRpcServer.getRemoteUser().getShortUserName();
       method = new RemoteMethod("setOwner",
           new Class<?>[]{String.class, String.class, String.class},

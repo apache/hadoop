@@ -212,6 +212,9 @@ public class TestRouterTrash {
     Field autoCreateUserHomeField = RouterClientProtocol.class.getDeclaredField(
         "autoCreateUserHomeForTrash");
     autoCreateUserHomeField.setAccessible(true);
+    // Save the original value
+    boolean originalAutoCreate =
+        autoCreateUserHomeField.getBoolean(clientProcotol);
 
     // Set owner to TEST_USER for root dir
     DFSClient superUserClient = nnContext.getClient();
@@ -252,6 +255,9 @@ public class TestRouterTrash {
     assertTrue(trash.moveToTrash(filePath));
     assertFalse(nnFs.exists(filePath));
     assertTrue(nnFs.exists(new Path(trashPath)));
+
+    // Restore the autoCreateUserHome flag
+    autoCreateUserHomeField.set(clientProcotol, originalAutoCreate);
   }
 
   @Test

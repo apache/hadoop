@@ -952,7 +952,7 @@ public class RouterRpcClient {
    * This method is the same as invokeSingle, except that it uses router's
    * identity.
    */
-  public <T> T invokeSingleAsRouter(final RemoteLocationContext location,
+  <T> T invokeSingleAsRouter(final RemoteLocationContext location,
       RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
     List<RemoteLocationContext> locations = Collections.singletonList(location);
@@ -1020,7 +1020,7 @@ public class RouterRpcClient {
    * This method is the same as invokeSequential, except that it uses
    * router's identity to make the calls.
    */
-  public <T> T invokeSequentialAsRouter(
+  <T> T invokeSequentialAsRouter(
       final List<? extends RemoteLocationContext> locations,
       final RemoteMethod remoteMethod, Class<T> expectedResultClass,
       Object expectedResultValue) throws IOException {
