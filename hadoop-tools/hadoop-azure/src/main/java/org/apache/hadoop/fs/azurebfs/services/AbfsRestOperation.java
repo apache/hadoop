@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
@@ -309,6 +310,13 @@ public class AbfsRestOperation {
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
+      }
+
+      if (ex instanceof SocketException && "Connection reset".equals(
+          ex.getMessage())) {
+        if(httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL) {
+          return false;
+        }
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
