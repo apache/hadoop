@@ -66,8 +66,7 @@ class AbfsClientThrottlingAnalyzer {
    * the specified name and period.
    *
    * @param name   A name used to identify this instance.
-   * @param period The frequency, in milliseconds, at which metrics are
-   *               analyzed.
+   * @param abfsConfiguration The configuration set.
    * @throws IllegalArgumentException If name is null or empty.
    *                                  If period is less than 1000 or greater than 30000 milliseconds.
    */
@@ -95,6 +94,9 @@ class AbfsClientThrottlingAnalyzer {
         analysisPeriodMs);
   }
 
+  /**
+   * Resumes the timer if it was stopped.
+   */
   public void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
             new AbfsOperationMetrics(System.currentTimeMillis()));
@@ -127,10 +129,10 @@ class AbfsClientThrottlingAnalyzer {
    * @return true if Thread sleeps(Throttling occurs) else false.
    */
   public boolean suspendIfNecessary() {
+    lastExecutionTime.set(now());
     if (isOperationOnAccountIdle.get()) {
       resumeTimer();
     }
-    lastExecutionTime.set(now());
     int duration = sleepDuration;
     if (duration > 0) {
       try {

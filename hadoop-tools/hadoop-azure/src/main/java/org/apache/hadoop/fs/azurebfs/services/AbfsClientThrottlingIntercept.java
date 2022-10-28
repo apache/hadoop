@@ -20,13 +20,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-
 
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
@@ -40,23 +39,23 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
  * and sleeps just enough to minimize errors, allowing optimal ingress and/or
  * egress throughput.
  */
-public final class AbfsClientThrottlingIntercept {
+public final class AbfsClientThrottlingIntercept implements AbfsThrottlingIntercept {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingIntercept.class);
   private static final String RANGE_PREFIX = "bytes=";
   private static AbfsClientThrottlingIntercept singleton = null;
   private AbfsClientThrottlingAnalyzer readThrottler = null;
   private AbfsClientThrottlingAnalyzer writeThrottler = null;
-  private static boolean isAutoThrottlingEnabled = false;
+  private static boolean autoThrottlingEnabled = false;
   private String accountName = "";
 
-  private synchronized void setIsAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
-    isAutoThrottlingEnabled = autoThrottlingEnabled;
+  private synchronized void setAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
+    autoThrottlingEnabled = autoThrottlingEnabled;
   }
 
   // Hide default constructor
   public AbfsClientThrottlingIntercept(String accountName, AbfsConfiguration abfsConfiguration) {
-    setIsAutoThrottlingEnabled(abfsConfiguration.isAutoThrottlingEnabled());
+    setAutoThrottlingEnabled(abfsConfiguration.isAutoThrottlingEnabled());
     this.accountName = accountName;
     this.readThrottler = setAnalyzer("read " + accountName, abfsConfiguration);
     this.writeThrottler = setAnalyzer("write " + accountName, abfsConfiguration);
@@ -81,18 +80,26 @@ public final class AbfsClientThrottlingIntercept {
     return writeThrottler;
   }
 
-  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
+  /**
+   * Creates a singleton object of the AbfsClientThrottlingIntercept.
+   * which is shared across all filesystem instances.
+   * @param abfsConfiguration configuration set.
+   * @return singleton object of intercept.
+   */
+  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(
+      AbfsConfiguration abfsConfiguration) {
     if (singleton == null) {
       singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-      isAutoThrottlingEnabled = true;
+      autoThrottlingEnabled = true;
       LOG.debug("Client-side throttling is enabled for the ABFS file system.");
     }
     return singleton;
   }
 
-  void updateMetrics(AbfsRestOperationType operationType,
-                            AbfsHttpOperation abfsHttpOperation) {
-    if (!isAutoThrottlingEnabled || abfsHttpOperation == null) {
+  @Override
+  public void updateMetrics(AbfsRestOperationType operationType,
+      AbfsHttpOperation abfsHttpOperation) {
+    if (!autoThrottlingEnabled || abfsHttpOperation == null) {
       return;
     }
 
@@ -130,9 +137,10 @@ public final class AbfsClientThrottlingIntercept {
    * uses this to suspend the request, if necessary, to minimize errors and
    * maximize throughput.
    */
-  void sendingRequest(AbfsRestOperationType operationType,
+  @Override
+  public void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters) {
-    if (!isAutoThrottlingEnabled) {
+    if (!autoThrottlingEnabled) {
       return;
     }
     switch (operationType) {

@@ -25,7 +25,6 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +45,8 @@ public class AbfsRestOperation {
   private final AbfsRestOperationType operationType;
   // Blob FS client, which has the credentials, retry policy, and logs.
   private final AbfsClient client;
+  // Return intercept instance
+  private final AbfsThrottlingIntercept intercept;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
   // full URL including query parameters
@@ -146,6 +147,7 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
+    this.intercept = client.getIntercept();
   }
 
   /**
@@ -242,11 +244,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation = null;
-    AbfsConfiguration abfsConfiguration = client.getAbfsConfiguration();
-    String accountName = abfsConfiguration.getAccountName();
-    AbfsClientThrottlingIntercept intercept
-        = AbfsClientThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
+    AbfsHttpOperation httpOperation;
 
     try {
       // initialize the HTTP request and open the connection
@@ -284,9 +282,7 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      if (intercept != null) {
-        intercept.sendingRequest(operationType, abfsCounters);
-      }
+      intercept.sendingRequest(operationType, abfsCounters);
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -324,9 +320,7 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      if (intercept != null) {
-        intercept.updateMetrics(operationType, httpOperation);
-      }
+      intercept.updateMetrics(operationType, httpOperation);
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
