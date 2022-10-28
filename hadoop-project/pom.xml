@@ -210,7 +210,7 @@
     <solr.version>8.8.2</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
-    <woodstox.version>5.3.0</woodstox.version>
+    <woodstox.version>5.4.0</woodstox.version>
     <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
