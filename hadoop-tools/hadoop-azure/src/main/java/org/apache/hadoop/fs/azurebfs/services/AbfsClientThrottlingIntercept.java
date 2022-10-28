@@ -90,8 +90,7 @@ public final class AbfsClientThrottlingIntercept {
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
 
-        int contentLengthReceived = abfsHttpOperation.getConnection()
-            .getContentLength();
+        long contentLengthReceived = abfsHttpOperation.getBytesReceived();
         if (abfsHttpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL
             && contentLength > contentLengthReceived) {
           isFailedOperation = true;
