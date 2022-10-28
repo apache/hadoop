@@ -162,6 +162,7 @@ public final class AzureADAuthenticator {
    *                     with the user's directory (obtain from
    *                     Active Directory configuration)
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
+   * @param clientSecret the client secret of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
    * @return {@link AzureADToken} obtained using the refresh token
    * @throws IOException throws IOException if there is a failure in connecting to Azure AD
@@ -172,8 +173,9 @@ public final class AzureADAuthenticator {
     QueryParams qp = new QueryParams();
     qp.add("grant_type", "refresh_token");
     qp.add("refresh_token", refreshToken);
-    qp.add("client_id", clientId);
-
+    if (clientId != null) {
+      qp.add("client_id", clientId);
+    }
     if (clientSecret != null) {
       qp.add("client_secret", clientSecret);
     }
