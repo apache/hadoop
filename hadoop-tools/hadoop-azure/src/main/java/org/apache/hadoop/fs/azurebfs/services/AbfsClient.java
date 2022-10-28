@@ -108,10 +108,13 @@ public class AbfsClient implements Closeable {
   private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE =
       new LogExactlyOnce(LOG);
 
+  private AbfsClientContext abfsClientContext;
+
   private AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
                     final AbfsConfiguration abfsConfiguration,
                     final AbfsClientContext abfsClientContext)
       throws IOException {
+    this.abfsClientContext = abfsClientContext;
     this.baseUrl = baseUrl;
     this.sharedKeyCredentials = sharedKeyCredentials;
     String baseUrlString = baseUrl.toString();
@@ -675,16 +678,9 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = new AbfsRestOperation(
-        AbfsRestOperationType.Append,
-        this,
-        HTTP_METHOD_PUT,
-        url,
-        requestHeaders,
-        buffer,
-        reqParams.getoffset(),
-        reqParams.getLength(),
-        sasTokenForReuse);
+    final AbfsRestOperation op = getAbfsRestOperation(AbfsRestOperationType.Append,
+        HTTP_METHOD_PUT, url, requestHeaders, buffer, reqParams.getoffset(),
+        reqParams.getLength(), sasTokenForReuse);
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -695,15 +691,9 @@ public class AbfsClient implements Closeable {
       if (reqParams.isAppendBlob()
           && appendSuccessCheckOp(op, path,
           (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
-        final AbfsRestOperation successOp = new AbfsRestOperation(
-            AbfsRestOperationType.Append,
-            this,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders,
-            buffer,
-            reqParams.getoffset(),
-            reqParams.getLength(),
+        final AbfsRestOperation successOp = getAbfsRestOperation(
+            AbfsRestOperationType.Append, HTTP_METHOD_PUT, url, requestHeaders,
+            buffer, reqParams.getoffset(), reqParams.getLength(),
             sasTokenForReuse);
         successOp.hardSetResult(HttpURLConnection.HTTP_OK);
         return successOp;
@@ -841,18 +831,32 @@ public class AbfsClient implements Closeable {
         abfsUriQueryBuilder, cachedSasToken);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.ReadFile,
-            this,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders,
-            buffer,
-            bufferOffset,
-            bufferLength, sasTokenForReuse);
+    final AbfsRestOperation op = getAbfsRestOperation(AbfsRestOperationType.ReadFile,
+        HTTP_METHOD_GET, url, requestHeaders,
+        buffer, bufferOffset, bufferLength, sasTokenForReuse);
     op.execute(tracingContext);
 
     return op;
+  }
+
+  @VisibleForTesting
+  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType readFile,
+      final String httpMethodGet,
+      final URL url,
+      final List<AbfsHttpHeader> requestHeaders,
+      final byte[] buffer,
+      final int bufferOffset,
+      final int bufferLength,
+      final String sasTokenForReuse) {
+    return new AbfsRestOperation(
+        readFile,
+        this,
+        httpMethodGet,
+        url,
+        requestHeaders,
+        buffer,
+        bufferOffset,
+        bufferLength, sasTokenForReuse);
   }
 
   public AbfsRestOperation deletePath(final String path, final boolean recursive, final String continuation,
@@ -1293,5 +1297,15 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   protected AccessTokenProvider getTokenProvider() {
     return tokenProvider;
+  }
+
+  @VisibleForTesting
+  AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
+  }
+
+  @VisibleForTesting
+  AbfsClientContext getAbfsClientContext() {
+    return abfsClientContext;
   }
 }

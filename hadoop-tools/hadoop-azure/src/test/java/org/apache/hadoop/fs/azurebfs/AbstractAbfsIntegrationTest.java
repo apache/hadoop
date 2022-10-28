@@ -298,6 +298,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     return abfs;
   }
 
+  public void setClient(final AbfsClient abfsClient) throws IOException {
+    abfs.getAbfsStore().setClient(abfsClient);
+  }
+
   public AzureBlobFileSystem getFileSystem(Configuration configuration) throws Exception{
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.get(configuration);
     return fs;
