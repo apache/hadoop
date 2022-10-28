@@ -119,6 +119,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.protobuf.AbstractMessageLite;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -153,6 +154,7 @@ public abstract class Server {
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
   private AlignmentContext alignmentContext;
+  private static final ByteString EMPTY_BYTE_STRING = ByteString.newOutput().toByteString();
   /**
    * Logical name of the server used in metrics and monitor.
    */
@@ -939,7 +941,7 @@ public abstract class Server {
     private boolean isCallCoordinated;
     // Serialized RouterFederatedStateProto message to
     // store last seen states for multiple namespaces.
-    private ByteString federatedNamespaceState;
+    private ByteString federatedNamespaceState = null;
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -2881,6 +2883,9 @@ public abstract class Server {
             call.setClientStateId(stateId);
             if (header.hasRouterFederatedState()) {
               call.setFederatedNamespaceState(header.getRouterFederatedState());
+            } else if (header.hasStateId()) {
+              // Only used to determine whether to return federatedNamespaceState.
+              call.setFederatedNamespaceState(EMPTY_BYTE_STRING);
             }
           }
         } catch (IOException ioe) {

@@ -88,10 +88,9 @@ public class ClientGSIContext implements AlignmentContext {
    */
   @Override
   public synchronized void updateRequestState(RpcRequestHeaderProto.Builder header) {
-    if (lastSeenStateId.get() != Long.MIN_VALUE) {
+    if (routerFederatedState == null) {
       header.setStateId(lastSeenStateId.get());
-    }
-    if (routerFederatedState != null) {
+    } else {
       header.setRouterFederatedState(routerFederatedState);
     }
   }

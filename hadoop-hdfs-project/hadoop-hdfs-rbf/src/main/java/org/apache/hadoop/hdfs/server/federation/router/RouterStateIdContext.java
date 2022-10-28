@@ -127,9 +127,18 @@ class RouterStateIdContext implements AlignmentContext {
     return clientStateID;
   }
 
+  /**
+   * @return true if the federatedNamespaceState of current request is not null, else false.
+   */
+  private boolean shouldUpdateResponseState() {
+    Server.Call call = Server.getCurCall().get();
+    return call != null && call.getFederatedNamespaceState() != null;
+  }
+
   @Override
   public void updateResponseState(RpcResponseHeaderProto.Builder header) {
-    if (namespaceIdMap.size() <= maxSizeOfFederatedStateToPropagate) {
+    if (namespaceIdMap.size() <= maxSizeOfFederatedStateToPropagate
+        && shouldUpdateResponseState()) {
       setResponseHeaderState(header);
     }
   }
