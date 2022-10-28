@@ -75,29 +75,29 @@ ENDOFFILE
   testlogfilename="$testOutputLogFolder/Test-Logs-$combination.txt"
   touch "$testlogfilename"
 
-   if [ "$runTest" == true ]
-    then
-      STARTTIME=$(date +%s)
-      echo "Running test for combination $combination on account $accountName [ProcessCount=$processcount]"
-      logOutput "Test run report can be seen in $testlogfilename"
-      mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount="$processcount" verify >> "$testlogfilename" || true
-      ENDTIME=$(date +%s)
-      summary
+  if [ "$runTest" == true ]
+  then
+    STARTTIME=$(date +%s)
+    echo "Running test for combination $combination on account $accountName [ProcessCount=$processcount]"
+    logOutput "Test run report can be seen in $testlogfilename"
+    mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount="$processcount" verify >> "$testlogfilename" || true
+    ENDTIME=$(date +%s)
+    summary
+  fi
+
+  if [ "$cleanUpTestContainers" == true ]
+  then
+    mvn test -Dtest=org.apache.hadoop.fs.azurebfs.utils.CleanupTestContainers >> "$testlogfilename" || true
+    if grep -q "There are test failures" "$testlogfilename";
+    then logOutput "ERROR: All test containers could not be deleted. Detailed error cause in $testlogfilename"
+    pcregrep -M "$testresultsregex" "$testlogfilename"
+    exit 0
     fi
 
-    if [ "$cleanUpTestContainers" == true ]
-    then
-      mvn test -Dtest=org.apache.hadoop.fs.azurebfs.utils.CleanupTestContainers >> "$testlogfilename" || true
-      if grep -q "There are test failures" "$testlogfilename";
-      then logOutput "ERROR: All test containers could not be deleted. Detailed error cause in $testlogfilename"
-      pcregrep -M "$testresultsregex" "$testlogfilename"
-      exit 0
-      fi
+    logOutput "Delete test containers - complete. Test run logs in - $testlogfilename"
+  fi
 
-      logOutput "Delete test containers - complete. Test run logs in - $testlogfilename"
-    fi
-
-  }
+}
 
 summary() {
   {
@@ -169,8 +169,4 @@ init() {
 
 logOutput() {
   echo -e "$outputFormatOn" "$1" "$outputFormatOff"
-<<<<<<< Updated upstream
 }
-=======
-}
->>>>>>> Stashed changes
