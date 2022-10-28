@@ -60,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -76,6 +77,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
@@ -140,6 +142,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -2809,10 +2812,63 @@ public class TestClientRMService {
     rm.close();
   }
 
+  @Test
+  public void testGetClusterMetrics() throws Exception {
+    MockRM rm = new MockRM() {
+      protected ClientRMService createClientRMService() {
+        return new ClientRMService(this.rmContext, scheduler,
+          this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
+          this.getRMContext().getRMDelegationTokenSecretManager());
+      };
+    };
+    rm.start();
+
+    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
+    clusterMetrics.incrDecommissioningNMs();
+    repeat(2, clusterMetrics::incrDecommisionedNMs);
+    repeat(3, clusterMetrics::incrNumActiveNodes);
+    repeat(4, clusterMetrics::incrNumLostNMs);
+    repeat(5, clusterMetrics::incrNumUnhealthyNMs);
+    repeat(6, clusterMetrics::incrNumRebootedNMs);
+    repeat(7, clusterMetrics::incrNumShutdownNMs);
+
+    // Create a client.
+    Configuration conf = new Configuration();
+    YarnRPC rpc = YarnRPC.create(conf);
+    InetSocketAddress rmAddress = rm.getClientRMService().getBindAddress();
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    ApplicationClientProtocol client =
+        (ApplicationClientProtocol) rpc
+          .getProxy(ApplicationClientProtocol.class, rmAddress, conf);
+
+    YarnClusterMetrics ymetrics = client.getClusterMetrics(
+        GetClusterMetricsRequest.newInstance()).getClusterMetrics();
+
+    Assert.assertEquals(0, ymetrics.getNumNodeManagers());
+    Assert.assertEquals(1, ymetrics.getNumDecommissioningNodeManagers());
+    Assert.assertEquals(2, ymetrics.getNumDecommissionedNodeManagers());
+    Assert.assertEquals(3, ymetrics.getNumActiveNodeManagers());
+    Assert.assertEquals(4, ymetrics.getNumLostNodeManagers());
+    Assert.assertEquals(5, ymetrics.getNumUnhealthyNodeManagers());
+    Assert.assertEquals(6, ymetrics.getNumRebootedNodeManagers());
+    Assert.assertEquals(7, ymetrics.getNumShutdownNodeManagers());
+
+    rpc.stopProxy(client, conf);
+    rm.close();
+  }
+
   @After
   public void tearDown(){
     if (resourceTypesFile != null && resourceTypesFile.exists()) {
       resourceTypesFile.delete();
+    }
+    ClusterMetrics.destroy();
+    DefaultMetricsSystem.shutdown();
+  }
+
+  private static void repeat(int n, Runnable r) {
+    for (int i = 0; i < n; ++i) {
+      r.run();
     }
   }
 }

@@ -38,10 +38,12 @@ public class TestRouterYarnClientUtils {
     YarnClusterMetrics resultMetrics = result.getClusterMetrics();
     Assert.assertEquals(3, resultMetrics.getNumNodeManagers());
     Assert.assertEquals(3, resultMetrics.getNumActiveNodeManagers());
+    Assert.assertEquals(3, resultMetrics.getNumDecommissioningNodeManagers());
     Assert.assertEquals(3, resultMetrics.getNumDecommissionedNodeManagers());
     Assert.assertEquals(3, resultMetrics.getNumLostNodeManagers());
     Assert.assertEquals(3, resultMetrics.getNumRebootedNodeManagers());
     Assert.assertEquals(3, resultMetrics.getNumUnhealthyNodeManagers());
+    Assert.assertEquals(3, resultMetrics.getNumShutdownNodeManagers());
   }
 
   public GetClusterMetricsResponse getClusterMetricsResponse(int value) {
@@ -49,9 +51,11 @@ public class TestRouterYarnClientUtils {
     metrics.setNumUnhealthyNodeManagers(value);
     metrics.setNumRebootedNodeManagers(value);
     metrics.setNumLostNodeManagers(value);
+    metrics.setNumDecommissioningNodeManagers(value);
     metrics.setNumDecommissionedNodeManagers(value);
     metrics.setNumActiveNodeManagers(value);
     metrics.setNumNodeManagers(value);
+    metrics.setNumShutdownNodeManagers(value);
     return GetClusterMetricsResponse.newInstance(metrics);
   }
 }
