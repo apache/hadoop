@@ -41,7 +41,8 @@ public class AppendRequestParameters {
       final int length,
       final Mode mode,
       final boolean isAppendBlob,
-      final String leaseId, boolean isExpectHeaderEnabled) {
+      final String leaseId,
+      final boolean isExpectHeaderEnabled) {
     this.position = position;
     this.offset = offset;
     this.length = length;

@@ -693,8 +693,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     return new AbfsOutputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withWriteBufferSize(bufferSize)
-            .enableFlush(abfsConfiguration.isFlushEnabled())
             .enableExpectHeader(abfsConfiguration.isExpectHeaderEnabled())
+            .enableFlush(abfsConfiguration.isFlushEnabled())
             .enableSmallWriteOptimization(abfsConfiguration.isSmallWriteOptimizationEnabled())
             .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
             .withStreamStatistics(new AbfsOutputStreamStatisticsImpl())

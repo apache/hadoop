@@ -651,11 +651,11 @@ public class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
     if (reqParams.getIsExpectHeaderEnabled()) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
+    // JDK7 does not support PATCH, so to workaround the issue we will use
+    // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
         HTTP_METHOD_PATCH));
     if (reqParams.getLeaseId() != null) {
@@ -692,13 +692,15 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
-      /*
-        If the http response code indicates a user error we retry the same append request with expect header disabled.
-        When "100-continue" header is enabled but a non Http 100 response comes, JDK fails to provide all response headers.
-        This handling is to avoid breaking of backward compatibility if someone has taken dependency on the exception message,
-        which is created using the error string present in the response header.
-       */
-      if (checkUserError(e) && reqParams.getIsExpectHeaderEnabled()) {
+      // If the http response code indicates a user error we retry
+      // the same append request with expect header disabled.
+      // When "100-continue" header is enabled but a non Http 100 response comes,
+      // JDK fails to provide all response headers.
+      // This handling is to avoid breaking of backward compatibility
+      // if someone has taken dependency on the exception message,
+      // which is created using the error string present in the response header.
+      int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
+      if (checkUserError(responseStatusCode) && reqParams.getIsExpectHeaderEnabled()) {
         reqParams.setExpectHeaderEnabled(false);
         return this.append(path, buffer, reqParams, cachedSasToken,
             tracingContext);
@@ -730,15 +732,13 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Returns true if the status code lies in the range of user error
-   * @param e Exception caught
-   * @return True or False
+   * Returns true if the status code lies in the range of user error.
+   * @param responseStatusCode http response status code.
+   * @return True or False.
    */
-  private boolean checkUserError(AzureBlobFileSystemException e) {
-    return ((AbfsRestOperationException) e).getStatusCode()
-        >= HttpURLConnection.HTTP_BAD_REQUEST
-        && ((AbfsRestOperationException) e).getStatusCode()
-        < HttpURLConnection.HTTP_INTERNAL_ERROR;
+  private boolean checkUserError(int responseStatusCode) {
+    return (responseStatusCode >= HttpURLConnection.HTTP_BAD_REQUEST
+        && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
   }
 
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
