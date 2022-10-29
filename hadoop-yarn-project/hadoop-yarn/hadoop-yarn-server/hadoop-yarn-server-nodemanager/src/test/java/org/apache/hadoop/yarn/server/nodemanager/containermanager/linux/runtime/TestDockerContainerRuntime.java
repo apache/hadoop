@@ -2033,19 +2033,16 @@ public class TestDockerContainerRuntime {
 
   @Test
   public void testDockerImageNamePattern() throws Exception {
-    String[] validNames =
-        { "ubuntu", "fedora/httpd:version1.0",
-            "fedora/httpd:version1.0.test",
-            "fedora/httpd:version1.0.TEST",
-            "myregistryhost:5000/ubuntu",
-            "myregistryhost:5000/fedora/httpd:version1.0",
-            "myregistryhost:5000/fedora/httpd:version1.0.test",
-            "myregistryhost:5000/fedora/httpd:version1.0.TEST"};
+    String[] validNames = {"ubuntu", "fedora/httpd:version1.0", "fedora/httpd:version1.0.test",
+        "fedora/httpd:version1.0.TEST", "myregistryhost:5000/ubuntu",
+        "myregistryhost:5000/fedora/httpd:version1.0",
+        "myregistryhost:5000/fedora/httpd:version1.0.test",
+        "myregistryhost:5000/fedora/httpd:version1.0.TEST",
+        "123456789123.dkr.ecr.us-east-1.amazonaws.com/emr-docker-examples:pyspark-example"
+            + "@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807"};
 
-    String[] invalidNames = { "Ubuntu", "ubuntu || fedora", "ubuntu#",
-        "myregistryhost:50AB0/ubuntu", "myregistry#host:50AB0/ubuntu",
-        ":8080/ubuntu"
-    };
+    String[] invalidNames = {"Ubuntu", "ubuntu || fedora", "ubuntu#", "myregistryhost:50AB0/ubuntu",
+        "myregistry#host:50AB0/ubuntu", ":8080/ubuntu"};
 
     for (String name : validNames) {
       DockerLinuxContainerRuntime.validateImageName(name);
