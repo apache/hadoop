@@ -148,6 +148,16 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   }
 
   @Override
+  public int getBlocksPerLock() {
+    return 0;
+  }
+
+  @Override
+  public void setBlocksPerLock(int blocksPerLock) {
+    // nothing.
+  }
+
+  @Override
   public void run() {
     LOG.debug("DatanodeAdminMonitor is running.");
     if (!namesystem.isRunning()) {

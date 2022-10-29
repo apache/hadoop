@@ -73,7 +73,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * The numbe of blocks to process when moving blocks to pendingReplication
    * before releasing and reclaiming the namenode lock.
    */
-  private int blocksPerLock;
+  private volatile int blocksPerLock;
 
   /**
    * The number of blocks that have been checked on this tick.
@@ -808,6 +808,14 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
 
   public void setPendingRepLimit(int pendingRepLimit) {
     this.pendingRepLimit = pendingRepLimit;
+  }
+
+  public int getBlocksPerLock() {
+    return blocksPerLock;
+  }
+
+  public void setBlocksPerLock(int blocksPerLock) {
+    this.blocksPerLock = blocksPerLock;
   }
 
   static class BlockStats {

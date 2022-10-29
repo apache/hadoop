@@ -41,4 +41,8 @@ public interface DatanodeAdminMonitorInterface extends Runnable {
   int getPendingRepLimit();
 
   void setPendingRepLimit(int pendingRepLimit);
+
+  int getBlocksPerLock();
+
+  void setBlocksPerLock(int blocksPerLock);
 }
