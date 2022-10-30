@@ -582,10 +582,9 @@ public class TestNameNodeReconfigure {
     int defaultBlocksPerLock = 1000;
     conf.setInt(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK,
         defaultBlocksPerLock);
-    MiniDFSCluster newCluster = new MiniDFSCluster.Builder(conf).build();
-    newCluster.waitActive();
 
-    try {
+    try (MiniDFSCluster newCluster = new MiniDFSCluster.Builder(conf).build()) {
+      newCluster.waitActive();
       final NameNode nameNode = newCluster.getNameNode();
       final DatanodeManager datanodeManager = nameNode.namesystem
           .getBlockManager().getDatanodeManager();
@@ -650,10 +649,6 @@ public class TestNameNodeReconfigure {
       nameNode.reconfigureProperty(
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
-    } finally {
-      if (newCluster != null) {
-        newCluster.shutdown();
-      }
     }
   }
 

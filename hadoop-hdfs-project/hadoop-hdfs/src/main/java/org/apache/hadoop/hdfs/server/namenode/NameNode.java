@@ -2614,7 +2614,7 @@ public class NameNode extends ReconfigurableBase implements
   private String reconfigureDecommissionBackoffMonitorParameters(
       final DatanodeManager datanodeManager, final String property, final String newVal)
       throws ReconfigurationException {
-    String newSetting;
+    String newSetting = null;
     try {
       if (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT)) {
         int pendingRepLimit = (newVal == null ?
@@ -2623,16 +2623,14 @@ public class NameNode extends ReconfigurableBase implements
         datanodeManager.getDatanodeAdminManager().refreshPendingRepLimit(pendingRepLimit,
             DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT);
         newSetting = String.valueOf(datanodeManager.getDatanodeAdminManager().getPendingRepLimit());
-      } else if (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK)) {
+      } else if (property.equals
+          (DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK)) {
         int blocksPerLock = (newVal == null ?
             DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK_DEFAULT :
             Integer.parseInt(newVal));
         datanodeManager.getDatanodeAdminManager().refreshBlocksPerLock(blocksPerLock,
             DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK);
         newSetting = String.valueOf(datanodeManager.getDatanodeAdminManager().getBlocksPerLock());
-      } else {
-        throw new IllegalArgumentException("Unexpected property " +
-            property + " in reconfigureDecommissionBackoffMonitorParameters");
       }
       LOG.info("RECONFIGURE* changed reconfigureDecommissionBackoffMonitorParameters {} to {}",
           property, newSetting);

@@ -424,6 +424,7 @@ public class DatanodeAdminManager {
     this.monitor.setPendingRepLimit(pendingRepLimit);
   }
 
+  @VisibleForTesting
   public int getPendingRepLimit() {
     return this.monitor.getPendingRepLimit();
   }
@@ -433,6 +434,7 @@ public class DatanodeAdminManager {
     this.monitor.setBlocksPerLock(blocksPerLock);
   }
 
+  @VisibleForTesting
   public int getBlocksPerLock() {
     return this.monitor.getBlocksPerLock();
   }
