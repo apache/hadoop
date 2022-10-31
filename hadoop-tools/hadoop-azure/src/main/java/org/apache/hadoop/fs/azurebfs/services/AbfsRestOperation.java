@@ -320,7 +320,8 @@ public class AbfsRestOperation {
       if (ex instanceof SocketException && "Connection reset".equals(
           ex.getMessage())) {
         if(httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL) {
-          return false;
+          result = httpOperation;
+          return true;
         }
       }
 

@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.Random;
 
 import org.junit.Assert;
@@ -59,7 +60,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testRecoverPartialRead() throws Exception {
-
     int fileSize = 4*ONE_MB;
     Path testPath = path(TEST_PATH);
     setup(testPath, fileSize);
@@ -68,15 +68,53 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     final AbfsClient originalClient = fs.getAbfsClient();
     MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
     MockHttpOperationTestIntercept mockHttpOperationTestIntercept = new MockHttpOperationTestIntercept() {
-
       private int callCount = 0;
-
       @Override
       public MockHttpOperationTestInterceptResult intercept() throws IOException {
         MockHttpOperationTestInterceptResult mockHttpOperationTestInterceptResult
             = new MockHttpOperationTestInterceptResult();
         mockHttpOperationTestInterceptResult.status = 206;
         mockHttpOperationTestInterceptResult.bytesRead = ONE_MB;
+        callCount++;
+        return mockHttpOperationTestInterceptResult;
+      }
+      public int getCallCount() {
+        return callCount;
+      }
+    };
+    abfsClient.setMockHttpOperationTestIntercept(mockHttpOperationTestIntercept);
+    fs.getAbfsStore().setClient(abfsClient);
+
+    AbfsClientThrottlingIntercept intercept = AbfsClientThrottlingInterceptTestUtil.get();
+    MockAbfsClientThrottlingAnalyzer readAnalyzer = new MockAbfsClientThrottlingAnalyzer("read");
+    AbfsClientThrottlingInterceptTestUtil.setReadAnalyzer(intercept, readAnalyzer);
+
+    FSDataInputStream inputStream = fs.open(testPath);
+    byte[] buffer = new byte[fileSize];
+    inputStream.read(0, buffer, 0, fileSize);
+
+    Assert.assertEquals(4, mockHttpOperationTestIntercept.getCallCount());
+    Assert.assertEquals(4, readAnalyzer.getFailedInstances());
+  }
+
+  @Test
+  public void testPartialReadWithConnectionReset() throws IOException {
+    int fileSize = 4*ONE_MB;
+    Path testPath = path(TEST_PATH);
+    setup(testPath, fileSize);
+
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AbfsClient originalClient = fs.getAbfsClient();
+    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
+    MockHttpOperationTestIntercept mockHttpOperationTestIntercept = new MockHttpOperationTestIntercept() {
+      private int callCount = 0;
+      @Override
+      public MockHttpOperationTestInterceptResult intercept() throws IOException {
+        MockHttpOperationTestInterceptResult mockHttpOperationTestInterceptResult
+            = new MockHttpOperationTestInterceptResult();
+        mockHttpOperationTestInterceptResult.status = 206;
+        mockHttpOperationTestInterceptResult.bytesRead = ONE_MB;
+        mockHttpOperationTestInterceptResult.exception = new SocketException("Connection reset");
         callCount++;
         return mockHttpOperationTestInterceptResult;
       }
