@@ -2623,8 +2623,8 @@ public class NameNode extends ReconfigurableBase implements
         datanodeManager.getDatanodeAdminManager().refreshPendingRepLimit(pendingRepLimit,
             DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT);
         newSetting = String.valueOf(datanodeManager.getDatanodeAdminManager().getPendingRepLimit());
-      } else if (property.equals
-          (DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK)) {
+      } else if (property.equals(
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK)) {
         int blocksPerLock = (newVal == null ?
             DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK_DEFAULT :
             Integer.parseInt(newVal));
