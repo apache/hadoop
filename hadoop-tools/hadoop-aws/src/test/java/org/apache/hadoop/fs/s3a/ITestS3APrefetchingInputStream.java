@@ -92,11 +92,12 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private void openFS() throws Exception {
     Configuration conf = getConfiguration();
+    String largeFileUri = S3ATestUtils.getCSVTestFile(conf);
 
-    largeFile = new Path(DEFAULT_CSVTEST_FILE);
+    largeFile = new Path(largeFileUri);
     blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
     largeFileFS = new S3AFileSystem();
-    largeFileFS.initialize(new URI(DEFAULT_CSVTEST_FILE), getConfiguration());
+    largeFileFS.initialize(new URI(largeFileUri), getConfiguration());
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
     numBlocks = calculateNumBlocks(largeFileSize, blockSize);
