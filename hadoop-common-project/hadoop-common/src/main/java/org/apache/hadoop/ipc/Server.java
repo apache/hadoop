@@ -2881,12 +2881,12 @@ public abstract class Server {
             stateId = alignmentContext.receiveRequestState(
                 header, getMaxIdleTime());
             call.setClientStateId(stateId);
-            if (header.hasRouterFederatedState()) {
-              call.setFederatedNamespaceState(header.getRouterFederatedState());
-            } else if (header.hasStateId()) {
-              // Only used to determine whether to return federatedNamespaceState.
-              call.setFederatedNamespaceState(EMPTY_BYTE_STRING);
-            }
+          }
+          if (header.hasRouterFederatedState()) {
+            call.setFederatedNamespaceState(header.getRouterFederatedState());
+          } else if (header.hasStateId()) {
+            // Only used to determine whether to return federatedNamespaceState.
+            call.setFederatedNamespaceState(EMPTY_BYTE_STRING);
           }
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
