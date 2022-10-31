@@ -51,6 +51,11 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
 
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
+import software.amazon.awssdk.core.client.config.SdkClientOption;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -346,12 +351,15 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("configuration");
+      S3Client s3 = fs.getAmazonS3V2ClientForTesting("configuration");
       assertNotNull(s3);
-      S3ClientOptions clientOptions = getField(s3, S3ClientOptions.class,
-          "clientOptions");
+
+      SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
+          "clientConfiguration");
+      S3Configuration s3Configuration =
+          (S3Configuration)clientConfiguration.option(SdkClientOption.SERVICE_CONFIGURATION);
       assertTrue("Expected to find path style access to be switched on!",
-          clientOptions.isPathStyleAccess());
+          s3Configuration.pathStyleAccessEnabled());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
           new Path("/path/style/access/testFile"), file, file.length,
