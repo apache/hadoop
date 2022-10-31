@@ -34,15 +34,26 @@ public class MockAbfsClient extends AbfsClient {
   }
 
   @Override
-  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType readFile,
-      final String httpMethodGet,
+  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+      final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,
       final byte[] buffer,
       final int bufferOffset,
       final int bufferLength,
       final String sasTokenForReuse) {
-    return super.getAbfsRestOperation(readFile, httpMethodGet, url,
+    if(AbfsRestOperationType.ReadFile == operationType) {
+      return new MockAbfsRestOperation(
+          operationType,
+          this,
+          httpMethod,
+          url,
+          requestHeaders,
+          buffer,
+          bufferOffset,
+          bufferLength, sasTokenForReuse);
+    }
+    return super.getAbfsRestOperation(operationType, httpMethod, url,
         requestHeaders, buffer, bufferOffset, bufferLength, sasTokenForReuse);
   }
 }

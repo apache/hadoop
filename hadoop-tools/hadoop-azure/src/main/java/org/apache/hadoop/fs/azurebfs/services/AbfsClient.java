@@ -840,8 +840,8 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType readFile,
-      final String httpMethodGet,
+  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+      final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,
       final byte[] buffer,
@@ -849,9 +849,9 @@ public class AbfsClient implements Closeable {
       final int bufferLength,
       final String sasTokenForReuse) {
     return new AbfsRestOperation(
-        readFile,
+        operationType,
         this,
-        httpMethodGet,
+        httpMethod,
         url,
         requestHeaders,
         buffer,
