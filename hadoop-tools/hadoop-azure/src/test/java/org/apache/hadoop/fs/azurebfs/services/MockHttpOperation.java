@@ -19,7 +19,10 @@ public class MockHttpOperation extends AbfsHttpOperation {
       final int offset,
       final int length) throws IOException {
 //    super.processResponse(buffer, offset, length);
-    mockHttpOperationTestIntercept.intercept();
+    MockHttpOperationTestInterceptResult result =
+        mockHttpOperationTestIntercept.intercept();
+    statusCode = result.status;
+    bytesReceived = result.bytesRead;
   }
 
   public void setMockHttpOperationTestIntercept(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {

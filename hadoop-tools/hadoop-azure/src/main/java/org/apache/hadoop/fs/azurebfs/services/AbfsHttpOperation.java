@@ -63,7 +63,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
-  private int statusCode;
+  protected int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage  = "";
@@ -73,7 +73,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   // metrics
   private int bytesSent;
-  private long bytesReceived;
+  protected long bytesReceived;
 
   // optional trace enabled metrics
   private final boolean isTraceEnabled;

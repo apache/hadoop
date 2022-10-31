@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
@@ -51,6 +52,16 @@ public final class AbfsClientThrottlingIntercept {
   private AbfsClientThrottlingIntercept() {
     readThrottler = new AbfsClientThrottlingAnalyzer("read");
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
+  }
+
+  @VisibleForTesting
+  void setReadThrottler(final AbfsClientThrottlingAnalyzer readThrottler) {
+    this.readThrottler = readThrottler;
+  }
+
+  @VisibleForTesting
+  static AbfsClientThrottlingIntercept getSingleton() {
+    return singleton;
   }
 
   public static synchronized void initializeSingleton(boolean enableAutoThrottling) {
