@@ -4,11 +4,16 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
+import com.sun.org.apache.xpath.internal.operations.Bool;
+
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
 public class MockAbfsClient extends AbfsClient {
+
+  private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;
+
   public MockAbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
       final AbfsConfiguration abfsConfiguration,
@@ -43,7 +48,7 @@ public class MockAbfsClient extends AbfsClient {
       final int bufferLength,
       final String sasTokenForReuse) {
     if(AbfsRestOperationType.ReadFile == operationType) {
-      return new MockAbfsRestOperation(
+      MockAbfsRestOperation op = new MockAbfsRestOperation(
           operationType,
           this,
           httpMethod,
@@ -52,8 +57,14 @@ public class MockAbfsClient extends AbfsClient {
           buffer,
           bufferOffset,
           bufferLength, sasTokenForReuse);
+      op.setMockHttpOperationTestIntercept(mockHttpOperationTestIntercept);
+      return op;
     }
     return super.getAbfsRestOperation(operationType, httpMethod, url,
         requestHeaders, buffer, bufferOffset, bufferLength, sasTokenForReuse);
+  }
+
+  public void setMockHttpOperationTestIntercept(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
+    this.mockHttpOperationTestIntercept = mockHttpOperationTestIntercept;
   }
 }

@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-
 public class MockAbfsRestOperation extends AbfsRestOperation {
+  private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;
 
   public MockAbfsRestOperation(final AbfsRestOperationType operationType,
       final AbfsClient client,
@@ -24,6 +22,12 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
 
   @Override
   AbfsHttpOperation getHttpOperation() throws IOException {
-    return new MockHttpOperation(getUrl(), getMethod(), getRequestHeaders());
+    MockHttpOperation op = new MockHttpOperation(getUrl(), getMethod(), getRequestHeaders());
+    op.setMockHttpOperationTestIntercept(mockHttpOperationTestIntercept);
+    return op;
+  }
+
+  public void setMockHttpOperationTestIntercept(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
+    this.mockHttpOperationTestIntercept = mockHttpOperationTestIntercept;
   }
 }
