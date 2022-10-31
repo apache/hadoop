@@ -140,12 +140,8 @@ public final class CallerContext {
     }
 
     public Builder(String context, Configuration conf) {
-      if (isValid(context)) {
-        sb.append(context);
-      }
-      fieldSeparator = conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
-          HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
-      checkFieldSeparator(fieldSeparator);
+      this(context, conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
+              HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT));
     }
 
     public Builder(String context, String separator) {

@@ -20,50 +20,41 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
 import com.google.gson.Gson;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONUnmarshaller;
 
-class FederationBlock extends HtmlBlock {
+class FederationBlock extends RouterBlock {
 
   private final Router router;
 
   @Inject
   FederationBlock(ViewContext ctx, Router router) {
-    super(ctx);
+    super(router, ctx);
     this.router = router;
   }
 
   @Override
   public void render(Block html) {
 
-    Configuration conf = this.router.getConfig();
-    boolean isEnabled = conf.getBoolean(
-        YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    boolean isEnabled = isYarnFederationEnabled();
 
     // init Html Page Federation
     initHtmlPageFederation(html, isEnabled);
@@ -121,23 +112,6 @@ class FederationBlock extends HtmlBlock {
   private void initHtmlPageFederation(Block html, boolean isEnabled) {
     List<Map<String, String>> lists = new ArrayList<>();
 
-    // If Yarn Federation is not enabled, the user needs to be prompted.
-    if (!isEnabled) {
-      html.style(".alert {padding: 15px; margin-bottom: 20px; " +
-          " border: 1px solid transparent; border-radius: 4px;}");
-      html.style(".alert-dismissable {padding-right: 35px;}");
-      html.style(".alert-info {color: #856404;background-color: #fff3cd;border-color: #ffeeba;}");
-
-      Hamlet.DIV<Hamlet> div = html.div("#div_id").$class("alert alert-dismissable alert-info");
-      div.p().$style("color:red").__("Federation is not Enabled.").__()
-          .p().__()
-          .p().__("We can refer to the following documents to configure Yarn Federation. ").__()
-          .p().__()
-          .a("https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/Federation.html",
-          "Hadoop: YARN Federation").
-          __();
-    }
-
     // Table header
     TBODY<TABLE<Hamlet>> tbody =
         html.table("#rms").$class("cell-border").$style("width:100%").thead().tr()
@@ -150,16 +124,9 @@ class FederationBlock extends HtmlBlock {
         .__().__().tbody();
 
     try {
-      // Binding to the FederationStateStore
-      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
-
-      Map<SubClusterId, SubClusterInfo> subClustersInfo = facade.getSubClusters(true);
 
       // Sort the SubClusters
-      List<SubClusterInfo> subclusters = new ArrayList<>();
-      subclusters.addAll(subClustersInfo.values());
-      Comparator<? super SubClusterInfo> cmp = Comparator.comparing(o -> o.getSubClusterId());
-      Collections.sort(subclusters, cmp);
+      List<SubClusterInfo> subclusters = getSubClusterInfoList();
 
       for (SubClusterInfo subcluster : subclusters) {
 

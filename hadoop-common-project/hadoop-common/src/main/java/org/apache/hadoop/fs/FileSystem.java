@@ -21,7 +21,6 @@ import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.ref.WeakReference;
 import java.lang.ref.ReferenceQueue;
 import java.net.URI;
@@ -1543,6 +1542,39 @@ public abstract class FileSystem extends Configured
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
+
+  /**
+   * Append to an existing file (optional operation).
+   * @param f the existing file to be appended.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, boolean appendToNewBlock) throws IOException {
+    return append(f, getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
+        IO_FILE_BUFFER_SIZE_DEFAULT), null, appendToNewBlock);
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   * This function is used for being overridden by some FileSystem like DistributedFileSystem
+   * @param f the existing file to be appended.
+   * @param bufferSize the size of the buffer to be used.
+   * @param progress for reporting progress if it is not null.
+   * @param appendToNewBlock whether to append data to a new block
+   * instead of the end of the last partial block
+   * @throws IOException IO failure
+   * @throws UnsupportedOperationException if the operation is unsupported
+   *         (default).
+   * @return output stream.
+   */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress, boolean appendToNewBlock) throws IOException {
+    return append(f, bufferSize, progress);
+  }
 
   /**
    * Concat existing files together.
@@ -3647,11 +3679,7 @@ public abstract class FileSystem extends Configured
       // to construct an instance.
       try (DurationInfo d = new DurationInfo(LOGGER, false,
           "Acquiring creator semaphore for %s", uri)) {
-        creatorPermits.acquire();
-      } catch (InterruptedException e) {
-        // acquisition was interrupted; convert to an IOE.
-        throw (IOException)new InterruptedIOException(e.toString())
-            .initCause(e);
+        creatorPermits.acquireUninterruptibly();
       }
       FileSystem fsToClose = null;
       try {

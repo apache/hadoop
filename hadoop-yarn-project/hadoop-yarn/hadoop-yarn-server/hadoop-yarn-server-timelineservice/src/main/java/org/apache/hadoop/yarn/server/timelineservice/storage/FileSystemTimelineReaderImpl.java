@@ -93,7 +93,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private static final String STORAGE_DIR_ROOT = "timeline_service_data";
 
   private final CSVFormat csvFormat =
-      CSVFormat.DEFAULT.withHeader("APP", "USER", "FLOW", "FLOWRUN");
+      CSVFormat.Builder.create().setHeader("APP", "USER", "FLOW", "FLOWRUN").build();
 
   public FileSystemTimelineReaderImpl() {
     super(FileSystemTimelineReaderImpl.class.getName());

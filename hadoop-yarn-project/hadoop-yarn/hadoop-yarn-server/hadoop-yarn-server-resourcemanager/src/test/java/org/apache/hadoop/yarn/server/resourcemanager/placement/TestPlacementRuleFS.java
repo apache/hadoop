@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
@@ -188,11 +189,10 @@ public class TestPlacementRuleFS {
 
   private Element createConf(String str) {
     // Create a simple rule element to use in the rule create
-    DocumentBuilderFactory docBuilderFactory =
-        DocumentBuilderFactory.newInstance();
-    docBuilderFactory.setIgnoringComments(true);
     Document doc = null;
     try {
+      DocumentBuilderFactory docBuilderFactory = XMLUtils.newSecureDocumentBuilderFactory();
+      docBuilderFactory.setIgnoringComments(true);
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       doc = builder.parse(IOUtils.toInputStream(str, StandardCharsets.UTF_8));
     } catch (Exception ex) {
