@@ -119,7 +119,7 @@ public class AbfsConfiguration{
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED)
-  private boolean isAccountThrottlingEnabled;
+  private boolean accountThrottlingEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
@@ -701,8 +701,8 @@ public class AbfsConfiguration{
     return this.azureAppendBlobDirs;
   }
 
-  public boolean isAccountThrottlingEnabled() {
-    return isAccountThrottlingEnabled;
+  public boolean accountThrottlingEnabled() {
+    return accountThrottlingEnabled;
   }
 
   public String getAzureInfiniteLeaseDirs() {

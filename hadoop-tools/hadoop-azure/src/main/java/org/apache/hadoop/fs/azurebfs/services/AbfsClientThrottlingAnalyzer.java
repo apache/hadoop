@@ -47,6 +47,7 @@ class AbfsClientThrottlingAnalyzer {
   private static final double SLEEP_DECREASE_FACTOR = .975;
   private static final double SLEEP_INCREASE_FACTOR = 1.05;
   private int analysisPeriodMs;
+
   private volatile int sleepDuration = 0;
   private long consecutiveNoErrorCount = 0;
   private String name = null;
@@ -55,7 +56,7 @@ class AbfsClientThrottlingAnalyzer {
   private AtomicLong lastExecutionTime = null;
   private AtomicBoolean isOperationOnAccountIdle = null;
   private AbfsConfiguration abfsConfiguration = null;
-  private boolean isAccountLevelThrottlingEnabled = true;
+  private boolean accountLevelThrottlingEnabled = true;
 
   private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
@@ -81,7 +82,7 @@ class AbfsClientThrottlingAnalyzer {
         "The argument 'period' must be between 1000 and 30000.");
     this.name = name;
     this.abfsConfiguration = abfsConfiguration;
-    this.isAccountLevelThrottlingEnabled = abfsConfiguration.isAccountThrottlingEnabled();
+    this.accountLevelThrottlingEnabled = abfsConfiguration.accountThrottlingEnabled();
     this.analysisPeriodMs = abfsConfiguration.getAnalysisPeriod();
     this.lastExecutionTime = new AtomicLong(now());
     this.isOperationOnAccountIdle = new AtomicBoolean(false);
@@ -115,11 +116,11 @@ class AbfsClientThrottlingAnalyzer {
   public void addBytesTransferred(long count, boolean isFailedOperation) {
     AbfsOperationMetrics metrics = blobMetrics.get();
     if (isFailedOperation) {
-      metrics.getBytesFailed().addAndGet(count);
-      metrics.getOperationsFailed().incrementAndGet();
+      metrics.addBytesFailed(count);
+      metrics.incrementOperationsFailed();
     } else {
-      metrics.getBytesSuccessful().addAndGet(count);
-      metrics.getOperationsSuccessful().incrementAndGet();
+      metrics.addBytesSuccessful(count);
+      metrics.incrementOperationsSuccessful();
     }
     blobMetrics.set(metrics);
   }
@@ -262,7 +263,7 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (isAccountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getOperationIdleTimeout())) {
+        if (accountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getOperationIdleTimeout())) {
           isOperationOnAccountIdle.set(true);
           this.cancel();
           timer.purge();

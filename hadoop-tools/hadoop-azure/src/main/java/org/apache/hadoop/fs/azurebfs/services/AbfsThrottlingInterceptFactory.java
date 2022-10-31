@@ -69,9 +69,9 @@ final class AbfsThrottlingInterceptFactory {
   /**
    * Returns an instance of AbfsThrottlingIntercept.
    *
-   * @param accountName The account for which we need instance of throttling intercept
-     @param abfsConfiguration The object of abfsconfiguration class
-    * @return Instance of AbfsThrottlingIntercept
+   * @param accountName The account for which we need instance of throttling intercept.
+     @param abfsConfiguration The object of abfsconfiguration class.
+    * @return Instance of AbfsThrottlingIntercept.
    */
   static synchronized AbfsThrottlingIntercept getInstance(String accountName,
       AbfsConfiguration abfsConfiguration) {
@@ -81,7 +81,7 @@ final class AbfsThrottlingInterceptFactory {
       return new AbfsNoOpThrottlingIntercept();
     }
     // If singleton is enabled use a static instance of the intercept class for all accounts
-    if (!abfsConfiguration.isAccountThrottlingEnabled()) {
+    if (!abfsConfiguration.accountThrottlingEnabled()) {
       intercept = AbfsClientThrottlingIntercept.initializeSingleton(
           abfsConfiguration);
     } else {

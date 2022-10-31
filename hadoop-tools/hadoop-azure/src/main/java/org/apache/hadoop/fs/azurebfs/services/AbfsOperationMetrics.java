@@ -118,5 +118,22 @@ class AbfsOperationMetrics {
   long getStartTime() {
     return startTime;
   }
+
+  void addBytesFailed(long bytes) {
+    this.getBytesFailed().addAndGet(bytes);
+  }
+
+  void addBytesSuccessful(long bytes) {
+    this.getBytesSuccessful().addAndGet(bytes);
+  }
+
+  void incrementOperationsFailed() {
+    this.getOperationsFailed().incrementAndGet();
+  }
+
+  void incrementOperationsSuccessful() {
+    this.getOperationsSuccessful().incrementAndGet();
+  }
+
 }
 

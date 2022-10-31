@@ -46,16 +46,10 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   private static AbfsClientThrottlingIntercept singleton = null;
   private AbfsClientThrottlingAnalyzer readThrottler = null;
   private AbfsClientThrottlingAnalyzer writeThrottler = null;
-  private static boolean autoThrottlingEnabled = false;
-  private String accountName = "";
-
-  private synchronized void setAutoThrottlingEnabled(boolean autoThrottlingEnabled) {
-    autoThrottlingEnabled = autoThrottlingEnabled;
-  }
+  private final String accountName;
 
   // Hide default constructor
   public AbfsClientThrottlingIntercept(String accountName, AbfsConfiguration abfsConfiguration) {
-    setAutoThrottlingEnabled(abfsConfiguration.isAutoThrottlingEnabled());
     this.accountName = accountName;
     this.readThrottler = setAnalyzer("read " + accountName, abfsConfiguration);
     this.writeThrottler = setAnalyzer("write " + accountName, abfsConfiguration);
@@ -64,18 +58,35 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
+    //Account name is kept as empty as same instance is shared across all accounts
+    this.accountName = "";
     readThrottler = setAnalyzer("read", abfsConfiguration);
     writeThrottler = setAnalyzer("write", abfsConfiguration);
+    LOG.debug("Client-side throttling is enabled for the ABFS file system using singleton intercept");
   }
 
+  /**
+   * Sets the analyzer for the intercept.
+   * @param name Name of the analyzer.
+   * @param abfsConfiguration The configuration.
+   * @return AbfsClientThrottlingAnalyzer instance.
+   */
   private AbfsClientThrottlingAnalyzer setAnalyzer(String name, AbfsConfiguration abfsConfiguration) {
     return new AbfsClientThrottlingAnalyzer(name, abfsConfiguration);
   }
 
+  /**
+   * Returns the analyzer for read operations.
+   * @return AbfsClientThrottlingAnalyzer for read.
+   */
   AbfsClientThrottlingAnalyzer getReadThrottler() {
     return readThrottler;
   }
 
+  /**
+   * Returns the analyzer for write operations.
+   * @return AbfsClientThrottlingAnalyzer for write.
+   */
   AbfsClientThrottlingAnalyzer getWriteThrottler() {
     return writeThrottler;
   }
@@ -86,20 +97,31 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    * @param abfsConfiguration configuration set.
    * @return singleton object of intercept.
    */
-  public static synchronized AbfsClientThrottlingIntercept initializeSingleton(
+  public static AbfsClientThrottlingIntercept initializeSingleton(
       AbfsConfiguration abfsConfiguration) {
-    if (singleton == null) {
-      singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-      autoThrottlingEnabled = true;
-      LOG.debug("Client-side throttling is enabled for the ABFS file system.");
-    }
-    return singleton;
+      if (singleton == null)
+      {
+        synchronized (AbfsClientThrottlingIntercept.class)
+        {
+          if (singleton == null)
+          {
+            singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
+            LOG.debug("Client-side throttling is enabled for the ABFS file system.");
+          }
+        }
+      }
+      return singleton;
   }
 
+  /**
+   * Updates the metrics for successful and failed read and write operations.
+   * @param operationType Only applicable for read and write operations.
+   * @param abfsHttpOperation Used for status code and data transfeered.
+   */
   @Override
   public void updateMetrics(AbfsRestOperationType operationType,
       AbfsHttpOperation abfsHttpOperation) {
-    if (!autoThrottlingEnabled || abfsHttpOperation == null) {
+    if (abfsHttpOperation == null) {
       return;
     }
 
@@ -140,9 +162,6 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   @Override
   public void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters) {
-    if (!autoThrottlingEnabled) {
-      return;
-    }
     switch (operationType) {
       case ReadFile:
         if (readThrottler.suspendIfNecessary()
