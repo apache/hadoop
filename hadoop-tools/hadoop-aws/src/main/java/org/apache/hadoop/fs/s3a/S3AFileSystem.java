@@ -65,9 +65,11 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketAclRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
@@ -830,7 +832,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (!invoker.retry("doesBucketExist", bucket, true,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
-            () -> s3.doesBucketExist(bucket)))) {
+            () -> {
+              s3V2.headBucket(HeadBucketRequest.builder()
+                  .bucket(bucket)
+                  .build());
+              return true;
+            }))) {
       throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
           + "not exist");
     }
@@ -853,7 +860,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               // Bug in SDK always returns `true` for AccessPoint ARNs with `doesBucketExistV2()`
               // expanding implementation to use ARNs and buckets correctly
               try {
-                s3.getBucketAcl(bucket);
+                s3V2.getBucketAcl(GetBucketAclRequest.builder()
+                    .bucket(bucket)
+                    .build());
               } catch (AwsServiceException ex) {
                 int statusCode = ex.statusCode();
                 if (statusCode == SC_404 ||

@@ -243,6 +243,7 @@ public class DefaultS3ClientFactory extends Configured
     // TODO: Some configuration done in configureBasicParams is not done yet.
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .useArnRegionEnabled(true)
         .build();
 
     return builder
