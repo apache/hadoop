@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -78,19 +80,22 @@ public abstract class SubClusterId implements Comparable<SubClusterId> {
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
+
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    SubClusterId other = (SubClusterId) obj;
-    return this.getId().equals(other.getId());
+
+    SubClusterId right = (SubClusterId) obj;
+    return new EqualsBuilder()
+        .append(this.getId(), right.getId())
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return getId().hashCode();
+    return new HashCodeBuilder().
+        append(this.getId()).
+        toHashCode();
   }
 
   @Override
@@ -100,9 +105,6 @@ public abstract class SubClusterId implements Comparable<SubClusterId> {
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(getId());
-    return sb.toString();
+    return "SubClusterId [getId() = " + getId() + "]";
   }
-
 }

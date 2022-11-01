@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -127,36 +129,36 @@ public abstract class SubClusterPolicyConfiguration {
 
   @Override
   public int hashCode() {
-    return 31 * getParams().hashCode() + getType().hashCode();
+    return new HashCodeBuilder().
+        append(this.getType()).
+        append(this.getQueue()).
+        append(this.getParams()).
+        toHashCode();
   }
 
   @Override
   public boolean equals(Object obj) {
+
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
+
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    SubClusterPolicyConfiguration other = (SubClusterPolicyConfiguration) obj;
-    if (!this.getType().equals(other.getType())) {
-      return false;
-    }
-    if (!this.getParams().equals(other.getParams())) {
-      return false;
-    }
-    return true;
+
+    SubClusterPolicyConfiguration right = (SubClusterPolicyConfiguration) obj;
+
+    return new EqualsBuilder()
+        .append(this.getType(), right.getType())
+        .append(this.getQueue(), right.getQueue())
+        .append(this.getParams(), right.getParams())
+        .isEquals();
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(getType())
-        .append(" : ")
-        .append(getParams());
-    return sb.toString();
+    return "SubClusterPolicyConfiguration [getType() = " + getType() + ","
+        + "getQueue() = " + getQueue() + "]";
   }
 }

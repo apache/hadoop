@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -58,18 +60,25 @@ public class SubClusterIdInfo {
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other instanceof SubClusterIdInfo) {
-      if (((SubClusterIdInfo) other).id.equals(this.id)) {
-        return true;
-      }
+  public boolean equals(Object obj) {
+
+    if (this == obj) {
+      return true;
     }
-    return false;
+
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+
+    SubClusterIdInfo right = (SubClusterIdInfo) obj;
+
+    return new EqualsBuilder()
+        .append(this.id, right.id)
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return id.hashCode();
+    return new HashCodeBuilder().append(this.id).toHashCode();
   }
-
 }

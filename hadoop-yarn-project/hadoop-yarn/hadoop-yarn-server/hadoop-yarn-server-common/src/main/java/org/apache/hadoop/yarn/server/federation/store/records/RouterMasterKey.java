@@ -115,6 +115,7 @@ public abstract class RouterMasterKey {
 
   @Override
   public boolean equals(Object right) {
+
     if (this == right) {
       return true;
     }
