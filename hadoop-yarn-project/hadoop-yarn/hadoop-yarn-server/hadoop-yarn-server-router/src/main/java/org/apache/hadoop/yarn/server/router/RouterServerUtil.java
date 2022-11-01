@@ -515,12 +515,15 @@ public final class RouterServerUtil {
     return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
 
-  public static UserGroupInformation setupUser(String userName) {
+  public static UserGroupInformation setupUser(final String userName) {
     UserGroupInformation user = null;
     try {
+      // If userName is empty, we will return UserGroupInformation.getCurrentUser.
       // Do not create a proxy user if user name matches the user name on
       // current UGI
-      if (UserGroupInformation.isSecurityEnabled()) {
+      if (userName == null || userName.trim().isEmpty()) {
+        user = UserGroupInformation.getCurrentUser();
+      } else if (UserGroupInformation.isSecurityEnabled()) {
         user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
       } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
         user = UserGroupInformation.getCurrentUser();

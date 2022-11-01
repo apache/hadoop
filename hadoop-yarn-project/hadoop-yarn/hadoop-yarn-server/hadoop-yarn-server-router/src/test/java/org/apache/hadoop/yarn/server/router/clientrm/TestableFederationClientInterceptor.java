@@ -200,6 +200,7 @@ public class TestableFederationClientInterceptor
         MockNM mockNM = mockNMs.getOrDefault(subClusterId, null);
         try {
           mockNM.unRegisterNode();
+          mockNM = null;
         } catch (Exception e) {
           LOG.error("mockNM unRegisterNode error.", e);
         }

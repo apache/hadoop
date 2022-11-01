@@ -640,7 +640,7 @@ public final class RouterMetrics {
   public long getNumSucceededRefreshQueuesRetrieved() {
     return totalSucceededRefreshQueuesRetrieved.lastStat().numSamples();
   }
-  
+
   public long getNumSucceededCheckUserAccessToQueueRetrievedRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
   }
@@ -849,7 +849,7 @@ public final class RouterMetrics {
   public double getLatencySucceededRefreshQueuesRetrieved() {
     return totalSucceededRefreshQueuesRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededCheckUserAccessToQueueRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().mean();
@@ -1035,11 +1035,11 @@ public final class RouterMetrics {
   public int getAppTimeoutsFailedRetrieved() {
     return numGetAppTimeoutsFailedRetrieved.value();
   }
-  
+
   public int getRefreshQueuesFailedRetrieved() {
     return numRefreshQueuesFailedRetrieved.value();
   }
-  
+
   public int getCheckUserAccessToQueueFailedRetrieved() {
     return numCheckUserAccessToQueueFailedRetrieved.value();
   }
@@ -1248,7 +1248,7 @@ public final class RouterMetrics {
     totalSucceededRefreshQueuesRetrieved.add(duration);
     getRefreshQueuesLatency.add(duration);
   }
-  
+
   public void succeededCheckUserAccessToQueueRetrieved(long duration) {
     totalSucceededCheckUserAccessToQueueRetrieved.add(duration);
     checkUserAccessToQueueLatency.add(duration);
@@ -1417,7 +1417,7 @@ public final class RouterMetrics {
   public void incrRefreshQueuesFailedRetrieved() {
     numRefreshQueuesFailedRetrieved.incr();
   }
-  
+
   public void incrCheckUserAccessToQueueFailedRetrieved() {
     numCheckUserAccessToQueueFailedRetrieved.incr();
   }

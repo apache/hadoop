@@ -22,7 +22,7 @@ import java.util.Arrays;
 
 
 /**
- * Class to define admin method,params and arguments.
+ * Class to define admin method, params and arguments.
  */
 public class AdminMethod {
 
