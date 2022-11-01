@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,9 +44,9 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * This is an wordcount application that tests the count of records
@@ -179,7 +177,7 @@ public class TestJobCounters {
     return len;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void initPaths() throws IOException {
     final Configuration conf = new Configuration();
     final Path TEST_ROOT_DIR =
@@ -207,7 +205,7 @@ public class TestJobCounters {
     createWordsFile(inFiles[2], conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     //clean up the input and output files
     final Configuration conf = new Configuration();
@@ -252,7 +250,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testOldCounterA() throws Exception {
+  void testOldCounterA() throws Exception {
     JobConf conf = createConfiguration();
     conf.setNumMapTasks(3);
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
@@ -293,7 +291,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testOldCounterB() throws Exception {
+  void testOldCounterB() throws Exception {
 
     JobConf conf = createConfiguration();
     createWordsFile(inFiles[3], conf);
@@ -326,7 +324,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testOldCounterC() throws Exception {
+  void testOldCounterC() throws Exception {
     JobConf conf = createConfiguration();
     createWordsFile(inFiles[3], conf);
     createWordsFile(inFiles[4], conf);
@@ -354,7 +352,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testOldCounterD() throws Exception {
+  void testOldCounterD() throws Exception {
     JobConf conf = createConfiguration();
     conf.setNumMapTasks(3);
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
@@ -378,7 +376,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testNewCounterA() throws Exception {
+  void testNewCounterA() throws Exception {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
@@ -395,11 +393,11 @@ public class TestJobCounters {
     assertTrue(job.waitForCompletion(true));
     final Counters c1 = Counters.downgrade(job.getCounters());
     validateCounters(c1, 73728, 15360, 61440);
-    validateFileCounters(c1, inputSize, 0, 0, 0);    
+    validateFileCounters(c1, inputSize, 0, 0, 0);
   }
 
   @Test
-  public void testNewCounterB() throws Exception {
+  void testNewCounterB() throws Exception {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
@@ -421,7 +419,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testNewCounterC() throws Exception {
+  void testNewCounterC() throws Exception {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 3);
@@ -444,7 +442,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testNewCounterD() throws Exception {
+  void testNewCounterD() throws Exception {
     final Job job = createJob();
     final Configuration conf = job.getConfiguration();
     conf.setInt(JobContext.IO_SORT_FACTOR, 2);
@@ -467,7 +465,7 @@ public class TestJobCounters {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testOldCounters() throws Exception {
+  void testOldCounters() throws Exception {
     Counters c1 = new Counters();
     c1.incrCounter(FileInputFormat.Counter.BYTES_READ, 100);
     c1.incrCounter(FileOutputFormat.Counter.BYTES_WRITTEN, 200);
@@ -528,7 +526,7 @@ public class TestJobCounters {
                     OutputCollector<WritableComparable, Writable> output,
                     Reporter reporter)
     throws IOException {
-      assertNotNull("Mapper not configured!", loader);
+      assertNotNull(loader, "Mapper not configured!");
       
       // load the memory
       loader.load();
@@ -557,7 +555,7 @@ public class TestJobCounters {
                        OutputCollector<WritableComparable, Writable> output,
                        Reporter reporter)
     throws IOException {
-      assertNotNull("Reducer not configured!", loader);
+      assertNotNull(loader, "Reducer not configured!");
       
       // load the memory
       loader.load();
@@ -582,10 +580,10 @@ public class TestJobCounters {
       reports = client.getReduceTaskReports(id);
     }
     
-    assertNotNull("No reports found for task type '" + type.name() 
-                  + "' in job " + id, reports);
+    assertNotNull(reports, "No reports found for task type '" + type.name() 
+                  + "' in job " + id);
     // make sure that the total number of reports match the expected
-    assertEquals("Mismatch in task id", numReports, reports.length);
+    assertEquals(numReports, reports.length, "Mismatch in task id");
     
     Counters counters = reports[taskId].getCounters();
     
@@ -632,11 +630,11 @@ public class TestJobCounters {
     RunningJob job = client.submitJob(jobConf);
     job.waitForCompletion();
     JobID jobID = job.getID();
-    assertTrue("Job " + jobID + " failed!", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job " + jobID + " failed!");
     
     return job;
   }
-  
+
   /**
    * Tests {@link TaskCounter}'s {@link TaskCounter.COMMITTED_HEAP_BYTES}. 
    * The test consists of running a low-memory job which consumes less heap 
@@ -647,26 +645,26 @@ public class TestJobCounters {
    */
   @Test
   @SuppressWarnings("deprecation")
-  public void testHeapUsageCounter() throws Exception {
+  void testHeapUsageCounter() throws Exception {
     JobConf conf = new JobConf();
     // create a local filesystem handle
     FileSystem fileSystem = FileSystem.getLocal(conf);
-    
+
     // define test root directories
     Path rootDir =
-      new Path(System.getProperty("test.build.data", "/tmp"));
+        new Path(System.getProperty("test.build.data", "/tmp"));
     Path testRootDir = new Path(rootDir, "testHeapUsageCounter");
     // cleanup the test root directory
     fileSystem.delete(testRootDir, true);
     // set the current working directory
     fileSystem.setWorkingDirectory(testRootDir);
-    
+
     fileSystem.deleteOnExit(testRootDir);
-    
+
     // create a mini cluster using the local file system
-    MiniMRCluster mrCluster = 
-      new MiniMRCluster(1, fileSystem.getUri().toString(), 1);
-    
+    MiniMRCluster mrCluster =
+        new MiniMRCluster(1, fileSystem.getUri().toString(), 1);
+
     try {
       conf = mrCluster.createJobConf();
       JobClient jobClient = new JobClient(conf);
@@ -678,47 +676,48 @@ public class TestJobCounters {
 
       // configure and run a low memory job which will run without loading the
       // jvm's heap
-      RunningJob lowMemJob = 
-        runHeapUsageTestJob(conf, testRootDir, "-Xms32m -Xmx1G", 
-                            0, 0, fileSystem, jobClient, inDir);
+      RunningJob lowMemJob =
+          runHeapUsageTestJob(conf, testRootDir, "-Xms32m -Xmx1G",
+              0, 0, fileSystem, jobClient, inDir);
       JobID lowMemJobID = lowMemJob.getID();
-      long lowMemJobMapHeapUsage = getTaskCounterUsage(jobClient, lowMemJobID, 
-                                                       1, 0, TaskType.MAP);
-      System.out.println("Job1 (low memory job) map task heap usage: " 
-                         + lowMemJobMapHeapUsage);
+      long lowMemJobMapHeapUsage = getTaskCounterUsage(jobClient, lowMemJobID,
+          1, 0, TaskType.MAP);
+      System.out.println("Job1 (low memory job) map task heap usage: "
+          + lowMemJobMapHeapUsage);
       long lowMemJobReduceHeapUsage =
-        getTaskCounterUsage(jobClient, lowMemJobID, 1, 0, TaskType.REDUCE);
-      System.out.println("Job1 (low memory job) reduce task heap usage: " 
-                         + lowMemJobReduceHeapUsage);
+          getTaskCounterUsage(jobClient, lowMemJobID, 1, 0, TaskType.REDUCE);
+      System.out.println("Job1 (low memory job) reduce task heap usage: "
+          + lowMemJobReduceHeapUsage);
 
       // configure and run a high memory job which will load the jvm's heap
-      RunningJob highMemJob = 
-        runHeapUsageTestJob(conf, testRootDir, "-Xms32m -Xmx1G", 
-                            lowMemJobMapHeapUsage + 256*1024*1024, 
-                            lowMemJobReduceHeapUsage + 256*1024*1024,
-                            fileSystem, jobClient, inDir);
+      RunningJob highMemJob =
+          runHeapUsageTestJob(conf, testRootDir, "-Xms32m -Xmx1G",
+              lowMemJobMapHeapUsage + 256 * 1024 * 1024,
+              lowMemJobReduceHeapUsage + 256 * 1024 * 1024,
+              fileSystem, jobClient, inDir);
       JobID highMemJobID = highMemJob.getID();
 
       long highMemJobMapHeapUsage = getTaskCounterUsage(jobClient, highMemJobID,
-                                                        1, 0, TaskType.MAP);
-      System.out.println("Job2 (high memory job) map task heap usage: " 
-                         + highMemJobMapHeapUsage);
+          1, 0, TaskType.MAP);
+      System.out.println("Job2 (high memory job) map task heap usage: "
+          + highMemJobMapHeapUsage);
       long highMemJobReduceHeapUsage =
-        getTaskCounterUsage(jobClient, highMemJobID, 1, 0, TaskType.REDUCE);
-      System.out.println("Job2 (high memory job) reduce task heap usage: " 
-                         + highMemJobReduceHeapUsage);
+          getTaskCounterUsage(jobClient, highMemJobID, 1, 0, TaskType.REDUCE);
+      System.out.println("Job2 (high memory job) reduce task heap usage: "
+          + highMemJobReduceHeapUsage);
 
-      assertTrue("Incorrect map heap usage reported by the map task", 
-                 lowMemJobMapHeapUsage < highMemJobMapHeapUsage);
+      assertTrue(lowMemJobMapHeapUsage < highMemJobMapHeapUsage,
+          "Incorrect map heap usage reported by the map task");
 
-      assertTrue("Incorrect reduce heap usage reported by the reduce task", 
-                 lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage);
+      assertTrue(lowMemJobReduceHeapUsage < highMemJobReduceHeapUsage,
+          "Incorrect reduce heap usage reported by the reduce task");
     } finally {
       // shutdown the mr cluster
       mrCluster.shutdown();
       try {
         fileSystem.delete(testRootDir, true);
-      } catch (IOException ioe) {} 
+      } catch (IOException ioe) {
+      }
     }
   }
 
@@ -841,7 +840,7 @@ public class TestJobCounters {
   }
 
   @Test
-  public void testMockResourceCalculatorProcessTree() {
+  void testMockResourceCalculatorProcessTree() {
     ResourceCalculatorProcessTree tree;
     tree = ResourceCalculatorProcessTree.getResourceCalculatorProcessTree(
         "1", TestJobCounters.MockResourceCalculatorProcessTree.class,
@@ -856,7 +855,7 @@ public class TestJobCounters {
    * @throws InterruptedException test failed
    */
   @Test
-  public void testMaxCounter()
+  void testMaxCounter()
       throws IOException, ClassNotFoundException, InterruptedException {
     // Create mapreduce cluster
     MiniMRClientCluster mrCluster = MiniMRClientClusterFactory.create(

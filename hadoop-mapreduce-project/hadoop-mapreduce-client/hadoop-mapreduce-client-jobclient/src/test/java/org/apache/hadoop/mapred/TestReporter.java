@@ -31,11 +31,12 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests the old mapred APIs with {@link Reporter#getProgress()}.
@@ -48,14 +49,14 @@ public class TestReporter {
   
   private static FileSystem fs = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     fs = FileSystem.getLocal(new Configuration());
     fs.delete(testRootTempDir, true);
     fs.mkdirs(testRootTempDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     fs.delete(testRootTempDir, true);
   }
@@ -92,16 +93,14 @@ public class TestReporter {
       float mapProgress = ((float)++numRecords)/INPUT_LINES;
       // calculate the attempt progress based on the progress range
       float attemptProgress = progressRange * mapProgress;
-      assertEquals("Invalid progress in map", 
-                   attemptProgress, reporter.getProgress(), 0f);
+      assertEquals(attemptProgress, reporter.getProgress(), 0f, "Invalid progress in map");
       output.collect(new Text(value.toString() + numRecords), value);
     }
     
     @Override
     public void close() throws IOException {
       super.close();
-      assertEquals("Invalid progress in map cleanup", 
-                   progressRange, reporter.getProgress(), 0f);
+      assertEquals(progressRange, reporter.getProgress(), 0f, "Invalid progress in map cleanup");
     }
   }
 
@@ -132,22 +131,22 @@ public class TestReporter {
    */
   @SuppressWarnings("deprecation")
   @Test
-  public void testReporterProgressForMapOnlyJob() throws IOException {
+  void testReporterProgressForMapOnlyJob() throws IOException {
     Path test = new Path(testRootTempDir, "testReporterProgressForMapOnlyJob");
-    
+
     JobConf conf = new JobConf();
     conf.setMapperClass(ProgressTesterMapper.class);
     conf.setMapOutputKeyClass(Text.class);
     // fail early
     conf.setMaxMapAttempts(1);
     conf.setMaxReduceAttempts(0);
-    
-    RunningJob job = 
-      UtilsForTests.runJob(conf, new Path(test, "in"), new Path(test, "out"), 
-                           1, 0, INPUT);
+
+    RunningJob job =
+        UtilsForTests.runJob(conf, new Path(test, "in"), new Path(test, "out"),
+            1, 0, INPUT);
     job.waitForCompletion();
-    
-    assertTrue("Job failed", job.isSuccessful());
+
+    assertTrue(job.isSuccessful(), "Job failed");
   }
   
   /**
@@ -176,27 +175,25 @@ public class TestReporter {
       float reducePhaseProgress = ((float)++recordCount)/INPUT_LINES;
       float weightedReducePhaseProgress = 
               reducePhaseProgress * REDUCE_PROGRESS_RANGE;
-      assertEquals("Invalid progress in reduce", 
-                   SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress, 
-                   reporter.getProgress(), 0.02f);
+      assertEquals(SHUFFLE_PROGRESS_RANGE + weightedReducePhaseProgress, 
+                   reporter.getProgress(), 0.02f, "Invalid progress in reduce");
       this.reporter = reporter;
     }
     
     @Override
     public void close() throws IOException {
       super.close();
-      assertEquals("Invalid progress in reduce cleanup", 
-                   1.0f, reporter.getProgress(), 0f);
+      assertEquals(1.0f, reporter.getProgress(), 0f, "Invalid progress in reduce cleanup");
     }
   }
-  
+
   /**
    * Test {@link Reporter}'s progress for map-reduce job.
    */
   @Test
-  public void testReporterProgressForMRJob() throws IOException {
+  void testReporterProgressForMRJob() throws IOException {
     Path test = new Path(testRootTempDir, "testReporterProgressForMRJob");
-    
+
     JobConf conf = new JobConf();
     conf.setMapperClass(ProgressTesterMapper.class);
     conf.setReducerClass(ProgressTestingReducer.class);
@@ -205,16 +202,16 @@ public class TestReporter {
     conf.setMaxMapAttempts(1);
     conf.setMaxReduceAttempts(1);
 
-    RunningJob job = 
-      UtilsForTests.runJob(conf, new Path(test, "in"), new Path(test, "out"), 
-                           1, 1, INPUT);
+    RunningJob job =
+        UtilsForTests.runJob(conf, new Path(test, "in"), new Path(test, "out"),
+            1, 1, INPUT);
     job.waitForCompletion();
-    
-    assertTrue("Job failed", job.isSuccessful());
+
+    assertTrue(job.isSuccessful(), "Job failed");
   }
 
   @Test
-  public void testStatusLimit() throws IOException, InterruptedException,
+  void testStatusLimit() throws IOException, InterruptedException,
       ClassNotFoundException {
     Path test = new Path(testRootTempDir, "testStatusLimit");
 
@@ -244,7 +241,7 @@ public class TestReporter {
 
     job.waitForCompletion(true);
 
-    assertTrue("Job failed", job.isSuccessful());
+    assertTrue(job.isSuccessful(), "Job failed");
   }
 
 }

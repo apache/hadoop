@@ -41,7 +41,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,8 +49,8 @@ import java.io.IOException;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestMRSequenceFileAsBinaryOutputFormat {
   private static final Logger LOG =
@@ -59,38 +59,38 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
   private static final int RECORDS = 10000;
 
   @Test
-  public void testBinary() throws IOException, InterruptedException {
+  void testBinary() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     Job job = Job.getInstance(conf);
-    
+
     Path outdir = new Path(System.getProperty("test.build.data", "/tmp"),
-                    "outseq");
+        "outseq");
     Random r = new Random();
     long seed = r.nextLong();
     r.setSeed(seed);
 
     FileOutputFormat.setOutputPath(job, outdir);
 
-    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputKeyClass(job, 
-                                          IntWritable.class );
-    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputValueClass(job, 
-                                          DoubleWritable.class ); 
+    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputKeyClass(job,
+        IntWritable.class);
+    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputValueClass(job,
+        DoubleWritable.class);
 
     SequenceFileAsBinaryOutputFormat.setCompressOutput(job, true);
-    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job, 
-                                                       CompressionType.BLOCK);
+    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job,
+        CompressionType.BLOCK);
 
     BytesWritable bkey = new BytesWritable();
     BytesWritable bval = new BytesWritable();
 
-    TaskAttemptContext context = 
-      MapReduceTestUtil.createDummyMapTaskAttemptContext(job.getConfiguration());
-    OutputFormat<BytesWritable, BytesWritable> outputFormat = 
-      new SequenceFileAsBinaryOutputFormat();
+    TaskAttemptContext context =
+        MapReduceTestUtil.createDummyMapTaskAttemptContext(job.getConfiguration());
+    OutputFormat<BytesWritable, BytesWritable> outputFormat =
+        new SequenceFileAsBinaryOutputFormat();
     OutputCommitter committer = outputFormat.getOutputCommitter(context);
     committer.setupJob(job);
     RecordWriter<BytesWritable, BytesWritable> writer = outputFormat.
-      getRecordWriter(context);
+        getRecordWriter(context);
 
     IntWritable iwritable = new IntWritable();
     DoubleWritable dwritable = new DoubleWritable();
@@ -115,20 +115,20 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
     committer.commitJob(job);
 
     InputFormat<IntWritable, DoubleWritable> iformat =
-      new SequenceFileInputFormat<IntWritable, DoubleWritable>();
+        new SequenceFileInputFormat<IntWritable, DoubleWritable>();
     int count = 0;
     r.setSeed(seed);
     SequenceFileInputFormat.setInputPaths(job, outdir);
     LOG.info("Reading data by SequenceFileInputFormat");
     for (InputSplit split : iformat.getSplits(job)) {
       RecordReader<IntWritable, DoubleWritable> reader =
-        iformat.createRecordReader(split, context);
-      MapContext<IntWritable, DoubleWritable, BytesWritable, BytesWritable> 
-        mcontext = new MapContextImpl<IntWritable, DoubleWritable,
-          BytesWritable, BytesWritable>(job.getConfiguration(), 
-          context.getTaskAttemptID(), reader, null, null, 
-          MapReduceTestUtil.createDummyReporter(), 
-          split);
+          iformat.createRecordReader(split, context);
+      MapContext<IntWritable, DoubleWritable, BytesWritable, BytesWritable>
+          mcontext = new MapContextImpl<IntWritable, DoubleWritable,
+              BytesWritable, BytesWritable>(job.getConfiguration(),
+              context.getTaskAttemptID(), reader, null, null,
+              MapReduceTestUtil.createDummyReporter(),
+              split);
       reader.initialize(split, mcontext);
       try {
         int sourceInt;
@@ -139,9 +139,8 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
           iwritable = reader.getCurrentKey();
           dwritable = reader.getCurrentValue();
           assertEquals(
-              "Keys don't match: " + "*" + iwritable.get() + ":" + 
-                                           sourceInt + "*",
-              sourceInt, iwritable.get());
+              sourceInt, iwritable.get(), "Keys don't match: " + "*" + iwritable.get() + ":" +
+              sourceInt + "*");
           assertThat(dwritable.get()).withFailMessage(
               "Vals don't match: " + "*" + dwritable.get() + ":" +
                   sourceDouble + "*").isEqualTo(sourceDouble);
@@ -151,45 +150,45 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
         reader.close();
       }
     }
-    assertEquals("Some records not found", RECORDS, count);
+    assertEquals(RECORDS, count, "Some records not found");
   }
 
   @Test
-  public void testSequenceOutputClassDefaultsToMapRedOutputClass()
-         throws IOException {
+  void testSequenceOutputClassDefaultsToMapRedOutputClass()
+      throws IOException {
     Job job = Job.getInstance();
     // Setting Random class to test getSequenceFileOutput{Key,Value}Class
     job.setOutputKeyClass(FloatWritable.class);
     job.setOutputValueClass(BooleanWritable.class);
 
-    assertEquals("SequenceFileOutputKeyClass should default to ouputKeyClass", 
-      FloatWritable.class,
-      SequenceFileAsBinaryOutputFormat.getSequenceFileOutputKeyClass(job));
-    assertEquals("SequenceFileOutputValueClass should default to " 
-      + "ouputValueClass", 
-      BooleanWritable.class,
-      SequenceFileAsBinaryOutputFormat.getSequenceFileOutputValueClass(job));
+    assertEquals(FloatWritable.class,
+        SequenceFileAsBinaryOutputFormat.getSequenceFileOutputKeyClass(job),
+        "SequenceFileOutputKeyClass should default to ouputKeyClass");
+    assertEquals(BooleanWritable.class,
+        SequenceFileAsBinaryOutputFormat.getSequenceFileOutputValueClass(job),
+        "SequenceFileOutputValueClass should default to "
+            + "ouputValueClass");
 
-    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputKeyClass(job, 
-      IntWritable.class );
-    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputValueClass(job, 
-      DoubleWritable.class ); 
+    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputKeyClass(job,
+        IntWritable.class);
+    SequenceFileAsBinaryOutputFormat.setSequenceFileOutputValueClass(job,
+        DoubleWritable.class);
 
-    assertEquals("SequenceFileOutputKeyClass not updated", 
-      IntWritable.class,
-      SequenceFileAsBinaryOutputFormat.getSequenceFileOutputKeyClass(job));
-    assertEquals("SequenceFileOutputValueClass not updated", 
-      DoubleWritable.class,
-      SequenceFileAsBinaryOutputFormat.getSequenceFileOutputValueClass(job));
+    assertEquals(IntWritable.class,
+        SequenceFileAsBinaryOutputFormat.getSequenceFileOutputKeyClass(job),
+        "SequenceFileOutputKeyClass not updated");
+    assertEquals(DoubleWritable.class,
+        SequenceFileAsBinaryOutputFormat.getSequenceFileOutputValueClass(job),
+        "SequenceFileOutputValueClass not updated");
   }
 
   @Test
-  public void testcheckOutputSpecsForbidRecordCompression()
+  void testcheckOutputSpecsForbidRecordCompression()
       throws IOException {
     Job job = Job.getInstance();
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());
-    Path outputdir = new Path(System.getProperty("test.build.data", "/tmp") 
-                              + "/output");
+    Path outputdir = new Path(System.getProperty("test.build.data", "/tmp")
+        + "/output");
     fs.delete(outputdir, true);
 
     // Without outputpath, FileOutputFormat.checkoutputspecs will throw 
@@ -200,26 +199,26 @@ public class TestMRSequenceFileAsBinaryOutputFormat {
     // It should throw an exception when checked by checkOutputSpecs
     SequenceFileAsBinaryOutputFormat.setCompressOutput(job, true);
 
-    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job, 
-      CompressionType.BLOCK);
+    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job,
+        CompressionType.BLOCK);
     try {
       new SequenceFileAsBinaryOutputFormat().checkOutputSpecs(job);
     } catch (Exception e) {
-      fail("Block compression should be allowed for " 
-        + "SequenceFileAsBinaryOutputFormat:Caught " + e.getClass().getName());
+      fail("Block compression should be allowed for "
+          + "SequenceFileAsBinaryOutputFormat:Caught " + e.getClass().getName());
     }
 
-    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job, 
-      CompressionType.RECORD);
+    SequenceFileAsBinaryOutputFormat.setOutputCompressionType(job,
+        CompressionType.RECORD);
     try {
       new SequenceFileAsBinaryOutputFormat().checkOutputSpecs(job);
-      fail("Record compression should not be allowed for " 
-        + "SequenceFileAsBinaryOutputFormat");
+      fail("Record compression should not be allowed for "
+          + "SequenceFileAsBinaryOutputFormat");
     } catch (InvalidJobConfException ie) {
       // expected
     } catch (Exception e) {
-      fail("Expected " + InvalidJobConfException.class.getName() 
-        + "but caught " + e.getClass().getName() );
+      fail("Expected " + InvalidJobConfException.class.getName()
+          + "but caught " + e.getClass().getName());
     }
   }
 }

@@ -40,12 +40,14 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFixedLengthInputFormat {
 
@@ -60,7 +62,7 @@ public class TestFixedLengthInputFormat {
   private static char[] chars;
   private static Random charRand;
 
-  @BeforeClass
+  @BeforeAll
   public static void onlyOnce() {
     try {
       defaultConf = new Configuration();
@@ -82,8 +84,9 @@ public class TestFixedLengthInputFormat {
    * 20 random tests of various record, file, and split sizes.  All tests have
    * uncompressed file as input.
    */
-  @Test (timeout=500000)
-  public void testFormat() throws Exception {
+  @Test
+  @Timeout(500000)
+  void testFormat() throws Exception {
     runRandomTests(null);
   }
 
@@ -91,16 +94,18 @@ public class TestFixedLengthInputFormat {
    * 20 random tests of various record, file, and split sizes.  All tests have
    * compressed file as input.
    */
-  @Test (timeout=500000)
-  public void testFormatCompressedIn() throws Exception {
+  @Test
+  @Timeout(500000)
+  void testFormatCompressedIn() throws Exception {
     runRandomTests(new GzipCodec());
   }
 
   /**
    * Test with no record length set.
    */
-  @Test (timeout=5000)
-  public void testNoRecordLength() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testNoRecordLength() throws Exception {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
@@ -118,23 +123,24 @@ public class TestFixedLengthInputFormat {
             format.createRecordReader(split, context);
         MapContext<LongWritable, BytesWritable, LongWritable, BytesWritable>
             mcontext =
-            new MapContextImpl<LongWritable, BytesWritable, LongWritable,
-            BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
-            reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
+                new MapContextImpl<LongWritable, BytesWritable, LongWritable,
+                    BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
+                    reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
         reader.initialize(split, mcontext);
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         exceptionThrown = true;
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for not setting record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for not setting record length:");
   }
 
   /**
    * Test with record length set to 0
    */
-  @Test (timeout=5000)
-  public void testZeroRecordLength() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testZeroRecordLength() throws Exception {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
@@ -149,28 +155,29 @@ public class TestFixedLengthInputFormat {
       try {
         TaskAttemptContext context =
             MapReduceTestUtil.createDummyMapTaskAttemptContext(
-            job.getConfiguration());
-        RecordReader<LongWritable, BytesWritable> reader = 
+                job.getConfiguration());
+        RecordReader<LongWritable, BytesWritable> reader =
             format.createRecordReader(split, context);
         MapContext<LongWritable, BytesWritable, LongWritable, BytesWritable>
             mcontext =
-            new MapContextImpl<LongWritable, BytesWritable, LongWritable,
-            BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
-            reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
+                new MapContextImpl<LongWritable, BytesWritable, LongWritable,
+                    BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
+                    reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
         reader.initialize(split, mcontext);
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         exceptionThrown = true;
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for zero record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for zero record length:");
   }
 
   /**
    * Test with record length set to a negative value
    */
-  @Test (timeout=5000)
-  public void testNegativeRecordLength() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testNegativeRecordLength() throws Exception {
     localFs.delete(workDir, true);
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
@@ -185,27 +192,28 @@ public class TestFixedLengthInputFormat {
       try {
         TaskAttemptContext context = MapReduceTestUtil.
             createDummyMapTaskAttemptContext(job.getConfiguration());
-        RecordReader<LongWritable, BytesWritable> reader = 
+        RecordReader<LongWritable, BytesWritable> reader =
             format.createRecordReader(split, context);
         MapContext<LongWritable, BytesWritable, LongWritable, BytesWritable>
             mcontext =
-            new MapContextImpl<LongWritable, BytesWritable, LongWritable,
-            BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
-            reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
+                new MapContextImpl<LongWritable, BytesWritable, LongWritable,
+                    BytesWritable>(job.getConfiguration(), context.getTaskAttemptID(),
+                    reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
         reader.initialize(split, mcontext);
-      } catch(IOException ioe) {
+      } catch (IOException ioe) {
         exceptionThrown = true;
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for negative record length:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for negative record length:");
   }
 
   /**
    * Test with partial record at the end of a compressed input file.
    */
-  @Test (timeout=5000)
-  public void testPartialRecordCompressedIn() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testPartialRecordCompressedIn() throws Exception {
     CompressionCodec gzip = new GzipCodec();
     runPartialRecordTest(gzip);
   }
@@ -213,16 +221,18 @@ public class TestFixedLengthInputFormat {
   /**
    * Test with partial record at the end of an uncompressed input file.
    */
-  @Test (timeout=5000)
-  public void testPartialRecordUncompressedIn() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testPartialRecordUncompressedIn() throws Exception {
     runPartialRecordTest(null);
   }
 
   /**
    * Test using the gzip codec with two input files.
    */
-  @Test (timeout=5000)
-  public void testGzipWithTwoInputs() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testGzipWithTwoInputs() throws Exception {
     CompressionCodec gzip = new GzipCodec();
     localFs.delete(workDir, true);
     Job job = Job.getInstance(defaultConf);
@@ -231,24 +241,24 @@ public class TestFixedLengthInputFormat {
     ReflectionUtils.setConf(gzip, job.getConfiguration());
     FileInputFormat.setInputPaths(job, workDir);
     // Create files with fixed length records with 5 byte long records.
-    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
+    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip,
         "one  two  threefour five six  seveneightnine ten  ");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
         "ten  nine eightsevensix  five four threetwo  one  ");
     List<InputSplit> splits = format.getSplits(job);
-    assertEquals("compressed splits == 2", 2, splits.size());
+    assertEquals(2, splits.size(), "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits.get(0);
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits.set(0, splits.get(1));
       splits.set(1, tmp);
     }
     List<String> results = readSplit(format, splits.get(0), job);
-    assertEquals("splits[0] length", 10, results.size());
-    assertEquals("splits[0][5]", "six  ", results.get(5));
+    assertEquals(10, results.size(), "splits[0] length");
+    assertEquals("six  ", results.get(5), "splits[0][5]");
     results = readSplit(format, splits.get(1), job);
-    assertEquals("splits[1] length", 10, results.size());
-    assertEquals("splits[1][0]", "ten  ", results.get(0));
-    assertEquals("splits[1][1]", "nine ", results.get(1));
+    assertEquals(10, results.size(), "splits[1] length");
+    assertEquals("ten  ", results.get(0), "splits[1][0]");
+    assertEquals("nine ", results.get(1), "splits[1][1]");
   }
 
   // Create a file containing fixed length records with random data
@@ -366,28 +376,28 @@ public class TestFixedLengthInputFormat {
             reader, null, null, MapReduceTestUtil.createDummyReporter(), split);
         reader.initialize(split, mcontext);
         Class<?> clazz = reader.getClass();
-        assertEquals("RecordReader class should be FixedLengthRecordReader:", 
-            FixedLengthRecordReader.class, clazz);
+        assertEquals(FixedLengthRecordReader.class, clazz, "RecordReader class should be FixedLengthRecordReader:");
         // Plow through the records in this split
         while (reader.nextKeyValue()) {
           key = reader.getCurrentKey();
           value = reader.getCurrentValue();
-          assertEquals("Checking key", (long)(recordNumber*recordLength),
-              key.get());
+          assertEquals((long)(recordNumber*recordLength),
+              key.get(),
+              "Checking key");
           String valueString = new String(value.getBytes(), 0,
               value.getLength());
-          assertEquals("Checking record length:", recordLength,
-              value.getLength());
-          assertTrue("Checking for more records than expected:",
-              recordNumber < totalRecords);
+          assertEquals(recordLength,
+              value.getLength(),
+              "Checking record length:");
+          assertTrue(recordNumber < totalRecords,
+              "Checking for more records than expected:");
           String origRecord = recordList.get(recordNumber);
-          assertEquals("Checking record content:", origRecord, valueString);
+          assertEquals(origRecord, valueString, "Checking record content:");
           recordNumber++;
         }
         reader.close();
       }
-      assertEquals("Total original records should be total read records:",
-          recordList.size(), recordNumber);
+      assertEquals(recordList.size(), recordNumber, "Total original records should be total read records:");
     }
   }
 
@@ -449,7 +459,7 @@ public class TestFixedLengthInputFormat {
     FileInputFormat.setInputPaths(job, workDir);
     List<InputSplit> splits = format.getSplits(job);
     if (codec != null) {
-      assertEquals("compressed splits == 1", 1, splits.size());
+      assertEquals(1, splits.size(), "compressed splits == 1");
     }
     boolean exceptionThrown = false;
     for (InputSplit split : splits) {
@@ -460,7 +470,7 @@ public class TestFixedLengthInputFormat {
         LOG.info("Exception message:" + ioe.getMessage());
       }
     }
-    assertTrue("Exception for partial record:", exceptionThrown);
+    assertTrue(exceptionThrown, "Exception for partial record:");
   }
 
 }

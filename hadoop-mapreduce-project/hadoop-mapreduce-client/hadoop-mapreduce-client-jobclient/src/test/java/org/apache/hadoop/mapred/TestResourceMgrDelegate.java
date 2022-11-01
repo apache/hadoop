@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -41,9 +39,12 @@ import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestResourceMgrDelegate {
 
@@ -52,46 +53,46 @@ public class TestResourceMgrDelegate {
    * @throws IOException
    */
   @Test
-  public void testGetRootQueues() throws IOException, InterruptedException {
+  void testGetRootQueues() throws IOException, InterruptedException {
     final ApplicationClientProtocol applicationsManager = Mockito.mock(ApplicationClientProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
     org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
-      Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+        Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
     Mockito.when(response.getQueueInfo()).thenReturn(queueInfo);
     try {
       Mockito.when(applicationsManager.getQueueInfo(Mockito.any(
-        GetQueueInfoRequest.class))).thenReturn(response);
+          GetQueueInfoRequest.class))).thenReturn(response);
     } catch (YarnException e) {
       throw new IOException(e);
     }
 
     ResourceMgrDelegate delegate = new ResourceMgrDelegate(
-      new YarnConfiguration()) {
+        new YarnConfiguration()) {
       @Override
       protected void serviceStart() throws Exception {
-        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        assertTrue(this.client instanceof YarnClientImpl);
         ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
     delegate.getRootQueues();
 
     ArgumentCaptor<GetQueueInfoRequest> argument =
-      ArgumentCaptor.forClass(GetQueueInfoRequest.class);
+        ArgumentCaptor.forClass(GetQueueInfoRequest.class);
     try {
       Mockito.verify(applicationsManager).getQueueInfo(
-        argument.capture());
+          argument.capture());
     } catch (YarnException e) {
       throw new IOException(e);
     }
 
-    Assert.assertTrue("Children of root queue not requested",
-      argument.getValue().getIncludeChildQueues());
-    Assert.assertTrue("Request wasn't to recurse through children",
-      argument.getValue().getRecursive());
+    assertTrue(argument.getValue().getIncludeChildQueues(),
+        "Children of root queue not requested");
+    assertTrue(argument.getValue().getRecursive(),
+        "Request wasn't to recurse through children");
   }
 
   @Test
-  public void tesAllJobs() throws Exception {
+  void tesAllJobs() throws Exception {
     final ApplicationClientProtocol applicationsManager = Mockito.mock(ApplicationClientProtocol.class);
     GetApplicationsResponse allApplicationsResponse = Records
         .newRecord(GetApplicationsResponse.class);
@@ -110,19 +111,19 @@ public class TestResourceMgrDelegate {
             .any(GetApplicationsRequest.class))).thenReturn(
         allApplicationsResponse);
     ResourceMgrDelegate resourceMgrDelegate = new ResourceMgrDelegate(
-      new YarnConfiguration()) {
+        new YarnConfiguration()) {
       @Override
       protected void serviceStart() throws Exception {
-        Assert.assertTrue(this.client instanceof YarnClientImpl);
+        assertTrue(this.client instanceof YarnClientImpl);
         ((YarnClientImpl) this.client).setRMClient(applicationsManager);
       }
     };
     JobStatus[] allJobs = resourceMgrDelegate.getAllJobs();
 
-    Assert.assertEquals(State.FAILED, allJobs[0].getState());
-    Assert.assertEquals(State.SUCCEEDED, allJobs[1].getState());
-    Assert.assertEquals(State.KILLED, allJobs[2].getState());
-    Assert.assertEquals(State.FAILED, allJobs[3].getState());
+    assertEquals(State.FAILED, allJobs[0].getState());
+    assertEquals(State.SUCCEEDED, allJobs[1].getState());
+    assertEquals(State.KILLED, allJobs[2].getState());
+    assertEquals(State.FAILED, allJobs[3].getState());
   }
 
   private ApplicationReport getApplicationReport(

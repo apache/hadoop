@@ -37,16 +37,15 @@ import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * check for the job submission options of
@@ -64,14 +63,14 @@ public class TestLocalJobSubmission {
   private Path jarPath;
   private Configuration config;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // setup the test root directory
     testRootDir =
         GenericTestUtils.setupTestRootDir(TestLocalJobSubmission.class);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     unitTestDir = new File(testRootDir, unitTestName.getMethodName());
     unitTestDir.mkdirs();
@@ -93,7 +92,7 @@ public class TestLocalJobSubmission {
    * @throws IOException thrown if there's an error creating the JAR file
    */
   @Test
-  public void testLocalJobLibjarsOption() throws IOException {
+  void testLocalJobLibjarsOption() throws IOException {
     testLocalJobLibjarsOption(config);
     config.setBoolean(Job.USE_WILDCARD_FOR_LIBJARS, false);
     testLocalJobLibjarsOption(config);
@@ -120,7 +119,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -129,7 +128,7 @@ public class TestLocalJobSubmission {
    * @throws IOException
    */
   @Test
-  public void testLocalJobEncryptedIntermediateData() throws IOException {
+  void testLocalJobEncryptedIntermediateData() throws IOException {
     config = MRJobConfUtil.initEncryptedIntermediateConfigsForTesting(config);
     final String[] args = {
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
@@ -140,13 +139,13 @@ public class TestLocalJobSubmission {
           (SpillCallBackPathsFinder) IntermediateEncryptedStream
               .setSpillCBInjector(new SpillCallBackPathsFinder());
       res = ToolRunner.run(config, new SleepJob(), args);
-      Assert.assertTrue("No spill occurred",
-          spillInjector.getEncryptedSpilledFiles().size() > 0);
+      assertTrue(spillInjector.getEncryptedSpilledFiles().size() > 0,
+          "No spill occurred");
     } catch (Exception e) {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -154,7 +153,7 @@ public class TestLocalJobSubmission {
    * @throws Exception
    */
   @Test
-  public void testJobMaxMapConfig() throws Exception {
+  void testJobMaxMapConfig() throws Exception {
     config.setInt(MRJobConfig.JOB_MAX_MAP, 0);
     final String[] args = {
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
@@ -175,7 +174,7 @@ public class TestLocalJobSubmission {
    * @throws IOException
    */
   @Test
-  public void testLocalJobFilesOption() throws IOException {
+  void testLocalJobFilesOption() throws IOException {
     config.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
     final String[] args = {
         "-jt", "local", "-files", jarPath.toString(),
@@ -188,7 +187,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}", e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -197,7 +196,7 @@ public class TestLocalJobSubmission {
    * @throws IOException
    */
   @Test
-  public void testLocalJobArchivesOption() throws IOException {
+  void testLocalJobArchivesOption() throws IOException {
     config.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
     final String[] args =
         {"-jt", "local", "-archives", jarPath.toString(), "-m", "1", "-r",
@@ -209,7 +208,7 @@ public class TestLocalJobSubmission {
       LOG.error("Job failed with {}" + e.getLocalizedMessage(), e);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   private Path makeJar(Path p) throws IOException {

@@ -48,7 +48,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
 import static org.slf4j.LoggerFactory.getLogger;
 
 /** Unit tests for using Job Token over RPC. 
@@ -78,14 +79,14 @@ public class TestUmbilicalProtocolWithJobToken {
   }
 
   @Test
-  public void testJobTokenRpc() throws Exception {
+  void testJobTokenRpc() throws Exception {
     TaskUmbilicalProtocol mockTT = mock(TaskUmbilicalProtocol.class);
     doReturn(TaskUmbilicalProtocol.versionID)
-      .when(mockTT).getProtocolVersion(anyString(), anyLong());
+        .when(mockTT).getProtocolVersion(anyString(), anyLong());
     doReturn(ProtocolSignature.getProtocolSignature(
         mockTT, TaskUmbilicalProtocol.class.getName(),
         TaskUmbilicalProtocol.versionID, 0))
-      .when(mockTT).getProtocolSignature(anyString(), anyLong(), anyInt());
+        .when(mockTT).getProtocolSignature(anyString(), anyLong(), anyInt());
 
     JobTokenSecretManager sm = new JobTokenSecretManager();
     final Server server = new RPC.Builder(conf)

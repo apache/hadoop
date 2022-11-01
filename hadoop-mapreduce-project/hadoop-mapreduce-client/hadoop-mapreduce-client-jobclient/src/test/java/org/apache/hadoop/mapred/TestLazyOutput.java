@@ -33,8 +33,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.LazyOutputFormat;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test the Map-Reduce framework's feature to create part
@@ -132,7 +133,7 @@ public class TestLazyOutput {
   }
 
   @Test
-  public void testLazyOutput() throws Exception {
+  void testLazyOutput() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
@@ -144,7 +145,7 @@ public class TestLazyOutput {
           .build();
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(NUM_HADOOP_WORKERS,
-            fileSys.getUri().toString(), 1);
+          fileSys.getUri().toString(), 1);
 
       int numReducers = 2;
       int numMappers = NUM_HADOOP_WORKERS * NUM_MAPS_PER_NODE;
@@ -157,10 +158,10 @@ public class TestLazyOutput {
           numReducers, true);
 
       Path[] fileList =
-        FileUtil.stat2Paths(fileSys.listStatus(output1,
-            new Utils.OutputFileUtils.OutputFilesFilter()));
-      for(int i=0; i < fileList.length; ++i) {
-        System.out.println("Test1 File list[" + i + "]" + ": "+ fileList[i]);
+          FileUtil.stat2Paths(fileSys.listStatus(output1,
+              new Utils.OutputFileUtils.OutputFilesFilter()));
+      for (int i = 0; i < fileList.length; ++i) {
+        System.out.println("Test1 File list[" + i + "]" + ": " + fileList[i]);
       }
       assertTrue(fileList.length == (numReducers - 1));
 
@@ -169,10 +170,10 @@ public class TestLazyOutput {
       runTestLazyOutput(mr.createJobConf(), output2, 0, true);
 
       fileList =
-        FileUtil.stat2Paths(fileSys.listStatus(output2,
-            new Utils.OutputFileUtils.OutputFilesFilter()));
-      for(int i=0; i < fileList.length; ++i) {
-        System.out.println("Test2 File list[" + i + "]" + ": "+ fileList[i]);
+          FileUtil.stat2Paths(fileSys.listStatus(output2,
+              new Utils.OutputFileUtils.OutputFilesFilter()));
+      for (int i = 0; i < fileList.length; ++i) {
+        System.out.println("Test2 File list[" + i + "]" + ": " + fileList[i]);
       }
 
       assertTrue(fileList.length == numMappers - 1);
@@ -182,17 +183,20 @@ public class TestLazyOutput {
       runTestLazyOutput(mr.createJobConf(), output3, 0, false);
 
       fileList =
-        FileUtil.stat2Paths(fileSys.listStatus(output3,
-            new Utils.OutputFileUtils.OutputFilesFilter()));
-      for(int i=0; i < fileList.length; ++i) {
-        System.out.println("Test3 File list[" + i + "]" + ": "+ fileList[i]);
+          FileUtil.stat2Paths(fileSys.listStatus(output3,
+              new Utils.OutputFileUtils.OutputFilesFilter()));
+      for (int i = 0; i < fileList.length; ++i) {
+        System.out.println("Test3 File list[" + i + "]" + ": " + fileList[i]);
       }
 
       assertTrue(fileList.length == numMappers);
 
     } finally {
-      if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown();
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+      if (mr != null) {
+        mr.shutdown();
       }
     }
   }

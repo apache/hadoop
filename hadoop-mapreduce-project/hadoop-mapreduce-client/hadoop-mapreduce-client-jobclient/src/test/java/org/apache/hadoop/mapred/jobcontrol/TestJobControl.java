@@ -24,15 +24,16 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -198,14 +199,15 @@ public class TestJobControl {
   }
 
   @SuppressWarnings("deprecation")
-  @Test(timeout = 30000)
-  public void testJobState() throws Exception {
+  @Test
+  @Timeout(30000)
+  void testJobState() throws Exception {
     Job job_1 = getCopyJob();
     JobControl jc = new JobControl("Test");
     jc.addJob(job_1);
-    Assert.assertEquals(Job.WAITING, job_1.getState());
+    assertEquals(Job.WAITING, job_1.getState());
     job_1.setState(Job.SUCCESS);
-    Assert.assertEquals(Job.WAITING, job_1.getState());
+    assertEquals(Job.WAITING, job_1.getState());
 
     org.apache.hadoop.mapreduce.Job mockjob =
         mock(org.apache.hadoop.mapreduce.Job.class);
@@ -213,21 +215,22 @@ public class TestJobControl {
         new org.apache.hadoop.mapreduce.JobID("test", 0);
     when(mockjob.getJobID()).thenReturn(jid);
     job_1.setJob(mockjob);
-    Assert.assertEquals("job_test_0000", job_1.getMapredJobID());
+    assertEquals("job_test_0000", job_1.getMapredJobID());
     job_1.setMapredJobID("job_test_0001");
-    Assert.assertEquals("job_test_0000", job_1.getMapredJobID());
+    assertEquals("job_test_0000", job_1.getMapredJobID());
     jc.stop();
   }
 
-  @Test(timeout = 30000)
-  public void testAddingDependingJob() throws Exception {
+  @Test
+  @Timeout(30000)
+  void testAddingDependingJob() throws Exception {
     Job job_1 = getCopyJob();
     ArrayList<Job> dependingJobs = new ArrayList<Job>();
     JobControl jc = new JobControl("Test");
     jc.addJob(job_1);
-    Assert.assertEquals(Job.WAITING, job_1.getState());
-    Assert.assertTrue(job_1.addDependingJob(new Job(job_1.getJobConf(),
-      dependingJobs)));
+    assertEquals(Job.WAITING, job_1.getState());
+    assertTrue(job_1.addDependingJob(new Job(job_1.getJobConf(),
+        dependingJobs)));
   }
 
   public Job getCopyJob() throws Exception {
@@ -252,24 +255,26 @@ public class TestJobControl {
     Job job_1 = new Job(jobConf_1, dependingJobs);
     return job_1;
   }
-  
-  @Test (timeout = 30000)
-  public void testJobControl() throws Exception {
+
+  @Test
+  @Timeout(30000)
+  void testJobControl() throws Exception {
     doJobControlTest();
   }
-  
-  @Test (timeout = 30000)
-  public void testGetAssignedJobId() throws Exception {
+
+  @Test
+  @Timeout(30000)
+  void testGetAssignedJobId() throws Exception {
     JobConf jc = new JobConf();
     Job j = new Job(jc);
     //Just make sure no exception is thrown
-    Assert.assertNull(j.getAssignedJobID());
+    assertNull(j.getAssignedJobID());
     org.apache.hadoop.mapreduce.Job mockjob = mock(org.apache.hadoop.mapreduce.Job.class);
-    org.apache.hadoop.mapreduce.JobID jid = new org.apache.hadoop.mapreduce.JobID("test",0);
+    org.apache.hadoop.mapreduce.JobID jid = new org.apache.hadoop.mapreduce.JobID("test", 0);
     when(mockjob.getJobID()).thenReturn(jid);
     j.setJob(mockjob);
-    JobID expected = new JobID("test",0);
-    Assert.assertEquals(expected, j.getAssignedJobID());
+    JobID expected = new JobID("test", 0);
+    assertEquals(expected, j.getAssignedJobID());
     verify(mockjob).getJobID();
   }
   

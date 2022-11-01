@@ -47,16 +47,13 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 public class TestFileSystem {
@@ -76,7 +73,7 @@ public class TestFileSystem {
   private static Path DATA_DIR = new Path(ROOT, "fs_data");
 
   @Test
-  public void testFs() throws Exception {
+  void testFs() throws Exception {
     testFs(10 * MEGA, 100, 0);
   }
 
@@ -101,29 +98,29 @@ public class TestFileSystem {
   }
 
   @Test
-  public void testCommandFormat() throws Exception {
+  void testCommandFormat() throws Exception {
     // This should go to TestFsShell.java when it is added.
     CommandFormat cf;
-    cf= new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
-    assertThat(cf.parse(new String[] {"-get", "file", "-"}, 1).get(1))
+    cf = new CommandFormat("copyToLocal", 2, 2, "crc", "ignoreCrc");
+    assertThat(cf.parse(new String[]{"-get", "file", "-"}, 1).get(1))
         .isEqualTo("-");
     try {
-      cf.parse(new String[] {"-get","file","-ignoreCrc","/foo"}, 1);
+      cf.parse(new String[]{"-get", "file", "-ignoreCrc", "/foo"}, 1);
       fail("Expected parsing to fail as it should stop at first non-option");
     }
     catch (Exception e) {
       // Expected
-    }  
+    }
     cf = new CommandFormat("tail", 1, 1, "f");
-    assertThat(cf.parse(new String[] {"-tail", "fileName"}, 1).get(0))
+    assertThat(cf.parse(new String[]{"-tail", "fileName"}, 1).get(0))
         .isEqualTo("fileName");
-    assertThat(cf.parse(new String[] {"-tail", "-f", "fileName"}, 1).get(0))
+    assertThat(cf.parse(new String[]{"-tail", "-f", "fileName"}, 1).get(0))
         .isEqualTo("fileName");
     cf = new CommandFormat("setrep", 2, 2, "R", "w");
-    assertThat(cf.parse(new String[] {"-setrep", "-R", "2", "/foo/bar"}, 1)
+    assertThat(cf.parse(new String[]{"-setrep", "-R", "2", "/foo/bar"}, 1)
         .get(1)).isEqualTo("/foo/bar");
     cf = new CommandFormat("put", 2, 10000);
-    assertThat(cf.parse(new String[] {"-put", "-", "dest"}, 1).get(1))
+    assertThat(cf.parse(new String[]{"-put", "-", "dest"}, 1).get(1))
         .isEqualTo("dest");
   }
 
@@ -505,30 +502,31 @@ public class TestFileSystem {
   }
 
   @Test
-  public void testFsCache() throws Exception {
+  void testFsCache() throws Exception {
     {
       long now = System.currentTimeMillis();
-      String[] users = new String[]{"foo","bar"};
+      String[] users = new String[]{"foo", "bar"};
       final Configuration conf = new Configuration();
       FileSystem[] fs = new FileSystem[users.length];
-  
-      for(int i = 0; i < users.length; i++) {
+
+      for (int i = 0; i < users.length; i++) {
         UserGroupInformation ugi = UserGroupInformation.createRemoteUser(users[i]);
         fs[i] = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
           public FileSystem run() throws IOException {
             return FileSystem.get(conf);
-        }});
-        for(int j = 0; j < i; j++) {
+          }
+        });
+        for (int j = 0; j < i; j++) {
           assertFalse(fs[j] == fs[i]);
         }
       }
       FileSystem.closeAll();
     }
-    
+
     {
       try {
         runTestCache(HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
-      } catch(java.net.BindException be) {
+      } catch (java.net.BindException be) {
         LOG.warn("Cannot test HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT (="
             + HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT + ")", be);
       }
@@ -579,7 +577,7 @@ public class TestFileSystem {
   }
 
   @Test
-  public void testFsClose() throws Exception {
+  void testFsClose() throws Exception {
     {
       Configuration conf = new Configuration();
       new Path("file:///").getFileSystem(conf);
@@ -588,7 +586,7 @@ public class TestFileSystem {
   }
 
   @Test
-  public void testFsShutdownHook() throws Exception {
+  void testFsShutdownHook() throws Exception {
     final Set<FileSystem> closed = Collections.synchronizedSet(new HashSet<FileSystem>());
     Configuration conf = new Configuration();
     Configuration confNoAuto = new Configuration();
@@ -598,9 +596,9 @@ public class TestFileSystem {
     confNoAuto.setBoolean("fs.automatic.close", false);
 
     TestShutdownFileSystem fsWithAuto =
-      (TestShutdownFileSystem)(new Path("test://a/").getFileSystem(conf));
+        (TestShutdownFileSystem) (new Path("test://a/").getFileSystem(conf));
     TestShutdownFileSystem fsWithoutAuto =
-      (TestShutdownFileSystem)(new Path("test://b/").getFileSystem(confNoAuto));
+        (TestShutdownFileSystem) (new Path("test://b/").getFileSystem(confNoAuto));
 
     fsWithAuto.setClosedSet(closed);
     fsWithoutAuto.setClosedSet(closed);
@@ -620,19 +618,19 @@ public class TestFileSystem {
   }
 
   @Test
-  public void testCacheKeysAreCaseInsensitive()
-    throws Exception
+  void testCacheKeysAreCaseInsensitive()
+      throws Exception
   {
     Configuration conf = new Configuration();
-    
+
     // check basic equality
     FileSystem.Cache.Key lowercaseCachekey1 = new FileSystem.Cache.Key(new URI("hdfs://localhost:12345/"), conf);
     FileSystem.Cache.Key lowercaseCachekey2 = new FileSystem.Cache.Key(new URI("hdfs://localhost:12345/"), conf);
-    assertEquals( lowercaseCachekey1, lowercaseCachekey2 );
+    assertEquals(lowercaseCachekey1, lowercaseCachekey2);
 
     // check insensitive equality    
     FileSystem.Cache.Key uppercaseCachekey = new FileSystem.Cache.Key(new URI("HDFS://Localhost:12345/"), conf);
-    assertEquals( lowercaseCachekey2, uppercaseCachekey );
+    assertEquals(lowercaseCachekey2, uppercaseCachekey);
 
     // check behaviour with collections
     List<FileSystem.Cache.Key> list = new ArrayList<FileSystem.Cache.Key>();
@@ -648,7 +646,7 @@ public class TestFileSystem {
     Map<FileSystem.Cache.Key, String> map = new HashMap<FileSystem.Cache.Key, String>();
     map.put(uppercaseCachekey, "");
     assertTrue(map.containsKey(uppercaseCachekey));
-    assertTrue(map.containsKey(lowercaseCachekey2));    
+    assertTrue(map.containsKey(lowercaseCachekey2));
 
   }
 

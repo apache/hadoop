@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -32,7 +30,9 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestLineRecordReaderJobs {
 
@@ -96,7 +96,7 @@ public class TestLineRecordReaderJobs {
    * @throws ClassNotFoundException
    */
   @Test
-  public void testCustomRecordDelimiters() throws IOException,
+  void testCustomRecordDelimiters() throws IOException,
       InterruptedException, ClassNotFoundException {
     Configuration conf = new Configuration();
     conf.set("textinputformat.record.delimiter", "\t\n");
@@ -119,7 +119,7 @@ public class TestLineRecordReaderJobs {
    * @throws ClassNotFoundException
    */
   @Test
-  public void testDefaultRecordDelimiters() throws IOException,
+  void testDefaultRecordDelimiters() throws IOException,
       InterruptedException, ClassNotFoundException {
     Configuration conf = new Configuration();
     FileSystem localFs = FileSystem.getLocal(conf);

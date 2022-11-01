@@ -18,7 +18,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -36,9 +36,9 @@ import org.apache.hadoop.mapred.MiniMRClientCluster;
 import org.apache.hadoop.mapred.MiniMRClientClusterFactory;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests whether a protected secret passed from JobClient is
@@ -54,7 +54,7 @@ public class TestMRCredentials {
   private static JobConf jConf;
 
   @SuppressWarnings("deprecation")
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     System.setProperty("hadoop.log.dir", "logs");
     Configuration conf = new Configuration();
@@ -66,7 +66,7 @@ public class TestMRCredentials {
     createKeysAsJson("keys.json");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(mrCluster != null)
       mrCluster.stop();
@@ -105,7 +105,7 @@ public class TestMRCredentials {
    * @throws IOException
    */
   @Test
-  public void test () throws IOException {
+  void test() throws IOException {
 
     // make sure JT starts
     Configuration jobConf =  new JobConf(mrCluster.getConfig());
@@ -116,7 +116,7 @@ public class TestMRCredentials {
     jobConf.set(JobContext.JOB_NAMENODES, nnUri + "," + nnUri.toString());
 
 
-    jobConf.set("mapreduce.job.credentials.json" , "keys.json");
+    jobConf.set("mapreduce.job.credentials.json", "keys.json");
 
     // using argument to pass the file name
     String[] args = {

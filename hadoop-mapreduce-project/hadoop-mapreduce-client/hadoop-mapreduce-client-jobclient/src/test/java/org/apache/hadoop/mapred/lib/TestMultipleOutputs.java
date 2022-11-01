@@ -39,9 +39,9 @@ import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -51,9 +51,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,28 +63,30 @@ public class TestMultipleOutputs extends HadoopTestCase {
   }
 
   @Test
-  public void testWithoutCounters() throws Exception {
+  void testWithoutCounters() throws Exception {
     _testMultipleOutputs(false);
     _testMOWithJavaSerialization(false);
   }
 
   @Test
-  public void testWithCounters() throws Exception {
+  void testWithCounters() throws Exception {
     _testMultipleOutputs(true);
     _testMOWithJavaSerialization(true);
   }
 
   @SuppressWarnings("unchecked")
-  @Test(expected = IOException.class)
-  public void testParallelCloseIOException() throws IOException {
-    RecordWriter writer = mock(RecordWriter.class);
-    Map<String, RecordWriter> recordWriters = mock(Map.class);
-    when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
-    doThrow(new IOException("test IO exception")).when(writer).close(null);
-    JobConf conf = createJobConf();
-    MultipleOutputs mos = new MultipleOutputs(conf);
-    mos.setRecordWriters(recordWriters);
-    mos.close();
+  @Test
+  void testParallelCloseIOException() throws IOException {
+    assertThrows(IOException.class, () -> {
+      RecordWriter writer = mock(RecordWriter.class);
+      Map<String, RecordWriter> recordWriters = mock(Map.class);
+      when(recordWriters.values()).thenReturn(Arrays.asList(writer, writer));
+      doThrow(new IOException("test IO exception")).when(writer).close(null);
+      JobConf conf = createJobConf();
+      MultipleOutputs mos = new MultipleOutputs(conf);
+      mos.setRecordWriters(recordWriters);
+      mos.close();
+    });
   }
 
   private static final Path ROOT_DIR = new Path("testing/mo");
@@ -103,7 +103,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     return dir;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     Path rootDir = getDir(ROOT_DIR);
@@ -117,7 +117,7 @@ public class TestMultipleOutputs extends HadoopTestCase {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Path rootDir = getDir(ROOT_DIR);
 

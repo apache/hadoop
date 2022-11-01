@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.slive;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -40,8 +40,8 @@ import org.apache.hadoop.fs.slive.Constants.OperationType;
 import org.apache.hadoop.fs.slive.DataVerifier.VerifyOutput;
 import org.apache.hadoop.fs.slive.DataWriter.GenerateOutput;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -144,7 +144,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testFinder() throws Exception {
+  void testFinder() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     PathFinder fr = new PathFinder(extractor, rnd);
     // should only be able to select 10 files
@@ -163,7 +163,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testSelection() throws Exception {
+  void testSelection() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     WeightSelector selector = new WeightSelector(extractor, rnd);
     // should be 1 of each type - uniform
@@ -194,7 +194,7 @@ public class TestSlive {
     return extractor;
   }
 
-  @Before
+  @BeforeEach
   public void ensureDeleted() throws Exception {
     rDelete(getTestFile());
     rDelete(getTestDir());
@@ -228,7 +228,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testArguments() throws Exception {
+  void testArguments() throws Exception {
     ConfigExtractor extractor = getTestConfig(true);
     assertEquals(extractor.getOpCount().intValue(), Constants.OperationType
         .values().length);
@@ -260,7 +260,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testDataWriting() throws Exception {
+  void testDataWriting() throws Exception {
     long byteAm = 100;
     File fn = getTestFile();
     DataWriter writer = new DataWriter(rnd);
@@ -279,14 +279,14 @@ public class TestSlive {
   }
 
   @Test
-  public void testRange() {
+  void testRange() {
     Range<Long> r = new Range<Long>(10L, 20L);
     assertThat(r.getLower().longValue()).isEqualTo(10L);
     assertThat(r.getUpper().longValue()).isEqualTo(20L);
   }
 
   @Test
-  public void testCreateOp() throws Exception {
+  void testCreateOp() throws Exception {
     // setup a valid config
     ConfigExtractor extractor = getTestConfig(false);
     final Path fn = new Path(getTestFile().getCanonicalPath());
@@ -299,7 +299,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testOpFailures() throws Exception {
+  void testOpFailures() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     final Path fn = new Path(getImaginaryFile().getCanonicalPath());
     ReadOp rop = new ReadOp(extractor, rnd) {
@@ -377,7 +377,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testDelete() throws Exception {
+  void testDelete() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     final Path fn = new Path(getTestFile().getCanonicalPath());
     // ensure file created before delete
@@ -397,7 +397,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testRename() throws Exception {
+  void testRename() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     final Path src = new Path(getTestFile().getCanonicalPath());
     final Path tgt = new Path(getTestRenameFile().getCanonicalPath());
@@ -417,7 +417,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testMRFlow() throws Exception {
+  void testMRFlow() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     SliveTest s = new SliveTest(getBaseConfig());
     int ec = ToolRunner.run(s, getTestArgs(false));
@@ -430,7 +430,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testRead() throws Exception {
+  void testRead() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     final Path fn = new Path(getTestFile().getCanonicalPath());
     // ensure file created before read
@@ -449,14 +449,14 @@ public class TestSlive {
   }
 
   @Test
-  public void testSleep() throws Exception {
+  void testSleep() throws Exception {
     ConfigExtractor extractor = getTestConfig(true);
     SleepOp op = new SleepOp(extractor, rnd);
     runOperationOk(extractor, op, true);
   }
 
   @Test
-  public void testList() throws Exception {
+  void testList() throws Exception {
     // ensure dir made
     ConfigExtractor extractor = getTestConfig(false);
     final Path dir = new Path(getTestDir().getCanonicalPath());
@@ -476,7 +476,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testBadChunks() throws Exception {
+  void testBadChunks() throws Exception {
     File fn = getTestFile();
     int byteAm = 10000;
     FileOutputStream fout = new FileOutputStream(fn);
@@ -494,13 +494,13 @@ public class TestSlive {
     } catch (Exception e) {
 
     } finally {
-      if(in != null) in.close();
+      if (in != null) in.close();
     }
     assertTrue(vout.getChunksSame() == 0);
   }
 
   @Test
-  public void testMkdir() throws Exception {
+  void testMkdir() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     final Path dir = new Path(getTestDir().getCanonicalPath());
     MkdirOp op = new MkdirOp(extractor, rnd) {
@@ -512,7 +512,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testSelector() throws Exception {
+  void testSelector() throws Exception {
     ConfigExtractor extractor = getTestConfig(false);
     RouletteSelector selector = new RouletteSelector(rnd);
     List<OperationWeight> sList = new LinkedList<OperationWeight>();
@@ -527,7 +527,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testAppendOp() throws Exception {
+  void testAppendOp() throws Exception {
     // setup a valid config
     ConfigExtractor extractor = getTestConfig(false);
     // ensure file created before append
@@ -549,7 +549,7 @@ public class TestSlive {
   }
 
   @Test
-  public void testTruncateOp() throws Exception {
+  void testTruncateOp() throws Exception {
     // setup a valid config
     ConfigExtractor extractor = getTestConfig(false);
     // ensure file created before append

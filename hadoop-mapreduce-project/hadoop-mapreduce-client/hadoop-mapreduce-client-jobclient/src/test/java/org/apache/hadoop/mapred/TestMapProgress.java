@@ -36,11 +36,11 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  *  Validates map phase progress.
@@ -193,8 +193,8 @@ public class TestMapProgress {
         return;
       }
       // validate map task progress when the map task is in map phase
-      assertTrue("Map progress is not the expected value.",
-                 Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001);
+      assertTrue(Math.abs(mapTaskProgress - ((float)recordNum/3)) < 0.001,
+                 "Map progress is not the expected value.");
     }
   }
 
@@ -238,7 +238,7 @@ public class TestMapProgress {
    *  using custom task reporter.
    */
   @Test
-  public void testMapProgress() throws Exception {
+  void testMapProgress() throws Exception {
     JobConf job = new JobConf();
     fs = FileSystem.getLocal(job);
     Path rootDir = new Path(TEST_ROOT_DIR);
@@ -246,28 +246,28 @@ public class TestMapProgress {
 
     job.setNumReduceTasks(0);
     TaskAttemptID taskId = TaskAttemptID.forName(
-                                  "attempt_200907082313_0424_m_000000_0");
+        "attempt_200907082313_0424_m_000000_0");
     job.setClass("mapreduce.job.outputformat.class",
-                 NullOutputFormat.class, OutputFormat.class);
+        NullOutputFormat.class, OutputFormat.class);
     job.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
-            TEST_ROOT_DIR);
+        TEST_ROOT_DIR);
     jobId = taskId.getJobID();
-    
+
     JobContext jContext = new JobContextImpl(job, jobId);
     InputFormat<?, ?> input =
-      ReflectionUtils.newInstance(jContext.getInputFormatClass(), job);
+        ReflectionUtils.newInstance(jContext.getInputFormatClass(), job);
 
     List<InputSplit> splits = input.getSplits(jContext);
-    JobSplitWriter.createSplitFiles(new Path(TEST_ROOT_DIR), job, 
-                   new Path(TEST_ROOT_DIR).getFileSystem(job),
-                   splits);
-    TaskSplitMetaInfo[] splitMetaInfo = 
-      SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, job, new Path(TEST_ROOT_DIR));
+    JobSplitWriter.createSplitFiles(new Path(TEST_ROOT_DIR), job,
+        new Path(TEST_ROOT_DIR).getFileSystem(job),
+        splits);
+    TaskSplitMetaInfo[] splitMetaInfo =
+        SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, job, new Path(TEST_ROOT_DIR));
     job.setUseNewMapper(true); // use new api    
     for (int i = 0; i < splitMetaInfo.length; i++) {// rawSplits.length is 1
       map = new TestMapTask(
           job.get(JTConfig.JT_SYSTEM_DIR, "/tmp/hadoop/mapred/system") +
-          jobId + "job.xml",  
+              jobId + "job.xml",
           taskId, i,
           splitMetaInfo[i].getSplitIndex(), 1);
 

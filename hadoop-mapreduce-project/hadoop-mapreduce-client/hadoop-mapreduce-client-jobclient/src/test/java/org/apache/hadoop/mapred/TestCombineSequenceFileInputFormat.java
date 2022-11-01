@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.BitSet;
@@ -33,7 +33,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.mapred.lib.CombineSequenceFileInputFormat;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,15 +58,16 @@ public class TestCombineSequenceFileInputFormat {
       System.getProperty("test.build.data", "/tmp"),
       "TestCombineSequenceFileInputFormat"));
 
-  @Test(timeout=10000)
-  public void testFormat() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
 
     Reporter reporter = Reporter.NULL;
 
     Random random = new Random();
     long seed = random.nextLong();
-    LOG.info("seed = "+seed);
+    LOG.info("seed = " + seed);
     random.setSeed(seed);
 
     localFs.delete(workDir, true);
@@ -80,36 +82,35 @@ public class TestCombineSequenceFileInputFormat {
 
     // create a combine split for the files
     InputFormat<IntWritable, BytesWritable> format =
-      new CombineSequenceFileInputFormat<IntWritable, BytesWritable>();
+        new CombineSequenceFileInputFormat<IntWritable, BytesWritable>();
     IntWritable key = new IntWritable();
     BytesWritable value = new BytesWritable();
     for (int i = 0; i < 3; i++) {
       int numSplits =
-        random.nextInt(length/(SequenceFile.SYNC_INTERVAL/20))+1;
+          random.nextInt(length / (SequenceFile.SYNC_INTERVAL / 20)) + 1;
       LOG.info("splitting: requesting = " + numSplits);
       InputSplit[] splits = format.getSplits(job, numSplits);
       LOG.info("splitting: got =        " + splits.length);
 
       // we should have a single split as the length is comfortably smaller than
       // the block size
-      assertEquals("We got more than one splits!", 1, splits.length);
+      assertEquals(1, splits.length, "We got more than one splits!");
       InputSplit split = splits[0];
-      assertEquals("It should be CombineFileSplit",
-        CombineFileSplit.class, split.getClass());
+      assertEquals(CombineFileSplit.class, split.getClass(), "It should be CombineFileSplit");
 
       // check each split
       BitSet bits = new BitSet(length);
       RecordReader<IntWritable, BytesWritable> reader =
-        format.getRecordReader(split, job, reporter);
+          format.getRecordReader(split, job, reporter);
       try {
         while (reader.next(key, value)) {
-          assertFalse("Key in multiple partitions.", bits.get(key.get()));
+          assertFalse(bits.get(key.get()), "Key in multiple partitions.");
           bits.set(key.get());
         }
       } finally {
         reader.close();
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 

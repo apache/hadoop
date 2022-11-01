@@ -27,15 +27,15 @@ import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestClientProtocolProviderImpls {
 
   @Test
-  public void testClusterWithLocalClientProvider() throws Exception {
+  void testClusterWithLocalClientProvider() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRConfig.FRAMEWORK_NAME, "local");
     Cluster cluster = new Cluster(conf);
@@ -44,7 +44,7 @@ public class TestClientProtocolProviderImpls {
   }
 
   @Test
-  public void testClusterWithJTClientProvider() throws Exception {
+  void testClusterWithJTClientProvider() throws Exception {
     Configuration conf = new Configuration();
     try {
       conf.set(MRConfig.FRAMEWORK_NAME, "classic");
@@ -59,7 +59,7 @@ public class TestClientProtocolProviderImpls {
   }
 
   @Test
-  public void testClusterWithYarnClientProvider() throws Exception {
+  void testClusterWithYarnClientProvider() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
     Cluster cluster = new Cluster(conf);
@@ -68,7 +68,7 @@ public class TestClientProtocolProviderImpls {
   }
 
   @Test
-  public void testClusterException() {
+  void testClusterException() {
     Configuration conf = new Configuration();
     try {
       conf.set(MRConfig.FRAMEWORK_NAME, "incorrect");
@@ -81,7 +81,7 @@ public class TestClientProtocolProviderImpls {
   }
 
   @Test
-  public void testClusterExceptionRootCause() throws Exception {
+  void testClusterExceptionRootCause() throws Exception {
     final Configuration conf = new Configuration();
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "nosuchfs:///");
@@ -91,9 +91,9 @@ public class TestClientProtocolProviderImpls {
       fail("Cluster init should fail because of non-existing FileSystem");
     } catch (IOException ioEx) {
       final String stackTrace = StringUtils.stringifyException(ioEx);
-      assertTrue("No root cause detected",
-          stackTrace.contains(UnsupportedFileSystemException.class.getName())
-              && stackTrace.contains("nosuchfs"));
+      assertTrue(stackTrace.contains(UnsupportedFileSystemException.class.getName())
+          && stackTrace.contains("nosuchfs"),
+          "No root cause detected");
     }
   }
 }

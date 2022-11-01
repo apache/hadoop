@@ -30,12 +30,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A JUnit test to test that jobs' output filenames are not HTML-encoded (cf HADOOP-1795).
@@ -85,7 +85,7 @@ public class TestSpecialCharactersInOutputPath {
     try {
       assertTrue(runningJob.isComplete());
       assertTrue(runningJob.isSuccessful());
-      assertTrue("Output folder not found!", fs.exists(new Path("/testing/output/" + OUTPUT_FILENAME)));
+      assertTrue(fs.exists(new Path("/testing/output/" + OUTPUT_FILENAME)), "Output folder not found!");
     } catch (NullPointerException npe) {
       // This NPE should no more happens
       fail("A NPE should not have happened.");
@@ -97,7 +97,7 @@ public class TestSpecialCharactersInOutputPath {
   }
 
   @Test
-  public void testJobWithDFS() throws IOException {
+  void testJobWithDFS() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
@@ -114,10 +114,14 @@ public class TestSpecialCharactersInOutputPath {
       boolean result;
       result = launchJob(fileSys.getUri(), jobConf, 3, 1);
       assertTrue(result);
-          
+
     } finally {
-      if (dfs != null) { dfs.shutdown(); }
-      if (mr != null) { mr.shutdown(); }
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+      if (mr != null) {
+        mr.shutdown();
+      }
     }
   }
 

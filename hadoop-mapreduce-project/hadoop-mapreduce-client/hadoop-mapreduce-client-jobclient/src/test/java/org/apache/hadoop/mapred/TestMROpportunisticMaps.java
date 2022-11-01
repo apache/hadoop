@@ -28,14 +28,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-
-import static org.junit.Assert.*;
 
 /**
  * Simple MapReduce to test ability of the MRAppMaster to request and use
@@ -56,7 +56,7 @@ public class TestMROpportunisticMaps {
    * @throws Exception
    */
   @Test
-  public void testAllOpportunisticMaps() throws Exception {
+  void testAllOpportunisticMaps() throws Exception {
     doTest(4, 1, 1, 4);
   }
 
@@ -65,7 +65,7 @@ public class TestMROpportunisticMaps {
    * @throws Exception
    */
   @Test
-  public void testHalfOpportunisticMaps() throws Exception {
+  void testHalfOpportunisticMaps() throws Exception {
     doTest(4, 1, 1, 2);
   }
 

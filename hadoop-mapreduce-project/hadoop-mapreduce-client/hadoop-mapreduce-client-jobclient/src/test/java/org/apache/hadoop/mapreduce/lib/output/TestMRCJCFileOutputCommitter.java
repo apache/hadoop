@@ -21,14 +21,12 @@ package org.apache.hadoop.mapreduce.lib.output;
 import java.io.*;
 import java.net.URI;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -83,19 +81,19 @@ public class TestMRCJCFileOutputCommitter {
     fs.delete(outDir, true);
   }
   
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     cleanup();
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     cleanup();
   }
-  
+
   @SuppressWarnings("unchecked")
   @Test
-  public void testCommitter() throws Exception {
+  void testCommitter() throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
@@ -132,7 +130,7 @@ public class TestMRCJCFileOutputCommitter {
   }
 
   @Test
-  public void testEmptyOutput() throws Exception {
+  void testEmptyOutput() throws Exception {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
@@ -150,13 +148,13 @@ public class TestMRCJCFileOutputCommitter {
     // do commit
     committer.commitTask(tContext);
     committer.commitJob(jContext);
-    
+
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testAbort() throws IOException, InterruptedException {
+  void testAbort() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     FileOutputFormat.setOutputPath(job, outDir);
     Configuration conf = job.getConfiguration();
@@ -178,12 +176,12 @@ public class TestMRCJCFileOutputCommitter {
     committer.abortTask(tContext);
     File expectedFile = new File(new Path(committer.getWorkPath(), partFile)
         .toString());
-    assertFalse("task temp dir still exists", expectedFile.exists());
+    assertFalse(expectedFile.exists(), "task temp dir still exists");
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
     expectedFile = new File(new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME)
         .toString());
-    assertFalse("job temp dir still exists", expectedFile.exists());
+    assertFalse(expectedFile.exists(), "job temp dir still exists");
     assertThat(new File(outDir.toString())
         .listFiles()).withFailMessage("Output directory not empty").isEmpty();
     FileUtil.fullyDelete(new File(outDir.toString()));
@@ -206,7 +204,7 @@ public class TestMRCJCFileOutputCommitter {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testFailAbort() throws IOException, InterruptedException {
+  void testFailAbort() throws IOException, InterruptedException {
     Job job = Job.getInstance();
     Configuration conf = job.getConfiguration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "faildel:///");
@@ -241,7 +239,7 @@ public class TestMRCJCFileOutputCommitter {
     File jobTmpDir = new File(committer.getJobAttemptPath(jContext).toUri().getPath());
     File taskTmpDir = new File(committer.getTaskAttemptPath(tContext).toUri().getPath());
     File expectedFile = new File(taskTmpDir, partFile);
-    assertTrue(expectedFile + " does not exists", expectedFile.exists());
+    assertTrue(expectedFile.exists(), expectedFile + " does not exists");
 
     th = null;
     try {
@@ -252,7 +250,7 @@ public class TestMRCJCFileOutputCommitter {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    assertTrue("job temp dir does not exists", jobTmpDir.exists());
+    assertTrue(jobTmpDir.exists(), "job temp dir does not exists");
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
 }

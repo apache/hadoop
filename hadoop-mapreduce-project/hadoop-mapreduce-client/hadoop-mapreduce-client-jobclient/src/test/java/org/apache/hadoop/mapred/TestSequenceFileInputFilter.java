@@ -25,13 +25,13 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSequenceFileInputFilter {
   private static final Logger LOG = FileInputFormat.LOG;
@@ -104,74 +104,74 @@ public class TestSequenceFileInputFilter {
   }
 
   @Test
-  public void testRegexFilter() throws Exception {
+  void testRegexFilter() throws Exception {
     // set the filter class
     LOG.info("Testing Regex Filter with patter: \\A10*");
-    SequenceFileInputFilter.setFilterClass(job, 
-                                           SequenceFileInputFilter.RegexFilter.class);
+    SequenceFileInputFilter.setFilterClass(job,
+        SequenceFileInputFilter.RegexFilter.class);
     SequenceFileInputFilter.RegexFilter.setPattern(job, "\\A10*");
-    
+
     // clean input dir
     fs.delete(inDir, true);
-  
+
     // for a variety of lengths
     for (int length = 1; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
-      LOG.info("******Number of records: "+length);
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
+      LOG.info("******Number of records: " + length);
       createSequenceFile(length);
       int count = countRecords(0);
-      assertEquals(count, length==0?0:(int)Math.log10(length)+1);
+      assertEquals(count, length == 0 ? 0 : (int) Math.log10(length) + 1);
     }
-    
+
     // clean up
     fs.delete(inDir, true);
   }
 
   @Test
-  public void testPercentFilter() throws Exception {
+  void testPercentFilter() throws Exception {
     LOG.info("Testing Percent Filter with frequency: 1000");
     // set the filter class
-    SequenceFileInputFilter.setFilterClass(job, 
-                                           SequenceFileInputFilter.PercentFilter.class);
+    SequenceFileInputFilter.setFilterClass(job,
+        SequenceFileInputFilter.PercentFilter.class);
     SequenceFileInputFilter.PercentFilter.setFrequency(job, 1000);
-      
+
     // clean input dir
     fs.delete(inDir, true);
-    
+
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
-      LOG.info("******Number of records: "+length);
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
+      LOG.info("******Number of records: " + length);
       createSequenceFile(length);
       int count = countRecords(1);
-      LOG.info("Accepted "+count+" records");
-      int expectedCount = length/1000;
-      if (expectedCount*1000!=length)
+      LOG.info("Accepted " + count + " records");
+      int expectedCount = length / 1000;
+      if (expectedCount * 1000 != length)
         expectedCount++;
       assertThat(count).isEqualTo(expectedCount);
     }
-      
+
     // clean up
     fs.delete(inDir, true);
   }
 
   @Test
-  public void testMD5Filter() throws Exception {
+  void testMD5Filter() throws Exception {
     // set the filter class
     LOG.info("Testing MD5 Filter with frequency: 1000");
-    SequenceFileInputFilter.setFilterClass(job, 
-                                           SequenceFileInputFilter.MD5Filter.class);
+    SequenceFileInputFilter.setFilterClass(job,
+        SequenceFileInputFilter.MD5Filter.class);
     SequenceFileInputFilter.MD5Filter.setFrequency(job, 1000);
-      
+
     // clean input dir
     fs.delete(inDir, true);
-    
+
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
-      LOG.info("******Number of records: "+length);
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
+      LOG.info("******Number of records: " + length);
       createSequenceFile(length);
-      LOG.info("Accepted "+countRecords(0)+" records");
+      LOG.info("Accepted " + countRecords(0) + " records");
     }
     // clean up
     fs.delete(inDir, true);

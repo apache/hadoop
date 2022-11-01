@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestCombineOutputCollector {
   private CombineOutputCollector<String, Integer> coc;
@@ -99,7 +99,7 @@ public class TestCombineOutputCollector {
   };
 
   @Test
-  public void testCustomCollect() throws Throwable {
+  void testCustomCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
 
@@ -108,20 +108,20 @@ public class TestCombineOutputCollector {
 
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS, "2");
-    
+
     coc = new CombineOutputCollector<String, Integer>(outCounter, mockTaskReporter, conf);
     coc.setWriter(mockWriter);
     verify(mockTaskReporter, never()).progress();
 
     coc.collect("dummy", 1);
     verify(mockTaskReporter, never()).progress();
-    
+
     coc.collect("dummy", 2);
     verify(mockTaskReporter, times(1)).progress();
   }
-  
+
   @Test
-  public void testDefaultCollect() throws Throwable {
+  void testDefaultCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
 
@@ -129,17 +129,17 @@ public class TestCombineOutputCollector {
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();
-    
+
     coc = new CombineOutputCollector<String, Integer>(outCounter, mockTaskReporter, conf);
     coc.setWriter(mockWriter);
     verify(mockTaskReporter, never()).progress();
 
-    for(int i = 0; i < Task.DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS; i++) {
-    	coc.collect("dummy", i);
+    for (int i = 0; i < Task.DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS; i++) {
+      coc.collect("dummy", i);
     }
     verify(mockTaskReporter, times(1)).progress();
-    for(int i = 0; i < Task.DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS; i++) {
-    	coc.collect("dummy", i);
+    for (int i = 0; i < Task.DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS; i++) {
+      coc.collect("dummy", i);
     }
     verify(mockTaskReporter, times(2)).progress();
   }

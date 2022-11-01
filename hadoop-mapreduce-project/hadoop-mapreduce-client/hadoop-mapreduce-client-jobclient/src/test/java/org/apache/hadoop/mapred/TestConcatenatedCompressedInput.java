@@ -29,8 +29,8 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.Inflater;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test class for concatenated {@link CompressionInputStream}.
@@ -79,7 +79,7 @@ public class TestConcatenatedCompressedInput {
     }
   }
 
-  @After
+  @AfterEach
   public void after() {
     ZlibFactory.loadNativeZLib();
   }
@@ -130,7 +130,7 @@ public class TestConcatenatedCompressedInput {
    * Test using Hadoop's original, native-zlib gzip codec for reading.
    */
   @Test
-  public void testGzip() throws IOException {
+  void testGzip() throws IOException {
     JobConf jobConf = new JobConf(defaultConf);
 
     CompressionCodec gzip = new GzipCodec();
@@ -151,58 +151,58 @@ public class TestConcatenatedCompressedInput {
     if (org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class ==
         gzip.getDecompressorType()) {
       System.out.println(COLOR_BR_RED +
-        "testGzip() using native-zlib Decompressor (" +
-        gzip.getDecompressorType() + ")" + COLOR_NORMAL);
+          "testGzip() using native-zlib Decompressor (" +
+          gzip.getDecompressorType() + ")" + COLOR_NORMAL);
     } else {
       LOG.warn("testGzip() skipped:  native (C/C++) libs not loaded");
       return;
     }
 
-/*
- *      // THIS IS BUGGY: omits 2nd/3rd gzip headers; screws up 2nd/3rd CRCs--
- *      //                see https://issues.apache.org/jira/browse/HADOOP-6799
- *  Path fnHDFS = new Path(workDir, "concat" + gzip.getDefaultExtension());
- *  //OutputStream out = localFs.create(fnHDFS);
- *  //GzipCodec.GzipOutputStream gzOStm = new GzipCodec.GzipOutputStream(out);
- *      // can just combine those two lines, probably
- *  //GzipCodec.GzipOutputStream gzOStm =
- *  //  new GzipCodec.GzipOutputStream(localFs.create(fnHDFS));
- *      // oops, no:  this is a protected helper class; need to access
- *      //   it via createOutputStream() instead:
- *  OutputStream out = localFs.create(fnHDFS);
- *  Compressor gzCmp = gzip.createCompressor();
- *  CompressionOutputStream gzOStm = gzip.createOutputStream(out, gzCmp);
- *      // this SHOULD be going to HDFS:  got out from localFs == HDFS
- *      //   ...yup, works
- *  gzOStm.write("first gzip concat\n member\nwith three lines\n".getBytes());
- *  gzOStm.finish();
- *  gzOStm.resetState();
- *  gzOStm.write("2nd gzip concat member\n".getBytes());
- *  gzOStm.finish();
- *  gzOStm.resetState();
- *  gzOStm.write("gzip concat\nmember #3\n".getBytes());
- *  gzOStm.close();
- *      //
- *  String fn = "hdfs-to-local-concat" + gzip.getDefaultExtension();
- *  Path fnLocal = new Path(System.getProperty("test.concat.data","/tmp"), fn);
- *  localFs.copyToLocalFile(fnHDFS, fnLocal);
- */
+    /*
+     *      // THIS IS BUGGY: omits 2nd/3rd gzip headers; screws up 2nd/3rd CRCs--
+     *      //                see https://issues.apache.org/jira/browse/HADOOP-6799
+     *  Path fnHDFS = new Path(workDir, "concat" + gzip.getDefaultExtension());
+     *  //OutputStream out = localFs.create(fnHDFS);
+     *  //GzipCodec.GzipOutputStream gzOStm = new GzipCodec.GzipOutputStream(out);
+     *      // can just combine those two lines, probably
+     *  //GzipCodec.GzipOutputStream gzOStm =
+     *  //  new GzipCodec.GzipOutputStream(localFs.create(fnHDFS));
+     *      // oops, no:  this is a protected helper class; need to access
+     *      //   it via createOutputStream() instead:
+     *  OutputStream out = localFs.create(fnHDFS);
+     *  Compressor gzCmp = gzip.createCompressor();
+     *  CompressionOutputStream gzOStm = gzip.createOutputStream(out, gzCmp);
+     *      // this SHOULD be going to HDFS:  got out from localFs == HDFS
+     *      //   ...yup, works
+     *  gzOStm.write("first gzip concat\n member\nwith three lines\n".getBytes());
+     *  gzOStm.finish();
+     *  gzOStm.resetState();
+     *  gzOStm.write("2nd gzip concat member\n".getBytes());
+     *  gzOStm.finish();
+     *  gzOStm.resetState();
+     *  gzOStm.write("gzip concat\nmember #3\n".getBytes());
+     *  gzOStm.close();
+     *      //
+     *  String fn = "hdfs-to-local-concat" + gzip.getDefaultExtension();
+     *  Path fnLocal = new Path(System.getProperty("test.concat.data","/tmp"), fn);
+     *  localFs.copyToLocalFile(fnHDFS, fnLocal);
+     */
 
     // copy prebuilt (correct!) version of concat.gz to HDFS
     final String fn = "concat" + gzip.getDefaultExtension();
     Path fnLocal = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
     Path fnHDFS  = new Path(workDir, fn);
     localFs.copyFromLocalFile(fnLocal, fnHDFS);
 
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-              "this is a test\nof gzip\n");
+        "this is a test\nof gzip\n");
     FileInputFormat.setInputPaths(jobConf, workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(jobConf);
 
     InputSplit[] splits = format.getSplits(jobConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
@@ -210,75 +210,78 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jobConf);
-    assertEquals("splits[0] num lines", 6, results.size());
-    assertEquals("splits[0][5]", "member #3",
-                 results.get(5).toString());
+    assertEquals(6, results.size(), "splits[0] num lines");
+    assertEquals("member #3",
+        results.get(5).toString(),
+        "splits[0][5]");
 
     results = readSplit(format, splits[1], jobConf);
-    assertEquals("splits[1] num lines", 2, results.size());
-    assertEquals("splits[1][0]", "this is a test",
-                 results.get(0).toString());
-    assertEquals("splits[1][1]", "of gzip",
-                 results.get(1).toString());
+    assertEquals(2, results.size(), "splits[1] num lines");
+    assertEquals("this is a test",
+        results.get(0).toString(),
+        "splits[1][0]");
+    assertEquals("of gzip",
+        results.get(1).toString(),
+        "splits[1][1]");
   }
 
   /**
    * Test using the raw Inflater codec for reading gzip files.
    */
   @Test
-  public void testPrototypeInflaterGzip() throws IOException {
+  void testPrototypeInflaterGzip() throws IOException {
     CompressionCodec gzip = new GzipCodec();  // used only for file extension
     localFs.delete(workDir, true); // localFs = FileSystem instance
 
     System.out.println(COLOR_BR_BLUE + "testPrototypeInflaterGzip() using " +
-      "non-native/Java Inflater and manual gzip header/trailer parsing" +
-      COLOR_NORMAL);
+        "non-native/Java Inflater and manual gzip header/trailer parsing" +
+        COLOR_NORMAL);
 
     // copy prebuilt (correct!) version of concat.gz to HDFS
     final String fn = "concat" + gzip.getDefaultExtension();
     Path fnLocal = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
     Path fnHDFS  = new Path(workDir, fn);
     localFs.copyFromLocalFile(fnLocal, fnHDFS);
 
     final FileInputStream in = new FileInputStream(fnLocal.toString());
-    assertEquals("concat bytes available", 148, in.available());
+    assertEquals(148, in.available(), "concat bytes available");
 
     // should wrap all of this header-reading stuff in a running-CRC wrapper
     // (did so in BuiltInGzipDecompressor; see below)
 
     byte[] compressedBuf = new byte[256];
     int numBytesRead = in.read(compressedBuf, 0, 10);
-    assertEquals("header bytes read", 10, numBytesRead);
-    assertEquals("1st byte", 0x1f, compressedBuf[0] & 0xff);
-    assertEquals("2nd byte", 0x8b, compressedBuf[1] & 0xff);
-    assertEquals("3rd byte (compression method)", 8, compressedBuf[2] & 0xff);
+    assertEquals(10, numBytesRead, "header bytes read");
+    assertEquals(0x1f, compressedBuf[0] & 0xff, "1st byte");
+    assertEquals(0x8b, compressedBuf[1] & 0xff, "2nd byte");
+    assertEquals(8, compressedBuf[2] & 0xff, "3rd byte (compression method)");
 
-    byte flags = (byte)(compressedBuf[3] & 0xff);
+    byte flags = (byte) (compressedBuf[3] & 0xff);
     if ((flags & 0x04) != 0) {   // FEXTRA
       numBytesRead = in.read(compressedBuf, 0, 2);
-      assertEquals("XLEN bytes read", 2, numBytesRead);
+      assertEquals(2, numBytesRead, "XLEN bytes read");
       int xlen = ((compressedBuf[1] << 8) | compressedBuf[0]) & 0xffff;
       in.skip(xlen);
     }
     if ((flags & 0x08) != 0) {   // FNAME
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse("unexpected end-of-file while reading filename",
-                    numBytesRead == -1);
+        assertFalse(numBytesRead == -1,
+            "unexpected end-of-file while reading filename");
       }
     }
     if ((flags & 0x10) != 0) {   // FCOMMENT
       while ((numBytesRead = in.read()) != 0) {
-        assertFalse("unexpected end-of-file while reading comment",
-                    numBytesRead == -1);
+        assertFalse(numBytesRead == -1,
+            "unexpected end-of-file while reading comment");
       }
     }
     if ((flags & 0xe0) != 0) {   // reserved
-      assertTrue("reserved bits are set??", (flags & 0xe0) == 0);
+      assertTrue((flags & 0xe0) == 0, "reserved bits are set??");
     }
     if ((flags & 0x02) != 0) {   // FHCRC
       numBytesRead = in.read(compressedBuf, 0, 2);
-      assertEquals("CRC16 bytes read", 2, numBytesRead);
+      assertEquals(2, numBytesRead, "CRC16 bytes read");
       int crc16 = ((compressedBuf[1] << 8) | compressedBuf[0]) & 0xffff;
     }
 
@@ -295,9 +298,9 @@ public class TestConcatenatedCompressedInput {
     try {
       int numBytesUncompressed = inflater.inflate(uncompressedBuf);
       String outString =
-        new String(uncompressedBuf, 0, numBytesUncompressed, "UTF-8");
+          new String(uncompressedBuf, 0, numBytesUncompressed, "UTF-8");
       System.out.println("uncompressed data of first gzip member = [" +
-                         outString + "]");
+          outString + "]");
     } catch (java.util.zip.DataFormatException ex) {
       throw new IOException(ex.getMessage());
     }
@@ -311,7 +314,7 @@ public class TestConcatenatedCompressedInput {
   // NOTE:  This fails on RHEL4 with "java.io.IOException: header crc mismatch"
   //        due to buggy version of zlib (1.2.1.2) included.
   @Test
-  public void testBuiltInGzipDecompressor() throws IOException {
+  void testBuiltInGzipDecompressor() throws IOException {
     JobConf jobConf = new JobConf(defaultConf);
 
     CompressionCodec gzip = new GzipCodec();
@@ -319,17 +322,17 @@ public class TestConcatenatedCompressedInput {
     localFs.delete(workDir, true);
     // Don't use native libs for this test
     ZlibFactory.setNativeZlibLoaded(false);
-    assertEquals("[non-native (Java) codec]",
-      org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class,
-      gzip.getDecompressorType());
+    assertEquals(org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor.class,
+        gzip.getDecompressorType(),
+        "[non-native (Java) codec]");
     System.out.println(COLOR_BR_YELLOW + "testBuiltInGzipDecompressor() using" +
-      " non-native (Java Inflater) Decompressor (" + gzip.getDecompressorType()
-      + ")" + COLOR_NORMAL);
+        " non-native (Java Inflater) Decompressor (" + gzip.getDecompressorType()
+        + ")" + COLOR_NORMAL);
 
     // copy single-member test file to HDFS
     String fn1 = "testConcatThenCompress.txt" + gzip.getDefaultExtension();
     Path fnLocal1 = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn1);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn1);
     Path fnHDFS1  = new Path(workDir, fn1);
     localFs.copyFromLocalFile(fnLocal1, fnHDFS1);
 
@@ -337,7 +340,7 @@ public class TestConcatenatedCompressedInput {
     // (actually in "seekable gzip" format, a la JIRA PIG-42)
     String fn2 = "testCompressThenConcat.txt" + gzip.getDefaultExtension();
     Path fnLocal2 = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn2);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn2);
     Path fnHDFS2  = new Path(workDir, fn2);
     localFs.copyFromLocalFile(fnLocal2, fnHDFS2);
 
@@ -346,23 +349,21 @@ public class TestConcatenatedCompressedInput {
     // here's first pair of DecompressorStreams:
     final FileInputStream in1 = new FileInputStream(fnLocal1.toString());
     final FileInputStream in2 = new FileInputStream(fnLocal2.toString());
-    assertEquals("concat bytes available", 2734, in1.available());
-    assertEquals("concat bytes available", 3413, in2.available()); // w/hdr CRC
+    assertEquals(2734, in1.available(), "concat bytes available");
+    assertEquals(3413, in2.available(), "concat bytes available"); // w/hdr CRC
 
     CompressionInputStream cin2 = gzip.createInputStream(in2);
     LineReader in = new LineReader(cin2);
     Text out = new Text();
 
-    int numBytes, totalBytes=0, lineNum=0;
+    int numBytes, totalBytes = 0, lineNum = 0;
     while ((numBytes = in.readLine(out)) > 0) {
       ++lineNum;
       totalBytes += numBytes;
     }
     in.close();
-    assertEquals("total uncompressed bytes in concatenated test file",
-                 5346, totalBytes);
-    assertEquals("total uncompressed lines in concatenated test file",
-                 84, lineNum);
+    assertEquals(5346, totalBytes, "total uncompressed bytes in concatenated test file");
+    assertEquals(84, lineNum, "total uncompressed lines in concatenated test file");
 
     ZlibFactory.loadNativeZLib();
     // test GzipZlibDecompressor (native), just to be sure
@@ -441,7 +442,7 @@ public class TestConcatenatedCompressedInput {
 
     // here's Nth pair of DecompressorStreams:
     InputSplit[] splits = format.getSplits(jConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath()
             .getName().equals("testdata/testCompressThenConcat.txt.gz")) {
@@ -451,29 +452,29 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jConf);
-    assertEquals("splits[0] length (num lines)", 84, results.size());
-    assertEquals("splits[0][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[0][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals(84, results.size(), "splits[0] length (num lines)");
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+      results.get(0).toString(),
+      "splits[0][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+      results.get(42).toString(),
+      "splits[0][42]");
 
     results = readSplit(format, splits[1], jConf);
-    assertEquals("splits[1] length (num lines)", 84, results.size());
-    assertEquals("splits[1][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[1][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals(84, results.size(), "splits[1] length (num lines)");
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+      results.get(0).toString(),
+      "splits[1][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+      results.get(42).toString(),
+      "splits[1][42]");
   }
 
   /**
    * Test using the bzip2 codec for reading
    */
   @Test
-  public void testBzip2() throws IOException {
+  void testBzip2() throws IOException {
     JobConf jobConf = new JobConf(defaultConf);
 
     CompressionCodec bzip2 = new BZip2Codec();
@@ -481,18 +482,18 @@ public class TestConcatenatedCompressedInput {
     localFs.delete(workDir, true);
 
     System.out.println(COLOR_BR_CYAN +
-      "testBzip2() using non-native CBZip2InputStream (presumably)" +
-      COLOR_NORMAL);
+        "testBzip2() using non-native CBZip2InputStream (presumably)" +
+        COLOR_NORMAL);
 
     // copy prebuilt (correct!) version of concat.bz2 to HDFS
     final String fn = "concat" + bzip2.getDefaultExtension();
     Path fnLocal = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn);
     Path fnHDFS  = new Path(workDir, fn);
     localFs.copyFromLocalFile(fnLocal, fnHDFS);
 
     writeFile(localFs, new Path(workDir, "part2.txt.bz2"), bzip2,
-              "this is a test\nof bzip2\n");
+        "this is a test\nof bzip2\n");
     FileInputFormat.setInputPaths(jobConf, workDir);
     TextInputFormat format = new TextInputFormat();  // extends FileInputFormat
     format.configure(jobConf);
@@ -500,7 +501,7 @@ public class TestConcatenatedCompressedInput {
     // [135 splits for a 208-byte file and a 62-byte file(!)]
 
     InputSplit[] splits = format.getSplits(jobConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.bz2")) {
       splits[0] = splits[1];
@@ -508,23 +509,26 @@ public class TestConcatenatedCompressedInput {
     }
 
     List<Text> results = readSplit(format, splits[0], jobConf);
-    assertEquals("splits[0] num lines", 6, results.size());
-    assertEquals("splits[0][5]", "member #3",
-                 results.get(5).toString());
+    assertEquals(6, results.size(), "splits[0] num lines");
+    assertEquals("member #3",
+        results.get(5).toString(),
+        "splits[0][5]");
 
     results = readSplit(format, splits[1], jobConf);
-    assertEquals("splits[1] num lines", 2, results.size());
-    assertEquals("splits[1][0]", "this is a test",
-                 results.get(0).toString());
-    assertEquals("splits[1][1]", "of bzip2",
-                 results.get(1).toString());
+    assertEquals(2, results.size(), "splits[1] num lines");
+    assertEquals("this is a test",
+        results.get(0).toString(),
+        "splits[1][0]");
+    assertEquals("of bzip2",
+        results.get(1).toString(),
+        "splits[1][1]");
   }
 
   /**
    * Extended bzip2 test, similar to BuiltInGzipDecompressor test above.
    */
   @Test
-  public void testMoreBzip2() throws IOException {
+  void testMoreBzip2() throws IOException {
     JobConf jobConf = new JobConf(defaultConf);
 
     CompressionCodec bzip2 = new BZip2Codec();
@@ -532,20 +536,20 @@ public class TestConcatenatedCompressedInput {
     localFs.delete(workDir, true);
 
     System.out.println(COLOR_BR_MAGENTA +
-      "testMoreBzip2() using non-native CBZip2InputStream (presumably)" +
-      COLOR_NORMAL);
+        "testMoreBzip2() using non-native CBZip2InputStream (presumably)" +
+        COLOR_NORMAL);
 
     // copy single-member test file to HDFS
     String fn1 = "testConcatThenCompress.txt" + bzip2.getDefaultExtension();
     Path fnLocal1 = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn1);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn1);
     Path fnHDFS1  = new Path(workDir, fn1);
     localFs.copyFromLocalFile(fnLocal1, fnHDFS1);
 
     // copy multiple-member test file to HDFS
     String fn2 = "testCompressThenConcat.txt" + bzip2.getDefaultExtension();
     Path fnLocal2 = new Path(
-            System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn2);
+        System.getProperty("test.concat.data", DEFAULT_WORK_DIR), fn2);
     Path fnHDFS2  = new Path(workDir, fn2);
     localFs.copyFromLocalFile(fnLocal2, fnHDFS2);
 
@@ -554,23 +558,21 @@ public class TestConcatenatedCompressedInput {
     // here's first pair of BlockDecompressorStreams:
     final FileInputStream in1 = new FileInputStream(fnLocal1.toString());
     final FileInputStream in2 = new FileInputStream(fnLocal2.toString());
-    assertEquals("concat bytes available", 2567, in1.available());
-    assertEquals("concat bytes available", 3056, in2.available());
+    assertEquals(2567, in1.available(), "concat bytes available");
+    assertEquals(3056, in2.available(), "concat bytes available");
 
     CompressionInputStream cin2 = bzip2.createInputStream(in2);
     LineReader in = new LineReader(cin2);
     Text out = new Text();
 
-    int numBytes, totalBytes=0, lineNum=0;
+    int numBytes, totalBytes = 0, lineNum = 0;
     while ((numBytes = in.readLine(out)) > 0) {
       ++lineNum;
       totalBytes += numBytes;
     }
     in.close();
-    assertEquals("total uncompressed bytes in concatenated test file",
-                 5346, totalBytes);
-    assertEquals("total uncompressed lines in concatenated test file",
-                 84, lineNum);
+    assertEquals(5346, totalBytes, "total uncompressed bytes in concatenated test file");
+    assertEquals(84, lineNum, "total uncompressed lines in concatenated test file");
 
     // test CBZip2InputStream with lots of different input-buffer sizes
     doMultipleBzip2BufferSizes(jobConf);
@@ -645,7 +647,7 @@ public class TestConcatenatedCompressedInput {
 
     // here's Nth pair of DecompressorStreams:
     InputSplit[] splits = format.getSplits(jConf, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath()
             .getName().equals("testdata/testCompressThenConcat.txt.gz")) {
@@ -656,23 +658,23 @@ public class TestConcatenatedCompressedInput {
 
     // testConcatThenCompress (single)
     List<Text> results = readSplit(format, splits[0], jConf);
-    assertEquals("splits[0] length (num lines)", 84, results.size());
-    assertEquals("splits[0][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[0][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals(84, results.size(), "splits[0] length (num lines)");
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+      results.get(0).toString(),
+      "splits[0][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+      results.get(42).toString(),
+      "splits[0][42]");
 
     // testCompressThenConcat (multi)
     results = readSplit(format, splits[1], jConf);
-    assertEquals("splits[1] length (num lines)", 84, results.size());
-    assertEquals("splits[1][0]",
-      "Call me Ishmael. Some years ago--never mind how long precisely--having",
-      results.get(0).toString());
-    assertEquals("splits[1][42]",
-      "Tell me, does the magnetic virtue of the needles of the compasses of",
-      results.get(42).toString());
+    assertEquals(84, results.size(), "splits[1] length (num lines)");
+    assertEquals("Call me Ishmael. Some years ago--never mind how long precisely--having",
+      results.get(0).toString(),
+      "splits[1][0]");
+    assertEquals("Tell me, does the magnetic virtue of the needles of the compasses of",
+      results.get(42).toString(),
+      "splits[1][42]");
   }
 
   private static String unquote(String in) {

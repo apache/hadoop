@@ -23,9 +23,10 @@ import org.apache.hadoop.mapreduce.counters.LimitExceededException;
 import org.apache.hadoop.mapreduce.counters.Limits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
  */
@@ -37,7 +38,7 @@ public class TestCounters {
    * Verify counter value works
    */
   @Test
-  public void testCounterValue() {
+  void testCounterValue() {
     final int NUMBER_TESTS = 100;
     final int NUMBER_INC = 10;
     final Random rand = new Random();
@@ -46,32 +47,30 @@ public class TestCounters {
       long expectedValue = initValue;
       Counter counter = new Counters().findCounter("test", "foo");
       counter.setValue(initValue);
-      assertEquals("Counter value is not initialized correctly",
-          expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(), "Counter value is not initialized correctly");
       for (int j = 0; j < NUMBER_INC; j++) {
         int incValue = rand.nextInt();
         counter.increment(incValue);
         expectedValue += incValue;
-        assertEquals("Counter value is not incremented correctly",
-            expectedValue, counter.getValue());
+        assertEquals(expectedValue, counter.getValue(), "Counter value is not incremented correctly");
       }
       expectedValue = rand.nextInt();
       counter.setValue(expectedValue);
-      assertEquals("Counter value is not set correctly",
-          expectedValue, counter.getValue());
+      assertEquals(expectedValue, counter.getValue(), "Counter value is not set correctly");
     }
   }
 
-  @Test public void testLimits() {
+  @Test
+  void testLimits() {
     for (int i = 0; i < 3; ++i) {
       // make sure limits apply to separate containers
       testMaxCounters(new Counters());
       testMaxGroups(new Counters());
     }
   }
-  
+
   @Test
-  public void testCountersIncrement() {
+  void testCountersIncrement() {
     Counters fCounters = new Counters();
     Counter fCounter = fCounters.findCounter(FRAMEWORK_COUNTER);
     fCounter.setValue(100);
@@ -148,6 +147,6 @@ public class TestCounters {
       LOG.info("got expected: "+ e);
       return;
     }
-    assertTrue("Should've thrown "+ ecls.getSimpleName(), false);
+    assertTrue(false, "Should've thrown "+ ecls.getSimpleName());
   }
 }

@@ -26,15 +26,16 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * check for the job submission  options of 
  * -libjars -files -archives
  */
-@Ignore
+@Disabled
 public class TestCommandLineJobSubmission {
   // Input output paths for this..
   // these are all dummy and does not test
@@ -43,8 +44,9 @@ public class TestCommandLineJobSubmission {
   static final Path input = new Path("/test/input/");
   static final Path output = new Path("/test/output");
   File buildDir = new File(System.getProperty("test.build.data", "/tmp"));
+
   @Test
-  public void testJobShell() throws Exception {
+  void testJobShell() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     FileSystem fs = null;
@@ -59,7 +61,7 @@ public class TestCommandLineJobSubmission {
       stream.close();
       mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
       File thisbuildDir = new File(buildDir, "jobCommand");
-      assertTrue("create build dir", thisbuildDir.mkdirs()); 
+      assertTrue(thisbuildDir.mkdirs(), "create build dir");
       File f = new File(thisbuildDir, "files_tmp");
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());
@@ -68,7 +70,7 @@ public class TestCommandLineJobSubmission {
       fstream = new FileOutputStream(f1);
       fstream.write("somestrings".getBytes());
       fstream.close();
-      
+
       // copy files to dfs
       Path cachePath = new Path("/cacheDir");
       if (!fs.mkdirs(cachePath)) {
@@ -89,21 +91,21 @@ public class TestCommandLineJobSubmission {
       String[] files = new String[3];
       files[0] = f.toString();
       files[1] = f1.toString() + "#localfilelink";
-      files[2] = 
-        fs.getUri().resolve(cachePath + "/test.txt#dfsfilelink").toString();
+      files[2] =
+          fs.getUri().resolve(cachePath + "/test.txt#dfsfilelink").toString();
 
       // construct options for -libjars
       String[] libjars = new String[2];
       libjars[0] = "build/test/mapred/testjar/testjob.jar";
       libjars[1] = fs.getUri().resolve(cachePath + "/test.jar").toString();
-      
+
       // construct options for archives
       String[] archives = new String[3];
       archives[0] = tgzPath.toString();
       archives[1] = tarPath + "#tarlink";
-      archives[2] = 
-        fs.getUri().resolve(cachePath + "/test.zip#ziplink").toString();
-      
+      archives[2] =
+          fs.getUri().resolve(cachePath + "/test.zip#ziplink").toString();
+
       String[] args = new String[10];
       args[0] = "-files";
       args[1] = StringUtils.arrayToString(files);
@@ -117,21 +119,27 @@ public class TestCommandLineJobSubmission {
       args[7] = "mapred.output.committer.class=testjar.CustomOutputCommitter";
       args[8] = input.toString();
       args[9] = output.toString();
-      
+
       JobConf jobConf = mr.createJobConf();
       //before running the job, verify that libjar is not in client classpath
-      assertTrue("libjar not in client classpath", loadLibJar(jobConf)==null);
+      assertTrue(loadLibJar(jobConf) == null, "libjar not in client classpath");
       int ret = ToolRunner.run(jobConf,
-                               new testshell.ExternalMapReduce(), args);
+          new testshell.ExternalMapReduce(), args);
       //after running the job, verify that libjar is in the client classpath
-      assertTrue("libjar added to client classpath", loadLibJar(jobConf)!=null);
-      
-      assertTrue("not failed ", ret != -1);
+      assertTrue(loadLibJar(jobConf) != null, "libjar added to client classpath");
+
+      assertTrue(ret != -1, "not failed ");
       f.delete();
       thisbuildDir.delete();
     } finally {
-      if (dfs != null) {dfs.shutdown();};
-      if (mr != null) {mr.shutdown();};
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+      ;
+      if (mr != null) {
+        mr.shutdown();
+      }
+      ;
     }
   }
   

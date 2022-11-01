@@ -30,8 +30,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestFileOutputFormat extends HadoopTestCase {
 
@@ -40,14 +41,14 @@ public class TestFileOutputFormat extends HadoopTestCase {
   }
 
   @Test
-  public void testCustomFile() throws Exception {
+  void testCustomFile() throws Exception {
     Path inDir = new Path("testing/fileoutputformat/input");
     Path outDir = new Path("testing/fileoutputformat/output");
 
     // Hack for local FS that does not have the concept of a 'mounting point'
     if (isLocalFS()) {
       String localPathRoot = System.getProperty("test.build.data", "/tmp")
-        .replace(' ', '+');
+          .replace(' ', '+');
       inDir = new Path(localPathRoot, inDir);
       outDir = new Path(localPathRoot, outDir);
     }

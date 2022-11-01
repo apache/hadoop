@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.util.*;
@@ -127,8 +127,9 @@ public class TestCollect
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(1);
   }
+
   @Test
-  public void testCollect() throws IOException {
+  void testCollect() throws IOException {
     JobConf conf = new JobConf();
     configure(conf);
     try {

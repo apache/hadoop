@@ -23,9 +23,9 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +40,7 @@ public class TestJHLA {
   private String historyLog = System.getProperty("test.build.data", 
                                   "build/test/data") + "/history/test.log";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     File logFile = new File(historyLog);
     if(!logFile.getParentFile().exists())
@@ -121,7 +121,7 @@ public class TestJHLA {
     writer.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     File logFile = new File(historyLog);
     if(!logFile.delete())
@@ -134,11 +134,11 @@ public class TestJHLA {
    * Run log analyzer in test mode for file test.log.
    */
   @Test
-  public void testJHLA() {
+  void testJHLA() {
     String[] args = {"-test", historyLog, "-jobDelimiter", ".!!FILE=.*!!"};
     JHLogAnalyzer.main(args);
     args = new String[]{"-test", historyLog, "-jobDelimiter", ".!!FILE=.*!!",
-                        "-usersIncluded", "hadoop,hadoop2"};
+        "-usersIncluded", "hadoop,hadoop2"};
     JHLogAnalyzer.main(args);
     args = new String[]{"-test", historyLog, "-jobDelimiter", ".!!FILE=.*!!",
         "-usersExcluded", "hadoop,hadoop3"};

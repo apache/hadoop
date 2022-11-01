@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +44,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public class TestMRCJCFileInputFormat {
 
   @Test
-  public void testAddInputPath() throws IOException {
+  void testAddInputPath() throws IOException {
     final Configuration conf = new Configuration();
     conf.set("fs.defaultFS", "file:///abc/");
     final Job j = Job.getInstance(conf);
@@ -77,7 +77,7 @@ public class TestMRCJCFileInputFormat {
   }
 
   @Test
-  public void testNumInputFiles() throws Exception {
+  void testNumInputFiles() throws Exception {
     Configuration conf = spy(new Configuration());
     Job mockedJob = mock(Job.class);
     when(mockedJob.getConfiguration()).thenReturn(conf);
@@ -89,10 +89,10 @@ public class TestMRCJCFileInputFormat {
     ispy.getSplits(mockedJob);
     verify(conf).setLong(FileInputFormat.NUM_INPUT_FILES, 1);
   }
-  
+
   @Test
   @SuppressWarnings({"rawtypes", "unchecked"})
-  public void testLastInputSplitAtSplitBoundary() throws Exception {
+  void testLastInputSplitAtSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1024l * 1024 * 1024,
         128l * 1024 * 1024);
     Configuration conf = new Configuration();
@@ -100,15 +100,15 @@ public class TestMRCJCFileInputFormat {
     when(jobContext.getConfiguration()).thenReturn(conf);
     List<InputSplit> splits = fif.getSplits(jobContext);
     assertEquals(8, splits.size());
-    for (int i = 0 ; i < splits.size() ; i++) {
+    for (int i = 0; i < splits.size(); i++) {
       InputSplit split = splits.get(i);
       assertEquals(("host" + i), split.getLocations()[0]);
     }
   }
-  
+
   @Test
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  public void testLastInputSplitExceedingSplitBoundary() throws Exception {
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void testLastInputSplitExceedingSplitBoundary() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(1027l * 1024 * 1024,
         128l * 1024 * 1024);
     Configuration conf = new Configuration();
@@ -123,8 +123,8 @@ public class TestMRCJCFileInputFormat {
   }
 
   @Test
-  @SuppressWarnings({ "rawtypes", "unchecked" })
-  public void testLastInputSplitSingleSplit() throws Exception {
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  void testLastInputSplitSingleSplit() throws Exception {
     FileInputFormat fif = new FileInputFormatForTest(100l * 1024 * 1024,
         128l * 1024 * 1024);
     Configuration conf = new Configuration();
@@ -142,28 +142,28 @@ public class TestMRCJCFileInputFormat {
    * Test when the input file's length is 0.
    */
   @Test
-  public void testForEmptyFile() throws Exception {
-      Configuration conf = new Configuration();
-      FileSystem fileSys = FileSystem.get(conf);
-      Path file = new Path("test" + "/file");
-      FSDataOutputStream out = fileSys.create(file, true,
-              conf.getInt("io.file.buffer.size", 4096), (short) 1, (long) 1024);
-      out.write(new byte[0]);
-      out.close();
+  void testForEmptyFile() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem fileSys = FileSystem.get(conf);
+    Path file = new Path("test" + "/file");
+    FSDataOutputStream out = fileSys.create(file, true,
+        conf.getInt("io.file.buffer.size", 4096), (short) 1, (long) 1024);
+    out.write(new byte[0]);
+    out.close();
 
-      // split it using a File input format
-      DummyInputFormat inFormat = new DummyInputFormat();
-      Job job = Job.getInstance(conf);
-      FileInputFormat.setInputPaths(job, "test");
-      List<InputSplit> splits = inFormat.getSplits(job);
-      assertEquals(1, splits.size());
-      FileSplit fileSplit = (FileSplit) splits.get(0);
-      assertEquals(0, fileSplit.getLocations().length);
-      assertEquals(file.getName(), fileSplit.getPath().getName());
-      assertEquals(0, fileSplit.getStart());
-      assertEquals(0, fileSplit.getLength());
+    // split it using a File input format
+    DummyInputFormat inFormat = new DummyInputFormat();
+    Job job = Job.getInstance(conf);
+    FileInputFormat.setInputPaths(job, "test");
+    List<InputSplit> splits = inFormat.getSplits(job);
+    assertEquals(1, splits.size());
+    FileSplit fileSplit = (FileSplit) splits.get(0);
+    assertEquals(0, fileSplit.getLocations().length);
+    assertEquals(file.getName(), fileSplit.getPath().getName());
+    assertEquals(0, fileSplit.getStart());
+    assertEquals(0, fileSplit.getLength());
 
-      fileSys.delete(file.getParent(), true);
+    fileSys.delete(file.getParent(), true);
   }
 
   /** Dummy class to extend FileInputFormat*/

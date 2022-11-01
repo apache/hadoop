@@ -20,8 +20,10 @@ package org.apache.hadoop.mapreduce.lib.input;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,13 +36,13 @@ public class TestDelegatingInputFormat {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testSplitting() throws Exception {
+  void testSplitting() throws Exception {
     Job job = Job.getInstance();
     MiniDFSCluster dfs = null;
     try {
       dfs = new MiniDFSCluster.Builder(job.getConfiguration()).numDataNodes(4)
-          .racks(new String[] { "/rack0", "/rack0", "/rack1", "/rack1" })
-          .hosts(new String[] { "host0", "host1", "host2", "host3" })
+          .racks(new String[]{"/rack0", "/rack0", "/rack1", "/rack1"})
+          .hosts(new String[]{"host0", "host1", "host2", "host3"})
           .build();
       FileSystem fs = dfs.getFileSystem();
 
@@ -51,45 +53,44 @@ public class TestDelegatingInputFormat {
 
       final int numSplits = 100;
 
-      FileInputFormat.setMaxInputSplitSize(job, 
-              fs.getFileStatus(path).getLen() / numSplits);
+      FileInputFormat.setMaxInputSplitSize(job,
+          fs.getFileStatus(path).getLen() / numSplits);
       MultipleInputs.addInputPath(job, path, TextInputFormat.class,
-         MapClass.class);
+          MapClass.class);
       MultipleInputs.addInputPath(job, path2, TextInputFormat.class,
-         MapClass2.class);
+          MapClass2.class);
       MultipleInputs.addInputPath(job, path3, KeyValueTextInputFormat.class,
-         MapClass.class);
+          MapClass.class);
       MultipleInputs.addInputPath(job, path4, TextInputFormat.class,
-         MapClass2.class);
+          MapClass2.class);
       DelegatingInputFormat inFormat = new DelegatingInputFormat();
 
       int[] bins = new int[3];
-      for (InputSplit split : (List<InputSplit>)inFormat.getSplits(job)) {
-       assertTrue(split instanceof TaggedInputSplit);
-       final TaggedInputSplit tis = (TaggedInputSplit) split;
-       int index = -1;
+      for (InputSplit split : (List<InputSplit>) inFormat.getSplits(job)) {
+        assertTrue(split instanceof TaggedInputSplit);
+        final TaggedInputSplit tis = (TaggedInputSplit) split;
+        int index = -1;
 
-       if (tis.getInputFormatClass().equals(KeyValueTextInputFormat.class)) {
-         // path3
-         index = 0;
-       } else if (tis.getMapperClass().equals(MapClass.class)) {
-         // path
-         index = 1;
-       } else {
-         // path2 and path4
-         index = 2;
-       }
+        if (tis.getInputFormatClass().equals(KeyValueTextInputFormat.class)) {
+          // path3
+          index = 0;
+        } else if (tis.getMapperClass().equals(MapClass.class)) {
+          // path
+          index = 1;
+        } else {
+          // path2 and path4
+          index = 2;
+        }
 
-       bins[index]++;
+        bins[index]++;
       }
 
-      assertEquals("count is not equal to num splits", numSplits, bins[0]);
-      assertEquals("count is not equal to num splits", numSplits, bins[1]);
-      assertEquals("count is not equal to 2 * num splits",
-        numSplits * 2, bins[2]);
+      assertEquals(numSplits, bins[0], "count is not equal to num splits");
+      assertEquals(numSplits, bins[1], "count is not equal to num splits");
+      assertEquals(numSplits * 2, bins[2], "count is not equal to 2 * num splits");
     } finally {
       if (dfs != null) {
-       dfs.shutdown();
+        dfs.shutdown();
       }
     }
   }

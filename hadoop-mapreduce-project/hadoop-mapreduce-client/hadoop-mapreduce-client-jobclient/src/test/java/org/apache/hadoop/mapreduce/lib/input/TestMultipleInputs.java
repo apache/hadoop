@@ -36,9 +36,10 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @see TestDelegatingInputFormat
@@ -64,7 +65,7 @@ public class TestMultipleInputs extends HadoopTestCase {
     return dir;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     Path rootDir = getDir(ROOT_DIR);
@@ -83,7 +84,7 @@ public class TestMultipleInputs extends HadoopTestCase {
   }
 
   @Test
-  public void testDoMultipleInputs() throws IOException {
+  void testDoMultipleInputs() throws IOException {
     Path in1Dir = getDir(IN1_DIR);
     Path in2Dir = getDir(IN2_DIR);
 
@@ -141,33 +142,33 @@ public class TestMultipleInputs extends HadoopTestCase {
   }
 
   @Test
-  public void testAddInputPathWithFormat() throws IOException {
+  void testAddInputPathWithFormat() throws IOException {
     final Job conf = Job.getInstance();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class);
     MultipleInputs.addInputPath(conf, new Path("/bar"),
         KeyValueTextInputFormat.class);
     final Map<Path, InputFormat> inputs = MultipleInputs
-       .getInputFormatMap(conf);
+        .getInputFormatMap(conf);
     assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
     assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
+        .getClass());
   }
 
   @Test
-  public void testAddInputPathWithMapper() throws IOException {
+  void testAddInputPathWithMapper() throws IOException {
     final Job conf = Job.getInstance();
     MultipleInputs.addInputPath(conf, new Path("/foo"), TextInputFormat.class,
-       MapClass.class);
+        MapClass.class);
     MultipleInputs.addInputPath(conf, new Path("/bar"),
         KeyValueTextInputFormat.class, KeyValueMapClass.class);
     final Map<Path, InputFormat> inputs = MultipleInputs
-       .getInputFormatMap(conf);
+        .getInputFormatMap(conf);
     final Map<Path, Class<? extends Mapper>> maps = MultipleInputs
-       .getMapperTypeMap(conf);
+        .getMapperTypeMap(conf);
 
     assertEquals(TextInputFormat.class, inputs.get(new Path("/foo")).getClass());
     assertEquals(KeyValueTextInputFormat.class, inputs.get(new Path("/bar"))
-       .getClass());
+        .getClass());
     assertEquals(MapClass.class, maps.get(new Path("/foo")));
     assertEquals(KeyValueMapClass.class, maps.get(new Path("/bar")));
   }

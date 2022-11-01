@@ -24,7 +24,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,8 +35,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestUserDefinedCounters {
   private static String TEST_ROOT_DIR =
@@ -77,14 +77,14 @@ public class TestUserDefinedCounters {
   }
 
   @Test
-  public void testMapReduceJob() throws Exception {
+  void testMapReduceJob() throws Exception {
 
     JobConf conf = new JobConf(TestUserDefinedCounters.class);
     conf.setJobName("UserDefinedCounters");
-    
+
     FileSystem fs = FileSystem.get(conf);
     cleanAndCreateInput(fs);
-    
+
     conf.setInputFormat(TextInputFormat.class);
 
     conf.setMapOutputKeyClass(LongWritable.class);
@@ -104,8 +104,8 @@ public class TestUserDefinedCounters {
     RunningJob runningJob = JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-        fs.listStatus(OUTPUT_DIR, 
-                      new Utils.OutputFileUtils.OutputFilesFilter()));
+        fs.listStatus(OUTPUT_DIR,
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = fs.open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

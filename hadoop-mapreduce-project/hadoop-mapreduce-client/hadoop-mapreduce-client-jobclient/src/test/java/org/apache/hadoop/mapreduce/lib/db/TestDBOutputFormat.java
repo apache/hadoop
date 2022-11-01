@@ -24,11 +24,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDBOutputFormat {
   private String[] fieldNames = new String[] { "id", "name", "value" };
@@ -41,16 +39,16 @@ public class TestDBOutputFormat {
     = new DBOutputFormat<DBWritable, NullWritable>();
 
   @Test
-  public void testConstructQuery() {
+  void testConstructQuery() {
     String actual = format.constructQuery("hadoop_output", fieldNames);
     assertEquals(expected, actual);
-    
+
     actual = format.constructQuery("hadoop_output", nullFieldNames);
     assertEquals(nullExpected, actual);
   }
 
   @Test
-  public void testDB2ConstructQuery() {
+  void testDB2ConstructQuery() {
     String db2expected = StringUtils.removeEnd(expected, ";");
     String db2nullExpected = StringUtils.removeEnd(nullExpected, ";");
 
@@ -71,7 +69,7 @@ public class TestDBOutputFormat {
   }
 
   @Test
-  public void testORACLEConstructQuery() {
+  void testORACLEConstructQuery() {
     String oracleExpected = StringUtils.removeEnd(expected, ";");
     String oracleNullExpected = StringUtils.removeEnd(nullExpected, ";");
 
@@ -92,25 +90,25 @@ public class TestDBOutputFormat {
   }
 
   @Test
-  public void testSetOutput() throws IOException {
+  void testSetOutput() throws IOException {
     Job job = Job.getInstance(new Configuration());
     DBOutputFormat.setOutput(job, "hadoop_output", fieldNames);
-    
+
     DBConfiguration dbConf = new DBConfiguration(job.getConfiguration());
     String actual = format.constructQuery(dbConf.getOutputTableName()
-        , dbConf.getOutputFieldNames());
-    
+    , dbConf.getOutputFieldNames());
+
     assertEquals(expected, actual);
-    
+
     job = Job.getInstance(new Configuration());
     dbConf = new DBConfiguration(job.getConfiguration());
     DBOutputFormat.setOutput(job, "hadoop_output", nullFieldNames.length);
     assertNull(dbConf.getOutputFieldNames());
     assertEquals(nullFieldNames.length, dbConf.getOutputFieldCount());
-    
+
     actual = format.constructQuery(dbConf.getOutputTableName()
-        , new String[dbConf.getOutputFieldCount()]);
-    
+    , new String[dbConf.getOutputFieldCount()]);
+
     assertEquals(nullExpected, actual);
   }
   

@@ -21,21 +21,22 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.MRCaching.TestResult;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * A JUnit test to test caching with DFS
  * 
  */
-@Ignore
+@Disabled
 public class TestMiniMRDFSCaching {
 
   @Test
-  public void testWithDFS() throws IOException {
+  void testWithDFS() throws IOException {
     MiniMRCluster mr = null;
     MiniDFSCluster dfs = null;
     FileSystem fileSys = null;
@@ -47,20 +48,20 @@ public class TestMiniMRDFSCaching {
       MRCaching.setupCache("/cachedir", fileSys);
       // run the wordcount example with caching
       TestResult ret = MRCaching.launchMRCache("/testing/wc/input",
-                                            "/testing/wc/output",
-                                            "/cachedir",
-                                            mr.createJobConf(),
-                                            "The quick brown fox\nhas many silly\n"
-                                            + "red fox sox\n");
-      assertTrue("Archives not matching", ret.isOutputOk);
+          "/testing/wc/output",
+          "/cachedir",
+          mr.createJobConf(),
+          "The quick brown fox\nhas many silly\n"
+              + "red fox sox\n");
+      assertTrue(ret.isOutputOk, "Archives not matching");
       // launch MR cache with symlinks
       ret = MRCaching.launchMRCache("/testing/wc/input",
-                                    "/testing/wc/output",
-                                    "/cachedir",
-                                    mr.createJobConf(),
-                                    "The quick brown fox\nhas many silly\n"
-                                    + "red fox sox\n");
-      assertTrue("Archives not matching", ret.isOutputOk);
+          "/testing/wc/output",
+          "/cachedir",
+          mr.createJobConf(),
+          "The quick brown fox\nhas many silly\n"
+              + "red fox sox\n");
+      assertTrue(ret.isOutputOk, "Archives not matching");
     } finally {
       if (fileSys != null) {
         fileSys.close();

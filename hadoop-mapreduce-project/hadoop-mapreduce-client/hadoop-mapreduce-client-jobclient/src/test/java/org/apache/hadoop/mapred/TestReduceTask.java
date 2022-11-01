@@ -26,12 +26,12 @@ import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This test exercises the ValueIterator.
@@ -125,21 +125,21 @@ public class TestReduceTask {
   }
 
   @Test
-  public void testValueIterator() throws Exception {
+  void testValueIterator() throws Exception {
     Path tmpDir = new Path("build/test/test.reduce.task");
     Configuration conf = new Configuration();
-    for (Pair[] testCase: testCases) {
+    for (Pair[] testCase : testCases) {
       runValueIterator(tmpDir, testCase, conf, null);
     }
   }
 
   @Test
-  public void testValueIteratorWithCompression() throws Exception {
+  void testValueIteratorWithCompression() throws Exception {
     Path tmpDir = new Path("build/test/test.reduce.task.compression");
     Configuration conf = new Configuration();
     DefaultCodec codec = new DefaultCodec();
     codec.setConf(conf);
-    for (Pair[] testCase: testCases) {
+    for (Pair[] testCase : testCases) {
       runValueIterator(tmpDir, testCase, conf, codec);
     }
   }

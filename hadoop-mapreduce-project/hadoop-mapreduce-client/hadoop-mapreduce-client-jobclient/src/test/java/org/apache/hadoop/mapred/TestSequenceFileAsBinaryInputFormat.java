@@ -25,23 +25,22 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestSequenceFileAsBinaryInputFormat {
   private static final Logger LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
   @Test
-  public void testBinary() throws IOException {
+  void testBinary() throws IOException {
     JobConf job = new JobConf();
     FileSystem fs = FileSystem.getLocal(job);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = new Path(System.getProperty("test.build.data", ".") + "/mapred");
     Path file = new Path(dir, "testbinary.seq");
     Random r = new Random();
     long seed = r.nextLong();
@@ -54,7 +53,7 @@ public class TestSequenceFileAsBinaryInputFormat {
     Text tval = new Text();
 
     SequenceFile.Writer writer =
-      new SequenceFile.Writer(fs, job, file, Text.class, Text.class);
+        new SequenceFile.Writer(fs, job, file, Text.class, Text.class);
     try {
       for (int i = 0; i < RECORDS; ++i) {
         tkey.set(Integer.toString(r.nextInt(), 36));
@@ -65,8 +64,8 @@ public class TestSequenceFileAsBinaryInputFormat {
       writer.close();
     }
 
-    InputFormat<BytesWritable,BytesWritable> bformat =
-      new SequenceFileAsBinaryInputFormat();
+    InputFormat<BytesWritable, BytesWritable> bformat =
+        new SequenceFileAsBinaryInputFormat();
 
     int count = 0;
     r.setSeed(seed);
@@ -78,8 +77,8 @@ public class TestSequenceFileAsBinaryInputFormat {
     final int NUM_SPLITS = 3;
     FileInputFormat.setInputPaths(job, file);
     for (InputSplit split : bformat.getSplits(job, NUM_SPLITS)) {
-      RecordReader<BytesWritable,BytesWritable> reader =
-        bformat.getRecordReader(split, job, Reporter.NULL);
+      RecordReader<BytesWritable, BytesWritable> reader =
+          bformat.getRecordReader(split, job, Reporter.NULL);
       try {
         while (reader.next(bkey, bval)) {
           tkey.set(Integer.toString(r.nextInt(), 36));
@@ -88,21 +87,15 @@ public class TestSequenceFileAsBinaryInputFormat {
           cmpkey.readFields(buf);
           buf.reset(bval.getBytes(), bval.getLength());
           cmpval.readFields(buf);
-          assertTrue(
-              "Keys don't match: " + "*" + cmpkey.toString() + ":" +
-                                           tkey.toString() + "*",
-              cmpkey.toString().equals(tkey.toString()));
-          assertTrue(
-              "Vals don't match: " + "*" + cmpval.toString() + ":" +
-                                           tval.toString() + "*",
-              cmpval.toString().equals(tval.toString()));
+          assertEquals(cmpkey.toString(), tkey.toString());
+          assertEquals(cmpval.toString(), tval.toString());
           ++count;
         }
       } finally {
         reader.close();
       }
     }
-    assertEquals("Some records not found", RECORDS, count);
+    assertEquals(RECORDS, count, "Some records not found");
   }
 
 }

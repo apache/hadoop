@@ -21,22 +21,23 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestInputPath {
   @Test
-  public void testInputPath() throws Exception {
+  void testInputPath() throws Exception {
     JobConf jobConf = new JobConf();
     Path workingDir = jobConf.getWorkingDirectory();
-    
-    Path path = new Path(workingDir, 
-        "xx{y"+StringUtils.COMMA_STR+"z}");
+
+    Path path = new Path(workingDir,
+        "xx{y" + StringUtils.COMMA_STR + "z}");
     FileInputFormat.setInputPaths(jobConf, path);
     Path[] paths = FileInputFormat.getInputPaths(jobConf);
     assertEquals(1, paths.length);
     assertEquals(path.toString(), paths[0].toString());
-	    
+
     StringBuilder pathStr = new StringBuilder();
     pathStr.append(StringUtils.ESCAPE_CHAR);
     pathStr.append(StringUtils.ESCAPE_CHAR);
@@ -48,14 +49,14 @@ public class TestInputPath {
     paths = FileInputFormat.getInputPaths(jobConf);
     assertEquals(1, paths.length);
     assertEquals(path.toString(), paths[0].toString());
-		    
+
     pathStr.setLength(0);
     pathStr.append(StringUtils.ESCAPE_CHAR);
     pathStr.append("xx");
     pathStr.append(StringUtils.ESCAPE_CHAR);
     path = new Path(workingDir, pathStr.toString());
     Path path1 = new Path(workingDir,
-        "yy"+StringUtils.COMMA_STR+"zz");
+        "yy" + StringUtils.COMMA_STR + "zz");
     FileInputFormat.setInputPaths(jobConf, path);
     FileInputFormat.addInputPath(jobConf, path1);
     paths = FileInputFormat.getInputPaths(jobConf);
@@ -69,13 +70,13 @@ public class TestInputPath {
     assertEquals(path.toString(), paths[0].toString());
     assertEquals(path1.toString(), paths[1].toString());
 
-    Path[] input = new Path[] {path, path1};
+    Path[] input = new Path[]{path, path1};
     FileInputFormat.setInputPaths(jobConf, input);
     paths = FileInputFormat.getInputPaths(jobConf);
     assertEquals(2, paths.length);
     assertEquals(path.toString(), paths[0].toString());
     assertEquals(path1.toString(), paths[1].toString());
-    
+
     pathStr.setLength(0);
     String str1 = "{a{b,c},de}";
     String str2 = "xyz";

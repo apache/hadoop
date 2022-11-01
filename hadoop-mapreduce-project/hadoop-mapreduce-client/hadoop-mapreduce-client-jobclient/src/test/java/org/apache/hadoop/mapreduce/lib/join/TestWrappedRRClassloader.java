@@ -31,9 +31,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestWrappedRRClassloader {
   /**
@@ -43,7 +43,7 @@ public class TestWrappedRRClassloader {
    * {@link CompositeRecordReader}
    */
   @Test
-  public void testClassLoader() throws Exception {
+  void testClassLoader() throws Exception {
     Configuration conf = new Configuration();
     Fake_ClassLoader classLoader = new Fake_ClassLoader();
     conf.setClassLoader(classLoader);
@@ -54,18 +54,18 @@ public class TestWrappedRRClassloader {
         System.getProperty("test.build.data", "/tmp")));
 
     Path base = new Path(testdir, "/empty");
-    Path[] src = { new Path(base, "i0"), new Path("i1"), new Path("i2") };
-    conf.set(CompositeInputFormat.JOIN_EXPR, 
-      CompositeInputFormat.compose("outer", IF_ClassLoaderChecker.class, src));
+    Path[] src = {new Path(base, "i0"), new Path("i1"), new Path("i2")};
+    conf.set(CompositeInputFormat.JOIN_EXPR,
+        CompositeInputFormat.compose("outer", IF_ClassLoaderChecker.class, src));
 
-    CompositeInputFormat<NullWritable> inputFormat = 
-      new CompositeInputFormat<NullWritable>();
+    CompositeInputFormat<NullWritable> inputFormat =
+        new CompositeInputFormat<NullWritable>();
     // create dummy TaskAttemptID
     TaskAttemptID tid = new TaskAttemptID("jt", 1, TaskType.MAP, 0, 0);
     conf.set(MRJobConfig.TASK_ATTEMPT_ID, tid.toString());
     inputFormat.createRecordReader
-      (inputFormat.getSplits(Job.getInstance(conf)).get(0), 
-       new TaskAttemptContextImpl(conf, tid));
+        (inputFormat.getSplits(Job.getInstance(conf)).get(0),
+            new TaskAttemptContextImpl(conf, tid));
   }
 
   public static class Fake_ClassLoader extends ClassLoader {
@@ -87,9 +87,9 @@ public class TestWrappedRRClassloader {
 
     @SuppressWarnings("unchecked")
     public RR_ClassLoaderChecker(Configuration conf) {
-      assertTrue("The class loader has not been inherited from "
-          + CompositeRecordReader.class.getSimpleName(),
-          conf.getClassLoader() instanceof Fake_ClassLoader);
+      assertTrue(conf.getClassLoader() instanceof Fake_ClassLoader,
+          "The class loader has not been inherited from "
+          + CompositeRecordReader.class.getSimpleName());
 
     }
   }

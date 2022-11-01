@@ -19,13 +19,13 @@ package org.apache.hadoop.mapred.lib;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestChain {
   @Test
-  public void testSetReducerWithReducerByValueAsTrue() throws Exception {
+  void testSetReducerWithReducerByValueAsTrue() throws Exception {
 
     JobConf jobConf = new JobConf();
     JobConf reducerConf = new JobConf();
@@ -39,7 +39,7 @@ public class TestChain {
   }
 
   @Test
-  public void testSetReducerWithReducerByValueAsFalse() throws Exception {
+  void testSetReducerWithReducerByValueAsFalse() throws Exception {
 
     JobConf jobConf = new JobConf();
     JobConf reducerConf = new JobConf();

@@ -36,14 +36,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMNMInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestRMNMInfo {
   private static final Logger LOG = LoggerFactory.getLogger(TestRMNMInfo.class);
@@ -64,7 +65,7 @@ public class TestRMNMInfo {
               .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
   static Path APP_JAR = new Path(TEST_ROOT_DIR, "MRAppJar.jar");
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws IOException {
 
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
@@ -86,7 +87,7 @@ public class TestRMNMInfo {
     localFs.setPermission(APP_JAR, new FsPermission("700"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     if (mrCluster != null) {
       mrCluster.stop();
@@ -95,73 +96,69 @@ public class TestRMNMInfo {
   }
 
   @Test
-  public void testRMNMInfo() throws Exception {
+  void testRMNMInfo() throws Exception {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
       LOG.info("MRAppJar " + MiniMRYarnCluster.APPJAR
-           + " not found. Not running test.");
+          + " not found. Not running test.");
       return;
     }
-    
+
     RMContext rmc = mrCluster.getResourceManager().getRMContext();
     ResourceScheduler rms = mrCluster.getResourceManager()
-                                                   .getResourceScheduler();
-    RMNMInfo rmInfo = new RMNMInfo(rmc,rms);
+        .getResourceScheduler();
+    RMNMInfo rmInfo = new RMNMInfo(rmc, rms);
     String liveNMs = rmInfo.getLiveNodeManagers();
     ObjectMapper mapper = new ObjectMapper();
     JsonNode jn = mapper.readTree(liveNMs);
-    Assert.assertEquals("Unexpected number of live nodes:",
-                                               NUMNODEMANAGERS, jn.size());
+    assertEquals(NUMNODEMANAGERS, jn.size(), "Unexpected number of live nodes:");
     Iterator<JsonNode> it = jn.iterator();
     while (it.hasNext()) {
       JsonNode n = it.next();
-      Assert.assertNotNull(n.get("HostName"));
-      Assert.assertNotNull(n.get("Rack"));
-      Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
-              n.get("State").asText().contains("RUNNING"));
-      Assert.assertNotNull(n.get("NodeHTTPAddress"));
-      Assert.assertNotNull(n.get("LastHealthUpdate"));
-      Assert.assertNotNull(n.get("HealthReport"));
-      Assert.assertNotNull(n.get("NodeManagerVersion"));
-      Assert.assertNotNull(n.get("NumContainers"));
-      Assert.assertEquals(
-              n.get("NodeId") + ": Unexpected number of used containers",
-              0, n.get("NumContainers").asInt());
-      Assert.assertEquals(
-              n.get("NodeId") + ": Unexpected amount of used memory",
-              0, n.get("UsedMemoryMB").asInt());
-      Assert.assertNotNull(n.get("AvailableMemoryMB"));
+      assertNotNull(n.get("HostName"));
+      assertNotNull(n.get("Rack"));
+      assertTrue(n.get("State").asText().contains("RUNNING"),
+          "Node " + n.get("NodeId") + " should be RUNNING");
+      assertNotNull(n.get("NodeHTTPAddress"));
+      assertNotNull(n.get("LastHealthUpdate"));
+      assertNotNull(n.get("HealthReport"));
+      assertNotNull(n.get("NodeManagerVersion"));
+      assertNotNull(n.get("NumContainers"));
+      assertEquals(
+          0, n.get("NumContainers").asInt(), n.get("NodeId") + ": Unexpected number of used containers");
+      assertEquals(
+          0, n.get("UsedMemoryMB").asInt(), n.get("NodeId") + ": Unexpected amount of used memory");
+      assertNotNull(n.get("AvailableMemoryMB"));
     }
   }
-  
+
   @Test
-  public void testRMNMInfoMissmatch() throws Exception {
+  void testRMNMInfoMissmatch() throws Exception {
     RMContext rmc = mock(RMContext.class);
     ResourceScheduler rms = mock(ResourceScheduler.class);
     ConcurrentMap<NodeId, RMNode> map = new ConcurrentHashMap<NodeId, RMNode>();
     RMNode node = MockNodes.newNodeInfo(1, MockNodes.newResource(4 * 1024));
     map.put(node.getNodeID(), node);
     when(rmc.getRMNodes()).thenReturn(map);
-    
-    RMNMInfo rmInfo = new RMNMInfo(rmc,rms);
+
+    RMNMInfo rmInfo = new RMNMInfo(rmc, rms);
     String liveNMs = rmInfo.getLiveNodeManagers();
     ObjectMapper mapper = new ObjectMapper();
     JsonNode jn = mapper.readTree(liveNMs);
-    Assert.assertEquals("Unexpected number of live nodes:",
-                                               1, jn.size());
+    assertEquals(1, jn.size(), "Unexpected number of live nodes:");
     Iterator<JsonNode> it = jn.iterator();
     while (it.hasNext()) {
       JsonNode n = it.next();
-      Assert.assertNotNull(n.get("HostName"));
-      Assert.assertNotNull(n.get("Rack"));
-      Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
-              n.get("State").asText().contains("RUNNING"));
-      Assert.assertNotNull(n.get("NodeHTTPAddress"));
-      Assert.assertNotNull(n.get("LastHealthUpdate"));
-      Assert.assertNotNull(n.get("HealthReport"));
-      Assert.assertNotNull(n.get("NodeManagerVersion"));
-      Assert.assertNull(n.get("NumContainers"));
-      Assert.assertNull(n.get("UsedMemoryMB"));
-      Assert.assertNull(n.get("AvailableMemoryMB"));
+      assertNotNull(n.get("HostName"));
+      assertNotNull(n.get("Rack"));
+      assertTrue(n.get("State").asText().contains("RUNNING"),
+          "Node " + n.get("NodeId") + " should be RUNNING");
+      assertNotNull(n.get("NodeHTTPAddress"));
+      assertNotNull(n.get("LastHealthUpdate"));
+      assertNotNull(n.get("HealthReport"));
+      assertNotNull(n.get("NodeManagerVersion"));
+      assertNull(n.get("NumContainers"));
+      assertNull(n.get("UsedMemoryMB"));
+      assertNull(n.get("AvailableMemoryMB"));
     }
   }
 }

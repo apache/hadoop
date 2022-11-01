@@ -30,14 +30,14 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.List;
-
-import static org.junit.Assert.assertEquals;
 
 public class TestNLineInputFormat {
   private static int MAX_LENGTH = 200;
@@ -58,7 +58,7 @@ public class TestNLineInputFormat {
              "TestNLineInputFormat");
 
   @Test
-  public void testFormat() throws Exception {
+  void testFormat() throws Exception {
     Job job = Job.getInstance(conf);
     Path file = new Path(workDir, "test.txt");
 
@@ -68,12 +68,12 @@ public class TestNLineInputFormat {
     NLineInputFormat.setNumLinesPerSplit(job, numLinesPerMap);
     for (int length = 0; length < MAX_LENGTH;
          length += 1) {
- 
+
       // create a file with length entries
       Writer writer = new OutputStreamWriter(localFs.create(file));
       try {
         for (int i = 0; i < length; i++) {
-          writer.write(Integer.toString(i)+" some more text");
+          writer.write(Integer.toString(i) + " some more text");
           writer.write("\n");
         }
       } finally {
@@ -96,15 +96,15 @@ public class TestNLineInputFormat {
     List<InputSplit> splits = format.getSplits(job);
     int count = 0;
     for (int i = 0; i < splits.size(); i++) {
-      assertEquals("There are no split locations", 0,
-                   splits.get(i).getLocations().length);
+      assertEquals(0,
+                   splits.get(i).getLocations().length,
+                   "There are no split locations");
       TaskAttemptContext context = MapReduceTestUtil.
         createDummyMapTaskAttemptContext(job.getConfiguration());
       RecordReader<LongWritable, Text> reader = format.createRecordReader(
         splits.get(i), context);
       Class<?> clazz = reader.getClass();
-      assertEquals("reader class is LineRecordReader.", 
-        LineRecordReader.class, clazz);
+      assertEquals(LineRecordReader.class, clazz, "reader class is LineRecordReader.");
       MapContext<LongWritable, Text, LongWritable, Text> mcontext = 
         new MapContextImpl<LongWritable, Text, LongWritable, Text>(
           job.getConfiguration(), context.getTaskAttemptID(), reader, null,
@@ -120,11 +120,9 @@ public class TestNLineInputFormat {
         reader.close();
       }
       if ( i == splits.size() - 1) {
-        assertEquals("number of lines in split(" + i + ") is wrong" ,
-                     lastN, count);
+        assertEquals(lastN, count, "number of lines in split(" + i + ") is wrong" );
       } else {
-        assertEquals("number of lines in split(" + i + ") is wrong" ,
-                     expectedN, count);
+        assertEquals(expectedN, count, "number of lines in split(" + i + ") is wrong" );
       }
     }
   }

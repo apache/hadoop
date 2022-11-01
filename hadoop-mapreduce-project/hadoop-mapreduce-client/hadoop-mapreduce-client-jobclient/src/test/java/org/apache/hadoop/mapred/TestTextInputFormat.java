@@ -38,11 +38,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.*;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestTextInputFormat {
   private static final Logger LOG =
@@ -65,16 +66,17 @@ public class TestTextInputFormat {
       System.getProperty("test.build.data", "/tmp"),
       "TestTextInputFormat"));
 
-  @Test (timeout=500000)
-  public void testFormat() throws Exception {
+  @Test
+  @Timeout(500000)
+  void testFormat() throws Exception {
     JobConf job = new JobConf(defaultConf);
     Path file = new Path(workDir, "test.txt");
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
-    
+
     int seed = new Random().nextInt();
-    LOG.info("seed = "+seed);
+    LOG.info("seed = " + seed);
     Random random = new Random(seed);
 
     localFs.delete(workDir, true);
@@ -82,7 +84,7 @@ public class TestTextInputFormat {
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
 
       LOG.debug("creating; entries = " + length);
 
@@ -103,65 +105,65 @@ public class TestTextInputFormat {
       LongWritable key = new LongWritable();
       Text value = new Text();
       for (int i = 0; i < 3; i++) {
-        int numSplits = random.nextInt(MAX_LENGTH/20)+1;
+        int numSplits = random.nextInt(MAX_LENGTH / 20) + 1;
         LOG.debug("splitting: requesting = " + numSplits);
         InputSplit[] splits = format.getSplits(job, numSplits);
         LOG.debug("splitting: got =        " + splits.length);
 
         if (length == 0) {
-           assertEquals("Files of length 0 are not returned from FileInputFormat.getSplits().", 
-                        1, splits.length);
-           assertEquals("Empty file length == 0", 0, splits[0].getLength());
+          assertEquals(1, splits.length, "Files of length 0 are not returned from FileInputFormat.getSplits().");
+          assertEquals(0, splits[0].getLength(), "Empty file length == 0");
         }
 
         // check each split
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
-          LOG.debug("split["+j+"]= " + splits[j]);
+          LOG.debug("split[" + j + "]= " + splits[j]);
           RecordReader<LongWritable, Text> reader =
-            format.getRecordReader(splits[j], job, reporter);
+              format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
             while (reader.next(key, value)) {
               int v = Integer.parseInt(value.toString());
               LOG.debug("read " + v);
               if (bits.get(v)) {
-                LOG.warn("conflict with " + v + 
-                         " in split " + j +
-                         " at position "+reader.getPos());
+                LOG.warn("conflict with " + v +
+                    " in split " + j +
+                    " at position " + reader.getPos());
               }
-              assertFalse("Key in multiple partitions.", bits.get(v));
+              assertFalse(bits.get(v), "Key in multiple partitions.");
               bits.set(v);
               count++;
             }
-            LOG.debug("splits["+j+"]="+splits[j]+" count=" + count);
+            LOG.debug("splits[" + j + "]=" + splits[j] + " count=" + count);
           } finally {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }
   }
 
-  @Test (timeout=900000)
-  public void testSplitableCodecs() throws IOException {
+  @Test
+  @Timeout(900000)
+  void testSplitableCodecs() throws IOException {
     JobConf conf = new JobConf(defaultConf);
     int seed = new Random().nextInt();
     // Create the codec
     CompressionCodec codec = null;
     try {
       codec = (CompressionCodec)
-      ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
+          ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
     } catch (ClassNotFoundException cnfe) {
       throw new IOException("Illegal codec!");
     }
-    Path file = new Path(workDir, "test"+codec.getDefaultExtension());
+    Path file = new Path(workDir, "test" + codec.getDefaultExtension());
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
-    LOG.info("seed = "+seed);
+    LOG.info("seed = " + seed);
     Random random = new Random(seed);
     FileSystem localFs = FileSystem.getLocal(conf);
 
@@ -172,7 +174,7 @@ public class TestTextInputFormat {
 
     // for a variety of lengths
     for (int length = MAX_LENGTH / 2; length < MAX_LENGTH;
-        length += random.nextInt(MAX_LENGTH / 4)+1) {
+        length += random.nextInt(MAX_LENGTH / 4) + 1) {
 
       for (int i = 0; i < 3; i++) {
         int numSplits = random.nextInt(MAX_LENGTH / 2000) + 1;
@@ -194,18 +196,19 @@ public class TestTextInputFormat {
   }
 
   // Test a corner case when position of stream is right after BZip2 marker
-  @Test (timeout=900000)
-  public void testSplitableCodecs2() throws IOException {
+  @Test
+  @Timeout(900000)
+  void testSplitableCodecs2() throws IOException {
     JobConf conf = new JobConf(defaultConf);
     // Create the codec
     CompressionCodec codec = null;
     try {
       codec = (CompressionCodec)
-      ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
+          ReflectionUtils.newInstance(conf.getClassByName("org.apache.hadoop.io.compress.BZip2Codec"), conf);
     } catch (ClassNotFoundException cnfe) {
       throw new IOException("Illegal codec!");
     }
-    Path file = new Path(workDir, "test"+codec.getDefaultExtension());
+    Path file = new Path(workDir, "test" + codec.getDefaultExtension());
 
     FileSystem localFs = FileSystem.getLocal(conf);
     localFs.delete(workDir, true);
@@ -252,7 +255,7 @@ public class TestTextInputFormat {
               LOG.warn("conflict with " + v + " in split " + j +
                   " at position " + reader.getPos());
             }
-            assertFalse("Key in multiple partitions.", bits.get(v));
+            assertFalse(bits.get(v), "Key in multiple partitions.");
             bits.set(v);
             counter++;
           }
@@ -265,7 +268,7 @@ public class TestTextInputFormat {
           reader.close();
         }
       }
-      assertEquals("Some keys in no partition.", length, bits.cardinality());
+      assertEquals(length, bits.cardinality(), "Some keys in no partition.");
     }
   }
 
@@ -313,7 +316,7 @@ public class TestTextInputFormat {
                     " in split " + j +
                     " at position "+reader.getPos());
           }
-          assertFalse("Key in multiple partitions.", bits.get(v));
+          assertFalse(bits.get(v), "Key in multiple partitions.");
           bits.set(v);
           counter++;
         }
@@ -326,7 +329,7 @@ public class TestTextInputFormat {
         reader.close();
       }
     }
-    assertEquals("Some keys in no partition.", length, bits.cardinality());
+    assertEquals(length, bits.cardinality(), "Some keys in no partition.");
   }
 
   private static LineReader makeStream(String str) throws IOException {
@@ -340,16 +343,16 @@ public class TestTextInputFormat {
                                            bufsz);
   }
 
-  @Test (timeout=5000)
-  public void testUTF8() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testUTF8() throws Exception {
     LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
     in.readLine(line);
-    assertEquals("readLine changed utf8 characters", 
-                 "abcd\u20acbdcd\u20ac", line.toString());
+    assertEquals("abcd\u20acbdcd\u20ac", line.toString(), "readLine changed utf8 characters");
     in = makeStream("abc\u200axyz");
     in.readLine(line);
-    assertEquals("split on fake newline", "abc\u200axyz", line.toString());
+    assertEquals("abc\u200axyz", line.toString(), "split on fake newline");
   }
 
   /**
@@ -359,34 +362,35 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test (timeout=5000)
-  public void testNewLines() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testNewLines() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\r\r\n\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
     Text out = new Text();
-    for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
+    for (int bufsz = 1; bufsz < STRLENBYTES + 1; ++bufsz) {
       LineReader in = makeStream(STR, bufsz);
       int c = 0;
       c += in.readLine(out); //"a"\n
-      assertEquals("line1 length, bufsz:"+bufsz, 1, out.getLength());
+      assertEquals(1, out.getLength(), "line1 length, bufsz:" + bufsz);
       c += in.readLine(out); //"bb"\n
-      assertEquals("line2 length, bufsz:"+bufsz, 2, out.getLength());
+      assertEquals(2, out.getLength(), "line2 length, bufsz:" + bufsz);
       c += in.readLine(out); //""\n
-      assertEquals("line3 length, bufsz:"+bufsz, 0, out.getLength());
+      assertEquals(0, out.getLength(), "line3 length, bufsz:" + bufsz);
       c += in.readLine(out); //"ccc"\r
-      assertEquals("line4 length, bufsz:"+bufsz, 3, out.getLength());
+      assertEquals(3, out.getLength(), "line4 length, bufsz:" + bufsz);
       c += in.readLine(out); //dddd\r
-      assertEquals("line5 length, bufsz:"+bufsz, 4, out.getLength());
+      assertEquals(4, out.getLength(), "line5 length, bufsz:" + bufsz);
       c += in.readLine(out); //""\r
-      assertEquals("line6 length, bufsz:"+bufsz, 0, out.getLength());
+      assertEquals(0, out.getLength(), "line6 length, bufsz:" + bufsz);
       c += in.readLine(out); //""\r\n
-      assertEquals("line7 length, bufsz:"+bufsz, 0, out.getLength());
+      assertEquals(0, out.getLength(), "line7 length, bufsz:" + bufsz);
       c += in.readLine(out); //""\r\n
-      assertEquals("line8 length, bufsz:"+bufsz, 0, out.getLength());
+      assertEquals(0, out.getLength(), "line8 length, bufsz:" + bufsz);
       c += in.readLine(out); //"eeeee"EOF
-      assertEquals("line9 length, bufsz:"+bufsz, 5, out.getLength());
-      assertEquals("end of file, bufsz: "+bufsz, 0, in.readLine(out));
-      assertEquals("total bytes, bufsz: "+bufsz, c, STRLENBYTES);
+      assertEquals(5, out.getLength(), "line9 length, bufsz:" + bufsz);
+      assertEquals(0, in.readLine(out), "end of file, bufsz: " + bufsz);
+      assertEquals(c, STRLENBYTES, "total bytes, bufsz: " + bufsz);
     }
   }
 
@@ -399,33 +403,35 @@ public class TestTextInputFormat {
    *
    * @throws Exception
    */
-  @Test (timeout=5000)
-  public void testMaxLineLength() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testMaxLineLength() throws Exception {
     final String STR = "a\nbb\n\nccc\rdddd\r\neeeee";
     final int STRLENBYTES = STR.getBytes().length;
     Text out = new Text();
-    for (int bufsz = 1; bufsz < STRLENBYTES+1; ++bufsz) {
+    for (int bufsz = 1; bufsz < STRLENBYTES + 1; ++bufsz) {
       LineReader in = makeStream(STR, bufsz);
       int c = 0;
       c += in.readLine(out, 1);
-      assertEquals("line1 length, bufsz: "+bufsz, 1, out.getLength());
+      assertEquals(1, out.getLength(), "line1 length, bufsz: " + bufsz);
       c += in.readLine(out, 1);
-      assertEquals("line2 length, bufsz: "+bufsz, 1, out.getLength());
+      assertEquals(1, out.getLength(), "line2 length, bufsz: " + bufsz);
       c += in.readLine(out, 1);
-      assertEquals("line3 length, bufsz: "+bufsz, 0, out.getLength());
+      assertEquals(0, out.getLength(), "line3 length, bufsz: " + bufsz);
       c += in.readLine(out, 3);
-      assertEquals("line4 length, bufsz: "+bufsz, 3, out.getLength());
+      assertEquals(3, out.getLength(), "line4 length, bufsz: " + bufsz);
       c += in.readLine(out, 10);
-      assertEquals("line5 length, bufsz: "+bufsz, 4, out.getLength());
+      assertEquals(4, out.getLength(), "line5 length, bufsz: " + bufsz);
       c += in.readLine(out, 8);
-      assertEquals("line5 length, bufsz: "+bufsz, 5, out.getLength());
-      assertEquals("end of file, bufsz: " +bufsz, 0, in.readLine(out));
-      assertEquals("total bytes, bufsz: "+bufsz, c, STRLENBYTES);
+      assertEquals(5, out.getLength(), "line5 length, bufsz: " + bufsz);
+      assertEquals(0, in.readLine(out), "end of file, bufsz: " + bufsz);
+      assertEquals(c, STRLENBYTES, "total bytes, bufsz: " + bufsz);
     }
   }
 
-  @Test (timeout=5000)
-  public void testMRMaxLine() throws Exception {
+  @Test
+  @Timeout(5000)
+  void testMRMaxLine() throws Exception {
     final int MAXPOS = 1024 * 1024;
     final int MAXLINE = 10 * 1024;
     final int BUF = 64 * 1024;
@@ -439,13 +445,13 @@ public class TestTextInputFormat {
       }
       @Override
       public int read(byte[] b) {
-        assertTrue("Read too many bytes from the stream", position < MAXPOSBUF);
+        assertTrue(position < MAXPOSBUF, "Read too many bytes from the stream");
         Arrays.fill(b, (byte) 0);
         position += b.length;
         return b.length;
       }
       public void reset() {
-        position=0;
+        position = 0;
       }
     };
     final LongWritable key = new LongWritable();
@@ -453,16 +459,16 @@ public class TestTextInputFormat {
     LOG.info("Reading a line from /dev/null");
     final Configuration conf = new Configuration(false);
     conf.setInt(org.apache.hadoop.mapreduce.lib.input.
-                LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
+        LineRecordReader.MAX_LINE_LENGTH, MAXLINE);
     conf.setInt("io.file.buffer.size", BUF); // used by LRR
     // test another constructor 
-     LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
-    assertFalse("Read a line from null", lrr.next(key, val));
+    LineRecordReader lrr = new LineRecordReader(infNull, 0, MAXPOS, conf);
+    assertFalse(lrr.next(key, val), "Read a line from null");
     infNull.reset();
-     lrr = new LineRecordReader(infNull, 0L, MAXLINE, MAXPOS);
-    assertFalse("Read a line from null", lrr.next(key, val));
-    
-    
+    lrr = new LineRecordReader(infNull, 0L, MAXLINE, MAXPOS);
+    assertFalse(lrr.next(key, val), "Read a line from null");
+
+
   }
 
   private static void writeFile(FileSystem fs, Path name, 
@@ -495,46 +501,50 @@ public class TestTextInputFormat {
     reader.close();
     return result;
   }
-  
+
   /**
    * Test using the gzip codec for reading
    */
-  @Test (timeout=5000)
-  public void testGzip() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testGzip() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir, true);
-    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
-              "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
+    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip,
+        "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-              "this is a test\nof gzip\n");
+        "this is a test\nof gzip\n");
     FileInputFormat.setInputPaths(job, workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals("compressed splits == 2", 2, splits.length);
+    assertEquals(2, splits.length, "compressed splits == 2");
     FileSplit tmp = (FileSplit) splits[0];
     if (tmp.getPath().getName().equals("part2.txt.gz")) {
       splits[0] = splits[1];
       splits[1] = tmp;
     }
     List<Text> results = readSplit(format, splits[0], job);
-    assertEquals("splits[0] length", 6, results.size());
-    assertEquals("splits[0][5]", " dog", results.get(5).toString());
+    assertEquals(6, results.size(), "splits[0] length");
+    assertEquals(" dog", results.get(5).toString(), "splits[0][5]");
     results = readSplit(format, splits[1], job);
-    assertEquals("splits[1] length", 2, results.size());
-    assertEquals("splits[1][0]", "this is a test", 
-                 results.get(0).toString());    
-    assertEquals("splits[1][1]", "of gzip", 
-                 results.get(1).toString());    
+    assertEquals(2, results.size(), "splits[1] length");
+    assertEquals("this is a test",
+        results.get(0).toString(),
+        "splits[1][0]");
+    assertEquals("of gzip",
+        results.get(1).toString(),
+        "splits[1][1]");
   }
 
   /**
    * Test using the gzip codec and an empty input file
    */
-  @Test (timeout=5000)
-  public void testGzipEmpty() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testGzipEmpty() throws IOException {
     JobConf job = new JobConf(defaultConf);
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
@@ -544,10 +554,9 @@ public class TestTextInputFormat {
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);
-    assertEquals("Compressed files of length 0 are not returned from FileInputFormat.getSplits().",
-                 1, splits.length);
+    assertEquals(1, splits.length, "Compressed files of length 0 are not returned from FileInputFormat.getSplits().");
     List<Text> results = readSplit(format, splits[0], job);
-    assertEquals("Compressed empty file length == 0", 0, results.size());
+    assertEquals(0, results.size(), "Compressed empty file length == 0");
   }
   
   private static String unquote(String in) {

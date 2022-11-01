@@ -49,23 +49,22 @@ import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestDatamerge {
 
   private static MiniDFSCluster cluster = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
   }
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
@@ -131,7 +130,7 @@ public class TestDatamerge {
     public void close() { }
     public void configure(JobConf job) {
       srcs = job.getInt("testdatamerge.sources", 0);
-      assertTrue("Invalid src count: " + srcs, srcs > 0);
+      assertTrue(srcs > 0, "Invalid src count: " + srcs);
     }
     public abstract void map(IntWritable key, V val,
         OutputCollector<IntWritable, IntWritable> out, Reporter reporter)
@@ -143,7 +142,7 @@ public class TestDatamerge {
       while (values.hasNext()) {
         seen += values.next().get();
       }
-      assertTrue("Bad count for " + key.get(), verify(key.get(), seen));
+      assertTrue(verify(key.get(), seen), "Bad count for " + key.get());
     }
     public abstract boolean verify(int key, int occ);
   }
@@ -155,10 +154,10 @@ public class TestDatamerge {
         throws IOException {
       int k = key.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
-      assertTrue(kvstr, 0 == k % (srcs * srcs));
+      assertTrue(0 == k % (srcs * srcs), kvstr);
       for (int i = 0; i < val.size(); ++i) {
         final int vali = ((IntWritable)val.get(i)).get();
-        assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+        assertTrue((vali - i) * srcs == 10 * k, kvstr);
       }
       out.collect(key, one);
     }
@@ -177,18 +176,18 @@ public class TestDatamerge {
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
         for (int i = 0; i < val.size(); ++i) {
-          assertTrue(kvstr, val.get(i) instanceof IntWritable);
+          assertTrue(val.get(i) instanceof IntWritable, kvstr);
           final int vali = ((IntWritable)val.get(i)).get();
-          assertTrue(kvstr, (vali - i) * srcs == 10 * k);
+          assertTrue((vali - i) * srcs == 10 * k, kvstr);
         }
       } else {
         for (int i = 0; i < val.size(); ++i) {
           if (i == k % srcs) {
-            assertTrue(kvstr, val.get(i) instanceof IntWritable);
+            assertTrue(val.get(i) instanceof IntWritable, kvstr);
             final int vali = ((IntWritable)val.get(i)).get();
-            assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+            assertTrue(srcs * (vali - i) == 10 * (k - i), kvstr);
           } else {
-            assertTrue(kvstr, !val.has(i));
+            assertTrue(!val.has(i), kvstr);
           }
         }
       }
@@ -210,10 +209,10 @@ public class TestDatamerge {
       final int vali = val.get();
       final String kvstr = "Unexpected tuple: " + stringify(key, val);
       if (0 == k % (srcs * srcs)) {
-        assertTrue(kvstr, vali == k * 10 / srcs + srcs - 1);
+        assertTrue(vali == k * 10 / srcs + srcs - 1, kvstr);
       } else {
         final int i = k % srcs;
-        assertTrue(kvstr, srcs * (vali - i) == 10 * (k - i));
+        assertTrue(srcs * (vali - i) == 10 * (k - i), kvstr);
       }
       out.collect(key, one);
     }
@@ -246,22 +245,22 @@ public class TestDatamerge {
   }
 
   @Test
-  public void testSimpleInnerJoin() throws Exception {
+  void testSimpleInnerJoin() throws Exception {
     joinAs("inner", InnerJoinChecker.class);
   }
 
   @Test
-  public void testSimpleOuterJoin() throws Exception {
+  void testSimpleOuterJoin() throws Exception {
     joinAs("outer", OuterJoinChecker.class);
   }
 
   @Test
-  public void testSimpleOverride() throws Exception {
+  void testSimpleOverride() throws Exception {
     joinAs("override", OverrideChecker.class);
   }
 
   @Test
-  public void testNestedJoin() throws Exception {
+  void testNestedJoin() throws Exception {
     // outer(inner(S1,...,Sn),outer(S1,...Sn))
     final int SOURCES = 3;
     final int ITEMS = (SOURCES + 1) * (SOURCES + 1);
@@ -293,19 +292,19 @@ public class TestDatamerge {
     for (int i = 0; i < SOURCES; ++i) {
       sb.append(
           CompositeInputFormat.compose(SequenceFileInputFormat.class,
-            src[i].toString()));
+              src[i].toString()));
       if (i + 1 != SOURCES) sb.append(",");
     }
     sb.append("),outer(");
-    sb.append(CompositeInputFormat.compose(Fake_IF.class,"foobar"));
+    sb.append(CompositeInputFormat.compose(Fake_IF.class, "foobar"));
     sb.append(",");
     for (int i = 0; i < SOURCES; ++i) {
       sb.append(
           CompositeInputFormat.compose(SequenceFileInputFormat.class,
-            src[i].toString()));
+              src[i].toString()));
       sb.append(",");
     }
-    sb.append(CompositeInputFormat.compose(Fake_IF.class,"raboof") + "))");
+    sb.append(CompositeInputFormat.compose(Fake_IF.class, "raboof") + "))");
     job.set("mapreduce.join.expr", sb.toString());
     job.setInputFormat(CompositeInputFormat.class);
     Path outf = new Path(base, "out");
@@ -321,29 +320,29 @@ public class TestDatamerge {
     job.setOutputFormat(SequenceFileOutputFormat.class);
     JobClient.runJob(job);
 
-    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf, 
-                             new Utils.OutputFileUtils.OutputFilesFilter());
+    FileStatus[] outlist = cluster.getFileSystem().listStatus(outf,
+        new Utils.OutputFileUtils.OutputFilesFilter());
     assertEquals(1, outlist.length);
     assertTrue(0 < outlist[0].getLen());
     SequenceFile.Reader r =
-      new SequenceFile.Reader(cluster.getFileSystem(),
-          outlist[0].getPath(), job);
+        new SequenceFile.Reader(cluster.getFileSystem(),
+            outlist[0].getPath(), job);
     TupleWritable v = new TupleWritable();
     while (r.next(k, v)) {
-      assertFalse(((TupleWritable)v.get(1)).has(0));
-      assertFalse(((TupleWritable)v.get(1)).has(SOURCES + 1));
+      assertFalse(((TupleWritable) v.get(1)).has(0));
+      assertFalse(((TupleWritable) v.get(1)).has(SOURCES + 1));
       boolean chk = true;
       int ki = k.get();
       for (int i = 2; i < SOURCES + 2; ++i) {
         if ((ki % i) == 0 && ki <= i * ITEMS) {
           assertEquals(i - 2, ((IntWritable)
-                              ((TupleWritable)v.get(1)).get((i - 1))).get());
+              ((TupleWritable) v.get(1)).get((i - 1))).get());
         } else chk = false;
       }
       if (chk) { // present in all sources; chk inner
         assertTrue(v.has(0));
         for (int i = 0; i < SOURCES; ++i)
-          assertTrue(((TupleWritable)v.get(0)).has(i));
+          assertTrue(((TupleWritable) v.get(0)).has(i));
       } else { // should not be present in inner join
         assertFalse(v.has(0));
       }
@@ -354,10 +353,10 @@ public class TestDatamerge {
   }
 
   @Test
-  public void testEmptyJoin() throws Exception {
+  void testEmptyJoin() throws Exception {
     JobConf job = new JobConf();
     Path base = cluster.getFileSystem().makeQualified(new Path("/empty"));
-    Path[] src = { new Path(base,"i0"), new Path("i1"), new Path("i2") };
+    Path[] src = {new Path(base, "i0"), new Path("i1"), new Path("i2")};
     job.set("mapreduce.join.expr", CompositeInputFormat.compose("outer",
         Fake_IF.class, src));
     job.setInputFormat(CompositeInputFormat.class);

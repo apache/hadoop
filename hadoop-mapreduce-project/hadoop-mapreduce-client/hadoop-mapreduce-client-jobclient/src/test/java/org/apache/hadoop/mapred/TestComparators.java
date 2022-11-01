@@ -35,11 +35,12 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.mapreduce.MRConfig;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 /**
@@ -312,7 +313,7 @@ public class TestComparators {
     }
   }
 
-  @Before
+  @BeforeEach
   public void configure() throws Exception {
     Path testdir = new Path(TEST_DIR.getAbsolutePath());
     Path inDir = new Path(testdir, "in");
@@ -355,30 +356,31 @@ public class TestComparators {
     jc = new JobClient(conf);
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(TEST_DIR);
   }
+
   /**
    * Test the default comparator for Map/Reduce. 
    * Use the identity mapper and see if the keys are sorted at the end
    * @throws Exception
    */
   @Test
-  public void testDefaultMRComparator() throws Exception {
+  void testDefaultMRComparator() throws Exception {
     conf.setMapperClass(IdentityMapper.class);
     conf.setReducerClass(AscendingKeysReducer.class);
-    
+
     RunningJob r_job = jc.submitJob(conf);
     while (!r_job.isComplete()) {
       Thread.sleep(1000);
     }
-    
+
     if (!r_job.isSuccessful()) {
       fail("Oops! The job broke due to an unexpected error");
     }
   }
-  
+
   /**
    * Test user-defined comparator for Map/Reduce.
    * We provide our own comparator that is the reverse of the default int 
@@ -386,21 +388,21 @@ public class TestComparators {
    * @throws Exception
    */
   @Test
-  public void testUserMRComparator() throws Exception {
+  void testUserMRComparator() throws Exception {
     conf.setMapperClass(IdentityMapper.class);
     conf.setReducerClass(DescendingKeysReducer.class);
     conf.setOutputKeyComparatorClass(DecreasingIntComparator.class);
-    
+
     RunningJob r_job = jc.submitJob(conf);
     while (!r_job.isComplete()) {
       Thread.sleep(1000);
     }
-    
+
     if (!r_job.isSuccessful()) {
       fail("Oops! The job broke due to an unexpected error");
     }
   }
-  
+
   /**
    * Test user-defined grouping comparator for grouping values in Reduce.
    * We generate composite keys that contain a random number, which acts
@@ -409,21 +411,21 @@ public class TestComparators {
    * @throws Exception
    */
   @Test
-  public void testUserValueGroupingComparator() throws Exception {
+  void testUserValueGroupingComparator() throws Exception {
     conf.setMapperClass(RandomGenMapper.class);
     conf.setReducerClass(AscendingGroupReducer.class);
     conf.setOutputValueGroupingComparator(CompositeIntGroupFn.class);
-    
+
     RunningJob r_job = jc.submitJob(conf);
     while (!r_job.isComplete()) {
       Thread.sleep(1000);
     }
-    
+
     if (!r_job.isSuccessful()) {
       fail("Oops! The job broke due to an unexpected error");
     }
   }
-  
+
   /**
    * Test all user comparators. Super-test of all tests here. 
    * We generate composite keys that contain a random number, which acts
@@ -434,7 +436,7 @@ public class TestComparators {
    * @throws Exception
    */
   @Test
-  public void testAllUserComparators() throws Exception {
+  void testAllUserComparators() throws Exception {
     conf.setMapperClass(RandomGenMapper.class);
     // use a decreasing comparator so keys are sorted in reverse order
     conf.setOutputKeyComparatorClass(DecreasingIntComparator.class);
@@ -444,7 +446,7 @@ public class TestComparators {
     while (!r_job.isComplete()) {
       Thread.sleep(1000);
     }
-    
+
     if (!r_job.isSuccessful()) {
       fail("Oops! The job broke due to an unexpected error");
     }
@@ -455,7 +457,7 @@ public class TestComparators {
    * for each compare.
    */
   @Test
-  public void testBakedUserComparator() throws Exception {
+  void testBakedUserComparator() throws Exception {
     MyWritable a = new MyWritable(8, 8);
     MyWritable b = new MyWritable(7, 9);
     assertTrue(a.compareTo(b) > 0);

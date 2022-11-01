@@ -18,8 +18,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -47,10 +46,11 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestBinaryTokenFile {
 
@@ -175,7 +175,7 @@ public class TestBinaryTokenFile {
 
   private static Path p1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     final Configuration conf = new Configuration();
 
@@ -201,7 +201,7 @@ public class TestBinaryTokenFile {
     p1 = fs.makeQualified(p1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if(mrCluster != null) {
       mrCluster.stop();
@@ -231,7 +231,7 @@ public class TestBinaryTokenFile {
         os.close();
       }
     } catch (IOException e) {
-      Assert.fail("Exception " + e);
+      fail("Exception " + e);
     }
   }
 
@@ -240,7 +240,7 @@ public class TestBinaryTokenFile {
    * @throws IOException
    */
   @Test
-  public void testBinaryTokenFile() throws IOException {
+  void testBinaryTokenFile() throws IOException {
     Configuration conf = mrCluster.getConfig();
 
     // provide namenodes names for the job to get the delegation tokens for
@@ -250,7 +250,7 @@ public class TestBinaryTokenFile {
     // using argument to pass the file name
     final String[] args = {
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
-        };
+    };
     int res = -1;
     try {
       res = ToolRunner.run(conf, new MySleepJob(), args);
@@ -259,7 +259,7 @@ public class TestBinaryTokenFile {
       e.printStackTrace(System.out);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 
   /**
@@ -268,7 +268,7 @@ public class TestBinaryTokenFile {
    * @throws IOException
   */
   @Test
-  public void testTokenCacheFile() throws IOException {
+  void testTokenCacheFile() throws IOException {
     Configuration conf = mrCluster.getConfig();
     createBinaryTokenFile(conf);
     // provide namenodes names for the job to get the delegation tokens for
@@ -279,7 +279,7 @@ public class TestBinaryTokenFile {
     final String[] args = {
         "-tokenCacheFile", binaryTokenFileName.toString(),
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
-        };
+    };
     int res = -1;
     try {
       res = ToolRunner.run(conf, new SleepJob(), args);
@@ -288,6 +288,6 @@ public class TestBinaryTokenFile {
       e.printStackTrace(System.out);
       fail("Job failed");
     }
-    assertEquals("dist job res is not 0:", 0, res);
+    assertEquals(0, res, "dist job res is not 0:");
   }
 }

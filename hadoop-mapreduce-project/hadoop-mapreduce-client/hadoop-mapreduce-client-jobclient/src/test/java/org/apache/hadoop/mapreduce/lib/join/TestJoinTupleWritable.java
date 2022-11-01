@@ -31,12 +31,10 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestJoinTupleWritable {
 
@@ -96,25 +94,25 @@ public class TestJoinTupleWritable {
         i = verifIter(writs, ((TupleWritable)w), i);
         continue;
       }
-      assertTrue("Bad value", w.equals(writs[i++]));
+      assertEquals(w, writs[i++]);
     }
     return i;
   }
 
   @Test
-  public void testIterable() throws Exception {
+  void testIterable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
-      new BooleanWritable(r.nextBoolean()),
-      new FloatWritable(r.nextFloat()),
-      new FloatWritable(r.nextFloat()),
-      new IntWritable(r.nextInt()),
-      new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
-      new LongWritable(r.nextLong()),
-      new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
-      new IntWritable(r.nextInt())
+        new BooleanWritable(r.nextBoolean()),
+        new FloatWritable(r.nextFloat()),
+        new FloatWritable(r.nextFloat()),
+        new IntWritable(r.nextInt()),
+        new LongWritable(r.nextLong()),
+        new BytesWritable("dingo".getBytes()),
+        new LongWritable(r.nextLong()),
+        new IntWritable(r.nextInt()),
+        new BytesWritable("yak".getBytes()),
+        new IntWritable(r.nextInt())
     };
     TupleWritable t = new TupleWritable(writs);
     for (int i = 0; i < 6; ++i) {
@@ -124,38 +122,38 @@ public class TestJoinTupleWritable {
   }
 
   @Test
-  public void testNestedIterable() throws Exception {
+  void testNestedIterable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
-      new BooleanWritable(r.nextBoolean()),
-      new FloatWritable(r.nextFloat()),
-      new FloatWritable(r.nextFloat()),
-      new IntWritable(r.nextInt()),
-      new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
-      new LongWritable(r.nextLong()),
-      new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
-      new IntWritable(r.nextInt())
+        new BooleanWritable(r.nextBoolean()),
+        new FloatWritable(r.nextFloat()),
+        new FloatWritable(r.nextFloat()),
+        new IntWritable(r.nextInt()),
+        new LongWritable(r.nextLong()),
+        new BytesWritable("dingo".getBytes()),
+        new LongWritable(r.nextLong()),
+        new IntWritable(r.nextInt()),
+        new BytesWritable("yak".getBytes()),
+        new IntWritable(r.nextInt())
     };
     TupleWritable sTuple = makeTuple(writs);
-    assertTrue("Bad count", writs.length == verifIter(writs, sTuple, 0));
+    assertTrue(writs.length == verifIter(writs, sTuple, 0), "Bad count");
   }
 
   @Test
-  public void testWritable() throws Exception {
+  void testWritable() throws Exception {
     Random r = new Random();
     Writable[] writs = {
-      new BooleanWritable(r.nextBoolean()),
-      new FloatWritable(r.nextFloat()),
-      new FloatWritable(r.nextFloat()),
-      new IntWritable(r.nextInt()),
-      new LongWritable(r.nextLong()),
-      new BytesWritable("dingo".getBytes()),
-      new LongWritable(r.nextLong()),
-      new IntWritable(r.nextInt()),
-      new BytesWritable("yak".getBytes()),
-      new IntWritable(r.nextInt())
+        new BooleanWritable(r.nextBoolean()),
+        new FloatWritable(r.nextFloat()),
+        new FloatWritable(r.nextFloat()),
+        new IntWritable(r.nextInt()),
+        new LongWritable(r.nextLong()),
+        new BytesWritable("dingo".getBytes()),
+        new LongWritable(r.nextLong()),
+        new IntWritable(r.nextInt()),
+        new BytesWritable("yak".getBytes()),
+        new IntWritable(r.nextInt())
     };
     TupleWritable sTuple = makeTuple(writs);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -163,15 +161,15 @@ public class TestJoinTupleWritable {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
-    assertTrue("Failed to write/read tuple", sTuple.equals(dTuple));
+    assertEquals(sTuple, dTuple);
   }
 
   @Test
-  public void testWideWritable() throws Exception {
+  void testWideWritable() throws Exception {
     Writable[] manyWrits = makeRandomWritables(131);
-    
+
     TupleWritable sTuple = new TupleWritable(manyWrits);
-    for (int i =0; i<manyWrits.length; i++)
+    for (int i = 0; i < manyWrits.length; i++)
     {
       if (i % 3 == 0) {
         sTuple.setWritten(i);
@@ -184,16 +182,15 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+    assertEquals(-1, in.read(), "All tuple data has not been read from the stream");
   }
 
   @Test
-  public void testWideWritable2() throws Exception {
+  void testWideWritable2() throws Exception {
     Writable[] manyWrits = makeRandomWritables(71);
-    
+
     TupleWritable sTuple = new TupleWritable(manyWrits);
-    for (int i =0; i<manyWrits.length; i++)
+    for (int i = 0; i < manyWrits.length; i++)
     {
       sTuple.setWritten(i);
     }
@@ -203,21 +200,20 @@ public class TestJoinTupleWritable {
     TupleWritable dTuple = new TupleWritable();
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
-            .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+        .isEqualTo(sTuple);
+    assertEquals(-1, in.read(), "All tuple data has not been read from the stream");
   }
-  
+
   /**
    * Tests a tuple writable with more than 64 values and the values set written
    * spread far apart.
    */
   @Test
-  public void testSparseWideWritable() throws Exception {
+  void testSparseWideWritable() throws Exception {
     Writable[] manyWrits = makeRandomWritables(131);
-    
+
     TupleWritable sTuple = new TupleWritable(manyWrits);
-    for (int i =0; i<manyWrits.length; i++)
+    for (int i = 0; i < manyWrits.length; i++)
     {
       if (i % 65 == 0) {
         sTuple.setWritten(i);
@@ -230,75 +226,74 @@ public class TestJoinTupleWritable {
     dTuple.readFields(new DataInputStream(in));
     assertThat(dTuple).withFailMessage("Failed to write/read tuple")
         .isEqualTo(sTuple);
-    assertEquals("All tuple data has not been read from the stream", 
-      -1, in.read());
+    assertEquals(-1, in.read(), "All tuple data has not been read from the stream");
   }
 
   @Test
-  public void testWideTuple() throws Exception {
+  void testWideTuple() throws Exception {
     Text emptyText = new Text("Should be empty");
     Writable[] values = new Writable[64];
-    Arrays.fill(values,emptyText);
+    Arrays.fill(values, emptyText);
     values[42] = new Text("Number 42");
-                                     
+
     TupleWritable tuple = new TupleWritable(values);
     tuple.setWritten(42);
-    
-    for (int pos=0; pos<tuple.size();pos++) {
+
+    for (int pos = 0; pos < tuple.size(); pos++) {
       boolean has = tuple.has(pos);
       if (pos == 42) {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has,
+            "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
 
   @Test
-  public void testWideTuple2() throws Exception {
+  void testWideTuple2() throws Exception {
     Text emptyText = new Text("Should be empty");
     Writable[] values = new Writable[64];
-    Arrays.fill(values,emptyText);
+    Arrays.fill(values, emptyText);
     values[9] = new Text("Number 9");
-                                     
+
     TupleWritable tuple = new TupleWritable(values);
     tuple.setWritten(9);
-    
-    for (int pos=0; pos<tuple.size();pos++) {
+
+    for (int pos = 0; pos < tuple.size(); pos++) {
       boolean has = tuple.has(pos);
       if (pos == 9) {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has,
+            "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }
-  
+
   /**
    * Tests that we can write more than 64 values.
    */
   @Test
-  public void testWideTupleBoundary() throws Exception {
+  void testWideTupleBoundary() throws Exception {
     Text emptyText = new Text("Should not be set written");
     Writable[] values = new Writable[65];
-    Arrays.fill(values,emptyText);
+    Arrays.fill(values, emptyText);
     values[64] = new Text("Should be the only value set written");
-                                     
+
     TupleWritable tuple = new TupleWritable(values);
     tuple.setWritten(64);
-    
-    for (int pos=0; pos<tuple.size();pos++) {
+
+    for (int pos = 0; pos < tuple.size(); pos++) {
       boolean has = tuple.has(pos);
       if (pos == 64) {
         assertTrue(has);
       }
       else {
-        assertFalse("Tuple position is incorrectly labelled as set: " + pos,
-          has);
+        assertFalse(has,
+            "Tuple position is incorrectly labelled as set: " + pos);
       }
     }
   }

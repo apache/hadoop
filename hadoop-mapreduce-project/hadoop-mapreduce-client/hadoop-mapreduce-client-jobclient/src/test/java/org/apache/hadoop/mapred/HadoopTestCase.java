@@ -21,8 +21,8 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 
@@ -139,7 +139,7 @@ public abstract class HadoopTestCase {
    *
    * @throws Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (localFS) {
       fileSystem = FileSystem.getLocal(new JobConf());
@@ -163,7 +163,7 @@ public abstract class HadoopTestCase {
    *
    * @throws Exception
    */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       if (mrCluster != null) {

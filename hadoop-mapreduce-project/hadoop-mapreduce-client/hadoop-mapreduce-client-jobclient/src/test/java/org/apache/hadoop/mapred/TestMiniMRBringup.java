@@ -20,10 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 
 /**
@@ -32,17 +32,19 @@ import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 public class TestMiniMRBringup {
 
   @Test
-  public void testBringUp() throws IOException {
+  void testBringUp() throws IOException {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(1, "local", 1);
     } finally {
-      if (mr != null) { mr.shutdown(); }
+      if (mr != null) {
+        mr.shutdown();
+      }
     }
   }
 
   @Test
-  public void testMiniMRYarnClusterWithoutJHS() throws IOException {
+  void testMiniMRYarnClusterWithoutJHS() throws IOException {
     MiniMRYarnCluster mr = null;
     try {
       final Configuration conf = new Configuration();
@@ -50,7 +52,7 @@ public class TestMiniMRBringup {
       mr = new MiniMRYarnCluster("testMiniMRYarnClusterWithoutJHS");
       mr.init(conf);
       mr.start();
-      Assert.assertEquals(null, mr.getHistoryServer());
+      assertNull(mr.getHistoryServer());
     } finally {
       if (mr != null) {
         mr.stop();

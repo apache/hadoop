@@ -38,9 +38,9 @@ import org.apache.hadoop.io.serializer.JavaSerialization;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestTotalOrderPartitioner {
 
@@ -141,7 +141,7 @@ public class TestTotalOrderPartitioner {
   }
 
   @Test
-  public void testTotalOrderWithCustomSerialization() throws Exception {
+  void testTotalOrderWithCustomSerialization() throws Exception {
     TotalOrderPartitioner<String, NullWritable> partitioner =
         new TotalOrderPartitioner<String, NullWritable>();
     Configuration conf = new Configuration();
@@ -158,8 +158,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<String> chk : testJavaStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -167,9 +168,9 @@ public class TestTotalOrderPartitioner {
   }
 
   @Test
-  public void testTotalOrderMemCmp() throws Exception {
-    TotalOrderPartitioner<Text,NullWritable> partitioner =
-      new TotalOrderPartitioner<Text,NullWritable>();
+  void testTotalOrderMemCmp() throws Exception {
+    TotalOrderPartitioner<Text, NullWritable> partitioner =
+        new TotalOrderPartitioner<Text, NullWritable>();
     Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
         "totalordermemcmp", conf, splitStrings);
@@ -178,8 +179,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -187,9 +189,9 @@ public class TestTotalOrderPartitioner {
   }
 
   @Test
-  public void testTotalOrderBinarySearch() throws Exception {
-    TotalOrderPartitioner<Text,NullWritable> partitioner =
-      new TotalOrderPartitioner<Text,NullWritable>();
+  void testTotalOrderBinarySearch() throws Exception {
+    TotalOrderPartitioner<Text, NullWritable> partitioner =
+        new TotalOrderPartitioner<Text, NullWritable>();
     Configuration conf = new Configuration();
     Path p = TestTotalOrderPartitioner.<Text>writePartitionFile(
         "totalorderbinarysearch", conf, splitStrings);
@@ -199,8 +201,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : testStrings) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);
@@ -220,9 +223,9 @@ public class TestTotalOrderPartitioner {
   }
 
   @Test
-  public void testTotalOrderCustomComparator() throws Exception {
-    TotalOrderPartitioner<Text,NullWritable> partitioner =
-      new TotalOrderPartitioner<Text,NullWritable>();
+  void testTotalOrderCustomComparator() throws Exception {
+    TotalOrderPartitioner<Text, NullWritable> partitioner =
+        new TotalOrderPartitioner<Text, NullWritable>();
     Configuration conf = new Configuration();
     Text[] revSplitStrings = Arrays.copyOf(splitStrings, splitStrings.length);
     Arrays.sort(revSplitStrings, new ReverseStringComparator());
@@ -231,7 +234,7 @@ public class TestTotalOrderPartitioner {
     conf.setBoolean(TotalOrderPartitioner.NATURAL_ORDER, false);
     conf.setClass(MRJobConfig.MAP_OUTPUT_KEY_CLASS, Text.class, Object.class);
     conf.setClass(MRJobConfig.KEY_COMPARATOR,
-      ReverseStringComparator.class, RawComparator.class);
+        ReverseStringComparator.class, RawComparator.class);
     ArrayList<Check<Text>> revCheck = new ArrayList<Check<Text>>();
     revCheck.add(new Check<Text>(new Text("aaaaa"), 9));
     revCheck.add(new Check<Text>(new Text("aaabb"), 9));
@@ -248,8 +251,9 @@ public class TestTotalOrderPartitioner {
       partitioner.setConf(conf);
       NullWritable nw = NullWritable.get();
       for (Check<Text> chk : revCheck) {
-        assertEquals(chk.data.toString(), chk.part,
-            partitioner.getPartition(chk.data, nw, splitStrings.length + 1));
+        assertEquals(chk.part,
+            partitioner.getPartition(chk.data, nw, splitStrings.length + 1),
+            chk.data.toString());
       }
     } finally {
       p.getFileSystem(conf).delete(p, true);

@@ -35,11 +35,13 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.DataOutputStream;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 /**
@@ -54,8 +56,8 @@ import org.junit.Test;
  *
  * In both cases local file system is used (this is irrelevant for
  * the tested functionality)
- *
  * 
+ *
  */
 public abstract class NotificationTestCase extends HadoopTestCase {
 
@@ -132,7 +134,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
         return;
       }
       failureCounter++;
-      assertTrue("The request (" + query + ") does not contain " + expected, false);
+      assertTrue(false, "The request (" + query + ") does not contain " + expected);
     }
   }
 
@@ -149,23 +151,23 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     startHttpServer();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     stopHttpServer();
     super.tearDown();
   }
 
   @Test
-  public void testMR() throws Exception {
+  void testMR() throws Exception {
 
     System.out.println(launchWordCount(this.createJobConf(),
-                                       "a b c d e f g h", 1, 1));
+        "a b c d e f g h", 1, 1));
     boolean keepTrying = true;
     for (int tries = 0; tries < 30 && keepTrying; tries++) {
       Thread.sleep(50);
@@ -173,7 +175,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     }
     assertEquals(2, NotificationServlet.counter);
     assertEquals(0, NotificationServlet.failureCounter);
-    
+
     Path inDir = new Path("notificationjob/input");
     Path outDir = new Path("notificationjob/output");
 
@@ -186,7 +188,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
     // run a job with KILLED status
     System.out.println(UtilsForTests.runJobKill(this.createJobConf(), inDir,
-                                                outDir).getID());
+        outDir).getID());
     keepTrying = true;
     for (int tries = 0; tries < 30 && keepTrying; tries++) {
       Thread.sleep(50);
@@ -194,10 +196,10 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     }
     assertEquals(4, NotificationServlet.counter);
     assertEquals(0, NotificationServlet.failureCounter);
-    
+
     // run a job with FAILED status
     System.out.println(UtilsForTests.runJobFail(this.createJobConf(), inDir,
-                                                outDir).getID());
+        outDir).getID());
     keepTrying = true;
     for (int tries = 0; tries < 30 && keepTrying; tries++) {
       Thread.sleep(50);

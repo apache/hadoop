@@ -21,19 +21,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static org.junit.Assert.assertEquals;
-
 public class TestIFileStreams {
   @Test
-  public void testIFileStream() throws Exception {
+  void testIFileStream() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);
     IFileOutputStream ifos = new IFileOutputStream(dob);
@@ -49,8 +48,9 @@ public class TestIFileStreams {
     }
     ifis.close();
   }
+
   @Test
-  public void testBadIFileStream() throws Exception {
+  void testBadIFileStream() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);
     IFileOutputStream ifos = new IFileOutputStream(dob);
@@ -75,13 +75,14 @@ public class TestIFileStreams {
       }
       ifis.close();
     } catch (ChecksumException e) {
-      assertEquals("Unexpected bad checksum", DLEN - 1, i);
+      assertEquals(DLEN - 1, i, "Unexpected bad checksum");
       return;
     }
     fail("Did not detect bad data in checksum");
   }
+
   @Test
-  public void testBadLength() throws Exception {
+  void testBadLength() throws Exception {
     final int DLEN = 100;
     DataOutputBuffer dob = new DataOutputBuffer(DLEN + 4);
     IFileOutputStream ifos = new IFileOutputStream(dob);
@@ -99,14 +100,14 @@ public class TestIFileStreams {
       }
       ifis.close();
     } catch (ChecksumException e) {
-      assertEquals("Checksum before close", i, DLEN - 8);
+      assertEquals(i, DLEN - 8, "Checksum before close");
       return;
     }
     fail("Did not detect bad data in checksum");
   }
 
   @Test
-  public void testCloseStreamOnException() throws Exception {
+  void testCloseStreamOnException() throws Exception {
     OutputStream outputStream = Mockito.mock(OutputStream.class);
     IFileOutputStream ifos = new IFileOutputStream(outputStream);
     Mockito.doThrow(new IOException("Dummy Exception")).when(outputStream)

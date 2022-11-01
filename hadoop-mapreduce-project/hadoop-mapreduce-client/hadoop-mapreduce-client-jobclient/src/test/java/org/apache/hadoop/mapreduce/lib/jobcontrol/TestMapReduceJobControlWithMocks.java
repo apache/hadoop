@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.jobcontrol;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,7 +29,9 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Tests the JobControl API using mock and stub Job instances.
@@ -38,78 +39,78 @@ import org.junit.Test;
 public class TestMapReduceJobControlWithMocks {
 
   @Test
-  public void testSuccessfulJobs() throws Exception {
+  void testSuccessfulJobs() throws Exception {
     JobControl jobControl = new JobControl("Test");
-    
+
     ControlledJob job1 = createSuccessfulControlledJob(jobControl);
     ControlledJob job2 = createSuccessfulControlledJob(jobControl);
     ControlledJob job3 = createSuccessfulControlledJob(jobControl, job1, job2);
     ControlledJob job4 = createSuccessfulControlledJob(jobControl, job3);
-    
+
     runJobControl(jobControl);
-    
-    assertEquals("Success list", 4, jobControl.getSuccessfulJobList().size());
-    assertEquals("Failed list", 0, jobControl.getFailedJobList().size());
-    
+
+    assertEquals(4, jobControl.getSuccessfulJobList().size(), "Success list");
+    assertEquals(0, jobControl.getFailedJobList().size(), "Failed list");
+
     assertEquals(ControlledJob.State.SUCCESS, job1.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job3.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job4.getJobState());
-    
+
     jobControl.stop();
   }
-  
+
   @Test
-  public void testFailedJob() throws Exception {
+  void testFailedJob() throws Exception {
     JobControl jobControl = new JobControl("Test");
-    
+
     ControlledJob job1 = createFailedControlledJob(jobControl);
     ControlledJob job2 = createSuccessfulControlledJob(jobControl);
     ControlledJob job3 = createSuccessfulControlledJob(jobControl, job1, job2);
     ControlledJob job4 = createSuccessfulControlledJob(jobControl, job3);
-    
+
     runJobControl(jobControl);
-    
-    assertEquals("Success list", 1, jobControl.getSuccessfulJobList().size());
-    assertEquals("Failed list", 3, jobControl.getFailedJobList().size());
+
+    assertEquals(1, jobControl.getSuccessfulJobList().size(), "Success list");
+    assertEquals(3, jobControl.getFailedJobList().size(), "Failed list");
 
     assertEquals(ControlledJob.State.FAILED, job1.getJobState());
     assertEquals(ControlledJob.State.SUCCESS, job2.getJobState());
     assertEquals(ControlledJob.State.DEPENDENT_FAILED, job3.getJobState());
     assertEquals(ControlledJob.State.DEPENDENT_FAILED, job4.getJobState());
-    
+
     jobControl.stop();
   }
 
   @Test
-  public void testErrorWhileSubmitting() throws Exception {
+  void testErrorWhileSubmitting() throws Exception {
     JobControl jobControl = new JobControl("Test");
-    
+
     Job mockJob = mock(Job.class);
-    
+
     ControlledJob job1 = new ControlledJob(mockJob, null);
     when(mockJob.getConfiguration()).thenReturn(new Configuration());
     doThrow(new IncompatibleClassChangeError("This is a test")).when(mockJob).submit();
-    
+
     jobControl.addJob(job1);
-    
+
     runJobControl(jobControl);
     try {
-      assertEquals("Success list", 0, jobControl.getSuccessfulJobList().size());
-      assertEquals("Failed list", 1, jobControl.getFailedJobList().size());
+      assertEquals(0, jobControl.getSuccessfulJobList().size(), "Success list");
+      assertEquals(1, jobControl.getFailedJobList().size(), "Failed list");
 
       assertEquals(ControlledJob.State.FAILED, job1.getJobState());
     } finally {
       jobControl.stop();
     }
   }
-  
+
   @Test
-  public void testKillJob() throws Exception {
+  void testKillJob() throws Exception {
     JobControl jobControl = new JobControl("Test");
-    
+
     ControlledJob job = createFailedControlledJob(jobControl);
-    
+
     job.killJob();
 
     // Verify that killJob() was called on the mock Job

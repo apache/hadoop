@@ -25,13 +25,13 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.slf4j.Logger;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.Random;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class TestSequenceFileInputFormat {
   private static final Logger LOG = FileInputFormat.LOG;
@@ -40,14 +40,14 @@ public class TestSequenceFileInputFormat {
   private static Configuration conf = new Configuration();
 
   @Test
-  public void testFormat() throws Exception {
+  void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getLocal(conf);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
+    Path dir = new Path(System.getProperty("test.build.data", ".") + "/mapred");
     Path file = new Path(dir, "test.seq");
-    
+
     Reporter reporter = Reporter.NULL;
-    
+
     int seed = new Random().nextInt();
     //LOG.info("seed = "+seed);
     Random random = new Random(seed);
@@ -58,14 +58,14 @@ public class TestSequenceFileInputFormat {
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
-         length+= random.nextInt(MAX_LENGTH/10)+1) {
+         length += random.nextInt(MAX_LENGTH / 10) + 1) {
 
       //LOG.info("creating; entries = " + length);
 
       // create a file with length entries
       SequenceFile.Writer writer =
-        SequenceFile.createWriter(fs, conf, file,
-                                  IntWritable.class, BytesWritable.class);
+          SequenceFile.createWriter(fs, conf, file,
+              IntWritable.class, BytesWritable.class);
       try {
         for (int i = 0; i < length; i++) {
           IntWritable key = new IntWritable(i);
@@ -80,12 +80,12 @@ public class TestSequenceFileInputFormat {
 
       // try splitting the file in a variety of sizes
       InputFormat<IntWritable, BytesWritable> format =
-        new SequenceFileInputFormat<IntWritable, BytesWritable>();
+          new SequenceFileInputFormat<IntWritable, BytesWritable>();
       IntWritable key = new IntWritable();
       BytesWritable value = new BytesWritable();
       for (int i = 0; i < 3; i++) {
         int numSplits =
-          random.nextInt(MAX_LENGTH/(SequenceFile.SYNC_INTERVAL/20))+1;
+            random.nextInt(MAX_LENGTH / (SequenceFile.SYNC_INTERVAL / 20)) + 1;
         //LOG.info("splitting: requesting = " + numSplits);
         InputSplit[] splits = format.getSplits(job, numSplits);
         //LOG.info("splitting: got =        " + splits.length);
@@ -94,7 +94,7 @@ public class TestSequenceFileInputFormat {
         BitSet bits = new BitSet(length);
         for (int j = 0; j < splits.length; j++) {
           RecordReader<IntWritable, BytesWritable> reader =
-            format.getRecordReader(splits[j], job, reporter);
+              format.getRecordReader(splits[j], job, reporter);
           try {
             int count = 0;
             while (reader.next(key, value)) {
@@ -102,7 +102,7 @@ public class TestSequenceFileInputFormat {
               // LOG.info("splits["+j+"]="+splits[j]+" : " + key.get());
               // LOG.info("@"+reader.getPos());
               // }
-              assertFalse("Key in multiple partitions.", bits.get(key.get()));
+              assertFalse(bits.get(key.get()), "Key in multiple partitions.");
               bits.set(key.get());
               count++;
             }
@@ -111,7 +111,7 @@ public class TestSequenceFileInputFormat {
             reader.close();
           }
         }
-        assertEquals("Some keys in no partition.", length, bits.cardinality());
+        assertEquals(length, bits.cardinality(), "Some keys in no partition.");
       }
 
     }

@@ -28,14 +28,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -125,21 +123,21 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
 
   @Test
-  public void testJobControlWithFailJob() throws Exception {
+  void testJobControlWithFailJob() throws Exception {
     LOG.info("Starting testJobControlWithFailJob");
     Configuration conf = createJobConf();
 
     cleanupData(conf);
-    
+
     // create a Fail job
     Job job1 = MapReduceTestUtil.createFailJob(conf, outdir_1, indir);
-    
+
     // create job dependencies
     JobControl theControl = createDependencies(conf, job1);
-    
+
     // wait till all the jobs complete
     waitTillAllFinished(theControl);
-    
+
     assertTrue(cjob1.getJobState() == ControlledJob.State.FAILED);
     assertTrue(cjob2.getJobState() == ControlledJob.State.SUCCESS);
     assertTrue(cjob3.getJobState() == ControlledJob.State.DEPENDENT_FAILED);
@@ -149,7 +147,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
 
   @Test
-  public void testJobControlWithKillJob() throws Exception {
+  void testJobControlWithKillJob() throws Exception {
     LOG.info("Starting testJobControlWithKillJob");
 
     Configuration conf = createJobConf();
@@ -170,15 +168,15 @@ public class TestMapReduceJobControl extends HadoopTestCase {
     // suspend jobcontrol and resume it again
     theControl.suspend();
     assertTrue(
-      theControl.getThreadState() == JobControl.ThreadState.SUSPENDED);
+        theControl.getThreadState() == JobControl.ThreadState.SUSPENDED);
     theControl.resume();
-    
+
     // kill the first job.
     cjob1.killJob();
 
     // wait till all the jobs complete
     waitTillAllFinished(theControl);
-    
+
     assertTrue(cjob1.getJobState() == ControlledJob.State.FAILED);
     assertTrue(cjob2.getJobState() == ControlledJob.State.SUCCESS);
     assertTrue(cjob3.getJobState() == ControlledJob.State.DEPENDENT_FAILED);
@@ -188,27 +186,28 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
 
   @Test
-  public void testJobControl() throws Exception {
+  void testJobControl() throws Exception {
     LOG.info("Starting testJobControl");
 
     Configuration conf = createJobConf();
 
     cleanupData(conf);
-    
+
     Job job1 = MapReduceTestUtil.createCopyJob(conf, outdir_1, indir);
-    
+
     JobControl theControl = createDependencies(conf, job1);
-    
+
     // wait till all the jobs complete
     waitTillAllFinished(theControl);
-    
-    assertEquals("Some jobs failed", 0, theControl.getFailedJobList().size());
-    
+
+    assertEquals(0, theControl.getFailedJobList().size(), "Some jobs failed");
+
     theControl.stop();
   }
-  
-  @Test(timeout = 30000)
-  public void testControlledJob() throws Exception {
+
+  @Test
+  @Timeout(30000)
+  void testControlledJob() throws Exception {
     LOG.info("Starting testControlledJob");
 
     Configuration conf = createJobConf();
@@ -222,11 +221,11 @@ public class TestMapReduceJobControl extends HadoopTestCase {
         break;
       }
     }
-    Assert.assertNotNull(cjob1.getMapredJobId());
+    assertNotNull(cjob1.getMapredJobId());
 
     // wait till all the jobs complete
     waitTillAllFinished(theControl);
-    assertEquals("Some jobs failed", 0, theControl.getFailedJobList().size());
+    assertEquals(0, theControl.getFailedJobList().size(), "Some jobs failed");
     theControl.stop();
   }
 }

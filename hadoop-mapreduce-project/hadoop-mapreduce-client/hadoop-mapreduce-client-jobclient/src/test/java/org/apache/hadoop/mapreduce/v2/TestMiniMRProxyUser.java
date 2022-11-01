@@ -28,24 +28,24 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestMiniMRProxyUser {
 
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (System.getProperty("hadoop.log.dir") == null) {
       System.setProperty("hadoop.log.dir", "/tmp");
@@ -93,7 +93,7 @@ public class TestMiniMRProxyUser {
     return mrCluster.createJobConf();
   }
   
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (mrCluster != null) {
       mrCluster.shutdown();
@@ -128,40 +128,40 @@ public class TestMiniMRProxyUser {
   }
 
   @Test
-  public void __testCurrentUser() throws Exception {
-   mrRun();
-  }  
+  void __testCurrentUser() throws Exception {
+    mrRun();
+  }
 
   @Test
-  public void testValidProxyUser() throws Exception {
+  void testValidProxyUser() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createProxyUser("u1", UserGroupInformation.getLoginUser());
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
-        public Void run() throws Exception {
-          mrRun();
-          return null;
-        }
+      public Void run() throws Exception {
+        mrRun();
+        return null;
+      }
 
- 
+
     });
   }
 
   @Test
-  public void ___testInvalidProxyUser() throws Exception {
+  void ___testInvalidProxyUser() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createProxyUser("u2", UserGroupInformation.getLoginUser());
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
-        public Void run() throws Exception {
-          try {
-            mrRun();
-            fail();
-          }
-          catch (RemoteException ex) {
-            //nop
-          }
-          catch (Exception ex) {
-            fail();
-          }
-          return null;
+      public Void run() throws Exception {
+        try {
+          mrRun();
+          fail();
         }
+        catch (RemoteException ex) {
+          //nop
+        }
+        catch (Exception ex) {
+          fail();
+        }
+        return null;
+      }
     });
   }
 }
