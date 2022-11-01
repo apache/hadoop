@@ -187,15 +187,20 @@ public class FederationClientInterceptor
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random(System.currentTimeMillis());
 
-    int numThreads = getConf().getInt(
-        YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
-        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE);
+    int numMinThreads = getNumMinThreads(getConf());
+
+    int numMaxThreads = getNumMaxThreads(getConf());
+
+    long keepAliveTime = getConf().getTimeDuration(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME, TimeUnit.SECONDS);
+
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router Client-" + userName + "-%d ").build();
 
-    BlockingQueue workQueue = new LinkedBlockingQueue<>();
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
+    this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
+        keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
 
     final Configuration conf = this.getConf();
 
@@ -314,7 +319,7 @@ public class FederationClientInterceptor
     // Try calling the getNewApplication method
     List<SubClusterId> blacklist = new ArrayList<>();
     int activeSubClustersCount = getActiveSubClustersCount();
-    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
+    int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
     try {
       GetNewApplicationResponse response =
@@ -470,7 +475,7 @@ public class FederationClientInterceptor
       // but if the number of Active SubClusters is less than this number at this time,
       // we should provide a high number of retry according to the number of Active SubClusters.
       int activeSubClustersCount = getActiveSubClustersCount();
-      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries) + 1;
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
       // Try calling the SubmitApplication method
       SubmitApplicationResponse response =
@@ -484,7 +489,7 @@ public class FederationClientInterceptor
         return response;
       }
 
-    } catch (Exception e){
+    } catch (Exception e) {
       routerMetrics.incrAppsFailedSubmitted();
       RouterServerUtil.logAndThrowException(e.getMessage(), e);
     }
@@ -543,7 +548,7 @@ public class FederationClientInterceptor
       ApplicationHomeSubCluster appHomeSubCluster =
           ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
 
-      if (exists || retryCount == 0) {
+      if (!exists || retryCount == 0) {
         addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
       } else {
         updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
@@ -563,8 +568,8 @@ public class FederationClientInterceptor
     } catch (Exception e) {
       RouterAuditLogger.logFailure(user.getShortUserName(), SUBMIT_NEW_APP, UNKNOWN,
           TARGET_CLIENT_RM_SERVICE, e.getMessage(), applicationId, subClusterId);
-      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {} error = {}.",
-          applicationId, subClusterId, e);
+      LOG.warn("Unable to submitApplication appId {} try #{} on SubCluster {}.",
+          applicationId, retryCount, subClusterId, e);
       if (subClusterId != null) {
         blackList.add(subClusterId);
       }
@@ -1947,5 +1952,50 @@ public class FederationClientInterceptor
             reservationId);
       }
     }
+  }
+
+  protected int getNumMinThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is a deprecated property, " +
+          "please remove it, use {} to configure the minimum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
+    }
+
+    int numMinThreads = conf.getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE);
+    return numMinThreads;
+  }
+
+  protected int getNumMaxThreads(Configuration conf) {
+
+    String threadSize = conf.get(YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE);
+
+    // If the user configures YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+    // we will still get the number of threads from this configuration.
+    if (StringUtils.isNotBlank(threadSize)) {
+      LOG.warn("{} is a deprecated property, " +
+          "please remove it, use {} to configure the maximum number of thread pool.",
+          YarnConfiguration.ROUTER_USER_CLIENT_THREADS_SIZE,
+          YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+      return Integer.parseInt(threadSize);
+    }
+
+    int numMaxThreads = conf.getInt(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE);
+    return numMaxThreads;
+  }
+
+  @VisibleForTesting
+  public void setNumSubmitRetries(int numSubmitRetries) {
+    this.numSubmitRetries = numSubmitRetries;
   }
 }
