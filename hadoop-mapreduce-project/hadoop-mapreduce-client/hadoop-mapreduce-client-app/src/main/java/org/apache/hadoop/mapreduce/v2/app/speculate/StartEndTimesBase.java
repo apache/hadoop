@@ -61,7 +61,7 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
       = new HashMap<Job, DataStatistics>();
 
 
-  private final Map<Job, Float> slowTaskRelativeTresholds
+  private final Map<Job, Float> slowTaskRelativeThresholds
       = new HashMap<Job, Float>();
 
   protected final Set<Task> doneTasks = new HashSet<Task>();
@@ -89,7 +89,7 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
       final Job job = entry.getValue();
       mapperStatistics.put(job, new DataStatistics());
       reducerStatistics.put(job, new DataStatistics());
-      slowTaskRelativeTresholds.put
+      slowTaskRelativeThresholds.put
           (job, conf.getFloat(MRJobConfig.SPECULATIVE_SLOWTASK_THRESHOLD,1.0f));
     }
   }
@@ -141,7 +141,7 @@ abstract class StartEndTimesBase implements TaskRuntimeEstimator {
 
     long result =  statistics == null
         ? Long.MAX_VALUE
-        : (long)statistics.outlier(slowTaskRelativeTresholds.get(job));
+        : (long)statistics.outlier(slowTaskRelativeThresholds.get(job));
     return result;
   }
 

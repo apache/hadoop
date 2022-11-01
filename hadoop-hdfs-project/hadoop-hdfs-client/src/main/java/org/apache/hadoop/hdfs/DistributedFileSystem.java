@@ -422,6 +422,16 @@ public class DistributedFileSystem extends FileSystem
     return append(f, EnumSet.of(CreateFlag.APPEND), bufferSize, progress);
   }
 
+  @Override
+  public FSDataOutputStream append(Path f, final int bufferSize,
+      final Progressable progress, boolean appendToNewBlock) throws IOException {
+    EnumSet<CreateFlag> flag = EnumSet.of(CreateFlag.APPEND);
+    if (appendToNewBlock) {
+      flag.add(CreateFlag.NEW_BLOCK);
+    }
+    return append(f, flag, bufferSize, progress);
+  }
+
   /**
    * Append to an existing file (optional operation).
    *

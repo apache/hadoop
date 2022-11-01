@@ -25,9 +25,11 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -40,7 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -377,15 +378,12 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 1 bad SubCluster.
    */
   @Test
-  public void testGetNodesOneBadSC()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNodesOneBadSC() throws Exception {
 
     setupCluster(Arrays.asList(bad2));
 
-    NodesInfo response = interceptor.getNodes(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(0, response.getNodes().size());
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**
@@ -393,14 +391,12 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 2 bad SubClusters.
    */
   @Test
-  public void testGetNodesTwoBadSCs()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNodesTwoBadSCs() throws Exception {
+
     setupCluster(Arrays.asList(bad1, bad2));
 
-    NodesInfo response = interceptor.getNodes(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(0, response.getNodes().size());
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**
@@ -408,17 +404,11 @@ public class TestFederationInterceptorRESTRetry
    * composed of only 1 bad SubCluster and a good one.
    */
   @Test
-  public void testGetNodesOneBadOneGood()
-      throws YarnException, IOException, InterruptedException {
+  public void testGetNodesOneBadOneGood() throws Exception {
     setupCluster(Arrays.asList(good, bad2));
 
-    NodesInfo response = interceptor.getNodes(null);
-    Assert.assertNotNull(response);
-    Assert.assertEquals(1, response.getNodes().size());
-    // Check if the only node came from Good SubCluster
-    Assert.assertEquals(good.getId(),
-        Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
-    // The remove duplicate operations is tested in TestRouterWebServiceUtil
+    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
+        () -> interceptor.getNodes(null));
   }
 
   /**
