@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -123,32 +125,34 @@ public abstract class ApplicationHomeSubCluster {
 
   @Override
   public boolean equals(Object obj) {
+
     if (this == obj) {
       return true;
     }
-    if (obj == null) {
+
+    if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    ApplicationHomeSubCluster other = (ApplicationHomeSubCluster) obj;
-    if (!this.getApplicationId().equals(other.getApplicationId())) {
-      return false;
-    }
-    return this.getHomeSubCluster().equals(other.getHomeSubCluster());
+
+    ApplicationHomeSubCluster right = (ApplicationHomeSubCluster) obj;
+    return new EqualsBuilder()
+        .append(this.getApplicationId(), right.getApplicationId())
+        .append(this.getHomeSubCluster(), right.getHomeSubCluster())
+        .isEquals();
   }
 
   @Override
   public int hashCode() {
-    return getApplicationId().hashCode() * 31 + getHomeSubCluster().hashCode();
+    return new HashCodeBuilder().
+        append(this.getApplicationId()).
+        append(this.getHomeSubCluster()).
+        append(this.getCreateTime()).toHashCode();
   }
 
   @Override
   public String toString() {
-    return "ApplicationHomeSubCluster [getApplicationId()="
+    return "ApplicationHomeSubCluster [getApplicationId() = "
         + getApplicationId() + ", getHomeSubCluster()=" + getHomeSubCluster()
         + "]";
   }
-
 }
