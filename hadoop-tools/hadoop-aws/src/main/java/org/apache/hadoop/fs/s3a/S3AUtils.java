@@ -82,6 +82,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -335,8 +336,33 @@ public final class S3AUtils {
   public static IOException extractException(String operation,
       String path,
       ExecutionException ee) {
+    return convertExceptionCause(operation, path, ee.getCause());
+  }
+
+  /**
+   * Extract an exception from a failed future, and convert to an IOE.
+   * @param operation operation which failed
+   * @param path path operated on (may be null)
+   * @param ce completion exception
+   * @return an IOE which can be thrown
+   */
+  public static IOException extractException(String operation,
+      String path,
+      CompletionException ce) {
+    return convertExceptionCause(operation, path, ce.getCause());
+  }
+
+  /**
+   * Convert the cause of a concurrent exception to an IOE.
+   * @param operation operation which failed
+   * @param path path operated on (may be null)
+   * @param cause cause of a concurrent exception
+   * @return an IOE which can be thrown
+   */
+  private static IOException convertExceptionCause(String operation,
+      String path,
+      Throwable cause) {
     IOException ioe;
-    Throwable cause = ee.getCause();
     if (cause instanceof SdkException) {
       ioe = translateException(operation, path, (SdkException) cause);
     } else if (cause instanceof IOException) {

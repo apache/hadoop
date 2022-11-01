@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -2081,6 +2082,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           innerRename(src, dst));
       LOG.debug("Copied {} bytes", bytesCopied);
       return true;
+    } catch (CompletionException e) {
+      throw extractException("rename(" + src +", " + dst + ")", src.toString(), e);
     } catch (SdkException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
