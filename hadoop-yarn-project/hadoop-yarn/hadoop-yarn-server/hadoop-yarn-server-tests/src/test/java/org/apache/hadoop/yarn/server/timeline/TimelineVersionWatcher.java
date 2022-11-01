@@ -20,28 +20,13 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
+
+import org.junit.jupiter.api.extension.TestWatcher;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineVersionWatcher extends TestWatcher {
+public class TimelineVersionWatcher implements TestWatcher {
   static final float DEFAULT_TIMELINE_VERSION = 1.0f;
   private TimelineVersion version;
 
-  @Override
-  protected void starting(Description description) {
-    version = description.getAnnotation(TimelineVersion.class);
-  }
-
-  /**
-   * @return the version number of timeline server for the current test (using
-   * timeline server v1.0 by default)
-   */
-  public float getTimelineVersion() {
-    if(version == null) {
-      return DEFAULT_TIMELINE_VERSION;
-    }
-    return version.value();
-  }
 }

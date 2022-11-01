@@ -248,8 +248,8 @@ class FSDirRenameOp {
     String src = srcArg;
     String dst = dstArg;
     if (NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options -" +
-          " " + src + " to " + dst);
+      NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: with options={} {} to {}",
+          Arrays.toString(options), src, dst);
     }
 
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
