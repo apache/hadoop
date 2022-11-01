@@ -364,7 +364,7 @@ public class ITestS3AConfiguration {
       ContractTestUtils.writeAndRead(fs,
           new Path("/path/style/access/testFile"), file, file.length,
               (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
-    } catch (final AWSS3IOException e) {
+    } catch (final AWSRedirectException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See
