@@ -208,7 +208,7 @@ public class DockerLinuxContainerRuntime extends OCIContainerRuntime {
   private static final Pattern dockerImagePattern =
       Pattern.compile(DOCKER_IMAGE_PATTERN);
 
-  private static final Pattern DOCKER_DIGEST_PATTERN = Pattern.compile("^sha256:[a-z0-9]{32,}$");
+  private static final Pattern DOCKER_DIGEST_PATTERN = Pattern.compile("^sha256:[a-z0-9]{12,64}$");
 
   private static final String DEFAULT_PROCFS = "/proc";
 
