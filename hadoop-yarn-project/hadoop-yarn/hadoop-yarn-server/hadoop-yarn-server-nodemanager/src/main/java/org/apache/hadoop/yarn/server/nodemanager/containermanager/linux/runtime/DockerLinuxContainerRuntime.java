@@ -213,6 +213,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
           "|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])" +
           ":[0-9]+:[0-9]+$";
   private static final int HOST_NAME_LENGTH = 64;
+
+  private static final Pattern DOCKER_DIGEST_PATTERN = Pattern.compile("^sha256:[a-z0-9]{12,64}$");
+
   private static final String DEFAULT_PROCFS = "/proc";
 
   @InterfaceAudience.Private
@@ -1264,9 +1267,17 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
       throw new ContainerExecutionException(
           ENV_DOCKER_CONTAINER_IMAGE + " not set!");
     }
-    if (!dockerImagePattern.matcher(imageName).matches()) {
-      throw new ContainerExecutionException("Image name '" + imageName
-          + "' doesn't match docker image name pattern");
+    // check if digest is part of imageName, extract and validate it.
+    String digest = null;
+    if (imageName.contains("@sha256")) {
+      String[] digestParts = imageName.split("@");
+      digest = digestParts[1];
+      imageName = digestParts[0];
+    }
+    if (!dockerImagePattern.matcher(imageName).matches() || (digest != null
+        && !DOCKER_DIGEST_PATTERN.matcher(digest).matches())) {
+      throw new ContainerExecutionException(
+          "Image name '" + imageName + "' doesn't match docker image name pattern");
     }
   }
 
