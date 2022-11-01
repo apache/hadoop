@@ -27,16 +27,19 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.client.ServiceClient;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 
 /**
@@ -47,22 +50,20 @@ public class TestCleanupAfterKill extends ServiceTestUtils {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCleanupAfterKill.class);
 
-  @Rule
-  public TemporaryFolder tmpFolder = new TemporaryFolder();
-
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     File tmpYarnDir = new File("target", "tmp");
     FileUtils.deleteQuietly(tmpYarnDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     shutdown();
   }
 
-  @Test(timeout = 200000)
-  public void testRegistryCleanedOnLifetimeExceeded() throws Exception {
+  @Test
+  @Timeout(200000)
+  void testRegistryCleanedOnLifetimeExceeded() throws Exception {
     setupInternal(NUM_NMS);
     ServiceClient client = createClient(getConf());
     Service exampleApp = createExampleApplication();
@@ -71,8 +72,8 @@ public class TestCleanupAfterKill extends ServiceTestUtils {
     waitForServiceToBeStable(client, exampleApp);
     String serviceZKPath = RegistryUtils.servicePath(RegistryUtils
         .currentUser(), YarnServiceConstants.APP_TYPE, exampleApp.getName());
-    Assert.assertTrue("Registry ZK service path doesn't exist",
-        getCuratorService().zkPathExists(serviceZKPath));
+    assertTrue(getCuratorService().zkPathExists(serviceZKPath),
+        "Registry ZK service path doesn't exist");
 
     // wait for app to be killed by RM
     ApplicationId exampleAppId = ApplicationId.fromString(exampleApp.getId());
@@ -85,10 +86,10 @@ public class TestCleanupAfterKill extends ServiceTestUtils {
         throw new RuntimeException("while waiting", e);
       }
     }, 2000, 200000);
-    Assert.assertFalse("Registry ZK service path still exists after killed",
-        getCuratorService().zkPathExists(serviceZKPath));
+    assertFalse(getCuratorService().zkPathExists(serviceZKPath),
+        "Registry ZK service path still exists after killed");
 
     LOG.info("Destroy the service");
-    Assert.assertEquals(0, client.actionDestroy(exampleApp.getName()));
+    assertEquals(0, client.actionDestroy(exampleApp.getName()));
   }
 }
