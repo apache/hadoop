@@ -226,7 +226,7 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
    * @param params map of params
    * @param key key
    */
-  protected  void assertMapNotContains(final Map<String, String> params, final String key) {
+  protected void assertMapNotContains(final Map<String, String> params, final String key) {
     assertThat(params.get(key))
             .describedAs(key)
             .isNull();

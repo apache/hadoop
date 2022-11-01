@@ -236,7 +236,15 @@ public class LoggingAuditor
      * @param request given get object request
      */
     private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange() != null) {
+      if (request instanceof GetObjectRequest)
+      {
+        if (((GetObjectRequest) request).getRange().length != 2) {
+          try {
+            throw new Exception("Cannot get a range for the request");
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
         long[] rangeValue = ((GetObjectRequest) request).getRange();
         String combinedRangeValue = String.format("bytes=%d-%d", rangeValue[0], rangeValue[1]);
         referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
