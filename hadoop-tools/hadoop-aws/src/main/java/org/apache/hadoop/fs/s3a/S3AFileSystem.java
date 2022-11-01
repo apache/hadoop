@@ -65,6 +65,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
@@ -1354,7 +1355,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 // If accessPoint then region is known from Arn
                 accessPoint != null
                     ? accessPoint.getRegion()
-                    : s3.getBucketLocation(bucketName)));
+                    : s3V2.getBucketLocation(GetBucketLocationRequest.builder()
+                        .bucket(bucketName)
+                        .build())
+                    .locationConstraintAsString()));
     return fixBucketRegion(region);
   }
 
