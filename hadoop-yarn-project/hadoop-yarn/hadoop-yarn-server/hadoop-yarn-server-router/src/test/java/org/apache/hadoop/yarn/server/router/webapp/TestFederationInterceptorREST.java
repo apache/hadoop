@@ -116,7 +116,6 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.DURATION;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.NUM_CONTAINERS;
-import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
