@@ -102,14 +102,11 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   static AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
     if (singleton == null) {
       LOCK.lock();
-      try {
-        if (singleton == null) {
-          singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-          LOG.debug("Client-side throttling is enabled for the ABFS file system.");
-        }
-      } finally {
-        LOCK.unlock();
+      if (singleton == null) {
+        singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
+        LOG.debug("Client-side throttling is enabled for the ABFS file system.");
       }
+      LOCK.unlock();
     }
     return singleton;
   }
@@ -117,7 +114,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   /**
    * Updates the metrics for successful and failed read and write operations.
    * @param operationType Only applicable for read and write operations.
-   * @param abfsHttpOperation Used for status code and data transfeered.
+   * @param abfsHttpOperation Used for status code and data transferred.
    */
   @Override
   public void updateMetrics(AbfsRestOperationType operationType,

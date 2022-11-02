@@ -98,7 +98,7 @@ class AbfsClientThrottlingAnalyzer {
   /**
    * Resumes the timer if it was stopped.
    */
-  public void resumeTimer() {
+  private synchronized void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
             new AbfsOperationMetrics(System.currentTimeMillis()));
     timer.schedule(new TimerTaskImpl(),

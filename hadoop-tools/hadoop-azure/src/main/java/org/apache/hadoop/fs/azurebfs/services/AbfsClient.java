@@ -218,7 +218,7 @@ public class AbfsClient implements Closeable {
     return sharedKeyCredentials;
   }
 
-  public AbfsThrottlingIntercept getIntercept() {
+  AbfsThrottlingIntercept getIntercept() {
     return intercept;
   }
 
