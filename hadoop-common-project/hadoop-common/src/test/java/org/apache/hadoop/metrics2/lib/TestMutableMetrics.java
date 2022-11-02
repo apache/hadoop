@@ -303,11 +303,10 @@ public class TestMutableMetrics {
     stat.add(1000, 2000);
     registry.snapshot(builderWithChange, true);
 
-    assertGauge("TestINumOps", 2000L, builderWithChange);
+    assertCounter("TestNumOps", 2000L, builderWithChange);
     assertGauge("TestAvgVal", 1.5, builderWithChange);
 
     registry.snapshot(builderWithoutChange, true);
-    assertGauge("TestINumOps", 0L, builderWithoutChange);
     assertGauge("TestAvgVal", 0.0, builderWithoutChange);
   }
 
