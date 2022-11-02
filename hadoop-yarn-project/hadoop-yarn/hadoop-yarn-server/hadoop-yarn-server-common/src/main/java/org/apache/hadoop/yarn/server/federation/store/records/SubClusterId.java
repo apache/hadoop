@@ -105,6 +105,8 @@ public abstract class SubClusterId implements Comparable<SubClusterId> {
 
   @Override
   public String toString() {
-    return "SubClusterId [getId() = " + getId() + "]";
+    StringBuilder sb = new StringBuilder();
+    sb.append(getId());
+    return sb.toString();
   }
 }

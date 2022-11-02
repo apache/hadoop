@@ -158,7 +158,7 @@ public abstract class SubClusterPolicyConfiguration {
 
   @Override
   public String toString() {
-    return "SubClusterPolicyConfiguration [getType() = " + getType() + ","
-        + "getQueue() = " + getQueue() + ",getParams() = " +  getParams() + "]";
+    return "SubClusterPolicyConfiguration [type = " + getType()
+        + ", queue = " + getQueue() + ", params = " +  getParams() + "]";
   }
 }

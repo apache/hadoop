@@ -121,8 +121,8 @@ public abstract class ReservationHomeSubCluster {
 
   @Override
   public String toString() {
-    return "ReservationHomeSubCluster [getReservationId() = "
-        + getReservationId() + ", getReservationHomeSubcluster() = " + getHomeSubCluster()
+    return "ReservationHomeSubCluster [reservationId = "
+        + getReservationId() + ", reservationHomeSubcluster = " + getHomeSubCluster()
         + "]";
   }
 }
