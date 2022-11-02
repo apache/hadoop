@@ -102,11 +102,14 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   static AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
     if (singleton == null) {
       LOCK.lock();
-      if (singleton == null) {
-        singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-        LOG.debug("Client-side throttling is enabled for the ABFS file system.");
+      try {
+        if (singleton == null) {
+          singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
+          LOG.debug("Client-side throttling is enabled for the ABFS file system.");
+        }
+      } finally {
+        LOCK.unlock();
       }
-      LOCK.unlock();
     }
     return singleton;
   }

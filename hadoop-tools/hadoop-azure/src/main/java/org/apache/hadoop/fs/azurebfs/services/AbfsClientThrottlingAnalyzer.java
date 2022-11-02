@@ -57,6 +57,7 @@ class AbfsClientThrottlingAnalyzer {
   private AtomicBoolean isOperationOnAccountIdle = null;
   private AbfsConfiguration abfsConfiguration = null;
   private boolean accountLevelThrottlingEnabled = true;
+  private final Object lock = new Object();
 
   private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
@@ -98,13 +99,15 @@ class AbfsClientThrottlingAnalyzer {
   /**
    * Resumes the timer if it was stopped.
    */
-  private synchronized void resumeTimer() {
+  private void resumeTimer() {
     blobMetrics = new AtomicReference<AbfsOperationMetrics>(
             new AbfsOperationMetrics(System.currentTimeMillis()));
     timer.schedule(new TimerTaskImpl(),
             analysisPeriodMs,
             analysisPeriodMs);
-    isOperationOnAccountIdle.set(false);
+    synchronized (lock) {
+      isOperationOnAccountIdle.set(false);
+    }
   }
 
   /**
@@ -264,10 +267,12 @@ class AbfsClientThrottlingAnalyzer {
 
         long now = System.currentTimeMillis();
         if (accountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getOperationIdleTimeout())) {
-          isOperationOnAccountIdle.set(true);
-          this.cancel();
-          timer.purge();
-          return;
+          synchronized (lock) {
+            isOperationOnAccountIdle.set(true);
+            this.cancel();
+            timer.purge();
+            return;
+          }
         }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {
           AbfsOperationMetrics oldMetrics = blobMetrics.getAndSet(
