@@ -15,41 +15,56 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.router.rmadmin;
+
+package org.apache.hadoop.yarn.server.federation.utils;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
-
-/**
- * Class to define admin method, params and arguments.
- */
-public class AdminMethod {
+public abstract class FederationMethodWrapper {
 
   /**
    * List of parameters: static and dynamic values, matchings types.
    */
-  private final Object[] params;
+  private Object[] params;
 
   /**
    * List of method parameters types, matches parameters.
    */
-  private final Class<?>[] types;
+  private Class<?>[] types;
 
   /**
    * String name of the method.
    */
-  private final String methodName;
+  private String methodName;
 
-  public AdminMethod(String method, Class<?>[] pTypes, Object... pParams)
+  /**
+   * The method's return result response class.
+   */
+  private Class rType;
+
+  public FederationMethodWrapper() {
+
+  }
+
+  public FederationMethodWrapper(Class<?>[] pTypes, Object... pParams)
       throws IOException {
     if (pParams.length != pTypes.length) {
-      throw new IOException("Invalid parameters for method " + method);
+      throw new IOException("Invalid parameters for method.");
     }
-
     this.params = pParams;
     this.types = Arrays.copyOf(pTypes, pTypes.length);
-    this.methodName = method;
   }
 
   public Object[] getParams() {
@@ -60,6 +75,10 @@ public class AdminMethod {
     return methodName;
   }
 
+  public void setMethodName(String methodName) {
+    this.methodName = methodName;
+  }
+
   /**
    * Get the calling types for this method.
    *
@@ -68,4 +87,8 @@ public class AdminMethod {
   public Class<?>[] getTypes() {
     return Arrays.copyOf(this.types, this.types.length);
   }
+
+  protected abstract <R> Collection<R> invokeConcurrent(Class<R> clazz) throws YarnException;
+
+
 }

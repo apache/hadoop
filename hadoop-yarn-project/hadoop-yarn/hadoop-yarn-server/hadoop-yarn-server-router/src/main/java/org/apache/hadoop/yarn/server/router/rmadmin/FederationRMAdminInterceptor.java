@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -62,7 +60,6 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappin
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappingResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -72,17 +69,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Collection;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.TreeMap;
-import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -169,10 +158,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     // call refreshQueues of activeSubClusters.
     try {
       long startTime = clock.getTime();
-      AdminMethod remoteMethod = new AdminMethod("refreshQueues",
-          new Class[] {RefreshQueuesRequest.class}, new Object[] {request});
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+           new Class[] {RefreshQueuesRequest.class}, new Object[] {request});
+
       Collection<RefreshQueuesResponse> refreshQueueResps =
-          invokeConcurrent(remoteMethod, RefreshQueuesResponse.class);
+          remoteMethod.invokeConcurrent(this, RefreshQueuesResponse.class);
 
       // If we get the return result from refreshQueueResps,
       // it means that the call has been successful,
@@ -281,62 +271,13 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     return new String[0];
   }
 
-  <R> Collection<R> invokeConcurrent(AdminMethod request, Class<R> clazz)
-      throws YarnException {
+  @VisibleForTesting
+  public FederationStateStoreFacade getFederationFacade() {
+    return federationFacade;
+  }
 
-    // Get Active SubClusters
-    Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
-    Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
-
-    List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
-    List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
-    Map<SubClusterId, Exception> exceptions = new TreeMap<>();
-
-    // Generate parallel Callable tasks
-    for (SubClusterId subClusterId : subClusterIds) {
-      callables.add(() -> {
-        ResourceManagerAdministrationProtocol protocol =
-            getAdminRMProxyForSubCluster(subClusterId);
-        String methodName = request.getMethodName();
-        Class<?>[] types = request.getTypes();
-        Object[] params = request.getParams();
-        Method method = ResourceManagerAdministrationProtocol.class.getMethod(methodName, types);
-        Object result = method.invoke(protocol, params);
-        return Pair.of(subClusterId, result);
-      });
-    }
-
-    // Get results from multiple threads
-    Map<SubClusterId, R> results = new TreeMap<>();
-    try {
-      futures.addAll(executorService.invokeAll(callables));
-      futures.stream().forEach(future -> {
-        SubClusterId subClusterId = null;
-        try {
-          Pair<SubClusterId, Object> pair = future.get();
-          subClusterId = pair.getKey();
-          Object result = pair.getValue();
-          results.put(subClusterId, clazz.cast(result));
-        } catch (InterruptedException | ExecutionException e) {
-          Throwable cause = e.getCause();
-          LOG.error("Cannot execute {} on {}: {}", request.getMethodName(),
-              subClusterId.getId(), cause.getMessage());
-          exceptions.put(subClusterId, e);
-        }
-      });
-    } catch (InterruptedException e) {
-      throw new YarnException("invokeConcurrent Failed.", e);
-    }
-
-    // All sub-clusters return results to be considered successful,
-    // otherwise an exception will be thrown.
-    if (exceptions != null && !exceptions.isEmpty()) {
-      Set<SubClusterId> subClusterIdSets = exceptions.keySet();
-      throw new YarnException("invokeConcurrent Failed, An exception occurred in subClusterIds = " +
-         StringUtils.join(subClusterIdSets, ","));
-    }
-
-    // return result
-    return results.values();
+  @VisibleForTesting
+  public ThreadPoolExecutor getExecutorService() {
+    return executorService;
   }
 }
