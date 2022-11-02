@@ -1065,7 +1065,7 @@ public class MockDefaultRequestInterceptorREST
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
 
-    ResourceManager mockRM = mock(ResourceManager.class);
+    ResourceManager mockRM2 = mock(ResourceManager.class);
     Configuration conf = new YarnConfiguration();
 
     ResourceScheduler mockScheduler = new CapacityScheduler() {
@@ -1085,8 +1085,8 @@ public class MockDefaultRequestInterceptorREST
       }
     };
 
-    when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
-    MockRMWebServices webSvc = new MockRMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    when(mockRM2.getResourceScheduler()).thenReturn(mockScheduler);
+    MockRMWebServices webSvc = new MockRMWebServices(mockRM2, conf, mock(HttpServletResponse.class));
     return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
   }
 
