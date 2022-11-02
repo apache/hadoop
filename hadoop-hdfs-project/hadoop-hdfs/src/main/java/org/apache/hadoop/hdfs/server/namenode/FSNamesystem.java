@@ -2203,7 +2203,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               }
             }
           }
-        } else if (isObserver()) {
+        } else if (isObserver() && res.blocks != null) {
           checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
       } finally {
@@ -3467,7 +3467,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
       LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
-      checkBlockLocationsWhenObserver(lbs, src);
+      if (lbs != null) {
+        checkBlockLocationsWhenObserver(lbs, src);
+      }
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4178,7 +4180,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-          checkBlockLocationsWhenObserver(lbs, fs.toString());
+          if (lbs != null) {
+            checkBlockLocationsWhenObserver(lbs, fs.toString());
+          }
         }
       }
     }
@@ -9034,9 +9038,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
-    for (LocatedBlock b : blocks.getLocatedBlocks()) {
-      if (b.getLocations() == null || b.getLocations().length == 0) {
-        throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+    List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
+    if (locatedBlockList != null) {
+      for (LocatedBlock b : locatedBlockList) {
+        if (b.getLocations() == null || b.getLocations().length == 0) {
+          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+        }
       }
     }
   }
