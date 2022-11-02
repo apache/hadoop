@@ -151,9 +151,12 @@ public abstract class ApplicationHomeSubCluster {
 
   @Override
   public String toString() {
-    return "ApplicationHomeSubCluster [applicationId = "
-        + getApplicationId() + ", homeSubCluster = "
-        + getHomeSubCluster() + ", createTime = " + getCreateTime()
-        + "]";
+    StringBuilder sb = new StringBuilder();
+    sb.append("ApplicationHomeSubCluster: [")
+        .append("ApplicationId: ").append(getApplicationId()).append(", ")
+        .append("HomeSubCluster: ").append(getHomeSubCluster()).append(", ")
+        .append("CreateTime: ").append(getCreateTime()).append(", ")
+        .append("]");
+    return sb.toString();
   }
 }

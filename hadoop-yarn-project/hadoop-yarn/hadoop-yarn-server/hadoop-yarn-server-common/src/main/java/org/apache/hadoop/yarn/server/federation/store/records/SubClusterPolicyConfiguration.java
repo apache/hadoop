@@ -129,10 +129,10 @@ public abstract class SubClusterPolicyConfiguration {
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().
-        append(this.getType()).
-        append(this.getQueue()).
-        append(this.getParams()).
+    return new HashCodeBuilder()
+        .append(this.getType())
+        .append(this.getQueue())
+        .append(this.getParams()).
         toHashCode();
   }
 
@@ -143,22 +143,30 @@ public abstract class SubClusterPolicyConfiguration {
       return true;
     }
 
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
       return false;
     }
 
-    SubClusterPolicyConfiguration right = (SubClusterPolicyConfiguration) obj;
+    if (obj instanceof SubClusterPolicyConfiguration) {
+      SubClusterPolicyConfiguration other = (SubClusterPolicyConfiguration) obj;
+      return new EqualsBuilder()
+          .append(this.getType(), other.getType())
+          .append(this.getQueue(), other.getQueue())
+          .append(this.getParams(), other.getParams())
+          .isEquals();
+    }
 
-    return new EqualsBuilder()
-        .append(this.getType(), right.getType())
-        .append(this.getQueue(), right.getQueue())
-        .append(this.getParams(), right.getParams())
-        .isEquals();
+    return false;
   }
 
   @Override
   public String toString() {
-    return "SubClusterPolicyConfiguration [type = " + getType()
-        + ", queue = " + getQueue() + ", params = " +  getParams() + "]";
+    StringBuilder sb = new StringBuilder();
+    sb.append("SubClusterPolicyConfiguration: [")
+        .append("Type: ").append(getType()).append(", ")
+        .append("Queue: ").append(getQueue()).append(", ")
+        .append("Params: ").append(getParams()).append(", ")
+        .append("]");
+    return sb.toString();
   }
 }
