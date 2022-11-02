@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -32,12 +34,21 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -72,6 +83,10 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
@@ -101,6 +116,11 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
+  private Timer timer;
+  private AzureBlobFileSystem metricFs = null;
+  private boolean metricCollectionEnabled = false;
+  private final MetricFormat metricFormat;
+  private AtomicBoolean timerStopped;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -155,6 +175,19 @@ public class AbfsClient implements Closeable {
         new ThreadFactoryBuilder().setNameFormat("AbfsClient Lease Ops").setDaemon(true).build();
     this.executorService = MoreExecutors.listeningDecorator(
         HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
+    this.metricFormat = abfsConfiguration.getMetricFormat();
+    this.timerStopped = new AtomicBoolean(false);
+    if (!metricFormat.toString().equals("")) {
+      metricCollectionEnabled = true;
+      abfsCounters.initializeMetrics(metricFormat);
+    }
+    this.timer = new Timer(
+        "abfs-timer-client", true);
+    if (metricCollectionEnabled) {
+      timer.schedule(new AbfsClient.TimerTaskImpl(),
+          60000,
+          60000);
+    }
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -1298,5 +1331,73 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   protected AccessTokenProvider getTokenProvider() {
     return tokenProvider;
+  }
+
+  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
+    if (metricFs == null) {
+      try {
+        Configuration metricConfig = abfsConfiguration.getRawConfiguration();
+        String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
+        final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
+        if (abfsMetricUrl == null) {
+          return null;
+        }
+        metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
+        metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+        URI metricUri;
+        metricUri = new URI(FileSystemUriSchemes.ABFS_SCHEME, abfsMetricUrl, null, null, null);
+        metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
+      } catch (AzureBlobFileSystemException | URISyntaxException ex) {
+        //do nothing
+      }
+    }
+    return metricFs;
+  }
+
+  public AtomicBoolean getTimerStopped() {
+    return timerStopped;
+  }
+
+  private TracingContext getMetricTracingContext() {
+    return new TracingContext(TracingContext.validateClientCorrelationID(
+        abfsConfiguration.getClientCorrelationId()),
+        getFileSystem(), FSOperationType.GET_ATTR, true,
+        abfsConfiguration.getTracingHeaderFormat(),
+        null, abfsCounters.toString());
+  }
+
+  void resumeTimer() {
+    timer.schedule(new TimerTaskImpl(),
+        60000,
+        60000);
+    timerStopped.set(false);
+  }
+
+  class TimerTaskImpl extends TimerTask {
+    /**
+     * Periodically analyzes a snapshot of the blob storage metrics and updates
+     * the sleepDuration in order to appropriately throttle storage operations.
+     */
+    @Override
+    public void run() {
+      try {
+        long now = System.currentTimeMillis();
+        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+        if (metricCollectionEnabled && (now - lastExecutionTime >= 60000)) {
+          AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
+          this.cancel();
+          timer.purge();
+          timerStopped.set(true);
+          if (metricFileSystem != null) {
+            try {
+              metricFileSystem.sendMetric(getMetricTracingContext());
+            } finally {
+              abfsCounters.initializeMetrics(metricFormat);
+            }
+          }
+        }
+      } catch (IOException e) {
+      }
+    }
   }
 }

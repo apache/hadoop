@@ -305,7 +305,9 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      metric += ":BO:" + getAbfsBackoffMetrics().toString();
+      if (getAbfsBackoffMetrics().getTotalRequests().get() > 0) {
+        metric += ":BO:" + getAbfsBackoffMetrics().toString();
+      }
     }
     if (readFooterMetricsList != null) {
       metric += ":FO:" + getFooterMetrics();

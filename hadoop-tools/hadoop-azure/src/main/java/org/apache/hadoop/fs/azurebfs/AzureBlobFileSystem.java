@@ -217,11 +217,11 @@ public class AzureBlobFileSystem extends FileSystem
     tracingMetricHeaderFormat = abfsConfiguration.getTracingMetricHeaderFormat();
     this.timer = new Timer(
             String.format("abfs-timer-filesystem"), true);
-    if (metricCollectionEnabled) {
-      this.timer.schedule(new TimerTaskImpl(),
-          10000,
-          10000);
-    }
+//    if (metricCollectionEnabled) {
+//      this.timer.schedule(new TimerTaskImpl(),
+//          10000,
+//          10000);
+//    }
     this.setWorkingDirectory(this.getHomeDirectory());
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -1708,12 +1708,12 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
-  public void resumeTimer() {
-    timerStopped.set(false);
-    timer.schedule(new TimerTaskImpl(),
-        10000,
-        10000);
-  }
+//  public void resumeTimer() {
+//    timerStopped.set(false);
+//    timer.schedule(new TimerTaskImpl(),
+//        10000,
+//        10000);
+//  }
 
   /**
    * Getter for IOStatistic instance in AzureBlobFilesystem.
@@ -1725,33 +1725,33 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 
-  class TimerTaskImpl extends TimerTask {
-    /**
-     * Periodically analyzes a snapshot of the blob storage metrics and updates
-     * the sleepDuration in order to appropriately throttle storage operations.
-     */
-    @Override
-    public void run() {
-      try {
-        long now = System.currentTimeMillis();
-        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-        if (metricCollectionEnabled && (now - lastExecutionTime >= 60000)) {
-          TracingContext tracingMetricContext = new TracingContext(
-              clientCorrelationId,
-              fileSystemId, FSOperationType.GET_ATTR, true,
-              tracingMetricHeaderFormat,
-              listener, abfsCounters.toString());
-          AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
-          this.cancel();
-          timer.purge();
-          timerStopped.set(true);
-          if (metricFileSystem != null) {
-            abfsCounters.initializeMetrics(metricFormat);
-            metricFileSystem.sendMetric(tracingMetricContext);
-          }
-        }
-      } catch (IOException e) {
-      }
-    }
-  }
+//  class TimerTaskImpl extends TimerTask {
+//    /**
+//     * Periodically analyzes a snapshot of the blob storage metrics and updates
+//     * the sleepDuration in order to appropriately throttle storage operations.
+//     */
+//    @Override
+//    public void run() {
+//      try {
+//        long now = System.currentTimeMillis();
+//        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+//        if (metricCollectionEnabled && (now - lastExecutionTime >= 60000)) {
+//          TracingContext tracingMetricContext = new TracingContext(
+//              clientCorrelationId,
+//              fileSystemId, FSOperationType.GET_ATTR, true,
+//              tracingMetricHeaderFormat,
+//              listener, abfsCounters.toString());
+//          AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
+//          this.cancel();
+//          timer.purge();
+//          timerStopped.set(true);
+//          if (metricFileSystem != null) {
+//            abfsCounters.initializeMetrics(metricFormat);
+//            metricFileSystem.sendMetric(tracingMetricContext);
+//          }
+//        }
+//      } catch (IOException e) {
+//      }
+//    }
+//  }
 }
