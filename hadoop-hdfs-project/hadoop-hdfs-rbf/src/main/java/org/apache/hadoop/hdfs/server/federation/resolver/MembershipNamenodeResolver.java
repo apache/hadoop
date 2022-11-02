@@ -34,6 +34,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -189,13 +190,43 @@ public class MembershipNamenodeResolver
     }
   }
 
+  @VisibleForTesting
+  public <T extends FederationNamenodeContext> List<T> shuffleObserverNN(
+      List<T> inputNameNodes, boolean listObserversFirst) {
+    if (!listObserversFirst) {
+      return inputNameNodes;
+    } else {
+      List<T> observerNNList = new ArrayList<>();
+      List<T> activeAndStandbyList = new ArrayList<>();
+      for (T t : inputNameNodes) {
+        if (t.getState() == OBSERVER) {
+          observerNNList.add(t);
+        } else {
+          activeAndStandbyList.add(t);
+        }
+      }
+
+      if (observerNNList.size() <= 1) {
+        return inputNameNodes;
+      } else {
+        List<T> ret = new ArrayList<>(observerNNList.size() + activeAndStandbyList.size());
+        Collections.shuffle(observerNNList);
+        // No need because the inputNameNodes has already been sorted
+        // activeAndStandbyList.sort(new NamenodePriorityComparator());
+        ret.addAll(observerNNList);
+        ret.addAll(activeAndStandbyList);
+        return ret;
+      }
+    }
+  }
+
   @Override
   public List<? extends FederationNamenodeContext> getNamenodesForNameserviceId(
       final String nsId, boolean listObserversFirst) throws IOException {
 
     List<? extends FederationNamenodeContext> ret = cacheNS.get(Pair.of(nsId, listObserversFirst));
     if (ret != null) {
-      return ret;
+      return shuffleObserverNN(ret, listObserversFirst);
     }
 
     // Not cached, generate the value
