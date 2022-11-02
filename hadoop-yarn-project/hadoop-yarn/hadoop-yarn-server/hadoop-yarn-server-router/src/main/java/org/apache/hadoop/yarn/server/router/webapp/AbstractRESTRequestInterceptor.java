@@ -92,14 +92,15 @@ public abstract class AbstractRESTRequestInterceptor
     return this.nextInterceptor;
   }
 
-  private void setupUser(String userName) {
+  private void setupUser(final String userName) {
     try {
-      if(userName == null || userName.isEmpty()){
-        // Yarn Router user
+      /**
+       * If the username is empty, we will use the Yarn Router user directly.
+       * Do not create a proxy user if user name matches the user name on current UGI.
+       */
+      if (userName == null || userName.isEmpty()) {
         user = UserGroupInformation.getCurrentUser();
       } else if (UserGroupInformation.isSecurityEnabled()) {
-        // Do not create a proxy user if user name matches the user name on
-        // current UGI
         user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
       } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
         user = UserGroupInformation.getCurrentUser();
