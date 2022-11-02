@@ -412,7 +412,7 @@ public final class RouterMetrics {
 
     getRMNodeLabelsLatency = registry.newQuantiles("getRMNodeLabelsLatency",
         "latency of get rmnodelabels timeouts", "ops", "latency", 10);
-    
+
     checkUserAccessToQueueLatency = registry.newQuantiles("checkUserAccessToQueueLatency",
         "latency of get apptimeouts timeouts", "ops", "latency", 10);
   }
@@ -640,7 +640,7 @@ public final class RouterMetrics {
   public long getNumSucceededGetRMNodeLabelsRetrieved() {
     return totalSucceededGetRMNodeLabelsRetrieved.lastStat().numSamples();
   }
-  
+
   @VisibleForTesting
   public long getNumSucceededCheckUserAccessToQueueRetrievedRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
@@ -850,7 +850,7 @@ public final class RouterMetrics {
   public double getLatencySucceededGetRMNodeLabelsRetrieved() {
     return totalSucceededGetRMNodeLabelsRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededCheckUserAccessToQueueRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().mean();
@@ -1040,7 +1040,7 @@ public final class RouterMetrics {
   public int getRMNodeLabelsFailedRetrieved() {
     return numGetRMNodeLabelsFailedRetrieved.value();
   }
-  
+
   public int getCheckUserAccessToQueueFailedRetrieved() {
     return numCheckUserAccessToQueueFailedRetrieved.value();
   }
@@ -1249,7 +1249,7 @@ public final class RouterMetrics {
     totalSucceededGetRMNodeLabelsRetrieved.add(duration);
     getRMNodeLabelsLatency.add(duration);
   }
-  
+
   public void succeededCheckUserAccessToQueueRetrieved(long duration) {
     totalSucceededCheckUserAccessToQueueRetrieved.add(duration);
     checkUserAccessToQueueLatency.add(duration);
@@ -1418,7 +1418,7 @@ public final class RouterMetrics {
   public void incrGetRMNodeLabelsFailedRetrieved() {
     numGetRMNodeLabelsFailedRetrieved.incr();
   }
-  
+
   public void incrCheckUserAccessToQueueFailedRetrieved() {
     numCheckUserAccessToQueueFailedRetrieved.incr();
   }
