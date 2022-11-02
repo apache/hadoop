@@ -106,6 +106,7 @@
        <groupId>org.hsqldb</groupId>
        <artifactId>hsqldb</artifactId>
        <scope>provided</scope>
+       <classifier>jdk8</classifier>
      </dependency>
      <dependency>
       <groupId>com.google.guava</groupId>

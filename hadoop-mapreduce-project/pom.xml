@@ -142,6 +142,7 @@
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
       <scope>compile</scope>
+      <classifier>jdk8</classifier>
     </dependency>
     <dependency>
       <groupId>org.fusesource.leveldbjni</groupId>

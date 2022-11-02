@@ -123,6 +123,7 @@
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
       <scope>test</scope>
+      <classifier>jdk8</classifier>
     </dependency>
     <dependency>
       <groupId>com.microsoft.sqlserver</groupId>
