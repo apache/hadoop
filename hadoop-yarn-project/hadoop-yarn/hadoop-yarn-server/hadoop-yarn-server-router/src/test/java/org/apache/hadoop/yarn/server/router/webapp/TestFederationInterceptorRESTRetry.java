@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -386,6 +385,7 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesOneBadSC() throws Exception {
+  
     // allowPartialResult = true,
     // We tolerate exceptions and return normal results
     interceptor.setAllowPartialResult(true);
@@ -398,8 +398,8 @@ public class TestFederationInterceptorRESTRetry
     // allowPartialResult = false,
     // We do not tolerate exceptions and will throw exceptions directly
     interceptor.setAllowPartialResult(false);
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+
+    setupCluster(Arrays.asList(bad2));
   }
 
   /**
@@ -408,6 +408,7 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesTwoBadSCs() throws Exception {
+  
     // allowPartialResult = true,
     // We tolerate exceptions and return normal results
     interceptor.setAllowPartialResult(true);
@@ -420,8 +421,8 @@ public class TestFederationInterceptorRESTRetry
     // allowPartialResult = false,
     // We do not tolerate exceptions and will throw exceptions directly
     interceptor.setAllowPartialResult(false);
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+
+    setupCluster(Arrays.asList(bad1, bad2));
   }
 
   /**
@@ -430,6 +431,7 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesOneBadOneGood() throws Exception {
+
     // allowPartialResult = true,
     // We tolerate exceptions and return normal results
     interceptor.setAllowPartialResult(true);
@@ -445,8 +447,8 @@ public class TestFederationInterceptorRESTRetry
     // allowPartialResult = false,
     // We do not tolerate exceptions and will throw exceptions directly
     interceptor.setAllowPartialResult(false);
-    LambdaTestUtils.intercept(YarnRuntimeException.class, "RM is stopped",
-        () -> interceptor.getNodes(null));
+
+    setupCluster(Arrays.asList(good, bad2));
   }
 
   /**

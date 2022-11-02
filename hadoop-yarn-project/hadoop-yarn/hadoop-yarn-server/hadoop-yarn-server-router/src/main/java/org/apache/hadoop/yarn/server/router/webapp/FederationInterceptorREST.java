@@ -105,6 +105,7 @@ import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -1814,8 +1815,54 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr) {
-    throw new NotImplementedException("Code is not implemented");
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
+
+    // Parameter Verification
+    if (queue == null || queue.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
+    }
+
+    if (username == null || username.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the username is empty or null.");
+    }
+
+    if (queueAclType == null || queueAclType.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the queueAclType is empty or null.");
+    }
+
+    // Traverse SubCluster and call checkUserAccessToQueue Api
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, String.class, String.class,
+          HttpServletRequest.class};
+      Object[] args = new Object[]{queue, username, queueAclType, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("checkUserAccessToQueue", argsClasses, args);
+      Map<SubClusterInfo, RMQueueAclInfo> rmQueueAclInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, RMQueueAclInfo.class);
+      FederationRMQueueAclInfo aclInfo = new FederationRMQueueAclInfo();
+      rmQueueAclInfoMap.forEach((subClusterInfo, rMQueueAclInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        rMQueueAclInfo.setSubClusterId(subClusterId.getId());
+        aclInfo.getList().add(rMQueueAclInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededCheckUserAccessToQueueRetrieved(stopTime - startTime);
+      return aclInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
+    }
+
+    routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+    throw new RuntimeException("checkUserAccessToQueue error.");
   }
 
   @Override
@@ -2034,6 +2081,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
+    CompletionService<Pair<R, Exception>> compSvc =
+        new ExecutorCompletionService<>(this.threadpool);
+
+    // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
     // and the right value is the exception.
     // If the request is normal, the response is not empty and the exception is empty;
@@ -2068,7 +2119,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
-          throw exception;
+          Exception exception = pair.getRight();
+          if (exception != null) {
+            throw exception;
+          }
         }
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
@@ -2077,6 +2131,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
+
     return results;
   }
 
