@@ -67,7 +67,6 @@ public class AWSRequestAnalyzer {
    * read/write and path.
    * @param request request.
    * @return information about the request.
-   * @param <T> type of request.
    */
   public RequestInfo analyze(SdkRequest request) {
 
@@ -84,6 +83,10 @@ public class AWSRequestAnalyzer {
       return writing(MULTIPART_UPLOAD_COMPLETED,
           r.key(),
           r.multipartUpload().parts().size());
+    } else if (request instanceof CreateMultipartUploadRequest) {
+      return writing(MULTIPART_UPLOAD_STARTED,
+          ((CreateMultipartUploadRequest) request).key(),
+          0);
     } else if (request instanceof DeleteObjectRequest) {
       // DeleteObject: single object
       return writing(OBJECT_DELETE_REQUEST,
@@ -103,9 +106,6 @@ public class AWSRequestAnalyzer {
       return reading(STORE_EXISTS_PROBE,
           r.bucket(),
           0);
-    } else if (request instanceof HeadObjectRequest) {
-      return reading(ACTION_HTTP_HEAD_REQUEST,
-          ((HeadObjectRequest) request).key(), 0);
     } else if (request instanceof GetObjectRequest) {
       GetObjectRequest r = (GetObjectRequest) request;
       long size = S3AUtils.parseRange(r.range())
@@ -114,10 +114,9 @@ public class AWSRequestAnalyzer {
       return reading(ACTION_HTTP_GET_REQUEST,
           r.key(),
           size);
-    } else if (request instanceof CreateMultipartUploadRequest) {
-      return writing(MULTIPART_UPLOAD_STARTED,
-          ((CreateMultipartUploadRequest) request).key(),
-          0);
+    } else if (request instanceof HeadObjectRequest) {
+      return reading(ACTION_HTTP_HEAD_REQUEST,
+          ((HeadObjectRequest) request).key(), 0);
     } else if (request instanceof ListMultipartUploadsRequest) {
       ListMultipartUploadsRequest r
           = (ListMultipartUploadsRequest) request;

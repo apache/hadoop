@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditor;
 import org.apache.hadoop.fs.s3a.audit.OperationAuditorOptions;
 import org.apache.hadoop.fs.s3a.audit.S3AAuditConstants;
+import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.CompositeService;
@@ -66,6 +67,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToRequest;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.retrieveAttachedSpan;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
 
 /**
  * Thread management for the active audit.
@@ -84,7 +86,7 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_I
  * This class also implements {@link ExecutionInterceptor} and
  * returns itself in {@link #createExecutionInterceptors()};
  * once registered with the S3 client, the implemented methods
- * will be called on lifetime events for S3 requests,
+ * will be called during different parts of an SDK request lifecycle,
  * which then locate the active span and forward the request.
  * If any such invocation raises an {@link AuditFailureException}
  * then the IOStatistics counter for {@code AUDIT_FAILURE}
@@ -390,7 +392,7 @@ public final class ActiveAuditManagerS3A
   }
 
   /**
-   * Return an execution interceptor for the AWS SDK which
+   * Return a list of execution interceptors for the AWS SDK which
    * relays to this class.
    * @return a list of execution interceptors.
    */
@@ -402,6 +404,11 @@ public final class ActiveAuditManagerS3A
     // preparing to make S3 calls.
     List<ExecutionInterceptor> executionInterceptors = new ArrayList<>();
     executionInterceptors.add(this);
+
+    final Class<?>[] handlers = getConfig().getClasses(AUDIT_REQUEST_HANDLERS);
+    if (handlers != null) {
+      V2Migration.v1RequestHandlersUsed();
+    }
 
     // TODO: should we remove this and use Global/Service interceptors, see:
     // https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html

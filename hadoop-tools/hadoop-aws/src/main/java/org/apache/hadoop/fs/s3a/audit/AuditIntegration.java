@@ -122,9 +122,8 @@ public final class AuditIntegration {
   }
 
   /**
-   * Get the span from a handler context.
-   * @param request request
-   * @param <T> type of request.
+   * Get the span from the execution attributes.
+   * @param executionAttributes the execution attributes
    * @return the span callbacks or null
    */
   public static AuditSpanS3A
@@ -133,10 +132,9 @@ public final class AuditIntegration {
   }
 
   /**
-   * Attach a span to a handler context.
-   * @param request request
+   * Attach a span to the execution attributes.
+   * @param executionAttributes the execution attributes
    * @param span span to attach
-   * @param <T> type of request.
    */
   public static void attachSpanToRequest(
       final ExecutionAttributes executionAttributes,

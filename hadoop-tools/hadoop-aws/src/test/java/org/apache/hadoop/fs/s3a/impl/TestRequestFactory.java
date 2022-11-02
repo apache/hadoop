@@ -141,7 +141,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     }
   }
 
-  private <T extends AwsRequest> AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder request) {
+  private AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder request) {
     AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(request.build());
     LOG.info("{}", info);
     requestsAnalyzed++;
