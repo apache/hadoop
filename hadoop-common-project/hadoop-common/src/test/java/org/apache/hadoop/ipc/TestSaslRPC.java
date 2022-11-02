@@ -797,7 +797,6 @@ public class TestSaslRPC extends TestRpcBase {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     Server server = setupTestServer(conf, 1, sm);
     try {
-      final InetSocketAddress addr = NetUtils.getConnectAddress(server);
       final UserGroupInformation clientUgi =
           UserGroupInformation.createRemoteUser("client");
       clientUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
