@@ -2,7 +2,7 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 
-public class MockWithPrefixSASTokenProvider extends  MockSASTokenProvider {
+public class MockWithPrefixSASTokenProvider extends MockSASTokenProvider {
 
     /**
      * Function to return an already generated SAS Token with a '?' prefix
