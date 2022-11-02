@@ -399,5 +399,4 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
 
     assertEquals(configuration1, configuration2);
   }
-
 }

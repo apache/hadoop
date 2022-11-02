@@ -130,4 +130,10 @@ public abstract class RouterMasterKey {
         .append(getKeyBytes().array(), r.getKeyBytes())
         .isEquals();
   }
+
+  @Override
+  public String toString() {
+    return "RouterMasterKey [keyId = " + getKeyId()
+        + ", expiryDate = " + getExpiryDate() + ", keyBytes = " +  getKeyBytes() + "]";
+  }
 }
