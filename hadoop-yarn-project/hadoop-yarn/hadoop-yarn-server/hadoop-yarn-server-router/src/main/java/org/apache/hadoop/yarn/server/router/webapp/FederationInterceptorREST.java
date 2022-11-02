@@ -152,6 +152,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public void init(String user) {
+
+    super.init(user);
+
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random();
 
