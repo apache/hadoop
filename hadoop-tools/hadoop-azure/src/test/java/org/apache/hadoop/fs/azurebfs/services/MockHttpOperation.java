@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class MockHttpOperation extends AbfsHttpOperation {
       final int offset,
       final int length) throws IOException {
     MockHttpOperationTestInterceptResult result =
-        mockHttpOperationTestIntercept.intercept();
+        mockHttpOperationTestIntercept.intercept(this, buffer, offset, length);
     statusCode = result.status;
     bytesReceived = result.bytesRead;
     if(result.exception != null) {
@@ -27,7 +28,18 @@ public class MockHttpOperation extends AbfsHttpOperation {
     }
   }
 
+  public void processResponseSuperCall(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    super.processResponse(buffer, offset, length);
+  }
+
   public void setMockHttpOperationTestIntercept(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
     this.mockHttpOperationTestIntercept = mockHttpOperationTestIntercept;
+  }
+
+  @Override
+  public HttpURLConnection getConnection() {
+    return super.getConnection();
   }
 }
