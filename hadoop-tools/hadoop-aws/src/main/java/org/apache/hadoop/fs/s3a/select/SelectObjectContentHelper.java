@@ -66,7 +66,7 @@ public final class SelectObjectContentHelper {
       }
       IOException translated;
       if (e instanceof SdkException) {
-        translated = S3AUtils.translateExceptionV2(action, source.toString(),
+        translated = S3AUtils.translateException(action, source,
             (SdkException)e);
       } else {
         translated = new IOException(e);
