@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,9 +44,10 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingIntercept.class);
   private static final String RANGE_PREFIX = "bytes=";
-  private static AbfsClientThrottlingIntercept singleton = null;
-  private AbfsClientThrottlingAnalyzer readThrottler = null;
-  private AbfsClientThrottlingAnalyzer writeThrottler = null;
+  private static AbfsClientThrottlingIntercept singleton; // singleton, initialized in static initialization block
+  private static final ReentrantLock LOCK = new ReentrantLock();
+  private final AbfsClientThrottlingAnalyzer readThrottler;
+  private final AbfsClientThrottlingAnalyzer writeThrottler;
   private final String accountName;
 
   // Hide default constructor
@@ -60,8 +62,8 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
     //Account name is kept as empty as same instance is shared across all accounts
     this.accountName = "";
-    readThrottler = setAnalyzer("read", abfsConfiguration);
-    writeThrottler = setAnalyzer("write", abfsConfiguration);
+    this.readThrottler = setAnalyzer("read", abfsConfiguration);
+    this.writeThrottler = setAnalyzer("write", abfsConfiguration);
     LOG.debug("Client-side throttling is enabled for the ABFS file system using singleton intercept");
   }
 
@@ -97,20 +99,19 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    * @param abfsConfiguration configuration set.
    * @return singleton object of intercept.
    */
-  public static AbfsClientThrottlingIntercept initializeSingleton(
-      AbfsConfiguration abfsConfiguration) {
-      if (singleton == null)
-      {
-        synchronized (AbfsClientThrottlingIntercept.class)
-        {
-          if (singleton == null)
-          {
-            singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-            LOG.debug("Client-side throttling is enabled for the ABFS file system.");
-          }
+  static AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
+    if (singleton == null) {
+      LOCK.lock();
+      try {
+        if (singleton == null) {
+          singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
+          LOG.debug("Client-side throttling is enabled for the ABFS file system.");
         }
+      } finally {
+        LOCK.unlock();
       }
-      return singleton;
+    }
+    return singleton;
   }
 
   /**

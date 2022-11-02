@@ -27,7 +27,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MI
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_AUTOTHROTTLING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT1_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
@@ -65,6 +64,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private final int retryCount = new Random().nextInt(maxRetryCount);
   private final int retryCountBeyondMax = maxRetryCount + 1;
   private static final String TEST_PATH = "/testfile";
+  private static final double MULTIPLYING_FACTOR = 1.5;
+  private static final int ANALYSIS_PERIOD = 10000;
 
 
   public TestExponentialRetryPolicy() throws Exception {
@@ -140,7 +141,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     when(successOp.getResult()).thenReturn(http500Op);
 
     AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);
-    when(configuration.getAnalysisPeriod()).thenReturn(10000);
+    when(configuration.getAnalysisPeriod()).thenReturn(ANALYSIS_PERIOD);
     when(configuration.isAutoThrottlingEnabled()).thenReturn(true);
     when(configuration.accountThrottlingEnabled()).thenReturn(false);
 
@@ -180,7 +181,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue(configuration1.isAutoThrottlingEnabled());
     Assume.assumeTrue(configuration1.accountThrottlingEnabled());
 
-    AbfsClientThrottlingIntercept accountIntercept = (AbfsClientThrottlingIntercept)client.getIntercept();
+    AbfsClientThrottlingIntercept accountIntercept
+        = (AbfsClientThrottlingIntercept) client.getIntercept();
     final byte[] b = new byte[2 * MIN_BUFFER_SIZE];
     new Random().nextBytes(b);
 
@@ -192,7 +194,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     }
 
     //Don't perform any operation on the account.
-    int sleepTime = (int)((getAbfsConfig().getAccountOperationIdleTimeout()) * 1.5);
+    int sleepTime = (int) ((getAbfsConfig().getAccountOperationIdleTimeout()) * MULTIPLYING_FACTOR);
     Thread.sleep(sleepTime);
 
     try (FSDataInputStream streamRead = fs.open(testPath)) {
@@ -208,7 +210,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);
     fs1.initialize(defaultUri1, getRawConfiguration());
     AbfsClient client1 = fs1.getAbfsStore().getClient();
-    AbfsClientThrottlingIntercept accountIntercept1 = (AbfsClientThrottlingIntercept)client1.getIntercept();
+    AbfsClientThrottlingIntercept accountIntercept1
+        = (AbfsClientThrottlingIntercept) client1.getIntercept();
     try (FSDataOutputStream stream1 = fs1.create(testPath)) {
       stream1.write(b);
     }

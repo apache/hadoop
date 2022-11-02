@@ -31,6 +31,9 @@ import org.slf4j.LoggerFactory;
  */
 final class AbfsThrottlingInterceptFactory {
 
+  private AbfsThrottlingInterceptFactory() {
+  }
+
   private static AbfsConfiguration abfsConfig;
 
   /**
@@ -44,15 +47,15 @@ final class AbfsThrottlingInterceptFactory {
   /**
    * Map which stores instance of ThrottlingIntercept class per account.
    */
-  private static final WeakReferenceMap<String, AbfsThrottlingIntercept>
-      instanceMapping = new WeakReferenceMap<>(
+  private static WeakReferenceMap<String, AbfsThrottlingIntercept>
+      interceptMap = new WeakReferenceMap<>(
       AbfsThrottlingInterceptFactory::factory,
       AbfsThrottlingInterceptFactory::referenceLost);
 
   /**
-   * Returns instance of throttling intercept
-   * @param accountName
-   * @return instance of throttling intercept
+   * Returns instance of throttling intercept.
+   * @param accountName Account name.
+   * @return instance of throttling intercept.
    */
   private static AbfsClientThrottlingIntercept factory(final String accountName) {
     return new AbfsClientThrottlingIntercept(accountName, abfsConfig);
@@ -60,7 +63,7 @@ final class AbfsThrottlingInterceptFactory {
 
   /**
    * Reference lost callback.
-   * @param accountName key lost
+   * @param accountName key lost.
    */
   private static void referenceLost(String accountName) {
     lostReferences.add(accountName);
@@ -86,11 +89,11 @@ final class AbfsThrottlingInterceptFactory {
           abfsConfiguration);
     } else {
       // Return the instance from the map
-      intercept = instanceMapping.get(accountName);
+      intercept = interceptMap.get(accountName);
       if (intercept == null) {
         intercept = new AbfsClientThrottlingIntercept(accountName,
             abfsConfiguration);
-        instanceMapping.put(accountName, intercept);
+        interceptMap.put(accountName, intercept);
       }
     }
     return intercept;
