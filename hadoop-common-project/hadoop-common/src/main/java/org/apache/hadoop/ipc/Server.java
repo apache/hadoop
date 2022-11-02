@@ -119,7 +119,6 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.thirdparty.protobuf.AbstractMessageLite;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -2885,7 +2884,7 @@ public abstract class Server {
           if (header.hasRouterFederatedState()) {
             call.setFederatedNamespaceState(header.getRouterFederatedState());
           } else if (header.hasStateId()) {
-            // Only used to determine whether to return federatedNamespaceState.
+            // Set one empty FederatedNamespaceState to identify the client want to get stateId.
             call.setFederatedNamespaceState(EMPTY_BYTE_STRING);
           }
         } catch (IOException ioe) {
