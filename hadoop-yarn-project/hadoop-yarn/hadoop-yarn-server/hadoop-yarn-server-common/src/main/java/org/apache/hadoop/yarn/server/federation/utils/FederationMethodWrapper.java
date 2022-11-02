@@ -18,19 +18,12 @@
 
 package org.apache.hadoop.yarn.server.federation.utils;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.Arrays;
+import java.util.Collection;
+
 
 public abstract class FederationMethodWrapper {
 
@@ -48,15 +41,6 @@ public abstract class FederationMethodWrapper {
    * String name of the method.
    */
   private String methodName;
-
-  /**
-   * The method's return result response class.
-   */
-  private Class rType;
-
-  public FederationMethodWrapper() {
-
-  }
 
   public FederationMethodWrapper(Class<?>[] pTypes, Object... pParams)
       throws IOException {
@@ -89,6 +73,4 @@ public abstract class FederationMethodWrapper {
   }
 
   protected abstract <R> Collection<R> invokeConcurrent(Class<R> clazz) throws YarnException;
-
-
 }
