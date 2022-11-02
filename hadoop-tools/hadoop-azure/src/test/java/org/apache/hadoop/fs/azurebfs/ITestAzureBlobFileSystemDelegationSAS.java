@@ -38,8 +38,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.extensions.MockWithPrefixSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -478,5 +480,18 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     assertEquals("The permissions are not expected.",
         "r--r-----",
         fileStatus.getPermission().toString());
+  }
+
+  @Test
+  public void testSASQuesMarkPrefix() throws Exception {
+    AbfsConfiguration testConfig = this.getConfiguration();
+    // the SAS Token Provider is changed
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, "org.apache.hadoop.fs.azurebfs.extensions.MockWithPrefixSASTokenProvider");
+
+    AzureBlobFileSystem testFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+    Path testFile = new Path("/testSASPrefixQuesMark");
+
+    // the creation of this filesystem should work correctly even when a SAS Token is generated with a ? prefix
+    testFs.create(testFile).close();
   }
 }
