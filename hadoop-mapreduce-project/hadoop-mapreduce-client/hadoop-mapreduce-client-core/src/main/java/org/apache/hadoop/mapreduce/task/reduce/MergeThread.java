@@ -112,12 +112,12 @@ abstract class MergeThread<T,K,V> extends Thread {
   public abstract void merge(List<T> inputs) throws IOException;
 
   @VisibleForTesting
-  protected int getMergeFactor() {
+  int getMergeFactor() {
     return mergeFactor;
   }
 
   @VisibleForTesting
-  protected LinkedList<List<T>> getPendingToBeMerged() {
+  LinkedList<List<T>> getPendingToBeMerged() {
     return pendingToBeMerged;
   }
 }
