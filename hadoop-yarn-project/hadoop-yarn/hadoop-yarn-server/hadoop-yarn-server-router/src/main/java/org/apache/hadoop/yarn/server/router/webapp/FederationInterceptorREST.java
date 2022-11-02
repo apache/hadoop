@@ -239,7 +239,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .isAssignableFrom(interceptorClass)) {
         interceptorInstance = (DefaultRequestInterceptorREST) ReflectionUtils
             .newInstance(interceptorClass, conf);
-
+        String userName = getUser().getUserName();
+        interceptorInstance.init(userName);
       } else {
         throw new YarnRuntimeException(
             "Class: " + interceptorClassName + " not instance of "
