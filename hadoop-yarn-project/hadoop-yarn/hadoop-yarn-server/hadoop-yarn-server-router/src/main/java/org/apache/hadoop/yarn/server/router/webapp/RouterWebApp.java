@@ -52,6 +52,6 @@ public class RouterWebApp extends WebApp implements YarnWebParams {
     route(pajoin("/apps", APP_SC, APP_STATE), RouterController.class, "apps");
     route(pajoin("/nodes", NODE_SC), RouterController.class, "nodes");
     route("/federation", RouterController.class, "federation");
-    route("/nodelabels", RouterController.class, "nodeLabels");
+    route(pajoin("/nodelabels", NODE_SC), RouterController.class, "nodeLabels");
   }
 }

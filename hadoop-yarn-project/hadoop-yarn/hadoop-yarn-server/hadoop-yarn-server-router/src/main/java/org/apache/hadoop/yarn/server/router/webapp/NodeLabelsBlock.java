@@ -19,15 +19,20 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.NODE_SC;
 
 /**
  * Navigation block for the Router Web UI.
@@ -45,8 +50,44 @@ public class NodeLabelsBlock extends RouterBlock {
   @Override
   protected void render(Block html) {
     boolean isEnabled = isYarnFederationEnabled();
-    NodeLabelsInfo nodeLabelsInfo = getYarnFederationNodeLabelsInfo(isEnabled);
+
+    // Get subClusterName
+    String subClusterName = $(NODE_SC);
+
+    NodeLabelsInfo nodeLabelsInfo = null;
+    if (StringUtils.isNotEmpty(subClusterName)) {
+      nodeLabelsInfo = getSubClusterNodeLabelsInfo(subClusterName);
+    } else {
+      nodeLabelsInfo = getYarnFederationNodeLabelsInfo(isEnabled);
+    }
+
     initYarnFederationNodeLabelsOfCluster(nodeLabelsInfo, html);
+  }
+
+  /**
+   * Get NodeLabels Info based on SubCluster.
+   * @return NodeLabelsInfo.
+   */
+  private NodeLabelsInfo getSubClusterNodeLabelsInfo(String subCluster) {
+    try {
+      SubClusterId subClusterId = SubClusterId.newInstance(subCluster);
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+      SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
+
+      if (subClusterInfo != null) {
+        // Prepare webAddress
+        String webAddress = subClusterInfo.getRMWebServiceAddress();
+        String herfWebAppAddress = "";
+        if (webAddress != null && !webAddress.isEmpty()) {
+          herfWebAppAddress =
+              WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAddress;
+          return getSubClusterNodeLabelsByWebAddress(herfWebAppAddress);
+        }
+      }
+    } catch (Exception e) {
+      LOG.error("get NodeLabelsInfo From SubCluster = {} error.", subCluster, e);
+    }
+    return null;
   }
 
   private NodeLabelsInfo getYarnFederationNodeLabelsInfo(boolean isEnabled) {
@@ -88,12 +129,7 @@ public class NodeLabelsBlock extends RouterBlock {
         String type = (info.getExclusivity()) ? "Exclusive Partition" : "Non Exclusive Partition";
         row = row.td(type);
         int nActiveNMs = info.getActiveNMs();
-        if (nActiveNMs > 0) {
-          row = row.td().a(url("nodes", "?" + YarnWebParams.NODE_LABEL + "=" + info.getName()),
-              String.valueOf(nActiveNMs)).__();
-        } else {
-          row = row.td(String.valueOf(nActiveNMs));
-        }
+        row = row.td(String.valueOf(nActiveNMs));
         row.td(info.getPartitionInfo().getResourceAvailable().toString()).__();
       }
     }

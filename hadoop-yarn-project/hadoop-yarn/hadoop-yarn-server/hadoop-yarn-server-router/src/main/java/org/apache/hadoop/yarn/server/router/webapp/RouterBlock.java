@@ -233,8 +233,28 @@ public abstract class RouterBlock extends HtmlBlock {
     }
   }
 
+  /**
+   * Initialize the NodeLabels menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
   protected void initNodeLabelsMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
       List<String> subClusterIds) {
-    mainList.li().a(url("nodelabels"), "Node Labels").__();
+
+    if (CollectionUtils.isNotEmpty(subClusterIds)) {
+      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> nodesList =
+          mainList.li().a(url("nodelabels"), "Node Labels").ul().
+          $style("padding:0.3em 1em 0.1em 2em");
+
+      // ### nodelabels info
+      nodesList.li().__();
+      for (String subClusterId : subClusterIds) {
+        nodesList.li().a(url("nodelabels", subClusterId), subClusterId).__();
+      }
+      nodesList.__().__();
+    } else {
+      mainList.li().a(url("nodelabels"), "Node Labels").__();
+    }
   }
 }
