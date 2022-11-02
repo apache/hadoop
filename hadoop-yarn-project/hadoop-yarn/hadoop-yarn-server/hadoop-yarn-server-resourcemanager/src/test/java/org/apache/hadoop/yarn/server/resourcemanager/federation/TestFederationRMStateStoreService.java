@@ -539,10 +539,10 @@ public class TestFederationRMStateStoreService {
     stateStoreService.setPolicyConfiguration(configurationRequest2);
 
     // get policy configuration
-    GetSubClusterPolicyConfigurationRequest request =
+    GetSubClusterPolicyConfigurationRequest request1 =
         GetSubClusterPolicyConfigurationRequest.newInstance(queue1);
     GetSubClusterPolicyConfigurationResponse response =
-        stateStoreService.getPolicyConfiguration(request);
+        stateStoreService.getPolicyConfiguration(request1);
     Assert.assertNotNull(response);
 
     SubClusterPolicyConfiguration responsePolicyConf =
@@ -648,14 +648,14 @@ public class TestFederationRMStateStoreService {
     Assert.assertEquals(1, subClusterInfos1.size());
   }
 
-  private SubClusterInfo createSubClusterInfo(SubClusterId subClusterId) {
+  private SubClusterInfo createSubClusterInfo(SubClusterId clusterId) {
 
     String amRMAddress = "1.2.3.4:1";
     String clientRMAddress = "1.2.3.4:2";
     String rmAdminAddress = "1.2.3.4:3";
     String webAppAddress = "1.2.3.4:4";
 
-    return SubClusterInfo.newInstance(subClusterId, amRMAddress,
+    return SubClusterInfo.newInstance(clusterId, amRMAddress,
         clientRMAddress, rmAdminAddress, webAppAddress, SubClusterState.SC_NEW,
         Time.now(), "capability");
   }
