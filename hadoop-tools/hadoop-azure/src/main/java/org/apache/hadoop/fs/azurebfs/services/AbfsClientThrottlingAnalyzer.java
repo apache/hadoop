@@ -57,7 +57,6 @@ class AbfsClientThrottlingAnalyzer {
   private AtomicBoolean isOperationOnAccountIdle = null;
   private AbfsConfiguration abfsConfiguration = null;
   private boolean accountLevelThrottlingEnabled = true;
-  private final Object lock = new Object();
 
   private AbfsClientThrottlingAnalyzer() {
     // hide default constructor
@@ -105,8 +104,31 @@ class AbfsClientThrottlingAnalyzer {
     timer.schedule(new TimerTaskImpl(),
             analysisPeriodMs,
             analysisPeriodMs);
-    synchronized (lock) {
-      isOperationOnAccountIdle.set(false);
+    isOperationOnAccountIdle.set(false);
+  }
+
+  /**
+   * Synchronized method to suspend or resume timer.
+   * @param checkToResumeTimer True if we want to check to resumeTimer.
+   * @param timerTask The timertask object.
+   * @return true or false.
+   */
+  private synchronized boolean timerOrchestrator(boolean checkToResumeTimer, TimerTask timerTask) {
+    if (checkToResumeTimer) {
+      if (isOperationOnAccountIdle.get()) {
+        resumeTimer();
+        return false;
+      }
+      return true;
+    } else {
+      if (accountLevelThrottlingEnabled && (System.currentTimeMillis() -
+          lastExecutionTime.get() >= getOperationIdleTimeout())) {
+        isOperationOnAccountIdle.set(true);
+        timerTask.cancel();
+        timer.purge();
+        return true;
+      }
+      return false;
     }
   }
 
@@ -134,9 +156,7 @@ class AbfsClientThrottlingAnalyzer {
    */
   public boolean suspendIfNecessary() {
     lastExecutionTime.set(now());
-    if (isOperationOnAccountIdle.get()) {
-      resumeTimer();
-    }
+    timerOrchestrator(true, null);
     int duration = sleepDuration;
     if (duration > 0) {
       try {
@@ -266,13 +286,8 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (accountLevelThrottlingEnabled && (now - lastExecutionTime.get() >= getOperationIdleTimeout())) {
-          synchronized (lock) {
-            isOperationOnAccountIdle.set(true);
-            this.cancel();
-            timer.purge();
-            return;
-          }
+        if (timerOrchestrator(false, this)) {
+          return;
         }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {
           AbfsOperationMetrics oldMetrics = blobMetrics.getAndSet(
