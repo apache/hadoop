@@ -7,6 +7,8 @@ import java.util.Random;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -26,6 +28,9 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
 
   private static final String TEST_PATH = "/testfile";
 
+  private Logger LOG =
+      LoggerFactory.getLogger(ITestPartialRead.class);
+
   public ITestPartialRead() throws Exception {
   }
 
@@ -38,7 +43,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
    * */
 
 
-  private void setup(final Path testPath, final int fileSize) throws IOException {
+  private byte[] setup(final Path testPath, final int fileSize) throws IOException {
     final AzureBlobFileSystem fs = getFileSystem();
     final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
     final int bufferSize = 4 * ONE_MB;
@@ -55,16 +60,19 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     } finally{
       stream.close();
     }
+    return b;
   }
 
   @Test
   public void testRecoverPartialRead() throws Exception {
     int fileSize = 4*ONE_MB;
     Path testPath = path(TEST_PATH);
-    setup(testPath, fileSize);
+    byte[] originalFile = setup(testPath, fileSize);
 
     final AzureBlobFileSystem fs = getFileSystem();
     MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
+
+    ActualServerReadByte actualServerReadByte = new ActualServerReadByte(fileSize, originalFile);
     MockHttpOperationTestIntercept mockHttpOperationTestIntercept = new MockHttpOperationTestIntercept() {
       private int callCount = 0;
       @Override
@@ -76,8 +84,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         * 1. Check if server can handle the request parameters.
         * 2. return 1MB data to test-client.
         * */
-
-        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset, length);
+        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset, length, actualServerReadByte, ONE_MB);
 
         MockHttpOperationTestInterceptResult mockHttpOperationTestInterceptResult
             = new MockHttpOperationTestInterceptResult();
@@ -108,21 +115,39 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
   private void callActualServerAndAssertBehaviour(final MockHttpOperation mockHttpOperation,
       final byte[] buffer,
       final int offset,
-      final int length) throws IOException {
+      final int length,
+      final ActualServerReadByte actualServerReadByte,
+      final int byteLenMockServerReturn) throws IOException {
+    LOG.info("length: " + length + "; offset: " + offset);
     mockHttpOperation.processResponseSuperCall(buffer, offset, length);
     Assert.assertTrue(
         mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK);
+    int iterator = 0;
+    int currPointer = actualServerReadByte.currPointer;
+    while(actualServerReadByte.currPointer < actualServerReadByte.size && iterator < buffer.length) {
+      actualServerReadByte.bytes[actualServerReadByte.currPointer++] = buffer[iterator++];
+    }
+    actualServerReadByte.currPointer = currPointer + byteLenMockServerReturn;
+    if(actualServerReadByte.currPointer == actualServerReadByte.size) {
+      for(int i=0; i< actualServerReadByte.size; i++) {
+        if(actualServerReadByte.bytes[i] != actualServerReadByte.originalFile[i]) {
+          Assert.assertTrue("Parsed data is not equal to original file",false);
+        }
+      }
+    }
   }
 
   @Test
   public void testPartialReadWithConnectionReset() throws IOException {
     int fileSize = 4*ONE_MB;
     Path testPath = path(TEST_PATH);
-    setup(testPath, fileSize);
+    byte[] originalFile = setup(testPath, fileSize);
 
     final AzureBlobFileSystem fs = getFileSystem();
-    final AbfsClient originalClient = fs.getAbfsClient();
     MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
+
+    ActualServerReadByte actualServerReadByte = new ActualServerReadByte(fileSize, originalFile);
+
     MockHttpOperationTestIntercept mockHttpOperationTestIntercept = new MockHttpOperationTestIntercept() {
       private int callCount = 0;
       @Override
@@ -135,7 +160,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
          * 2. return 1MB data with connection-reset exception to test-client.
          * */
 
-        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset, length);
+        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset, length, actualServerReadByte, ONE_MB);
 
         MockHttpOperationTestInterceptResult mockHttpOperationTestInterceptResult
             = new MockHttpOperationTestInterceptResult();
@@ -162,6 +187,19 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
 
     Assert.assertEquals(4, mockHttpOperationTestIntercept.getCallCount());
     Assert.assertEquals(4, readAnalyzer.getFailedInstances());
+  }
+
+  class ActualServerReadByte {
+    byte[] bytes;
+    int size;
+    int currPointer = 0;
+    byte[] originalFile;
+
+    ActualServerReadByte(int size, byte[] originalFile) {
+      bytes = new byte[size];
+      this.size = size;
+      this.originalFile = originalFile;
+    }
   }
 
 }
