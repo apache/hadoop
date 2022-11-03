@@ -24,8 +24,12 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -140,6 +144,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String SNAPSHOT_DIFF_INDEX = "snapshotdiffindex";
   public static final String FSACTION_MODE_PARAM = "fsaction";
   public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
+  public static final String OFFSET_PARAM = "offset";
+  public static final String LENGTH_PARAM = "length";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -239,6 +245,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
+  public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
@@ -269,7 +276,8 @@ public class HttpFSFileSystem extends FileSystem
     GETSNAPSHOTTABLEDIRECTORYLIST(HTTP_GET), GETSNAPSHOTLIST(HTTP_GET),
     GETSERVERDEFAULTS(HTTP_GET),
     CHECKACCESS(HTTP_GET), SETECPOLICY(HTTP_PUT), GETECPOLICY(HTTP_GET), UNSETECPOLICY(
-        HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET);
+        HTTP_POST), SATISFYSTORAGEPOLICY(HTTP_PUT), GETSNAPSHOTDIFFLISTING(HTTP_GET),
+    GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
 
@@ -1709,5 +1717,42 @@ public class HttpFSFileSystem extends FileSystem
     HttpURLConnection conn = getConnection(
         Operation.SATISFYSTORAGEPOLICY.getMethod(), params, path, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+  }
+
+  @Override
+  public BlockLocation[] getFileBlockLocations(Path path, long start, long len)
+      throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETFILEBLOCKLOCATIONS.toString());
+    params.put(OFFSET_PARAM, Long.toString(start));
+    params.put(LENGTH_PARAM, Long.toString(len));
+    HttpURLConnection conn = getConnection(
+        Operation.GETFILEBLOCKLOCATIONS.getMethod(), params, path, true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return toBlockLocations(json);
+  }
+
+  @Override
+  public BlockLocation[] getFileBlockLocations(final FileStatus status,
+      final long offset, final long length) throws IOException {
+    if (status == null) {
+      return null;
+    }
+    return getFileBlockLocations(status.getPath(), offset, length);
+  }
+
+  @VisibleForTesting
+  static BlockLocation[] toBlockLocations(JSONObject json) throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    MapType subType = mapper.getTypeFactory().constructMapType(Map.class,
+        String.class, BlockLocation[].class);
+    MapType rootType = mapper.getTypeFactory().constructMapType(Map.class,
+        mapper.constructType(String.class), mapper.constructType(subType));
+
+    Map<String, Map<String, BlockLocation[]>> jsonMap =
+        mapper.readValue(json.toJSONString(), rootType);
+    Map<String, BlockLocation[]> locationMap = jsonMap.get(BLOCK_LOCATIONS_JSON);
+    return locationMap.get(BlockLocation.class.getSimpleName());
   }
 }
