@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -39,7 +40,7 @@ final class AbfsThrottlingInterceptFactory {
   /**
    * List of references notified of loss.
    */
-  private static List<String> lostReferences;
+  private static List<String> lostReferences = new ArrayList<>();
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsThrottlingInterceptFactory.class);
