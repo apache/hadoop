@@ -23,10 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Date;
 
 import com.google.gson.Gson;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
@@ -150,10 +150,8 @@ class FederationBlock extends RouterBlock {
         ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
 
         // Prepare LastStartTime & LastHeartBeat
-        String lastStartTime =
-            DateFormatUtils.format(subcluster.getLastStartTime(), DATE_PATTERN);
-        String lastHeartBeat =
-            DateFormatUtils.format(subcluster.getLastHeartBeat(), DATE_PATTERN);
+        Date lastStartTime = new Date(subcluster.getLastStartTime());
+        Date lastHeartBeat = new Date(subcluster.getLastHeartBeat());
 
         // Prepare Resource
         long totalMB = subClusterInfo.getTotalMB();
@@ -176,8 +174,8 @@ class FederationBlock extends RouterBlock {
         tbody.tr().$id(subClusterIdText)
             .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
             .td().$style(stateStyle).__(state.name()).__()
-            .td(lastStartTime)
-            .td(lastHeartBeat)
+            .td().__(lastStartTime).__()
+            .td().__(lastHeartBeat).__()
             .td(resources)
             .td(nodes)
             .__();
