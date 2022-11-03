@@ -730,15 +730,15 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
-//    TracingContext tracingMetricContext = new TracingContext(
-//        clientCorrelationId,
-//        fileSystemId, FSOperationType.GET_ATTR, true,
-//        tracingMetricHeaderFormat,
-//        listener, abfsCounters.toString());
-//    AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
-//    if (metricFileSystem != null) {
-//      metricFileSystem.sendMetric(tracingMetricContext);
-//    }
+    TracingContext tracingMetricContext = new TracingContext(
+        clientCorrelationId,
+        fileSystemId, FSOperationType.GET_ATTR, true,
+        tracingHeaderFormat,
+        listener, abfsCounters.toString());
+    AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
+    if (metricFileSystem != null) {
+      metricFileSystem.sendMetric(tracingMetricContext);
+    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");

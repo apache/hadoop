@@ -172,7 +172,7 @@ public class AbfsBackoffMetrics {
     for (Map.Entry<String, AbfsBackoffMetrics> entry : metricsMap.entrySet()) {
       metricString.append("$RCTSI$_").append(entry.getKey())
           .append("R_").append("=")
-          .append(entry.getValue().getNumberOfRequestsSucceeded()).append("");
+          .append(entry.getValue().getNumberOfRequestsSucceeded());
       long totalRequests = entry.getValue().getTotalRequests().get();
       if (totalRequests > 0) {
         metricString.append("$MMA$_").append(entry.getKey())
