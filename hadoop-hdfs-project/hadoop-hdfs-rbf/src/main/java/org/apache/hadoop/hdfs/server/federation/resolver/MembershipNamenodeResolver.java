@@ -25,6 +25,7 @@ import static org.apache.hadoop.hdfs.server.federation.resolver.FederationNameno
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +35,6 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
@@ -190,34 +190,36 @@ public class MembershipNamenodeResolver
     }
   }
 
-  @VisibleForTesting
-  public <T extends FederationNamenodeContext> List<T> shuffleObserverNN(
+  private <T extends FederationNamenodeContext> List<T> shuffleObserverNN(
       List<T> inputNameNodes, boolean listObserversFirst) {
     if (!listObserversFirst) {
       return inputNameNodes;
-    } else {
-      List<T> observerNNList = new ArrayList<>();
-      List<T> activeAndStandbyList = new ArrayList<>();
-      for (T t : inputNameNodes) {
-        if (t.getState() == OBSERVER) {
-          observerNNList.add(t);
-        } else {
-          activeAndStandbyList.add(t);
-        }
-      }
-
-      if (observerNNList.size() <= 1) {
-        return inputNameNodes;
+    }
+    // Get Observers first.
+    List<T> observerList = new ArrayList<>();
+    for (T t : inputNameNodes) {
+      if (t.getState() == OBSERVER) {
+        observerList.add(t);
       } else {
-        List<T> ret = new ArrayList<>(observerNNList.size() + activeAndStandbyList.size());
-        Collections.shuffle(observerNNList);
-        // No need because the inputNameNodes has already been sorted
-        // activeAndStandbyList.sort(new NamenodePriorityComparator());
-        ret.addAll(observerNNList);
-        ret.addAll(activeAndStandbyList);
-        return ret;
+        // The inputNameNodes are already sorted, so it can break
+        // when the first non-observer is encountered.
+        break;
       }
     }
+    // Returns the inputNameNodes if no shuffle is required
+    if (observerList.size() <= 1) {
+      return inputNameNodes;
+    }
+
+    // Shuffle multiple Observers
+    Collections.shuffle(observerList);
+
+    List<T> ret = new ArrayList<>(inputNameNodes.size());
+    ret.addAll(observerList);
+    for (int i = observerList.size(); i < inputNameNodes.size(); i++) {
+      ret.add(inputNameNodes.get(i));
+    }
+    return ret;
   }
 
   @Override
