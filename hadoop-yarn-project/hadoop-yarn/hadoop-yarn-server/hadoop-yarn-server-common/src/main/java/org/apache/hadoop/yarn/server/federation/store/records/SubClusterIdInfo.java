@@ -66,15 +66,18 @@ public class SubClusterIdInfo {
       return true;
     }
 
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
       return false;
     }
 
-    SubClusterIdInfo right = (SubClusterIdInfo) obj;
+    if (obj instanceof SubClusterIdInfo) {
+      SubClusterIdInfo other = (SubClusterIdInfo) obj;
+      return new EqualsBuilder()
+          .append(this.id, other.id)
+          .isEquals();
+    }
 
-    return new EqualsBuilder()
-        .append(this.id, right.id)
-        .isEquals();
+    return false;
   }
 
   @Override

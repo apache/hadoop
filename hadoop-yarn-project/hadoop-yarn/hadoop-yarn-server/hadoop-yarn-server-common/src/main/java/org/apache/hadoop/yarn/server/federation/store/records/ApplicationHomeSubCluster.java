@@ -130,15 +130,19 @@ public abstract class ApplicationHomeSubCluster {
       return true;
     }
 
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
       return false;
     }
 
-    ApplicationHomeSubCluster right = (ApplicationHomeSubCluster) obj;
-    return new EqualsBuilder()
-        .append(this.getApplicationId(), right.getApplicationId())
-        .append(this.getHomeSubCluster(), right.getHomeSubCluster())
-        .isEquals();
+    if (obj instanceof ApplicationHomeSubCluster) {
+      ApplicationHomeSubCluster other = (ApplicationHomeSubCluster) obj;
+      return new EqualsBuilder()
+          .append(this.getApplicationId(), other.getApplicationId())
+          .append(this.getHomeSubCluster(), other.getHomeSubCluster())
+          .isEquals();
+    }
+
+    return false;
   }
 
   @Override

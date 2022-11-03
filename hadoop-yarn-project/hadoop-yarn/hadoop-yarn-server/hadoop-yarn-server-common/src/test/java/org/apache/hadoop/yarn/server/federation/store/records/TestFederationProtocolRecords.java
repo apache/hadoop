@@ -383,7 +383,7 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
   }
 
   @Test
-  public void testSubClusterPolicyConfiguration() throws Exception {
+  public void testSubClusterPolicyConfigurationEqual() throws Exception {
 
     String queue1 = "queue1";
     WeightedPolicyInfo policyInfo1 = mock(WeightedPolicyInfo.class);
@@ -398,5 +398,27 @@ public class TestFederationProtocolRecords extends BasePBImplRecordsTest {
         .newInstance(queue2, policyInfo2.getClass().getCanonicalName(), buf2);
 
     assertEquals(configuration1, configuration2);
+  }
+
+  @Test
+  public void testSubClusterInfoEqual() throws Exception {
+
+    String scAmRMAddress = "5.6.7.8:5";
+    String scClientRMAddress = "5.6.7.8:6";
+    String scRmAdminAddress = "5.6.7.8:7";
+    String scWebAppAddress = "127.0.0.1:8080";
+    String capabilityJson = "-";
+
+    SubClusterInfo sc1 =
+        SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
+        scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
+        SubClusterState.SC_RUNNING, Time.now(), capabilityJson);
+
+    SubClusterInfo sc2 =
+        SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
+        scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
+        SubClusterState.SC_RUNNING, Time.now(), capabilityJson);
+
+    assertEquals(sc1, sc2);
   }
 }

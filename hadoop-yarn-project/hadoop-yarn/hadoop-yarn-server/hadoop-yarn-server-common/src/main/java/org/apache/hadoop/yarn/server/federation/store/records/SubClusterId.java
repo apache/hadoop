@@ -81,14 +81,18 @@ public abstract class SubClusterId implements Comparable<SubClusterId> {
       return true;
     }
 
-    if (obj == null || getClass() != obj.getClass()) {
+    if (obj == null) {
       return false;
     }
 
-    SubClusterId right = (SubClusterId) obj;
-    return new EqualsBuilder()
-        .append(this.getId(), right.getId())
-        .isEquals();
+    if (obj instanceof SubClusterId) {
+      SubClusterId other = (SubClusterId) obj;
+      return new EqualsBuilder()
+          .append(this.getId(), other.getId())
+          .isEquals();
+    }
+
+    return false;
   }
 
   @Override
