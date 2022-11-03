@@ -3955,16 +3955,8 @@ public class DistributedFileSystem extends FileSystem
       }
 
       @Override
-      public Path next(final FileSystem fs, final Path p)
-          throws IOException {
-        if (!(fs instanceof DistributedFileSystem)) {
-          throw new UnsupportedOperationException(
-              "Cannot call getEnclosingRoot"
-                  + " on a symlink to a non-DistributedFileSystem: " + path
-                  + " -> " + p);
-        }
-        DistributedFileSystem myDfs = (DistributedFileSystem) fs;
-        return myDfs.getEnclosingRoot(p);
+      public Path next(final FileSystem fs, final Path p) throws IOException {
+        return fs.getEnclosingRoot(p);
       }
     }.resolve(this, absF);
   }

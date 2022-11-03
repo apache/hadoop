@@ -429,11 +429,11 @@ message GetSlowDatanodeReportRequestProto {
 }
 
 message GetEnclosingRootRequestProto {
-  required string filename = 1;
+  optional string filename = 1;
 }
 
 message GetEnclosingRootResponseProto {
-  required string enclosingRootPath = 1;
+  optional string enclosingRootPath = 1;
 }
 
 message GetSlowDatanodeReportResponseProto {

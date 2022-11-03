@@ -19,55 +19,42 @@ package org.apache.hadoop.hdfs;
 
 import java.io.File;
 import java.util.EnumSet;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileContextTestWrapper;
 import org.apache.hadoop.fs.FileSystemTestHelper;
-import org.apache.hadoop.fs.FileSystemTestWrapper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.CreateEncryptionZoneFlag;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EncryptionZoneManager;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-
-public class TestEnclosingRoot {
-  static final Logger LOG = LoggerFactory.getLogger(TestEncryptionZones.class);
-
-  protected Configuration conf;
-  private FileSystemTestHelper fsHelper;
-
-  protected MiniDFSCluster cluster;
-  protected HdfsAdmin dfsAdmin;
-  protected DistributedFileSystem fs;
-  private File testRootDir;
-  protected final String TEST_KEY = "test_key";
-  private static final String NS_METRICS = "FSNamesystem";
-  private static final String  AUTHORIZATION_EXCEPTION_MESSAGE =
-      "User [root] is not authorized to perform [READ] on key " +
-          "with ACL name [key2]!!";
-
-  protected FileSystemTestWrapper fsWrapper;
-  protected FileContextTestWrapper fcWrapper;
-
-  protected static final EnumSet<CreateEncryptionZoneFlag> NO_TRASH =
+public class TestEnclosingRoot extends AbstractHadoopTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestEnclosingRoot.class);
+  private final String TEST_KEY = "test_key";
+  private static final EnumSet<CreateEncryptionZoneFlag> NO_TRASH =
       EnumSet.of(CreateEncryptionZoneFlag.NO_TRASH);
 
-  protected String getKeyProviderURI() {
+  private Configuration conf;
+  private FileSystemTestHelper fsHelper;
+
+  private MiniDFSCluster cluster;
+  private HdfsAdmin dfsAdmin;
+  private DistributedFileSystem fs;
+  private File testRootDir;
+
+  private String getKeyProviderURI() {
     return JavaKeyStoreProvider.SCHEME_NAME + "://file" +
         new Path(testRootDir.toString(), "test.jks").toUri();
   }
@@ -90,9 +77,6 @@ public class TestEnclosingRoot {
     GenericTestUtils.setLogLevel(
         LoggerFactory.getLogger(EncryptionZoneManager.class), Level.TRACE);
     fs = cluster.getFileSystem();
-    fsWrapper = new FileSystemTestWrapper(fs);
-    fcWrapper = new FileContextTestWrapper(
-        FileContext.getFileContext(cluster.getURI(), conf));
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
     setProvider();
     // Create a test key
@@ -116,19 +100,37 @@ public class TestEnclosingRoot {
   }
 
   @Test
+  /**
+   * Testing basic operations for getEnclosingRoot with dfs/DistributedFileSystem
+   */
   public void testBasicOperations() throws Exception {
     final Path rootDir = new Path("/");
     final Path zone1 = new Path(rootDir, "zone1");
-    final Path zone1FileDNE = new Path(zone1, "newDNE.txt");
 
-    assertEquals(fs.getEnclosingRoot(rootDir), rootDir);
-    assertEquals(fs.getEnclosingRoot(zone1), rootDir);
+    // Ensure that the root "/" returns the root without mount points or encryption zones
+    assertThat(rootDir.equals(fs.getEnclosingRoot(rootDir)));
 
+    // Ensure a dir returns the root without mount points or encryption zones
+    assertThat(rootDir.equals(fs.getEnclosingRoot(zone1)));
+
+    // create an encryption zone
     fs.mkdirs(zone1);
     dfsAdmin.createEncryptionZone(zone1, TEST_KEY, NO_TRASH);
-    assertEquals(fs.getEnclosingRoot(rootDir), rootDir);
-    assertEquals(fs.getEnclosingRoot(zone1), zone1);
-    assertEquals(fs.getEnclosingRoot(zone1FileDNE), zone1);
+
+    // Ensure that the root "/" returns the root with an encryption zone present
+    assertThat(rootDir.equals(fs.getEnclosingRoot(rootDir)));
+
+    // Ensure that the encryption zone path itself returns correctly as itself
+    assertThat(zone1.equals(fs.getEnclosingRoot(zone1)));
+
+    // Ensure that a path where the file does not exist returns the encryption zone root path
+    final Path zone1FileDNE = new Path(zone1, "newDNE.txt");
+    assertThat(zone1.equals(fs.getEnclosingRoot(zone1FileDNE)));
+
+    // Ensure that a path where the dir does not exist returns the encryption zone root path
+    final Path zone1DirDNE = new Path(zone1, "zone2/newDNE.txt");
+    assertThat(zone1.equals(fs.getEnclosingRoot(zone1DirDNE)));
+
   }
 
 }

@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
@@ -94,7 +95,6 @@ public class TestRouterMountTable {
         .build();
     conf.setInt(RBFConfigKeys.DFS_ROUTER_ADMIN_MAX_COMPONENT_LENGTH_KEY, 20);
     cluster.addRouterOverrides(conf);
-    cluster.startCluster();
     cluster.startCluster();
     cluster.startRouters();
     cluster.waitClusterUp();
@@ -776,6 +776,8 @@ public class TestRouterMountTable {
     assertEquals(routerFs.getEnclosingRoot(new Path("/readonly")), new Path("/readonly"));
 
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/"));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")),
+        routerFs.getEnclosingRoot(routerFs.getEnclosingRoot(new Path("/regular"))));
 
     // Add a regular entry
     MountTable regularEntry = MountTable.newInstance(
@@ -783,7 +785,8 @@ public class TestRouterMountTable {
     assertTrue(addMountTable(regularEntry));
     assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/regular"));
 
-    // Create a folder which should show in all locations
-    assertTrue(routerFs.mkdirs(new Path("/regular/newdir")));
+    // path does not need to exist
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
+
   }
 }
