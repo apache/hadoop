@@ -1333,7 +1333,7 @@ public class AbfsClient implements Closeable {
     return tokenProvider;
   }
 
-  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
+  private AzureBlobFileSystem getMetricFilesystem() throws IOException {
     if (metricFs == null) {
       try {
         Configuration metricConfig = abfsConfiguration.getRawConfiguration();
