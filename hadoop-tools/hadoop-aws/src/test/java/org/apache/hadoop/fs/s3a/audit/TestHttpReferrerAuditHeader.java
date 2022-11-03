@@ -318,7 +318,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   @Test
   public void testGetObjectRange() throws Throwable {
     AuditSpan span = span();
-    GetObjectRequest request = rangedGet();
+    GetObjectRequest request = get(getObjectRequest -> getObjectRequest.setRange(100, 200));
     Map<String, String> headers
             = request.getCustomRequestHeaders();
     assertThat(headers)
@@ -328,7 +328,26 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     LOG.info("Header is {}", header);
     Map<String, String> params
             = HttpReferrerAuditHeader.extractQueryParameters(header);
-    assertMapContains(params, PARAM_RANGE, "bytes=8-24");
+    assertMapContains(params, PARAM_RANGE, "bytes=100-200");
+  }
+
+  /**
+   * Verify that no range is getting added to the header in request without range
+   */
+  @Test
+  public void testGetObjectWithoutRange() throws Throwable {
+    AuditSpan span = span();
+    GetObjectRequest request = get(getObjectRequest -> {});
+    Map<String, String> headers
+        = request.getCustomRequestHeaders();
+    assertThat(headers)
+        .describedAs("Custom headers")
+        .containsKey(HEADER_REFERRER);
+    String header = headers.get(HEADER_REFERRER);
+    LOG.info("Header is {}", header);
+    Map<String, String> params
+        = HttpReferrerAuditHeader.extractQueryParameters(header);
+    assertMapNotContains(params, PARAM_RANGE);
   }
 
   /**

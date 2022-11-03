@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -140,13 +141,14 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a GetObject request with specified range and pass it through the
-   * manager's beforeExecution()
-   * @return the processed request
+   * Create a GetObject request and modify it before passing it through auditor
+   * @param modifyRequest Consumer Interface for changing the request before passing to the auditor
+   * @return the request
    */
-  protected GetObjectRequest rangedGet() {
-    return manager.beforeExecution(
-            requestFactory.newGetObjectRequest("/").withRange(8, 24));
+  protected GetObjectRequest get(Consumer<GetObjectRequest> modifyRequest) {
+    GetObjectRequest req = requestFactory.newGetObjectRequest("/");
+    modifyRequest.accept(req);
+    return manager.beforeExecution(req);
   }
 
   /**

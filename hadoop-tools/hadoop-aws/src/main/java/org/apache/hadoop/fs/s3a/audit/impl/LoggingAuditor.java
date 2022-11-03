@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -110,6 +111,14 @@ public class LoggingAuditor
    * Attributes to filter.
    */
   private Collection<String> filters;
+
+  /**
+   * Log for warning of problems getting the range of GetObjectRequest
+   * will only log of a problem once per process instance.
+   * This is to avoid logs being flooded with errors.
+   */
+  private static final LogExactlyOnce WARN_INCORRECT_RANGE =
+      new LogExactlyOnce(LOG);
 
   /**
    * Create the auditor.
@@ -236,18 +245,15 @@ public class LoggingAuditor
      * @param request given get object request
      */
     private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest)
-      {
-        if (((GetObjectRequest) request).getRange().length != 2) {
-          try {
-            throw new Exception("Cannot get a range for the request");
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
+      if (request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange()!=null) {
+        if(((GetObjectRequest) request).getRange().length!=2) {
+          WARN_INCORRECT_RANGE.warn("Range has unexpected number of elements");
+          return;
         }
         long[] rangeValue = ((GetObjectRequest) request).getRange();
         String combinedRangeValue = String.format("bytes=%d-%d", rangeValue[0], rangeValue[1]);
         referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
+
       }
     }
 
