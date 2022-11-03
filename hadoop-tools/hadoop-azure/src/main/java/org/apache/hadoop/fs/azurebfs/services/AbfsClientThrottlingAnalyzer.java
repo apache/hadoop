@@ -109,27 +109,31 @@ class AbfsClientThrottlingAnalyzer {
 
   /**
    * Synchronized method to suspend or resume timer.
-   * @param checkToResumeTimer True if we want to check to resumeTimer.
+   * @param timerFunctionality resume or suspend.
    * @param timerTask The timertask object.
    * @return true or false.
    */
-  private synchronized boolean timerOrchestrator(boolean checkToResumeTimer, TimerTask timerTask) {
-    if (checkToResumeTimer) {
+  private synchronized boolean timerOrchestrator(TimerFunctionality timerFunctionality,
+      TimerTask timerTask) {
+    switch (timerFunctionality) {
+    case RESUME:
       if (isOperationOnAccountIdle.get()) {
         resumeTimer();
-        return false;
       }
-      return true;
-    } else {
-      if (accountLevelThrottlingEnabled && (System.currentTimeMillis() -
-          lastExecutionTime.get() >= getOperationIdleTimeout())) {
+      break;
+    case SUSPEND:
+      if (accountLevelThrottlingEnabled && (System.currentTimeMillis()
+          - lastExecutionTime.get() >= getOperationIdleTimeout())) {
         isOperationOnAccountIdle.set(true);
         timerTask.cancel();
         timer.purge();
         return true;
       }
-      return false;
+      break;
+    default:
+      break;
     }
+    return false;
   }
 
   /**
@@ -156,7 +160,7 @@ class AbfsClientThrottlingAnalyzer {
    */
   public boolean suspendIfNecessary() {
     lastExecutionTime.set(now());
-    timerOrchestrator(true, null);
+    timerOrchestrator(TimerFunctionality.RESUME, null);
     int duration = sleepDuration;
     if (duration > 0) {
       try {
@@ -286,7 +290,7 @@ class AbfsClientThrottlingAnalyzer {
         }
 
         long now = System.currentTimeMillis();
-        if (timerOrchestrator(false, this)) {
+        if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
           return;
         }
         if (now - blobMetrics.get().getStartTime() >= analysisPeriodMs) {
