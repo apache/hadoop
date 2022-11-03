@@ -602,26 +602,76 @@ various test combinations, it will:
 2. Run tests for all combinations
 3. Summarize results across all the test combination runs.
 
-As a pre-requisite step, fill config values for test accounts and credentials
-needed for authentication in `src/test/resources/azure-auth-keys.xml.template`
-and rename as `src/test/resources/azure-auth-keys.xml`.
+Below are the pre-requiste steps to follow:
+1. Copy
 
-**To add a new test combination:** Templates for mandatory test combinations
-for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
-If a new one needs to be added, add a combination set within
-`dev-support/testrun-scripts/runtests.sh` similar to the ones already defined
-and
-1. Provide a new combination name
-2. Update properties and values array which need to be effective for the test
-combination
-3. Call generateconfigs
+        ./src/test/resources/azure-auth-keys.xml.template
+        TO
+        ./src/test/resources/azure-auth-keys.xml
+  Update account names that should be used in the test run for HNS and non-HNS
+  combinations in the 2 properties present in the xml (account name should be
+  without domain part), namely
+
+    fs.azure.hnsTestAccountName
+    fs.azure.nonHnsTestAccountName
+  azure-auth-keys.xml is listed in .gitignore, so any accidental account name leak is prevented.
+
+```
+XInclude is supported, so for extra security secrets may be
+kept out of the source tree then referenced through an an XInclude element:
+
+      <include xmlns="http://www.w3.org/2001/XInclude"
+        href="/users/self/.secrets/auth-keys.xml" />
+```
+
+2. Create account config files (one config file per account) in folder:
+
+        ./src/test/resources/accountSettings/
+   Follow the instruction in the start of the template file
+
+        accountName_settings.xml.template
+   within accountSettings folder while creating account config file.
+   New files created in folder accountSettings is listed in .gitignore to
+   prevent accidental cred leaks.
 
 **To run PR validation:** Running command
-* `dev-support/testrun-scripts/runtests.sh` will generate configurations for
-each of the combinations defined and run tests for all the combinations.
-* `dev-support/testrun-scripts/runtests.sh -c {combinationname}` Specific
-combinations can be provided with -c option. If combinations are provided
-with -c option, tests for only those combinations will be run.
+* `dev-support/testrun-scripts/runtests.sh` will prompt as below:
+```bash
+Choose action:
+[Note - SET_ACTIVE_TEST_CONFIG will help activate the config for IDE/single test class runs]
+1) SET_ACTIVE_TEST_CONFIG               4) SET_OR_CHANGE_TEST_ACCOUNT
+2) RUN_TEST                             5) PRINT_LOG4J_LOG_PATHS_FROM_LAST_RUN
+3) CLEAN_UP_OLD_TEST_CONTAINERS
+#? 2
+```
+Enter 1: for setting active combination for IDE test run/single mvn test class runs.
+
+Enter 2: for choosing the combination to choose for mvn full test suite.
+
+Enter 3: For clean-up of any abruptly ending test leaving auto generated test
+container on the account.
+
+Enter 4: To create/modify the config file that decides the account to use for specific test combination.
+
+Enter 5: To print the log4j paths the last test runs.
+
+On next prompt, current list of combinations to choose are provided.
+Sample for Run_TEST action:
+```bash
+Enter parallel test run process count [default - 8]: 4
+Set the active test combination to run the action:
+1) HNS-OAuth               3) nonHNS-SharedKey        5) AllCombinationsTestRun
+2) HNS-SharedKey           4) AppendBlob-HNS-OAuth    6) Quit
+#? 1
+
+Combination specific property setting: [ key=fs.azure.account.auth.type , value=OAuth ]
+
+Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: snvijayacontracttest for combination HNS-OAuth
+Running test for combination HNS-OAuth on account snvijayacontracttest [ProcessCount=4]
+Test run report can be seen in dev-support/testlogs/2022-10-07_05-23-22/Test-Logs-HNS-OAuth.txt
+````
+
+Provide the option for the action chosen first.
 
 **Test logs:** Test runs will create a folder within dev-support/testlogs to
 save the test logs. Folder name will be the test start timestamp. The mvn verify
@@ -632,25 +682,18 @@ consolidated results of all the combination runs will be saved into a file as
 Test-Results.log in the same folder. When run for PR validation, the
 consolidated test results needs to be pasted into the PR comment section.
 
-**To generate config for use in IDE:** Running command with -a (activate) option
-`dev-support/testrun-scripts/runtests.sh -a {combination name}` will update
-the effective config relevant for the specific test combination. Hence the same
-config files used by the mvn test runs can be used for IDE without any manual
-updates needed within config file.
+**To add a new test combination:** Templates for mandatory test combinations
+for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.
+If a new one needs to be added, add a combination to
+`dev-support/testrun-scripts/runtests.sh`.
+(Refer to current active combinations within
+`SECTION: COMBINATION DEFINITIONS AND TRIGGER` and
+`SECTION: TEST COMBINATION METHODS` in the script).
 
-**Other command line options:**
-* -a <COMBINATION_NAME> Specify the combination name which needs to be
-activated. This is to be used to generate config for use in IDE.
-* -c <COMBINATION_NAME> Specify the combination name for test runs. If this
-config is specified, tests for only the specified combinations will run. All
-combinations of tests will be running if this config is not specified.
-* -t <THREAD_COUNT> ABFS mvn tests are run in parallel mode. Tests by default
-are run with 8 thread count. It can be changed by providing -t <THREAD_COUNT>
+**Test Configuration Details:**
 
-In order to test ABFS, please add the following configuration to your
-`src/test/resources/azure-auth-keys.xml` file. Note that the ABFS tests include
-compatibility tests which require WASB credentials, in addition to the ABFS
-credentials.
+ Note that the ABFS tests include compatibility tests which require WASB
+ credentials, in addition to the ABFS credentials.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>

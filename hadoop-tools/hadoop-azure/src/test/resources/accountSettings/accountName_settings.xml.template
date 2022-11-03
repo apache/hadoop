@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  NOTE:
+  Each config file will hold configs for one storage account.
+  ABFS Driver tests run with different Auth settings, OAuth and SharedKey, on same test account.
+  Below template collects information needed for both Auth settings on the account.
+
+  OAuth test mode works with token provider type - ClientCredsTokenProvider
+  For specific details on test config or pre-requisite, refer to
+  https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-azure/src/site/markdown/testing_azure.md
+
+  Pre-requisite before configuring:
+  1. An ABFS account
+  2. A container within account
+  3. A Service principal with RBAC - Storage Blob Data Owner (superuser) role on account
+  4. A Service principal with no RBAC roles assigned on account. This is needed for checkaccess tests (noRBACUser)
+  5. A Service principal with Storage Blob Data Contributor RBAC roles assigned on account. This is needed for RBAC tests (contributorRBACUser)
+  6. A Service principal with Storage Blob Data Reader RBAC roles assigned on account. This is needed for RBAC tests (readerRBACUser)
+
+  Replace below strings with actual value:
+  ## ACCOUNT SETTINGS ##
+    1. ACCOUNTNAME -> to account name without domain
+    2. IS_NAMESPACE_ENABLED -> to true or false
+    3. CONTAINER_NAME -> name of an existing container
+    4. ACCOUNT_KEY -> Account access key
+  ## IDENTITY SETTINGS ##
+    5. SUPERUSER_TENANT_ID -> AAD tenant ID of Superuser Service principal
+    6. SUPERUSER_CLIENT_ID -> SuperUser Service principal's client ID
+    7. SUPERUSER_CLIENT_SECRET -> SuperUser Service principal's client secret
+
+    8. NO_RBAC_USER_CLIENT_ID -> noRBACUser Service principal's client ID
+    9. NO_RBAC_USER_CLIENT_SECRET -> noRBACUser Service principal's client secret
+    10. NO_RBAC_USER_OID -> noRBACUser Service principal's OID
+
+    11. CONTRIBUTOR_RBAC_USER_CLIENT_ID -> contributorRBACUser Service principal's client ID
+    12. CONTRIBUTOR_RBAC_USER_CLIENT_SECRET -> contributorRBACUser Service principal's client secret
+
+    13. READER_RBAC_USER_CLIENT_ID -> readerRBACUser Service principal's client ID
+    14. READER_RBAC_USER_CLIENT_SECRET -> readerRBACUser Service principal's client secret
+-->
+
+<configuration>
+
+  <!-- ACCOUNT SETTINGS -->
+  <property>
+    <name>fs.azure.abfs.account.name</name>
+    <value>ACCOUNTNAME.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.abfs</name>
+    <value>abfs://CONTAINER_NAME@ACCOUNTNAME.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.abfss</name>
+    <value>abfss://CONTAINER_NAME@ACCOUNTNAME.dfs.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.contract.test.fs.wasb</name>
+    <value>wasb://CONTAINER_NAME@ACCOUNTNAME.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.wasb.account.name</name>
+    <value>ACCOUNTNAME.blob.core.windows.net</value>
+  </property>
+  <property>
+    <name>fs.azure.scale.test.enabled</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.azure.test.namespace.enabled.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>IS_NAMESPACE_ENABLED</value>
+  </property>
+  <property>
+    <name>fs.azure.test.namespace.enabled</name>
+    <value>IS_NAMESPACE_ENABLED</value>
+  </property>
+  <property>
+    <name>fs.azure.account.hns.enabled.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>IS_NAMESPACE_ENABLED</value>
+  </property>
+  <property>
+    <name>fs.azure.account.hns.enabled</name>
+    <value>IS_NAMESPACE_ENABLED</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>ACCOUNT_KEY</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.ACCOUNTNAME.blob.core.windows.net</name>
+    <value>ACCOUNT_KEY</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>ACCOUNT_KEY</value>
+  </property>
+  <property>
+    <name>fs.azure.account.key.ACCOUNTNAME.blob.core.windows.net</name>
+    <value>ACCOUNT_KEY</value>
+  </property>
+
+  <!-- SUPERUSER SETTINGS -->
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>https://login.microsoftonline.com/SUPERUSER_TENANT_ID/oauth2/token</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.endpoint</name>
+    <value>https://login.microsoftonline.com/SUPERUSER_TENANT_ID/oauth2/token</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth.provider.type.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth.provider.type</name>
+    <value>org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.id.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>SUPERUSER_CLIENT_ID</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.id</name>
+    <value>SUPERUSER_CLIENT_ID</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.secret.ACCOUNTNAME.dfs.core.windows.net</name>
+    <value>SUPERUSER_CLIENT_SECRET</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.client.secret</name>
+    <value>SUPERUSER_CLIENT_SECRET</value>
+  </property>
+
+  <!-- NO RBAC USER SETTINGS -->
+  <property>
+    <name>fs.azure.enable.check.access</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.id</name>
+    <value>NO_RBAC_USER_CLIENT_ID</value>
+  </property>
+  <property>
+    <name>fs.azure.account.test.oauth2.client.secret</name>
+    <value>NO_RBAC_USER_CLIENT_SECRET</value>
+  </property>
+  <property>
+    <name>fs.azure.check.access.testuser.guid</name>
+    <value>NO_RBAC_USER_OID</value>
+  </property>
+
+  <!-- CONTRIBUTOR RBAC USER SETTINGS -->
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.id</name>
+    <value>CONTRIBUTOR_RBAC_USER_CLIENT_ID</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.contributor.client.secret</name>
+    <value>CONTRIBUTOR_RBAC_USER_CLIENT_SECRET</value>
+  </property>
+
+  <!-- READER RBAC USER SETTINGS -->
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.id</name>
+    <value>READER_RBAC_USER_CLIENT_ID</value>
+  </property>
+  <property>
+    <name>fs.azure.account.oauth2.reader.client.secret</name>
+    <value>READER_RBAC_USER_CLIENT_ID</value>
+  </property>
+</configuration>

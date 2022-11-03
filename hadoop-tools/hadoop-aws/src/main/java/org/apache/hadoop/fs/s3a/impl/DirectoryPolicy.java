@@ -69,21 +69,21 @@ public interface DirectoryPolicy {
 
     /**
      * Delete markers.
-     * <p></p>
+     * <p>
      * This is the classic S3A policy,
      */
     Delete(DIRECTORY_MARKER_POLICY_DELETE),
 
     /**
      * Keep markers.
-     * <p></p>
+     * <p>
      * This is <i>Not backwards compatible</i>.
      */
     Keep(DIRECTORY_MARKER_POLICY_KEEP),
 
     /**
      * Keep markers in authoritative paths only.
-     * <p></p>
+     * <p>
      * This is <i>Not backwards compatible</i> within the
      * auth paths, but is outside these.
      */
