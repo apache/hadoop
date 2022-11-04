@@ -205,6 +205,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK_DEFAULT;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -353,7 +357,9 @@ public class NameNode extends ReconfigurableBase implements
           DFS_BLOCK_INVALIDATE_LIMIT_KEY,
           DFS_DATANODE_PEER_STATS_ENABLED_KEY,
           DFS_DATANODE_MAX_NODES_TO_REPORT_KEY,
-          DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY));
+          DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_KEY,
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT,
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK));
 
   private static final String USAGE = "Usage: hdfs namenode ["
       + StartupOption.BACKUP.getName() + "] | \n\t["
@@ -2321,6 +2327,10 @@ public class NameNode extends ReconfigurableBase implements
       return reconfigureSlowNodesParameters(datanodeManager, property, newVal);
     } else if (property.equals(DFS_BLOCK_INVALIDATE_LIMIT_KEY)) {
       return reconfigureBlockInvalidateLimit(datanodeManager, property, newVal);
+    } else if (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT) ||
+        (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK))) {
+      return reconfigureDecommissionBackoffMonitorParameters(datanodeManager, property,
+          newVal);
     } else {
       throw new ReconfigurationException(property, newVal, getConf().get(
           property));
@@ -2601,6 +2611,34 @@ public class NameNode extends ReconfigurableBase implements
     }
   }
 
+  private String reconfigureDecommissionBackoffMonitorParameters(
+      final DatanodeManager datanodeManager, final String property, final String newVal)
+      throws ReconfigurationException {
+    String newSetting = null;
+    try {
+      if (property.equals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT)) {
+        int pendingRepLimit = (newVal == null ?
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT_DEFAULT :
+            Integer.parseInt(newVal));
+        datanodeManager.getDatanodeAdminManager().refreshPendingRepLimit(pendingRepLimit,
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT);
+        newSetting = String.valueOf(datanodeManager.getDatanodeAdminManager().getPendingRepLimit());
+      } else if (property.equals(
+          DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK)) {
+        int blocksPerLock = (newVal == null ?
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK_DEFAULT :
+            Integer.parseInt(newVal));
+        datanodeManager.getDatanodeAdminManager().refreshBlocksPerLock(blocksPerLock,
+            DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK);
+        newSetting = String.valueOf(datanodeManager.getDatanodeAdminManager().getBlocksPerLock());
+      }
+      LOG.info("RECONFIGURE* changed reconfigureDecommissionBackoffMonitorParameters {} to {}",
+          property, newSetting);
+      return newSetting;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
 
   @Override  // ReconfigurableBase
   protected Configuration getNewConf() {
