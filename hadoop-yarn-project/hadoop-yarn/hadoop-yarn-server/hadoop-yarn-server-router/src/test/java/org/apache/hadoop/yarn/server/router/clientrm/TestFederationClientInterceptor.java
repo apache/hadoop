@@ -1573,12 +1573,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   @Test
   public void testGetDelegationToken() throws IOException, YarnException {
 
-    // We design such a unit test to check that the execution of the GetDelegationToken method is as expected.
+    // We design such a unit test to check
+    // that the execution of the GetDelegationToken method is as expected.
+    //
     // 1. Apply for a DelegationToken for renewer1,
-    // the Router returns the DelegationToken of the user, and the KIND of the token is RM_DELEGATION_TOKEN
+    // the Router returns the DelegationToken of the user, and the KIND of the token is
+    // RM_DELEGATION_TOKEN
+    //
     // 2. We maintain the compatibility with RMDelegationTokenIdentifier,
     // we can serialize the token into RMDelegationTokenIdentifier,
-    // we can get the issueDate, and compare the data in the StateStore, the data should be consistent。
+    // we can get the issueDate, and compare the data in the StateStore,
+    // the data should be consistent.
 
     // Step1. We apply for DelegationToken for renewer1
     // Both response & delegationToken cannot be empty
