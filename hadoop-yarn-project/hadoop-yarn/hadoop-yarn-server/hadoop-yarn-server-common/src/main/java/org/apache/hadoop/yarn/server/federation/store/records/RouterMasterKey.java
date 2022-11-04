@@ -114,20 +114,36 @@ public abstract class RouterMasterKey {
   }
 
   @Override
-  public boolean equals(Object right) {
-    if (this == right) {
+  public boolean equals(Object obj) {
+
+    if (this == obj) {
       return true;
     }
 
-    if (right == null || getClass() != right.getClass()) {
+    if (obj == null) {
       return false;
     }
 
-    RouterMasterKey r = (RouterMasterKey) right;
-    return new EqualsBuilder()
-        .append(this.getKeyId().intValue(), r.getKeyId().intValue())
-        .append(this.getExpiryDate().longValue(), this.getExpiryDate().longValue())
-        .append(getKeyBytes().array(), r.getKeyBytes())
-        .isEquals();
+    if (obj instanceof RouterMasterKey) {
+      RouterMasterKey other = (RouterMasterKey) obj;
+      return new EqualsBuilder()
+          .append(this.getKeyId().intValue(), other.getKeyId().intValue())
+          .append(this.getExpiryDate().longValue(), other.getExpiryDate().longValue())
+          .append(this.getKeyBytes().array(), other.getKeyBytes())
+          .isEquals();
+    }
+
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("RouterMasterKey: [")
+        .append("KeyId: ").append(getKeyId()).append(", ")
+        .append("ExpiryDate: ").append(getExpiryDate()).append(", ")
+        .append("KeyBytes: ").append(getKeyBytes()).append(", ")
+        .append("]");
+    return sb.toString();
   }
 }
