@@ -499,10 +499,10 @@ public final class RouterServerUtil {
   public static boolean isAllowedDelegationTokenOp() throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
-              UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
-              UserGroupInformation.AuthenticationMethod.CERTIFICATE)
-              .contains(UserGroupInformation.getCurrentUser()
-                      .getRealAuthenticationMethod());
+          UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
+          UserGroupInformation.AuthenticationMethod.CERTIFICATE)
+          .contains(UserGroupInformation.getCurrentUser()
+          .getRealAuthenticationMethod());
     } else {
       return true;
     }

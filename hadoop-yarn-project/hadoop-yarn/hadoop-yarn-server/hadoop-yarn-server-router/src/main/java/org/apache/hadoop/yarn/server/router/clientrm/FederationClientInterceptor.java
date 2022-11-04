@@ -1526,21 +1526,29 @@ public class FederationClientInterceptor
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException, IOException {
     try {
+
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrRenewDelegationTokenFailedRetrieved();
         throw new IOException(
             "Delegation Token can be renewed only with kerberos authentication");
       }
+
+      long startTime = clock.getTime();
       org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
       String user = RouterServerUtil.getRenewerForToken(token);
       long nextExpTime = this.getTokenSecretManager().renewToken(token, user);
-      RenewDelegationTokenResponse renewResponse = Records
-          .newRecord(RenewDelegationTokenResponse.class);
+      RenewDelegationTokenResponse renewResponse =
+          Records.newRecord(RenewDelegationTokenResponse.class);
       renewResponse.setNextExpirationTime(nextExpTime);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededRenewDelegationTokenRetrieved((stopTime - startTime));
       return renewResponse;
+
     } catch (IOException e) {
+      routerMetrics.incrRenewDelegationTokenFailedRetrieved();
       throw new YarnException(e);
     }
   }
@@ -1550,17 +1558,23 @@ public class FederationClientInterceptor
       CancelDelegationTokenRequest request) throws YarnException, IOException {
     try {
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrCancelDelegationTokenFailedRetrieved();
         throw new IOException(
             "Delegation Token can be cancelled only with kerberos authentication");
       }
+
+      long startTime = clock.getTime();
       org.apache.hadoop.yarn.api.records.Token protoToken = request.getDelegationToken();
       Token<RMDelegationTokenIdentifier> token = new Token<>(
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
       String user = UserGroupInformation.getCurrentUser().getUserName();
       this.getTokenSecretManager().cancelToken(token, user);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededCancelDelegationTokenRetrieved((stopTime - startTime));
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {
+      routerMetrics.incrCancelDelegationTokenFailedRetrieved();
       throw new YarnException(e);
     }
   }
