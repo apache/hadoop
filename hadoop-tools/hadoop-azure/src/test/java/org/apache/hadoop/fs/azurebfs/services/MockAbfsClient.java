@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
-
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
