@@ -71,7 +71,7 @@ public final class AbfsClientThrottlingIntercept {
       return;
     }
 
-    int status = abfsHttpOperation.getStatusCode();
+    final int status = abfsHttpOperation.getStatusCode();
     long contentLength = 0;
     // If the socket is terminated prior to receiving a response, the HTTP
     // status may be 0 or -1.  A status less than 200 or greater than or equal
@@ -93,7 +93,7 @@ public final class AbfsClientThrottlingIntercept {
         long bytesToBeAddedInMetric = contentLength;
 
         long contentLengthReceived = abfsHttpOperation.getBytesReceived();
-        if (abfsHttpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL
+        if (status == HttpURLConnection.HTTP_PARTIAL
             && contentLength > contentLengthReceived) {
           bytesToBeAddedInMetric = contentLength - contentLengthReceived;
           isFailedOperation = true;
