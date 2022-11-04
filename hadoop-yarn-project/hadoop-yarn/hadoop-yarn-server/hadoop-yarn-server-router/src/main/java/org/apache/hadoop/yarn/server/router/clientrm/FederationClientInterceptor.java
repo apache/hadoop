@@ -138,7 +138,6 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.router.RouterAuditLogger;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
-import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Records;
@@ -185,7 +184,6 @@ public class FederationClientInterceptor
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private long submitIntervalTime;
-  private RouterDelegationTokenSecretManager routerDTSecretManager;
 
   @Override
   public void init(String userName) {
@@ -232,8 +230,6 @@ public class FederationClientInterceptor
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
-
-    routerDTSecretManager = this.getTokenSecretManager();
   }
 
   @Override
@@ -1485,34 +1481,43 @@ public class FederationClientInterceptor
       GetDelegationTokenRequest request) throws YarnException, IOException {
 
     if (request == null || request.getRenewer() == null) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
       RouterServerUtil.logAndThrowException(
           "Missing getDelegationToken request or Renewer.", null);
     }
 
     try {
+
       // Verify that the connection is kerberos authenticated
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
+        routerMetrics.incrGetDelegationTokenFailedRetrieved();
         throw new IOException(
-            "Delegation Token can be issued only with kerberos authentication");
+            "Delegation Token can be issued only with kerberos authentication.");
       }
+
+      long startTime = clock.getTime();
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       Text owner = new Text(ugi.getUserName());
       Text realUser = null;
       if (ugi.getRealUser() != null) {
         realUser = new Text(ugi.getRealUser().getUserName());
       }
+
       RMDelegationTokenIdentifier tokenIdentifier =
           new RMDelegationTokenIdentifier(owner, new Text(request.getRenewer()), realUser);
       Token<RMDelegationTokenIdentifier> realRMDToken =
-          new Token<>(tokenIdentifier, this.routerDTSecretManager);
+          new Token<>(tokenIdentifier, this.getTokenSecretManager());
 
       org.apache.hadoop.yarn.api.records.Token routerRMDTToken =
           BuilderUtils.newDelegationToken(realRMDToken.getIdentifier(),
               realRMDToken.getKind().toString(),
               realRMDToken.getPassword(), realRMDToken.getService().toString());
 
+      long stopTime = clock.getTime();
+      routerMetrics.succeededGetDelegationTokenRetrieved((stopTime - startTime));
       return GetDelegationTokenResponse.newInstance(routerRMDTToken);
     } catch(IOException e) {
+      routerMetrics.incrGetDelegationTokenFailedRetrieved();
       throw new YarnException(e);
     }
   }
@@ -1530,7 +1535,7 @@ public class FederationClientInterceptor
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
       String user = RouterServerUtil.getRenewerForToken(token);
-      long nextExpTime = this.routerDTSecretManager.renewToken(token, user);
+      long nextExpTime = this.getTokenSecretManager().renewToken(token, user);
       RenewDelegationTokenResponse renewResponse = Records
           .newRecord(RenewDelegationTokenResponse.class);
       renewResponse.setNextExpirationTime(nextExpTime);
@@ -1553,7 +1558,7 @@ public class FederationClientInterceptor
           protoToken.getIdentifier().array(), protoToken.getPassword().array(),
           new Text(protoToken.getKind()), new Text(protoToken.getService()));
       String user = UserGroupInformation.getCurrentUser().getUserName();
-      this.routerDTSecretManager.cancelToken(token, user);
+      this.getTokenSecretManager().cancelToken(token, user);
       return Records.newRecord(CancelDelegationTokenResponse.class);
     } catch (IOException e) {
       throw new YarnException(e);
@@ -2069,4 +2074,5 @@ public class FederationClientInterceptor
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
   }
+
 }

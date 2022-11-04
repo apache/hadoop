@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,101 +33,19 @@ import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.ReservationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
-import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
-import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.NodeAttributeKey;
-import org.apache.hadoop.yarn.api.records.NodeToAttributeValue;
-import org.apache.hadoop.yarn.api.records.NodeAttribute;
-import org.apache.hadoop.yarn.api.records.NodeAttributeInfo;
-import org.apache.hadoop.yarn.api.records.NodeAttributeType;
-import org.apache.hadoop.yarn.api.records.ReservationRequest;
-import org.apache.hadoop.yarn.api.records.ReservationDefinition;
-import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
-import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.api.protocolrecords.*;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -138,6 +57,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
@@ -181,6 +102,15 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     interceptor.setConf(this.getConf());
     interceptor.init(user);
+    RouterDelegationTokenSecretManager tokenSecretManager =
+        interceptor.createRouterRMDelegationTokenSecretManager(this.getConf());
+    try {
+      tokenSecretManager.startThreads();
+      interceptor.setTokenSecretManager(tokenSecretManager);
+    } catch (Exception e) {
+      LOG.error(e.getMessage());
+      Assert.fail();
+    }
 
     subClusters = new ArrayList<>();
 
@@ -230,6 +160,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     conf.setInt("yarn.scheduler.maximum-allocation-mb", 100 * 1024);
     conf.setInt("yarn.scheduler.maximum-allocation-vcores", 100);
 
+    conf.setBoolean("hadoop.security.authentication", true);
     return conf;
   }
 
@@ -1549,5 +1480,51 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     this.getConf().setInt(YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE, 8);
     int minThreads2 = interceptor.getNumMaxThreads(this.getConf());
     Assert.assertEquals(8, minThreads2);
+  }
+
+  @Test
+  public void testGetDelegationToken() throws IOException, YarnException {
+
+    // We design such a unit test to check that the execution of the GetDelegationToken method is as expected.
+    // 1. Apply for a DelegationToken for renewer1,
+    // the Router returns the DelegationToken of the user, and the KIND of the token is RM_DELEGATION_TOKEN
+    // 2. We maintain the compatibility with RMDelegationTokenIdentifier,
+    // we can serialize the token into RMDelegationTokenIdentifier,
+    // we can get the issueDate, and compare the data in the StateStore, the data should be consistent。
+
+    // Step1. We apply for DelegationToken for renewer1
+    // Both response & delegationToken cannot be empty
+    GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
+    when(request.getRenewer()).thenReturn("renewer1");
+    GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
+    Assert.assertNotNull(response);
+    Token delegationToken = response.getRMDelegationToken();
+    Assert.assertNotNull(delegationToken);
+    Assert.assertEquals("RM_DELEGATION_TOKEN", delegationToken.getKind());
+
+    // Step2. Serialize the returned Token as RMDelegationTokenIdentifier.
+    org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
+        ConverterUtils.convertFromYarn(delegationToken, (Text) null);
+    RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
+    Assert.assertNotNull(rMDelegationTokenIdentifier);
+
+    // Step3. Verify the returned data of the token.
+    String renewer = rMDelegationTokenIdentifier.getRenewer().toString();
+    long issueDate = rMDelegationTokenIdentifier.getIssueDate();
+    long maxDate = rMDelegationTokenIdentifier.getMaxDate();
+    Assert.assertEquals("renewer1", renewer);
+
+    long tokenMaxLifetime = this.getConf().getLong(
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+    Assert.assertEquals((issueDate + tokenMaxLifetime), maxDate);
+
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    long tokenRenewInterval = this.getConf().getLong(
+            YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+            YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertEquals((issueDate + tokenRenewInterval), renewDate);
   }
 }

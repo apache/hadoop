@@ -1478,15 +1478,15 @@ public class TestRouterMetrics {
 
   @Test
   public void testCheckUserAccessToQueueRetrievedRetrieved() {
-    long totalGoodBefore = metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved();
+    long totalGoodBefore = metrics.getNumSucceededCheckUserAccessToQueueRetrieved();
     goodSubCluster.getCheckUserAccessToQueueRetrieved(150);
     Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved());
+        metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
     Assert.assertEquals(150,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getCheckUserAccessToQueueRetrieved(300);
     Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved());
+        metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
   }
