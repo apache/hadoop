@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.util.ChunkedArrayList;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -135,6 +136,28 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
   @Override
   public int getNumNodesChecked() {
     return numNodesChecked;
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getPendingRepLimit() {
+    return 0;
+  }
+
+  @Override
+  public void setPendingRepLimit(int pendingRepLimit) {
+    // nothing.
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getBlocksPerLock() {
+    return 0;
+  }
+
+  @Override
+  public void setBlocksPerLock(int blocksPerLock) {
+    // nothing.
   }
 
   @Override
