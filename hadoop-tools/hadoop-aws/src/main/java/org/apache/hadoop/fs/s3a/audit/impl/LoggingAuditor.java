@@ -245,9 +245,9 @@ public class LoggingAuditor
      * @param request given get object request
      */
     private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest) {
+      if (request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange()!=null) {
         long[] rangeValue = ((GetObjectRequest) request).getRange();
-        if (rangeValue == null || rangeValue.length == 0) {
+        if (rangeValue.length == 0) {
           return;
         }
         if (rangeValue.length != 2) {
