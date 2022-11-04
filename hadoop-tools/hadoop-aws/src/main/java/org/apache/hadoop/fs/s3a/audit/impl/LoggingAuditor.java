@@ -245,15 +245,17 @@ public class LoggingAuditor
      * @param request given get object request
      */
     private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest && ((GetObjectRequest) request).getRange()!=null) {
-        if(((GetObjectRequest) request).getRange().length!=2) {
-          WARN_INCORRECT_RANGE.warn("Range has unexpected number of elements");
+      if (request instanceof GetObjectRequest) {
+        long[] rangeValue = ((GetObjectRequest) request).getRange();
+        if (rangeValue == null || rangeValue.length == 0) {
           return;
         }
-        long[] rangeValue = ((GetObjectRequest) request).getRange();
+        if (rangeValue.length != 2) {
+          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements. Got "
+              + rangeValue.length + ". Ignoring");
+        }
         String combinedRangeValue = String.format("bytes=%d-%d", rangeValue[0], rangeValue[1]);
         referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
-
       }
     }
 
