@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -130,7 +132,9 @@ public class NodeLabelsBlock extends RouterBlock {
         row = row.td(type);
         int nActiveNMs = info.getActiveNMs();
         row = row.td(String.valueOf(nActiveNMs));
-        row.td(info.getPartitionInfo().getResourceAvailable().toString()).__();
+        PartitionInfo partitionInfo = info.getPartitionInfo();
+        ResourceInfo available = partitionInfo.getResourceAvailable();
+        row.td(available.toFormattedString()).__();
       }
     }
 
