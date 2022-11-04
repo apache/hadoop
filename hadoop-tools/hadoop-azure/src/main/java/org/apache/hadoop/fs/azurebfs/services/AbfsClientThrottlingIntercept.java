@@ -54,16 +54,6 @@ public final class AbfsClientThrottlingIntercept {
     writeThrottler = new AbfsClientThrottlingAnalyzer("write");
   }
 
-  @VisibleForTesting
-  void setReadThrottler(final AbfsClientThrottlingAnalyzer readThrottler) {
-    this.readThrottler = readThrottler;
-  }
-
-  @VisibleForTesting
-  static AbfsClientThrottlingIntercept getSingleton() {
-    return singleton;
-  }
-
   public static synchronized void initializeSingleton(boolean enableAutoThrottling) {
     if (!enableAutoThrottling) {
       return;
@@ -100,14 +90,17 @@ public final class AbfsClientThrottlingIntercept {
       case ReadFile:
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
+        long bytesToBeAddedInMetric = contentLength;
 
         long contentLengthReceived = abfsHttpOperation.getBytesReceived();
         if (abfsHttpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL
             && contentLength > contentLengthReceived) {
+          bytesToBeAddedInMetric = contentLength - contentLengthReceived;
           isFailedOperation = true;
         }
-        if (contentLength > 0) {
-          singleton.readThrottler.addBytesTransferred(contentLength,
+        if (bytesToBeAddedInMetric > 0) {
+          singleton.readThrottler.addBytesTransferred(
+              bytesToBeAddedInMetric,
               isFailedOperation);
         }
         break;
@@ -156,5 +149,15 @@ public final class AbfsClientThrottlingIntercept {
       }
     }
     return contentLength;
+  }
+
+  @VisibleForTesting
+  void setReadThrottler(final AbfsClientThrottlingAnalyzer readThrottler) {
+    this.readThrottler = readThrottler;
+  }
+
+  @VisibleForTesting
+  static AbfsClientThrottlingIntercept getSingleton() {
+    return singleton;
   }
 }
