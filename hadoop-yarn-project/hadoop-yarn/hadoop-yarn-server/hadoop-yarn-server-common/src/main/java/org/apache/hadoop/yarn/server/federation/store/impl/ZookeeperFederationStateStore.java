@@ -19,6 +19,8 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -26,10 +28,14 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.Comparator;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
+import java.nio.ByteBuffer;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -84,6 +90,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -96,6 +103,7 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,6 +139,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private final static String ROOT_ZNODE_NAME_APPLICATION = "applications";
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
   private final static String ROOT_ZNODE_NAME_RESERVATION = "reservation";
+  private final static String RM_DT_SECRET_MANAGER_ROOT = "RMDTSecretManagerRoot";
+  private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME = "RMDTMasterKeysRoot";
+  private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME = "RMDelegationTokensRoot";
+  private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME = "RMDTSequentialNumber";
+  private static final String DELEGATION_KEY_PREFIX = "DelegationKey_";
+  private static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
 
   /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
@@ -143,6 +157,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String policiesZNode;
   private String reservationsZNode;
   private int maxAppsInStateStore;
+  private int delegationTokenNodeSplitIndex = 0;
+
+  /** **/
+  private String rmDTSecretManagerRoot;
+  private String dtMasterKeysRootPath;
+  private String delegationTokensRootPath;
+  private String dtSequenceNumberPath;
+  private Map<Integer, String> rmDelegationTokenHierarchies;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -173,6 +195,33 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     appsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_APPLICATION);
     policiesZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_POLICY);
     reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
+    rmDTSecretManagerRoot = getNodePath(baseZNode, RM_DT_SECRET_MANAGER_ROOT);
+    dtMasterKeysRootPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
+    delegationTokensRootPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    rmDelegationTokenHierarchies = new HashMap<>(5);
+    rmDelegationTokenHierarchies.put(0, delegationTokensRootPath);
+    for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+      rmDelegationTokenHierarchies.put(splitIndex,
+          getNodePath(delegationTokensRootPath, Integer.toString(splitIndex)));
+    }
+    dtSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
+
+    delegationTokenNodeSplitIndex =
+        conf.getInt(YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX,
+        YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
+
+    if (delegationTokenNodeSplitIndex < 0
+            || delegationTokenNodeSplitIndex > 4) {
+      LOG.info("Invalid value " + delegationTokenNodeSplitIndex + " for config "
+              + YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX
+              + " specified.  Resetting it to " +
+              YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
+      delegationTokenNodeSplitIndex =
+              YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX;
+    }
 
     // Create base znode for each entity
     try {
@@ -181,6 +230,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
       zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
+      zkManager.createRootDirRecursively(rmDTSecretManagerRoot, zkAcl);
+      zkManager.createRootDirRecursively(dtMasterKeysRootPath, zkAcl);
+      zkManager.createRootDirRecursively(delegationTokensRootPath, zkAcl);
+      for (int splitIndex = 1; splitIndex <= 4; splitIndex++) {
+        zkManager.createRootDirRecursively(rmDelegationTokenHierarchies.get(splitIndex), zkAcl);
+      }
+      zkManager.createRootDirRecursively(dtSequenceNumberPath, zkAcl);
+
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -887,15 +944,35 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+  public synchronized RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+    String nodeCreatePath = getNodePath(dtMasterKeysRootPath,
+            DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
+    LOG.debug("Storing RMDelegationKey_{}", delegationKey.getKeyId());
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    try(DataOutputStream fsOut = new DataOutputStream(os)) {
+      delegationKey.write(fsOut);
+      put(nodeCreatePath, os.toByteArray(), false);
+    }
+    return RouterMasterKeyResponse.newInstance(masterKey);
   }
 
   @Override
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+    String nodeRemovePath = getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
+        + delegationKey.getKeyId());
+    LOG.debug("Removing RMDelegationKey_{}", delegationKey.getKeyId());
+    try{
+      zkManager.delete(nodeRemovePath);
+    }catch (Exception e){
+      throw new YarnException(e);
+    }
+    return RouterMasterKeyResponse.newInstance(masterKey);
   }
 
   @Override
@@ -926,5 +1003,54 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
+  }
+
+  private static DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
+    ByteBuffer keyByteBuf = masterKey.getKeyBytes();
+    byte[] keyBytes = new byte[keyByteBuf.remaining()];
+    keyByteBuf.get(keyBytes);
+    return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
+  }
+
+  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
+      boolean createParentIfNotExists) throws Exception {
+    return getLeafDelegationTokenNodePath(rmDTSequenceNumber,
+        createParentIfNotExists, delegationTokenNodeSplitIndex);
+  }
+
+  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
+      boolean createParentIfNotExists, int split) throws Exception {
+    String nodeName = DELEGATION_TOKEN_PREFIX;
+    if (split == 0) {
+      nodeName += rmDTSequenceNumber;
+    } else {
+      nodeName += String.format("%04d", rmDTSequenceNumber);
+    }
+    return getLeafZnodePath(nodeName, rmDelegationTokenHierarchies.get(split),
+            split, createParentIfNotExists);
+  }
+
+  private String getLeafZnodePath(String nodeName, String rootNode,
+      int splitIdx, boolean createParentIfNotExists) throws Exception {
+    if (splitIdx == 0) {
+      return getNodePath(rootNode, nodeName);
+    }
+    int split = nodeName.length() - splitIdx;
+    String rootNodePath =
+            getNodePath(rootNode, nodeName.substring(0, split));
+    if (createParentIfNotExists && !exists(rootNodePath)) {
+      try {
+        zkManager.create(rootNodePath);
+      } catch (KeeperException.NodeExistsException e) {
+        LOG.debug("Unable to create app parent node {} as it already exists.",
+                rootNodePath);
+      }
+    }
+    return getNodePath(rootNodePath, nodeName.substring(split));
+  }
+
+  @VisibleForTesting
+  boolean exists(final String path) throws Exception {
+    return zkManager.exists(path);
   }
 }
