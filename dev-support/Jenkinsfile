@@ -270,7 +270,11 @@ pipeline {
 //                     '''
 
 
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin"'
 //                     sh '''#!/usr/bin/env bash
 //
 //                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
