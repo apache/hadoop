@@ -179,6 +179,7 @@ function run_ci() {
   # Dockerfile since we don't want to use the auto-pulled version.
   YETUS_ARGS+=("--docker")
   YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
+  YETUS_ARGS+=("--dockercmd=/f/jenkins/tools/docker/resources/bin/docker.exe")
   YETUS_ARGS+=("--mvn-custom-repos")
 
   # effectively treat dev-suport as a custom maven module

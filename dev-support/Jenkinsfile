@@ -263,34 +263,34 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-//                     bat '''
-//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
-//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
-//                     '''
+                    bat '''
+                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
+                    '''
 
 //                     sh '''#!/usr/bin/env bash
 //
 //                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
 //                     "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
 //                     '''
-                    bat 'dir \\'
-                    bat 'cd'
-                    bat 'dir F:'
-                    bat 'dir F:\\jenkins'
-                    bat 'dir F:\\jenkins\\tools'
-                    bat 'dir \\Microsoft'
-                    bat 'dir \\"Program Files"'
-                    bat 'dir \\"Program Files (x86)"'
-                    bat 'dir \\"Program Files (x86)\\Microsoft Visual Studio"'
-                    bat 'echo %PATH%'
-                    bat 'where git'
-                    bat 'where powershell.exe'
-                    bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
-                    bat 'dir F:\\jenkins\\tools\\docker\\resources\\bin'
-                    bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\docker.exe --version'
-                    bat 'where docker.exe'
-                    bat 'where docker'
-                    bat 'docker --version'
+//                     bat 'dir \\'
+//                     bat 'cd'
+//                     bat 'dir F:'
+//                     bat 'dir F:\\jenkins'
+//                     bat 'dir F:\\jenkins\\tools'
+//                     bat 'dir \\Microsoft'
+//                     bat 'dir \\"Program Files"'
+//                     bat 'dir \\"Program Files (x86)"'
+//                     bat 'dir \\"Program Files (x86)\\Microsoft Visual Studio"'
+//                     bat 'echo %PATH%'
+//                     bat 'where git'
+//                     bat 'where powershell.exe'
+//                     bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
+//                     bat 'dir F:\\jenkins\\tools\\docker\\resources\\bin'
+//                     bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\docker.exe --version'
+//                     bat 'where docker.exe'
+//                     bat 'where docker'
+//                     bat 'docker --version'
                 }
             }
 
