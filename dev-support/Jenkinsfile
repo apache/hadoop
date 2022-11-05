@@ -286,7 +286,9 @@ pipeline {
                     bat 'where git'
                     bat 'where powershell.exe'
                     bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
-                    bat 'dir F:\\jenkins\\tools\\docker'
+                    bat 'dir F:\\jenkins\\tools\\docker\\resources\\bin'
+                    bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\docker.exe --version'
+                    bat 'where docker.exe'
                     bat 'where docker'
                     bat 'docker --version'
                 }
