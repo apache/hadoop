@@ -263,13 +263,14 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {
-                    bat '''
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin/docker"
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin/docker.exe"
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
-                    C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
-                    '''
+//                     bat '''
+//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin/docker.exe"
+//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+//                     C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
+//                     '''
 
+
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f"'
 //                     sh '''#!/usr/bin/env bash
 //
 //                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
