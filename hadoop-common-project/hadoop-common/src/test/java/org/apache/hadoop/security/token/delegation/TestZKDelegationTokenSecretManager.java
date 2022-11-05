@@ -84,17 +84,17 @@ public class TestZKDelegationTokenSecretManager {
   }
 
   protected Configuration getSecretConf(String connectString) {
-   Configuration conf = new Configuration();
-   conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
-   conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
-   conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
-   conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
-   conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
-   return conf;
+    Configuration conf = new Configuration();
+    conf.setBoolean(DelegationTokenManager.ENABLE_ZK_KEY, true);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_CONNECTION_STRING, connectString);
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZNODE_WORKING_PATH, "testPath");
+    conf.set(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_AUTH_TYPE, "none");
+    conf.setLong(ZKDelegationTokenSecretManager.ZK_DTSM_ZK_SHUTDOWN_TIMEOUT, 100);
+    conf.setLong(DelegationTokenManager.UPDATE_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.MAX_LIFETIME, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.RENEW_INTERVAL, DAY_IN_SECS);
+    conf.setLong(DelegationTokenManager.REMOVAL_SCAN_INTERVAL, DAY_IN_SECS);
+    return conf;
   }
 
   @SuppressWarnings("unchecked")
@@ -344,8 +344,8 @@ public class TestZKDelegationTokenSecretManager {
     tm1 = new DelegationTokenManager(conf, new Text("foo"));
     tm1.init();
 
-    Token<DelegationTokenIdentifier> token =
-      (Token<DelegationTokenIdentifier>)
+    Token<DelegationTokenIdentifier> token = 
+        (Token<DelegationTokenIdentifier>)
     tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
     Assert.assertNotNull(token);
     tm1.destroy();
@@ -358,8 +358,8 @@ public class TestZKDelegationTokenSecretManager {
     Configuration conf = getSecretConf(connectString);
     RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
     String userPass = "myuser:mypass";
-    final ACL digestACL = new ACL(ZooDefs.Perms.ALL, new Id("digest",
-      DigestAuthenticationProvider.generateDigest(userPass)));
+    final ACL digestACL = new ACL(ZooDefs.Perms.ALL, new Id("digest", 
+        DigestAuthenticationProvider.generateDigest(userPass)));
     ACLProvider digestAclProvider = new ACLProvider() {
       @Override
       public List<ACL> getAclForPath(String path) { return getDefaultAcl(); }
@@ -373,12 +373,12 @@ public class TestZKDelegationTokenSecretManager {
     };
 
     CuratorFramework curatorFramework =
-      CuratorFrameworkFactory.builder()
-        .connectString(connectString)
-        .retryPolicy(retryPolicy)
-        .aclProvider(digestAclProvider)
-        .authorization("digest", userPass.getBytes("UTF-8"))
-        .build();
+        CuratorFrameworkFactory.builder()
+          .connectString(connectString)
+          .retryPolicy(retryPolicy)
+          .aclProvider(digestAclProvider)
+          .authorization("digest", userPass.getBytes("UTF-8"))
+          .build();
     curatorFramework.start();
     ZKDelegationTokenSecretManager.setCurator(curatorFramework);
     tm1 = new DelegationTokenManager(conf, new Text("bla"));

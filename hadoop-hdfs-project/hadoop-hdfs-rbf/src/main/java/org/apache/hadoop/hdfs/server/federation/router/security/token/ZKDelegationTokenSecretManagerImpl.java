@@ -30,8 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
@@ -193,7 +191,7 @@ public class ZKDelegationTokenSecretManagerImpl extends
       // 2) remove tokens in local cache but not in zk anymore
       for (AbstractDelegationTokenIdentifier ident : currentTokens.keySet()) {
         if (!localTokenCache.contains(ident)) {
-            currentTokens.remove(ident);
+          currentTokens.remove(ident);
         }
       }
     }

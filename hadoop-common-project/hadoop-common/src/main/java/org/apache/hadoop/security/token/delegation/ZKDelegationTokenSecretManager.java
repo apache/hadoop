@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -261,8 +260,8 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // If namespace parents are implicitly created, they won't have ACLs.
       // So, let's explicitly create them.
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
-      EnsurePath ensureNs =
-        nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
+      EnsurePath ensureNs = 
+          nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
       try {
         ensureNs.ensure(nullNsFw.getZookeeperClient());
       } catch (Exception e) {
