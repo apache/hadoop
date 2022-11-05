@@ -1584,8 +1584,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     // RM_DELEGATION_TOKEN
     //
     // 2. We maintain the compatibility with RMDelegationTokenIdentifier,
-    // we can serialize the token into RMDelegationTokenIdentifier,
-    // we can get the issueDate, and compare the data in the StateStore,
+    // we can serialize the token into RMDelegationTokenIdentifier.
+    //
+    // 3. We can get the issueDate, and compare the data in the StateStore,
     // the data should be consistent.
 
     // Step1. We apply for DelegationToken for renewer1
@@ -1616,7 +1617,12 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals((issueDate + tokenMaxLifetime), maxDate);
 
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Assert.assertNotNull(managerState);
+
     Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+
     long tokenRenewInterval = this.getConf().getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
@@ -1626,22 +1632,23 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testRenewDelegationToken() throws IOException, YarnException {
-
     // We design such a unit test to check
     // that the execution of the GetDelegationToken method is as expected
     // 1. Call GetDelegationToken to apply for delegationToken.
     // 2. Call renewDelegationToken to refresh delegationToken.
     // By looking at the code of AbstractDelegationTokenSecretManager#renewToken,
     // we know that renewTime is calculated as Math.min(id.getMaxDate(), now + tokenRenewInterval)
-    // so renewTime will be less than or equal to maxDate
+    // so renewTime will be less than or equal to maxDate.
+    // 3. We will compare whether the expirationTime returned to the
+    // client is consistent with the renewDate in the stateStore.
 
+    // Step1. Call GetDelegationToken to apply for delegationToken.
     GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
     when(request.getRenewer()).thenReturn("renewer2");
     GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
     Assert.assertNotNull(response);
     Token delegationToken = response.getRMDelegationToken();
 
-    // Step2. Serialize the returned Token as RMDelegationTokenIdentifier.
     org.apache.hadoop.security.token.Token<RMDelegationTokenIdentifier> token =
         ConverterUtils.convertFromYarn(delegationToken, (Text) null);
     RMDelegationTokenIdentifier rMDelegationTokenIdentifier = token.decodeIdentifier();
@@ -1649,6 +1656,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     long maxDate = rMDelegationTokenIdentifier.getMaxDate();
     Assert.assertEquals("renewer2", renewer);
 
+    // Step2. Call renewDelegationToken to refresh delegationToken.
     RenewDelegationTokenRequest renewRequest = Records.newRecord(RenewDelegationTokenRequest.class);
     renewRequest.setDelegationToken(delegationToken);
     RenewDelegationTokenResponse renewResponse = interceptor.renewDelegationToken(renewRequest);
@@ -1656,5 +1664,17 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     long expDate = renewResponse.getNextExpirationTime();
     Assert.assertTrue(expDate <= maxDate);
+
+    // Step3. Compare whether the expirationTime returned to
+    // the client is consistent with the renewDate in the stateStore
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertTrue(delegationTokenState.containsKey(rMDelegationTokenIdentifier));
+    long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
+    Assert.assertEquals(expDate, renewDate);
   }
+
+
+
 }
