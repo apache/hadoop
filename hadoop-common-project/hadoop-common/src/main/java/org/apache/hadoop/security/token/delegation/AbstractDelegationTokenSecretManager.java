@@ -58,8 +58,8 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public abstract class AbstractDelegationTokenSecretManager<TokenIdent 
-    extends AbstractDelegationTokenIdentifier> 
+public abstract class AbstractDelegationTokenSecretManager<TokenIdent
+    extends AbstractDelegationTokenIdentifier>
     extends SecretManager<TokenIdent> {
   private static final Logger LOG = LoggerFactory
       .getLogger(AbstractDelegationTokenSecretManager.class);

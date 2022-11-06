@@ -260,7 +260,7 @@ public abstract class ZKDelegationTokenSecretManager<TokenIdent extends Abstract
       // If namespace parents are implicitly created, they won't have ACLs.
       // So, let's explicitly create them.
       CuratorFramework nullNsFw = zkClient.usingNamespace(null);
-      EnsurePath ensureNs = 
+      EnsurePath ensureNs =
           nullNsFw.newNamespaceAwareEnsurePath("/" + zkClient.getNamespace());
       try {
         ensureNs.ensure(nullNsFw.getZookeeperClient());

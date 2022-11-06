@@ -344,7 +344,7 @@ public class TestZKDelegationTokenSecretManager {
     tm1 = new DelegationTokenManager(conf, new Text("foo"));
     tm1.init();
 
-    Token<DelegationTokenIdentifier> token = 
+    Token<DelegationTokenIdentifier> token =
         (Token<DelegationTokenIdentifier>)
     tm1.createToken(UserGroupInformation.getCurrentUser(), "foo");
     Assert.assertNotNull(token);
@@ -358,7 +358,7 @@ public class TestZKDelegationTokenSecretManager {
     Configuration conf = getSecretConf(connectString);
     RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
     String userPass = "myuser:mypass";
-    final ACL digestACL = new ACL(ZooDefs.Perms.ALL, new Id("digest", 
+    final ACL digestACL = new ACL(ZooDefs.Perms.ALL, new Id("digest",
         DigestAuthenticationProvider.generateDigest(userPass)));
     ACLProvider digestAclProvider = new ACLProvider() {
       @Override
