@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.AMRMClientRelayer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.AsyncCallback;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -426,7 +427,7 @@ public class UnmanagedApplicationManager {
 
     ContainerLaunchContext amContainer =
         this.recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     context.setResource(resource);
     context.setAMContainerSpec(amContainer);
     submitRequest.setApplicationSubmissionContext(context);
