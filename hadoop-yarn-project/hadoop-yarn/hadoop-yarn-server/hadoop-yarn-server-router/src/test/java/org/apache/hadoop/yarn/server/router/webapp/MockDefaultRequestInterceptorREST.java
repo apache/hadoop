@@ -44,6 +44,7 @@ import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
@@ -96,6 +97,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityLevel;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -136,7 +138,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDelet
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -150,8 +151,11 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mockito.Mockito.mock;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -1061,7 +1065,7 @@ public class MockDefaultRequestInterceptorREST
   public void setMockRM(MockRM mockRM) {
     this.mockRM = mockRM;
   }
-  
+
   @Override
   public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
 
@@ -1070,6 +1074,7 @@ public class MockDefaultRequestInterceptorREST
     nodeLabelInfo.setName("Test-Label");
     nodeLabelInfo.setActiveNMs(10);
     PartitionInfo partitionInfo = new PartitionInfo();
+    nodeLabelInfo.setPartitionInfo(partitionInfo);
 
     NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
     nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
@@ -1172,8 +1177,8 @@ public class MockDefaultRequestInterceptorREST
       if (callerUGI != null && !this.resourceManager.getResourceScheduler().checkAccess(
               callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {
         throw new ForbiddenException(
-                "User=" + callerUGI.getUserName() + " doesn't haven access to queue="
-                        + queue + " so it cannot check ACLs for other users.");
+            "User=" + callerUGI.getUserName() + " doesn't haven access to queue="
+            + queue + " so it cannot check ACLs for other users.");
       }
 
       // Create UGI for the to-be-checked user.
