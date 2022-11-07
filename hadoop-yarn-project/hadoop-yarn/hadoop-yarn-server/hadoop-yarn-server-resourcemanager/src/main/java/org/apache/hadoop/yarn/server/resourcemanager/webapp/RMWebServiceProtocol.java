@@ -325,6 +325,8 @@ public interface RMWebServiceProtocol {
    */
   NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException;
 
+  NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException;
+
   /**
    * This method retrieves all the node within multiple node labels in the
    * cluster, and it is reachable by using {@link RMWSConsts#LABEL_MAPPINGS}.
