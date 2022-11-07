@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-public class MockAbfsClientThrottlingAnalyzer extends AbfsClientThrottlingAnalyzer {
-  private int failedInstances = 0;
+public class MockAbfsClientThrottlingAnalyzer
+    extends AbfsClientThrottlingAnalyzer {
+
+  private ThreadLocal<Integer> failedInstances = new ThreadLocal<>();
 
   public MockAbfsClientThrottlingAnalyzer(final String name)
       throws IllegalArgumentException {
@@ -29,13 +31,19 @@ public class MockAbfsClientThrottlingAnalyzer extends AbfsClientThrottlingAnalyz
   @Override
   public void addBytesTransferred(final long count,
       final boolean isFailedOperation) {
-    if(isFailedOperation) {
-      failedInstances++;
+    if (isFailedOperation) {
+      Integer current = failedInstances.get();
+      if (current == null) {
+        current = 1;
+      } else {
+        current++;
+      }
+      failedInstances.set(current);
     }
     super.addBytesTransferred(count, isFailedOperation);
   }
 
-  public int getFailedInstances() {
-    return failedInstances;
+  public Integer getFailedInstances() {
+    return failedInstances.get();
   }
 }

@@ -157,6 +157,11 @@ public final class AbfsClientThrottlingIntercept {
   }
 
   @VisibleForTesting
+  AbfsClientThrottlingAnalyzer getReadThrottler() {
+    return readThrottler;
+  }
+
+  @VisibleForTesting
   static AbfsClientThrottlingIntercept getSingleton() {
     return singleton;
   }

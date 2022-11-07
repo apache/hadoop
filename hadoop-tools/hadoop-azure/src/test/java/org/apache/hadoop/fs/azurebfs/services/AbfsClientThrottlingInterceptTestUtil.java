@@ -24,8 +24,14 @@ public class AbfsClientThrottlingInterceptTestUtil {
     return AbfsClientThrottlingIntercept.getSingleton();
   }
 
-  public static void setReadAnalyzer(final AbfsClientThrottlingIntercept intercept,
+  public synchronized static AbfsClientThrottlingAnalyzer setReadAnalyzer(final AbfsClientThrottlingIntercept intercept,
       final AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
+    if (intercept.getReadThrottler() != null
+        && intercept.getReadThrottler().getClass()
+        == MockAbfsClientThrottlingAnalyzer.class) {
+      return intercept.getReadThrottler();
+    }
     intercept.setReadThrottler(abfsClientThrottlingAnalyzer);
+    return abfsClientThrottlingAnalyzer;
   }
 }

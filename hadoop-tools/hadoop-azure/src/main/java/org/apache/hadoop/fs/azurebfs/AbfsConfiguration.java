@@ -1092,4 +1092,9 @@ public class AbfsConfiguration{
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
 
+  @VisibleForTesting
+  void setReadAheadQueueDepth(int depth) {
+    readAheadQueueDepth = depth;
+  }
+
 }
