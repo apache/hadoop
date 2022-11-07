@@ -38,74 +38,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetLabelsToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeLabelsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceTypeInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FailApplicationAttemptResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAllResourceProfilesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetResourceProfileResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetAttributesToNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodeAttributesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNodesToAttributesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewReservationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.*;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1632,6 +1565,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
   @Test
   public void testRenewDelegationToken() throws IOException, YarnException {
+
     // We design such a unit test to check
     // that the execution of the GetDelegationToken method is as expected
     // 1. Call GetDelegationToken to apply for delegationToken.
@@ -1675,6 +1609,34 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     Assert.assertEquals(expDate, renewDate);
   }
 
+  @Test
+  public void testCancelDelegationToken() throws IOException, YarnException {
 
+    // We design such a unit test to check
+    // that the execution of the CancelDelegationToken method is as expected
+    // 1. Call GetDelegationToken to apply for delegationToken.
+    // 2. Call CancelDelegationToken to cancel delegationToken.
+    // 3. Query the data in the StateStore and confirm that the Delegation has been deleted.
 
+    // Step1. Call GetDelegationToken to apply for delegationToken.
+    GetDelegationTokenRequest request = mock(GetDelegationTokenRequest.class);
+    when(request.getRenewer()).thenReturn("renewer3");
+    GetDelegationTokenResponse response = interceptor.getDelegationToken(request);
+    Assert.assertNotNull(response);
+    Token delegationToken = response.getRMDelegationToken();
+
+    // Step2. Call CancelDelegationToken to cancel delegationToken.
+    CancelDelegationTokenRequest cancelTokenRequest =
+        CancelDelegationTokenRequest.newInstance(delegationToken);
+    CancelDelegationTokenResponse cancelTokenResponse =
+        interceptor.cancelDelegationToken(cancelTokenRequest);
+    Assert.assertNotNull(cancelTokenResponse);
+
+    // Step3. Query the data in the StateStore and confirm that the Delegation has been deleted.
+    // At this point, the size of delegationTokenState should be 0.
+    RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
+    Map<RMDelegationTokenIdentifier, Long> delegationTokenState = managerState.getTokenState();
+    Assert.assertNotNull(delegationTokenState);
+    Assert.assertEquals(0, delegationTokenState.size());
+  }
 }
