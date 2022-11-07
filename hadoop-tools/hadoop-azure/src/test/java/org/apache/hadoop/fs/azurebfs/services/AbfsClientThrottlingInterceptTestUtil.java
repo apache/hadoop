@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-public class AbfsClientThrottlingInterceptTestUtil {
+public final class AbfsClientThrottlingInterceptTestUtil {
 
   private AbfsClientThrottlingInterceptTestUtil() {}
 
