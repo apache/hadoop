@@ -241,7 +241,7 @@ public class LoggingAuditor
     private final HttpReferrerAuditHeader referrer;
 
     /**
-     * Attach Range of data for GetObject Request
+     * Attach Range of data for GetObject Request.
      * @param request given get object request
      */
     private void attachRangeFromRequest(AmazonWebServiceRequest request) {

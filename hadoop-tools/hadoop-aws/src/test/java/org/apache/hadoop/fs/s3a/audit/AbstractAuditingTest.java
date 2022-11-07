@@ -141,7 +141,7 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a GetObject request and modify it before passing it through auditor
+   * Create a GetObject request and modify it before passing it through auditor.
    * @param modifyRequest Consumer Interface for changing the request before passing to the auditor
    * @return the request
    */

@@ -313,7 +313,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   }
 
   /**
-   * Verify that correct range is getting published in header
+   * Verify that correct range is getting published in header.
    */
   @Test
   public void testGetObjectRange() throws Throwable {
@@ -332,7 +332,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   }
 
   /**
-   * Verify that no range is getting added to the header in request without range
+   * Verify that no range is getting added to the header in request without range.
    */
   @Test
   public void testGetObjectWithoutRange() throws Throwable {
