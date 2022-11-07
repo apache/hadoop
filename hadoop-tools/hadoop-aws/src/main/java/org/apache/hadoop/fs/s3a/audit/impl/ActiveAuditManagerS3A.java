@@ -405,7 +405,7 @@ public final class ActiveAuditManagerS3A
     List<ExecutionInterceptor> executionInterceptors = new ArrayList<>();
     executionInterceptors.add(this);
 
-    final Class<?>[] handlers = getConfig().getClasses(AUDIT_REQUEST_HANDLERS);
+    final String handlers = getConfig().get(AUDIT_REQUEST_HANDLERS);
     if (handlers != null) {
       V2Migration.v1RequestHandlersUsed();
     }
