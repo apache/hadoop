@@ -188,7 +188,7 @@ public final class ConfigurationKeys {
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 
   /**
-   * Enable or disable readahead buffer in AbfsInputStream. It is enabled by default.
+   * Enable or disable readahead buffer in AbfsInputStream.
    * Value: {@value}.
    */
   public static final String FS_AZURE_ENABLE_READAHEAD = "fs.azure.enable.readahead";

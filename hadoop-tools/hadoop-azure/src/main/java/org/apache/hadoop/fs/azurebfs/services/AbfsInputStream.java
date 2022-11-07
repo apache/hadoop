@@ -748,7 +748,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   public boolean isReadAheadEnabled() {
     return readAheadEnabled;
-
   }
 
   @VisibleForTesting

@@ -80,7 +80,6 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     return this;
   }
 
-
   public AbfsInputStreamContext withReadAheadRange(
           final int readAheadRange) {
     this.readAheadRange = readAheadRange;

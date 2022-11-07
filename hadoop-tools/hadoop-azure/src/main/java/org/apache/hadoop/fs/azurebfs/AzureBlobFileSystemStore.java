@@ -806,15 +806,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
         .orElse(false);
     // readahead is cluster config unless openfile explicitly sets it.
-    boolean readahead = abfsConfiguration.isReadAheadEnabled();
-    boolean readAheadEnabled = options
-            .map(c -> c.getBoolean(FS_AZURE_ENABLE_READAHEAD, readahead))
-            .orElse(readahead);
     return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(abfsConfiguration.getReadBufferSize())
             .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
             .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
-            .isReadAheadEnabled(readAheadEnabled)
+            .isReadAheadEnabled(abfsConfiguration.isReadAheadEnabled())
             .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
             .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withReadAheadRange(abfsConfiguration.getReadAheadRange())
