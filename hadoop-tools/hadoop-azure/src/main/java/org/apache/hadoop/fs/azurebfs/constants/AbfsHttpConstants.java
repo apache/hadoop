@@ -112,5 +112,7 @@ public final class AbfsHttpConstants {
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
 
+  public static final String CONNECTION_RESET = "Connection reset";
+
   private AbfsHttpConstants() {}
 }

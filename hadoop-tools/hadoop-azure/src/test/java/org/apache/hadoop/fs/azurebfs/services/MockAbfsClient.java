@@ -63,7 +63,7 @@ public class MockAbfsClient extends AbfsClient {
       final int bufferOffset,
       final int bufferLength,
       final String sasTokenForReuse) {
-    if(AbfsRestOperationType.ReadFile == operationType) {
+    if (AbfsRestOperationType.ReadFile == operationType) {
       MockAbfsRestOperation op = new MockAbfsRestOperation(
           operationType,
           this,

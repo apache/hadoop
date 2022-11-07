@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CONNECTION_RESET;
+
 /**
  * The AbfsRestOperation for Rest AbfsClient.
  */
@@ -317,9 +319,9 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
-      if (ex instanceof SocketException && "Connection reset".equals(
+      if (ex instanceof SocketException && CONNECTION_RESET.equals(
           ex.getMessage())) {
-        if(httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL) {
+        if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL) {
           result = httpOperation;
           return true;
         }

@@ -23,6 +23,7 @@ import java.net.URL;
 import java.util.List;
 
 public class MockAbfsRestOperation extends AbfsRestOperation {
+
   private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;
 
   public MockAbfsRestOperation(final AbfsRestOperationType operationType,
@@ -40,7 +41,8 @@ public class MockAbfsRestOperation extends AbfsRestOperation {
 
   @Override
   AbfsHttpOperation getHttpOperation() throws IOException {
-    MockHttpOperation op = new MockHttpOperation(getUrl(), getMethod(), getRequestHeaders());
+    MockHttpOperation op = new MockHttpOperation(getUrl(), getMethod(),
+        getRequestHeaders());
     op.setMockHttpOperationTestIntercept(mockHttpOperationTestIntercept);
     return op;
   }

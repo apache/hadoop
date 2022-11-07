@@ -20,11 +20,13 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 public class AbfsClientThrottlingInterceptTestUtil {
 
+  private AbfsClientThrottlingInterceptTestUtil() {}
+
   public static AbfsClientThrottlingIntercept get() {
     return AbfsClientThrottlingIntercept.getSingleton();
   }
 
-  public synchronized static AbfsClientThrottlingAnalyzer setReadAnalyzer(final AbfsClientThrottlingIntercept intercept,
+  public static synchronized AbfsClientThrottlingAnalyzer setReadAnalyzer(final AbfsClientThrottlingIntercept intercept,
       final AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
     if (intercept.getReadThrottler() != null
         && intercept.getReadThrottler().getClass()

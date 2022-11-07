@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.services.MockHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult;
 
+import static java.net.HttpURLConnection.HTTP_PARTIAL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 public class ITestPartialRead extends AbstractAbfsIntegrationTest {
@@ -113,8 +114,8 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         MockHttpOperationTestInterceptResult
             mockHttpOperationTestInterceptResult
             = new MockHttpOperationTestInterceptResult();
-        mockHttpOperationTestInterceptResult.status = 206;
-        mockHttpOperationTestInterceptResult.bytesRead = ONE_MB;
+        mockHttpOperationTestInterceptResult.setStatus(HTTP_PARTIAL);
+        mockHttpOperationTestInterceptResult.setBytesRead(ONE_MB);
         callCount++;
         return mockHttpOperationTestInterceptResult;
       }
@@ -153,7 +154,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     LOG.info("length: " + length + "; offset: " + offset);
     mockHttpOperation.processResponseSuperCall(buffer, offset, length);
     Assert.assertTrue(
-        mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL
+        mockHttpOperation.getStatusCode() == HTTP_PARTIAL
             || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK);
     int iterator = 0;
     int currPointer = actualServerReadByte.currPointer;
@@ -205,10 +206,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         MockHttpOperationTestInterceptResult
             mockHttpOperationTestInterceptResult
             = new MockHttpOperationTestInterceptResult();
-        mockHttpOperationTestInterceptResult.status = 206;
-        mockHttpOperationTestInterceptResult.bytesRead = ONE_MB;
-        mockHttpOperationTestInterceptResult.exception = new SocketException(
-            "Connection reset");
+        mockHttpOperationTestInterceptResult.setStatus(HTTP_PARTIAL);
+        mockHttpOperationTestInterceptResult.setBytesRead(ONE_MB);
+        mockHttpOperationTestInterceptResult.setException(new SocketException(
+            "Connection reset"));
         callCount++;
         return mockHttpOperationTestInterceptResult;
       }
@@ -238,7 +239,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         analyzerToBeAsserted.getFailedInstances().intValue());
   }
 
-  class ActualServerReadByte {
+  private class ActualServerReadByte {
 
     byte[] bytes;
 

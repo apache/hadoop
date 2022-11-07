@@ -21,7 +21,31 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 
 public class MockHttpOperationTestInterceptResult {
-  public int bytesRead;
-  public int status;
-  public IOException exception;
+  private int bytesRead;
+  private int status;
+  private IOException exception;
+
+  public int getBytesRead() {
+    return bytesRead;
+  }
+
+  public void setBytesRead(final int bytesRead) {
+    this.bytesRead = bytesRead;
+  }
+
+  public int getStatus() {
+    return status;
+  }
+
+  public void setStatus(final int status) {
+    this.status = status;
+  }
+
+  public IOException getException() {
+    return exception;
+  }
+
+  public void setException(final IOException exception) {
+    this.exception = exception;
+  }
 }

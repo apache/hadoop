@@ -28,6 +28,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -63,7 +64,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private String maskedEncodedUrl;
 
   private HttpURLConnection connection;
-  protected int statusCode;
+  private int statusCode;
   private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage  = "";
@@ -73,7 +74,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   // metrics
   private int bytesSent;
-  protected long bytesReceived;
+  private long bytesReceived;
 
   // optional trace enabled metrics
   private final boolean isTraceEnabled;
@@ -562,5 +563,15 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     public String getResponseHeader(final String httpHeader) {
       return "";
     }
+  }
+
+  @VisibleForTesting
+  protected void setStatusCode(int statusCode) {
+    this.statusCode = statusCode;
+  }
+
+  @VisibleForTesting
+  protected void setBytesReceived(long bytesReceived) {
+    this.bytesReceived = bytesReceived;
   }
 }
