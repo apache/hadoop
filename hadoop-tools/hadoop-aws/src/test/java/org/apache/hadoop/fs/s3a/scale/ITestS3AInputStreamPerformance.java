@@ -501,7 +501,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     writeDataset(fs, dataFile, skipDataset, skipDataset.length, 1024,
         false);
 
-    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead);
+    in = openDataFile(fs, dataFile, S3AInputPolicy.Random, readahead, 256);
 
     in.seek(10);
     assertEquals("current byte read", 10, in.read());
