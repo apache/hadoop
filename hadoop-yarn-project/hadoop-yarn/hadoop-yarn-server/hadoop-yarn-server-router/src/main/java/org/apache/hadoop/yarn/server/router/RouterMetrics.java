@@ -863,7 +863,7 @@ public final class RouterMetrics {
   public double getLatencySucceededRefreshQueuesRetrieved() {
     return totalSucceededRefreshQueuesRetrieved.lastStat().mean();
   }
-  
+
   @VisibleForTesting
   public double getLatencySucceededGetRMNodeLabelsRetrieved() {
     return totalSucceededGetRMNodeLabelsRetrieved.lastStat().mean();
@@ -1059,7 +1059,7 @@ public final class RouterMetrics {
   public int getRefreshQueuesFailedRetrieved() {
     return numRefreshQueuesFailedRetrieved.value();
   }
-  
+
   public int getRMNodeLabelsFailedRetrieved() {
     return numGetRMNodeLabelsFailedRetrieved.value();
   }
@@ -1272,7 +1272,7 @@ public final class RouterMetrics {
     totalSucceededRefreshQueuesRetrieved.add(duration);
     getRefreshQueuesLatency.add(duration);
   }
-  
+
   public void succeededGetRMNodeLabelsRetrieved(long duration) {
     totalSucceededGetRMNodeLabelsRetrieved.add(duration);
     getRMNodeLabelsLatency.add(duration);
@@ -1446,7 +1446,7 @@ public final class RouterMetrics {
   public void incrRefreshQueuesFailedRetrieved() {
     numRefreshQueuesFailedRetrieved.incr();
   }
-  
+
   public void incrGetRMNodeLabelsFailedRetrieved() {
     numGetRMNodeLabelsFailedRetrieved.incr();
   }
