@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
 /**
  * Interface for statistics for the AbfsInputStream.
@@ -99,7 +99,7 @@ public interface AbfsInputStreamStatistics extends IOStatisticsSource {
    * Get the IOStatisticsStore instance from AbfsInputStreamStatistics.
    * @return instance of IOStatisticsStore which extends IOStatistics.
    */
-  IOStatistics getIOStatistics();
+  IOStatisticsStore getIOStatistics();
 
   /**
    * Makes the string of all the AbfsInputStream statistics.

@@ -28,14 +28,18 @@ import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
@@ -45,10 +49,14 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BLOCKS_DISCARDED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -62,7 +70,13 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 
 /**
- * Unit test AbfsInputStream.
+ * Unit test AbfsInputStream, especially the ReadAheadManager.
+ * Note 1: even though this uses mocking to simulate the client,
+ * it is still an integration test suite and will fail if offline.
+ *
+ * Note 2: maven runs different test methods in parallel, so
+ * making assertions about the state of the shared object is
+ * fairly dangerous.
  */
 public class TestAbfsInputStream extends
     AbstractAbfsIntegrationTest {
@@ -81,6 +95,8 @@ public class TestAbfsInputStream extends
   private static final int INCREASED_READ_BUFFER_AGE_THRESHOLD =
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAbfsInputStream.class);
 
   @Override
   public void teardown() throws Exception {
@@ -118,7 +134,11 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
+        inputStreamContext
+            .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
+            .withReadBufferSize(ONE_KB)
+            .withReadAheadQueueDepth(10)
+            .withReadAheadBlockSize(ONE_KB),
         "eTag",
         getTestTracingContext(null, false));
 
@@ -144,6 +164,7 @@ public class TestAbfsInputStream extends
         FORWARD_SLASH + fileName,
         fileSize,
         inputStreamContext.withReadBufferSize(readBufferSize)
+            .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
             .withReadAheadQueueDepth(readAheadQueueDepth)
             .withShouldReadBufferSizeAlways(alwaysReadBufferSize)
             .withReadAheadBlockSize(readAheadBlockSize),
@@ -166,13 +187,14 @@ public class TestAbfsInputStream extends
     ReadBufferManager.getBufferManager()
         .queueReadAhead(inputStream, TWO_KB, TWO_KB,
             inputStream.getTracingContext());
+
   }
 
   private void verifyReadCallCount(AbfsClient client, int count) throws
       AzureBlobFileSystemException, InterruptedException {
     // ReadAhead threads are triggered asynchronously.
     // Wait a second before verifying the number of total calls.
-    Thread.sleep(1000);
+    waitForPrefetchCompletion();
     verify(client, times(count)).read(any(String.class), any(Long.class),
         any(byte[].class), any(Integer.class), any(Integer.class),
         any(String.class), any(String.class), any(TracingContext.class));
@@ -341,7 +363,7 @@ public class TestAbfsInputStream extends
     // In this test, a read should trigger 3 client.read() calls as file is 3 KB
     // and readahead buffer size set in AbfsInputStream is 1 KB
     // There should only be a total of 3 client.read() in this test.
-    intercept(IOException.class,
+    intercept(TimeoutException.class,
         () -> inputStream.read(new byte[ONE_KB]));
 
     // Only the 3 readAhead threads should have triggered client.read
@@ -384,7 +406,6 @@ public class TestAbfsInputStream extends
   }
 
   /**
-   *
    * The test expects AbfsInputStream to initiate a remote read request for
    * the request offset and length when previous read ahead on the offset had failed.
    * Also checks that the ReadBuffers are evicted as per the ReadBufferManager
@@ -414,7 +435,7 @@ public class TestAbfsInputStream extends
     AbfsInputStream inputStream = getAbfsInputStream(client, "testOlderReadAheadFailure.txt");
 
     // First read request that fails as the readahead triggered from this request failed.
-    intercept(IOException.class,
+    intercept(TimeoutException.class, "Internal Server error",
         () -> inputStream.read(new byte[ONE_KB]));
 
     // Only the 3 readAhead threads should have triggered client.read
@@ -593,7 +614,7 @@ public class TestAbfsInputStream extends
     // AbfsInputStream Read would have waited for the read-ahead for the requested offset
     // as we are testing from ReadAheadManager directly, sleep for a sec to
     // get the read ahead threads to complete
-    Thread.sleep(1000);
+    waitForPrefetchCompletion();
 
     // if readAhead failed for specific offset, getBlock should
     // throw exception from the ReadBuffer that failed within last thresholdAgeMilliseconds sec
@@ -700,7 +721,7 @@ public class TestAbfsInputStream extends
     // AbfsInputStream Read would have waited for the read-ahead for the requested offset
     // as we are testing from ReadAheadManager directly, sleep for a sec to
     // get the read ahead threads to complete
-    Thread.sleep(1000);
+    waitForPrefetchCompletion();
 
     // Only the 3 readAhead threads should have triggered client.read
     verifyReadCallCount(client, 3);
@@ -723,6 +744,14 @@ public class TestAbfsInputStream extends
     // Stub will throw exception for client.read() for 4th and later calls
     // if not using the read-ahead buffer exception will be thrown on read
     checkEvictedStatus(inputStream, 0, true);
+  }
+
+  /**
+   * Wait for prefetches to complete.
+   * @throws InterruptedException interrupted.
+   */
+  private static void waitForPrefetchCompletion() throws InterruptedException {
+    Thread.sleep(1000);
   }
 
   /**
@@ -918,4 +947,67 @@ public class TestAbfsInputStream extends
     // by successive tests can lead to OOM based on the dev VM/machine capacity.
     System.gc();
   }
+
+  /**
+   * The first readahead closes the stream.
+   */
+  @Test
+  public void testStreamCloseInFirstReadAhead() throws Exception {
+    describe("close a stream during prefetch, verify outcome is good");
+
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, getMethodName());
+    ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+
+    final long initialInProgressBlocksDiscarded = bufferManager.getInProgressBlocksDiscarded();
+
+    // on first read, the op succeeds but the stream is closed, which
+    // means that the request should be considered a failure
+    doAnswer(invocation -> {
+      LOG.info("in read call with {}", inputStream);
+      inputStream.close();
+      return successOp;
+    }).doReturn(successOp)
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class), any(TracingContext.class));
+
+    // kick these off before the read() to avoid various race conditions.
+    queueReadAheads(inputStream);
+
+    // AbfsInputStream Read would have waited for the read-ahead for the requested offset
+    // as we are testing from ReadAheadManager directly, sleep for a sec to
+    // get the read ahead threads to complete
+    waitForPrefetchCompletion();
+
+    // this triggers prefetching, which closes the stream while the read
+    // is queued. which causes the prefetch to not return.
+    // which triggers a blocking read, which will then fail.
+    intercept(PathIOException.class, FSExceptionMessages.STREAM_IS_CLOSED, () -> {
+      // should fail
+      int bytesRead = inputStream.read(new byte[ONE_KB]);
+      // diagnostics info if failure wasn't raised
+      return "read " + bytesRead + " bytes from " + inputStream;
+    });
+
+    Assertions.assertThat(bufferManager.getCompletedReadListCopy())
+        .filteredOn(rb -> rb.getStream() == inputStream)
+        .describedAs("list of completed reads")
+        .isEmpty();
+    IOStatisticsStore ios = inputStream.getIOStatistics();
+    assertThatStatisticCounter(ios, STREAM_READ_PREFETCH_BLOCKS_DISCARDED)
+        .describedAs("blocks discarded by %s", inputStream)
+        .isGreaterThan(0);
+
+    // at least one of the blocks was discarded in progress.
+    // this is guaranteed because the mockito callback must have been invoked
+    // by the prefetcher
+    Assertions.assertThat(bufferManager.getInProgressBlocksDiscarded())
+        .describedAs("in progress blocks discarded")
+        .isGreaterThan(initialInProgressBlocksDiscarded);
+  }
+
 }

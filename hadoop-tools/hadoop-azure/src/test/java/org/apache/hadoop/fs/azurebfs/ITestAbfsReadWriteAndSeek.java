@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -35,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CAPABILITY_PREFETCH_SAFE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.APPENDBLOB_MAX_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MAX_BUFFER_SIZE;
@@ -89,6 +92,10 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     new Random().nextBytes(b);
 
     Path testPath = path(TEST_PATH);
+    Assertions.assertThat(fs.hasPathCapability(testPath, FS_AZURE_CAPABILITY_PREFETCH_SAFE))
+        .describedAs("path capability %s on filesystem %s", FS_AZURE_CAPABILITY_PREFETCH_SAFE, fs)
+        .isTrue();
+
     FSDataOutputStream stream = fs.create(testPath);
     try {
       stream.write(b);
@@ -100,13 +107,28 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     final byte[] readBuffer = new byte[2 * bufferSize];
     int result;
     IOStatisticsSource statisticsSource = null;
-    try (FSDataInputStream inputStream = fs.open(testPath)) {
+    try (FSDataInputStream inputStream = fs.open(testPath);
+         FSDataInputStream stream2 = fs.openFile(testPath)
+             .must(FS_AZURE_CAPABILITY_PREFETCH_SAFE, "")
+             .must(FS_AZURE_BUFFERED_PREAD_DISABLE, true)
+             .build().get()) {
       statisticsSource = inputStream;
       ((AbfsInputStream) inputStream.getWrappedStream()).registerListener(
           new TracingHeaderValidator(abfsConfiguration.getClientCorrelationId(),
               fs.getFileSystemId(), FSOperationType.READ, true, 0,
               ((AbfsInputStream) inputStream.getWrappedStream())
                   .getStreamID()));
+      // check stream 2 capabilities
+      Assertions.assertThat(stream2.hasCapability(FS_AZURE_CAPABILITY_PREFETCH_SAFE))
+          .describedAs("Stream capability %s on stream %s",
+              FS_AZURE_CAPABILITY_PREFETCH_SAFE, stream2)
+          .isTrue();
+      Assertions.assertThat(stream2.hasCapability(FS_AZURE_BUFFERED_PREAD_DISABLE))
+          .describedAs("Stream capability %s on stream %s",
+              FS_AZURE_BUFFERED_PREAD_DISABLE, stream2)
+          .isTrue();
+      // trigger read at byte 0 on second input stream
+      stream2.read();
       inputStream.seek(bufferSize);
       result = inputStream.read(readBuffer, bufferSize, bufferSize);
       assertNotEquals(-1, result);
@@ -118,11 +140,16 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
+      assertNotEquals("data read in final read()", -1, result);
+      assertArrayEquals(readBuffer, b);
+      inputStream.close();
+
+      // now look at stream2, including all prefetching
+      stream2.readFully(readBuffer, 0, bufferSize);
+      // and a bit of positioned read
+      stream2.readFully(bufferSize + 1, readBuffer, 0, bufferSize-1);
     }
     logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
-
-    assertNotEquals("data read in final read()", -1, result);
-    assertArrayEquals(readBuffer, b);
   }
 
   @Test

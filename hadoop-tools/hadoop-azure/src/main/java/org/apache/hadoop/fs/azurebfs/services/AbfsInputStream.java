@@ -23,9 +23,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -42,7 +47,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
 import static java.lang.Math.max;
@@ -50,13 +54,17 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.emptyStatisticsStore;
+import static org.apache.hadoop.util.Preconditions.checkState;
 import static org.apache.hadoop.util.StringUtils.toLowerCase;
 
 /**
  * The AbfsInputStream for AbfsClient.
  */
 public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
-        StreamCapabilities, IOStatisticsSource {
+        StreamCapabilities, IOStatisticsSource, ReadBufferStreamOperations {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsInputStream.class);
   //  Footer size is set to qualify for both ORC and parquet files
   public static final int FOOTER_SIZE = 16 * ONE_KB;
@@ -95,7 +103,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int bCursor = 0;   // cursor of read within buffer - offset of next byte to be returned from buffer
   private int limit = 0;     // offset of next byte to be read into buffer from service (i.e., upper marker+1
   //                                                      of valid bytes in buffer)
-  private boolean closed = false;
+
+  /**
+   * Closed flag.
+   */
+  private final AtomicBoolean closed = new AtomicBoolean(false);
   private TracingContext tracingContext;
 
   //  Optimisations modify the pointer fields.
@@ -113,7 +125,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private Listener listener;
 
   private final AbfsInputStreamContext context;
-  private IOStatistics ioStatistics;
+  private IOStatisticsStore ioStatistics;
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
@@ -155,9 +167,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
-    if (streamStatistics != null) {
-      ioStatistics = streamStatistics.getIOStatistics();
-    }
+    // if no statistics was passed (happens in some tests) a stub iostatistics
+    // store is used instead.
+    ioStatistics = streamStatistics != null
+        ? streamStatistics.getIOStatistics()
+        : emptyStatisticsStore();
   }
 
   public String getPath() {
@@ -176,11 +190,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // kind of random reads on a shared file input stream will greatly get
     // benefited by such implementation.
     // Strict close check at the begin of the API only not for the entire flow.
-    synchronized (this) {
-      if (closed) {
-        throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-      }
-    }
+    checkNotClosed();
     LOG.debug("pread requested offset = {} len = {} bufferedPreadDisabled = {}",
         offset, length, bufferedPreadDisabled);
     if (!bufferedPreadDisabled) {
@@ -216,6 +226,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
+    checkNotClosed();
     // check if buffer is null before logging the length
     if (b != null) {
       LOG.debug("read requested b.length = {} offset = {} len = {}", b.length,
@@ -428,7 +439,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean validate(final byte[] b, final int off, final int len)
       throws IOException {
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
 
@@ -449,6 +460,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private int copyToUserBuffer(byte[] b, int off, int len){
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
+
+    // unbuffer() or close() may free the buffer during an HTTP call.
+    // this triggers an NPE in arraycopy(); the check here simply to
+    // fail more meaningfully
+    checkState(buffer != null,
+        "read buffer is null in stream {}", this);
     int bytesRemaining = limit - bCursor;
     int bytesToRead = min(len, bytesRemaining);
     System.arraycopy(buffer, bCursor, b, off, bytesToRead);
@@ -467,6 +484,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
+    checkNotClosed();
     if (readAheadEnabled && !bypassReadAhead) {
       // try reading from read-ahead
       if (offset != 0) {
@@ -515,7 +533,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
-  int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
+  @Override
+  public int readRemote(long position,
+      byte[] b,
+      int offset,
+      int length,
+      TracingContext tracingContext) throws IOException {
+    checkNotClosed();
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
@@ -555,7 +579,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           throw new FileNotFoundException(ere.getMessage());
         }
       }
-      throw new IOException(ex);
+      throw ex;
     }
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
@@ -566,6 +590,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
     LOG.debug("HTTP request read bytes = {}", bytesRead);
     bytesFromRemoteRead += bytesRead;
+
+    // now, the stream may have been closed during the read.
+    // this can be traumatic for direct read() as the buffer will
+    // now be null.
+    // For readahead it is less than ideal.
+    checkNotClosed();
+
     return (int) bytesRead;
   }
 
@@ -587,7 +618,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public synchronized void seek(long n) throws IOException {
     LOG.debug("requested seek to position {}", n);
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     if (n < 0) {
@@ -608,7 +639,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized long skip(long n) throws IOException {
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     long currentPos = getPos();
@@ -641,7 +672,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   @Override
   public synchronized int available() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(
           FSExceptionMessages.STREAM_IS_CLOSED);
     }
@@ -659,7 +690,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    * @throws IOException if the stream is closed
    */
   public long length() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     return contentLength;
@@ -671,7 +702,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   @Override
   public synchronized long getPos() throws IOException {
-    if (closed) {
+    if (isClosed()) {
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     return nextReadPos < 0 ? 0 : nextReadPos;
@@ -692,11 +723,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @Override
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
     LOG.debug("Closing {}", this);
-    closed = true;
-    buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
+    if (closed.compareAndSet(false, true)) {
+      buffer = null; // de-reference the buffer so it can be GC'ed sooner
+      // Tell the ReadBufferManager to clean up.
+      ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
+    }
+  }
+
+  @Override
+  @InterfaceAudience.Private
+  public boolean isClosed() {
+    return closed.get();
   }
 
   /**
@@ -738,7 +777,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public boolean hasCapability(String capability) {
-    return StreamCapabilities.UNBUFFER.equals(toLowerCase(capability));
+    switch (toLowerCase(capability)) {
+    case StreamCapabilities.UNBUFFER:
+    case ConfigurationKeys.FS_AZURE_CAPABILITY_PREFETCH_SAFE: // safe from buffer sharing
+      return true;
+    case ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE:
+      return bufferedPreadDisabled;
+    default:
+      return false;
+    }
   }
 
   byte[] getBuffer() {
@@ -760,6 +807,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = cachedSasToken;
   }
 
+  @Override
   @VisibleForTesting
   public String getStreamID() {
     return inputStreamId;
@@ -817,7 +865,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @Override
-  public IOStatistics getIOStatistics() {
+  public IOStatisticsStore getIOStatistics() {
     return ioStatistics;
   }
 
@@ -827,13 +875,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder(super.toString());
-    if (streamStatistics != null) {
-      sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
-      sb.append(streamStatistics.toString());
-      sb.append("}");
-    }
-    return sb.toString();
+    return "AbfsInputStream{(" + this.hashCode() + ") " 
+        + "path='" + path + '\''
+        + ", id=" + inputStreamId
+        + ", closed=" + closed.get()
+        + ", contentLength=" + contentLength
+        + ", nextReadPos=" + nextReadPos
+        + ", readAheadQueueDepth=" + readAheadQueueDepth
+        + ", readAheadEnabled=" + readAheadEnabled
+        + ", bufferedPreadDisabled=" + bufferedPreadDisabled
+        + ", firstRead=" + firstRead
+        + ", fCursor=" + fCursor
+        + ", " + ioStatisticsToPrettyString(retrieveIOStatistics(streamStatistics))
+        + "}";
   }
 
   @VisibleForTesting
@@ -854,5 +908,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   long getLimit() {
     return this.limit;
+  }
+
+  /**
+   * Verify that the input stream is open.
+   * @throws IOException if the connection is closed.
+   */
+  private void checkNotClosed() throws IOException {
+    if (isClosed()) {
+      throw new PathIOException(getPath(), FSExceptionMessages.STREAM_IS_CLOSED);
+    }
   }
 }

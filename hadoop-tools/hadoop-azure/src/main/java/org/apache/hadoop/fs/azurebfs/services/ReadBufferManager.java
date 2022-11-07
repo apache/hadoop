@@ -30,10 +30,13 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * The Read Buffer Manager for Rest AbfsClient.
@@ -43,7 +46,7 @@ final class ReadBufferManager {
   private static final int ONE_KB = 1024;
   private static final int ONE_MB = ONE_KB * ONE_KB;
 
-  private static final int NUM_BUFFERS = 16;
+  static final int NUM_BUFFERS = 16;
   private static final int NUM_THREADS = 8;
   private static final int DEFAULT_THRESHOLD_AGE_MILLISECONDS = 3000; // have to see if 3 seconds is a good threshold
 
@@ -51,6 +54,12 @@ final class ReadBufferManager {
   private static int thresholdAgeMilliseconds = DEFAULT_THRESHOLD_AGE_MILLISECONDS;
   private Thread[] threads = new Thread[NUM_THREADS];
   private byte[][] buffers;    // array of byte[] buffers, to hold the data that is read
+
+  /**
+   * map of {@link #buffers} to {@link ReadBuffer} using it.
+   */
+  private ReadBuffer[] bufferOwners;
+
   private Stack<Integer> freeList = new Stack<>();   // indices in buffers[] array that are available
 
   private Queue<ReadBuffer> readAheadQueue = new LinkedList<>(); // queue of requests that are not picked up by any worker thread yet
@@ -59,7 +68,22 @@ final class ReadBufferManager {
   private static ReadBufferManager bufferManager; // singleton, initialized in static initialization block
   private static final ReentrantLock LOCK = new ReentrantLock();
 
-  static ReadBufferManager getBufferManager() {
+  /**
+   * How many completed blocks were discarded when a stream was closed?
+   */
+  private final AtomicLong completedBlocksDiscarded = new AtomicLong();
+
+  /**
+   * How many queued blocks were discarded when a stream was closed?
+   */
+  private final AtomicLong queuedBlocksDiscarded = new AtomicLong();
+
+  /**
+   * How many in progress blocks were discarded when a stream was closed?
+   */
+  private final AtomicLong inProgressBlocksDiscarded = new AtomicLong();
+
+  public static ReadBufferManager getBufferManager() {
     if (bufferManager == null) {
       LOCK.lock();
       try {
@@ -85,6 +109,7 @@ final class ReadBufferManager {
 
   private void init() {
     buffers = new byte[NUM_BUFFERS][];
+    bufferOwners = new ReadBuffer[NUM_BUFFERS];
     for (int i = 0; i < NUM_BUFFERS; i++) {
       buffers[i] = new byte[blockSize];  // same buffers are reused. The byte array never goes back to GC
       freeList.add(i);
@@ -113,12 +138,13 @@ final class ReadBufferManager {
 
   /**
    * {@link AbfsInputStream} calls this method to queue read-aheads.
-   *
-   * @param stream          The {@link AbfsInputStream} for which to do the read-ahead
+   * @param stream The {@link AbfsInputStream} for which to do the read-ahead
    * @param requestedOffset The offset in the file which shoukd be read
    * @param requestedLength The length to read
+   * @return the queued read
    */
-  void queueReadAhead(final AbfsInputStream stream, final long requestedOffset, final int requestedLength,
+  @VisibleForTesting
+  ReadBuffer queueReadAhead(final ReadBufferStreamOperations stream, final long requestedOffset, final int requestedLength,
                       TracingContext tracingContext) {
     if (LOGGER.isTraceEnabled()) {
       LOGGER.trace("Start Queueing readAhead for {} offset {} length {}",
@@ -127,10 +153,10 @@ final class ReadBufferManager {
     ReadBuffer buffer;
     synchronized (this) {
       if (isAlreadyQueued(stream, requestedOffset)) {
-        return; // already queued, do not queue again
+        return null;
       }
       if (freeList.isEmpty() && !tryEvict()) {
-        return; // no buffers available, cannot queue anything
+        return null;
       }
 
       buffer = new ReadBuffer();
@@ -142,10 +168,8 @@ final class ReadBufferManager {
       buffer.setLatch(new CountDownLatch(1));
       buffer.setTracingContext(tracingContext);
 
-      Integer bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
-
-      buffer.setBuffer(buffers[bufferIndex]);
-      buffer.setBufferindex(bufferIndex);
+      int bufferIndex = freeList.pop();  // will return a value, since we have checked size > 0 already
+      takeOwnershipOfBufferAtIndex(buffer, bufferIndex);
       readAheadQueue.add(buffer);
       notifyAll();
       if (LOGGER.isTraceEnabled()) {
@@ -153,6 +177,7 @@ final class ReadBufferManager {
             stream.getPath(), requestedOffset, buffer.getBufferindex());
       }
     }
+    return buffer;
   }
 
 
@@ -225,8 +250,8 @@ final class ReadBufferManager {
         Thread.currentThread().interrupt();
       }
       if (LOGGER.isTraceEnabled()) {
-        LOGGER.trace("latch done for file {} buffer idx {} length {}",
-            stream.getPath(), readBuf.getBufferindex(), readBuf.getLength());
+        LOGGER.trace("latch done for file {} buffer {}",
+            stream.getPath(), readBuf);
       }
     }
   }
@@ -239,15 +264,22 @@ final class ReadBufferManager {
    */
   private synchronized boolean tryEvict() {
     ReadBuffer nodeToEvict = null;
-    if (completedReadList.size() <= 0) {
+    if (completedReadList.isEmpty()) {
       return false;  // there are no evict-able buffers
     }
 
     long currentTimeInMs = currentTimeMillis();
 
-    // first, try buffers where all bytes have been consumed (approximated as first and last bytes consumed)
+    // first, look for easy targets
     for (ReadBuffer buf : completedReadList) {
+      if (buf.isStreamClosed() && buf.hasIndexedBuffer()) {
+        // the stream was closed since this was added to the completed
+        // list (it would not have a buffer if the stream was closed before)
+        nodeToEvict = buf;
+        break;
+      }
       if (buf.isFirstByteConsumed() && buf.isLastByteConsumed()) {
+        // buffers where all bytes have been consumed (approximated as first and last bytes consumed)
         nodeToEvict = buf;
         break;
       }
@@ -278,12 +310,13 @@ final class ReadBufferManager {
     long earliestBirthday = Long.MAX_VALUE;
     ArrayList<ReadBuffer> oldFailedBuffers = new ArrayList<>();
     for (ReadBuffer buf : completedReadList) {
-      if ((buf.getBufferindex() != -1)
+      if (buf.hasIndexedBuffer()
           && (buf.getTimeStamp() < earliestBirthday)) {
         nodeToEvict = buf;
         earliestBirthday = buf.getTimeStamp();
-      } else if ((buf.getBufferindex() == -1)
-          && (currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds) {
+      } else if (!buf.hasIndexedBuffer()
+          && ((currentTimeInMs - buf.getTimeStamp()) > thresholdAgeMilliseconds)
+              || buf.isStreamClosed()) {
         oldFailedBuffers.add(buf);
       }
     }
@@ -302,33 +335,33 @@ final class ReadBufferManager {
   }
 
   private boolean evict(final ReadBuffer buf) {
-    // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
-    // avoid adding it to freeList.
-    if (buf.getBufferindex() != -1) {
-      freeList.push(buf.getBufferindex());
-    }
-
-    completedReadList.remove(buf);
     buf.setTracingContext(null);
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("Evicting buffer idx {}; was used for file {} offset {} length {}",
-          buf.getBufferindex(), buf.getStream().getPath(), buf.getOffset(), buf.getLength());
+      LOGGER.trace("Evicting buffer {}", buf);
     }
+    completedReadList.remove(buf);
+    // As failed ReadBuffers (bufferIndx = -1) are saved in completedReadList,
+    // avoid adding it to freeList.
+    if (buf.hasIndexedBuffer()) {
+      placeBufferOnFreeList("eviction", buf);
+    }
+    // tell the buffer it was evicted so should update its statistics
+    buf.evicted();
     return true;
   }
 
-  private boolean isAlreadyQueued(final AbfsInputStream stream, final long requestedOffset) {
+  private boolean isAlreadyQueued(final ReadBufferStreamOperations stream, final long requestedOffset) {
     // returns true if any part of the buffer is already queued
     return (isInList(readAheadQueue, stream, requestedOffset)
         || isInList(inProgressList, stream, requestedOffset)
         || isInList(completedReadList, stream, requestedOffset));
   }
 
-  private boolean isInList(final Collection<ReadBuffer> list, final AbfsInputStream stream, final long requestedOffset) {
+  private boolean isInList(final Collection<ReadBuffer> list, final ReadBufferStreamOperations stream, final long requestedOffset) {
     return (getFromList(list, stream, requestedOffset) != null);
   }
 
-  private ReadBuffer getFromList(final Collection<ReadBuffer> list, final AbfsInputStream stream, final long requestedOffset) {
+  private ReadBuffer getFromList(final Collection<ReadBuffer> list, final ReadBufferStreamOperations stream, final long requestedOffset) {
     for (ReadBuffer buffer : list) {
       if (buffer.getStream() == stream) {
         if (buffer.getStatus() == ReadBufferStatus.AVAILABLE
@@ -350,7 +383,7 @@ final class ReadBufferManager {
    * @param requestedOffset
    * @return
    */
-  private ReadBuffer getBufferFromCompletedQueue(final AbfsInputStream stream, final long requestedOffset) {
+  private ReadBuffer getBufferFromCompletedQueue(final ReadBufferStreamOperations stream, final long requestedOffset) {
     for (ReadBuffer buffer : completedReadList) {
       // Buffer is returned if the requestedOffset is at or above buffer's
       // offset but less than buffer's length or the actual requestedLength
@@ -365,16 +398,136 @@ final class ReadBufferManager {
     return null;
   }
 
-  private void clearFromReadAheadQueue(final AbfsInputStream stream, final long requestedOffset) {
+  private void clearFromReadAheadQueue(final ReadBufferStreamOperations stream, final long requestedOffset) {
     ReadBuffer buffer = getFromList(readAheadQueue, stream, requestedOffset);
     if (buffer != null) {
       readAheadQueue.remove(buffer);
       notifyAll();   // lock is held in calling method
-      freeList.push(buffer.getBufferindex());
+      placeBufferOnFreeList("clear from readahead", buffer);
     }
   }
 
-  private int getBlockFromCompletedQueue(final AbfsInputStream stream, final long position, final int length,
+  /**
+   * Add a buffer to the free list.
+   * @param reason reason for eviction
+   * @param readBuffer read buffer which owns the buffer to free
+   */
+  private void placeBufferOnFreeList(final String reason, final ReadBuffer readBuffer) {
+    int index = readBuffer.getBufferindex();
+    LOGGER.debug("Returning buffer index {} to free list for '{}'; owner {}",
+        index, reason, readBuffer);
+    checkState(readBuffer.hasIndexedBuffer(),
+        "ReadBuffer buffer release for %s has no allocated buffer to free: %s",
+        reason, readBuffer);
+    checkState(!freeList.contains(index),
+        "Duplicate buffer %d added to free buffer list for '%s' by %s",
+        index, reason, readBuffer);
+    verifyReadBufferOwnsBufferAtIndex(readBuffer, index);
+    // declare it as unowned
+    bufferOwners[index] = null;
+    // set the buffer to null, because it is now free
+    // for other operations.
+    readBuffer.releaseBuffer();
+    // once it is not owned/referenced, make available to others
+    freeList.push(index);
+  }
+
+  /**
+   * Verify that at given read ReadBuffer a buffer.
+   * @param readBuffer read operation taking ownership
+   * @param index index of buffer in buffer array
+   */
+  void verifyReadBufferOwnsBufferAtIndex(final ReadBuffer readBuffer, final int index) {
+    checkState(readBuffer == bufferOwner(index),
+        "ReadBufferManager buffer %s is not owned by %s", index, readBuffer);
+  }
+
+  /**
+   * Verify a read buffer owns its indexed buffer.
+   * @param readBuffer read buffer to validate.
+   * @throws IllegalStateException if ownership not satisified.
+   */
+  void verifyIsOwnerOfBuffer(final ReadBuffer readBuffer) {
+    checkState(readBuffer.hasIndexedBuffer(), "no buffer owned by %s", readBuffer);
+    verifyReadBufferOwnsBufferAtIndex(readBuffer, readBuffer.getBufferindex());
+  }
+
+  /**
+   * Take ownership of a buffer.
+   * This updates the {@link #bufferOwners} array.
+   * @param readBuffer read operation taking ownership
+   * @param index index of buffer in buffer array
+   */
+  private void takeOwnershipOfBufferAtIndex(final ReadBuffer readBuffer, int index) {
+    checkState(null == bufferOwners[index],
+        "Buffer %d requested by %s already owned by %s",
+        index, readBuffer, bufferOwners[index]);
+    readBuffer.setBuffer(buffers[index]);
+    readBuffer.setBufferindex(index);
+    bufferOwners[index] = readBuffer;
+  }
+
+  /**
+   * Verify a buffer is not in use anywhere.
+   * @param index buffer index.
+   * @throws IllegalStateException if the state is invalid.
+   */
+  private void verifyByteBufferNotInUse(final int index) {
+    verifyByteBufferNotInCollection("completedReadList", index, completedReadList);
+    verifyByteBufferNotInCollection("inProgressList", index, inProgressList);
+    verifyByteBufferNotInCollection("readAheadQueue", index, readAheadQueue);
+  }
+
+  /**
+   * Verify that a buffer is not referenced in the supplied collection.
+   * @param name collection name for exceptions.
+   * @param index buffer index.
+   * @param collection collection to validate
+   * @throws IllegalStateException if the state is invalid.
+   */
+  private void verifyByteBufferNotInCollection(String name, int index,
+      Collection<ReadBuffer> collection) {
+    checkState(collection.stream().noneMatch(rb -> rb.getBufferindex() == index),
+        "Buffer index %d found in buffer collection %s", index, name);
+  }
+
+  /**
+   * Verify that a read buffer is not referenced in the supplied collection.
+   * @param name collection name for exceptions.
+   * @param rb read buffer
+   * @param collection collection to validate
+   * @throws IllegalStateException if the state is invalid.
+   */
+  private void verifyReadBufferNotInCollection(String name,
+      ReadBuffer rb,
+      Collection<ReadBuffer> collection) {
+    checkState(!collection.contains(rb),
+        "Collection %s contains buffer %s", name, rb);
+  }
+
+  /**
+   * Validate all invariants of the read manager state.
+   * @throws IllegalStateException if the state is invalid.
+   */
+  @VisibleForTesting
+  public synchronized void validateReadManagerState() {
+    // all buffers in free list are not in any of the other lists
+    freeList.forEach(this::verifyByteBufferNotInUse);
+
+    // there is no in progress buffer in the other queues
+    inProgressList.forEach(rb -> {
+      verifyReadBufferNotInCollection("completedReadList", rb,
+          completedReadList);
+      verifyReadBufferNotInCollection("readAheadQueue", rb, readAheadQueue);
+    });
+    // nothing completed is in the readahead queue
+    completedReadList.forEach(rb -> {
+      verifyReadBufferNotInCollection("readAheadQueue", rb, readAheadQueue);
+    });
+
+  }
+
+  private int getBlockFromCompletedQueue(final ReadBufferStreamOperations stream, final long position, final int length,
                                          final byte[] buffer) throws IOException {
     ReadBuffer buf = getBufferFromCompletedQueue(stream, position);
 
@@ -401,13 +554,7 @@ final class ReadBufferManager {
     int availableLengthInBuffer = buf.getLength() - cursor;
     int lengthToCopy = Math.min(length, availableLengthInBuffer);
     System.arraycopy(buf.getBuffer(), cursor, buffer, 0, lengthToCopy);
-    if (cursor == 0) {
-      buf.setFirstByteConsumed(true);
-    }
-    if (cursor + lengthToCopy == buf.getLength()) {
-      buf.setLastByteConsumed(true);
-    }
-    buf.setAnyByteConsumed(true);
+    buf.dataConsumedByStream(cursor, lengthToCopy);
     return lengthToCopy;
   }
 
@@ -435,6 +582,9 @@ final class ReadBufferManager {
       if (buffer == null) {
         return null;            // should never happen
       }
+      // verify buffer index is owned.
+      verifyIsOwnerOfBuffer(buffer);
+
       buffer.setStatus(ReadBufferStatus.READING_IN_PROGRESS);
       inProgressList.add(buffer);
     }
@@ -442,6 +592,9 @@ final class ReadBufferManager {
       LOGGER.trace("ReadBufferWorker picked file {} for offset {}",
           buffer.getStream().getPath(), buffer.getOffset());
     }
+    validateReadManagerState();
+    // update stream gauge.
+    buffer.prefetchStarted();
     return buffer;
   }
 
@@ -454,31 +607,104 @@ final class ReadBufferManager {
    */
   void doneReading(final ReadBuffer buffer, final ReadBufferStatus result, final int bytesActuallyRead) {
     if (LOGGER.isTraceEnabled()) {
-      LOGGER.trace("ReadBufferWorker completed read file {} for offset {} outcome {} bytes {}",
-          buffer.getStream().getPath(),  buffer.getOffset(), result, bytesActuallyRead);
+      LOGGER.trace("ReadBufferWorker completed file {} for offset {} bytes {}; {}",
+          buffer.getStream().getPath(),  buffer.getOffset(), bytesActuallyRead, buffer);
     }
-    synchronized (this) {
-      // If this buffer has already been purged during
-      // close of InputStream then we don't update the lists.
-      if (inProgressList.contains(buffer)) {
-        inProgressList.remove(buffer);
-        if (result == ReadBufferStatus.AVAILABLE && bytesActuallyRead > 0) {
-          buffer.setStatus(ReadBufferStatus.AVAILABLE);
-          buffer.setLength(bytesActuallyRead);
-        } else {
-          freeList.push(buffer.getBufferindex());
-          // buffer will be deleted as per the eviction policy.
+    // decrement counter.
+    buffer.prefetchFinished();
+
+    try {
+      synchronized (this) {
+        // remove from the list
+        if (!inProgressList.remove(buffer)) {
+          // this is a sign of inconsistent state, so a major problem, such as
+          // double invocation of this method with the same buffer.
+          String message =
+              String.format("Read completed from an operation not declared as in progress %s",
+                  buffer);
+          LOGGER.warn(message);
+          if (buffer.hasIndexedBuffer()) {
+            // release the buffer (which may raise an exception)
+            placeBufferOnFreeList("read not in progress", buffer);
+          }
+          // report the failure
+          throw new IllegalStateException(message);
         }
-        // completed list also contains FAILED read buffers
-        // for sending exception message to clients.
+
+        // does the buffer own the array it has just written to?
+        // this is a significant issue.
+        verifyIsOwnerOfBuffer(buffer);
+        // should the read buffer be added to the completed list?
+        boolean addCompleted;
+        // flag to indicate buffer should be freed
+        boolean shouldFreeBuffer = false;
+        // and the reason (for logging)
+        String freeBufferReason = "";
+
         buffer.setStatus(result);
         buffer.setTimeStamp(currentTimeMillis());
-        completedReadList.add(buffer);
+        // did the read return any data?
+        if (result == ReadBufferStatus.AVAILABLE) {
+          if (bytesActuallyRead > 0) {
+
+            // successful read of data;
+            addCompleted = true;
+
+            // update buffer state.
+            buffer.setLength(bytesActuallyRead);
+          } else {
+            // there was no data; the buffer can be returned to the free list.
+            shouldFreeBuffer = true;
+            freeBufferReason = "no data";
+            // don't
+            addCompleted = false;
+          }
+        } else {
+          // read failed or there was no data; the buffer can be returned to the free list.
+          shouldFreeBuffer = true;
+          freeBufferReason = "failed read";
+          // completed list also contains FAILED read buffers
+          // for sending exception message to clients.
+          // NOTE: checks for closed state may update this.
+          addCompleted = true;
+        }
+
+        // now check for closed streams, which are discarded
+        // and the buffers freed immediately, irrespective of
+        // outcome
+        if (buffer.isStreamClosed()) {
+          // stream was closed during the read.
+          // even if there is data, it should be discarded
+          LOGGER.trace("Discarding prefetch on closed stream {}", buffer);
+          inProgressBlocksDiscarded.incrementAndGet();
+          // don't add
+          addCompleted = false;
+          // and the buffer recycled
+          shouldFreeBuffer = true;
+          freeBufferReason = "stream closed";
+        }
+        if (shouldFreeBuffer) {
+          buffer.discarded();
+          // buffer should be returned to the free list.
+          placeBufferOnFreeList(freeBufferReason, buffer);
+        }
+        if (addCompleted) {
+          // add to the completed list.
+          LOGGER.trace("Adding buffer to completed list {}", buffer);
+          completedReadList.add(buffer);
+        }
       }
+    } catch (IllegalStateException e) {
+      // update this for tests to validate
+      buffer.setStatus(ReadBufferStatus.READ_FAILED);
+      buffer.setErrException(new IOException(e));
+      throw e;
+    } finally {
+      //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
+      LOGGER.trace("releasing latch {}", buffer.getLatch());
+      buffer.getLatch().countDown(); // wake up waiting threads (if any)
     }
 
-    //outside the synchronized, since anyone receiving a wake-up from the latch must see safe-published results
-    buffer.getLatch().countDown(); // wake up waiting threads (if any)
   }
 
   /**
@@ -530,48 +756,127 @@ final class ReadBufferManager {
   }
 
   @VisibleForTesting
-  void callTryEvict() {
-    tryEvict();
+  boolean callTryEvict() {
+    return tryEvict();
   }
-
 
   /**
    * Purging the buffers associated with an {@link AbfsInputStream}
    * from {@link ReadBufferManager} when stream is closed.
+   * Before HADOOP-18521 this would purge in progress reads, which
+   * would return the active buffer to the free pool while it was
+   * still in use.
    * @param stream input stream.
    */
-  public synchronized void purgeBuffersForStream(AbfsInputStream stream) {
-    LOGGER.debug("Purging stale buffers for AbfsInputStream {} ", stream);
+  public synchronized void purgeBuffersForStream(ReadBufferStreamOperations stream) {
+    LOGGER.debug("Purging stale buffers for AbfsInputStream {}/{}",
+        stream.getStreamID(), stream.getPath());
+
+    // remove from the queue
+    int before = readAheadQueue.size();
     readAheadQueue.removeIf(readBuffer -> readBuffer.getStream() == stream);
-    purgeList(stream, completedReadList);
+    int readaheadPurged = readAheadQueue.size() - before;
+    queuedBlocksDiscarded.addAndGet(readaheadPurged);
+
+    // all completed entries
+    int completedPurged = purgeCompletedReads(stream);
+    completedBlocksDiscarded.addAndGet(completedPurged);
+
+    // print a summary
+    LOGGER.debug("Purging outcome readahead={}, completed={} for {}",
+        readaheadPurged, completedPurged, stream);
+    validateReadManagerState();
   }
 
   /**
    * Method to remove buffers associated with a {@link AbfsInputStream}
-   * when its close method is called.
+   * from the completed read list.
+   * Any allocated buffers will be returned to the pool.
+   * The buffers will have {@link ReadBuffer#evicted()} called to let
+   * them update their statistics.
    * NOTE: This method is not threadsafe and must be called inside a
    * synchronised block. See caller.
    * @param stream associated input stream.
-   * @param list list of buffers like {@link this#completedReadList}
-   *             or {@link this#inProgressList}.
    */
-  private void purgeList(AbfsInputStream stream, LinkedList<ReadBuffer> list) {
-    for (Iterator<ReadBuffer> it = list.iterator(); it.hasNext();) {
+  private int purgeCompletedReads(ReadBufferStreamOperations stream) {
+    int purged = 0;
+    for (Iterator<ReadBuffer> it = completedReadList.iterator(); it.hasNext();) {
       ReadBuffer readBuffer = it.next();
       if (readBuffer.getStream() == stream) {
+        purged++;
         it.remove();
         // As failed ReadBuffers (bufferIndex = -1) are already pushed to free
         // list in doneReading method, we will skip adding those here again.
-        if (readBuffer.getBufferindex() != -1) {
-          freeList.push(readBuffer.getBufferindex());
+        if (readBuffer.hasIndexedBuffer()) {
+          placeBufferOnFreeList("purge completed reads", readBuffer);
         }
+        // tell the buffer it was evicted so should update its statistics
+        readBuffer.evicted();
       }
     }
+    return purged;
+  }
+
+  /**
+   * Get the count of completed blocks discarded.
+   * @return the number of completed blocks discarded.
+   */
+  @VisibleForTesting
+  public long getCompletedBlocksDiscarded() {
+    return completedBlocksDiscarded.get();
+  }
+
+  /**
+   * Get the count of completed blocks discarded.
+   * @return the number of queued block reads discarded.
+   */
+  @VisibleForTesting
+  public long getQueuedBlocksDiscarded() {
+    return queuedBlocksDiscarded.get();
+  }
+
+  /**
+   * Get the count of in progress read blocks discarded.
+   * @return the number of blocks being read discarded.
+   */
+  @VisibleForTesting
+  public long getInProgressBlocksDiscarded() {
+    return inProgressBlocksDiscarded.get();
+  }
+
+  @VisibleForTesting
+  public void resetBlocksDiscardedCounters() {
+    completedBlocksDiscarded.set(0);
+    queuedBlocksDiscarded.set(0);
+    inProgressBlocksDiscarded.set(0);
+  }
+
+  /**
+   * Look up the owner of a buffer.
+   * @param index index of the buffer.
+   * @return the buffer owner, null if the buffer is free.
+   */
+  ReadBuffer bufferOwner(int index) {
+    return bufferOwners[index];
+  }
+
+  @Override
+  public String toString() {
+    return "ReadBufferManager{" +
+        "readAheadQueue=" + readAheadQueue.size()
+        + ", inProgressList=" + inProgressList.size()
+        + ", completedReadList=" + completedReadList.size()
+        + ", completedBlocksDiscarded=" + completedBlocksDiscarded
+        + ", queuedBlocksDiscarded=" + queuedBlocksDiscarded
+        + ", inProgressBlocksDiscarded=" + inProgressBlocksDiscarded
+        + '}';
   }
 
   /**
    * Test method that can clean up the current state of readAhead buffers and
    * the lists. Will also trigger a fresh init.
+   * Note: will cause problems with the static shared class if multiple tests
+   * are running in the same VM.
    */
   @VisibleForTesting
   void testResetReadBufferManager() {
@@ -593,6 +898,7 @@ final class ReadBufferManager {
       freeList.clear();
       for (int i = 0; i < NUM_BUFFERS; i++) {
         buffers[i] = null;
+        bufferOwners[i] = null;
       }
       buffers = null;
       resetBufferManager();

@@ -34,20 +34,38 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
+import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.io.IOUtils;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_READAHEAD;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_BLOCK_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticGauge;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 
 public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
-    public ITestReadBufferManager() throws Exception {
+  /**
+   * Time before the JUnit test times out for eventually() clauses
+   * to fail. This copes with slow network connections and debugging
+   * sessions, yet still allows for tests to fail with meaningful
+   * messages.
+   */
+  public static final int TIMEOUT_OFFSET = 5 * 60_000;
+
+  /**
+   * Interval between eventually preobes.
+   */
+  public static final int PROBE_INTERVAL_MILLIS = 1_000;
+
+  public ITestReadBufferManager() throws Exception {
     }
 
     @Test
@@ -93,55 +111,100 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
 
     @Test
     public void testPurgeBufferManagerForSequentialStream() throws Exception {
-        describe("Testing purging of buffers in ReadBufferManager for "
-                + "sequential input streams");
-        AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
-        final String fileName = methodName.getMethodName();
-        byte[] fileContent = getRandomBytesArray(ONE_MB);
-        Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      describe("Testing purging of buffers in ReadBufferManager for "
+          + "sequential input streams");
+      AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
+      final String fileName = methodName.getMethodName();
+      byte[] fileContent = getRandomBytesArray(ONE_MB);
+      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
 
-        AbfsInputStream iStream1 =  null;
+      AbfsInputStream iStream1 = null;
         // stream1 will be closed right away.
-        try {
-            iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-            // Just reading one byte will trigger all read ahead calls.
-            iStream1.read();
-        } finally {
-            IOUtils.closeStream(iStream1);
-        }
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        AbfsInputStream iStream2 = null;
-        try {
-            iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
-            iStream2.read();
-            // After closing stream1, no queued buffers of stream1 should be present
-            // assertions can't be made about the state of the other lists as it is
-            // too prone to race conditions.
-            assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
-        } finally {
-            // closing the stream later.
-            IOUtils.closeStream(iStream2);
-        }
-        // After closing stream2, no queued buffers of stream2 should be present.
-        assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
+      AbfsInputStream iStream2 = null;
+      try {
+        iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+        // Just reading one byte will trigger all read ahead calls.
+        iStream1.read();
+        assertThatStatisticGauge(iStream1.getIOStatistics(), STREAM_READ_ACTIVE_PREFETCH_OPERATIONS)
+            .isGreaterThan(0);
+      } finally {
+        IOUtils.closeStream(iStream1);
+      }
+      ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
 
-        // After closing both the streams, read queue should be empty.
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+      try {
+        iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+        iStream2.read();
+        // After closing stream1, none of the buffers associated with stream1 should be present.
+        AbfsInputStream s1 = iStream1;
+        eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
+            assertListDoesnotContainBuffersForIstream("InProgressList",
+                bufferManager.getInProgressCopiedList(), s1));
+        assertListDoesnotContainBuffersForIstream("CompletedList",
+            bufferManager.getCompletedReadListCopy(), iStream1);
+        assertListDoesnotContainBuffersForIstream("ReadAheadQueue",
+            bufferManager.getReadAheadQueueCopy(), iStream1);
+      } finally {
+        // closing the stream later.
+        IOUtils.closeStream(iStream2);
+      }
+      // After closing stream2, none of the buffers associated with stream2 should be present.
+      IOStatisticsStore stream2IOStatistics = iStream2.getIOStatistics();
+      AbfsInputStream s2 = iStream2;
+      eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
+          assertListDoesnotContainBuffersForIstream("InProgressList",
+              bufferManager.getInProgressCopiedList(), s2));
+      // no in progress reads in the stats
+      assertThatStatisticGauge(stream2IOStatistics, STREAM_READ_ACTIVE_PREFETCH_OPERATIONS)
+          .isEqualTo(0);
 
+      assertListDoesnotContainBuffersForIstream("CompletedList",
+          bufferManager.getCompletedReadListCopy(), iStream2);
+      assertListDoesnotContainBuffersForIstream("ReadAheadQueue",
+          bufferManager.getReadAheadQueueCopy(), iStream2);
+
+        // After closing both the streams, all lists should be empty.
+      eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
+          assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList()));
+      assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
+      assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
     }
 
 
-    private void assertListDoesnotContainBuffersForIstream(List<ReadBuffer> list,
-                                                           AbfsInputStream inputStream) {
-        for (ReadBuffer buffer : list) {
-            Assertions.assertThat(buffer.getStream())
-                    .describedAs("Buffers associated with closed input streams shouldn't be present")
-                    .isNotEqualTo(inputStream);
-        }
+    private void assertListDoesnotContainBuffersForIstream(String name,
+        List<ReadBuffer> list, AbfsInputStream inputStream) {
+      Assertions.assertThat(list)
+          .describedAs("list %s contains entries for closed stream %s",
+              name, inputStream)
+          .filteredOn(b -> b.getStream() == inputStream)
+          .isEmpty();
     }
+
+    private void assertListContainBuffersForIstream(List<ReadBuffer> list,
+        AbfsInputStream inputStream) {
+      Assertions.assertThat(list)
+          .describedAs("buffer expected to contain closed stream %s", inputStream )
+          .filteredOn(b -> b.getStream() == inputStream)
+          .isNotEmpty();
+    }
+
+  /**
+   * Does a list contain a read buffer for stream?
+   * @param list list to scan
+   * @param inputStream stream to look for
+   * @return true if there is at least one reference in the list.
+   */
+    boolean listContainsStreamRead(List<ReadBuffer> list,
+            AbfsInputStream inputStream) {
+      return list.stream()
+          .filter(b -> b.getStream() == inputStream)
+          .count() > 0;
+    }
+
 
     private AzureBlobFileSystem getABFSWithReadAheadConfig() throws Exception {
         Configuration conf = getRawConfiguration();
+        conf.setBoolean(FS_AZURE_ENABLE_READAHEAD, true);
         conf.setLong(FS_AZURE_READ_AHEAD_QUEUE_DEPTH, 8);
         conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
         conf.setInt(FS_AZURE_READ_AHEAD_BLOCK_SIZE, MIN_BUFFER_SIZE);

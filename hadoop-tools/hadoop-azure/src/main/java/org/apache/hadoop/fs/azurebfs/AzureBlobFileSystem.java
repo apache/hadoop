@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +45,7 @@ import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -291,7 +291,7 @@ public class AzureBlobFileSystem extends FileSystem
     LOG.debug("AzureBlobFileSystem.openFileWithOptions path: {}", path);
     AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(
         parameters.getMandatoryKeys(),
-        Collections.emptySet(),
+        ConfigurationKeys.KNOWN_OPENFILE_KEYS,
         "for " + path);
     return LambdaUtils.eval(
         new CompletableFuture<>(), () ->
@@ -1628,6 +1628,7 @@ public class AzureBlobFileSystem extends FileSystem
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.ETAGS_AVAILABLE:
+    case ConfigurationKeys.FS_AZURE_CAPABILITY_PREFETCH_SAFE: // safe from buffer sharing:
       return true;
 
     case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:

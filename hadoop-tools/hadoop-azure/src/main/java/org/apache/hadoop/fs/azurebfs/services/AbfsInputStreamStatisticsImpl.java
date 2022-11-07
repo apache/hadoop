@@ -20,13 +20,20 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ACTIVE_PREFETCH_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BLOCKS_DISCARDED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BLOCKS_EVICTED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BLOCKS_USED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BYTES_DISCARDED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_BYTES_USED;
+import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_PREFETCH_OPERATIONS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -48,9 +55,15 @@ public class AbfsInputStreamStatisticsImpl
           StreamStatisticNames.BYTES_READ_BUFFER,
           StreamStatisticNames.REMOTE_READ_OP,
           StreamStatisticNames.READ_AHEAD_BYTES_READ,
-          StreamStatisticNames.REMOTE_BYTES_READ
-          )
-      .withDurationTracking(ACTION_HTTP_GET_REQUEST)
+          StreamStatisticNames.REMOTE_BYTES_READ,
+          STREAM_READ_PREFETCH_BLOCKS_USED,
+          STREAM_READ_PREFETCH_BYTES_USED,
+          STREAM_READ_PREFETCH_BLOCKS_DISCARDED,
+          STREAM_READ_PREFETCH_BYTES_DISCARDED,
+          STREAM_READ_PREFETCH_BLOCKS_EVICTED)
+      .withGauges(STREAM_READ_ACTIVE_PREFETCH_OPERATIONS)
+      .withDurationTracking(ACTION_HTTP_GET_REQUEST,
+          STREAM_READ_PREFETCH_OPERATIONS)
       .build();
 
   /* Reference to the atomic counter for frequently updated counters to avoid
@@ -183,7 +196,7 @@ public class AbfsInputStreamStatisticsImpl
    * @return IOStatisticsStore instance which extends IOStatistics.
    */
   @Override
-  public IOStatistics getIOStatistics() {
+  public IOStatisticsStore getIOStatistics() {
     return ioStatisticsStore;
   }
 
@@ -270,7 +283,7 @@ public class AbfsInputStreamStatisticsImpl
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "StreamStatistics{");
-    sb.append(ioStatisticsStore.toString());
+    sb.append(ioStatisticsToPrettyString(ioStatisticsStore));
     sb.append('}');
     return sb.toString();
   }

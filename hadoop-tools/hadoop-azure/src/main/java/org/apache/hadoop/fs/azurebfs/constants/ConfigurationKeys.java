@@ -18,9 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.constants;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 
 /**
  * Responsible to keep all the Azure Blob File System configurations keys in Hadoop configuration file.
@@ -259,5 +266,27 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+
+  /**
+   * Has the ReadBufferManager fix of HADOOP-18521 been applied?
+   * This can be queried on {@code hasCapability()} and
+   * on the filesystem {@code hasPathCapability()} probes.
+   */
+  public static final String FS_AZURE_CAPABILITY_PREFETCH_SAFE = "fs.azure.capability.prefetch.safe";
+
+  /**
+   * Known keys for openFile(), including the standard ones.
+   */
+  public static final Set<String> KNOWN_OPENFILE_KEYS;
+
+  static {
+    Set<String> collect = Stream.of(
+            FS_AZURE_CAPABILITY_PREFETCH_SAFE,
+            FS_AZURE_BUFFERED_PREAD_DISABLE)
+        .collect(Collectors.toSet());
+    collect.addAll(FS_OPTION_OPENFILE_STANDARD_OPTIONS);
+    KNOWN_OPENFILE_KEYS = Collections.unmodifiableSet(collect);
+  }
+
   private ConfigurationKeys() {}
 }
