@@ -514,6 +514,11 @@ public class TestRouterMetrics {
       metrics.incrGetAppTimeoutsFailedRetrieved();
     }
 
+    public void getRMNodeLabelsFailed() {
+      LOG.info("Mocked: failed getRMNodeLabelsFailed call");
+      metrics.incrGetRMNodeLabelsFailedRetrieved();
+    }
+
     public void getCheckUserAccessToQueueRetrieved() {
       LOG.info("Mocked: failed checkUserAccessToQueueRetrieved call");
       metrics.incrCheckUserAccessToQueueFailedRetrieved();
@@ -727,6 +732,11 @@ public class TestRouterMetrics {
     public void getAppTimeoutsRetrieved(long duration) {
       LOG.info("Mocked: successful getAppTimeouts call with duration {}", duration);
       metrics.succeededGetAppTimeoutsRetrieved(duration);
+    }
+
+    public void getRMNodeLabelsRetrieved(long duration) {
+      LOG.info("Mocked: successful getRMNodeLabels call with duration {}", duration);
+      metrics.succeededGetRMNodeLabelsRetrieved(duration);
     }
 
     public void getCheckUserAccessToQueueRetrieved(long duration) {
@@ -1474,6 +1484,29 @@ public class TestRouterMetrics {
     badSubCluster.getAppTimeoutsFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getAppTimeoutsFailedRetrieved());
+  }
+
+  @Test
+  public void testGetRMNodeLabelsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetRMNodeLabelsRetrieved();
+    goodSubCluster.getRMNodeLabelsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetRMNodeLabelsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRMNodeLabelsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetRMNodeLabelsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetRMNodeLabelsRetrievedFailed() {
+    long totalBadBefore = metrics.getRMNodeLabelsFailedRetrieved();
+    badSubCluster.getRMNodeLabelsFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getRMNodeLabelsFailedRetrieved());
   }
 
   @Test
