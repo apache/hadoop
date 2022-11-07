@@ -23,6 +23,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
+/**
+ * Child class of {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperation}
+ * to orchestrate mocking behaviour for test-classes.
+ * */
 public class MockHttpOperation extends AbfsHttpOperation {
 
   private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;
@@ -33,6 +37,15 @@ public class MockHttpOperation extends AbfsHttpOperation {
     super(url, method, requestHeaders);
   }
 
+  /**
+   * Call the test-class provided implementation of {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept}
+   * and sets the following:
+   * <ol>
+   *   <li>statusCode</li>
+   *   <li>bytesReceived</li>
+   * </ol>
+   * It throws exception in case the implementation returns the exception.
+   * */
   @Override
   public void processResponse(final byte[] buffer,
       final int offset,

@@ -26,6 +26,14 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 
+/**
+ * Child class of {@link org.apache.hadoop.fs.azurebfs.services.AbfsClient} to orchestrate mocking behaviour for test-classes.
+ * It creates an object of {@link org.apache.hadoop.fs.azurebfs.services.MockAbfsRestOperation}
+ * and on override call of {@link org.apache.hadoop.fs.azurebfs.services.AbfsClient
+ * #getAbfsRestOperation(AbfsRestOperationType, String, URL, List, byte[], int, int, String)}
+ * and links it with the test-method provided implementation of
+ * {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept}
+ * */
 public class MockAbfsClient extends AbfsClient {
 
   private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;

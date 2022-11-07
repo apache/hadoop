@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.util.Random;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -53,14 +54,12 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
   public ITestPartialRead() throws Exception {
   }
 
-
-  /**
+  /*
    * Test1: Execute read for 4 MB, but httpOperation will read for only 1MB.:
    * retry with the remaining data, add data in throttlingIntercept.
-   * Test2: Execute read for 4 MB, but httpOperation will throw connection-rest exception + read 1 MB:
-   * retry with remaining data + add data in throttlingIntercept.
+   * Test2: Execute read for 4 MB, but httpOperation will throw connection-reset
+   * exception + read 1 MB: retry with remaining data + add data in throttlingIntercept.
    * */
-
 
   private byte[] setup(final Path testPath, final int fileSize)
       throws IOException {
@@ -74,7 +73,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
 
     final byte[] b = new byte[fileSize];
     new Random().nextBytes(b);
-
 
     FSDataOutputStream stream = fs.create(testPath);
     try {
@@ -140,10 +138,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     FSDataInputStream inputStream = fs.open(testPath);
     byte[] buffer = new byte[fileSize];
     inputStream.read(0, buffer, 0, fileSize);
-
-    Assert.assertEquals(4, mockHttpOperationTestIntercept.getCallCount());
-    Assert.assertEquals(4,
-        analyzerToBeAsserted.getFailedInstances().intValue());
+    Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
+        .isEqualTo(4);
+    Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
+        .isEqualTo(4);
   }
 
   private void callActualServerAndAssertBehaviour(final MockHttpOperation mockHttpOperation,
@@ -235,9 +233,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     byte[] buffer = new byte[fileSize];
     inputStream.read(0, buffer, 0, fileSize);
 
-    Assert.assertEquals(4, mockHttpOperationTestIntercept.getCallCount());
-    Assert.assertEquals(4,
-        analyzerToBeAsserted.getFailedInstances().intValue());
+    Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
+        .isEqualTo(4);
+    Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
+        .isEqualTo(4);
   }
 
   private class ActualServerReadByte {

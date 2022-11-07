@@ -22,6 +22,13 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
+/**
+ * Child class of {@link org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation} to orchestrate mocking behaviour for test-classes.
+ * It creates an object of {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperation}
+ * on the override call of {@link org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation#getHttpOperation()}
+ * and links it with the test-method provided implementation of
+ * {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept}.
+ * */
 public class MockAbfsRestOperation extends AbfsRestOperation {
 
   private MockHttpOperationTestIntercept mockHttpOperationTestIntercept;

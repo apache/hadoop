@@ -319,12 +319,17 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
 
+      /*
+       * In case of Connection_reset with status == 206 (partial-content)from
+       * server for read operation, the partial-result has to be sent back to
+       * AbfsInputStream which would retry for the remaining bytes.
+       * */
       if (ex instanceof SocketException && CONNECTION_RESET.equals(
-          ex.getMessage())) {
-        if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL) {
-          result = httpOperation;
-          return true;
-        }
+          ex.getMessage())
+          && httpOperation.getStatusCode() == HttpURLConnection.HTTP_PARTIAL
+          && operationType == AbfsRestOperationType.ReadFile) {
+        result = httpOperation;
+        return true;
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {

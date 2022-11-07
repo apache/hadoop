@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+/**
+ * Test-Utility class to interact with the methods of AbfsClientThrottlingIntercept
+ * which are exposed to test classes.
+ * */
 public final class AbfsClientThrottlingInterceptTestUtil {
 
   private AbfsClientThrottlingInterceptTestUtil() {}
@@ -26,6 +30,16 @@ public final class AbfsClientThrottlingInterceptTestUtil {
     return AbfsClientThrottlingIntercept.getSingleton();
   }
 
+  /**
+   * Synchronized method to set readAnalyzer field in the instance of
+   * AbfsClientThrottlingIntercept object. If the object already have a readAnalyser object of
+   * MockAbfsClientThrottlingAnalyzer class, the method will not update the field.<br>
+   * This method has to be synchronized as its going to check and set field on a
+   * singleton object. If multiple test are run in parallel, without synchronized block,
+   * it would result into consistency issue.
+   *
+   * @return readAnalyzer object in the provided AbfsClientThrottlingIntercept object.
+   * */
   public static synchronized AbfsClientThrottlingAnalyzer setReadAnalyzer(final AbfsClientThrottlingIntercept intercept,
       final AbfsClientThrottlingAnalyzer abfsClientThrottlingAnalyzer) {
     if (intercept.getReadThrottler() != null
