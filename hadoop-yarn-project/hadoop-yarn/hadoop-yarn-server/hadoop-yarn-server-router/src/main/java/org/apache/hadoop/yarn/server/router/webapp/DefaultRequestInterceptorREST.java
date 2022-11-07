@@ -608,7 +608,7 @@ public class DefaultRequestInterceptorREST
   public Client getClient() {
     return client;
   }
-  
+
   @Override
   public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
