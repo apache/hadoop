@@ -1946,22 +1946,4 @@ public final class S3AUtils {
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
   }
-
-  private static final String BYTES_PREFIX = "bytes=";
-
-  public static Optional<Pair<Long, Long>> parseRange(String rangeHeader) {
-    // TODO: Surely, there is a better way.
-    if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
-      String[] values = rangeHeader.substring("bytes=".length()).split("-");
-      if (values.length == 2) {
-        try {
-          Long start = Long.parseUnsignedLong(values[0]);
-          Long end = Long.parseUnsignedLong(values[0]);
-          return Optional.of(Pair.of(start, end));
-        } catch(NumberFormatException e) {
-        }
-      }
-    }
-    return Optional.empty();
-  }
 }

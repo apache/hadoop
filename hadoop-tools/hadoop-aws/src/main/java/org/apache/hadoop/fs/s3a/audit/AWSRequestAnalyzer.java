@@ -40,8 +40,6 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
-import org.apache.hadoop.fs.s3a.S3AUtils;
-
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_HEAD_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_ABORTED;
@@ -108,12 +106,9 @@ public class AWSRequestAnalyzer {
           0);
     } else if (request instanceof GetObjectRequest) {
       GetObjectRequest r = (GetObjectRequest) request;
-      long size = S3AUtils.parseRange(r.range())
-          .map(range -> range.getRight() - range.getLeft())
-          .orElse(Long.valueOf(-1));
       return reading(ACTION_HTTP_GET_REQUEST,
           r.key(),
-          size);
+          sizeFromRangeHeader(r.range()));
     } else if (request instanceof HeadObjectRequest) {
       return reading(ACTION_HTTP_HEAD_REQUEST,
           ((HeadObjectRequest) request).key(), 0);
@@ -298,5 +293,24 @@ public class AWSRequestAnalyzer {
 
   private static long toSafeLong(final Number size) {
     return size != null ? size.longValue() : 0;
+  }
+
+  private static final String BYTES_PREFIX = "bytes=";
+
+  private static Number sizeFromRangeHeader(String rangeHeader) {
+    if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
+      String[] values = rangeHeader
+          .substring(BYTES_PREFIX.length())
+          .split("-");
+      if (values.length == 2) {
+        try {
+          long start = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[0]);
+          return end - start;
+        } catch(NumberFormatException e) {
+        }
+      }
+    }
+    return -1;
   }
 }
