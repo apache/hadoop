@@ -99,4 +99,22 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
     WebAppTests.testPage(AppsPage.class, Router.class, new MockRouter(config));
   }
+
+  @Test
+  public void testNodeLabelAppViewNotEnable()
+      throws InterruptedException, YarnException, IOException {
+    // Test Federation Not Enabled
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
+    WebAppTests.testPage(NodeLabelsPage.class, Router.class, new MockRouter(config));
+  }
+
+  @Test
+  public void testNodeLabelAppViewEnable()
+      throws InterruptedException, YarnException, IOException {
+    // Test Federation Not Enabled
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    WebAppTests.testPage(NodeLabelsPage.class, Router.class, new MockRouter(config));
+  }
 }
