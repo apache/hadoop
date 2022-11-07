@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult;
 
 import static java.net.HttpURLConnection.HTTP_PARTIAL;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CONNECTION_RESET;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
 public class ITestPartialRead extends AbstractAbfsIntegrationTest {
@@ -107,7 +108,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         /*
          * 1. Check if server can handle the request parameters.
          * 2. return 1MB data to test-client.
-         * */
+         */
         callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset,
             length, actualServerReadByte, ONE_MB);
 
@@ -198,7 +199,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         /*
          * 1. Check if server can handle the request parameters.
          * 2. return 1MB data with connection-reset exception to test-client.
-         * */
+         */
 
         callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset,
             length, actualServerReadByte, ONE_MB);
@@ -209,7 +210,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         mockHttpOperationTestInterceptResult.setStatus(HTTP_PARTIAL);
         mockHttpOperationTestInterceptResult.setBytesRead(ONE_MB);
         mockHttpOperationTestInterceptResult.setException(new SocketException(
-            "Connection reset"));
+            CONNECTION_RESET));
         callCount++;
         return mockHttpOperationTestInterceptResult;
       }
