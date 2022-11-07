@@ -134,6 +134,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -1059,6 +1060,42 @@ public class MockDefaultRequestInterceptorREST
   @VisibleForTesting
   public void setMockRM(MockRM mockRM) {
     this.mockRM = mockRM;
+  }
+  
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo();
+    nodeLabelInfo.setExclusivity(true);
+    nodeLabelInfo.setName("Test-Label");
+    nodeLabelInfo.setActiveNMs(10);
+    PartitionInfo partitionInfo = new PartitionInfo();
+
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    return nodeLabelsInfo;
+  }
+
+  private MockRM setupResourceManager() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
+
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    // Define default queue
+    conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+    // Define dedicated queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+        new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
+    conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
+    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
+    conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    rm.registerNode("127.0.0.1:5678", 100*1024, 100);
+    return rm;
   }
 
   @Override
