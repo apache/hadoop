@@ -526,10 +526,10 @@ public class DefaultRequestInterceptorREST
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr) {
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         RMQueueAclInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.QUEUES + "/" + queue
+        RMWSConsts.RM_WEB_SERVICE_PATH +  "/" + RMWSConsts.QUEUES + "/" + queue
             + "/access", null, null, getConf(), client);
   }
 
@@ -601,5 +601,13 @@ public class DefaultRequestInterceptorREST
             RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
                 + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
             null, getConf(), client);
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+        NodeLabelsInfo.class, HTTPMethods.GET,
+        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS,
+        null, null, getConf(), client);
   }
 }
