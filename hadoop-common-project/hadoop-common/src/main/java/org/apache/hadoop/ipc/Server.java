@@ -2884,7 +2884,7 @@ public abstract class Server {
           if (header.hasRouterFederatedState()) {
             call.setFederatedNamespaceState(header.getRouterFederatedState());
           } else if (header.hasStateId()) {
-            // Set one empty FederatedNamespaceState to identify the client want to get stateId.
+            // Set one empty FederatedNamespaceState to identify the client wants to get stateId.
             call.setFederatedNamespaceState(EMPTY_BYTE_STRING);
           }
         } catch (IOException ioe) {
