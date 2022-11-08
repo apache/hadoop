@@ -27,7 +27,6 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Builder;
@@ -53,6 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
@@ -226,6 +226,12 @@ public class DefaultS3ClientFactory extends Configured
           parameters.getUserAgentSuffix());
     }
 
+    if (parameters.getExecutionInterceptors() != null) {
+      for (ExecutionInterceptor interceptor : parameters.getExecutionInterceptors()) {
+        clientOverrideConfigBuilder.addExecutionInterceptor(interceptor);
+      }
+    }
+
     clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
     httpClientBuilder.proxyConfiguration(proxyConfigBuilder.build());
 
@@ -253,8 +259,8 @@ public class DefaultS3ClientFactory extends Configured
     s3ClientBuilder.serviceConfiguration(s3Configuration);
 
     // TODO: Some configuration done in configureBasicParams is not done yet.
-    //  Request handlers will be added during auditor work. Need to verify how metrics collection
-    //  can be done, as SDK V2 only seems to have a metrics publisher.
+    //  Need to verify how metrics collection can be done, as SDK V2 only
+    //  seems to have a metrics publisher.
 
     return s3ClientBuilder.build();
   }
@@ -358,10 +364,6 @@ public class DefaultS3ClientFactory extends Configured
     if (parameters.getMetrics() != null) {
       builder.withMetricsCollector(
           new AwsStatisticsCollector(parameters.getMetrics()));
-    }
-    if (parameters.getRequestHandlers() != null) {
-      builder.withRequestHandlers(
-          parameters.getRequestHandlers().toArray(new RequestHandler2[0]));
     }
     if (parameters.getMonitoringListener() != null) {
       builder.withMonitoringListener(parameters.getMonitoringListener());

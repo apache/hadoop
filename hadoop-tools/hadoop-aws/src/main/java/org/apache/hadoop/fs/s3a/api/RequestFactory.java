@@ -22,9 +22,6 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 
-import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 
@@ -80,13 +77,6 @@ public interface RequestFactory {
    * @return an ACL, if any
    */
   ObjectCannedACL getCannedACL();
-
-  /**
-   * Create the AWS SDK structure used to configure SSE,
-   * if the encryption secrets contain the information/settings for this.
-   * @return an optional set of KMS Key settings
-   */
-  Optional<SSEAwsKeyManagementParams> generateSSEAwsKeyParams();
 
   /**
    * Create the SSE-C structure for the AWS SDK, if the encryption secrets
@@ -241,16 +231,6 @@ public interface RequestFactory {
   ListObjectsRequest.Builder newListObjectsV1RequestBuilder(String key,
       String delimiter,
       int maxKeys);
-
-  /**
-   * Create the next V1 page list request, following
-   * on from the previous response.
-   * @param prev previous response
-   * @return the request
-   */
-
-  ListNextBatchOfObjectsRequest newListNextBatchOfObjectsRequest(
-      ObjectListing prev);
 
   /**
    * Create a V2 list request builder.

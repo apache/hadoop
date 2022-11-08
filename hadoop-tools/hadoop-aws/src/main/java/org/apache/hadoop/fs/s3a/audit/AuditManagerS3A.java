@@ -21,9 +21,6 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.IOException;
 import java.util.List;
 
-import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -31,6 +28,9 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.service.Service;
+
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 /**
  * Interface for Audit Managers auditing operations through the
@@ -56,24 +56,24 @@ public interface AuditManagerS3A extends Service,
   OperationAuditor getAuditor();
 
   /**
-   * Create the request handler(s) for this audit service.
-   * The list returned is mutable; new handlers may be added.
-   * @return list of handlers for the SDK.
+   * Create the execution interceptor(s) for this audit service.
+   * The list returned is mutable; new interceptors may be added.
+   * @return list of interceptors for the SDK.
    * @throws IOException failure.
    */
-  List<RequestHandler2> createRequestHandlers() throws IOException;
+  List<ExecutionInterceptor> createExecutionInterceptors() throws IOException;
 
   /**
-   * Return a transfer state change callback which
+   * Return a transfer callback which
    * fixes the active span context to be that in which
-   * the state change listener was created.
+   * the transfer listener was created.
    * This can be used to audit the creation of the multipart
    * upload initiation request which the transfer manager
    * makes when a file to be copied is split up.
    * This must be invoked/used within the active span.
-   * @return a state change listener.
+   * @return a transfer listener.
    */
-  TransferStateChangeListener createStateChangeListener();
+  TransferListener createTransferListener();
 
   /**
    * Check for permission to access a path.

@@ -26,9 +26,6 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.ListNextBatchOfObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
 import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import org.apache.hadoop.util.Preconditions;
@@ -36,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
@@ -84,8 +82,8 @@ import static org.apache.hadoop.util.Preconditions.checkNotNull;
  * This is where audit span information is added to the requests,
  * until it is done in the AWS SDK itself.
  *
- * All created requests will be passed through
- * {@link PrepareRequest#prepareRequest(AmazonWebServiceRequest)} before
+ * All created request builders will be passed to
+ * {@link PrepareRequest#prepareRequest(SdkRequest.Builder)} before
  * being returned to the caller.
  */
 public class RequestFactoryImpl implements RequestFactory {
@@ -146,24 +144,14 @@ public class RequestFactoryImpl implements RequestFactory {
 
   /**
    * Preflight preparation of AWS request.
-   * @param <T> web service request
-   * @return prepared entry.
+   * @param <T> web service request builder
+   * @return prepared builder.
    */
   @Retries.OnceRaw
-  private <T extends AmazonWebServiceRequest> T prepareRequest(T t) {
-    return requestPreparer != null
-        ? requestPreparer.prepareRequest(t)
-        : t;
-  }
-
-  /**
-   * Preflight preparation of V2 AWS request.
-   * @param <T> web service request
-   * @return prepared entry.
-   */
-  // TODO: Currently this is a NOOP, will be completed separately as part of auditor work.
-  @Retries.OnceRaw
-  private <T extends AwsRequest.Builder> T prepareV2Request(T t) {
+  private <T extends SdkRequest.Builder> T prepareRequest(T t) {
+    if (requestPreparer != null) {
+      requestPreparer.prepareRequest(t);
+    }
     return t;
   }
 
@@ -185,25 +173,12 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   /**
-   * Create the AWS SDK structure used to configure SSE,
-   * if the encryption secrets contain the information/settings for this.
-   * @return an optional set of KMS Key settings
-   */
-  // TODO: This method can be removed during getObject work, as the key now comes directly from
-  //  EncryptionSecretOperations.getSSEAwsKMSKey.
-  @Override
-  public Optional<SSEAwsKeyManagementParams> generateSSEAwsKeyParams() {
-    return EncryptionSecretOperations.createSSEAwsKeyManagementParams(
-        encryptionSecrets);
-  }
-
-  /**
    * Create the SSE-C structure for the AWS SDK, if the encryption secrets
    * contain the information/settings for this.
    * This will contain a secret extracted from the bucket/configuration.
    * @return an optional customer key.
    */
-  // TODO: This method can be removed during getObject work, as the key now comes directly from
+  // TODO: This method can be removed during SelectObject work, as the key now comes directly from
   //  EncryptionSecretOperations.getSSECustomerKey.
   @Override
   public Optional<SSECustomerKey> generateSSECustomerKey() {
@@ -288,7 +263,7 @@ public class RequestFactoryImpl implements RequestFactory {
     copyObjectRequestBuilder.destinationBucket(getBucket())
         .destinationKey(dstKey).sourceBucket(getBucket()).sourceKey(srcKey);
 
-    return prepareV2Request(copyObjectRequestBuilder);
+    return prepareRequest(copyObjectRequestBuilder);
   }
 
   /**
@@ -350,7 +325,7 @@ public class RequestFactoryImpl implements RequestFactory {
       putObjectRequestBuilder.storageClass(storageClass);
     }
 
-    return prepareV2Request(putObjectRequestBuilder);
+    return prepareRequest(putObjectRequestBuilder);
   }
 
   private PutObjectRequest.Builder buildPutObjectRequest(long length, boolean isDirectoryMarker) {
@@ -405,7 +380,7 @@ public class RequestFactoryImpl implements RequestFactory {
 
     putEncryptionParameters(putObjectRequestBuilder);
 
-    return prepareV2Request(putObjectRequestBuilder);
+    return prepareRequest(putObjectRequestBuilder);
   }
 
   @Override
@@ -418,7 +393,7 @@ public class RequestFactoryImpl implements RequestFactory {
     if (prefix != null) {
       requestBuilder.prefix(prefix);
     }
-    return prepareV2Request(requestBuilder);
+    return prepareRequest(requestBuilder);
   }
 
   @Override
@@ -428,7 +403,7 @@ public class RequestFactoryImpl implements RequestFactory {
     AbortMultipartUploadRequest.Builder requestBuilder =
         AbortMultipartUploadRequest.builder().bucket(getBucket()).key(destKey).uploadId(uploadId);
 
-    return prepareV2Request(requestBuilder);
+    return prepareRequest(requestBuilder);
   }
 
   private void multipartUploadEncryptionParameters(CreateMultipartUploadRequest.Builder mpuRequestBuilder) {
@@ -475,7 +450,7 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.storageClass(storageClass);
     }
 
-    return prepareV2Request(requestBuilder);
+    return prepareRequest(requestBuilder);
   }
 
   @Override
@@ -489,7 +464,7 @@ public class RequestFactoryImpl implements RequestFactory {
         CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
 
-    return prepareV2Request(requestBuilder);
+    return prepareRequest(requestBuilder);
   }
 
   @Override
@@ -505,7 +480,7 @@ public class RequestFactoryImpl implements RequestFactory {
           .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
     });
 
-    return prepareV2Request(headObjectRequestBuilder);
+    return prepareRequest(headObjectRequestBuilder);
   }
 
   @Override
@@ -521,7 +496,7 @@ public class RequestFactoryImpl implements RequestFactory {
           .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
     });
 
-    return prepareV2Request(builder);
+    return prepareRequest(builder);
   }
 
   @Override
@@ -551,7 +526,7 @@ public class RequestFactoryImpl implements RequestFactory {
         .partNumber(partNumber)
         .contentLength(size);
     uploadPartEncryptionParameters(builder);
-    return prepareV2Request(builder);
+    return prepareRequest(builder);
   }
 
   @Override
@@ -560,7 +535,10 @@ public class RequestFactoryImpl implements RequestFactory {
     request.setBucketName(bucket);
     request.setKey(key);
     generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
-    return prepareRequest(request);
+
+    // TODO: revert when select is upgraded to v2
+    // return prepareRequest(requestBuilder);
+    return request;
   }
 
   @Override
@@ -576,13 +554,7 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.delimiter(delimiter);
     }
 
-    return prepareV2Request(requestBuilder);
-  }
-
-  @Override
-  public ListNextBatchOfObjectsRequest newListNextBatchOfObjectsRequest(
-      ObjectListing prev) {
-    return prepareRequest(new ListNextBatchOfObjectsRequest(prev));
+    return prepareRequest(requestBuilder);
   }
 
   @Override
@@ -600,18 +572,18 @@ public class RequestFactoryImpl implements RequestFactory {
       requestBuilder.delimiter(delimiter);
     }
 
-    return prepareV2Request(requestBuilder);
+    return prepareRequest(requestBuilder);
   }
 
   @Override
   public DeleteObjectRequest.Builder newDeleteObjectRequestBuilder(String key) {
-    return prepareV2Request(DeleteObjectRequest.builder().bucket(bucket).key(key));
+    return prepareRequest(DeleteObjectRequest.builder().bucket(bucket).key(key));
   }
 
   @Override
   public DeleteObjectsRequest.Builder newBulkDeleteRequestBuilder(
           List<ObjectIdentifier> keysToDelete) {
-    return prepareV2Request(DeleteObjectsRequest
+    return prepareRequest(DeleteObjectsRequest
         .builder()
         .bucket(bucket)
         .delete(d -> d.objects(keysToDelete).quiet(true)));
@@ -766,11 +738,9 @@ public class RequestFactoryImpl implements RequestFactory {
 
     /**
      * Post-creation preparation of AWS request.
-     * @param t request
-     * @param <T> request type.
-     * @return prepared entry.
+     * @param t request builder
      */
     @Retries.OnceRaw
-    <T extends AmazonWebServiceRequest> T prepareRequest(T t);
+    void prepareRequest(SdkRequest.Builder t);
   }
 }

@@ -47,6 +47,9 @@ public final class V2Migration {
   private static final LogExactlyOnce WARN_OF_CUSTOM_SIGNER =
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
+  private static final LogExactlyOnce WARN_OF_REQUEST_HANDLERS =
+      new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
+
   private static final LogExactlyOnce WARN_ON_GET_OBJECT_METADATA =
       new LogExactlyOnce(SDK_V2_UPGRADE_LOG);
 
@@ -84,6 +87,15 @@ public final class V2Migration {
   public static void v1CustomSignerUsed() {
     WARN_OF_CUSTOM_SIGNER.warn(
         "The signer interface has changed in AWS SDK V2, custom signers will need to be updated "
+            + "once S3A is upgraded to SDK V2");
+  }
+
+  /**
+   * Warns on use of request handlers.
+   */
+  public static void v1RequestHandlersUsed() {
+    WARN_OF_REQUEST_HANDLERS.warn(
+        "The request handler interface has changed in AWS SDK V2, use exception interceptors "
             + "once S3A is upgraded to SDK V2");
   }
 

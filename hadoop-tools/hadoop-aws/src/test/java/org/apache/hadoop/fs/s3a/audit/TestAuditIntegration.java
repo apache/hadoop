@@ -20,27 +20,23 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
-import java.util.List;
 
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditor;
-import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToRequest;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.retrieveAttachedSpan;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.createIOStatisticsStoreForAuditing;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditConfig;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStarted;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStopped;
@@ -174,14 +170,14 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   public void testRequestHandlerLoading() throws Throwable {
     Configuration conf = noopAuditConfig();
     conf.setClassLoader(this.getClass().getClassLoader());
-    conf.set(AUDIT_REQUEST_HANDLERS,
-        SimpleAWSRequestHandler.CLASS);
+    conf.set(AUDIT_EXECUTION_INTERCEPTORS,
+        SimpleAWSExecutionInterceptor.CLASS);
     AuditManagerS3A manager = AuditIntegration.createAndStartAuditManager(
         conf,
         ioStatistics);
-    assertThat(manager.createRequestHandlers())
+    assertThat(manager.createExecutionInterceptors())
         .hasSize(2)
-        .hasAtLeastOneElementOfType(SimpleAWSRequestHandler.class);
+        .hasAtLeastOneElementOfType(SimpleAWSExecutionInterceptor.class);
   }
 
   @Test
@@ -198,8 +194,8 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   @Test
   public void testNoopAuditManager() throws Throwable {
     AuditManagerS3A manager = AuditIntegration.stubAuditManager();
-    assertThat(manager.createStateChangeListener())
-        .describedAs("transfer state change listener")
+    assertThat(manager.createTransferListener())
+        .describedAs("transfer listener")
         .isNotNull();
   }
 
@@ -208,11 +204,10 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
     AuditManagerS3A manager = AuditIntegration.stubAuditManager();
 
     AuditSpanS3A span = manager.createSpan("op", null, null);
-    GetObjectMetadataRequest request =
-        new GetObjectMetadataRequest("bucket", "key");
-    attachSpanToRequest(request, span);
-    AWSAuditEventCallbacks callbacks = retrieveAttachedSpan(request);
-    assertThat(callbacks).isSameAs(span);
+    ExecutionAttributes attributes = ExecutionAttributes.builder().build();
+    attachSpanToRequest(attributes, span);
+    AuditSpanS3A retrievedSpan = retrieveAttachedSpan(attributes);
+    assertThat(retrievedSpan).isSameAs(span);
 
   }
 }

@@ -33,7 +33,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.enableLoggingAuditor;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupCounterStatistic;
@@ -57,8 +57,8 @@ public class ITestAuditManager extends AbstractS3ACostTest {
     Configuration conf = super.createConfiguration();
     resetAuditOptions(conf);
     enableLoggingAuditor(conf);
-    conf.set(AUDIT_REQUEST_HANDLERS,
-        SimpleAWSRequestHandler.CLASS);
+    conf.set(AUDIT_EXECUTION_INTERCEPTORS,
+        SimpleAWSExecutionInterceptor.CLASS);
     return conf;
   }
 
@@ -117,14 +117,14 @@ public class ITestAuditManager extends AbstractS3ACostTest {
   public void testRequestHandlerBinding() throws Throwable {
     describe("Verify that extra request handlers can be added and that they"
         + " will be invoked during request execution");
-    final long baseCount = SimpleAWSRequestHandler.getInvocationCount();
+    final long baseCount = SimpleAWSExecutionInterceptor.getInvocationCount();
     final S3AFileSystem fs = getFileSystem();
     final long exec0 = lookupCounterStatistic(iostats(),
         AUDIT_REQUEST_EXECUTION.getSymbol());
     // API call to a known path, `getBucketLocation()` does not always result in an API call.
     fs.listStatus(path("/"));
     // which MUST have ended up calling the extension request handler
-    Assertions.assertThat(SimpleAWSRequestHandler.getInvocationCount())
+    Assertions.assertThat(SimpleAWSExecutionInterceptor.getInvocationCount())
         .describedAs("Invocation count of plugged in request handler")
         .isGreaterThan(baseCount);
     assertThatStatisticCounter(iostats(), AUDIT_REQUEST_EXECUTION.getSymbol())
