@@ -225,7 +225,7 @@ public class ConfigurationProperties {
     if (!propertyKeyParts.isEmpty()) {
       return findOrCreatePrefixNode(null, propertyKeyParts.iterator());
     } else {
-      LOG.warn("Empty configuration property");
+      LOG.warn("Empty configuration property: " + name);
       return null;
     }
   }

@@ -245,8 +245,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
 
-  private BiConsumer<String, String> propAddListener;
-  private Consumer<String> propRemoveListener;
+  private BiConsumer<String, String> propertiesAddListener;
+  private Consumer<String> propertiesRemoveListener;
 
 
   private static class Resource {
@@ -879,12 +879,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   protected synchronized void setPropListeners(
-      BiConsumer<String, String> propAddListener,
-      Consumer<String> propRemoveListener
+      BiConsumer<String, String> propertiesAddListener,
+      Consumer<String> propertiesRemoveListener
   ) {
+    assert propertiesAddListener != null : "propertiesAddListener can not be null";
+    assert propertiesRemoveListener != null : "propertiesRemoveListener cannot be null";
     this.properties = null;
-    this.propAddListener = propAddListener;
-    this.propRemoveListener = propRemoveListener;
+    this.propertiesAddListener = propertiesAddListener;
+    this.propertiesRemoveListener = propertiesRemoveListener;
   }
 
   /**
@@ -2938,8 +2940,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   protected synchronized Properties getProps() {
     if (properties == null) {
-      properties = propAddListener != null || propRemoveListener != null
-        ? new PropWithListener(this)
+      properties = propertiesAddListener != null || propertiesRemoveListener != null
+        ? new PropertiesWithListener(this)
         : new Properties();
       loadProps(properties, 0, true);
     }
@@ -4078,24 +4080,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     localUR.put(key, value);
   }
-  private class PropWithListener extends Properties {
+  private class PropertiesWithListener extends Properties {
 
     private final Configuration configuration;
 
-    public PropWithListener(Configuration configuration) {
+    public PropertiesWithListener(Configuration configuration) {
       this.configuration = configuration;
     }
+
     @Override
     public synchronized Object setProperty(String key, String value) {
       synchronized (configuration) {
-        propAddListener.accept(key, value);
+        propertiesAddListener.accept(key, value);
         return super.setProperty(key, value);
       }
     }
     @Override
     public synchronized Object remove(Object key) {
       synchronized (configuration) {
-        propRemoveListener.accept(String.valueOf(key));
+        propertiesRemoveListener.accept(String.valueOf(key));
         return super.remove(key);
       }
     }

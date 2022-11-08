@@ -17,13 +17,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.junit.Test;
 
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
