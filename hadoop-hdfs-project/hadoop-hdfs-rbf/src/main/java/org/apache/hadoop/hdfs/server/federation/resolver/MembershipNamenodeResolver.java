@@ -218,7 +218,7 @@ public class MembershipNamenodeResolver
     for (int i = observerList.size(); i < inputNameNodes.size(); i++) {
       ret.add(inputNameNodes.get(i));
     }
-    return ret;
+    return Collections.unmodifiableList(ret);
   }
 
   @Override
