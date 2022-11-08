@@ -52,14 +52,12 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
   private YarnConfigurationStore confStore;
   private ConfigurationMutationACLPolicy aclMutationPolicy;
   private RMContext rmContext;
-  private ConfUpdateAssembler confUpdateAssembler;
 
   private final ReentrantReadWriteLock formatLock =
       new ReentrantReadWriteLock();
 
   public MutableCSConfigurationProvider(RMContext rmContext) {
     this.rmContext = rmContext;
-    this.confUpdateAssembler = new ConfUpdateAssembler();
   }
 
   // Unit test can overwrite this method
@@ -127,8 +125,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     oldConf = new Configuration(schedConf);
     CapacitySchedulerConfiguration proposedConf =
             new CapacitySchedulerConfiguration(schedConf, false);
-    Map<String, String> kvUpdate
-            = confUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
+    Map<String, String> kvUpdate = ConfUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
     confStore.logMutation(log);
     applyMutation(proposedConf, kvUpdate);
@@ -140,8 +137,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
                            SchedConfUpdateInfo confUpdate) throws IOException {
     CapacitySchedulerConfiguration proposedConf =
             new CapacitySchedulerConfiguration(oldConfiguration, false);
-    Map<String, String> kvUpdate
-            = confUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
+    Map<String, String> kvUpdate = ConfUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
     applyMutation(proposedConf, kvUpdate);
     return proposedConf;
   }

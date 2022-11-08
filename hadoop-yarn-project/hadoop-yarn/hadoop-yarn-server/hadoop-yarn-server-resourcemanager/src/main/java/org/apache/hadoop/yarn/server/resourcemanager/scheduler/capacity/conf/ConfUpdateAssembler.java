@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.conf.Configuration;
@@ -17,7 +35,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 
 public class ConfUpdateAssembler {
 
-  public Map<String, String> constructKeyValueConfUpdate(
+  public static Map<String, String> constructKeyValueConfUpdate(
           CapacitySchedulerConfiguration proposedConf,
           SchedConfUpdateInfo mutationInfo) throws IOException {
 
@@ -38,7 +56,7 @@ public class ConfUpdateAssembler {
     return confUpdate;
   }
 
-  private void removeQueue(
+  private static void removeQueue(
           String queueToRemove, CapacitySchedulerConfiguration proposedConf,
           Map<String, String> confUpdate) throws IOException {
     if (queueToRemove != null) {
@@ -82,7 +100,7 @@ public class ConfUpdateAssembler {
     }
   }
 
-  private void addQueue(
+  private static void addQueue(
           QueueConfigInfo addInfo, CapacitySchedulerConfiguration proposedConf,
           Map<String, String> confUpdate) throws IOException {
     if (addInfo != null) {
@@ -126,9 +144,9 @@ public class ConfUpdateAssembler {
     }
   }
 
-  private void updateQueue(QueueConfigInfo updateInfo,
-                           CapacitySchedulerConfiguration proposedConf,
-                           Map<String, String> confUpdate) {
+  private static void updateQueue(QueueConfigInfo updateInfo,
+                                  CapacitySchedulerConfiguration proposedConf,
+                                  Map<String, String> confUpdate) {
     if (updateInfo != null) {
       String queuePath = updateInfo.getQueue();
       String keyPrefix = CapacitySchedulerConfiguration.PREFIX
@@ -146,7 +164,7 @@ public class ConfUpdateAssembler {
     }
   }
 
-  private List<String> getSiblingQueues(String queuePath, Configuration conf) {
+  private static List<String> getSiblingQueues(String queuePath, Configuration conf) {
     String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
     String childQueuesKey = CapacitySchedulerConfiguration.PREFIX +
             parentQueue + CapacitySchedulerConfiguration.DOT +
