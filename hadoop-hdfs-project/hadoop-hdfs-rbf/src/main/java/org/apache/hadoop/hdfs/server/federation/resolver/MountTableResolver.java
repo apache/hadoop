@@ -398,7 +398,9 @@ public class MountTableResolver
     try {
       // Our cache depends on the store, update it first
       MountTableStore mountTable = this.getMountTableStore();
-      mountTable.loadCache(force);
+      if (!mountTable.loadCache(force)) {
+        return false;
+      }
 
       GetMountTableEntriesRequest request =
           GetMountTableEntriesRequest.newInstance("/");
