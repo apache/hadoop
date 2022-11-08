@@ -577,7 +577,7 @@ public interface MRJobConfig {
   public static final String MAX_SHUFFLE_FETCH_HOST_FAILURES = "mapreduce.reduce.shuffle.max-host-failures";
   public static final int DEFAULT_MAX_SHUFFLE_FETCH_HOST_FAILURES = 5;
 
-  String SHUFFLE_INDEX_CACHE = "mapreduce.reduce.shuffle.indexcache.mb";
+  public static final String SHUFFLE_INDEX_CACHE = "mapreduce.reduce.shuffle.indexcache.mb";
 
   public static final String REDUCE_SKIP_INCR_PROC_COUNT = "mapreduce.reduce.skip.proc-count.auto-incr";
 
