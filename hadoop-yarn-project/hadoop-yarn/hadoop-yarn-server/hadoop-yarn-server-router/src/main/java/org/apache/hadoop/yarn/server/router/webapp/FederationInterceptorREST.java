@@ -2076,13 +2076,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
 
-    // Send the requests in parallel
-    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
-
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
-    CompletionService<Pair<R, Exception>> compSvc =
-        new ExecutorCompletionService<>(this.threadpool);
+    // Send the requests in parallel.
+    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2119,7 +2116,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
-          Exception exception = pair.getRight();
           if (exception != null) {
             throw exception;
           }
