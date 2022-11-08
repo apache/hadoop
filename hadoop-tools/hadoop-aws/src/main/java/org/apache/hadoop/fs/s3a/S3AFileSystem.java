@@ -1169,14 +1169,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   private void initTransferManager() {
-    TransferManagerConfiguration transferConfiguration =
-        new TransferManagerConfiguration();
-    transferConfiguration.setMinimumUploadPartSize(partSize);
-    transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
-    transferConfiguration.setMultipartCopyPartSize(partSize);
-    transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
-
-      transferManagerV2 = S3TransferManager.builder()
+    transferManagerV2 = S3TransferManager.builder()
         .s3ClientConfiguration(clientConfiguration -> {
           // TODO: This partSize check is required temporarily as some of the unit tests
           //  (TestStagingCommitter) set the S3Client using setAmazonS3Client() at which point
@@ -1185,8 +1178,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           if (partSize > 0) {
             clientConfiguration.minimumPartSizeInBytes(partSize);
           }
+
+          // TODO: other configuration options? e.g. credential providers
         })
+        .transferConfiguration(transferConfiguration ->
+            transferConfiguration.executor(unboundedThreadPool)) // TODO: double-check
         .build();
+
+    TransferManagerConfiguration transferConfiguration =
+        new TransferManagerConfiguration();
+    transferConfiguration.setMinimumUploadPartSize(partSize);
+    transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
+    transferConfiguration.setMultipartCopyPartSize(partSize);
+    transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
 
     transfers = new TransferManager(s3, unboundedThreadPool);
     transfers.setConfiguration(transferConfiguration);
@@ -1341,6 +1345,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     s3 = client.getLeft();
     s3V2 = client.getRight();
 
+    // TODO: still relevant in v2?
     // Need to use a new TransferManager that uses the new client.
     // Also, using a new TransferManager requires a new threadpool as the old
     // TransferManager will shut the thread pool down when it is garbage
@@ -4123,6 +4128,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       transfers = null;
     }
+
+    // TODO: Do we need this for v2?
+    try {
+      if (transferManagerV2 != null) {
+        transferManagerV2.close();
+      }
+      if (s3V2 != null) {
+        s3V2.close();
+      }
+      if (s3AsyncClient != null) {
+        s3AsyncClient.close();
+      }
+    } catch (RuntimeException e) {
+      // catch and swallow for resilience.
+      LOG.debug("When shutting down", e);
+    }
+    transferManagerV2 = null;
+    s3V2 = null;
+    s3AsyncClient = null;
+
     // At this point the S3A client is shut down,
     // now the executor pools are closed
     HadoopExecutors.shutdown(boundedThreadPool, LOG,
