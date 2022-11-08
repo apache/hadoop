@@ -43,9 +43,10 @@ Multiple blocks may be read in parallel.
 |`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
 |`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
 
-Although, default size of the block for prefetching the input stream is 8 MB, minimum size allowed to set
-is 1 byte for a block. User should set the block size as per the use knowing that very low block size increases
-the number of blocks. Thus, it affects the performance by increasing the overhead for reading and prefetching
+Although, default size of the block for prefetching the input stream is 8 MB, 
+minimum size allowed to set is 1 byte for a block.
+User should set the block size with the understanding that smaller block sizes increases the number of blocks.
+Thus, smaller block size affects the performance by increasing the overhead for reading and prefetching
 each block.
 
 ### Key Components
