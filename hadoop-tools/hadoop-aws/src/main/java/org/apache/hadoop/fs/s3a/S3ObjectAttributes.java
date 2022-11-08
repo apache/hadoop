@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.transfer.model.CopyResult;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -71,31 +69,6 @@ public class S3ObjectAttributes {
     this.serverSideEncryptionKey = serverSideEncryptionKey;
     this.eTag = eTag;
     this.versionId = versionId;
-    this.len = len;
-  }
-
-  /**
-   * Construct from the result of a copy and those parameters
-   * which aren't included in an AWS SDK response.
-   * @param path path
-   * @param copyResult copy result.
-   * @param serverSideEncryptionAlgorithm current encryption algorithm
-   * @param serverSideEncryptionKey any server side encryption key?
-   * @param len object length
-   */
-  public S3ObjectAttributes(
-      final Path path,
-      final CopyResult copyResult,
-      final S3AEncryptionMethods serverSideEncryptionAlgorithm,
-      final String serverSideEncryptionKey,
-      final long len) {
-    this.bucket = copyResult.getDestinationBucketName();
-    this.key = copyResult.getDestinationKey();
-    this.path = path;
-    this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
-    this.serverSideEncryptionKey = serverSideEncryptionKey;
-    this.eTag = copyResult.getETag();
-    this.versionId = copyResult.getVersionId();
     this.len = len;
   }
 

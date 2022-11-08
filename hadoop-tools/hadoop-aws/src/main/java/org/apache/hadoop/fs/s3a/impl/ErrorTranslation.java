@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import com.amazonaws.AmazonServiceException;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404;

@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.TreeMap;
 
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
