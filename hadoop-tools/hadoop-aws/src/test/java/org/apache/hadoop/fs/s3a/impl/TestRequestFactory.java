@@ -23,8 +23,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -60,7 +58,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
   private final AWSRequestAnalyzer analyzer = new AWSRequestAnalyzer();
 
   /**
-   * Count of requests analyzed via the {@link #a(AmazonWebServiceRequest)}
+   * Count of requests analyzed via the {@link #a(AwsRequest.Builder)}
    * call.
    */
   private int requestsAnalyzed;
@@ -141,22 +139,13 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     }
   }
 
-  private AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder request) {
-    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(request.build());
-    LOG.info("{}", info);
-    requestsAnalyzed++;
-    return info;
-  }
-
   /**
    * Analyze the request, log the output, return the info.
-   * @param request request.
-   * @param <T> type of request.
+   * @param builder request builder.
    * @return value
    */
-  private <T extends AmazonWebServiceRequest> AWSRequestAnalyzer.RequestInfo
-      a(T request) {
-    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(request);
+  private AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder builder) {
+    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(builder.build());
     LOG.info("{}", info);
     requestsAnalyzed++;
     return info;
