@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1227,12 +1228,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public void abortOutstandingMultipartUploads(long seconds)
       throws IOException {
     Preconditions.checkArgument(seconds >= 0);
-    Date purgeBefore =
-        new Date(new Date().getTime() - seconds * 1000);
+    Instant purgeBefore =
+        Instant.now().minusSeconds(seconds);
     LOG.debug("Purging outstanding multipart uploads older than {}",
         purgeBefore);
     invoker.retry("Purging multipart uploads", bucket, true,
-        () -> transfers.abortMultipartUploads(bucket, purgeBefore));
+        () -> {
+          MultipartUtils.UploadIterator uploadIterator =
+              MultipartUtils.listMultipartUploads(createStoreContext(),
+                  s3V2, null, maxKeys);
+
+          while (uploadIterator.hasNext()) {
+            MultipartUpload upload = uploadIterator.next();
+            if (upload.initiated().compareTo(purgeBefore) < 0) {
+              abortMultipartUpload(upload);
+            }
+          }
+        });
   }
 
   /**
