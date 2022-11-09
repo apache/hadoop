@@ -218,6 +218,11 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    return getNextInterceptor().getRMNodeLabels(hsr);
+  }
+
+  @Override
   public LabelsToNodesInfo getLabelsToNodes(Set<String> labels)
       throws IOException {
     return getNextInterceptor().getLabelsToNodes(labels);

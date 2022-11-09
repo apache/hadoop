@@ -185,7 +185,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.316</aws-java-sdk.version>
-    <hsqldb.version>2.5.2</hsqldb.version>
+    <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
@@ -197,7 +197,7 @@
     <declared.hadoop.version>${hadoop.version}</declared.hadoop.version>
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
-    <snakeyaml.version>1.32</snakeyaml.version>
+    <snakeyaml.version>1.33</snakeyaml.version>
     <hbase.one.version>1.7.1</hbase.one.version>
     <hbase.two.version>2.2.4</hbase.two.version>
     <junit.version>4.13.2</junit.version>
@@ -210,7 +210,7 @@
     <solr.version>8.8.2</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
-    <woodstox.version>5.3.0</woodstox.version>
+    <woodstox.version>5.4.0</woodstox.version>
     <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
@@ -360,6 +360,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-native-client</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs-rbf</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -389,6 +394,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
       <dependency>
@@ -1470,6 +1480,7 @@
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
         <version>${hsqldb.version}</version>
+        <classifier>jdk8</classifier>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>

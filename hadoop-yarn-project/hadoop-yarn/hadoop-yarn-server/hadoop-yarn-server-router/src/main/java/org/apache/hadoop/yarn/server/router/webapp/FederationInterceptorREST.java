@@ -45,6 +45,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -104,6 +105,7 @@ import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -1271,8 +1273,37 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getNodeToLabels error.", e);
     }
-    routerMetrics.incrGetAppStatisticsFailedRetrieved();
+    routerMetrics.incrNodeToLabelsFailedRetrieved();
     throw new RuntimeException("getNodeToLabels Failed.");
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getRMNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      NodeLabelsInfo nodeToLabelsInfo =
+          RouterWebServiceUtil.mergeNodeLabelsInfo(nodeToLabelsInfoMap);
+      if (nodeToLabelsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetRMNodeLabelsRetrieved(stopTime - startTime);
+        return nodeToLabelsInfo;
+      }
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("getRMNodeLabels error.", e);
+    }
+    routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+    throw new RuntimeException("getRMNodeLabels Failed.");
   }
 
   @Override
@@ -1808,8 +1839,54 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
-      String queueAclType, HttpServletRequest hsr) {
-    throw new NotImplementedException("Code is not implemented");
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
+
+    // Parameter Verification
+    if (queue == null || queue.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the queue is empty or null.");
+    }
+
+    if (username == null || username.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the username is empty or null.");
+    }
+
+    if (queueAclType == null || queueAclType.isEmpty()) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the queueAclType is empty or null.");
+    }
+
+    // Traverse SubCluster and call checkUserAccessToQueue Api
+    try {
+      long startTime = Time.now();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, String.class, String.class,
+          HttpServletRequest.class};
+      Object[] args = new Object[]{queue, username, queueAclType, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("checkUserAccessToQueue", argsClasses, args);
+      Map<SubClusterInfo, RMQueueAclInfo> rmQueueAclInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, RMQueueAclInfo.class);
+      FederationRMQueueAclInfo aclInfo = new FederationRMQueueAclInfo();
+      rmQueueAclInfoMap.forEach((subClusterInfo, rMQueueAclInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        rMQueueAclInfo.setSubClusterId(subClusterId.getId());
+        aclInfo.getList().add(rMQueueAclInfo);
+      });
+      long stopTime = Time.now();
+      routerMetrics.succeededCheckUserAccessToQueueRetrieved(stopTime - startTime);
+      return aclInfo;
+    } catch (NotFoundException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("checkUserAccessToQueue error.", e);
+    }
+
+    routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+    throw new RuntimeException("checkUserAccessToQueue error.");
   }
 
   @Override
@@ -2024,9 +2101,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     Map<SubClusterInfo, R> results = new HashMap<>();
 
     // Send the requests in parallel
-    CompletionService<R> compSvc = new ExecutorCompletionService<>(this.threadpool);
+    CompletionService<Pair<R, Exception>> compSvc =
+        new ExecutorCompletionService<>(this.threadpool);
 
-    // Error Msg
+    // This part of the code should be able to expose the accessed Exception information.
+    // We use Pair to store related information. The left value of the Pair is the response,
+    // and the right value is the exception.
+    // If the request is normal, the response is not empty and the exception is empty;
+    // if the request is abnormal, the response is empty and the exception is not empty.
     for (final SubClusterInfo info : clusterIds) {
       compSvc.submit(() -> {
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
@@ -2036,29 +2118,36 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return ret;
+          return Pair.of(ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return null;
+          return Pair.of(null, e);
         }
       });
     }
 
     clusterIds.stream().forEach(clusterId -> {
       try {
-        Future<R> future = compSvc.take();
-        R response = future.get();
+        Future<Pair<R, Exception>> future = compSvc.take();
+        Pair<R, Exception> pair = future.get();
+        R response = pair.getKey();
         if (response != null) {
           results.put(clusterId, response);
         }
+
+        Exception exception = pair.getRight();
+        if (exception != null) {
+          throw exception;
+        }
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId, request.getMethodName());
-        LOG.warn(msg, e);
-        throw new YarnRuntimeException(msg, e);
+            clusterId.getSubClusterId(), request.getMethodName());
+        LOG.error(msg, e);
+        throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
+
     return results;
   }
 

@@ -349,9 +349,6 @@ public class NameNodeProxiesClient {
       boolean withRetries, AtomicBoolean fallbackToSimpleAuth,
       AlignmentContext alignmentContext)
       throws IOException {
-    if (alignmentContext == null) {
-      alignmentContext = new ClientGSIContext();
-    }
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
 
