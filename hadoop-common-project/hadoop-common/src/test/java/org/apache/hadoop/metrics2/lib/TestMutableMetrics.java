@@ -290,6 +290,27 @@ public class TestMutableMetrics {
     }
   }
 
+  /**
+   * MutableStat should output 0 instead of the previous state when there is no change.
+   */
+  @Test public void testMutableWithoutChanged() {
+    MetricsRecordBuilder builderWithChange = mockMetricsRecordBuilder();
+    MetricsRecordBuilder builderWithoutChange = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
+    stat.add(1000, 1000);
+    stat.add(1000, 2000);
+    registry.snapshot(builderWithChange, true);
+
+    assertCounter("TestNumOps", 2000L, builderWithChange);
+    assertGauge("TestINumOps", 2000L, builderWithChange);
+    assertGauge("TestAvgVal", 1.5, builderWithChange);
+
+    registry.snapshot(builderWithoutChange, true);
+    assertGauge("TestINumOps", 0L, builderWithoutChange);
+    assertGauge("TestAvgVal", 0.0, builderWithoutChange);
+  }
+
   @Test
   public void testDuplicateMetrics() {
     MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
