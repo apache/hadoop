@@ -68,6 +68,9 @@ public interface S3ClientFactory {
 
   /**
    * Creates a new {@link S3Client}.
+   * The client returned supports synchronous operations. For
+   * asynchronous operations, use
+   * {@link #createS3AsyncClientV2(URI, S3ClientCreationParameters)}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object
@@ -79,6 +82,9 @@ public interface S3ClientFactory {
 
   /**
    * Creates a new {@link S3AsyncClient}.
+   * The client returned supports asynchronous operations. For
+   * synchronous operations, use
+   * {@link #createS3ClientV2(URI, S3ClientCreationParameters)}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object

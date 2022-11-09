@@ -160,10 +160,10 @@ public final class AWSClientConfig {
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @return Proxy configuration builder
+   * @return Proxy configuration
    * @throws IOException on any IO problem
    */
-  public static ProxyConfiguration.Builder createProxyConfigurationBuilder(Configuration conf,
+  public static ProxyConfiguration createProxyConfiguration(Configuration conf,
       String bucket) throws IOException {
 
     ProxyConfiguration.Builder proxyConfigBuilder = ProxyConfiguration.builder();
@@ -209,11 +209,11 @@ public final class AWSClientConfig {
       throw new IllegalArgumentException(msg);
     }
 
-    return proxyConfigBuilder;
+    return proxyConfigBuilder.build();
   }
 
   /**
-   * Configures the proxy.
+   * Configures the proxy for the async http client.
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
