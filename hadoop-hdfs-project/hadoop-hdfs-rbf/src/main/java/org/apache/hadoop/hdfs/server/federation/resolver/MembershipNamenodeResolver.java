@@ -191,8 +191,9 @@ public class MembershipNamenodeResolver
 
   /**
    * Try to shuffle the multiple observer namenodes if listObserversFirst is true.
-   * @param inputNameNodes the input namenodes which has been sorted by NamenodePriorityComparator
-   * @param listObserversFirst true if we need to shuffule the multiple observer namenodes.
+   * @param inputNameNodes the input FederationNamenodeContext list. If listObserversFirst is true,
+   *                       all observers will be placed at the front of the collection.
+   * @param listObserversFirst true if we need to shuffle the multiple front observer namenodes.
    * @return a list of FederationNamenodeContext.
    * @param <T> a subclass of FederationNamenodeContext.
    */
