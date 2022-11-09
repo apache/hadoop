@@ -35,6 +35,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 
 public class ConfUpdateAssembler {
 
+  private ConfUpdateAssembler() {
+  }
+
   public static Map<String, String> constructKeyValueConfUpdate(
           CapacitySchedulerConfiguration proposedConf,
           SchedConfUpdateInfo mutationInfo) throws IOException {
