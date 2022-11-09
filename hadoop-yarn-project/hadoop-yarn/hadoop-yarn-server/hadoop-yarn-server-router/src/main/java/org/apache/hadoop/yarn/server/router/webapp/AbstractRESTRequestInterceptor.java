@@ -92,12 +92,15 @@ public abstract class AbstractRESTRequestInterceptor
     return this.nextInterceptor;
   }
 
+  /**
+   * Set User information.
+   *
+   * If the username is empty, we will use the Yarn Router user directly.
+   * Do not create a proxy user if user name matches the user name on current UGI.
+   * @param userName userName.
+   */
   private void setupUser(final String userName) {
     try {
-      /**
-       * If the username is empty, we will use the Yarn Router user directly.
-       * Do not create a proxy user if user name matches the user name on current UGI.
-       */
       if (userName == null || userName.isEmpty()) {
         user = UserGroupInformation.getCurrentUser();
       } else if (UserGroupInformation.isSecurityEnabled()) {
