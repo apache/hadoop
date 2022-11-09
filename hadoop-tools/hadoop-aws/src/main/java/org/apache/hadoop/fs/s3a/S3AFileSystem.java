@@ -1699,8 +1699,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public CompletableFuture<Void> selectObjectContent(
         SelectObjectContentRequest request,
-        SelectObjectContentResponseHandler th) {
-     return s3AsyncClient.selectObjectContent(request, th);
+        SelectObjectContentResponseHandler responseHandler) {
+     return s3AsyncClient.selectObjectContent(request, responseHandler);
     }
 
     @Override

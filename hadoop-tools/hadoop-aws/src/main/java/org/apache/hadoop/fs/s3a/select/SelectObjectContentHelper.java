@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3a.select;
 
 import java.io.IOException;
@@ -17,8 +35,20 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 
 import static org.apache.hadoop.fs.s3a.WriteOperationHelper.WriteOperationHelperCallbacks;
 
+/**
+ * Helper for SelectObjectContent queries against an S3 Bucket.
+ */
 public final class SelectObjectContentHelper {
-
+  
+  /**
+   * Execute an S3 Select operation.
+   * @param writeOperationHelperCallbacks helper callbacks
+   * @param source  source for selection
+   * @param request Select request to issue.
+   * @param action  the action for use in exception creation
+   * @return the select response event stream publisher
+   * @throws IOException on failure
+   */
   public static SelectEventStreamPublisher select(
       WriteOperationHelperCallbacks writeOperationHelperCallbacks,
       Path source,
@@ -27,9 +57,9 @@ public final class SelectObjectContentHelper {
       throws IOException {
     try {
       Handler handler = new Handler();
-      CompletableFuture<Void> operationFuture =
+      CompletableFuture<Void> selectOperationFuture =
           writeOperationHelperCallbacks.selectObjectContent(request, handler);
-      return handler.eventPublisher(operationFuture).join();
+      return handler.eventPublisher(selectOperationFuture).join();
     } catch (Throwable e) {
       if (e instanceof CompletionException) {
         e = e.getCause();
@@ -47,15 +77,15 @@ public final class SelectObjectContentHelper {
 
   private static class Handler implements SelectObjectContentResponseHandler {
     private volatile CompletableFuture<Pair<SelectObjectContentResponse,
-        SdkPublisher<SelectObjectContentEventStream>>> future =
+        SdkPublisher<SelectObjectContentEventStream>>> responseAndPublisherFuture =
         new CompletableFuture<>();
 
     private volatile SelectObjectContentResponse response;
 
     public CompletableFuture<SelectEventStreamPublisher> eventPublisher(
-        CompletableFuture<Void> operationFuture) {
-      return future.thenApply(p ->
-          new SelectEventStreamPublisher(operationFuture,
+        CompletableFuture<Void> selectOperationFuture) {
+      return responseAndPublisherFuture.thenApply(p ->
+          new SelectEventStreamPublisher(selectOperationFuture,
               p.getLeft(), p.getRight()));
     }
 
@@ -66,12 +96,12 @@ public final class SelectObjectContentHelper {
 
     @Override
     public void onEventStream(SdkPublisher<SelectObjectContentEventStream> publisher) {
-      future.complete(Pair.of(response, publisher));
+      responseAndPublisherFuture.complete(Pair.of(response, publisher));
     }
 
     @Override
     public void exceptionOccurred(Throwable error) {
-      future.completeExceptionally(error);
+      responseAndPublisherFuture.completeExceptionally(error);
     }
 
     @Override
