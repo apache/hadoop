@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
@@ -71,7 +72,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AtomicReference<AbfsBackoffMetrics> abfsBackoffMetrics = null;
 
-  private List<AbfsReadFooterMetrics> readFooterMetricsList = null;
+  private AtomicReference<AbfsReadFooterMetrics> abfsReadFooterMetrics = null;
 
   private AtomicLong lastExecutionTime = null;
 
@@ -132,8 +133,6 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
-//    abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
-//    readFooterMetricsList = new ArrayList<>();
     lastExecutionTime = new AtomicLong(now());
   }
 
@@ -144,11 +143,11 @@ public class AbfsCountersImpl implements AbfsCounters {
       abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
       break;
     case INTERNAL_FOOTER_METRIC_FORMAT:
-      readFooterMetricsList = new ArrayList<>();
+      abfsReadFooterMetrics = new AtomicReference<>(new AbfsReadFooterMetrics());
       break;
     case INTERNAL_METRIC_FORMAT:
       abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
-      readFooterMetricsList = new ArrayList<>();
+      abfsReadFooterMetrics = new AtomicReference<>(new AbfsReadFooterMetrics());
       break;
     default:
       break;
@@ -231,8 +230,8 @@ public class AbfsCountersImpl implements AbfsCounters {
   }
 
   @Override
-  public List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics() {
-    return readFooterMetricsList != null ? readFooterMetricsList : null;
+  public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
+    return abfsReadFooterMetrics != null ? abfsReadFooterMetrics.get() : null;
   }
 
   /**
@@ -292,26 +291,23 @@ public class AbfsCountersImpl implements AbfsCounters {
     return ioStatisticsStore.trackDuration(key);
   }
 
-  private String getFooterMetrics(){
-    List<AbfsReadFooterMetrics> readFooterMetricsList = getAbfsReadFooterMetrics();
-    String readFooterMetric = "";
-    if (!readFooterMetricsList.isEmpty()) {
-      readFooterMetric = AbfsReadFooterMetrics.getFooterMetrics(readFooterMetricsList, readFooterMetric);
-    }
-    return readFooterMetric;
-  }
-
   @Override
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      AtomicLong totalNoRequests = abfsBackoffMetrics.get().getTotalNumberOfRequests();
+      AtomicLong totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
       if (totalNoRequests.get() > 0) {
         metric += ":BO:" + getAbfsBackoffMetrics().toString();
       }
     }
-    if (readFooterMetricsList != null) {
-      metric += ":FO:" + getFooterMetrics();
+    if (abfsReadFooterMetrics != null) {
+      Map<String, AbfsReadFooterMetrics> metricsMap = getAbfsReadFooterMetrics().getMetricsMap();
+      if (metricsMap != null && !(metricsMap.isEmpty())) {
+        String readFooterMetric = getAbfsReadFooterMetrics().toString();
+        if (!readFooterMetric.equals("")) {
+          metric += ":FO:" + getAbfsReadFooterMetrics().toString();
+        }
+      }
     }
     return metric;
   }

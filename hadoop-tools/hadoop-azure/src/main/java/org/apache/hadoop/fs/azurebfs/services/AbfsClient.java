@@ -22,11 +22,13 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -116,11 +118,13 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private Timer timer;
+  private final Timer timer;
   private AzureBlobFileSystem metricFs = null;
   private boolean metricCollectionEnabled = false;
   private final MetricFormat metricFormat;
-  private AtomicBoolean timerStopped;
+  private final AtomicBoolean metricCollectionStopped;
+  private final int metricAnalysisPeriod;
+  private final int metricIdlePeriod;
 
   private final ListeningScheduledExecutorService executorService;
 
@@ -176,7 +180,9 @@ public class AbfsClient implements Closeable {
     this.executorService = MoreExecutors.listeningDecorator(
         HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
     this.metricFormat = abfsConfiguration.getMetricFormat();
-    this.timerStopped = new AtomicBoolean(false);
+    this.metricCollectionStopped = new AtomicBoolean(false);
+    this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
+    this.metricIdlePeriod = abfsConfiguration.getMetricIdleTimeout();
     if (!metricFormat.toString().equals("")) {
       metricCollectionEnabled = true;
       abfsCounters.initializeMetrics(metricFormat);
@@ -185,8 +191,8 @@ public class AbfsClient implements Closeable {
         "abfs-timer-client", true);
     if (metricCollectionEnabled) {
       timer.schedule(new AbfsClient.TimerTaskImpl(),
-          60000,
-          60000);
+          metricIdlePeriod,
+          metricIdlePeriod);
     }
   }
 
@@ -1333,7 +1339,7 @@ public class AbfsClient implements Closeable {
     return tokenProvider;
   }
 
-  private AzureBlobFileSystem getMetricFilesystem() throws IOException {
+  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
     if (metricFs == null) {
       try {
         Configuration metricConfig = abfsConfiguration.getRawConfiguration();
@@ -1354,23 +1360,55 @@ public class AbfsClient implements Closeable {
     return metricFs;
   }
 
-  public AtomicBoolean getTimerStopped() {
-    return timerStopped;
-  }
-
   private TracingContext getMetricTracingContext() {
+    String hostName;
+    try {
+      hostName = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {
+      hostName = "UnknownHost";
+    }
     return new TracingContext(TracingContext.validateClientCorrelationID(
         abfsConfiguration.getClientCorrelationId()),
-        getFileSystem(), FSOperationType.GET_ATTR, true,
+        hostName, FSOperationType.GET_ATTR, true,
         abfsConfiguration.getTracingHeaderFormat(),
         null, abfsCounters.toString());
   }
 
+  /**
+   * Synchronized method to suspend or resume timer.
+   * @param timerFunctionality resume or suspend.
+   * @param timerTask The timertask object.
+   * @return true or false.
+   */
+  synchronized boolean timerOrchestrator(TimerFunctionality timerFunctionality,
+      TimerTask timerTask) {
+    switch (timerFunctionality) {
+    case RESUME:
+      if (metricCollectionStopped.get()) {
+        resumeTimer();
+      }
+      break;
+    case SUSPEND:
+      long now = System.currentTimeMillis();
+      long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+      if (metricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
+        timerTask.cancel();
+        timer.purge();
+        metricCollectionStopped.set(true);
+        return true;
+      }
+      break;
+    default:
+      break;
+    }
+    return false;
+  }
+
   void resumeTimer() {
+    metricCollectionStopped.set(false);
     timer.schedule(new TimerTaskImpl(),
-        60000,
-        60000);
-    timerStopped.set(false);
+        metricIdlePeriod,
+        metricIdlePeriod);
   }
 
   class TimerTaskImpl extends TimerTask {
@@ -1381,13 +1419,8 @@ public class AbfsClient implements Closeable {
     @Override
     public void run() {
       try {
-        long now = System.currentTimeMillis();
-        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-        if (metricCollectionEnabled && (now - lastExecutionTime >= 60000)) {
+        if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
           AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
-          this.cancel();
-          timer.purge();
-          timerStopped.set(true);
           if (metricFileSystem != null) {
             try {
               metricFileSystem.sendMetric(getMetricTracingContext());

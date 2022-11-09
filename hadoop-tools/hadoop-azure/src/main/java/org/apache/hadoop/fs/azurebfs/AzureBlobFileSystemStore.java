@@ -813,7 +813,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
             .withReadAheadRange(abfsConfiguration.getReadAheadRange())
             .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
-            .withReadFooterMetrics(abfsCounters.getAbfsReadFooterMetrics() != null ? new AbfsReadFooterMetrics() : null)
             .withShouldReadBufferSizeAlways(
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
@@ -1994,8 +1993,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  public void sendMetric(TracingContext tracingContext)
+  public void sendMetric(TracingContext tracingContextMetric)
       throws AzureBlobFileSystemException {
-    client.getPathStatus("/..$$@@", true, tracingContext); // Will sent a GFS calls that will fail to register in MDM x-ms-client-metric
+    client.getPathStatus("/..$$@@", true, tracingContextMetric); // Will sent a GFS calls that will fail to register in MDM x-ms-client-metric
   }
 }

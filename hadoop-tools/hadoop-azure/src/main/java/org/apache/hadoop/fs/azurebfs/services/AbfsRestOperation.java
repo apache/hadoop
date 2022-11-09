@@ -201,9 +201,7 @@ public class AbfsRestOperation {
       throws AzureBlobFileSystemException {
     try {
       abfsCounters.getLastExecutionTime().set(now());
-      if (client.getTimerStopped().get()){
-        client.resumeTimer();
-      }
+      client.timerOrchestrator(TimerFunctionality.RESUME, null);
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
           () -> completeExecute(tracingContext));

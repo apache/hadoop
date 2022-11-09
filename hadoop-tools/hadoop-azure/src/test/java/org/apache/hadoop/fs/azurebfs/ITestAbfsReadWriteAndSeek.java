@@ -108,15 +108,6 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
 
       inputStream.seek(0);
       result = inputStream.read(readBuffer, 0, bufferSize);
-      Thread.sleep(90000);
-
-      inputStream.seek(0);
-      byte[] temp1 = new byte[5];
-      int t1 = inputStream.read(temp1, 0, 1);
-
-      inputStream.seek(0);
-      result = inputStream.read(readBuffer, 0, bufferSize);
-      Thread.sleep(90000);
     }
     IOStatisticsLogging.logIOStatisticsAtLevel(LOG, IOSTATISTICS_LOGGING_LEVEL_INFO, statisticsSource);
 

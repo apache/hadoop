@@ -263,7 +263,6 @@ public class ITestAbfsInputStreamStatistics
             getConfiguration().getSasTokenRenewPeriodForStreamsInSeconds())
             .withReadBufferSize(getConfiguration().getReadBufferSize())
             .withReadAheadQueueDepth(getConfiguration().getReadAheadQueueDepth())
-            .withReadFooterMetrics(new AbfsReadFooterMetrics())
             .withStreamStatistics(null)
             .withReadAheadRange(getConfiguration().getReadAheadRange())
             .build();

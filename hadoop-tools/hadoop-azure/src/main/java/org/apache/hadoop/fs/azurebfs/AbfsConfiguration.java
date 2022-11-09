@@ -262,6 +262,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_IDLE_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_IDLE_TIMEOUT_MS)
+  private int metricIdleTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ANALYSIS_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
+  private int metricAnalysisTimeout;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ABFS_IO_RATE_LIMIT,
       MinValue = 0,
       DefaultValue = RATE_LIMIT_DEFAULT)
@@ -731,6 +739,14 @@ public class AbfsConfiguration{
 
   public boolean isAutoThrottlingEnabled() {
     return this.enableAutoThrottling;
+  }
+
+  public int getMetricIdleTimeout() {
+    return this.metricIdleTimeout;
+  }
+
+  public int getMetricAnalysisTimeout() {
+    return this.metricAnalysisTimeout;
   }
 
   public int getRateLimit() {

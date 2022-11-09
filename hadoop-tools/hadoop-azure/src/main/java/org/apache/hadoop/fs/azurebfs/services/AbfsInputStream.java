@@ -22,10 +22,12 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -86,7 +88,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final int readAheadRange;
 
   private boolean firstRead = true;
-  private long offsetOfFirstRead = 0;
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
   private byte[] buffer = null;            // will be initialized on first use
@@ -112,13 +113,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private long bytesFromReadAhead; // bytes read from readAhead; for testing
   private long bytesFromRemoteRead; // bytes read remotely; for testing
   private Listener listener;
-  private boolean collectMetricsForNextRead = false;
-  private long dataLenRequested;
-  private long readReqCount;
-  private boolean collectLenMetrics = false;
-  private boolean collectStreamMetrics = false;
   private final AbfsInputStreamContext context;
   private IOStatistics ioStatistics;
+  private Map<String, AbfsReadFooterMetrics> metricsMap;
+  private String filePathIdentifier;
   /**
    * This is the actual position within the object, used by
    * lazy seek to decide whether to seek on the next read or not.
@@ -150,19 +148,30 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.cachedSasToken = new CachedSASToken(
         abfsInputStreamContext.getSasTokenRenewPeriodForStreamsInSeconds());
     this.streamStatistics = abfsInputStreamContext.getStreamStatistics();
-    this.abfsReadFooterMetrics = abfsInputStreamContext.getAbfsReadFooterMetrics();
+    this.abfsReadFooterMetrics = client.getAbfsCounters().getAbfsReadFooterMetrics();
     this.inputStreamId = createInputStreamId();
     this.tracingContext = new TracingContext(tracingContext);
     this.tracingContext.setOperation(FSOperationType.READ);
     this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+    if (abfsReadFooterMetrics != null) {
+      this.metricsMap = abfsReadFooterMetrics.getMetricsMap();
+      this.filePathIdentifier = eTag + path;
+      initializeMap();
+    }
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
     ReadBufferManager.setReadBufferManagerConfigs(readAheadBlockSize);
     if (streamStatistics != null) {
       ioStatistics = streamStatistics.getIOStatistics();
+    }
+  }
+
+  private void initializeMap() {
+    if (!metricsMap.containsKey(filePathIdentifier)) {
+      metricsMap.put(filePathIdentifier, new AbfsReadFooterMetrics(filePathIdentifier));
     }
   }
 
@@ -245,21 +254,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       // go back and read from buffer is fCursor - limit.
       // There maybe case that we read less than requested data.
       long filePosAtStartOfBuffer = fCursor - limit;
-      if (abfsReadFooterMetrics != null && firstRead && nextReadPos >= contentLength - 20 * ONE_KB) {
-        collectMetricsForNextRead = true;
-        offsetOfFirstRead = nextReadPos;
-        abfsReadFooterMetrics.setSizeReadByFirstRead(len + "_" + (Math.abs(contentLength - nextReadPos)));
-        abfsReadFooterMetrics.getFileLength().set(contentLength);
-      }
-      if (collectLenMetrics) {
-        dataLenRequested += len;
-        readReqCount += 1;
-      }
-      if (abfsReadFooterMetrics != null && !firstRead && collectMetricsForNextRead){
-        collectStreamMetrics = true;
-        abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(len + "_" + (Math.abs(nextReadPos - offsetOfFirstRead)));
-        collectMetricsForNextRead = false;
-        collectLenMetrics = true;
+      if (metricsMap != null) {
+        AbfsReadFooterMetrics readFooterMetrics = metricsMap.get(filePathIdentifier);
+        if (readFooterMetrics.getReadCount().get() == 0
+            || (readFooterMetrics.getReadCount().get() >= 1
+            && readFooterMetrics.getCollectMetrics().get())) {
+          updateMetrics(readFooterMetrics, len);
+        }
       }
       if (nextReadPos >= filePosAtStartOfBuffer && nextReadPos <= fCursor) {
         // Determining position in buffer from where data is to be read.
@@ -294,6 +295,27 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     } while (lastReadBytes > 0);
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+  }
+
+  private void updateMetrics(AbfsReadFooterMetrics readFooterMetrics, final int len) {
+    int readCount = readFooterMetrics.getReadCount().incrementAndGet();
+    if (readCount == 1 && nextReadPos >= contentLength - 20 * ONE_KB) {
+      readFooterMetrics.getCollectMetrics().set(true);
+      readFooterMetrics.getCollectMetricsForNextRead().set(true);
+      readFooterMetrics.getOffsetOfFirstRead().set(nextReadPos);
+      readFooterMetrics.setSizeReadByFirstRead
+          ((len + "_" + (Math.abs(contentLength - nextReadPos))));
+      readFooterMetrics.getFileLength().set(contentLength);
+    }
+    if (readFooterMetrics.getCollectLenMetrics().get()) {
+      readFooterMetrics.getDataLenRequested().getAndAdd(len);
+    }
+    if (readCount == 2 && readFooterMetrics.getCollectMetricsForNextRead().get()) {
+      readFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead
+          (len + "_" + (Math.abs(nextReadPos - readFooterMetrics
+              .getOffsetOfFirstRead().get())));
+      readFooterMetrics.getCollectLenMetrics().set(true);
+    }
   }
 
   private boolean shouldReadFully() {
@@ -717,27 +739,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
-    if (collectStreamMetrics) {
-      checkIsParquet(abfsReadFooterMetrics);
-      if (readReqCount > 0) {
-        abfsReadFooterMetrics.setAvgReadLenRequested(
-            (double) dataLenRequested / readReqCount);
-      }
-      this.client.getAbfsCounters().getAbfsReadFooterMetrics()
-          .add(abfsReadFooterMetrics);
-    }
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
-  }
-
-  private void checkIsParquet(AbfsReadFooterMetrics abfsReadFooterMetrics) {
-    String[] firstReadSize = abfsReadFooterMetrics.getSizeReadByFirstRead().split("_");
-    String[] offDiffFirstSecondRead  = abfsReadFooterMetrics.getOffsetDiffBetweenFirstAndSecondRead().split("_");
-    if ((firstReadSize[0].equals(firstReadSize[1]))
-        && (offDiffFirstSecondRead[0].equals(offDiffFirstSecondRead[1]))) {
-      abfsReadFooterMetrics.setParquetFile(true);
-      abfsReadFooterMetrics.setSizeReadByFirstRead(firstReadSize[0]);
-      abfsReadFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead(offDiffFirstSecondRead[0]);
-    }
   }
 
   /**
