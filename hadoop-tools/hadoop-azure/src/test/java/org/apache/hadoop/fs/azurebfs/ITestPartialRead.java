@@ -24,7 +24,6 @@ import java.net.SocketException;
 import java.util.Random;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -139,8 +138,11 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     byte[] buffer = new byte[fileSize];
     inputStream.read(0, buffer, 0, fileSize);
     Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
+        .describedAs("Number of server calls is wrong")
         .isEqualTo(4);
     Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
+        .describedAs(
+            "Number of server calls counted as throttling case is incorrect")
         .isEqualTo(4);
   }
 
@@ -152,9 +154,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       final int byteLenMockServerReturn) throws IOException {
     LOG.info("length: " + length + "; offset: " + offset);
     mockHttpOperation.processResponseSuperCall(buffer, offset, length);
-    Assert.assertTrue(
-        mockHttpOperation.getStatusCode() == HTTP_PARTIAL
-            || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK);
+    Assertions.assertThat(mockHttpOperation.getStatusCode() == HTTP_PARTIAL
+            || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK)
+        .describedAs("Http-response should have statusCode equal to 200 or 206")
+        .isTrue();
     int iterator = 0;
     int currPointer = actualServerReadByte.currPointer;
     while (actualServerReadByte.currPointer < actualServerReadByte.size
@@ -163,13 +166,18 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
           = buffer[iterator++];
     }
     actualServerReadByte.currPointer = currPointer + byteLenMockServerReturn;
+    Boolean isOriginalAndReceivedFileEqual = true;
     if (actualServerReadByte.currPointer == actualServerReadByte.size) {
       for (int i = 0; i < actualServerReadByte.size; i++) {
         if (actualServerReadByte.bytes[i]
             != actualServerReadByte.originalFile[i]) {
-          Assert.assertTrue("Parsed data is not equal to original file", false);
+          isOriginalAndReceivedFileEqual = false;
+          break;
         }
       }
+      Assertions.assertThat(isOriginalAndReceivedFileEqual)
+          .describedAs("Parsed data is not equal to original file")
+          .isTrue();
     }
   }
 
@@ -234,8 +242,11 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     inputStream.read(0, buffer, 0, fileSize);
 
     Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
+        .describedAs("Number of server calls is wrong")
         .isEqualTo(4);
     Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
+        .describedAs(
+            "Number of server calls counted as throttling case is incorrect")
         .isEqualTo(4);
   }
 
