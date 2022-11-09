@@ -602,25 +602,31 @@ on the filesystem.
 1. The outcome of this operation MUST be identical to the value of
    `getFileStatus(P).getBlockSize()`.
 2. By inference, it MUST be > 0 for any file of length > 0.
+
 ###  `Path getEnclosingRoot(Path p)`
 
 This method is used to find a root directory for a path given. This is useful for creating 
-staging and temp directories in the same root directory. There are constraints around how 
+staging and temp directories in the same enclosing root directory. There are constraints around how 
 renames are allowed to atomically occur (ex. across hdfs volumes or across encryption zones).
+
+For any two paths p1 and p2 that do not have the same enclosing root, `rename(p1, p2)` is expected to fail or will not
+be atomic.
+
+The following statement is always true:
+`getEnclosingRoot(p) == getEnclosingRoot(getEnclosingRoot(p))`
 
 #### Preconditions
 
-if no root path is found:  raise IOException
-No root path would be found only if there is no mount point for the given path
+The path does not have to exist, but the path does need to be valid and reconcilable by the filesystem 
+* if a linkfallback is used all paths are reconcilable
+* if a linkfallback is not used there must be a mount point covering the path
 
 
 #### Postconditions
 
-The path return will not be null
+* The path returned will not be null, if there is no deeper enclosing root, the root path ("/") will be returned.
+* The path returned is a directory
 
-1. The outcome of this operation MUST be identical to the value of
-   `getFileStatus(P).getBlockSize()`.
-1. By inference, it MUST be > 0 for any file of length > 0.
 
 ## <a name="state_changing_operations"></a> State Changing Operations
 

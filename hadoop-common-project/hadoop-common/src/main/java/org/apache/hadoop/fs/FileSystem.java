@@ -4917,7 +4917,6 @@ public abstract class FileSystem extends Configured
    */
   @InterfaceAudience.Public
   @InterfaceStability.Unstable
-  // Should this throw RuntimeException (instead of IO), so we can throw NotInMountpointException from viewfs/rbf?
   public Path getEnclosingRoot(Path path) throws IOException {
     this.makeQualified(path);
     return this.makeQualified(new Path("/"));
