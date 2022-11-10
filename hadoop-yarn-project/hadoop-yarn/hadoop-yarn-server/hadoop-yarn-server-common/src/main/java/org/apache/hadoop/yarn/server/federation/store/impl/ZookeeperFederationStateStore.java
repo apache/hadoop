@@ -99,11 +99,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubCluster
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
+import org.apache.hadoop.yarn.server.federation.store.utils.*;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.util.Clock;
@@ -993,6 +989,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+
+    FederationRouterRMTokenInputValidator.validate(request);
+
     try {
       // add delegationToken
       storeOrUpdateRouterRMDT(request.getRouterStoreToken(), false);
@@ -1012,6 +1011,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+
+    FederationRouterRMTokenInputValidator.validate(request);
+
     try {
       RouterStoreToken routerStoreToken = request.getRouterStoreToken();
       YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
@@ -1046,6 +1048,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+
+    FederationRouterRMTokenInputValidator.validate(request);
+
     try {
       RouterStoreToken routerStoreToken = request.getRouterStoreToken();
       YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
@@ -1071,10 +1076,20 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
   }
 
+  /**
+   * The Router Supports GetTokenByRouterStoreToken.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return RouterRMTokenResponse.
+   * @throws YarnException if the call to the state store is unsuccessful
+   * @throws IOException An IO Error occurred
+   */
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    request.getRouterStoreToken().getTokenIdentifier();
+
+    FederationRouterRMTokenInputValidator.validate(request);
+
     try {
       RouterStoreToken routerStoreToken = request.getRouterStoreToken();
       YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
