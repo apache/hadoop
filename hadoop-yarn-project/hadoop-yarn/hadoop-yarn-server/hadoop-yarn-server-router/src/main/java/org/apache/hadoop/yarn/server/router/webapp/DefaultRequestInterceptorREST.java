@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
 import com.sun.jersey.api.client.Client;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -601,6 +602,11 @@ public class DefaultRequestInterceptorREST
             RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
                 + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
             null, getConf(), client);
+  }
+
+  @VisibleForTesting
+  public Client getClient() {
+    return client;
   }
 
   @Override
