@@ -156,6 +156,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public void init(String user) {
+
+    super.init(user);
+
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random();
 
@@ -248,7 +251,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .isAssignableFrom(interceptorClass)) {
         interceptorInstance = (DefaultRequestInterceptorREST) ReflectionUtils
             .newInstance(interceptorClass, conf);
-
+        String userName = getUser().getUserName();
+        interceptorInstance.init(userName);
       } else {
         throw new YarnRuntimeException(
             "Class: " + interceptorClassName + " not instance of "
