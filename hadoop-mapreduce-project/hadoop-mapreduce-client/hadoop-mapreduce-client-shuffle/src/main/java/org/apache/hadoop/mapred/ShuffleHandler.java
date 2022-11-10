@@ -331,17 +331,17 @@ public class ShuffleHandler extends AuxiliaryService {
       channelGroup.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
     }
 
-    public static ChannelFuture closeAsIdle(Channel channel, int timeout) {
+    public static ChannelFuture closeAsIdle(Channel ch, int timeout) {
       LOG.debug("Closing channel as writer was idle for {} seconds", timeout);
-      return closeChannel(channel);
+      return closeChannel(ch);
     }
 
     public static void channelActive(Channel ch) {
       LOG.debug("Executing channelActive, channel id: {}", ch.id());
     }
 
-    public static void channelInactive(Channel channel) {
-      LOG.debug("Executing channelInactive, channel id: {}", channel.id());
+    public static void channelInactive(Channel ch) {
+      LOG.debug("Executing channelInactive, channel id: {}", ch.id());
     }
   }
 
@@ -1035,7 +1035,7 @@ public class ShuffleHandler extends AuxiliaryService {
       }
       // Check whether the shuffle version is compatible
       String shuffleVersion = ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION;
-      String httpHeaderName = ShuffleHeader.HTTP_HEADER_NAME;
+      String httpHeaderName = ShuffleHeader.DEFAULT_HTTP_HEADER_NAME;
       if (request.headers() != null) {
         shuffleVersion = request.headers().get(ShuffleHeader.HTTP_HEADER_VERSION);
         httpHeaderName = request.headers().get(ShuffleHeader.HTTP_HEADER_NAME);
@@ -1047,7 +1047,7 @@ public class ShuffleHandler extends AuxiliaryService {
           !ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION.equals(shuffleVersion)) {
         sendError(ctx, "Incompatible shuffle request version", BAD_REQUEST);
       }
-      final Map<String, List<String>> q = 
+      final Map<String, List<String>> q =
           new QueryStringDecoder(request.uri()).parameters();
       final List<String> keepAliveList = q.get("keepAlive");
       boolean keepAliveParam = false;
