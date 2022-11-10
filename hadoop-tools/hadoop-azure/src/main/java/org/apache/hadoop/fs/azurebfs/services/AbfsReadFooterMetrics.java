@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
 import java.util.ArrayList;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
+
 public class AbfsReadFooterMetrics {
   private String filePath;
   private final AtomicBoolean isParquetFile;
@@ -67,80 +69,120 @@ public class AbfsReadFooterMetrics {
     return metricsMap;
   }
 
-  public AtomicBoolean getIsParquetFile() {
+  private AtomicBoolean getIsParquetFile() {
     return isParquetFile;
   }
 
-  public String getSizeReadByFirstRead() {
+  private String getSizeReadByFirstRead() {
     return sizeReadByFirstRead;
   }
 
-  public void setSizeReadByFirstRead(final String sizeReadByFirstRead) {
+  private void setSizeReadByFirstRead(final String sizeReadByFirstRead) {
     this.sizeReadByFirstRead = sizeReadByFirstRead;
   }
 
-  public String getOffsetDiffBetweenFirstAndSecondRead() {
+  private String getOffsetDiffBetweenFirstAndSecondRead() {
     return offsetDiffBetweenFirstAndSecondRead;
   }
 
-  public void setOffsetDiffBetweenFirstAndSecondRead(final String offsetDiffBetweenFirstAndSecondRead) {
+  private void setOffsetDiffBetweenFirstAndSecondRead(final String offsetDiffBetweenFirstAndSecondRead) {
     this.offsetDiffBetweenFirstAndSecondRead
         = offsetDiffBetweenFirstAndSecondRead;
   }
 
-  public AtomicLong getFileLength() {
+  private AtomicLong getFileLength() {
     return fileLength;
   }
 
-  public double getAvgFileLength() {
+  private double getAvgFileLength() {
     return avgFileLength;
   }
 
-  public void setAvgFileLength(final double avgFileLength) {
+  private void setAvgFileLength(final double avgFileLength) {
     this.avgFileLength = avgFileLength;
   }
 
-  public double getAvgReadLenRequested() {
+  private double getAvgReadLenRequested() {
     return avgReadLenRequested;
   }
 
-  public void setAvgReadLenRequested(final double avgReadLenRequested) {
+  private void setAvgReadLenRequested(final double avgReadLenRequested) {
     this.avgReadLenRequested = avgReadLenRequested;
   }
 
-  public AtomicBoolean getCollectMetricsForNextRead() {
+  private AtomicBoolean getCollectMetricsForNextRead() {
     return collectMetricsForNextRead;
   }
 
-  public AtomicLong getOffsetOfFirstRead() {
+  private AtomicLong getOffsetOfFirstRead() {
     return offsetOfFirstRead;
   }
 
-  public AtomicInteger getReadCount() {
+  private AtomicInteger getReadCount() {
     return readCount;
   }
 
-  public AtomicBoolean getCollectLenMetrics() {
+  private AtomicBoolean getCollectLenMetrics() {
     return collectLenMetrics;
   }
 
-  public AtomicLong getDataLenRequested() {
+  private AtomicLong getDataLenRequested() {
     return dataLenRequested;
   }
 
-  public AtomicBoolean getCollectMetrics() {
+  private AtomicBoolean getCollectMetrics() {
     return collectMetrics;
   }
 
-  public AtomicBoolean getIsParquetEvaluated() {
+  private AtomicBoolean getIsParquetEvaluated() {
     return isParquetEvaluated;
   }
 
-  public AtomicBoolean getIsLenUpdated() {
+  private AtomicBoolean getIsLenUpdated() {
     return isLenUpdated;
   }
 
-  public void checkIsParquet(Map<String, AbfsReadFooterMetrics> metricsMap) {
+  public void updateMap(String filePathIdentifier) {
+    if (!metricsMap.containsKey(filePathIdentifier)) {
+      metricsMap.put(filePathIdentifier, new AbfsReadFooterMetrics(filePathIdentifier));
+    }
+  }
+
+  public void checkMetricUpdate(final String filePathIdentifier, final int len, final long contentLength,
+      final long nextReadPos) {
+    updateMap(filePathIdentifier);
+    AbfsReadFooterMetrics readFooterMetrics = metricsMap.get(filePathIdentifier);
+    if (readFooterMetrics.getReadCount().get() == 0
+        || (readFooterMetrics.getReadCount().get() >= 1
+        && readFooterMetrics.getCollectMetrics().get())) {
+      updateMetrics(filePathIdentifier, len, contentLength, nextReadPos);
+    }
+  }
+
+  private void updateMetrics(final String filePathIdentifier, final int len, final long contentLength,
+      final long nextReadPos) {
+    AbfsReadFooterMetrics readFooterMetrics = metricsMap.get(filePathIdentifier);
+    int readCount = readFooterMetrics.getReadCount().incrementAndGet();
+    if (readCount == 1 && nextReadPos >= contentLength - 20 * ONE_KB) {
+      readFooterMetrics.getCollectMetrics().set(true);
+      readFooterMetrics.getCollectMetricsForNextRead().set(true);
+      readFooterMetrics.getOffsetOfFirstRead().set(nextReadPos);
+      readFooterMetrics.setSizeReadByFirstRead
+          ((len + "_" + (Math.abs(contentLength - nextReadPos))));
+      readFooterMetrics.getFileLength().set(contentLength);
+    }
+    if (readFooterMetrics.getCollectLenMetrics().get()) {
+      readFooterMetrics.getDataLenRequested().getAndAdd(len);
+    }
+    if (readCount == 2 && readFooterMetrics.getCollectMetricsForNextRead().get()) {
+      readFooterMetrics.setOffsetDiffBetweenFirstAndSecondRead
+          (len + "_" + (Math.abs(nextReadPos - readFooterMetrics
+              .getOffsetOfFirstRead().get())));
+      readFooterMetrics.getCollectLenMetrics().set(true);
+    }
+  }
+
+  private void checkIsParquet(Map<String, AbfsReadFooterMetrics> metricsMap) {
     for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
     {
       AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
@@ -166,7 +208,7 @@ public class AbfsReadFooterMetrics {
     }
   }
 
-  public void updateLenRequested(Map<String, AbfsReadFooterMetrics> metricsMap) {
+  private void updateLenRequested(Map<String, AbfsReadFooterMetrics> metricsMap) {
     for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
     {
       AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
@@ -184,7 +226,7 @@ public class AbfsReadFooterMetrics {
     }
   }
 
-  public void getParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isParquetList,
+  private void getParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isParquetList,
       AbfsReadFooterMetrics avgParquetReadFooterMetrics){
     avgParquetReadFooterMetrics.setSizeReadByFirstRead(
         String.format("%.3f", isParquetList.stream()
@@ -202,7 +244,7 @@ public class AbfsReadFooterMetrics {
         mapToDouble(Double::doubleValue).average().orElse(0.0));
   }
 
-  public void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
+  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
       AbfsReadFooterMetrics avgNonParquetReadFooterMetrics){
     int size = isNonParquetList.get(0).getSizeReadByFirstRead().split("_").length;
     double[] store = new double[2*size];
@@ -246,7 +288,7 @@ public class AbfsReadFooterMetrics {
   offset of the first read.)
   3.FL :- Total length of the file requested for read
    */
-  public String getReadFooterMetrics(AbfsReadFooterMetrics avgReadFooterMetrics) {
+  private String getReadFooterMetrics(AbfsReadFooterMetrics avgReadFooterMetrics) {
     String readFooterMetric = "";
     if (avgReadFooterMetrics.getIsParquetFile().get()) {
       readFooterMetric += "$Parquet:";
@@ -263,7 +305,7 @@ public class AbfsReadFooterMetrics {
     return readFooterMetric;
   }
 
-  public String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsList, String readFooterMetric){
+  private String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsList, String readFooterMetric){
     List<AbfsReadFooterMetrics> isParquetList = new ArrayList<>();
     List<AbfsReadFooterMetrics> isNonParquetList = new ArrayList<>();
     for (AbfsReadFooterMetrics abfsReadFooterMetrics : readFooterMetricsList) {

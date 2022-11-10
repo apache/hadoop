@@ -1404,7 +1404,7 @@ public class AbfsClient implements Closeable {
     return false;
   }
 
-  void resumeTimer() {
+  private void resumeTimer() {
     metricCollectionStopped.set(false);
     timer.schedule(new TimerTaskImpl(),
         metricIdlePeriod,
