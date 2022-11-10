@@ -251,4 +251,11 @@ public class RouterDelegationTokenSecretManager
     }
     return allTokens;
   }
+
+  @Override
+  protected synchronized int incrementDelegationTokenSeqNum() {
+    return super.incrementDelegationTokenSeqNum();
+  }
+
+
 }

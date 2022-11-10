@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.io.DataInput;
 import java.io.IOException;
 
 @Private
@@ -53,4 +54,8 @@ public abstract class RouterStoreToken {
   @Private
   @Unstable
   public abstract void setRenewDate(Long renewDate);
+
+  public abstract byte[] toByteArray() throws IOException;
+
+  public abstract void readFields(DataInput in) throws IOException;
 }

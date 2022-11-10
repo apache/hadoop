@@ -19,9 +19,12 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
+import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -30,9 +33,9 @@ import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.HashMap;
-import java.nio.ByteBuffer;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.curator.framework.recipes.shared.SharedCount;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -43,6 +46,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterIdProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterInfoProto;
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.SubClusterPolicyConfigurationProto;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
@@ -90,10 +94,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -102,8 +107,8 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservatio
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.SystemClock;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,6 +121,7 @@ import static org.apache.hadoop.yarn.server.federation.store.utils.FederationSta
  * ZooKeeper implementation of {@link FederationStateStore}.
  *
  * The znode structure is as follows:
+ *
  * ROOT_DIR_PATH
  * |--- MEMBERSHIP
  * |     |----- SC1
@@ -129,6 +135,7 @@ import static org.apache.hadoop.yarn.server.federation.store.utils.FederationSta
  * |--- RESERVATION
  * |     |----- RESERVATION1
  * |     |----- RESERVATION2
+ * |---
  */
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
@@ -148,6 +155,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
+
+  private SharedCount delTokSeqCounter;
 
   /** Directory to store the state store data. */
   private String baseZNode;
@@ -984,13 +993,55 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      // add delegationToken
+      storeOrUpdateRouterRMDT(request.getRouterStoreToken(), false);
+      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      return RouterRMTokenResponse.newInstance(resultStoreToken);
+    } catch (YarnException e) {
+      throw new YarnException(e);
+    } catch (IOException e) {
+      throw new IOException(e);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+
+      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
+
+      // get the Token storage path
+      String nodePath = getNodePath(RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME,
+          DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber());
+
+      boolean pathExists = true;
+      if (!exists(nodePath)) {
+        pathExists = false;
+      }
+
+      if (pathExists) {
+        // update delegationToken
+        storeOrUpdateRouterRMDT(routerStoreToken, true);
+      } else {
+        storeNewToken(request);
+      }
+
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      return RouterRMTokenResponse.newInstance(resultStoreToken);
+    } catch (YarnException e) {
+      throw new YarnException(e);
+    } catch (IOException e) {
+      throw new IOException(e);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 
   @Override
@@ -1002,7 +1053,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+    request.getRouterStoreToken().getTokenIdentifier();
     throw new NotImplementedException("Code is not implemented");
+
   }
 
   private static DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
@@ -1012,45 +1065,80 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
   }
 
-  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
-      boolean createParentIfNotExists) throws Exception {
-    return getLeafDelegationTokenNodePath(rmDTSequenceNumber,
-        createParentIfNotExists, delegationTokenNodeSplitIndex);
-  }
-
-  private String getLeafDelegationTokenNodePath(int rmDTSequenceNumber,
-      boolean createParentIfNotExists, int split) throws Exception {
-    String nodeName = DELEGATION_TOKEN_PREFIX;
-    if (split == 0) {
-      nodeName += rmDTSequenceNumber;
-    } else {
-      nodeName += String.format("%04d", rmDTSequenceNumber);
-    }
-    return getLeafZnodePath(nodeName, rmDelegationTokenHierarchies.get(split),
-            split, createParentIfNotExists);
-  }
-
-  private String getLeafZnodePath(String nodeName, String rootNode,
-      int splitIdx, boolean createParentIfNotExists) throws Exception {
-    if (splitIdx == 0) {
-      return getNodePath(rootNode, nodeName);
-    }
-    int split = nodeName.length() - splitIdx;
-    String rootNodePath =
-            getNodePath(rootNode, nodeName.substring(0, split));
-    if (createParentIfNotExists && !exists(rootNodePath)) {
-      try {
-        zkManager.create(rootNodePath);
-      } catch (KeeperException.NodeExistsException e) {
-        LOG.debug("Unable to create app parent node {} as it already exists.",
-                rootNodePath);
-      }
-    }
-    return getNodePath(rootNodePath, nodeName.substring(split));
-  }
-
   @VisibleForTesting
   boolean exists(final String path) throws Exception {
     return zkManager.exists(path);
+  }
+
+  /**
+   * Add or update delegationToken.
+   *
+   * @param routerStoreToken storeToken
+   * @param isUpdate true, update the token; false, create a new token.
+   *
+   * @throws Exception exception occurs.
+   */
+  protected void storeOrUpdateRouterRMDT(RouterStoreToken routerStoreToken, boolean isUpdate)
+      throws Exception {
+    YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
+    int sequenceNumber = tokenIdentifier.getSequenceNumber();
+
+    String nodeCreatePath =
+        getNodePath(RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME,
+        DELEGATION_TOKEN_PREFIX + sequenceNumber);
+
+    LOG.debug("nodeCreatePath = {}, isUpdate = {}", nodeCreatePath, isUpdate);
+
+    if (isUpdate) {
+      put(nodeCreatePath, routerStoreToken.toByteArray(), true);
+    } else {
+      put(nodeCreatePath, routerStoreToken.toByteArray(), false);
+    }
+  }
+
+  /**
+   * Get RouterStoreToken from ZK.
+   *
+   * @param identifier YARN DelegationToken Identifier
+   * @param quiet Whether it is in quiet mode,
+   *              if it is in quiet mode, no exception information will be output.
+   * @return RouterStoreToken.
+   * @throws IOException io exception occurs.
+   */
+  protected RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier,
+      boolean quiet) throws IOException {
+    // get the Token storage path
+    String nodePath = getNodePath(RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME,
+        DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
+    return getStoreTokenFromZK(nodePath, quiet);
+  }
+
+  /**
+   * Get RouterStoreToken from ZK.
+   *
+   * @param nodePath Znode location where data is stored.
+   * @param quiet Whether it is in quiet mode,
+   *              if it is in quiet mode, no exception information will be output.
+   * @return RouterStoreToken.
+   * @throws IOException io exception occurs.
+   */
+  protected RouterStoreToken getStoreTokenFromZK(String nodePath, boolean quiet)
+      throws IOException {
+    try {
+      byte[] data = get(nodePath);
+      if ((data == null) || (data.length == 0)) {
+        return null;
+      }
+      ByteArrayInputStream bin = new ByteArrayInputStream(data);
+      DataInputStream din = new DataInputStream(bin);
+      RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
+      storeToken.readFields(din);
+      return storeToken;
+    } catch (Exception ex) {
+      if (!quiet) {
+        LOG.error("No node in path [" + nodePath + "]");
+      }
+      throw new IOException(ex);
+    }
   }
 }
