@@ -143,7 +143,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
         .describedAs(
             "Number of server calls counted as throttling case is incorrect")
-        .isEqualTo(4);
+        .isEqualTo(3);
   }
 
   private void callActualServerAndAssertBehaviour(final MockHttpOperation mockHttpOperation,
@@ -247,7 +247,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
         .describedAs(
             "Number of server calls counted as throttling case is incorrect")
-        .isEqualTo(4);
+        .isEqualTo(3);
   }
 
   private class ActualServerReadByte {

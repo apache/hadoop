@@ -270,7 +270,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (currentLen <= 0 || currentLen > b.length - currentOff) {
         break;
       }
-    } while (lastReadBytes > 0);
+    } while (lastReadBytes >= 0);
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
@@ -507,12 +507,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
 
       // got nothing from read-ahead, do our own read now
-      receivedBytes = readRemote(position, b, offset, length, new TracingContext(tracingContext));
-      return receivedBytes;
+      return explicitReadRemoteCall(position, b, offset, length);
     } else {
       LOG.debug("read ahead disabled, reading remote");
-      return readRemote(position, b, offset, length, new TracingContext(tracingContext));
+      return explicitReadRemoteCall(position, b, offset, length);
     }
+  }
+
+  private int explicitReadRemoteCall(final long position,
+      final byte[] b,
+      final int offset,
+      final int length) throws IOException {
+    final Long requiredLen = Math.min(length, contentLength - position);
+    return readRemote(position, b, offset, requiredLen.intValue(),
+        new TracingContext(tracingContext));
   }
 
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
