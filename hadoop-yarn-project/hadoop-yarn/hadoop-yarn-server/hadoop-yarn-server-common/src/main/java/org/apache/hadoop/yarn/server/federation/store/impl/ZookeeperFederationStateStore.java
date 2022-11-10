@@ -956,9 +956,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+    DelegationKey delegationKey = convertMasterKeyToDelegationKey(masterKey);
     String nodeCreatePath = getNodePath(dtMasterKeysRootPath,
-            DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
+        DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
     LOG.debug("Storing RMDelegationKey_{}", delegationKey.getKeyId());
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     try(DataOutputStream fsOut = new DataOutputStream(os)) {
@@ -972,7 +972,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     RouterMasterKey masterKey = request.getRouterMasterKey();
-    DelegationKey delegationKey = getDelegationKeyByMasterKey(masterKey);
+    DelegationKey delegationKey = convertMasterKeyToDelegationKey(masterKey);
     String nodeRemovePath = getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
         + delegationKey.getKeyId());
     LOG.debug("Removing RMDelegationKey_{}", delegationKey.getKeyId());
@@ -1013,7 +1013,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     try {
-
       RouterStoreToken routerStoreToken = request.getRouterStoreToken();
       YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
 
@@ -1047,18 +1046,63 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
+
+      // get the Token storage path
+      String nodePath = getNodePath(RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME,
+          DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber());
+
+      RouterStoreToken storeToken = getStoreTokenFromZK(tokenIdentifier, true);
+
+      if (storeToken != null) {
+        zkManager.delete(nodePath);
+      }
+
+      return RouterRMTokenResponse.newInstance(storeToken);
+
+    } catch (YarnException e) {
+      throw new YarnException(e);
+    } catch (IOException e) {
+      throw new IOException(e);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     request.getRouterStoreToken().getTokenIdentifier();
-    throw new NotImplementedException("Code is not implemented");
+    try {
+      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
 
+      // get the Token storage path
+      String nodeName = DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber();
+      String nodePath = getNodePath(RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME,
+          DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber());
+
+      if (!exists(nodePath)) {
+        throw new IOException(nodeName + " not exists!");
+      }
+
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      return RouterRMTokenResponse.newInstance(resultStoreToken);
+
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 
-  private static DelegationKey getDelegationKeyByMasterKey(RouterMasterKey masterKey) {
+  /**
+   * Convert MasterKey to DelegationKey.
+   *
+   * @param masterKey masterKey.
+   * @return DelegationKey.
+   */
+  private DelegationKey convertMasterKeyToDelegationKey(RouterMasterKey masterKey) {
     ByteBuffer keyByteBuf = masterKey.getKeyBytes();
     byte[] keyBytes = new byte[keyByteBuf.remaining()];
     keyByteBuf.get(keyBytes);
