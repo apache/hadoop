@@ -32,7 +32,6 @@ public class TestPoolAlignmentContext {
     PoolAlignmentContext poolContext1 = new PoolAlignmentContext(routerStateIdContext, namespaceId);
     PoolAlignmentContext poolContext2 = new PoolAlignmentContext(routerStateIdContext, namespaceId);
 
-    routerStateIdContext.getNamespaceStateId(namespaceId).accumulate(20L);
     assertRequestHeaderStateId(poolContext1, Long.MIN_VALUE);
     assertRequestHeaderStateId(poolContext2, Long.MIN_VALUE);
     Assertions.assertEquals(20L, poolContext1.getLastSeenStateId());
