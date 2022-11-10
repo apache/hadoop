@@ -70,7 +70,7 @@ public class SnapshotFSImageFormat {
 
   /**
    * Save SnapshotDiff list for an INodeDirectoryWithSnapshot.
-   * @param sNode The directory that the SnapshotDiff list belongs to.
+   * @param diffs The directory that the SnapshotDiff list belongs to.
    * @param out The {@link DataOutput} to write.
    */
   private static <N extends INode, A extends INodeAttributes, D extends AbstractINodeDiff<N, A, D>>
@@ -186,7 +186,7 @@ public class SnapshotFSImageFormat {
    * @param createdList The created list associated with the deleted list in 
    *                    the same Diff.
    * @param in The {@link DataInput} to read.
-   * @param loader The {@link Loader} instance.
+   * @param loader The {@link FSImageFormat.Loader} instance.
    * @return The deleted list.
    */
   private static List<INode> loadDeletedList(INodeDirectory parent,
@@ -260,7 +260,7 @@ public class SnapshotFSImageFormat {
    * Load the snapshotINode field of {@link AbstractINodeDiff}.
    * @param snapshot The Snapshot associated with the {@link AbstractINodeDiff}.
    * @param in The {@link DataInput} to read.
-   * @param loader The {@link Loader} instance that this loading procedure is
+   * @param loader The {@link FSImageFormat.Loader} instance that this loading procedure is
    *               using.
    * @return The snapshotINode.
    */
@@ -281,7 +281,7 @@ public class SnapshotFSImageFormat {
    * Load {@link DirectoryDiff} from fsimage.
    * @param parent The directory that the SnapshotDiff belongs to.
    * @param in The {@link DataInput} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
+   * @param loader The {@link FSImageFormat.Loader} instance that this loading procedure is
    *               using.
    * @return A {@link DirectoryDiff}.
    */

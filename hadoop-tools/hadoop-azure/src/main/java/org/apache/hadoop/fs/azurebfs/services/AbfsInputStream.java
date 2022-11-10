@@ -139,7 +139,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
-    this.readAheadEnabled = true;
+    this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
         = abfsInputStreamContext.shouldReadBufferSizeAlways();
     this.bufferedPreadDisabled = abfsInputStreamContext
@@ -752,6 +752,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   byte[] getBuffer() {
     return buffer;
+  }
+
+  @VisibleForTesting
+  public boolean isReadAheadEnabled() {
+    return readAheadEnabled;
   }
 
   @VisibleForTesting
