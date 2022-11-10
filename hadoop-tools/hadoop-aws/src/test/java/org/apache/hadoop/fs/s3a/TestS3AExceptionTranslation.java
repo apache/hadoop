@@ -193,6 +193,10 @@ public class TestS3AExceptionTranslation {
         .message(message)
         .statusCode(code)
         .build();
+    // TODO: is there an equivalent for v2?
+    //       currently used to retrieve endpoint on redirect
+    //       see S3AUtils.translateException and
+    //       https://github.com/aws/aws-sdk-java-v2/issues/3048
     // source.setAdditionalDetails(additionalDetails);
     return source;
   }
