@@ -33,9 +33,9 @@ import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
-public final class ConfUpdateAssembler {
+public final class ConfigurationUpdateAssembler {
 
-  private ConfUpdateAssembler() {
+  private ConfigurationUpdateAssembler() {
   }
 
   public static Map<String, String> constructKeyValueConfUpdate(

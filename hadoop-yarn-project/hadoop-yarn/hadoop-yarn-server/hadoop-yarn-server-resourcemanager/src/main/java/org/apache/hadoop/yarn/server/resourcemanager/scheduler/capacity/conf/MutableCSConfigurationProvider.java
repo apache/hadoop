@@ -126,7 +126,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     CapacitySchedulerConfiguration proposedConf =
             new CapacitySchedulerConfiguration(schedConf, false);
     Map<String, String> kvUpdate
-            = ConfUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
+            = ConfigurationUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
     LogMutation log = new LogMutation(kvUpdate, user.getShortUserName());
     confStore.logMutation(log);
     applyMutation(proposedConf, kvUpdate);
@@ -139,7 +139,7 @@ public class MutableCSConfigurationProvider implements CSConfigurationProvider,
     CapacitySchedulerConfiguration proposedConf =
             new CapacitySchedulerConfiguration(oldConfiguration, false);
     Map<String, String> kvUpdate
-            = ConfUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
+            = ConfigurationUpdateAssembler.constructKeyValueConfUpdate(proposedConf, confUpdate);
     applyMutation(proposedConf, kvUpdate);
     return proposedConf;
   }

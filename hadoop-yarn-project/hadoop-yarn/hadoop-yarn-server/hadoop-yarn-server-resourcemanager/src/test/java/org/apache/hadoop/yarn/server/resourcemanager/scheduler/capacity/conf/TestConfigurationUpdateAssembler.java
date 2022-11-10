@@ -32,9 +32,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 /**
- * Tests {@link ConfUpdateAssembler}.
+ * Tests {@link ConfigurationUpdateAssembler}.
  */
-public class TestConfUpdateAssembler {
+public class TestConfigurationUpdateAssembler {
 
   private final String A_PATH = "root.a";
   private final String B_PATH = "root.b";
@@ -51,11 +51,11 @@ public class TestConfUpdateAssembler {
           CapacitySchedulerConfiguration.ROOT + CapacitySchedulerConfiguration.DOT +
           CapacitySchedulerConfiguration.QUEUES;
 
-  private final String A_INIT_VALUE = "aInitValue";
-  private final String A_VALUE = "aValue";
-  private final String B_INIT_VALUE = "bInitValue";
-  private final String B_VALUE = "bValue";
-  private final String C_VALUE = "cValue";
+  private final String A_INIT_CONFIG_VALUE = "aInitValue";
+  private final String A_CONFIG_VALUE = "aValue";
+  private final String B_INIT_CONFIG_VALUE = "bInitValue";
+  private final String B_CONFIG_VALUE = "bValue";
+  private final String C_CONFIG_VALUE = "cValue";
 
   private CapacitySchedulerConfiguration csConfig;
 
@@ -68,27 +68,27 @@ public class TestConfUpdateAssembler {
   public void testAddQueue() throws Exception {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateMap = new HashMap<>();
-    updateMap.put(CONFIG_NAME, C_VALUE);
+    updateMap.put(CONFIG_NAME, C_CONFIG_VALUE);
     QueueConfigInfo queueConfigInfo = new QueueConfigInfo(C_PATH, updateMap);
     updateInfo.getAddQueueInfo().add(queueConfigInfo);
 
-    Map<String, String> confUpdate =
-            ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+    Map<String, String> configurationUpdate =
+            ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
 
-    assertEquals(C_VALUE, confUpdate.get(C_CONFIG_PATH));
-    assertEquals("a,b,c", confUpdate.get(ROOT_QUEUES_PATH));
+    assertEquals(C_CONFIG_VALUE, configurationUpdate.get(C_CONFIG_PATH));
+    assertEquals("a,b,c", configurationUpdate.get(ROOT_QUEUES_PATH));
   }
 
   @Test
   public void testAddExistingQueue() {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateMap = new HashMap<>();
-    updateMap.put(CONFIG_NAME, A_VALUE);
+    updateMap.put(CONFIG_NAME, A_CONFIG_VALUE);
     QueueConfigInfo queueConfigInfo = new QueueConfigInfo(A_PATH, updateMap);
     updateInfo.getAddQueueInfo().add(queueConfigInfo);
 
     assertThrows(IOException.class, () -> {
-      ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+      ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
   }
 
@@ -96,12 +96,12 @@ public class TestConfUpdateAssembler {
   public void testAddInvalidQueue() {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateMap = new HashMap<>();
-    updateMap.put(CONFIG_NAME, A_VALUE);
+    updateMap.put(CONFIG_NAME, A_CONFIG_VALUE);
     QueueConfigInfo queueConfigInfo = new QueueConfigInfo("invalidPath", updateMap);
     updateInfo.getAddQueueInfo().add(queueConfigInfo);
 
     assertThrows(IOException.class, () -> {
-      ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+      ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
   }
 
@@ -109,21 +109,21 @@ public class TestConfUpdateAssembler {
   public void testUpdateQueue() throws Exception {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     Map<String, String> updateMap = new HashMap<>();
-    updateMap.put(CONFIG_NAME, A_VALUE);
+    updateMap.put(CONFIG_NAME, A_CONFIG_VALUE);
     QueueConfigInfo queueAConfigInfo = new QueueConfigInfo(A_PATH, updateMap);
     updateInfo.getUpdateQueueInfo().add(queueAConfigInfo);
 
     Map<String, String> updateMapQueueB = new HashMap<>();
-    updateMapQueueB.put(CONFIG_NAME, B_VALUE);
+    updateMapQueueB.put(CONFIG_NAME, B_CONFIG_VALUE);
     QueueConfigInfo queueBConfigInfo = new QueueConfigInfo(B_PATH, updateMapQueueB);
 
     updateInfo.getUpdateQueueInfo().add(queueBConfigInfo);
 
-    Map<String, String> confUpdate =
-            ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+    Map<String, String> configurationUpdate =
+            ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
 
-    assertEquals(A_VALUE, confUpdate.get(A_CONFIG_PATH));
-    assertEquals(B_VALUE, confUpdate.get(B_CONFIG_PATH));
+    assertEquals(A_CONFIG_VALUE, configurationUpdate.get(A_CONFIG_PATH));
+    assertEquals(B_CONFIG_VALUE, configurationUpdate.get(B_CONFIG_PATH));
   }
 
   @Test
@@ -131,11 +131,11 @@ public class TestConfUpdateAssembler {
     SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
     updateInfo.getRemoveQueueInfo().add(A_PATH);
 
-    Map<String, String> confUpdate =
-            ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+    Map<String, String> configurationUpdate =
+            ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
 
-    assertEquals(null, confUpdate.get(A_CONFIG_PATH));
-    assertEquals("b", confUpdate.get(ROOT_QUEUES_PATH));
+    assertEquals(null, configurationUpdate.get(A_CONFIG_PATH));
+    assertEquals("b", configurationUpdate.get(ROOT_QUEUES_PATH));
   }
 
   @Test
@@ -144,7 +144,7 @@ public class TestConfUpdateAssembler {
     updateInfo.getRemoveQueueInfo().add("invalidPath");
 
     assertThrows(IOException.class, () -> {
-      ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+      ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
   }
 
@@ -154,7 +154,7 @@ public class TestConfUpdateAssembler {
     updateInfo.getRemoveQueueInfo().add("root.d");
 
     assertThrows(IOException.class, () -> {
-      ConfUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
+      ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
     });
   }
 
@@ -162,8 +162,8 @@ public class TestConfUpdateAssembler {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a, b" });
 
-    csConf.set(A_CONFIG_PATH, A_INIT_VALUE);
-    csConf.set(B_CONFIG_PATH, B_INIT_VALUE);
+    csConf.set(A_CONFIG_PATH, A_INIT_CONFIG_VALUE);
+    csConf.set(B_CONFIG_PATH, B_INIT_CONFIG_VALUE);
 
     return csConf;
   }
