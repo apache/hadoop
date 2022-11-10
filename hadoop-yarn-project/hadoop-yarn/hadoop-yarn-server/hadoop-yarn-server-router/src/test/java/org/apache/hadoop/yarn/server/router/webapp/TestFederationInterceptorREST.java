@@ -1257,4 +1257,23 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     when(mockHsr.getUserPrincipal()).thenReturn(principal);
     return mockHsr;
   }
+
+  @Test
+  public void testCheckFederationInterceptorRESTClient() {
+    SubClusterId subClusterId = SubClusterId.newInstance("SC-1");
+    String webAppSocket = "SC-1:WebAddress";
+    String webAppAddress = "http://" + webAppSocket;
+
+    Configuration configuration = new Configuration();
+    FederationInterceptorREST rest = new FederationInterceptorREST();
+    rest.setConf(configuration);
+    rest.init("router");
+
+    DefaultRequestInterceptorREST interceptorREST =
+        rest.getOrCreateInterceptorForSubCluster(subClusterId, webAppSocket);
+
+    Assert.assertNotNull(interceptorREST);
+    Assert.assertNotNull(interceptorREST.getClient());
+    Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
+  }
 }
