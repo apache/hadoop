@@ -54,6 +54,8 @@ import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.retry.RetryPolicy;
+import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
@@ -190,9 +192,11 @@ public class DefaultS3ClientFactory extends Configured
 
     Configuration conf = getConf();
     bucket = uri.getHost();
+    ApacheHttpClient.Builder httpClientBuilder = AWSClientConfig
+        .createHttpClientBuilder(conf)
+        .proxyConfiguration(AWSClientConfig.createProxyConfiguration(conf, bucket));
     return configureClientBuilder(S3Client.builder(), parameters, conf, bucket)
-        .httpClientBuilder(AWSClientConfig.createHttpClientBuilder(conf)
-            .proxyConfiguration(AWSClientConfig.createProxyConfiguration(conf, bucket)))
+        .httpClientBuilder(httpClientBuilder)
         .build();
   }
 
@@ -203,9 +207,11 @@ public class DefaultS3ClientFactory extends Configured
 
     Configuration conf = getConf();
     bucket = uri.getHost();
+    NettyNioAsyncHttpClient.Builder httpClientBuilder = AWSClientConfig
+        .createAsyncHttpClientBuilder(conf)
+        .proxyConfiguration(AWSClientConfig.createAsyncProxyConfiguration(conf, bucket));
     return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
-        .httpClientBuilder(AWSClientConfig.createAsyncHttpClientBuilder(conf)
-            .proxyConfiguration(AWSClientConfig.createAsyncProxyConfiguration(conf, bucket)))
+        .httpClientBuilder(httpClientBuilder)
         .build();
   }
 
@@ -233,6 +239,10 @@ public class DefaultS3ClientFactory extends Configured
     LOG.debug("Using endpoint {}; and region {}", endpoint, region);
 
     // TODO: Some configuration done in configureBasicParams is not done yet.
+    S3Configuration serviceConfiguration = S3Configuration.builder()
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .build();
+
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
         .credentialsProvider(
@@ -241,9 +251,7 @@ public class DefaultS3ClientFactory extends Configured
             V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()))
         .endpointOverride(endpoint)
         .region(region)
-        .serviceConfiguration(S3Configuration.builder()
-            .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-            .build());
+        .serviceConfiguration(serviceConfiguration);
   }
 
   /**
