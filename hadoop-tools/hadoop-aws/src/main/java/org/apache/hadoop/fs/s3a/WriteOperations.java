@@ -25,15 +25,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.SelectObjectContentResult;
-
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -41,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.select.SelectEventStreamPublisher;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -286,25 +285,26 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   Configuration getConf();
 
   /**
-   * Create a S3 Select request for the destination path.
+   * Create a S3 Select request builder for the destination path.
    * This does not build the query.
    * @param path pre-qualified path for query
-   * @return the request
+   * @return the request builder
    */
-  SelectObjectContentRequest newSelectRequest(Path path);
+  SelectObjectContentRequest.Builder newSelectRequestBuilder(Path path);
 
   /**
    * Execute an S3 Select operation.
    * On a failure, the request is only logged at debug to avoid the
    * select exception being printed.
-   * @param source source for selection
+   *
+   * @param source  source for selection
    * @param request Select request to issue.
-   * @param action the action for use in exception creation
+   * @param action  the action for use in exception creation
    * @return response
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  SelectObjectContentResult select(
+  SelectEventStreamPublisher select(
       Path source,
       SelectObjectContentRequest request,
       String action)

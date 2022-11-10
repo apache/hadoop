@@ -31,6 +31,7 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.thirdparty.org.apache.http.client.utils.URIBuilder;
 
 import org.apache.hadoop.conf.Configuration;
@@ -112,6 +113,33 @@ public final class AWSClientConfig {
   }
 
   /**
+   * Configures the async http client.
+   *
+   * @param conf The Hadoop configuration
+   * @return Http client builder
+   */
+  public static NettyNioAsyncHttpClient.Builder createAsyncHttpClientBuilder(Configuration conf) {
+    NettyNioAsyncHttpClient.Builder httpClientBuilder =
+        NettyNioAsyncHttpClient.builder();
+
+    httpClientBuilder.maxConcurrency(S3AUtils.intOption(conf, MAXIMUM_CONNECTIONS,
+        DEFAULT_MAXIMUM_CONNECTIONS, 1));
+
+    int connectionEstablishTimeout =
+        S3AUtils.intOption(conf, ESTABLISH_TIMEOUT, DEFAULT_ESTABLISH_TIMEOUT, 0);
+    int socketTimeout = S3AUtils.intOption(conf, SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT, 0);
+
+    httpClientBuilder.connectionTimeout(Duration.ofSeconds(connectionEstablishTimeout));
+    httpClientBuilder.readTimeout(Duration.ofSeconds(socketTimeout));
+    httpClientBuilder.writeTimeout(Duration.ofSeconds(socketTimeout));
+
+    // TODO: Need to set ssl socket factory, as done in
+    //  NetworkBinding.bindSSLChannelMode(conf, awsConf);
+
+    return httpClientBuilder;
+  }
+
+  /**
    * Configures the retry policy.
    *
    * @param conf The Hadoop configuration
@@ -132,10 +160,10 @@ public final class AWSClientConfig {
    *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @return Proxy configuration builder
+   * @return Proxy configuration
    * @throws IOException on any IO problem
    */
-  public static ProxyConfiguration.Builder createProxyConfigurationBuilder(Configuration conf,
+  public static ProxyConfiguration createProxyConfiguration(Configuration conf,
       String bucket) throws IOException {
 
     ProxyConfiguration.Builder proxyConfigBuilder = ProxyConfiguration.builder();
@@ -181,7 +209,72 @@ public final class AWSClientConfig {
       throw new IllegalArgumentException(msg);
     }
 
-    return proxyConfigBuilder;
+    return proxyConfigBuilder.build();
+  }
+
+  /**
+   * Configures the proxy for the async http client.
+   *
+   * @param conf The Hadoop configuration
+   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
+   * @return Proxy configuration
+   * @throws IOException on any IO problem
+   */
+  public static software.amazon.awssdk.http.nio.netty.ProxyConfiguration
+      createAsyncProxyConfiguration(Configuration conf,
+      String bucket) throws IOException {
+
+    software.amazon.awssdk.http.nio.netty.ProxyConfiguration.Builder proxyConfigBuilder =
+        software.amazon.awssdk.http.nio.netty.ProxyConfiguration.builder();
+
+    String proxyHost = conf.getTrimmed(PROXY_HOST, "");
+    int proxyPort = conf.getInt(PROXY_PORT, -1);
+
+    if (!proxyHost.isEmpty()) {
+      if (proxyPort >= 0) {
+        proxyConfigBuilder.host(proxyHost);
+        proxyConfigBuilder.port(proxyPort);
+      } else {
+        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
+          LOG.warn("Proxy host set without port. Using HTTPS default 443");
+          proxyConfigBuilder.host(proxyHost);
+          proxyConfigBuilder.port(443);
+        } else {
+          LOG.warn("Proxy host set without port. Using HTTP default 80");
+          proxyConfigBuilder.host(proxyHost);
+          proxyConfigBuilder.port(80);
+        }
+      }
+      final String proxyUsername = S3AUtils.lookupPassword(bucket, conf, PROXY_USERNAME,
+          null, null);
+      final String proxyPassword = S3AUtils.lookupPassword(bucket, conf, PROXY_PASSWORD,
+          null, null);
+      if ((proxyUsername == null) != (proxyPassword == null)) {
+        String msg = "Proxy error: " + PROXY_USERNAME + " or " +
+            PROXY_PASSWORD + " set without the other.";
+        LOG.error(msg);
+        throw new IllegalArgumentException(msg);
+      }
+      proxyConfigBuilder.username(proxyUsername);
+      proxyConfigBuilder.password(proxyPassword);
+      // TODO: check NTLM support
+      // proxyConfigBuilder.ntlmDomain(conf.getTrimmed(PROXY_DOMAIN));
+      // proxyConfigBuilder.ntlmWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Using proxy server {}:{} as user {} with password {} on "
+                + "domain {} as workstation {}", proxyHost, proxyPort, proxyUsername, proxyPassword,
+            PROXY_DOMAIN, PROXY_WORKSTATION);
+      }
+    } else if (proxyPort >= 0) {
+      String msg =
+          "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
+      LOG.error(msg);
+      throw new IllegalArgumentException(msg);
+    } else {
+      return null;
+    }
+
+    return proxyConfigBuilder.build();
   }
 
   /***

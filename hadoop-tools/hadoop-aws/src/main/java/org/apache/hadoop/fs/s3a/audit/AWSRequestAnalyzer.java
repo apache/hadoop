@@ -20,13 +20,10 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.util.List;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.CopyPartRequest;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CopyPartResult;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -38,6 +35,8 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
@@ -133,34 +132,17 @@ public class AWSRequestAnalyzer {
       return writing(OBJECT_PUT_REQUEST,
           r.key(),
           0);
+    } else if (request instanceof SelectObjectContentRequest) {
+      SelectObjectContentRequest r =
+          (SelectObjectContentRequest) request;
+      return reading(OBJECT_SELECT_REQUESTS,
+          r.key(),
+          1);
     } else if (request instanceof UploadPartRequest) {
       UploadPartRequest r = (UploadPartRequest) request;
       return writing(MULTIPART_UPLOAD_PART_PUT,
           r.key(),
           r.contentLength());
-    }
-    // no explicit support, return classname
-    return writing(request.getClass().getName(), null, 0);
-  }
-
-  /**
-   * Given an AWS request, try to analyze it to operation,
-   * read/write and path.
-   * @param request request.
-   * @return information about the request.
-   * @param <T> type of request.
-   */
-  public <T extends AmazonWebServiceRequest> RequestInfo analyze(T request) {
-
-    // this is where Scala's case statement would massively
-    // simplify life.
-    // Please Keep in Alphabetical Order.
-    if (request instanceof SelectObjectContentRequest) {
-      SelectObjectContentRequest r =
-          (SelectObjectContentRequest) request;
-      return reading(OBJECT_SELECT_REQUESTS,
-          r.getKey(),
-          1);
     }
     // no explicit support, return classname
     return writing(request.getClass().getName(), null, 0);
@@ -213,7 +195,7 @@ public class AWSRequestAnalyzer {
    */
   public static boolean
       isRequestNotAlwaysInSpan(final Object request) {
-    return request instanceof CopyPartRequest
+    return request instanceof UploadPartCopyRequest
         || request instanceof CompleteMultipartUploadRequest
         || request instanceof GetBucketLocationRequest;
   }

@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
@@ -67,6 +68,9 @@ public interface S3ClientFactory {
 
   /**
    * Creates a new {@link S3Client}.
+   * The client returned supports synchronous operations. For
+   * asynchronous operations, use
+   * {@link #createS3AsyncClientV2(URI, S3ClientCreationParameters)}.
    *
    * @param uri S3A file system URI
    * @param parameters parameter object
@@ -76,6 +80,19 @@ public interface S3ClientFactory {
   S3Client createS3ClientV2(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
 
+  /**
+   * Creates a new {@link S3AsyncClient}.
+   * The client returned supports asynchronous operations. For
+   * synchronous operations, use
+   * {@link #createS3ClientV2(URI, S3ClientCreationParameters)}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return Async S3 client
+   * @throws IOException on any IO problem
+   */
+  S3AsyncClient createS3AsyncClient(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
 
   /**
    * Settings for the S3 Client.
