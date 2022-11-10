@@ -1107,9 +1107,8 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.prefetch.block.size</name>
   <value>8MB</value>
   <description>
-      The size of a single prefetched block of data. 
-      Default value is 8 MB.
-      Lower limit for the block size is 1 byte.
+      The size of a single prefetched block of data.
+      Decreasing this will increase the number of prefetches required, and may negatively impact performance.
   </description>
 </property>
 
