@@ -36,26 +36,26 @@ import static org.junit.Assert.assertThrows;
  */
 public class TestConfigurationUpdateAssembler {
 
-  private final String A_PATH = "root.a";
-  private final String B_PATH = "root.b";
-  private final String C_PATH = "root.c";
+  private static final String A_PATH = "root.a";
+  private static final String B_PATH = "root.b";
+  private static final String C_PATH = "root.c";
 
-  private final String CONFIG_NAME = "testConfigName";
-  private final String A_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + A_PATH +
+  private static final String CONFIG_NAME = "testConfigName";
+  private static final String A_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + A_PATH +
           CapacitySchedulerConfiguration.DOT + CONFIG_NAME;
-  private final String B_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + B_PATH +
+  private static final String B_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + B_PATH +
           CapacitySchedulerConfiguration.DOT + CONFIG_NAME;
-  private final String C_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + C_PATH +
+  private static final String C_CONFIG_PATH = CapacitySchedulerConfiguration.PREFIX + C_PATH +
           CapacitySchedulerConfiguration.DOT + CONFIG_NAME;
-  private final String ROOT_QUEUES_PATH = CapacitySchedulerConfiguration.PREFIX +
+  private static final String ROOT_QUEUES_PATH = CapacitySchedulerConfiguration.PREFIX +
           CapacitySchedulerConfiguration.ROOT + CapacitySchedulerConfiguration.DOT +
           CapacitySchedulerConfiguration.QUEUES;
 
-  private final String A_INIT_CONFIG_VALUE = "aInitValue";
-  private final String A_CONFIG_VALUE = "aValue";
-  private final String B_INIT_CONFIG_VALUE = "bInitValue";
-  private final String B_CONFIG_VALUE = "bValue";
-  private final String C_CONFIG_VALUE = "cValue";
+  private static final String A_INIT_CONFIG_VALUE = "aInitValue";
+  private static final String A_CONFIG_VALUE = "aValue";
+  private static final String B_INIT_CONFIG_VALUE = "bInitValue";
+  private static final String B_CONFIG_VALUE = "bValue";
+  private static final String C_CONFIG_VALUE = "cValue";
 
   private CapacitySchedulerConfiguration csConfig;
 
