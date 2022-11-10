@@ -635,9 +635,6 @@ public class WriteOperationHelper implements WriteOperations {
     return conf;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public SelectObjectContentRequest.Builder newSelectRequestBuilder(Path path) {
     try (AuditSpan span = getAuditSpan()) {
       return getRequestFactory().newSelectRequestBuilder(
