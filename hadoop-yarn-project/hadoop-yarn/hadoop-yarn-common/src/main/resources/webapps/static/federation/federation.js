@@ -28,7 +28,7 @@ $(document).ready(function() {
             var capabilityArr = scTableData.filter(item => (item.subcluster === row.id()));
             var capabilityObj = JSON.parse(capabilityArr[0].capability).clusterMetrics;
             row.child(
-                '<table>' +
+                '<table style="line-height:25px;" >' +
                 '   <tr>' +
                 '      <td>' +
                 '         <h3>Application Metrics</h3>' +
@@ -42,11 +42,12 @@ $(document).ready(function() {
                 '      <td>' +
                 '        <h3>Resource Metrics</h3>' +
                 '        <h4>Memory</h4>' +
-                '        TotalMB : ' + capabilityObj.totalMB + ' </p>' +
-                '        ReservedMB : ' + capabilityObj.reservedMB + ' </p>' +
-                '        AvailableMB : ' + capabilityObj.availableMB + ' </p>' +
-                '        AllocatedMB : ' + capabilityObj.allocatedMB + ' </p>' +
-                '        PendingMB : ' + capabilityObj.pendingMB + ' </p>' +
+                '        Total Memory : ' + capabilityArr[0].totalmemory + ' </p>' +
+                '        Reserved Memory : ' + capabilityArr[0].reservedmemory + ' </p>' +
+                '        Available Memory : ' + capabilityArr[0].availablememory + ' </p>' +
+                '        Allocated Memory : ' + capabilityArr[0].allocatedmemory + ' </p>' +
+                '        Pending Memory : ' + capabilityArr[0].pendingmemory + ' </p>' +
+                '        <hr />' +
                 '        <h4>VirtualCores</h4>' +
                 '        TotalVirtualCores : ' + capabilityObj.totalVirtualCores + ' </p>' +
                 '        ReservedVirtualCores : ' + capabilityObj.reservedVirtualCores + ' </p>' +
