@@ -68,7 +68,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  *
  * The retry policy is all built around that of the normal IO exceptions,
  * particularly those extracted from
- * {@link S3AUtils#translateException(String, Path, AmazonClientException)}.
+ * {@link S3AUtils#translateException(String, Path, SdkException)}.
  * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
  * does this translation if an {@code AmazonClientException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
@@ -240,7 +240,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     Preconditions.checkArgument(exception != null, "Null exception");
     Exception ex = exception;
     if (exception instanceof SdkException) {
-      // uprate the skd exception for the purpose of exception
+      // update the sdk exception for the purpose of exception
       // processing.
       ex = S3AUtils.translateException("", "", (SdkException) exception);
     }
