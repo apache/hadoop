@@ -33,7 +33,7 @@ import java.util.Map;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
-public class ConfUpdateAssembler {
+public final class ConfUpdateAssembler {
 
   private ConfUpdateAssembler() {
   }
