@@ -186,14 +186,14 @@ public class TestZookeeperFederationStateStore
     // 2. Compare the data returned by the storeNewMasterKey
     // interface with the data queried by zk, and ensure that the data is consistent.
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
-    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
         ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
     FederationStateStore stateStore = this.getStateStore();
 
     assertTrue(stateStore instanceof ZookeeperFederationStateStore);
 
     RouterMasterKeyRequest routerMasterKeyRequest =
-        RouterMasterKeyRequest.newInstance(routerMasterKey);
+        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
     RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
     assertNotNull(response);
     RouterMasterKey respRouterMasterKey = response.getRouterMasterKey();
@@ -210,12 +210,13 @@ public class TestZookeeperFederationStateStore
     zkDT.readFields(din);
 
     // Generate RouterMasterKey based on ZK data.
-    RouterMasterKey resultRouterMasterKey =
+    RouterMasterKey zkRouterMasterKey =
         RouterMasterKey.newInstance(zkDT.getKeyId(), ByteBuffer.wrap(zkDT.getEncodedKey()),
         zkDT.getExpiryDate());
-    assertNotNull(resultRouterMasterKey);
-    assertEquals(resultRouterMasterKey, routerMasterKey);
-    assertEquals(respRouterMasterKey, routerMasterKey);
+    assertNotNull(zkRouterMasterKey);
+    assertEquals(paramRouterMasterKey, respRouterMasterKey);
+    assertEquals(paramRouterMasterKey, zkRouterMasterKey);
+    assertEquals(zkRouterMasterKey, respRouterMasterKey);
   }
 
   public void testGetMasterKeyByDelegationKey() throws Exception {
@@ -225,14 +226,14 @@ public class TestZookeeperFederationStateStore
     // 2. Call the getMasterKeyByDelegationKey interface of stateStore to get the MasterKey data.
     // 3. The zk data should be consistent with the returned data.
     DelegationKey key = new DelegationKey(5678, 8765, "keyBytes".getBytes());
-    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
         ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
     FederationStateStore stateStore = this.getStateStore();
 
     assertTrue(stateStore instanceof ZookeeperFederationStateStore);
 
     RouterMasterKeyRequest routerMasterKeyRequest =
-        RouterMasterKeyRequest.newInstance(routerMasterKey);
+        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
     RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
     assertNotNull(response);
 
@@ -253,12 +254,49 @@ public class TestZookeeperFederationStateStore
     RouterMasterKeyResponse response1 = stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
     assertNotNull(response1);
     RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
-    assertEquals(respRouterMasterKey, routerMasterKey);
-    assertEquals(respRouterMasterKey, zkRouterMasterKey);
+    assertEquals(paramRouterMasterKey, respRouterMasterKey);
+    assertEquals(paramRouterMasterKey, zkRouterMasterKey);
+    assertEquals(zkRouterMasterKey, respRouterMasterKey);
   }
 
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
-    super.testRemoveStoredMasterKey();
+  public void testRemoveStoredMasterKey() throws Exception {
+
+    // We will design a unit test like this:
+    // 1. Manually create a DelegationKey,
+    // and call the interface storeNewMasterKey to write the data to zk.
+    // 2. Call removeStoredMasterKey to remove the MasterKey data in zk.
+    // 3. Check if Zk data exists, data should not exist.
+
+    // Step1. Manually create a DelegationKey，store Data in zk.
+    DelegationKey key = new DelegationKey(2345, 5432, "keyBytes".getBytes());
+    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    FederationStateStore stateStore = this.getStateStore();
+
+    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
+
+    // We need to ensure that the returned result is not empty.
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    assertNotNull(response);
+
+    // We will check if delegationToken exists in zk.
+    String nodeName = "delegation_key_" + key.getKeyId();
+    String nodePath = "/federationstore/router_rm_dt_secret_manager_root/" +
+        "router_rm_dt_master_keys_root/" + nodeName;
+    assertTrue(curatorFramework.checkExists().forPath(nodePath) != null);
+
+    // Step2. Call removeStoredMasterKey
+    RouterMasterKeyResponse response1 = stateStore.removeStoredMasterKey(routerMasterKeyRequest);
+    assertNotNull(response1);
+    RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
+    assertNotNull(respRouterMasterKey);
+    assertEquals(paramRouterMasterKey, respRouterMasterKey);
+
+    // We have removed the RouterMasterKey data from zk,
+    // the path should be empty at this point.
+    assertTrue(curatorFramework.checkExists().forPath(nodePath) == null);
   }
 
   public void testStoreNewToken() throws IOException, YarnException {

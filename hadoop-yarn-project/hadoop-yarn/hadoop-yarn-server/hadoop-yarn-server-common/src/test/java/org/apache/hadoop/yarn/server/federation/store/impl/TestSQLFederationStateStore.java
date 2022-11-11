@@ -569,7 +569,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+  public void testRemoveStoredMasterKey() throws Exception {
     super.testRemoveStoredMasterKey();
   }
 
