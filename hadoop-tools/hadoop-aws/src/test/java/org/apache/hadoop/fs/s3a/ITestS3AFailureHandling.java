@@ -33,11 +33,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.nio.file.AccessDeniedException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
@@ -162,7 +164,20 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
                 fs.pathToKey(csvPath),
                 "missing-key.csv"
             });
-    // TODO:WiP: missing test?
+    MultiObjectDeleteException ex = intercept(
+        MultiObjectDeleteException.class,
+        () -> fs.removeKeys(keys, false));
+    final List<Path> undeleted = ex.errors().stream()
+        .map(S3Error::key)
+        .map(fs::keyToQualifiedPath)
+        .collect(Collectors.toList());
+    final String undeletedFiles = undeleted.stream()
+        .map(Path::toString)
+        .collect(Collectors.joining(", "));
+    failIf(undeleted.size() != 2,
+        "undeleted list size wrong: " + undeletedFiles,
+        ex);
+    assertTrue("no CSV in " +undeletedFiles, undeleted.contains(csvPath));
   }
 
   /**
