@@ -20,8 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
-import com.amazonaws.services.s3.AmazonS3;
-
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +53,6 @@ public abstract class AbstractS3AMockTest {
   public ExpectedException exception = ExpectedException.none();
 
   protected S3AFileSystem fs;
-  protected AmazonS3 s3;
   protected S3Client s3V2;
 
   @Before
@@ -66,7 +63,6 @@ public abstract class AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
-    s3 = fs.getAmazonS3ClientForTesting("mocking");
     s3V2 = fs.getAmazonS3V2ClientForTesting("mocking");
   }
 
