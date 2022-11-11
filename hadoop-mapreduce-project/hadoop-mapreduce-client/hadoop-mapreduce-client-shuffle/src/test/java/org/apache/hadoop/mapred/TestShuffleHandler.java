@@ -21,12 +21,14 @@ import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.jboss.netty.handler.codec.http.HttpVersion.HTTP_1_1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -91,8 +93,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.Mockito;
@@ -210,8 +212,9 @@ public class TestShuffleHandler {
    *
    * @throws Exception exception
    */
-  @Test (timeout = 10000)
-  public void testSerializeMeta()  throws Exception {
+  @Test
+  @Timeout(10000)
+  void testSerializeMeta()  throws Exception {
     assertEquals(1, ShuffleHandler.deserializeMetaData(
         ShuffleHandler.serializeMetaData(1)));
     assertEquals(-1, ShuffleHandler.deserializeMetaData(
@@ -225,24 +228,25 @@ public class TestShuffleHandler {
    *
    * @throws Exception exception
    */
-  @Test (timeout = 10000)
-  public void testShuffleMetrics() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testShuffleMetrics() throws Exception {
     MetricsSystem ms = new MetricsSystemImpl();
     ShuffleHandler sh = new ShuffleHandler(ms);
     ChannelFuture cf = mock(ChannelFuture.class);
     when(cf.isSuccess()).thenReturn(true).thenReturn(false);
 
     sh.metrics.shuffleConnections.incr();
-    sh.metrics.shuffleOutputBytes.incr(1*MiB);
+    sh.metrics.shuffleOutputBytes.incr(1 * MiB);
     sh.metrics.shuffleConnections.incr();
-    sh.metrics.shuffleOutputBytes.incr(2*MiB);
+    sh.metrics.shuffleOutputBytes.incr(2 * MiB);
 
-    checkShuffleMetrics(ms, 3*MiB, 0 , 0, 2);
+    checkShuffleMetrics(ms, 3 * MiB, 0, 0, 2);
 
     sh.metrics.operationComplete(cf);
     sh.metrics.operationComplete(cf);
 
-    checkShuffleMetrics(ms, 3*MiB, 1, 1, 0);
+    checkShuffleMetrics(ms, 3 * MiB, 1, 1, 0);
   }
 
   static void checkShuffleMetrics(MetricsSystem ms, long bytes, int failed,
@@ -260,8 +264,9 @@ public class TestShuffleHandler {
    *
    * @throws Exception exception.
    */
-  @Test (timeout = 10000)
-  public void testClientClosesConnection() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testClientClosesConnection() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -287,13 +292,13 @@ public class TestShuffleHandler {
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
               HttpRequest request, HttpResponse response, URL requestUri)
-                  throws IOException {
+              throws IOException {
           }
           @Override
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
               Channel ch, String user, String mapId, int reduce,
               MapOutputInfo info)
-                  throws IOException {
+              throws IOException {
             // send a shuffle header and a lot of data down the channel
             // to trigger a broken pipe
             ShuffleHeader header =
@@ -332,25 +337,25 @@ public class TestShuffleHandler {
     // simulate a reducer that closes early by reading a single shuffle header
     // then closing the connection
     URL url = new URL("http://127.0.0.1:"
-      + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
-      + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
-    HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+        + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
         ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
     conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
         ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
-    Assert.assertEquals("close",
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals("close",
         conn.getHeaderField(HttpHeader.CONNECTION.asString()));
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
     input.close();
 
     shuffleHandler.stop();
-    Assert.assertTrue("sendError called when client closed connection",
-        failures.size() == 0);
+    assertTrue(failures.size() == 0,
+        "sendError called when client closed connection");
   }
   static class LastSocketAddress {
     SocketAddress lastAddress;
@@ -362,8 +367,9 @@ public class TestShuffleHandler {
     }
   }
 
-  @Test(timeout = 10000)
-  public void testKeepAlive() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testKeepAlive() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -458,8 +464,8 @@ public class TestShuffleHandler {
     shuffleHandler.start();
 
     String shuffleBaseURL = "http://127.0.0.1:"
-            + shuffleHandler.getConfig().get(
-              ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
+        + shuffleHandler.getConfig().get(
+        ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
     URL url =
         new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
             + "map=attempt_12345_1_m_1_0");
@@ -470,15 +476,16 @@ public class TestShuffleHandler {
         ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     DataInputStream input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+    assertEquals(HttpHeader.KEEP_ALIVE.asString(),
         conn.getHeaderField(HttpHeader.CONNECTION.asString()));
-    Assert.assertEquals("timeout=1",
+    assertEquals("timeout=1",
         conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     ShuffleHeader header = new ShuffleHeader();
     header.readFields(input);
     byte[] buffer = new byte[1024];
-    while (input.read(buffer) != -1) {}
+    while (input.read(buffer) != -1) {
+    }
     SocketAddress firstAddress = lastSocketAddress.getSocketAddres();
     input.close();
 
@@ -493,26 +500,27 @@ public class TestShuffleHandler {
         ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
     conn.connect();
     input = new DataInputStream(conn.getInputStream());
-    Assert.assertEquals(HttpHeader.KEEP_ALIVE.asString(),
+    assertEquals(HttpHeader.KEEP_ALIVE.asString(),
         conn.getHeaderField(HttpHeader.CONNECTION.asString()));
-    Assert.assertEquals("timeout=1",
+    assertEquals("timeout=1",
         conn.getHeaderField(HttpHeader.KEEP_ALIVE.asString()));
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
     header = new ShuffleHeader();
     header.readFields(input);
     input.close();
     SocketAddress secondAddress = lastSocketAddress.getSocketAddres();
-    Assert.assertNotNull("Initial shuffle address should not be null",
-        firstAddress);
-    Assert.assertNotNull("Keep-Alive shuffle address should not be null",
-        secondAddress);
-    Assert.assertEquals("Initial shuffle address and keep-alive shuffle "
-        + "address should be the same", firstAddress, secondAddress);
+    assertNotNull(firstAddress,
+        "Initial shuffle address should not be null");
+    assertNotNull(secondAddress,
+        "Keep-Alive shuffle address should not be null");
+    assertEquals(firstAddress, secondAddress, "Initial shuffle address and keep-alive shuffle "
+        + "address should be the same");
 
   }
 
-  @Test(timeout = 10000)
-  public void testSocketKeepAlive() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testSocketKeepAlive() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
     conf.setBoolean(ShuffleHandler.SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED, true);
@@ -530,8 +538,8 @@ public class TestShuffleHandler {
       shuffleHandler.start();
 
       String shuffleBaseURL = "http://127.0.0.1:"
-              + shuffleHandler.getConfig().get(
-                ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
+          + shuffleHandler.getConfig().get(
+          ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY);
       URL url =
           new URL(shuffleBaseURL + "/mapOutput?job=job_12345_1&reduce=1&"
               + "map=attempt_12345_1_m_1_0");
@@ -542,8 +550,8 @@ public class TestShuffleHandler {
           ShuffleHeader.DEFAULT_HTTP_HEADER_VERSION);
       conn.connect();
       conn.getInputStream();
-      Assert.assertTrue("socket should be set KEEP_ALIVE",
-          shuffleHandler.isSocketKeepAlive());
+      assertTrue(shuffleHandler.isSocketKeepAlive(),
+          "socket should be set KEEP_ALIVE");
     } finally {
       if (conn != null) {
         conn.disconnect();
@@ -558,8 +566,9 @@ public class TestShuffleHandler {
    * 
    * @throws Exception exception
    */
-  @Test (timeout = 10000)
-  public void testIncompatibleShuffleVersion() throws Exception {
+  @Test
+  @Timeout(10000)
+  void testIncompatibleShuffleVersion() throws Exception {
     final int failureNum = 3;
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -570,16 +579,16 @@ public class TestShuffleHandler {
     // simulate a reducer that closes early by reading a single shuffle header
     // then closing the connection
     URL url = new URL("http://127.0.0.1:"
-      + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
-      + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
+        + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+        + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_1_0");
     for (int i = 0; i < failureNum; ++i) {
-      HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           i == 0 ? "mapreduce" : "other");
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
           i == 1 ? "1.0.0" : "1.0.1");
       conn.connect();
-      Assert.assertEquals(
+      assertEquals(
           HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
     }
 
@@ -592,9 +601,10 @@ public class TestShuffleHandler {
    * 
    * @throws Exception exception
    */
-  @Test (timeout = 10000)
-  public void testMaxConnections() throws Exception {
-    
+  @Test
+  @Timeout(10000)
+  void testMaxConnections() throws Exception {
+
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
     conf.setInt(ShuffleHandler.MAX_SHUFFLE_CONNECTIONS, 3);
@@ -619,14 +629,14 @@ public class TestShuffleHandler {
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
               HttpRequest request, HttpResponse response, URL requestUri)
-                  throws IOException {
+              throws IOException {
             // Do nothing.
           }
           @Override
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
               Channel ch, String user, String mapId, int reduce,
               MapOutputInfo info)
-                  throws IOException {
+              throws IOException {
             // send a shuffle header and a lot of data down the channel
             // to trigger a broken pipe
             ShuffleHeader header =
@@ -635,7 +645,7 @@ public class TestShuffleHandler {
             header.write(dob);
             ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
             dob = new DataOutputBuffer();
-            for (int i=0; i<100000; ++i) {
+            for (int i = 0; i < 100000; ++i) {
               header.write(dob);
             }
             return ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
@@ -651,12 +661,12 @@ public class TestShuffleHandler {
     HttpURLConnection conns[] = new HttpURLConnection[connAttempts];
 
     for (int i = 0; i < connAttempts; i++) {
-      String URLstring = "http://127.0.0.1:" 
-           + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
-           + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_"
-           + i + "_0";
-      URL url = new URL(URLstring);
-      conns[i] = (HttpURLConnection)url.openConnection();
+      String urlString = "http://127.0.0.1:"
+          + shuffleHandler.getConfig().get(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+          + "/mapOutput?job=job_12345_1&reduce=1&map=attempt_12345_1_m_"
+          + i + "_0";
+      URL url = new URL(urlString);
+      conns[i] = (HttpURLConnection) url.openConnection();
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           ShuffleHeader.DEFAULT_HTTP_HEADER_NAME);
       conns[i].setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
@@ -671,31 +681,30 @@ public class TestShuffleHandler {
     //Ensure first connections are okay
     conns[0].getInputStream();
     int rc = conns[0].getResponseCode();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
-    
+    assertEquals(HttpURLConnection.HTTP_OK, rc);
+
     conns[1].getInputStream();
     rc = conns[1].getResponseCode();
-    Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+    assertEquals(HttpURLConnection.HTTP_OK, rc);
 
     // This connection should be closed because it to above the limit
     try {
       rc = conns[2].getResponseCode();
-      Assert.assertEquals("Expected a too-many-requests response code",
-          ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc);
-      long backoff = Long.valueOf(
-          conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
-      Assert.assertTrue("The backoff value cannot be negative.", backoff > 0);
+      assertEquals(ShuffleHandler.TOO_MANY_REQ_STATUS.getCode(), rc,
+          "Expected a too-many-requests response code");
+      long backoff = Long.valueOf(conns[2].getHeaderField(ShuffleHandler.RETRY_AFTER_HEADER));
+      assertTrue(backoff > 0, "The backoff value cannot be negative.");
       conns[2].getInputStream();
-      Assert.fail("Expected an IOException");
+      fail("Expected an IOException");
     } catch (IOException ioe) {
       LOG.info("Expected - connection should not be open");
     } catch (NumberFormatException ne) {
-      Assert.fail("Expected a numerical value for RETRY_AFTER header field");
+      fail("Expected a numerical value for RETRY_AFTER header field");
     } catch (Exception e) {
-      Assert.fail("Expected a IOException");
+      fail("Expected a IOException");
     }
-    
-    shuffleHandler.stop(); 
+
+    shuffleHandler.stop();
   }
 
   /**
@@ -704,8 +713,9 @@ public class TestShuffleHandler {
    *
    * @throws Exception exception
    */
-  @Test(timeout = 100000)
-  public void testMapFileAccess() throws IOException {
+  @Test
+  @Timeout(100000)
+  void testMapFileAccess() throws IOException {
     // This will run only in NativeIO is enabled as SecureIOUtils need it
     assumeTrue(NativeIO.isAvailable());
     Configuration conf = new Configuration();
@@ -751,14 +761,14 @@ public class TestShuffleHandler {
               "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
       shuffleHandler
-        .initializeApplication(new ApplicationInitializationContext(user,
-          appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
-            outputBuffer.getLength())));
+          .initializeApplication(new ApplicationInitializationContext(user,
+              appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
+                  outputBuffer.getLength())));
       URL url =
           new URL(
               "http://127.0.0.1:"
                   + shuffleHandler.getConfig().get(
-                      ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+                  ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
                   + "/mapOutput?job=job_12345_0001&reduce=" + reducerId
                   + "&map=attempt_12345_1_m_1_0");
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -782,7 +792,7 @@ public class TestShuffleHandler {
       String message =
           "Owner '" + owner + "' for path " + fileMap.get(0).getAbsolutePath()
               + " did not match expected owner '" + user + "'";
-      Assert.assertTrue((new String(byteArr)).contains(message));
+      assertTrue((new String(byteArr)).contains(message));
     } finally {
       shuffleHandler.stop();
       FileUtil.fullyDelete(ABS_LOG_DIR);
@@ -839,12 +849,12 @@ public class TestShuffleHandler {
   }
 
   @Test
-  public void testRecovery() throws IOException {
+  void testRecovery() throws IOException {
     final String user = "someuser";
     final ApplicationId appId = ApplicationId.newInstance(12345, 1);
     final JobID jobId = JobID.downgrade(TypeConverter.fromYarn(appId));
     final File tmpDir = new File(System.getProperty("test.build.data",
-        System.getProperty("java.io.tmpdir")),
+            System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
     ShuffleHandler shuffle = new ShuffleHandler();
     AuxiliaryLocalPathHandler pathHandler = new TestAuxiliaryLocalPathHandler();
@@ -870,11 +880,11 @@ public class TestShuffleHandler {
       jt.write(outputBuffer);
       shuffle.initializeApplication(new ApplicationInitializationContext(user,
           appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
-            outputBuffer.getLength())));
+              outputBuffer.getLength())));
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -886,12 +896,12 @@ public class TestShuffleHandler {
 
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // shutdown app and verify access is lost
       shuffle.stopApplication(new ApplicationTerminationContext(appId));
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -902,7 +912,7 @@ public class TestShuffleHandler {
 
       // verify we still don't have access
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, rc);
     } finally {
       if (shuffle != null) {
         shuffle.close();
@@ -910,13 +920,13 @@ public class TestShuffleHandler {
       FileUtil.fullyDelete(tmpDir);
     }
   }
-  
+
   @Test
-  public void testRecoveryFromOtherVersions() throws IOException {
+  void testRecoveryFromOtherVersions() throws IOException {
     final String user = "someuser";
     final ApplicationId appId = ApplicationId.newInstance(12345, 1);
     final File tmpDir = new File(System.getProperty("test.build.data",
-        System.getProperty("java.io.tmpdir")),
+            System.getProperty("java.io.tmpdir")),
         TestShuffleHandler.class.getName());
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -945,7 +955,7 @@ public class TestShuffleHandler {
 
       // verify we are authorized to shuffle
       int rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
 
       // emulate shuffle handler restart
       shuffle.close();
@@ -957,15 +967,15 @@ public class TestShuffleHandler {
 
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
       Version version = Version.newInstance(1, 0);
-      Assert.assertEquals(version, shuffle.getCurrentVersion());
-    
+      assertEquals(version, shuffle.getCurrentVersion());
+
       // emulate shuffle handler restart with compatible version
       Version version11 = Version.newInstance(1, 1);
       // update version info before close shuffle
       shuffle.storeVersion(version11);
-      Assert.assertEquals(version11, shuffle.loadVersion());
+      assertEquals(version11, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandler();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
@@ -974,29 +984,29 @@ public class TestShuffleHandler {
       shuffle.start();
       // shuffle version will be override by CURRENT_VERSION_INFO after restart
       // successfully.
-      Assert.assertEquals(version, shuffle.loadVersion());
+      assertEquals(version, shuffle.loadVersion());
       // verify we are still authorized to shuffle to the old application
       rc = getShuffleResponseCode(shuffle, jt);
-      Assert.assertEquals(HttpURLConnection.HTTP_OK, rc);
-    
+      assertEquals(HttpURLConnection.HTTP_OK, rc);
+
       // emulate shuffle handler restart with incompatible version
       Version version21 = Version.newInstance(2, 1);
       shuffle.storeVersion(version21);
-      Assert.assertEquals(version21, shuffle.loadVersion());
+      assertEquals(version21, shuffle.loadVersion());
       shuffle.close();
       shuffle = new ShuffleHandler();
       shuffle.setAuxiliaryLocalPathHandler(pathHandler);
       shuffle.setRecoveryPath(new Path(tmpDir.toString()));
       shuffle.init(conf);
-    
+
       try {
         shuffle.start();
-        Assert.fail("Incompatible version, should expect fail here.");
+        fail("Incompatible version, should expect fail here.");
       } catch (ServiceStateException e) {
-        Assert.assertTrue("Exception message mismatch", 
-        e.getMessage().contains("Incompatible version for state DB schema:"));
-      } 
-    
+        assertTrue(e.getMessage().contains("Incompatible version for state DB schema:"),
+            "Exception message mismatch");
+      }
+
     } finally {
       if (shuffle != null) {
         shuffle.close();
@@ -1026,8 +1036,9 @@ public class TestShuffleHandler {
     return rc;
   }
 
-  @Test(timeout = 100000)
-  public void testGetMapOutputInfo() throws Exception {
+  @Test
+  @Timeout(100000)
+  void testGetMapOutputInfo() throws Exception {
     final ArrayList<Throwable> failures = new ArrayList<Throwable>(1);
     Configuration conf = new Configuration();
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
@@ -1095,17 +1106,17 @@ public class TestShuffleHandler {
       outputBuffer.reset();
       Token<JobTokenIdentifier> jt =
           new Token<JobTokenIdentifier>("identifier".getBytes(),
-          "password".getBytes(), new Text(user), new Text("shuffleService"));
+              "password".getBytes(), new Text(user), new Text("shuffleService"));
       jt.write(outputBuffer);
       shuffleHandler
           .initializeApplication(new ApplicationInitializationContext(user,
-          appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
-          outputBuffer.getLength())));
+              appId, ByteBuffer.wrap(outputBuffer.getData(), 0,
+                  outputBuffer.getLength())));
       URL url =
           new URL(
               "http://127.0.0.1:"
                   + shuffleHandler.getConfig().get(
-                      ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
+                  ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY)
                   + "/mapOutput?job=job_12345_0001&reduce=" + reducerId
                   + "&map=attempt_12345_1_m_1_0");
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -1122,16 +1133,16 @@ public class TestShuffleHandler {
       } catch (EOFException e) {
         // ignore
       }
-      Assert.assertEquals("sendError called due to shuffle error",
-          0, failures.size());
+      assertEquals(0, failures.size(), "sendError called due to shuffle error");
     } finally {
       shuffleHandler.stop();
       FileUtil.fullyDelete(ABS_LOG_DIR);
     }
   }
 
-  @Test(timeout = 4000)
-  public void testSendMapCount() throws Exception {
+  @Test
+  @Timeout(4000)
+  void testSendMapCount() throws Exception {
     final List<ShuffleHandler.ReduceMapFileCount> listenerList =
         new ArrayList<ShuffleHandler.ReduceMapFileCount>();
 
@@ -1166,17 +1177,17 @@ public class TestShuffleHandler {
     Configuration conf = new Configuration();
     sh.init(conf);
     sh.start();
-    int maxOpenFiles =conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
+    int maxOpenFiles = conf.getInt(ShuffleHandler.SHUFFLE_MAX_SESSION_OPEN_FILES,
         ShuffleHandler.DEFAULT_SHUFFLE_MAX_SESSION_OPEN_FILES);
     sh.getShuffle(conf).messageReceived(mockCtx, mockEvt);
-    assertTrue("Number of Open files should not exceed the configured " +
-            "value!-Not Expected",
-        listenerList.size() <= maxOpenFiles);
-    while(!listenerList.isEmpty()) {
+    assertTrue(listenerList.size() <= maxOpenFiles,
+        "Number of Open files should not exceed the configured " +
+            "value!-Not Expected");
+    while (!listenerList.isEmpty()) {
       listenerList.remove(0).operationComplete(mockFuture);
-      assertTrue("Number of Open files should not exceed the configured " +
-              "value!-Not Expected",
-          listenerList.size() <= maxOpenFiles);
+      assertTrue(listenerList.size() <= maxOpenFiles,
+          "Number of Open files should not exceed the configured " +
+              "value!-Not Expected");
     }
     sh.close();
   }
