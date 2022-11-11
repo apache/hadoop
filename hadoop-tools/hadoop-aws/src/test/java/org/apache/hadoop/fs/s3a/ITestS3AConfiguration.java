@@ -19,9 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.S3ClientOptions;
-
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -31,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -114,7 +113,7 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("test endpoint");
+      S3Client s3 = fs.getAmazonS3V2ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -126,7 +125,7 @@ public class ITestS3AConfiguration {
         fail("Unexpected endpoint");
       }
       assertEquals("Endpoint config setting and bucket location differ: ",
-          endPointRegion, s3.getBucketLocation(fs.getUri().getHost()));
+          endPointRegion, s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost())));
     }
   }
 
@@ -386,12 +385,13 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User Agent");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User Agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -400,12 +400,13 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User agent");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("MyApp, Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("MyApp, Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -413,12 +414,13 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("Request timeout (ms)");
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
         " is different than what AWS sdk configuration uses internally",
-        120000, awsConf.getRequestTimeout());
+        120000,
+        clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT).toMillis());
   }
 
   @Test

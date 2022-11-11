@@ -20,15 +20,17 @@ package org.apache.hadoop.fs.s3a;
 
 import java.util.List;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.Grant;
-import com.amazonaws.services.s3.model.GroupGrantee;
-import com.amazonaws.services.s3.model.Permission;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectAclRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectAclResponse;
+import software.amazon.awssdk.services.s3.model.Grant;
+import software.amazon.awssdk.services.s3.model.Grantee;
+import software.amazon.awssdk.services.s3.model.Permission;
+import software.amazon.awssdk.services.s3.model.Type;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -90,18 +92,26 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
 
     StoreContext storeContext = fs.createStoreContext();
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("acls");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("acls");
     String key = storeContext.pathToKey(path);
     if (!isFile) {
       key = key + "/";
     }
-    AccessControlList acl = s3.getObjectAcl(storeContext.getBucket(),
-        key);
-    List<Grant> grants = acl.getGrantsAsList();
+    GetObjectAclResponse acl = s3.getObjectAcl(GetObjectAclRequest.builder()
+        .bucket(storeContext.getBucket())
+        .key(key)
+        .build());
+    List<Grant> grants = acl.grants();
     for (Grant grant : grants) {
       LOG.info("{}", grant.toString());
     }
-    Grant loggingGrant = new Grant(GroupGrantee.LogDelivery, Permission.Write);
+    Grant loggingGrant = Grant.builder()
+        .grantee(Grantee.builder()
+            .type(Type.GROUP)
+            .uri("http://acs.amazonaws.com/groups/s3/LogDelivery")
+            .build())
+        .permission(Permission.WRITE)
+        .build();
     Assertions.assertThat(grants)
         .describedAs("ACL grants of object %s", path)
         .contains(loggingGrant);
