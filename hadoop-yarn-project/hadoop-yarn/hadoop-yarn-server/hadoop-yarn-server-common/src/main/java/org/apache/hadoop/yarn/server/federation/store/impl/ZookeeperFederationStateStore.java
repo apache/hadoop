@@ -957,7 +957,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     // Parse the delegationKey from the request and get the ZK storage path.
     DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
-    String nodeCreatePath = getMasterKeyZNodePathByKeyId(delegationKey);
+    String nodeCreatePath = getMasterKeyZNodePathByDelegationKey(delegationKey);
     LOG.debug("Storing RMDelegationKey_{}, ZkNodePath = {}.", delegationKey.getKeyId(),
         nodeCreatePath);
 
@@ -969,7 +969,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
 
     // Get the stored masterKey from zk.
-    RouterMasterKey masterKeyFromZK = getMasterKeyFromZK(nodeCreatePath, false);
+    RouterMasterKey masterKeyFromZK = getRouterMasterKeyFromZK(nodeCreatePath, false);
     return RouterMasterKeyResponse.newInstance(masterKeyFromZK);
   }
 
@@ -994,7 +994,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       // Parse the delegationKey from the request and get the ZK storage path.
       RouterMasterKey masterKey = request.getRouterMasterKey();
       DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
-      String nodeRemovePath = getMasterKeyZNodePathByKeyId(delegationKey);
+      String nodeRemovePath = getMasterKeyZNodePathByDelegationKey(delegationKey);
       LOG.debug("Removing RMDelegationKey_{}, ZkNodePath = {}.", delegationKey.getKeyId(),
           nodeRemovePath);
 
@@ -1031,7 +1031,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Parse the delegationKey from the request and get the ZK storage path.
       DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
-      String nodePath = getMasterKeyZNodePathByKeyId(delegationKey);
+      String nodePath = getMasterKeyZNodePathByDelegationKey(delegationKey);
 
       // Check if the path exists, Throws an exception if the path does not exist.
       if (!exists(nodePath)) {
@@ -1039,7 +1039,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // Get the stored masterKey from zk.
-      RouterMasterKey routerMasterKey = getMasterKeyFromZK(nodePath, false);
+      RouterMasterKey routerMasterKey = getRouterMasterKeyFromZK(nodePath, false);
       return RouterMasterKeyResponse.newInstance(routerMasterKey);
     } catch (Exception e) {
       throw new YarnException(e);
@@ -1047,7 +1047,64 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   /**
+   * Get MasterKeyZNodePath based on DelegationKey.
+   *
+   * @param delegationKey delegationKey.
+   * @return masterKey ZNodePath.
+   */
+  private String getMasterKeyZNodePathByDelegationKey(DelegationKey delegationKey) {
+    return getMasterKeyZNodePathByKeyId(delegationKey.getKeyId());
+  }
+
+  /**
+   * Get MasterKeyZNodePath based on KeyId.
+   *
+   * @param keyId master key id.
+   * @return masterKey ZNodePath.
+   */
+  private String getMasterKeyZNodePathByKeyId(int keyId) {
+    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + keyId;
+    return getNodePath(routerRMDTMasterKeysRootPath, nodeName);
+  }
+
+  /**
+   * Get RouterMasterKey from ZK.
+   *
+   * @param nodePath The path where masterKey is stored in zk.
+   * @param quiet If true is silent mode, no error message is printed at this time,
+   * if false is non-silent mode, error message is printed at this time.
+   *
+   * @return
+   * @throws IOException
+   */
+  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath, boolean quiet)
+      throws IOException {
+    try {
+      byte[] data = get(nodePath);
+      if ((data == null) || (data.length == 0)) {
+        return null;
+      }
+
+      ByteArrayInputStream bin = new ByteArrayInputStream(data);
+      DataInputStream din = new DataInputStream(bin);
+      DelegationKey key = new DelegationKey();
+      key.readFields(din);
+
+      return RouterMasterKey.newInstance(key.getKeyId(),
+              ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    } catch (Exception ex) {
+      if (!quiet) {
+        LOG.error("No node in path [" + nodePath + "]");
+      }
+      throw new IOException(ex);
+    }
+  }
+
+  /**
    * ZookeeperFederationStateStore Supports Store RMDelegationTokenIdentifier.
+   *
+   * The stored token method is a synchronized method
+   * used to ensure that storeNewToken is a thread-safe method.
    *
    * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
    * @return routerRMTokenResponse, the response contains the RouterStoreToken.
@@ -1063,6 +1120,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
+
       // add delegationToken
       storeOrUpdateRouterRMDT(request, false);
 
@@ -1076,6 +1134,17 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Update RMDelegationTokenIdentifier.
+   *
+   * The update stored token method is a synchronized method
+   * used to ensure that storeNewToken is a thread-safe method.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return routerRMTokenResponse, the response contains the RouterStoreToken.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public synchronized RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
@@ -1087,8 +1156,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     try {
 
       // get the Token storage path
-      String nodePath = getStoreTokenZNodePathByIdentifier(request);
+      String nodePath = getStoreTokenZNodePathByTokenRequest(request);
 
+      // updateStoredToken needs to determine whether the zkNode exists.
+      // If it exists, update the token data.
+      // If it does not exist, write the new token data directly.
       boolean pathExists = true;
       if (!exists(nodePath)) {
         pathExists = false;
@@ -1098,39 +1170,60 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         // update delegationToken
         storeOrUpdateRouterRMDT(request, true);
       } else {
+        // add new delegationToken
         storeNewToken(request);
       }
 
+      // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
-      throw new YarnException(e);
+      throw e;
     } catch (Exception e) {
       throw new YarnException(e);
     }
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Remove RMDelegationTokenIdentifier.
+   *
+   * The remove stored token method is a synchronized method
+   * used to ensure that storeNewToken is a thread-safe method.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return routerRMTokenResponse, the response contains the RouterStoreToken.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public synchronized RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    // We verify the RouterRMTokenRequest to ensure that the request is not empty,
+    // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
 
       // get the Token storage path
-      String nodePath = getStoreTokenZNodePathByIdentifier(request);
+      String nodePath = getStoreTokenZNodePathByTokenRequest(request);
 
+      // If the path to be deleted does not exist, throw an exception directly.
+      if (!exists(nodePath)) {
+        throw new YarnException("ZkNodePath = " + nodePath + " not exists!");
+      }
+
+      // Check again, first get the data from ZK,
+      // if the data is not empty, then delete it
       RouterStoreToken storeToken = getStoreTokenFromZK(request, false);
-
       if (storeToken != null) {
         zkManager.delete(nodePath);
       }
 
+      // return deleted token data.
       return RouterRMTokenResponse.newInstance(storeToken);
-
     } catch (YarnException | IOException e) {
-      throw new YarnException(e);
+      throw e;
     } catch (Exception e) {
       throw new YarnException(e);
     }
@@ -1148,36 +1241,28 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    // We verify the RouterRMTokenRequest to ensure that the request is not empty,
+    // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
 
-      String nodePath = getStoreTokenZNodePathByIdentifier(request);
-
+      // Before get the token,
+      // we need to determine whether the path where the token is stored exists.
+      // If it doesn't exist, we will throw an exception.
+      String nodePath = getStoreTokenZNodePathByTokenRequest(request);
       if (!exists(nodePath)) {
-        throw new IOException(nodePath + " not exists!");
+        throw new YarnException("ZkNodePath = " + nodePath + " not exists!");
       }
 
+      // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
-
+    } catch (YarnException | IOException e) {
+      throw e;
     } catch (Exception e) {
       throw new YarnException(e);
     }
-  }
-
-  private String getMasterKeyZNodePathByKeyId(DelegationKey delegationKey) {
-    return getMasterKeyZNodePathByKeyId(delegationKey.getKeyId());
-  }
-
-  /**
-   * Get MasterKeyZNodePath based on KeyId.
-   *
-   * @param keyId master key id.
-   */
-  private String getMasterKeyZNodePathByKeyId(int keyId) {
-    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + keyId;
-    return getNodePath(routerRMDTMasterKeysRootPath, nodeName);
   }
 
   /**
@@ -1223,16 +1308,19 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   /**
    * Add or update delegationToken.
    *
+   * Before using this function,
+   * please use FederationRouterRMTokenInputValidator to verify the request.
+   * By default, the request is not empty, and the internal object is not empty.
+   *
    * @param request storeToken
    * @param isUpdate true, update the token; false, create a new token.
-   *
    * @throws Exception exception occurs.
    */
   private void storeOrUpdateRouterRMDT(RouterRMTokenRequest request,  boolean isUpdate)
       throws Exception {
-    RouterStoreToken routerStoreToken  = request.getRouterStoreToken();
 
-    String nodeCreatePath = getStoreTokenZNodePathByIdentifier(request);
+    RouterStoreToken routerStoreToken  = request.getRouterStoreToken();
+    String nodeCreatePath = getStoreTokenZNodePathByTokenRequest(request);
 
     LOG.debug("nodeCreatePath = {}, isUpdate = {}", nodeCreatePath, isUpdate);
 
@@ -1243,16 +1331,30 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
   }
 
-  private RouterStoreToken getStoreTokenFromZK(RouterRMTokenRequest request,
-      boolean quiet) throws IOException {
-    return getStoreTokenFromZK(request.getRouterStoreToken().getTokenIdentifier(), quiet);
-  }
-
-  private String getStoreTokenZNodePathByIdentifier(RouterRMTokenRequest request)
+  /**
+   * Get ZNode Path of StoreToken.
+   *
+   * Before using this method, we should use FederationRouterRMTokenInputValidator
+   * to verify the request,ensure that the request is not empty,
+   * and ensure that the object in the request is not empty.
+   *
+   * @param request RouterMasterKeyRequest.
+   * @return RouterRMToken ZNode Path.
+   * @throws IOException io exception occurs.
+   */
+  private String getStoreTokenZNodePathByTokenRequest(RouterRMTokenRequest request)
       throws IOException {
-    return getStoreTokenZNodePathByIdentifier(request.getRouterStoreToken().getTokenIdentifier());
+    RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+    YARNDelegationTokenIdentifier identifier = routerStoreToken.getTokenIdentifier();
+    return getStoreTokenZNodePathByIdentifier(identifier);
   }
 
+  /**
+   * Get ZNode Path of StoreToken.
+   *
+   * @param identifier YARNDelegationTokenIdentifier
+   * @return RouterRMToken ZNode Path.
+   */
   private String getStoreTokenZNodePathByIdentifier(YARNDelegationTokenIdentifier identifier) {
     String nodePath = getNodePath(routerRMDelegationTokensRootPath,
         ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
@@ -1262,9 +1364,25 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   /**
    * Get RouterStoreToken from ZK.
    *
+   * @param request RouterMasterKeyRequest.
+   * @param quiet If true is silent mode, no error message is printed at this time,
+   * if false is non-silent mode, error message is printed at this time.
+   * @return RouterStoreToken.
+   * @throws IOException io exception occurs.
+   */
+  private RouterStoreToken getStoreTokenFromZK(RouterRMTokenRequest request,
+      boolean quiet) throws IOException {
+    RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+    YARNDelegationTokenIdentifier identifier = routerStoreToken.getTokenIdentifier();
+    return getStoreTokenFromZK(identifier, quiet);
+  }
+
+  /**
+   * Get RouterStoreToken from ZK.
+   *
    * @param identifier YARN DelegationToken Identifier
    * @param quiet Whether it is in quiet mode,
-   *              if it is in quiet mode, no exception information will be output.
+   *        if it is in quiet mode, no exception information will be output.
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
@@ -1280,7 +1398,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    *
    * @param nodePath Znode location where data is stored.
    * @param quiet Whether it is in quiet mode,
-   *              if it is in quiet mode, no exception information will be output.
+   *        if it is in quiet mode, no exception information will be output.
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
@@ -1303,28 +1421,4 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       throw new IOException(ex);
     }
   }
-
-  protected RouterMasterKey getMasterKeyFromZK(String nodePath, boolean quiet)
-      throws IOException {
-    try {
-      byte[] data = get(nodePath);
-      if ((data == null) || (data.length == 0)) {
-        return null;
-      }
-
-      ByteArrayInputStream bin = new ByteArrayInputStream(data);
-      DataInputStream din = new DataInputStream(bin);
-      DelegationKey key = new DelegationKey();
-      key.readFields(din);
-
-      return RouterMasterKey.newInstance(key.getKeyId(),
-          ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    } catch (Exception ex) {
-      if (!quiet) {
-        LOG.error("No node in path [" + nodePath + "]");
-      }
-      throw new IOException(ex);
-    }
-  }
-
 }
