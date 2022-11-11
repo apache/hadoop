@@ -2116,9 +2116,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
-          if (exception != null) {
-            throw exception;
-          }
+          throw exception;
         }
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
