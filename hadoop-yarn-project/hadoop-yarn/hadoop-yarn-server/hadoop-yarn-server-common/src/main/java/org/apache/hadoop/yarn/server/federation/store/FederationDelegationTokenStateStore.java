@@ -112,4 +112,10 @@ public interface FederationDelegationTokenStateStore {
    */
   RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException;
+
+  /**
+   *
+   * @return
+   */
+  int incrementDelegationTokenSeqNum();
 }

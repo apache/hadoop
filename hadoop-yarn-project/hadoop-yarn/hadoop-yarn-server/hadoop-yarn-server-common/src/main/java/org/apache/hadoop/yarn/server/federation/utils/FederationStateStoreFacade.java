@@ -849,4 +849,13 @@ public final class FederationStateStoreFacade {
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     return stateStore.getTokenByRouterStoreToken(request);
   }
+
+  /**
+   * stateStore provides DelegationTokenSeqNum increase.
+   *
+   * @return delegationTokenSequenceNumber
+   */
+  public int incrementDelegationTokenSeqNum() {
+    return stateStore.incrementDelegationTokenSeqNum();
+  }
 }

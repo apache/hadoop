@@ -1394,4 +1394,9 @@ public class SQLFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
     throw new NotImplementedException("Code is not implemented");
   }
+
+  @Override
+  public int incrementDelegationTokenSeqNum() {
+    return 0;
+  }
 }

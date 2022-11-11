@@ -57,10 +57,9 @@ public class TestZookeeperFederationStateStore
   @Before
   public void before() throws IOException, YarnException {
     try {
-     /* curatorTestingServer = new TestingServer();
+      curatorTestingServer = new TestingServer();
       curatorTestingServer.start();
-      String connectString = curatorTestingServer.getConnectString();*/
-      String connectString = "127.0.0.1:2181";
+      String connectString = curatorTestingServer.getConnectString();
       curatorFramework = CuratorFrameworkFactory.builder()
           .connectString(connectString)
           .retryPolicy(new RetryNTimes(100, 100))

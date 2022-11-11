@@ -254,8 +254,6 @@ public class RouterDelegationTokenSecretManager
 
   @Override
   protected synchronized int incrementDelegationTokenSeqNum() {
-    return super.incrementDelegationTokenSeqNum();
+    return federationFacade.incrementDelegationTokenSeqNum();
   }
-
-
 }

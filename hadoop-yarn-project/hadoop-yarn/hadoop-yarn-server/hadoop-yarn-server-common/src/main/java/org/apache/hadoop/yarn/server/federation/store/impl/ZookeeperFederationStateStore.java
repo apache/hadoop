@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE;
+import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT;
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
 import java.io.IOException;
@@ -33,6 +35,7 @@ import java.util.Comparator;
 import java.util.stream.Collectors;
 
 import org.apache.curator.framework.recipes.shared.SharedCount;
+import org.apache.curator.framework.recipes.shared.VersionedValue;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -166,6 +169,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
 
+  /** Store sequenceNum. **/
+  private int seqNumBatchSize;
+  private int currentSeqNum;
+  private int currentMaxSeqNum;
   private SharedCount delTokSeqCounter;
 
   /** Directory to store the state store data. */
@@ -176,7 +183,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String policiesZNode;
   private String reservationsZNode;
   private int maxAppsInStateStore;
-  private int delegationTokenNodeSplitIndex = 0;
 
   /** Directory to store the delegation token data. **/
   private String routerRMDTSecretManagerRoot;
@@ -192,6 +198,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public void init(Configuration conf) throws YarnException {
+
     LOG.info("Initializing ZooKeeper connection");
 
     maxAppsInStateStore = conf.getInt(
@@ -233,10 +240,31 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
       zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
       zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
-      zkManager.createRootDirRecursively(routerRMSequenceNumberPath, zkAcl);
+      // zkManager.createRootDirRecursively(routerRMSequenceNumberPath, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    try {
+      seqNumBatchSize = conf.getInt(ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
+          ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
+
+      delTokSeqCounter = new SharedCount(zkManager.getCurator(), routerRMSequenceNumberPath, 0);
+
+      if (delTokSeqCounter != null) {
+        delTokSeqCounter.start();
+      }
+
+      // the first batch range should be allocated during this starting window
+      // by calling the incrSharedCount
+      currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+      currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+
+      LOG.info("Fetched initial range of seq num, from {} to {} ",
+          currentSeqNum + 1, currentMaxSeqNum);
+    } catch (Exception e) {
+      throw new YarnException("Could not start Sequence Counter.", e);
     }
   }
 
@@ -1419,6 +1447,42 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         LOG.error("No node in path [" + nodePath + "]");
       }
       throw new IOException(ex);
+    }
+  }
+
+  @Override
+  public synchronized int incrementDelegationTokenSeqNum() {
+    // The secret manager will keep a local range of seq num which won't be
+    // seen by peers, so only when the range is exhausted it will ask zk for
+    // another range again
+    if (currentSeqNum >= currentMaxSeqNum) {
+      try {
+        // after a successful batch request, we can get the range starting point
+        currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
+        currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
+        LOG.info("Fetched new range of seq num, from {} to {} ",
+                currentSeqNum+1, currentMaxSeqNum);
+      } catch (InterruptedException e) {
+        // The ExpirationThread is just finishing.. so dont do anything..
+        LOG.debug(
+                "Thread interrupted while performing token counter increment", e);
+        Thread.currentThread().interrupt();
+      } catch (Exception e) {
+        throw new RuntimeException("Could not increment shared counter !!", e);
+      }
+    }
+
+    return ++currentSeqNum;
+  }
+
+  private int incrSharedCount(SharedCount sharedCount, int batchSize)
+          throws Exception {
+    while (true) {
+      // Loop until we successfully increment the counter
+      VersionedValue<Integer> versionedValue = sharedCount.getVersionedValue();
+      if (sharedCount.trySetCount(versionedValue, versionedValue.getValue() + batchSize)) {
+        return versionedValue.getValue();
+      }
     }
   }
 }

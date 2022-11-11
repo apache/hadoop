@@ -27,6 +27,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Comparator;
 
@@ -110,6 +111,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private Map<String, SubClusterPolicyConfiguration> policies;
   private RouterRMDTSecretManagerState routerRMSecretManagerState;
   private int maxAppsInStateStore;
+  private AtomicInteger sequenceNum;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -126,6 +128,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
     maxAppsInStateStore = conf.getInt(
         YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
+    sequenceNum = new AtomicInteger();
   }
 
   @Override
@@ -532,6 +535,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
     RouterStoreToken resultToken =
         RouterStoreToken.newInstance(tokenIdentifier, rmDTState.get(tokenIdentifier));
     return RouterRMTokenResponse.newInstance(resultToken);
+  }
+
+  @Override
+  public synchronized int incrementDelegationTokenSeqNum() {
+    return sequenceNum.incrementAndGet();
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,
