@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
+import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader.HeaderVersionProtocol;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -115,7 +116,7 @@ public class TestShuffleHandler {
       return new Shuffle(conf) {
         @Override
         protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-            HttpRequest request, HttpResponse response, URL requestUri)
+            HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
             throws IOException {
         }
         @Override
@@ -128,7 +129,7 @@ public class TestShuffleHandler {
         protected void populateHeaders(List<String> mapIds, String jobId,
             String user, int reduce, HttpRequest request,
             HttpResponse response, boolean keepAliveParam,
-            Map<String, MapOutputInfo> infoMap) throws IOException {
+            Map<String, MapOutputInfo> infoMap, HeaderVersionProtocol versionProtocol) throws IOException {
           // Do nothing.
         }
         @Override
@@ -191,7 +192,7 @@ public class TestShuffleHandler {
       return new Shuffle(conf) {
         @Override
         protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-            HttpRequest request, HttpResponse response, URL requestUri)
+            HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
             throws IOException {
           SocketChannel channel = (SocketChannel)(ctx.getChannel());
           socketKeepAlive = channel.getConfig().isKeepAlive();
@@ -279,14 +280,14 @@ public class TestShuffleHandler {
           protected void populateHeaders(List<String> mapIds, String jobId,
               String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
-              Map<String, MapOutputInfo> infoMap) throws IOException {
+              Map<String, MapOutputInfo> infoMap, HeaderVersionProtocol versionProtocol) throws IOException {
             // Only set response headers and skip everything else
             // send some dummy value for content-length
             super.setResponseHeaders(response, keepAliveParam, 100);
           }
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
+              HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
                   throws IOException {
           }
           @Override
@@ -384,7 +385,7 @@ public class TestShuffleHandler {
           }
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
+              HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
               throws IOException {
           }
 
@@ -392,7 +393,7 @@ public class TestShuffleHandler {
           protected void populateHeaders(List<String> mapIds, String jobId,
               String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
-              Map<String, MapOutputInfo> infoMap) throws IOException {
+              Map<String, MapOutputInfo> infoMap, HeaderVersionProtocol versionProtocol) throws IOException {
             // Send some dummy data (populate content length details)
             ShuffleHeader header =
                 new ShuffleHeader("attempt_12345_1_m_1_0", 5678, 5678, 1);
@@ -576,8 +577,8 @@ public class TestShuffleHandler {
       HttpURLConnection conn = (HttpURLConnection)url.openConnection();
       conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_NAME,
           i == 0 ? "mapreduce" : "other");
-      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION,
-          i == 1 ? "1.0.0" : "1.0.1");
+      // server can not find any version smaller than 0.9.0
+      conn.setRequestProperty(ShuffleHeader.HTTP_HEADER_VERSION, i == 1 ? "1.0.0" : "0.9.0");
       conn.connect();
       Assert.assertEquals(
           HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
@@ -613,12 +614,12 @@ public class TestShuffleHandler {
           protected void populateHeaders(List<String> mapIds, String jobId,
               String user, int reduce, HttpRequest request,
               HttpResponse response, boolean keepAliveParam,
-              Map<String, MapOutputInfo> infoMap) throws IOException {
+              Map<String, MapOutputInfo> infoMap, HeaderVersionProtocol versionProtocol) throws IOException {
             // Do nothing.
           }
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
+              HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
                   throws IOException {
             // Do nothing.
           }
@@ -731,7 +732,7 @@ public class TestShuffleHandler {
 
           @Override
           protected void verifyRequest(String appid, ChannelHandlerContext ctx,
-              HttpRequest request, HttpResponse response, URL requestUri)
+              HttpRequest request, HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol)
               throws IOException {
             // Do nothing.
           }
@@ -1053,7 +1054,8 @@ public class TestShuffleHandler {
           protected void populateHeaders(List<String> mapIds,
               String outputBaseStr, String user, int reduce,
               HttpRequest request, HttpResponse response,
-              boolean keepAliveParam, Map<String, MapOutputInfo> infoMap)
+              boolean keepAliveParam, Map<String, MapOutputInfo> infoMap,
+                  HeaderVersionProtocol versionProtocol)
               throws IOException {
             // Only set response headers and skip everything else
             // send some dummy value for content-length
@@ -1062,7 +1064,7 @@ public class TestShuffleHandler {
           @Override
           protected void verifyRequest(String appid,
               ChannelHandlerContext ctx, HttpRequest request,
-              HttpResponse response, URL requestUri) throws IOException {
+              HttpResponse response, URL requestUri, HeaderVersionProtocol versionProtocol) throws IOException {
             // Do nothing.
           }
           @Override
