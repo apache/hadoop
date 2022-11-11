@@ -240,12 +240,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
       zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
       zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
-      // zkManager.createRootDirRecursively(routerRMSequenceNumberPath, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
+    // Distributed sequenceNum.
     try {
       seqNumBatchSize = conf.getInt(ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE,
           ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT);
@@ -270,6 +270,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
   @Override
   public void close() throws Exception {
+
+    try {
+      if (delTokSeqCounter != null) {
+        delTokSeqCounter.close();
+      }
+    } catch (Exception e) {
+      LOG.error("Could not Stop Delegation Token Counter", e);
+    }
+
     if (zkManager != null) {
       zkManager.close();
     }
@@ -1461,11 +1470,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         currentSeqNum = incrSharedCount(delTokSeqCounter, seqNumBatchSize);
         currentMaxSeqNum = currentSeqNum + seqNumBatchSize;
         LOG.info("Fetched new range of seq num, from {} to {} ",
-                currentSeqNum+1, currentMaxSeqNum);
+            currentSeqNum + 1, currentMaxSeqNum);
       } catch (InterruptedException e) {
         // The ExpirationThread is just finishing.. so dont do anything..
-        LOG.debug(
-                "Thread interrupted while performing token counter increment", e);
+        LOG.debug("Thread interrupted while performing token counter increment", e);
         Thread.currentThread().interrupt();
       } catch (Exception e) {
         throw new RuntimeException("Could not increment shared counter !!", e);
@@ -1476,7 +1484,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   }
 
   private int incrSharedCount(SharedCount sharedCount, int batchSize)
-          throws Exception {
+      throws Exception {
     while (true) {
       // Loop until we successfully increment the counter
       VersionedValue<Integer> versionedValue = sharedCount.getVersionedValue();
