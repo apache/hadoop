@@ -1322,13 +1322,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Set the client -used in mocking tests to force in a different client.
    * @param client client.
    */
-  protected void setAmazonS3Client(Pair<AmazonS3, S3Client> client) {
-    Preconditions.checkNotNull(client.getLeft(), "client");
-    Preconditions.checkNotNull(client.getRight(), "clientV2");
-    LOG.debug("Setting S3 client to {}", client.getLeft());
-    LOG.debug("Setting S3V2 client to {}", client.getRight());
-    s3 = client.getLeft();
-    s3V2 = client.getRight();
+  protected void setAmazonS3Client(S3Client client) {
+    Preconditions.checkNotNull(client, "clientV2");
+    LOG.debug("Setting S3V2 client to {}", client);
+    s3V2 = client;
 
     // TODO: still relevant in v2?
     // Need to use a new TransferManager that uses the new client.
