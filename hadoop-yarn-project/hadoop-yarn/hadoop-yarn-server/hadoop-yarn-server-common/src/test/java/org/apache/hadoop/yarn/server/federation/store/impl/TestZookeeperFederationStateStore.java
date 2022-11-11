@@ -17,7 +17,10 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -28,16 +31,22 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -171,11 +180,81 @@ public class TestZookeeperFederationStateStore
   }
 
   public void testStoreNewMasterKey() throws Exception {
-    super.testStoreNewMasterKey();
+    // We Will Design a unit test like this:
+    // 1. Manually create a DelegationKey,
+    // and call the interface storeNewMasterKey to write the data to zk.
+    // 2. Compare the data returned by the storeNewMasterKey
+    // interface with the data queried by zk, and ensure that the data is consistent.
+    DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    FederationStateStore stateStore = this.getStateStore();
+
+    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
+
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    assertNotNull(response);
+    RouterMasterKey respRouterMasterKey = response.getRouterMasterKey();
+    assertNotNull(respRouterMasterKey);
+
+    // Get Data From ZK.
+    String nodeName = "delegation_key_" + key.getKeyId();
+    String nodePath = "/federationstore/router_rm_dt_secret_manager_root/" +
+        "router_rm_dt_master_keys_root/" + nodeName;
+    byte[] data = curatorFramework.getData().forPath(nodePath);
+    ByteArrayInputStream bin = new ByteArrayInputStream(data);
+    DataInputStream din = new DataInputStream(bin);
+    DelegationKey zkDT = new DelegationKey();
+    zkDT.readFields(din);
+
+    // Generate RouterMasterKey based on ZK data.
+    RouterMasterKey resultRouterMasterKey =
+        RouterMasterKey.newInstance(zkDT.getKeyId(), ByteBuffer.wrap(zkDT.getEncodedKey()),
+        zkDT.getExpiryDate());
+    assertNotNull(resultRouterMasterKey);
+    assertEquals(resultRouterMasterKey, routerMasterKey);
+    assertEquals(respRouterMasterKey, routerMasterKey);
   }
 
-  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
-    super.testGetMasterKeyByDelegationKey();
+  public void testGetMasterKeyByDelegationKey() throws Exception {
+    // We will design a unit test like this:
+    // 1. Manually create a DelegationKey,
+    // and call the interface storeNewMasterKey to write the data to zk.
+    // 2. Call the getMasterKeyByDelegationKey interface of stateStore to get the MasterKey data.
+    // 3. The zk data should be consistent with the returned data.
+    DelegationKey key = new DelegationKey(5678, 8765, "keyBytes".getBytes());
+    RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+    FederationStateStore stateStore = this.getStateStore();
+
+    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
+
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
+    assertNotNull(response);
+
+    // Get Data From ZK.
+    String nodeName = "delegation_key_" + key.getKeyId();
+    String nodePath = "/federationstore/router_rm_dt_secret_manager_root/" +
+        "router_rm_dt_master_keys_root/" + nodeName;
+    byte[] data = curatorFramework.getData().forPath(nodePath);
+    ByteArrayInputStream bin = new ByteArrayInputStream(data);
+    DataInputStream din = new DataInputStream(bin);
+    DelegationKey zkDT = new DelegationKey();
+    zkDT.readFields(din);
+    RouterMasterKey zkRouterMasterKey =
+        RouterMasterKey.newInstance(zkDT.getKeyId(), ByteBuffer.wrap(zkDT.getEncodedKey()),
+        zkDT.getExpiryDate());
+
+    // Call the getMasterKeyByDelegationKey interface to get the returned result.
+    RouterMasterKeyResponse response1 = stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
+    assertNotNull(response1);
+    RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
+    assertEquals(respRouterMasterKey, routerMasterKey);
+    assertEquals(respRouterMasterKey, zkRouterMasterKey);
   }
 
   public void testRemoveStoredMasterKey() throws YarnException, IOException {

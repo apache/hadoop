@@ -879,7 +879,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+  public void testGetMasterKeyByDelegationKey() throws Exception {
     // store delegation key;
     DelegationKey key = new DelegationKey(5678, 8765, "keyBytes".getBytes());
     Set<DelegationKey> keySet = new HashSet<>();

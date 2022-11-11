@@ -138,12 +138,12 @@ import static org.apache.hadoop.yarn.server.federation.store.utils.FederationSta
  * |     |----- RESERVATION2
  * |--- ROUTER_RM_DT_SECRET_MANAGER_ROOT
  * |     |----- ROUTER_RM_DELEGATION_TOKENS_ROOT
- * |             |----- RM_DELEGATION_TOKEN_1
- * |             |----- RM_DELEGATION_TOKEN_2
- * |             |----- RM_DELEGATION_TOKEN_3
+ * |     |       |----- RM_DELEGATION_TOKEN_1
+ * |     |       |----- RM_DELEGATION_TOKEN_2
+ * |     |       |----- RM_DELEGATION_TOKEN_3
  * |     |----- ROUTER_RM_DT_MASTER_KEYS_ROOT
- * |             |----- DELEGATION_KEY_1
- * |     |----- ROUTER_RM_DT_SEQUENTIAL_NUMBER
+ * |     |       |----- DELEGATION_KEY_1
+ * |---  |----- ROUTER_RM_DT_SEQUENTIAL_NUMBER
  */
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
