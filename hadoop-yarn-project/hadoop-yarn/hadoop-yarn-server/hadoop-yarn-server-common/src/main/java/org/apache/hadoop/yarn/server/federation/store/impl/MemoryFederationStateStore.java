@@ -184,7 +184,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     if (subClusterInfo == null) {
       FederationStateStoreUtils.logAndThrowStoreException(
-          LOG, "SubCluster %s does not exist, cannot heartbeat.", request.getSubClusterId());
+          LOG, "SubCluster %s does not exist; cannot heartbeat.", request.getSubClusterId());
     }
 
     long currentTime =
@@ -242,7 +242,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
       applications.put(appId, homeSubCluster);
     }
 
-    return AddApplicationHomeSubClusterResponse.newInstance(homeSubCluster.getHomeSubCluster());
+    return AddApplicationHomeSubClusterResponse.newInstance(applications.get(appId).getHomeSubCluster());
   }
 
   @Override
