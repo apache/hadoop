@@ -31,6 +31,7 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.InterceptorContext;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
@@ -134,8 +135,11 @@ public class TestLoggingAuditor extends AbstractAuditingTest {
    */
   @Test
   public void testCopyOutsideSpanAllowed() throws Throwable {
-    // TODO: equivalent in v2?
-    //getManager().beforeExecution(new CopyPartRequest());
+    getManager().beforeExecution(
+        InterceptorContext.builder()
+            .request(UploadPartCopyRequest.builder().build())
+            .build(),
+        ExecutionAttributes.builder().build());
     getManager().beforeExecution(
         InterceptorContext.builder()
             .request(GetBucketLocationRequest.builder().build())
