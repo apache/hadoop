@@ -257,7 +257,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
 
     // Call the getMasterKeyByDelegationKey interface to get the returned result.
     // The zk data should be consistent with the returned data.
-    RouterMasterKeyResponse response1 = stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
+    RouterMasterKeyResponse response1 =
+        stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
     assertNotNull(response1);
     RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
     assertEquals(paramRouterMasterKey, respRouterMasterKey);
@@ -457,7 +458,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     return storeToken;
   }
 
-  private RouterMasterKey getRouterMasterKeyFromZK (String nodePath) throws Exception {
+  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath) throws Exception {
     byte[] data = curatorFramework.getData().forPath(nodePath);
     ByteArrayInputStream bin = new ByteArrayInputStream(data);
     DataInputStream din = new DataInputStream(bin);
