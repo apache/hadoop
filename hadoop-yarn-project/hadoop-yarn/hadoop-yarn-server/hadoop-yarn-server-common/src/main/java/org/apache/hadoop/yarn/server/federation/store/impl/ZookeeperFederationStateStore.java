@@ -133,7 +133,14 @@ import static org.apache.hadoop.yarn.server.federation.store.utils.FederationSta
  * |--- RESERVATION
  * |     |----- RESERVATION1
  * |     |----- RESERVATION2
- * |---
+ * |--- ROUTER_RM_DT_SECRET_MANAGER_ROOT
+ * |     |----- ROUTER_RM_DELEGATION_TOKENS_ROOT
+ * |             |----- RM_DELEGATION_TOKEN_1
+ * |             |----- RM_DELEGATION_TOKEN_2
+ * |             |----- RM_DELEGATION_TOKEN_3
+ * |     |----- ROUTER_RM_DT_MASTER_KEYS_ROOT
+ * |             |----- DELEGATION_KEY_1
+ * |     |----- ROUTER_RM_DT_SEQUENTIAL_NUMBER
  */
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
@@ -144,12 +151,17 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private final static String ROOT_ZNODE_NAME_APPLICATION = "applications";
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
   private final static String ROOT_ZNODE_NAME_RESERVATION = "reservation";
-  private final static String RM_DT_SECRET_MANAGER_ROOT = "RMDTSecretManagerRoot";
-  private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME = "RMDTMasterKeysRoot";
-  private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME = "RMDelegationTokensRoot";
-  private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME = "RMDTSequentialNumber";
-  private static final String DELEGATION_KEY_PREFIX = "DelegationKey_";
-  private static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
+
+  /** Store Delegation Token Node. */
+  private final static String ROUTER_RM_DT_SECRET_MANAGER_ROOT = "router_rm_dt_secret_manager_root";
+  private static final String ROUTER_RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
+      "router_rm_dt_master_keys_root";
+  private static final String ROUTER_RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
+      "router_rm_delegation_tokens_root";
+  private static final String ROUTER_RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =
+      "router_rm_dt_sequential_number";
+  private static final String ROUTER_RM_DELEGATION_KEY_PREFIX = "delegation_key_";
+  private static final String ROUTER_RM_DELEGATION_TOKEN_PREFIX = "rm_delegation_token_";
 
   /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
@@ -166,11 +178,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private int maxAppsInStateStore;
   private int delegationTokenNodeSplitIndex = 0;
 
-  /** **/
-  private String rmDTSecretManagerRoot;
-  private String dtMasterKeysRootPath;
-  private String delegationTokensRootPath;
-  private String dtSequenceNumberPath;
+  /** Directory to store the delegation token data. **/
+  private String routerRMDTSecretManagerRoot;
+  private String routerRMDTMasterKeysRootPath;
+  private String routerRMDelegationTokensRootPath;
+  private String routerRMSequenceNumberPath;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -201,27 +213,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     appsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_APPLICATION);
     policiesZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_POLICY);
     reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
-    rmDTSecretManagerRoot = getNodePath(baseZNode, RM_DT_SECRET_MANAGER_ROOT);
-    dtMasterKeysRootPath = getNodePath(rmDTSecretManagerRoot,
-        RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
-    delegationTokensRootPath = getNodePath(rmDTSecretManagerRoot,
-        RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
-    dtSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
-        RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
 
-    delegationTokenNodeSplitIndex =
-        conf.getInt(YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX,
-        YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
-
-    if (delegationTokenNodeSplitIndex < 0
-            || delegationTokenNodeSplitIndex > 4) {
-      LOG.info("Invalid value " + delegationTokenNodeSplitIndex + " for config "
-              + YarnConfiguration.ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX
-              + " specified.  Resetting it to " +
-              YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX);
-      delegationTokenNodeSplitIndex =
-              YarnConfiguration.DEFAULT_ZK_DELEGATION_TOKEN_NODE_SPLIT_INDEX;
-    }
+    // delegation token znodes
+    routerRMDTSecretManagerRoot = getNodePath(baseZNode, ROUTER_RM_DT_SECRET_MANAGER_ROOT);
+    routerRMDTMasterKeysRootPath = getNodePath(routerRMDTSecretManagerRoot,
+        ROUTER_RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
+    routerRMDelegationTokensRootPath = getNodePath(routerRMDTSecretManagerRoot,
+        ROUTER_RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    routerRMSequenceNumberPath = getNodePath(routerRMDTSecretManagerRoot,
+        ROUTER_RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
 
     // Create base znode for each entity
     try {
@@ -230,10 +230,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
       zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
-      zkManager.createRootDirRecursively(rmDTSecretManagerRoot, zkAcl);
-      zkManager.createRootDirRecursively(dtMasterKeysRootPath, zkAcl);
-      zkManager.createRootDirRecursively(delegationTokensRootPath, zkAcl);
-      zkManager.createRootDirRecursively(dtSequenceNumberPath, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDTSecretManagerRoot, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDTMasterKeysRootPath, zkAcl);
+      zkManager.createRootDirRecursively(routerRMDelegationTokensRootPath, zkAcl);
+      zkManager.createRootDirRecursively(routerRMSequenceNumberPath, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
@@ -939,75 +939,138 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     return UpdateReservationHomeSubClusterResponse.newInstance();
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Store NewMasterKey.
+   *
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey
+   * @return routerMasterKeyResponse, the response contains the RouterMasterKey.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public synchronized RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    RouterMasterKey masterKey = request.getRouterMasterKey();
-    DelegationKey delegationKey = convertMasterKeyToDelegationKey(masterKey);
-    String nodeCreatePath = getNodePath(dtMasterKeysRootPath,
-        DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
-    LOG.debug("Storing RMDelegationKey_{}", delegationKey.getKeyId());
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    try(DataOutputStream fsOut = new DataOutputStream(os)) {
+
+    // For the verification of the request, after passing the verification,
+    // the request and the internal objects will not be empty and can be used directly.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    // Parse the delegationKey from the request and get the ZK storage path.
+    DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
+    String nodeCreatePath = getMasterKeyZNodePathByKeyId(delegationKey);
+    LOG.debug("Storing RMDelegationKey_{}, ZkNodePath = {}.", delegationKey.getKeyId(),
+        nodeCreatePath);
+
+    // Write master key data to zk.
+    try(ByteArrayOutputStream os = new ByteArrayOutputStream();
+        DataOutputStream fsOut = new DataOutputStream(os)) {
       delegationKey.write(fsOut);
       put(nodeCreatePath, os.toByteArray(), false);
     }
-    return RouterMasterKeyResponse.newInstance(masterKey);
+
+    // Get the stored masterKey from zk.
+    RouterMasterKey masterKeyFromZK = getMasterKeyFromZK(nodeCreatePath, false);
+    return RouterMasterKeyResponse.newInstance(masterKeyFromZK);
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Remove MasterKey.
+   *
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey
+   * @return routerMasterKeyResponse, the response contains the RouterMasterKey.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public synchronized RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    RouterMasterKey masterKey = request.getRouterMasterKey();
-    DelegationKey delegationKey = convertMasterKeyToDelegationKey(masterKey);
-    String nodeRemovePath = getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
-        + delegationKey.getKeyId());
-    LOG.debug("Removing RMDelegationKey_{}", delegationKey.getKeyId());
-    try{
+
+    // For the verification of the request, after passing the verification,
+    // the request and the internal objects will not be empty and can be used directly.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    try {
+
+      // Parse the delegationKey from the request and get the ZK storage path.
+      RouterMasterKey masterKey = request.getRouterMasterKey();
+      DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
+      String nodeRemovePath = getMasterKeyZNodePathByKeyId(delegationKey);
+      LOG.debug("Removing RMDelegationKey_{}, ZkNodePath = {}.", delegationKey.getKeyId(),
+          nodeRemovePath);
+
+      // Check if the path exists, Throws an exception if the path does not exist.
+      if (!exists(nodeRemovePath)) {
+        throw new YarnException("ZkNodePath = " + nodeRemovePath + " not exists!");
+      }
+
+      // try to remove masterKey.
       zkManager.delete(nodeRemovePath);
+      return RouterMasterKeyResponse.newInstance(masterKey);
     } catch (Exception e) {
       throw new YarnException(e);
     }
-    return RouterMasterKeyResponse.newInstance(masterKey);
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Remove MasterKey.
+   *
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey
+   * @return routerMasterKeyResponse, the response contains the RouterMasterKey.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
-    try {
-      RouterMasterKey masterKey = request.getRouterMasterKey();
-      DelegationKey delegationKey = convertMasterKeyToDelegationKey(masterKey);
-      String nodeCreatePath = getNodePath(dtMasterKeysRootPath,
-          DELEGATION_KEY_PREFIX + delegationKey.getKeyId());
+    // For the verification of the request, after passing the verification,
+    // the request and the internal objects will not be empty and can be used directly.
+    FederationRouterRMTokenInputValidator.validate(request);
 
-      if (!exists(nodeCreatePath)) {
-        throw new IOException(nodeCreatePath + " not exists!");
+    try {
+
+      // Parse the delegationKey from the request and get the ZK storage path.
+      DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
+      String nodePath = getMasterKeyZNodePathByKeyId(delegationKey);
+
+      // Check if the path exists, Throws an exception if the path does not exist.
+      if (!exists(nodePath)) {
+        throw new YarnException("ZkNodePath = " + nodePath + " not exists!");
       }
-      RouterMasterKey routerMasterKey = getMasterKeyFromZK(nodeCreatePath, false);
+
+      // Get the stored masterKey from zk.
+      RouterMasterKey routerMasterKey = getMasterKeyFromZK(nodePath, false);
       return RouterMasterKeyResponse.newInstance(routerMasterKey);
     } catch (Exception e) {
       throw new YarnException(e);
     }
   }
 
+  /**
+   * ZookeeperFederationStateStore Supports Store RMDelegationTokenIdentifier.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return routerRMTokenResponse, the response contains the RouterStoreToken.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public synchronized RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    // We verify the RouterRMTokenRequest to ensure that the request is not empty,
+    // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
       // add delegationToken
-      storeOrUpdateRouterRMDT(request.getRouterStoreToken(), false);
-      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
-      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      storeOrUpdateRouterRMDT(request, false);
+
+      // Get the stored delegationToken from ZK and return.
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
-    } catch (YarnException e) {
-      throw new YarnException(e);
-    } catch (IOException e) {
-      throw new IOException(e);
+    } catch (YarnException | IOException e) {
+      throw e;
     } catch (Exception e) {
       throw new YarnException(e);
     }
@@ -1017,15 +1080,14 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    // We verify the RouterRMTokenRequest to ensure that the request is not empty,
+    // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
-      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
-      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
 
       // get the Token storage path
-      String nodePath = getNodePath(delegationTokensRootPath,
-          DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber());
+      String nodePath = getStoreTokenZNodePathByIdentifier(request);
 
       boolean pathExists = true;
       if (!exists(nodePath)) {
@@ -1034,17 +1096,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       if (pathExists) {
         // update delegationToken
-        storeOrUpdateRouterRMDT(routerStoreToken, true);
+        storeOrUpdateRouterRMDT(request, true);
       } else {
         storeNewToken(request);
       }
 
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
-    } catch (YarnException e) {
+    } catch (YarnException | IOException e) {
       throw new YarnException(e);
-    } catch (IOException e) {
-      throw new IOException(e);
     } catch (Exception e) {
       throw new YarnException(e);
     }
@@ -1057,14 +1117,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
-      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
-      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
 
       // get the Token storage path
-      String nodePath = getNodePath(delegationTokensRootPath,
-          DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber());
+      String nodePath = getStoreTokenZNodePathByIdentifier(request);
 
-      RouterStoreToken storeToken = getStoreTokenFromZK(tokenIdentifier, true);
+      RouterStoreToken storeToken = getStoreTokenFromZK(request, false);
 
       if (storeToken != null) {
         zkManager.delete(nodePath);
@@ -1072,10 +1129,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       return RouterRMTokenResponse.newInstance(storeToken);
 
-    } catch (YarnException e) {
+    } catch (YarnException | IOException e) {
       throw new YarnException(e);
-    } catch (IOException e) {
-      throw new IOException(e);
     } catch (Exception e) {
       throw new YarnException(e);
     }
@@ -1096,23 +1151,48 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
-      RouterStoreToken routerStoreToken = request.getRouterStoreToken();
-      YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
 
-      // get the Token storage path
-      String nodeName = DELEGATION_TOKEN_PREFIX + tokenIdentifier.getSequenceNumber();
-      String nodePath = getNodePath(delegationTokensRootPath, nodeName);
+      String nodePath = getStoreTokenZNodePathByIdentifier(request);
 
       if (!exists(nodePath)) {
-        throw new IOException(nodeName + " not exists!");
+        throw new IOException(nodePath + " not exists!");
       }
 
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(tokenIdentifier, false);
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
 
     } catch (Exception e) {
       throw new YarnException(e);
     }
+  }
+
+  private String getMasterKeyZNodePathByKeyId(DelegationKey delegationKey) {
+    return getMasterKeyZNodePathByKeyId(delegationKey.getKeyId());
+  }
+
+  /**
+   * Get MasterKeyZNodePath based on KeyId.
+   *
+   * @param keyId master key id.
+   */
+  private String getMasterKeyZNodePathByKeyId(int keyId) {
+    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + keyId;
+    return getNodePath(routerRMDTMasterKeysRootPath, nodeName);
+  }
+
+  /**
+   * Convert MasterKey to DelegationKey.
+   *
+   * Before using this function,
+   * please use FederationRouterRMTokenInputValidator to verify the request.
+   * By default, the request is not empty, and the internal object is not empty.
+   *
+   * @param request RouterMasterKeyRequest
+   * @return DelegationKey.
+   */
+  private DelegationKey convertMasterKeyToDelegationKey(RouterMasterKeyRequest request) {
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    return convertMasterKeyToDelegationKey(masterKey);
   }
 
   /**
@@ -1128,6 +1208,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     return new DelegationKey(masterKey.getKeyId(), masterKey.getExpiryDate(), keyBytes);
   }
 
+  /**
+   * Check if a path exists in zk.
+   *
+   * @param path Path to be checked.
+   * @return Returns true if the path exists, false if the path does not exist.
+   * @throws Exception When an exception to access zk occurs.
+   */
   @VisibleForTesting
   boolean exists(final String path) throws Exception {
     return zkManager.exists(path);
@@ -1136,18 +1223,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   /**
    * Add or update delegationToken.
    *
-   * @param routerStoreToken storeToken
+   * @param request storeToken
    * @param isUpdate true, update the token; false, create a new token.
    *
    * @throws Exception exception occurs.
    */
-  protected void storeOrUpdateRouterRMDT(RouterStoreToken routerStoreToken, boolean isUpdate)
+  private void storeOrUpdateRouterRMDT(RouterRMTokenRequest request,  boolean isUpdate)
       throws Exception {
-    YARNDelegationTokenIdentifier tokenIdentifier = routerStoreToken.getTokenIdentifier();
-    int sequenceNumber = tokenIdentifier.getSequenceNumber();
+    RouterStoreToken routerStoreToken  = request.getRouterStoreToken();
 
-    String nodeCreatePath =
-        getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX + sequenceNumber);
+    String nodeCreatePath = getStoreTokenZNodePathByIdentifier(request);
 
     LOG.debug("nodeCreatePath = {}, isUpdate = {}", nodeCreatePath, isUpdate);
 
@@ -1156,6 +1241,22 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     } else {
       put(nodeCreatePath, routerStoreToken.toByteArray(), false);
     }
+  }
+
+  private RouterStoreToken getStoreTokenFromZK(RouterRMTokenRequest request,
+      boolean quiet) throws IOException {
+    return getStoreTokenFromZK(request.getRouterStoreToken().getTokenIdentifier(), quiet);
+  }
+
+  private String getStoreTokenZNodePathByIdentifier(RouterRMTokenRequest request)
+      throws IOException {
+    return getStoreTokenZNodePathByIdentifier(request.getRouterStoreToken().getTokenIdentifier());
+  }
+
+  private String getStoreTokenZNodePathByIdentifier(YARNDelegationTokenIdentifier identifier) {
+    String nodePath = getNodePath(routerRMDelegationTokensRootPath,
+        ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
+    return nodePath;
   }
 
   /**
@@ -1167,11 +1268,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  protected RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier,
+  private RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier,
       boolean quiet) throws IOException {
     // get the Token storage path
-    String nodePath = getNodePath(delegationTokensRootPath,
-        DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
+    String nodePath = getStoreTokenZNodePathByIdentifier(identifier);
     return getStoreTokenFromZK(nodePath, quiet);
   }
 
@@ -1184,7 +1284,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  protected RouterStoreToken getStoreTokenFromZK(String nodePath, boolean quiet)
+  private RouterStoreToken getStoreTokenFromZK(String nodePath, boolean quiet)
       throws IOException {
     try {
       byte[] data = get(nodePath);
@@ -1226,4 +1326,5 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       throw new IOException(ex);
     }
   }
+
 }

@@ -20,8 +20,7 @@ package org.apache.hadoop.yarn.server.federation.store.utils;
 
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +60,36 @@ public final class FederationRouterRMTokenInputValidator {
       }
     } catch (Exception e) {
       throw new FederationStateStoreInvalidInputException(e);
+    }
+  }
+
+  /**
+   * We will check with the RouterMasterKeyRequest{@link RouterMasterKeyRequest}
+   * to ensure that the request object is not empty and that the RouterMasterKey is not empty.
+   *
+   * @param request RouterMasterKey Request.
+   * @throws if the request is invalid.
+   */
+  public static void validate(RouterMasterKeyRequest request)
+      throws FederationStateStoreInvalidInputException {
+
+    // Verify the request to ensure that the request is not empty,
+    // if the request is found to be empty, an exception will be thrown.
+    if (request == null) {
+      String message = "Missing RouterMasterKey Request."
+          + " Please try again by specifying a router master key request information.";
+      LOG.warn(message);
+      throw new FederationStateStoreInvalidInputException(message);
+    }
+
+    // Check whether the masterKey is empty,
+    // if the masterKey is empty, throw an exception message.
+    RouterMasterKey masterKey = request.getRouterMasterKey();
+    if (masterKey == null) {
+      String message = "Missing RouterMasterKey."
+          + " Please try again by specifying a router master key information.";
+      LOG.warn(message);
+      throw new FederationStateStoreInvalidInputException(message);
     }
   }
 }

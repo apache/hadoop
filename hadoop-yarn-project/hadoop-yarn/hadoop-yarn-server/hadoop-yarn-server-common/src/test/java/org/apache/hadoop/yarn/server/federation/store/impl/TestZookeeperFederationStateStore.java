@@ -57,9 +57,10 @@ public class TestZookeeperFederationStateStore
   @Before
   public void before() throws IOException, YarnException {
     try {
-      curatorTestingServer = new TestingServer();
+     /* curatorTestingServer = new TestingServer();
       curatorTestingServer.start();
-      String connectString = curatorTestingServer.getConnectString();
+      String connectString = curatorTestingServer.getConnectString();*/
+      String connectString = "127.0.0.1:2181";
       curatorFramework = CuratorFrameworkFactory.builder()
           .connectString(connectString)
           .retryPolicy(new RetryNTimes(100, 100))
@@ -189,6 +190,7 @@ public class TestZookeeperFederationStateStore
   // @Test(expected = NotImplementedException.class)
   public void testStoreNewToken() throws IOException, YarnException {
     super.testStoreNewToken();
+    LOG.info("xxxx");
   }
 
   // @Test(expected = NotImplementedException.class)
