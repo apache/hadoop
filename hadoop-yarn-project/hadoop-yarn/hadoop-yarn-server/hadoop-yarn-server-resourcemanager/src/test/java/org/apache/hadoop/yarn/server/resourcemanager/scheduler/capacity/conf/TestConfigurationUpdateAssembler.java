@@ -29,7 +29,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests {@link ConfigurationUpdateAssembler}.
@@ -134,7 +136,8 @@ public class TestConfigurationUpdateAssembler {
     Map<String, String> configurationUpdate =
             ConfigurationUpdateAssembler.constructKeyValueConfUpdate(csConfig, updateInfo);
 
-    assertEquals(null, configurationUpdate.get(A_CONFIG_PATH));
+    assertTrue(configurationUpdate.containsKey(A_CONFIG_PATH));
+    assertNull(configurationUpdate.get(A_CONFIG_PATH));
     assertEquals("b", configurationUpdate.get(ROOT_QUEUES_PATH));
   }
 
@@ -160,7 +163,7 @@ public class TestConfigurationUpdateAssembler {
 
   private CapacitySchedulerConfiguration crateInitialCSConfig() {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a, b" });
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a, b"});
 
     csConf.set(A_CONFIG_PATH, A_INIT_CONFIG_VALUE);
     csConf.set(B_CONFIG_PATH, B_INIT_CONFIG_VALUE);
