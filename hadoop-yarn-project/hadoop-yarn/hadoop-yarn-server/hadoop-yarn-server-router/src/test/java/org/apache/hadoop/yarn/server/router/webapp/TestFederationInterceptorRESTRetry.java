@@ -384,7 +384,7 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesOneBadSC() throws Exception {
-  
+
     // allowPartialResult = true,
     // We tolerate exceptions and return normal results
     interceptor.setAllowPartialResult(true);
@@ -407,7 +407,7 @@ public class TestFederationInterceptorRESTRetry
    */
   @Test
   public void testGetNodesTwoBadSCs() throws Exception {
-  
+
     // allowPartialResult = true,
     // We tolerate exceptions and return normal results
     interceptor.setAllowPartialResult(true);
