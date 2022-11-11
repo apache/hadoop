@@ -157,12 +157,9 @@ public abstract class FederationStateStoreBaseTest {
 
     SubClusterDeregisterRequest deregisterRequest = SubClusterDeregisterRequest
         .newInstance(subClusterId, SubClusterState.SC_UNREGISTERED);
-    try {
-      stateStore.deregisterSubCluster(deregisterRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage().startsWith("SubCluster SC not found"));
-    }
+
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC not found", () -> stateStore.deregisterSubCluster(deregisterRequest));
   }
 
   @Test
@@ -259,13 +256,9 @@ public abstract class FederationStateStoreBaseTest {
     SubClusterHeartbeatRequest heartbeatRequest = SubClusterHeartbeatRequest
         .newInstance(subClusterId, SubClusterState.SC_RUNNING, "capability");
 
-    try {
-      stateStore.subClusterHeartbeat(heartbeatRequest);
-      Assert.fail();
-    } catch (FederationStateStoreException e) {
-      Assert.assertTrue(e.getMessage()
-          .startsWith("SubCluster SC does not exist; cannot heartbeat"));
-    }
+    LambdaTestUtils.intercept(YarnException.class,
+        "SubCluster SC does not exist; cannot heartbeat",
+        () -> stateStore.subClusterHeartbeat(heartbeatRequest));
   }
 
   // Test FederationApplicationHomeSubClusterStore
