@@ -51,10 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
@@ -294,7 +291,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private URI uri;
   private Path workingDir;
   private String username;
-  private AmazonS3 s3;
   private S3Client s3V2;
   private S3AsyncClient s3AsyncClient;
   // initial callback policy is fail-once; it's there just to assist
@@ -315,7 +311,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Listing listing;
   private long partSize;
   private boolean enableMultiObjectsDelete;
-  private TransferManager transfers;
   private S3TransferManager transferManagerV2;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
@@ -985,10 +980,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
         .withExecutionInterceptors(auditManager.createExecutionInterceptors());
 
-    s3 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3Client(getUri(),
-            parameters);
-
     s3V2 = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
         .createS3ClientV2(getUri(),
             parameters);
@@ -1184,16 +1175,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .transferConfiguration(transferConfiguration ->
             transferConfiguration.executor(unboundedThreadPool)) // TODO: double-check
         .build();
-
-    TransferManagerConfiguration transferConfiguration =
-        new TransferManagerConfiguration();
-    transferConfiguration.setMinimumUploadPartSize(partSize);
-    transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
-    transferConfiguration.setMultipartCopyPartSize(partSize);
-    transferConfiguration.setMultipartCopyThreshold(multiPartThreshold);
-
-    transfers = new TransferManager(s3, unboundedThreadPool);
-    transfers.setConfiguration(transferConfiguration);
   }
 
   private void initCannedAcls(Configuration conf) {
@@ -1294,15 +1275,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   public int getDefaultPort() {
     return 0;
-  }
-
-  /**
-   * Returns the S3 client used by this filesystem.
-   * This is for internal use within the S3A code itself.
-   * @return AmazonS3Client
-   */
-  private AmazonS3 getAmazonS3Client() {
-    return s3;
   }
 
   /**
@@ -4099,18 +4071,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * both the expected state of this FS and of failures while being stopped.
    */
   protected synchronized void stopAllServices() {
-    // shutting down the transfer manager also shuts
-    // down the S3 client it is bonded to.
-    if (transfers != null) {
-      try {
-        transfers.shutdownNow(true);
-      } catch (RuntimeException e) {
-        // catch and swallow for resilience.
-        LOG.debug("When shutting down", e);
-      }
-      transfers = null;
-    }
-
     // TODO: Do we need this for v2?
     try {
       if (transferManagerV2 != null) {
