@@ -17,10 +17,6 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE;
-import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT;
-import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
-
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -117,10 +113,12 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
 import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
+import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE;
+import static org.apache.hadoop.security.token.delegation.ZKDelegationTokenSecretManager.ZK_DTSM_TOKEN_SEQNUM_BATCH_SIZE_DEFAULT;
+import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
 
 /**
  * ZooKeeper implementation of {@link FederationStateStore}.
- *
  * The znode structure is as follows:
  *
  * ROOT_DIR_PATH

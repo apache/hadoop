@@ -32,6 +32,13 @@ public final class FederationRouterRMTokenInputValidator {
   private FederationRouterRMTokenInputValidator() {
   }
 
+  /**
+   * We will check with the RouterRMTokenRequest{@link RouterRMTokenRequest}
+   * to ensure that the request object is not empty and that the RouterStoreToken is not empty.
+   *
+   * @param request RouterRMTokenRequest Request.
+   * @throws FederationStateStoreInvalidInputException if the request is invalid.
+   */
   public static void validate(RouterRMTokenRequest request)
       throws FederationStateStoreInvalidInputException {
 
@@ -68,7 +75,7 @@ public final class FederationRouterRMTokenInputValidator {
    * to ensure that the request object is not empty and that the RouterMasterKey is not empty.
    *
    * @param request RouterMasterKey Request.
-   * @throws if the request is invalid.
+   * @throws FederationStateStoreInvalidInputException if the request is invalid.
    */
   public static void validate(RouterMasterKeyRequest request)
       throws FederationStateStoreInvalidInputException {
