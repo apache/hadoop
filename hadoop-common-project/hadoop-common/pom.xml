@@ -374,6 +374,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.squareup.okio</groupId>
+      <artifactId>okio-jvm</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>dnsjava</groupId>
       <artifactId>dnsjava</artifactId>
       <scope>compile</scope>
