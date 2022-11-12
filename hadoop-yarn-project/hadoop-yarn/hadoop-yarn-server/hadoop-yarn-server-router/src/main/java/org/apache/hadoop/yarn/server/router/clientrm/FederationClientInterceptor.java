@@ -141,12 +141,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_NEW_APP;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.SUBMIT_NEW_APP;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.GET_APP_REPORT;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.FORCE_KILL_APP;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.TARGET_CLIENT_RM_SERVICE;
-import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.UNKNOWN;
+import static org.apache.hadoop.yarn.server.router.RouterAuditLogger.AuditConstants.*;
 
 /**
  * Extends the {@code AbstractRequestInterceptorClient} class and provides an
@@ -811,6 +806,8 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrMultipleAppsFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_APPLICATIONS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing getApplications request.");
       RouterServerUtil.logAndThrowException("Missing getApplications request.", null);
     }
     long startTime = clock.getTime();
@@ -834,6 +831,8 @@ public class FederationClientInterceptor
       GetClusterMetricsRequest request) throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrGetClusterMetricsFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERMETRICS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing getApplications request.");
       RouterServerUtil.logAndThrowException("Missing getClusterMetrics request.", null);
     }
     long startTime = clock.getTime();
@@ -888,7 +887,7 @@ public class FederationClientInterceptor
           results.put(subClusterId, clazz.cast(result));
         } catch (InterruptedException | ExecutionException e) {
           Throwable cause = e.getCause();
-          LOG.error("Cannot execute {} on {}: {}", request.getMethodName(),
+          LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
               subClusterId.getId(), cause.getMessage());
           exceptions.put(subClusterId, e);
         }
@@ -914,6 +913,8 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null) {
       routerMetrics.incrClusterNodesFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_CLUSTERNODES, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing getClusterNodes request.");
       RouterServerUtil.logAndThrowException("Missing getClusterNodes request.", null);
     }
     long startTime = clock.getTime();
@@ -937,6 +938,8 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null || request.getQueueName() == null) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUEINFO, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing getQueueInfo request or queueName.");
       RouterServerUtil.logAndThrowException("Missing getQueueInfo request or queueName.", null);
     }
 
@@ -962,6 +965,8 @@ public class FederationClientInterceptor
       GetQueueUserAclsInfoRequest request) throws YarnException, IOException {
     if(request == null){
       routerMetrics.incrQueueUserAclsFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing getQueueUserAcls request.");
       RouterServerUtil.logAndThrowException("Missing getQueueUserAcls request.", null);
     }
     long startTime = clock.getTime();
@@ -986,6 +991,9 @@ public class FederationClientInterceptor
       throws YarnException, IOException {
     if (request == null || request.getApplicationId() == null || request.getTargetQueue() == null) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
+      RouterAuditLogger.logFailure(user.getShortUserName(), GET_QUEUE_USER_ACLS, UNKNOWN,
+          TARGET_CLIENT_RM_SERVICE, "Missing moveApplicationAcrossQueues request or " +
+          "applicationId or target queue.");
       RouterServerUtil.logAndThrowException("Missing moveApplicationAcrossQueues request or " +
           "applicationId or target queue.", null);
     }
@@ -999,8 +1007,8 @@ public class FederationClientInterceptor
           .getApplicationHomeSubCluster(applicationId);
     } catch (YarnException e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Application " +
-          applicationId + " does not exist in FederationStateStore.", e);
+      RouterServerUtil.logAndThrowException(e, "Application %s does not exist in FederationStateStore.",
+          applicationId);
     }
 
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -1009,8 +1017,9 @@ public class FederationClientInterceptor
       response = clientRMProxy.moveApplicationAcrossQueues(request);
     } catch (Exception e) {
       routerMetrics.incrMoveApplicationAcrossQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Unable to moveApplicationAcrossQueues for " +
-          applicationId + " to SubCluster " + subClusterId.getId(), e);
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to moveApplicationAcrossQueues for %s to SubCluster %s.", applicationId,
+          subClusterId.getId());
     }
 
     if (response == null) {

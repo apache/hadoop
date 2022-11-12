@@ -51,6 +51,11 @@ public class RouterAuditLogger {
     public static final String GET_APP_REPORT = "Get Application Report";
     public static final String TARGET_CLIENT_RM_SERVICE = "RouterClientRMService";
     public static final String UNKNOWN = "UNKNOWN";
+    public static final String GET_APPLICATIONS = "Get Applications";
+    public static final String GET_CLUSTERMETRICS = "Get ClusterMetrics";
+    public static final String GET_CLUSTERNODES = "Get ClusterNodes";
+    public static final String GET_QUEUEINFO = "Get QueueInfo";
+    public static final String GET_QUEUE_USER_ACLS = "Get QueueUserAcls";
   }
 
   /**
