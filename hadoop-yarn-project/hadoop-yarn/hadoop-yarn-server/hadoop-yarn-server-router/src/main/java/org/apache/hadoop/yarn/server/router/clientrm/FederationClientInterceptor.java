@@ -272,17 +272,6 @@ public class FederationClientInterceptor
     return list.get(rand.nextInt(list.size()));
   }
 
-  @VisibleForTesting
-  private int getActiveSubClustersCount() throws YarnException {
-    Map<SubClusterId, SubClusterInfo> activeSubClusters =
-        federationFacade.getSubClusters(true);
-    if (activeSubClusters == null || activeSubClusters.isEmpty()) {
-      return 0;
-    } else {
-      return activeSubClusters.size();
-    }
-  }
-
   /**
    * YARN Router forwards every getNewApplication requests to any RM. During
    * this operation there will be no communication with the State Store. The
@@ -318,7 +307,7 @@ public class FederationClientInterceptor
 
     // Try calling the getNewApplication method
     List<SubClusterId> blacklist = new ArrayList<>();
-    int activeSubClustersCount = getActiveSubClustersCount();
+    int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
     int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
     try {
@@ -474,7 +463,7 @@ public class FederationClientInterceptor
       // the user will provide us with an expected submitRetries,
       // but if the number of Active SubClusters is less than this number at this time,
       // we should provide a high number of retry according to the number of Active SubClusters.
-      int activeSubClustersCount = getActiveSubClustersCount();
+      int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
       int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
       // Try calling the SubmitApplication method

@@ -849,4 +849,18 @@ public final class FederationStateStoreFacade {
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     return stateStore.getTokenByRouterStoreToken(request);
   }
+
+  /**
+   *
+   * @return
+   * @throws YarnException
+   */
+  public int getActiveSubClustersCount() throws YarnException {
+    Map<SubClusterId, SubClusterInfo> activeSubClusters = getSubClusters(true);
+    if (activeSubClusters == null || activeSubClusters.isEmpty()) {
+      return 0;
+    } else {
+      return activeSubClusters.size();
+    }
+  }
 }

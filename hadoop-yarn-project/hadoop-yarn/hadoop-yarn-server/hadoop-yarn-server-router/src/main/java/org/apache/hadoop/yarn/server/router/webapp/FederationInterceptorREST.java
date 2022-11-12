@@ -29,11 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletionService;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
@@ -62,8 +58,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
 import org.apache.hadoop.yarn.server.federation.policies.RouterPolicyFacade;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
+import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
@@ -134,13 +132,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   private int numSubmitRetries;
   private FederationStateStoreFacade federationFacade;
-  private Random rand;
   private RouterPolicyFacade policyFacade;
   private RouterMetrics routerMetrics;
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
+  private long submitIntervalTime;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
   private LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> appInfosCaches;
@@ -156,7 +154,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     super.init(user);
 
     federationFacade = FederationStateStoreFacade.getInstance();
-    rand = new Random();
 
     final Configuration conf = this.getConf();
 
@@ -194,24 +191,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           YarnConfiguration.DEFAULT_ROUTER_APPSINFO_CACHED_COUNT);
       appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
     }
-  }
 
-  private SubClusterId getRandomActiveSubCluster(
-      Map<SubClusterId, SubClusterInfo> activeSubclusters,
-      List<SubClusterId> blackListSubClusters) throws YarnException {
-
-    if (activeSubclusters == null || activeSubclusters.size() < 1) {
-      RouterServerUtil.logAndThrowException(
-          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
-    }
-    Collection<SubClusterId> keySet = activeSubclusters.keySet();
-    FederationPolicyUtils.validateSubClusterAvailability(keySet, blackListSubClusters);
-    if (blackListSubClusters != null) {
-      keySet.removeAll(blackListSubClusters);
-    }
-
-    List<SubClusterId> list = keySet.stream().collect(Collectors.toList());
-    return list.get(rand.nextInt(list.size()));
+    submitIntervalTime = conf.getTimeDuration(
+        YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
+        YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
@@ -300,63 +283,59 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throws AuthorizationException, IOException, InterruptedException {
 
     long startTime = clock.getTime();
-
-    Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      routerMetrics.incrAppsFailedCreated();
-      return Response.status(Status.INTERNAL_SERVER_ERROR)
-          .entity(e.getLocalizedMessage()).build();
-    }
 
-    List<SubClusterId> blacklist = new ArrayList<>();
+      Map<SubClusterId, SubClusterInfo> subClustersActive =
+          federationFacade.getSubClusters(true);
 
-    for (int i = 0; i < numSubmitRetries; ++i) {
+      List<SubClusterId> blacklist = new ArrayList<>();
+      int activeSubClustersCount = federationFacade.getActiveSubClustersCount();
+      int actualRetryNums = Math.min(activeSubClustersCount, numSubmitRetries);
 
-      SubClusterId subClusterId;
-      try {
-        subClusterId = getRandomActiveSubCluster(subClustersActive, blacklist);
-      } catch (YarnException e) {
-        routerMetrics.incrAppsFailedCreated();
-        return Response.status(Status.SERVICE_UNAVAILABLE)
-            .entity(e.getLocalizedMessage()).build();
-      }
+      Response response = ((FederationActionRetry<Response>) (retryCount) ->
+          invokeGetNewApplication(subClustersActive, blacklist, hsr, retryCount)).
+          runWithRetries(actualRetryNums, submitIntervalTime);
 
-      LOG.debug("getNewApplication try #{} on SubCluster {}.", i, subClusterId);
-
-      DefaultRequestInterceptorREST interceptor =
-          getOrCreateInterceptorForSubCluster(subClusterId,
-              subClustersActive.get(subClusterId).getRMWebServiceAddress());
-      Response response = null;
-      try {
-        response = interceptor.createNewApplication(hsr);
-      } catch (Exception e) {
-        LOG.warn("Unable to create a new ApplicationId in SubCluster {}.",
-            subClusterId.getId(), e);
-      }
-
-      if (response != null &&
-          response.getStatus() == HttpServletResponse.SC_OK) {
-
+      if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
         long stopTime = clock.getTime();
         routerMetrics.succeededAppsCreated(stopTime - startTime);
-
         return response;
-      } else {
-        // Empty response from the ResourceManager.
-        // Blacklist this subcluster for this request.
-        blacklist.add(subClusterId);
       }
+    } catch (FederationPolicyException e) {
+      routerMetrics.incrAppsFailedCreated();
+      return Response.status(Status.INTERNAL_SERVER_ERROR).entity(e.getLocalizedMessage()).build();
+    } catch (Exception e) {
+      routerMetrics.incrAppsFailedCreated();
+      return Response.status(Status.SERVICE_UNAVAILABLE).entity(e.getLocalizedMessage()).build();
     }
 
     String errMsg = "Fail to create a new application.";
     LOG.error(errMsg);
     routerMetrics.incrAppsFailedCreated();
-    return Response
-        .status(Status.INTERNAL_SERVER_ERROR)
-        .entity(errMsg)
-        .build();
+    return Response.status(Status.INTERNAL_SERVER_ERROR).entity(errMsg).build();
+  }
+
+  private Response invokeGetNewApplication(Map<SubClusterId, SubClusterInfo> subClustersActive,
+      List<SubClusterId> blackList, HttpServletRequest hsr, int retryCount)
+      throws YarnException, IOException, InterruptedException {
+    SubClusterId subClusterId =
+        RouterServerUtil.getRandomActiveSubCluster(subClustersActive, blackList);
+    LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
+    DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(subClusterId,
+        subClustersActive.get(subClusterId).getRMWebServiceAddress());
+    try {
+      Response response = interceptor.createNewApplication(hsr);
+      if (response != null && response.getStatus() == HttpServletResponse.SC_OK) {
+        return response;
+      }
+    } catch (Exception e) {
+      blackList.add(subClusterId);
+      throw e;
+    }
+    // We need to throw the exception directly.
+    String msg = String.format("Unable to create a new ApplicationId in SubCluster %s.",
+        subClusterId.getId());
+    throw new YarnException(msg);
   }
 
   /**
