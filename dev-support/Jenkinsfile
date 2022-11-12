@@ -274,7 +274,7 @@ pipeline {
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin"'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "/f/jenkins/tools/docker/resources/bin/docker.exe --version"'
 
-                       bat 'F:\\jenkins\\tools\\docker\\"Docker Desktop.exe"'
+                       bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\dockerd.exe'
 
                        bat '''
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin/docker.exe"
