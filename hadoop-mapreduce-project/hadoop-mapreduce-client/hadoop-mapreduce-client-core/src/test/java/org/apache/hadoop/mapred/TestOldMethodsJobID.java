@@ -26,10 +26,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.mapred.TaskCompletionEvent.Status;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Test deprecated methods
@@ -42,7 +44,8 @@ public class TestOldMethodsJobID {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
+  @Test
+  @Timeout(5000)
   public void testDepricatedMethods() throws IOException {
     JobID jid = new JobID();
     TaskID test = new TaskID(jid, true, 1);
@@ -68,25 +71,28 @@ public class TestOldMethodsJobID {
         TaskID.getTaskIDsPatternWOPrefix("003", 1, TaskType.MAP, 4).toString());
    
   }
-  
+
   /**
    * test JobID
    * @throws IOException 
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
-  public void testJobID() throws IOException{
+  @Test
+  @Timeout(5000)
+  public void testJobID() throws IOException {
     JobID jid = new JobID("001",2);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     jid.write(new DataOutputStream(out));
    assertEquals(jid,JobID.read(new DataInputStream(new ByteArrayInputStream(out.toByteArray()))));
    assertEquals("job_001_0001",JobID.getJobIDsPattern("001",1));
   }
+
   /**
    * test deprecated methods of TaskCompletionEvent
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
+  @Test
+  @Timeout(5000)
   public void testTaskCompletionEvent() {
     TaskAttemptID taid = new TaskAttemptID("001", 1, TaskType.REDUCE, 2, 3);
     TaskCompletionEvent template = new TaskCompletionEvent(12, taid, 13, true,
@@ -113,7 +119,8 @@ public class TestOldMethodsJobID {
    * @throws IOException
    */
   @SuppressWarnings("deprecation")
-  @Test (timeout=5000)
+  @Test
+  @Timeout(5000)
   public void testJobProfile() throws IOException {
 
     JobProfile profile = new JobProfile("user", "job_001_03", "jobFile", "uri",
@@ -134,12 +141,14 @@ public class TestOldMethodsJobID {
     assertEquals(profile2.url, profile.url);
     assertEquals(profile2.user, profile.user);
   }
+
   /**
    * test TaskAttemptID 
    */
-  @SuppressWarnings( "deprecation" )
-  @Test (timeout=5000)
-  public void testTaskAttemptID (){
+  @SuppressWarnings("deprecation")
+  @Test
+  @Timeout(5000)
+  public void testTaskAttemptID() {
     TaskAttemptID task  = new TaskAttemptID("001",2,true,3,4);
     assertEquals("attempt_001_0002_m_000003_4", TaskAttemptID.getTaskAttemptIDsPattern("001", 2, true, 3, 4));
     assertEquals("task_001_0002_m_000003", task.getTaskID().toString());
@@ -147,14 +156,15 @@ public class TestOldMethodsJobID {
     assertEquals("001_0001_m_000001_2", TaskAttemptID.getTaskAttemptIDsPatternWOPrefix("001",1, TaskType.MAP, 1, 2).toString());
     
   }
-  
+
   /**
    * test Reporter.NULL
    * 
    */
   
-  @Test (timeout=5000)
-  public void testReporter(){
+  @Test
+  @Timeout(5000)
+  public void testReporter() {
     Reporter nullReporter=Reporter.NULL;
     assertNull(nullReporter.getCounter(null));
     assertNull(nullReporter.getCounter("group", "name"));

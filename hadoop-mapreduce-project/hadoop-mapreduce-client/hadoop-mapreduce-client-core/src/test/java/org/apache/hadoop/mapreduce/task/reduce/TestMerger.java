@@ -18,6 +18,9 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -65,11 +68,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -82,7 +84,7 @@ public class TestMerger {
   private JobConf jobConf;
   private FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     // setup the test root directory
     testRootDir =
@@ -90,7 +92,7 @@ public class TestMerger {
             TestMerger.class);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     unitTestDir = new File(testRootDir, unitTestName.getMethodName());
     unitTestDir.mkdirs();
@@ -154,7 +156,7 @@ public class TestMerger {
 
     inMemoryMerger.merge(mapOutputs1);
 
-    Assert.assertEquals(1, mergeManager.onDiskMapOutputs.size());
+    assertEquals(1, mergeManager.onDiskMapOutputs.size());
 
     TaskAttemptID reduceId2 = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 3), 0);
@@ -189,7 +191,7 @@ public class TestMerger {
 
     inMemoryMerger2.merge(mapOutputs2);
 
-    Assert.assertEquals(2, mergeManager.onDiskMapOutputs.size());
+    assertEquals(2, mergeManager.onDiskMapOutputs.size());
 
     List<CompressAwarePath> paths = new ArrayList<CompressAwarePath>();
     Iterator<CompressAwarePath> iterator =
@@ -214,7 +216,7 @@ public class TestMerger {
     MergeThread<CompressAwarePath,Text,Text> onDiskMerger = mergeManager.createOnDiskMerger();
     onDiskMerger.merge(paths);
 
-    Assert.assertEquals(1, mergeManager.onDiskMapOutputs.size());
+    assertEquals(1, mergeManager.onDiskMapOutputs.size());
 
     keys = new ArrayList<String>();
     values = new ArrayList<String>();
@@ -226,9 +228,9 @@ public class TestMerger {
             "pretty good", "bla", "amazing", "delicious"));
 
     mergeManager.close();
-    Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());
-    Assert.assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
-    Assert.assertEquals(0, mergeManager.onDiskMapOutputs.size());
+    assertEquals(0, mergeManager.inMemoryMapOutputs.size());
+    assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
+    assertEquals(0, mergeManager.onDiskMapOutputs.size());
   }
 
   private byte[] writeMapOutput(Configuration conf, Map<String, String> keysToValues)
@@ -295,35 +297,35 @@ public class TestMerger {
     // Reading 6 keys total, 3 each in 2 segments, so each key read moves the
     // progress forward 1/6th of the way. Initially the first keys from each
     // segment have been read as part of the merge setup, so progress = 2/6.
-    Assert.assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // The first next() returns one of the keys already read during merge setup
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(2/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Subsequent next() calls should read one key and move progress
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(3/6.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(3/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // At this point we've exhausted all of the keys in one segment
     // so getting the next key will return the already cached key from the
     // other segment
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(4/6.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Subsequent next() calls should read one key and move progress
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(5/6.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.next());
-    Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(5/6.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.next());
+    assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
 
     // Now there should be no more input
-    Assert.assertFalse(mergeQueue.next());
-    Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
-    Assert.assertTrue(mergeQueue.getKey() == null);
-    Assert.assertEquals(0, mergeQueue.getValue().getData().length);
+    assertFalse(mergeQueue.next());
+    assertEquals(1.0f, mergeQueue.getProgress().get(), epsilon);
+    assertTrue(mergeQueue.getKey() == null);
+    assertEquals(0, mergeQueue.getValue().getData().length);
   }
 
   private Progressable getReporter() {

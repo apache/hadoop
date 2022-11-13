@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.mapreduce.lib.db;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -33,8 +28,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.lib.db.DataDrivenDBInputFormat.DataDrivenDBInputSplit;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test Splitters. Splitters should build parts of sql sentences for split result. 
@@ -43,14 +44,15 @@ public class TestSplitters {
 
   private Configuration configuration;
   
-  @Before
+  @BeforeEach
   public void setup() {
     configuration = new Configuration();
     configuration.setInt(MRJobConfig.NUM_MAPS, 2);
   }
-  
-  @Test(timeout=2000)
-  public void testBooleanSplitter() throws Exception{
+
+  @Test
+  @Timeout(2000)
+  public void testBooleanSplitter() throws Exception {
     BooleanSplitter splitter = new BooleanSplitter();
     ResultSet result = mock(ResultSet.class);
     when(result.getString(1)).thenReturn("result1");
@@ -76,9 +78,10 @@ public class TestSplitters {
     assertSplits(new String[] {
         "column = FALSE column = FALSE", ".*column = TRUE"}, splits);
   }
-  
-  @Test(timeout=2000)
-  public void testFloatSplitter() throws Exception{
+
+  @Test
+  @Timeout(2000)
+  public void testFloatSplitter() throws Exception {
     FloatSplitter splitter = new FloatSplitter();
     
     ResultSet results = mock(ResultSet.class);
@@ -96,8 +99,9 @@ public class TestSplitters {
         "column1 >= 6.0 column1 <= 7.0"}, splits);
   }
 
-  @Test(timeout=2000)
-  public void testBigDecimalSplitter() throws Exception{
+  @Test
+  @Timeout(2000)
+  public void testBigDecimalSplitter() throws Exception {
     BigDecimalSplitter splitter = new BigDecimalSplitter();
     ResultSet result = mock(ResultSet.class);
     
@@ -114,8 +118,9 @@ public class TestSplitters {
         "column1 >= 11 column1 <= 12"}, splits);
   }
 
-  @Test(timeout=2000)
-  public void testIntegerSplitter() throws Exception{
+  @Test
+  @Timeout(2000)
+  public void testIntegerSplitter() throws Exception {
     IntegerSplitter splitter = new IntegerSplitter();
     ResultSet result = mock(ResultSet.class);
     
@@ -132,8 +137,9 @@ public class TestSplitters {
         "column1 >= 13 column1 < 18", "column1 >= 18 column1 <= 19"}, splits);
   }
 
-  @Test(timeout=2000)
-  public void testTextSplitter() throws Exception{
+  @Test
+  @Timeout(2000)
+  public void testTextSplitter() throws Exception {
     TextSplitter splitter = new TextSplitter();
     ResultSet result = mock(ResultSet.class);
     
@@ -154,10 +160,9 @@ public class TestSplitters {
     for (int i = 0; i < expectedSplitRE.length; i++) {
       DataDrivenDBInputSplit split = (DataDrivenDBInputSplit) splits.get(i);
       String actualExpr = split.getLowerClause() + " " + split.getUpperClause();
-      assertTrue("Split #" + (i+1) + " expression is wrong."
-          + " Expected " + expectedSplitRE[i]
-          + " Actual " + actualExpr,
-          Pattern.matches(expectedSplitRE[i], actualExpr));
+      assertTrue(Pattern.matches(expectedSplitRE[i], actualExpr),
+          "Split #" + (i + 1) + " expression is wrong." + " Expected " + expectedSplitRE[i]
+              + " Actual " + actualExpr);
     }
   }
   

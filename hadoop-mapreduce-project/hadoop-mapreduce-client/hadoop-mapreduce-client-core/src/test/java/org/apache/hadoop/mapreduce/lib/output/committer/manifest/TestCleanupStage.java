@@ -20,7 +20,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;

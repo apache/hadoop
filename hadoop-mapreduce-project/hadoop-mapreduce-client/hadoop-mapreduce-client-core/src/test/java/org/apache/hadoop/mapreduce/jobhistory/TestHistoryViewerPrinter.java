@@ -24,10 +24,10 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.slf4j.Logger;
@@ -39,6 +39,9 @@ import java.util.HashMap;
 import java.util.TimeZone;
 import java.util.Locale;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 public class TestHistoryViewerPrinter {
 
   private static final Logger LOG =
@@ -48,12 +51,12 @@ public class TestHistoryViewerPrinter {
 
   private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Locale.setDefault(Locale.ENGLISH);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Locale.setDefault(DEFAULT_LOCALE);
   }
@@ -65,7 +68,7 @@ public class TestHistoryViewerPrinter {
         new HumanReadableHistoryViewerPrinter(job, false, "http://",
             TimeZone.getTimeZone("GMT"));
     String outStr = run(printer);
-    Assert.assertEquals("\n" +
+    assertEquals("\n" +
         "Hadoop job: job_1317928501754_0001\n" +
         "=====================================\n" +
         "User: rkanter\n" +
@@ -168,7 +171,7 @@ public class TestHistoryViewerPrinter {
             TimeZone.getTimeZone("GMT"));
     String outStr = run(printer);
     if (System.getProperty("java.version").startsWith("1.7")) {
-      Assert.assertEquals("\n" +
+      assertEquals("\n" +
           "Hadoop job: job_1317928501754_0001\n" +
           "=====================================\n" +
           "User: rkanter\n" +
@@ -356,7 +359,7 @@ public class TestHistoryViewerPrinter {
           "localhost\ttask_1317928501754_0001_m_000002, " +
           LINE_SEPARATOR, outStr);
     } else {
-      Assert.assertEquals("\n" +
+      assertEquals("\n" +
           "Hadoop job: job_1317928501754_0001\n" +
           "=====================================\n" +
           "User: rkanter\n" +
@@ -1018,12 +1021,11 @@ public class TestHistoryViewerPrinter {
     // We are not interested in anything but the duplicate counter
     int count1 = outStr.indexOf(
         "|Map-Reduce Framework          |Map input records             |");
-    Assert.assertNotEquals("First counter occurrence not found", -1, count1);
+    assertNotEquals(-1, count1, "First counter occurrence not found");
     int count2 = outStr.indexOf(
         "|Map-Reduce Framework          |Map input records             |",
         count1 + 1);
-    Assert.assertEquals("Duplicate counter found at: " + count1 +
-        " and " + count2, -1, count2);
+    assertEquals(-1, count2, "Duplicate counter found at: " + count1 + " and " + count2);
   }
 
   @Test
@@ -1038,12 +1040,11 @@ public class TestHistoryViewerPrinter {
     // We are not interested in anything but the duplicate counter
     int count1 = outStr.indexOf(
         "\"counterName\":\"MAP_INPUT_RECORDS\"");
-    Assert.assertNotEquals("First counter occurrence not found", -1, count1);
+    assertNotEquals(-1, count1, "First counter occurrence not found");
     int count2 = outStr.indexOf(
         "\"counterName\":\"MAP_INPUT_RECORDS\"",
         count1 + 1);
-    Assert.assertEquals("Duplicate counter found at: " + count1 +
-        " and " + count2, -1, count2);
+    assertEquals(-1, count2, "Duplicate counter found at: " + count1 + " and " + count2);
   }
 
   private String run(HistoryViewerPrinter printer) throws Exception {
