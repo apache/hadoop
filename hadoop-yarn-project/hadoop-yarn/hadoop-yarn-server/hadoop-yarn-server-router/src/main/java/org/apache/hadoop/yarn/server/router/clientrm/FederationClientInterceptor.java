@@ -350,7 +350,7 @@ public class FederationClientInterceptor
       List<SubClusterId> blackList, GetNewApplicationRequest request, int retryCount)
       throws YarnException, IOException {
     SubClusterId subClusterId =
-        RouterServerUtil.getRandomActiveSubCluster(subClustersActive, blackList);
+        federationFacade.getRandomActiveSubCluster(subClustersActive, blackList);
     LOG.info("getNewApplication try #{} on SubCluster {}.", retryCount, subClusterId);
     ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
     try {
@@ -531,17 +531,10 @@ public class FederationClientInterceptor
       LOG.info("submitApplication appId {} try #{} on SubCluster {}.",
           applicationId, retryCount, subClusterId);
 
-      // Step2. Query homeSubCluster according to ApplicationId.
-      Boolean exists = existsApplicationHomeSubCluster(applicationId);
-
-      ApplicationHomeSubCluster appHomeSubCluster =
-          ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
-
-      if (!exists || retryCount == 0) {
-        addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
-      } else {
-        updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
-      }
+      // Step2. We Store the mapping relationship
+      // between Application and HomeSubCluster in stateStore.
+      federationFacade.addOrUpdateApplicationHomeSubCluster(
+          applicationId, subClusterId, retryCount);
 
       // Step3. SubmitApplication to the subCluster
       ApplicationClientProtocol clientRMProxy = getClientRMProxyForSubCluster(subClusterId);
@@ -568,70 +561,6 @@ public class FederationClientInterceptor
     // If SubmitApplicationResponse is empty, the request fails.
     String msg = String.format("Application %s failed to be submitted.", applicationId);
     throw new YarnException(msg);
-  }
-
-  /**
-   * Add ApplicationHomeSubCluster to FederationStateStore.
-   *
-   * @param applicationId applicationId.
-   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
-   * @throws YarnException yarn exception.
-   */
-  private void addApplicationHomeSubCluster(ApplicationId applicationId,
-      ApplicationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      federationFacade.addApplicationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      RouterServerUtil.logAndThrowException(e,
-          "Unable to insert the ApplicationId %s into the FederationStateStore.", applicationId);
-    }
-  }
-
-  /**
-   * Update ApplicationHomeSubCluster to FederationStateStore.
-   *
-   * @param subClusterId homeSubClusterId
-   * @param applicationId applicationId.
-   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
-   * @throws YarnException yarn exception.
-   */
-  private void updateApplicationHomeSubCluster(SubClusterId subClusterId,
-      ApplicationId applicationId, ApplicationHomeSubCluster homeSubCluster) throws YarnException {
-    try {
-      federationFacade.updateApplicationHomeSubCluster(homeSubCluster);
-    } catch (YarnException e) {
-      SubClusterId subClusterIdInStateStore =
-          federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId == subClusterIdInStateStore) {
-        LOG.info("Application {} already submitted on SubCluster {}.",
-            applicationId, subClusterId);
-      } else {
-        RouterServerUtil.logAndThrowException(e,
-            "Unable to update the ApplicationId %s into the FederationStateStore.",
-            applicationId);
-      }
-    }
-  }
-
-  /**
-   * Query SubClusterId By applicationId.
-   *
-   * If SubClusterId is not empty, it means it exists and returns true;
-   * if SubClusterId is empty, it means it does not exist and returns false.
-   *
-   * @param applicationId applicationId
-   * @return true, SubClusterId exists; false, SubClusterId not exists.
-   */
-  private boolean existsApplicationHomeSubCluster(ApplicationId applicationId) {
-    try {
-      SubClusterId subClusterId = federationFacade.getApplicationHomeSubCluster(applicationId);
-      if (subClusterId != null) {
-        return true;
-      }
-    } catch (YarnException e) {
-      LOG.warn("get homeSubCluster by applicationId = {} error.", applicationId, e);
-    }
-    return false;
   }
 
   /**
