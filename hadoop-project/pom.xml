@@ -132,9 +132,10 @@
     <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp.version>2.7.5</okhttp.version>
-    <okhttp3.version>4.9.3</okhttp3.version>
-    <kotlin-stdlib.verion>1.4.10</kotlin-stdlib.verion>
-    <kotlin-stdlib-common.version>1.4.10</kotlin-stdlib-common.version>
+    <okhttp3.version>4.10.0</okhttp3.version>
+    <okio.version>3.2.0</okio.version>
+    <kotlin-stdlib.verion>1.6.20</kotlin-stdlib.verion>
+    <kotlin-stdlib-common.version>1.6.20</kotlin-stdlib-common.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <grizzly.version>2.2.21</grizzly.version>
@@ -234,7 +235,16 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-common</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio-jvm</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio-jvm</artifactId>
+        <version>${okio.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jetbrains.kotlin</groupId>
@@ -255,8 +265,18 @@
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>mockwebserver</artifactId>
-        <version>4.9.3</version>
+        <version>${okhttp3.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio-jvm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>jdiff</groupId>
