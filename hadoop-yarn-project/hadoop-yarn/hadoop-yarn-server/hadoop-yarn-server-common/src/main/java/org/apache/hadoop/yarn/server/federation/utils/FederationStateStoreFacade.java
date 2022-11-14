@@ -496,6 +496,7 @@ public final class FederationStateStoreFacade {
    * @param defaultValue the default implementation for fallback
    * @param type the class for which a retry proxy is required
    * @param retryPolicy the policy for retrying method call failures
+   * @param <T> The type of the instance.
    * @return a retry proxy for the specified interface
    */
   public static <T> Object createRetryInstance(Configuration conf,
@@ -731,7 +732,7 @@ public final class FederationStateStoreFacade {
     return stateStore;
   }
 
-  /*
+  /**
    * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
    * @param newKey Key used for generating and verifying delegation tokens
