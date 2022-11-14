@@ -123,7 +123,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     int bytesRead = inputStream.read(buffer, 0, 2);
     Assertions.assertThat(bytesRead)
         .describedAs(
-            "bytesRead returned for  length greater than the contentLength should be -1")
+            "bytesRead returned for length greater than the contentLength should be -1")
         .isEqualTo(-1);
 
     inputStream = fs.open(testPath);

@@ -1110,5 +1110,4 @@ public class AbfsConfiguration{
   void setReadAheadQueueDepth(int depth) {
     readAheadQueueDepth = depth;
   }
-
 }
