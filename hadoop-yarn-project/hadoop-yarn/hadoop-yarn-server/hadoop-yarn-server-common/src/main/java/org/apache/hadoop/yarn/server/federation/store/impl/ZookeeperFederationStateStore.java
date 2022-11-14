@@ -986,6 +986,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1005,6 +1006,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     // Get the stored masterKey from zk.
     RouterMasterKey masterKeyFromZK = getRouterMasterKeyFromZK(nodeCreatePath, false);
+    long end = clock.getTime();
+    opDurations.addStoreNewMasterKeyDuration(start, end);
     return RouterMasterKeyResponse.newInstance(masterKeyFromZK);
   }
 
@@ -1020,12 +1023,12 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
 
     try {
-
       // Parse the delegationKey from the request and get the ZK storage path.
       RouterMasterKey masterKey = request.getRouterMasterKey();
       DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
@@ -1040,6 +1043,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // try to remove masterKey.
       zkManager.delete(nodeRemovePath);
+      long end = clock.getTime();
+      opDurations.removeStoredMasterKeyDuration(start, end);
       return RouterMasterKeyResponse.newInstance(masterKey);
     } catch (Exception e) {
       throw new YarnException(e);
@@ -1058,6 +1063,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // For the verification of the request, after passing the verification,
     // the request and the internal objects will not be empty and can be used directly.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1075,6 +1081,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored masterKey from zk.
       RouterMasterKey routerMasterKey = getRouterMasterKeyFromZK(nodePath, false);
+      long end = clock.getTime();
+      opDurations.getMasterKeyByDelegationKeyDuration(start, end);
       return RouterMasterKeyResponse.newInstance(routerMasterKey);
     } catch (Exception e) {
       throw new YarnException(e);
@@ -1126,7 +1134,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       key.readFields(din);
 
       return RouterMasterKey.newInstance(key.getKeyId(),
-              ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+          ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
     } catch (Exception ex) {
       if (!quiet) {
         LOG.error("No node in path [" + nodePath + "]");
@@ -1150,6 +1158,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1161,6 +1170,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      long end = clock.getTime();
+      opDurations.getStoreNewTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
       throw e;
@@ -1184,6 +1195,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1211,6 +1223,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      long end = clock.getTime();
+      opDurations.updateStoredTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
       throw e;
@@ -1234,6 +1248,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public synchronized RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1256,6 +1271,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // return deleted token data.
+      long end = clock.getTime();
+      opDurations.removeStoredTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(storeToken);
     } catch (YarnException | IOException e) {
       throw e;
@@ -1276,6 +1293,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
+    long start = clock.getTime();
     // We verify the RouterRMTokenRequest to ensure that the request is not empty,
     // and that the internal RouterStoreToken is not empty.
     FederationRouterRMTokenInputValidator.validate(request);
@@ -1292,6 +1310,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Get the stored delegationToken from ZK and return.
       RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      // return deleted token data.
+      long end = clock.getTime();
+      opDurations.getTokenByRouterStoreTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
     } catch (YarnException | IOException e) {
       throw e;
@@ -1356,14 +1377,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
     RouterStoreToken routerStoreToken  = request.getRouterStoreToken();
     String nodeCreatePath = getStoreTokenZNodePathByTokenRequest(request);
-
     LOG.debug("nodeCreatePath = {}, isUpdate = {}", nodeCreatePath, isUpdate);
-
-    if (isUpdate) {
-      put(nodeCreatePath, routerStoreToken.toByteArray(), true);
-    } else {
-      put(nodeCreatePath, routerStoreToken.toByteArray(), false);
-    }
+    put(nodeCreatePath, routerStoreToken.toByteArray(), isUpdate);
   }
 
   /**
@@ -1457,6 +1472,20 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
   }
 
+  /**
+   * Increase SequenceNum. For zk, this is a distributed value.
+   * To ensure data consistency, we will use the synchronized keyword.
+   *
+   * For ZookeeperFederationStateStore, in order to reduce the interaction with ZK,
+   * we will apply for SequenceNum from ZK in batches(Apply when currentSeqNum >= currentMaxSeqNum),
+   * and assign this value to the variable currentMaxSeqNum.
+   *
+   * When calling the method incrementDelegationTokenSeqNum,
+   * if currentSeqNum < currentMaxSeqNum, we return ++currentMaxSeqNum,
+   * When currentSeqNum >= currentMaxSeqNum, we re-apply SequenceNum from zk.
+   *
+   * @return SequenceNum.
+   */
   @Override
   public synchronized int incrementDelegationTokenSeqNum() {
     // The secret manager will keep a local range of seq num which won't be
@@ -1477,10 +1506,17 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         throw new RuntimeException("Could not increment shared counter !!", e);
       }
     }
-
     return ++currentSeqNum;
   }
 
+  /**
+   * Increment the value of the shared variable.
+   *
+   * @param sharedCount zk SharedCount.
+   * @param batchSize batch size.
+   * @return new SequenceNum.
+   * @throws Exception exception occurs.
+   */
   private int incrSharedCount(SharedCount sharedCount, int batchSize)
       throws Exception {
     while (true) {
