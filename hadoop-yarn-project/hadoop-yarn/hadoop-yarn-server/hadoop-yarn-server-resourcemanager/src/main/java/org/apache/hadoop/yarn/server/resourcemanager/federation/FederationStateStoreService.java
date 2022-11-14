@@ -423,6 +423,11 @@ public class FederationStateStoreService extends AbstractService
     return stateStoreClient.getTokenByRouterStoreToken(request);
   }
 
+  @Override
+  public int incrementDelegationTokenSeqNum() {
+    return stateStoreClient.incrementDelegationTokenSeqNum();
+  }
+
   /**
    * Create a thread that cleans up the app.
    * @param stage rm-start/rm-stop.

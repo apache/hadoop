@@ -564,32 +564,32 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+  public void testGetMasterKeyByDelegationKey() throws Exception {
     super.testGetMasterKeyByDelegationKey();
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+  public void testRemoveStoredMasterKey() throws Exception {
     super.testRemoveStoredMasterKey();
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testStoreNewToken() throws IOException, YarnException {
+  public void testStoreNewToken() throws Exception {
     super.testStoreNewToken();
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testUpdateStoredToken() throws IOException, YarnException {
+  public void testUpdateStoredToken() throws Exception {
     super.testUpdateStoredToken();
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testRemoveStoredToken() throws IOException, YarnException {
+  public void testRemoveStoredToken() throws Exception {
     super.testRemoveStoredToken();
   }
 
   @Test(expected = NotImplementedException.class)
-  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+  public void testGetTokenByRouterStoreToken() throws Exception {
     super.testGetTokenByRouterStoreToken();
   }
 }
