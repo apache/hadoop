@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -104,6 +106,31 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       testExceptionInOptimization(fs, testFilePath, fileSize - HUNDRED,
           fileSize / 4, fileContent);
     }
+  }
+
+  @Test
+  public void testZeroByteFileRead() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final Path testPath = path("/testfile");
+    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore()
+        .getAbfsConfiguration();
+
+    FSDataOutputStream stream = fs.create(testPath);
+
+    FSDataInputStream inputStream = fs.open(testPath);
+    byte[] buffer = new byte[2];
+
+    int bytesRead = inputStream.read(buffer, 0, 2);
+    Assertions.assertThat(bytesRead)
+        .describedAs(
+            "bytesRead returned for  length greater than the contentLength should be -1")
+        .isEqualTo(-1);
+
+    inputStream = fs.open(testPath);
+    bytesRead = inputStream.read(buffer, 0, 0);
+    Assertions.assertThat(bytesRead)
+        .describedAs("bytesRead to be for length 0 should be equal to 0")
+        .isEqualTo(0);
   }
 
   private void testExceptionInOptimization(final FileSystem fs,

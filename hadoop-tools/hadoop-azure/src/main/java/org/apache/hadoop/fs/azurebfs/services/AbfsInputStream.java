@@ -270,7 +270,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       if (currentLen <= 0 || currentLen > b.length - currentOff) {
         break;
       }
-    } while (lastReadBytes >= 0);
+    } while (lastReadBytes >= 0); //backend server can return 0B with 206 httpStatus.
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
