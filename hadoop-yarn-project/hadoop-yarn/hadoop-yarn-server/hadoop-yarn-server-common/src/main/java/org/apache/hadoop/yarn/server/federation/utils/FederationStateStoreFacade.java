@@ -20,8 +20,12 @@ package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.Random;
 
 import javax.cache.Cache;
 import javax.cache.CacheManager;
@@ -500,6 +504,7 @@ public final class FederationStateStoreFacade {
    * @param defaultValue the default implementation for fallback
    * @param type the class for which a retry proxy is required
    * @param retryPolicy the policy for retrying method call failures
+   * @param <T> The type of the instance
    * @return a retry proxy for the specified interface
    */
   public static <T> Object createRetryInstance(Configuration conf,
@@ -735,7 +740,7 @@ public final class FederationStateStoreFacade {
     return stateStore;
   }
 
-  /*
+  /**
    * The Router Supports Store NewMasterKey (RouterMasterKey{@link RouterMasterKey}).
    *
    * @param newKey Key used for generating and verifying delegation tokens
@@ -881,7 +886,7 @@ public final class FederationStateStoreFacade {
    */
   public static SubClusterId getRandomActiveSubCluster(
       Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-          throws YarnException {
+      throws YarnException {
 
     // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
     if (MapUtils.isEmpty(activeSubClusters)) {
@@ -907,6 +912,13 @@ public final class FederationStateStoreFacade {
     return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
 
+  /**
+   * Get the number of retries.
+   *
+   * @param configRetries User-configured number of retries.
+   * @return number of retries.
+   * @throws YarnException yarn exception.
+   */
   public int getRetryNumbers(int configRetries) throws YarnException {
     int activeSubClustersCount = getActiveSubClustersCount();
     int actualRetryNums = Math.min(activeSubClustersCount, configRetries);
