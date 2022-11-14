@@ -33,6 +33,9 @@ import javax.management.ObjectName;
 import javax.management.ReflectionException;
 import javax.management.openmbean.CompositeDataSupport;
 
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
@@ -717,6 +720,39 @@ public class TestRollingUpgrade {
 
     if (retries >= 10) {
       Assert.fail("Query return false");
+    }
+  }
+
+  @Test
+  public void testEditLogTailerRollingUpgrade() throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
+
+    HAUtil.setAllowStandbyReads(conf, true);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(0)
+        .build();
+    cluster.waitActive();
+
+    cluster.transitionToActive(0);
+
+    NameNode nn1 = cluster.getNameNode(0);
+    NameNode nn2 = cluster.getNameNode(1);
+    try {
+      // RU start should trigger rollback image in standbycheckpointer
+      nn1.getRpcServer().rollingUpgrade(HdfsConstants.RollingUpgradeAction.PREPARE);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+      Assert.assertTrue(nn2.getNamesystem().isNeedRollbackFsImage());
+
+      // RU finalize should reset rollback image flag in standbycheckpointer
+      nn1.getRpcServer().rollingUpgrade(HdfsConstants.RollingUpgradeAction.FINALIZE);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+      Assert.assertFalse(nn2.getNamesystem().isNeedRollbackFsImage());
+    } finally {
+      cluster.shutdown();
     }
   }
 
