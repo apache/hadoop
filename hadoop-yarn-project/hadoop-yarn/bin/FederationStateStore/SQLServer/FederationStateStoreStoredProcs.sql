@@ -24,10 +24,10 @@ IF OBJECT_ID ( '[sp_addApplicationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_addApplicationHomeSubCluster]
-    @applicationId VARCHAR(64),
-    @homeSubCluster VARCHAR(256),
-    @storedHomeSubCluster VARCHAR(256) OUTPUT,
-    @rowCount int OUTPUT
+    @applicationId_IN VARCHAR(64),
+    @homeSubCluster_IN VARCHAR(256),
+    @storedHomeSubCluster_OUT VARCHAR(256) OUTPUT,
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -37,21 +37,21 @@ AS BEGIN
             -- Otherwise don't change the current mapping.
             IF NOT EXISTS (SELECT TOP 1 *
                        FROM [dbo].[applicationsHomeSubCluster]
-                       WHERE [applicationId] = @applicationId)
+                       WHERE [applicationId] = @applicationId_IN)
 
                 INSERT INTO [dbo].[applicationsHomeSubCluster] (
                     [applicationId],
                     [homeSubCluster])
                 VALUES (
-                    @applicationId,
-                    @homeSubCluster);
+                    @applicationId_IN,
+                    @homeSubCluster_IN);
             -- End of the IF block
 
-            SELECT @rowCount = @@ROWCOUNT;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
-            SELECT @storedHomeSubCluster = [homeSubCluster]
+            SELECT @storedHomeSubCluster_OUT = [homeSubCluster]
             FROM [dbo].[applicationsHomeSubCluster]
-            WHERE [applicationId] = @applicationId;
+            WHERE [applicationId] = @applicationId_IN;
 
         COMMIT TRAN
     END TRY
@@ -75,9 +75,9 @@ IF OBJECT_ID ( '[sp_updateApplicationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_updateApplicationHomeSubCluster]
-    @applicationId VARCHAR(64),
-    @homeSubCluster VARCHAR(256),
-    @rowCount int OUTPUT
+    @applicationId_IN VARCHAR(64),
+    @homeSubCluster_IN VARCHAR(256),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -85,9 +85,9 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[applicationsHomeSubCluster]
-            SET [homeSubCluster] = @homeSubCluster
-            WHERE [applicationId] = @applicationid;
-            SELECT @rowCount = @@ROWCOUNT;
+            SET [homeSubCluster] = @homeSubCluster_IN
+            WHERE [applicationId] = @applicationId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -111,8 +111,8 @@ IF OBJECT_ID ( '[sp_getApplicationsHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationsHomeSubCluster]
-    @limit int,
-    @homeSubCluster VARCHAR(256)
+    @limit_IN int,
+    @homeSubCluster_IN VARCHAR(256)
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -128,8 +128,8 @@ AS BEGIN
                  [createTime],
                  row_number() over(order by [createTime] desc) AS app_rank
              FROM [dbo].[applicationsHomeSubCluster]
-             WHERE [homeSubCluster] = @homeSubCluster OR @homeSubCluster = '') AS applicationsHomeSubCluster
-        WHERE app_rank <= @limit;
+             WHERE [homeSubCluster] = @homeSubCluster_IN OR @homeSubCluster = '') AS applicationsHomeSubCluster
+        WHERE app_rank <= @limit_IN;
 
     END TRY
 
@@ -150,16 +150,16 @@ IF OBJECT_ID ( '[sp_getApplicationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getApplicationHomeSubCluster]
-    @applicationId VARCHAR(64),
-    @homeSubCluster VARCHAR(256) OUTPUT
+    @applicationId_IN VARCHAR(64),
+    @homeSubCluster_OUT VARCHAR(256) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @homeSubCluster = [homeSubCluster]
+        SELECT @homeSubCluster_OUT = [homeSubCluster]
         FROM [dbo].[applicationsHomeSubCluster]
-        WHERE [applicationId] = @applicationid;
+        WHERE [applicationId] = @applicationId_IN;
 
     END TRY
 
@@ -181,8 +181,8 @@ IF OBJECT_ID ( '[sp_deleteApplicationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_deleteApplicationHomeSubCluster]
-    @applicationId VARCHAR(64),
-    @rowCount int OUTPUT
+    @applicationId_IN VARCHAR(64),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -190,8 +190,8 @@ AS BEGIN
         BEGIN TRAN
 
             DELETE FROM [dbo].[applicationsHomeSubCluster]
-            WHERE [applicationId] = @applicationId;
-            SELECT @rowCount = @@ROWCOUNT;
+            WHERE [applicationId] = @applicationId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -215,15 +215,15 @@ IF OBJECT_ID ( '[sp_registerSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_registerSubCluster]
-    @subClusterId VARCHAR(256),
-    @amRMServiceAddress VARCHAR(256),
-    @clientRMServiceAddress VARCHAR(256),
-    @rmAdminServiceAddress VARCHAR(256),
-    @rmWebServiceAddress VARCHAR(256),
-    @state VARCHAR(32),
-    @lastStartTime BIGINT,
-    @capability VARCHAR(6000),
-    @rowCount int OUTPUT
+    @subClusterId_IN VARCHAR(256),
+    @amRMServiceAddress_IN VARCHAR(256),
+    @clientRMServiceAddress_IN VARCHAR(256),
+    @rmAdminServiceAddress_IN VARCHAR(256),
+    @rmWebServiceAddress_IN VARCHAR(256),
+    @state_IN VARCHAR(32),
+    @lastStartTime_IN BIGINT,
+    @capability_IN VARCHAR(6000),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -231,7 +231,7 @@ AS BEGIN
         BEGIN TRAN
 
             DELETE FROM [dbo].[membership]
-            WHERE [subClusterId] = @subClusterId;
+            WHERE [subClusterId] = @subClusterId_IN;
             INSERT INTO [dbo].[membership] (
                 [subClusterId],
                 [amRMServiceAddress],
@@ -243,16 +243,16 @@ AS BEGIN
                 [lastStartTime],
                 [capability] )
             VALUES (
-                @subClusterId,
-                @amRMServiceAddress,
-                @clientRMServiceAddress,
-                @rmAdminServiceAddress,
-                @rmWebServiceAddress,
+                @subClusterId_IN,
+                @amRMServiceAddress_IN,
+                @clientRMServiceAddress_IN,
+                @rmAdminServiceAddress_IN,
+                @rmWebServiceAddress_IN,
                 GETUTCDATE(),
-                @state,
-                @lastStartTime,
-                @capability);
-            SELECT @rowCount = @@ROWCOUNT;
+                @state_IN,
+                @lastStartTime_IN,
+                @capability_IN);
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -303,32 +303,32 @@ IF OBJECT_ID ( '[sp_getSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getSubCluster]
-    @subClusterId VARCHAR(256),
-    @amRMServiceAddress VARCHAR(256) OUTPUT,
-    @clientRMServiceAddress VARCHAR(256) OUTPUT,
-    @rmAdminServiceAddress VARCHAR(256) OUTPUT,
-    @rmWebServiceAddress VARCHAR(256) OUTPUT,
-    @lastHeartbeat DATETIME2 OUTPUT,
-    @state VARCHAR(256) OUTPUT,
-    @lastStartTime BIGINT OUTPUT,
-    @capability VARCHAR(6000) OUTPUT
+    @subClusterId_IN VARCHAR(256),
+    @amRMServiceAddress_OUT VARCHAR(256) OUTPUT,
+    @clientRMServiceAddress_OUT VARCHAR(256) OUTPUT,
+    @rmAdminServiceAddress_OUT VARCHAR(256) OUTPUT,
+    @rmWebServiceAddress_OUT VARCHAR(256) OUTPUT,
+    @lastHeartBeat_OUT DATETIME2 OUTPUT,
+    @state_OUT VARCHAR(256) OUTPUT,
+    @lastStartTime_OUT BIGINT OUTPUT,
+    @capability_OUT VARCHAR(6000) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
         BEGIN TRAN
 
-            SELECT @subClusterId = [subClusterId],
-                   @amRMServiceAddress = [amRMServiceAddress],
-                   @clientRMServiceAddress = [clientRMServiceAddress],
-                   @rmAdminServiceAddress = [rmAdminServiceAddress],
-                   @rmWebServiceAddress = [rmWebServiceAddress],
-                   @lastHeartBeat = [lastHeartBeat],
-                   @state = [state],
-                   @lastStartTime = [lastStartTime],
-                   @capability = [capability]
+            SELECT @subClusterId_IN = [subClusterId],
+                   @amRMServiceAddress_OUT = [amRMServiceAddress],
+                   @clientRMServiceAddress_OUT = [clientRMServiceAddress],
+                   @rmAdminServiceAddress_OUT = [rmAdminServiceAddress],
+                   @rmWebServiceAddress_OUT = [rmWebServiceAddress],
+                   @lastHeartBeat_OUT = [lastHeartBeat],
+                   @state_OUT = [state],
+                   @lastStartTime_OUT = [lastStartTime],
+                   @capability_OUT = [capability]
             FROM [dbo].[membership]
-            WHERE [subClusterId] = @subClusterId
+            WHERE [subClusterId] = @subClusterId_IN
 
         COMMIT TRAN
     END TRY
@@ -353,10 +353,10 @@ IF OBJECT_ID ( '[sp_subClusterHeartbeat]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_subClusterHeartbeat]
-    @subClusterId VARCHAR(256),
-    @state VARCHAR(256),
-    @capability VARCHAR(6000),
-    @rowCount int OUTPUT
+    @subClusterId_IN VARCHAR(256),
+    @state_IN VARCHAR(256),
+    @capability_IN VARCHAR(6000),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -364,11 +364,11 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[membership]
-            SET [state] = @state,
+            SET [state] = @state_IN,
                 [lastHeartbeat] = GETUTCDATE(),
-                [capability] = @capability
-            WHERE [subClusterId] = @subClusterId;
-            SELECT @rowCount = @@ROWCOUNT;
+                [capability] = @capability_IN
+            WHERE [subClusterId] = @subClusterId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -392,9 +392,9 @@ IF OBJECT_ID ( '[sp_deregisterSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_deregisterSubCluster]
-    @subClusterId VARCHAR(256),
-    @state VARCHAR(256),
-    @rowCount int OUTPUT
+    @subClusterId_IN VARCHAR(256),
+    @state_IN VARCHAR(256),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -402,9 +402,9 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[membership]
-            SET [state] = @state
-            WHERE [subClusterId] = @subClusterId;
-            SELECT @rowCount = @@ROWCOUNT;
+            SET [state] = @state_IN
+            WHERE [subClusterId] = @subClusterId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -428,10 +428,10 @@ IF OBJECT_ID ( '[sp_setPolicyConfiguration]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_setPolicyConfiguration]
-    @queue VARCHAR(256),
-    @policyType VARCHAR(256),
-    @params VARBINARY(512),
-    @rowCount int OUTPUT
+    @queue_IN VARCHAR(256),
+    @policyType_IN VARCHAR(256),
+    @params_IN VARBINARY(512),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -439,16 +439,16 @@ AS BEGIN
         BEGIN TRAN
 
             DELETE FROM [dbo].[policies]
-            WHERE [queue] = @queue;
+            WHERE [queue] = @queue_IN;
             INSERT INTO [dbo].[policies] (
                 [queue],
                 [policyType],
                 [params])
             VALUES (
-                @queue,
-                @policyType,
-                @params);
-            SELECT @rowCount = @@ROWCOUNT;
+                @queue_IN,
+                @policyType_IN,
+                @params_IN);
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -472,18 +472,18 @@ IF OBJECT_ID ( '[sp_getPolicyConfiguration]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getPolicyConfiguration]
-    @queue VARCHAR(256),
-    @policyType VARCHAR(256) OUTPUT,
-    @params VARBINARY(6000) OUTPUT
+    @queue_IN VARCHAR(256),
+    @policyType_OUT VARCHAR(256) OUTPUT,
+    @params_OUT VARBINARY(6000) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @policyType = [policyType],
-               @params = [params]
+        SELECT @policyType_OUT = [policyType],
+               @params_OUT = [params]
         FROM [dbo].[policies]
-        WHERE [queue] = @queue
+        WHERE [queue] = @queue_IN
 
     END TRY
 
@@ -524,15 +524,15 @@ AS BEGIN
 END;
 GO
 
-IF OBJECT_ID ( '[sp_addApplicationHomeSubCluster]', 'P' ) IS NOT NULL
-    DROP PROCEDURE [sp_addApplicationHomeSubCluster];
+IF OBJECT_ID ( '[sp_addReservationHomeSubCluster]', 'P' ) IS NOT NULL
+    DROP PROCEDURE [sp_addReservationHomeSubCluster];
 GO
 
 CREATE PROCEDURE [dbo].[sp_addReservationHomeSubCluster]
-    @reservationId VARCHAR(128),
-    @homeSubCluster VARCHAR(256),
-    @storedHomeSubCluster VARCHAR(256) OUTPUT,
-    @rowCount int OUTPUT
+    @reservationId_IN VARCHAR(128),
+    @homeSubCluster_IN VARCHAR(256),
+    @storedHomeSubCluster_OUT VARCHAR(256) OUTPUT,
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -542,21 +542,21 @@ AS BEGIN
             -- Otherwise don't change the current mapping.
             IF NOT EXISTS (SELECT TOP 1 *
                        FROM [dbo].[reservationsHomeSubCluster]
-                       WHERE [reservationId] = @reservationId)
+                       WHERE [reservationId] = @reservationId_IN)
 
                 INSERT INTO [dbo].[reservationsHomeSubCluster] (
                     [reservationId],
                     [homeSubCluster])
                 VALUES (
-                    @reservationId,
-                    @homeSubCluster);
+                    @reservationId_IN,
+                    @homeSubCluster_IN);
             -- End of the IF block
 
-            SELECT @rowCount = @@ROWCOUNT;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
-            SELECT @storedHomeSubCluster = [homeSubCluster]
+            SELECT @storedHomeSubCluster_OUT = [homeSubCluster]
             FROM [dbo].[reservationsHomeSubCluster]
-            WHERE [reservationId] = @reservationId;
+            WHERE [reservationId] = @reservationId_IN;
 
         COMMIT TRAN
     END TRY
@@ -580,9 +580,9 @@ IF OBJECT_ID ( '[sp_updateReservationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_updateReservationHomeSubCluster]
-    @reservationId VARCHAR(128),
-    @homeSubCluster VARCHAR(256),
-    @rowCount int OUTPUT
+    @reservationId_IN VARCHAR(128),
+    @homeSubCluster_IN VARCHAR(256),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -590,9 +590,9 @@ AS BEGIN
         BEGIN TRAN
 
             UPDATE [dbo].[reservationsHomeSubCluster]
-            SET [homeSubCluster] = @homeSubCluster
-            WHERE [reservationId] = @reservationId;
-            SELECT @rowCount = @@ROWCOUNT;
+            SET [homeSubCluster] = @homeSubCluster_IN
+            WHERE [reservationId] = @reservationId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY
@@ -641,16 +641,16 @@ IF OBJECT_ID ( '[sp_getReservationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_getReservationHomeSubCluster]
-    @reservationId VARCHAR(128),
-    @homeSubCluster VARCHAR(256) OUTPUT
+    @reservationId_IN VARCHAR(128),
+    @homeSubCluster_OUT VARCHAR(256) OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
     BEGIN TRY
 
-        SELECT @homeSubCluster = [homeSubCluster]
+        SELECT @homeSubCluster_OUT = [homeSubCluster]
         FROM [dbo].[reservationsHomeSubCluster]
-        WHERE [reservationId] = @reservationId;
+        WHERE [reservationId] = @reservationId_IN;
 
     END TRY
 
@@ -672,8 +672,8 @@ IF OBJECT_ID ( '[sp_deleteReservationHomeSubCluster]', 'P' ) IS NOT NULL
 GO
 
 CREATE PROCEDURE [dbo].[sp_deleteReservationHomeSubCluster]
-    @reservationId VARCHAR(128),
-    @rowCount int OUTPUT
+    @reservationId_IN VARCHAR(128),
+    @rowCount_OUT int OUTPUT
 AS BEGIN
     DECLARE @errorMessage nvarchar(4000)
 
@@ -681,8 +681,8 @@ AS BEGIN
         BEGIN TRAN
 
             DELETE FROM [dbo].[reservationsHomeSubCluster]
-            WHERE [reservationId] = @reservationId;
-            SELECT @rowCount = @@ROWCOUNT;
+            WHERE [reservationId] = @reservationId_IN;
+            SELECT @rowCount_OUT = @@ROWCOUNT;
 
         COMMIT TRAN
     END TRY

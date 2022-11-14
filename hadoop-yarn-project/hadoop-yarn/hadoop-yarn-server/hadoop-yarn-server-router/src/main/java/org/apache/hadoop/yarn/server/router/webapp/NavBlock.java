@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 
 import java.util.List;
-
 /**
  * Navigation block for the Router Web UI.
  */
@@ -49,18 +48,14 @@ public class NavBlock extends RouterBlock {
 
     List<String> subClusterIds = getActiveSubClusterIds();
 
-    Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList1 =
-        mainList.li().a(url("nodes"), "Nodes").ul().$style("padding:0.3em 1em 0.1em 2em");
-
     // ### nodes info
-    subAppsList1.li().__();
-    for (String subClusterId : subClusterIds) {
-      subAppsList1.li().a(url("nodes", subClusterId), subClusterId).__();
-    }
-    subAppsList1.__().__();
+    initNodesMenu(mainList, subClusterIds);
+
+    // ### nodelabels info
+    initNodeLabelsMenu(mainList, subClusterIds);
 
     // ### applications info
-    mainList.li().a(url("apps"), "Applications").__();
+    initApplicationsMenu(mainList, subClusterIds);
 
     // ### tools
     Hamlet.DIV<Hamlet> sectionBefore = mainList.__();

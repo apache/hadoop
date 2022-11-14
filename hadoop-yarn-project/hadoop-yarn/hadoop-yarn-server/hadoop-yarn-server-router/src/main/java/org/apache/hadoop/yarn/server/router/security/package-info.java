@@ -16,16 +16,4 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timeline;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-@Retention(value = RetentionPolicy.RUNTIME)
-@Target(value = {ElementType.METHOD})
-public @interface TimelineVersion {
-  float value() default TimelineVersionWatcher.DEFAULT_TIMELINE_VERSION;
-}
-
+package org.apache.hadoop.yarn.server.router.security;

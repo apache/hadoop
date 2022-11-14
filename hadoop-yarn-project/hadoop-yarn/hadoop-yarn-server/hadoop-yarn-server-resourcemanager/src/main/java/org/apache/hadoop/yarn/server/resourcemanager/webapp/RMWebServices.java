@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -138,6 +139,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -1399,6 +1401,32 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       PartitionInfo partitionInfo =
           new PartitionInfo(new ResourceInfo(resource));
       nodeLabelsInfo.add(new NodeLabelInfo(label, partitionInfo));
+    }
+
+    return new NodeLabelsInfo(nodeLabelsInfo);
+  }
+
+  @GET
+  @Path(RMWSConsts.GET_RM_NODE_LABELS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NodeLabelsInfo getRMNodeLabels(@Context HttpServletRequest hsr)
+      throws IOException {
+
+    initForReadableEndpoints();
+    RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
+
+    ArrayList<NodeLabelInfo> nodeLabelsInfo = new ArrayList<>();
+    for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
+      String labelName = info.getLabelName().isEmpty() ?
+          NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName();
+      int activeNMs = info.getNumActiveNMs();
+      PartitionInfo partitionInfo =
+          new PartitionInfo(new ResourceInfo(info.getResource()));
+      NodeLabel nodeLabel = NodeLabel.newInstance(labelName, info.getIsExclusive());
+      NodeLabelInfo nodeLabelInfo = new NodeLabelInfo(nodeLabel, partitionInfo);
+      nodeLabelInfo.setActiveNMs(activeNMs);
+      nodeLabelsInfo.add(nodeLabelInfo);
     }
 
     return new NodeLabelsInfo(nodeLabelsInfo);
