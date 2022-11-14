@@ -89,19 +89,19 @@ public final class AbfsClientThrottlingIntercept {
         break;
       case ReadFile:
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
-        contentLength = getContentLengthIfKnown(range);
-        long bytesToBeAddedInMetric = contentLength;
+        long contentLengthRequested = getContentLengthIfKnown(range);
+        long bytesToBeAddedInMetric = contentLengthRequested;
 
         long contentLengthReceived = abfsHttpOperation.getBytesReceived();
         if (status == HttpURLConnection.HTTP_PARTIAL
-            && contentLength > contentLengthReceived) {
+            && contentLengthRequested > contentLengthReceived) {
           /*
            * In case of server response status == 206 (partial content) and the
            * contentLength received is lesser than the requested length, we have
            * to take it as a throttling case and hence we need to add the remaining
            * bytes (contentLengthReceived - contentLength) in failure data-point.
            * */
-          bytesToBeAddedInMetric = contentLength - contentLengthReceived;
+          bytesToBeAddedInMetric = contentLengthRequested - contentLengthReceived;
           isFailedOperation = true;
         }
         if (bytesToBeAddedInMetric > 0) {
