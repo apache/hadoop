@@ -481,8 +481,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * @param blackList Blacklist avoid repeated calls to unavailable subCluster.
    * @param hsr HttpServletRequest.
    * @param retryCount number of retries.
-   * @return Get response, If the response is empty or status not equal SC_ACCEPTED, the request fails,
-   * if the response is not empty and status equal SC_OK, the request is successful.
+   * @return Get response, If the response is empty or status not equal SC_ACCEPTED,
+   * the request fails, if the response is not empty and status equal SC_OK,
+   * the request is successful.
    * @throws YarnException yarn exception.
    * @throws IOException io error.
    */
