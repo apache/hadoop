@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.extensions.FixedSASTokenProvider;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -909,6 +910,57 @@ public class AbfsConfiguration{
       LOG.trace("Initializing {}", sasTokenProviderClass.getName());
       sasTokenProvider.initialize(rawConfig, accountName);
       LOG.trace("{} init complete", sasTokenProviderClass.getName());
+      return sasTokenProvider;
+    } catch (Exception e) {
+      throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
+    }
+  }
+
+  public SASTokenProvider getSASTokenProvider(boolean isNamespaceEnabled) throws AzureBlobFileSystemException {
+    // currently kept as a second method definition to not disturb the TestAccountConfiguration tests
+    // which test the precedence of account specific and global sas provider
+    AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    if (authType != AuthType.SAS) {
+      throw new SASTokenProviderException(String.format(
+              "Invalid auth type: %s is being used, expecting SAS", authType));
+    }
+
+    try {
+      String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+      Class<? extends SASTokenProvider> sasTokenProviderClass =
+              getTokenProviderClass(authType, configKey, null,
+                      SASTokenProvider.class);
+      String fixedConfigKey = FS_AZURE_SAS_FIXED_TOKEN;
+      String fixedToken = this.rawConfig.get(fixedConfigKey, null);
+
+      Preconditions.checkArgument(sasTokenProviderClass != null || fixedToken != null,
+              String.format("The configuration value for both \"%s\" and \"%s\" cannot be invalid.", configKey, fixedConfigKey));
+
+      Class<? extends SASTokenProvider> finalSasTokenProviderClass = null;
+      if (sasTokenProviderClass != null && fixedToken != null) {
+        if (isNamespaceEnabled)
+          throw new InvalidConfigurationValueException("A clear setting of either global or uesr delegation SAS provider is required.");
+        else {
+          // precedence given to fixed SAS in case of non hns account
+          finalSasTokenProviderClass = FixedSASTokenProvider.class;
+        }
+      }
+      else if (sasTokenProviderClass != null) {
+        // document that access control exceptions might be encountered with filesystem level operations
+        finalSasTokenProviderClass = sasTokenProviderClass;
+      }
+      else {
+        finalSasTokenProviderClass = FixedSASTokenProvider.class;
+      }
+
+      SASTokenProvider sasTokenProvider = ReflectionUtils
+              .newInstance(finalSasTokenProviderClass, rawConfig);
+      Preconditions.checkArgument(sasTokenProvider != null,
+              String.format("Failed to initialize %s", finalSasTokenProviderClass));
+
+      LOG.trace("Initializing {}", finalSasTokenProviderClass.getName());
+      sasTokenProvider.initialize(rawConfig, accountName);
+      LOG.trace("{} init complete", finalSasTokenProviderClass.getName());
       return sasTokenProvider;
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
