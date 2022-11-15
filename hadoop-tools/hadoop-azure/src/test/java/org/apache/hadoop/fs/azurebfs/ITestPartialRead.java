@@ -117,7 +117,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
          * 2. return 1MB data for 50% occurrence and 0B for 50% occurrence to test-client.
          */
         int size;
-        if(oneMBSupplier[0]) {
+        if (oneMBSupplier[0]) {
           size = ONE_MB;
           oneMBSupplier[0] = false;
         } else {
@@ -230,84 +230,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         .isEqualTo(3);
   }
 
-  private void setMocks(final AzureBlobFileSystem fs,
-      final AbfsClient originalClient,
-      final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
-    AbfsClient abfsClient = Mockito.spy(originalClient);
-    MockClassUtils.mockAbfsClientGetAbfsRestOperation((getRestOpMockInvocation, objects) -> {
-      AbfsRestOperation abfsRestOperation = MockClassUtils.createAbfsRestOperation(
-          getRestOpMockInvocation.getArgument(0, AbfsRestOperationType.class),
-          (AbfsClient) objects[0],
-          getRestOpMockInvocation.getArgument(1, String.class),
-          getRestOpMockInvocation.getArgument(2, URL.class),
-          getRestOpMockInvocation.getArgument(3, List.class),
-          getRestOpMockInvocation.getArgument(4, byte[].class),
-          getRestOpMockInvocation.getArgument(5, Integer.class),
-          getRestOpMockInvocation.getArgument(6, Integer.class),
-          getRestOpMockInvocation.getArgument(7, String.class)
-      );
-      if(AbfsRestOperationType.ReadFile == getRestOpMockInvocation.getArgument(0, AbfsRestOperationType.class)) {
-        AbfsRestOperation mockRestOp = Mockito.spy(abfsRestOperation);
-        MockClassUtils.mockAbfsRestOperationGetHttpOperation((getHttpOpInvocationMock, getHttpOpObjects) -> {
-          AbfsRestOperation op = (AbfsRestOperation) getHttpOpObjects[0];
-          AbfsHttpOperation httpOperation = new AbfsHttpOperation(op.getUrl(), op.getMethod(), op.getRequestHeaders());
-          AbfsHttpOperation spiedOp = Mockito.spy(httpOperation);
-          MockClassUtils.mockAbfsHttpOperationProcessResponse((processResponseInvokation, processResponseObjs) -> {
-            byte[] buffer = processResponseInvokation.getArgument(0, byte[].class);
-            int offset = processResponseInvokation.getArgument(1, Integer.class);
-            int length = processResponseInvokation.getArgument(2, Integer.class);
-
-            AbfsHttpOperation abfsHttpOperation = (AbfsHttpOperation) processResponseObjs[0];
-
-            MockHttpOperationTestInterceptResult result = mockHttpOperationTestIntercept.intercept(abfsHttpOperation, buffer, offset, length);
-            MockClassUtils.setHttpOpStatus(result.getStatus(), abfsHttpOperation);
-            MockClassUtils.setHttpOpBytesReceived(result.getBytesRead(), abfsHttpOperation);
-            if(result.getException() != null) {
-              throw result.getException();
-            }
-            return null;
-          }, spiedOp);
-          return spiedOp;
-        }, mockRestOp);
-        return mockRestOp;
-      }
-      return abfsRestOperation;
-    }, abfsClient);
-    fs.getAbfsStore().setClient(abfsClient);
-  }
-
-  private void callActualServerAndAssertBehaviour(final AbfsHttpOperation mockHttpOperation,
-      final byte[] buffer,
-      final int offset,
-      final int length,
-      final ActualServerReadByte actualServerReadByte,
-      final int byteLenMockServerReturn, FSDataInputStream inputStream) throws IOException {
-    LOG.info("length: " + length + "; offset: " + offset);
-    Mockito.doCallRealMethod().when(mockHttpOperation).processResponse(Mockito.nullable(byte[].class), Mockito.nullable(Integer.class), Mockito.nullable(Integer.class));
-    mockHttpOperation.processResponse(buffer, offset, length);
-    int iterator = 0;
-    int currPointer = actualServerReadByte.currPointer;
-    while (actualServerReadByte.currPointer < actualServerReadByte.size
-        && iterator < buffer.length) {
-      actualServerReadByte.bytes[actualServerReadByte.currPointer++]
-          = buffer[iterator++];
-    }
-    actualServerReadByte.currPointer = currPointer + byteLenMockServerReturn;
-    Boolean isOriginalAndReceivedFileEqual = true;
-    if (actualServerReadByte.currPointer == actualServerReadByte.size) {
-      for (int i = 0; i < actualServerReadByte.size; i++) {
-        if (actualServerReadByte.bytes[i]
-            != actualServerReadByte.originalFile[i]) {
-          isOriginalAndReceivedFileEqual = false;
-          break;
-        }
-      }
-      Assertions.assertThat(isOriginalAndReceivedFileEqual)
-          .describedAs("Parsed data is not equal to original file")
-          .isTrue();
-    }
-  }
-
   @Test
   public void testPartialReadWithConnectionReset() throws IOException {
     int fileSize = 4 * ONE_MB;
@@ -369,6 +291,116 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         .isEqualTo(3);
   }
 
+  private void setMocks(final AzureBlobFileSystem fs,
+      final AbfsClient originalClient,
+      final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
+    AbfsClient abfsClient = Mockito.spy(originalClient);
+    MockClassUtils.mockAbfsClientGetAbfsRestOperation(
+        (getRestOpMockInvocation, objects) -> {
+          AbfsRestOperation abfsRestOperation
+              = MockClassUtils.createAbfsRestOperation(
+              getRestOpMockInvocation.getArgument(0,
+                  AbfsRestOperationType.class),
+              (AbfsClient) objects[0],
+              getRestOpMockInvocation.getArgument(1, String.class),
+              getRestOpMockInvocation.getArgument(2, URL.class),
+              getRestOpMockInvocation.getArgument(3, List.class),
+              getRestOpMockInvocation.getArgument(4, byte[].class),
+              getRestOpMockInvocation.getArgument(5, Integer.class),
+              getRestOpMockInvocation.getArgument(6, Integer.class),
+              getRestOpMockInvocation.getArgument(7, String.class)
+          );
+          if (AbfsRestOperationType.ReadFile
+              == getRestOpMockInvocation.getArgument(0,
+              AbfsRestOperationType.class)) {
+            AbfsRestOperation mockRestOp = Mockito.spy(abfsRestOperation);
+            setMockAbfsRestOperation(mockHttpOperationTestIntercept,
+                mockRestOp);
+            return mockRestOp;
+          }
+          return abfsRestOperation;
+        }, abfsClient);
+    fs.getAbfsStore().setClient(abfsClient);
+  }
+
+  private void setMockAbfsRestOperation(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept,
+      final AbfsRestOperation mockRestOp) throws IOException {
+    MockClassUtils.mockAbfsRestOperationGetHttpOperation(
+        (getHttpOpInvocationMock, getHttpOpObjects) -> {
+          AbfsRestOperation op
+              = (AbfsRestOperation) getHttpOpObjects[0];
+          AbfsHttpOperation httpOperation = new AbfsHttpOperation(
+              op.getUrl(), op.getMethod(), op.getRequestHeaders());
+          AbfsHttpOperation spiedOp = Mockito.spy(httpOperation);
+          setMockAbfsRestOperation(mockHttpOperationTestIntercept, spiedOp);
+          return spiedOp;
+        }, mockRestOp);
+  }
+
+  private void setMockAbfsRestOperation(final MockHttpOperationTestIntercept mockHttpOperationTestIntercept,
+      final AbfsHttpOperation spiedOp) throws IOException {
+    MockClassUtils.mockAbfsHttpOperationProcessResponse(
+        (processResponseInvokation, processResponseObjs) -> {
+          byte[] buffer = processResponseInvokation.getArgument(0,
+              byte[].class);
+          int offset = processResponseInvokation.getArgument(1,
+              Integer.class);
+          int length = processResponseInvokation.getArgument(2,
+              Integer.class);
+
+          AbfsHttpOperation abfsHttpOperation
+              = (AbfsHttpOperation) processResponseObjs[0];
+
+          MockHttpOperationTestInterceptResult result
+              = mockHttpOperationTestIntercept.intercept(
+              abfsHttpOperation, buffer, offset, length);
+          MockClassUtils.setHttpOpStatus(result.getStatus(),
+              abfsHttpOperation);
+          MockClassUtils.setHttpOpBytesReceived(
+              result.getBytesRead(), abfsHttpOperation);
+          if (result.getException() != null) {
+            throw result.getException();
+          }
+          return null;
+        }, spiedOp);
+  }
+
+  private void callActualServerAndAssertBehaviour(final AbfsHttpOperation mockHttpOperation,
+      final byte[] buffer,
+      final int offset,
+      final int length,
+      final ActualServerReadByte actualServerReadByte,
+      final int byteLenMockServerReturn, FSDataInputStream inputStream)
+      throws IOException {
+    LOG.info("length: " + length + "; offset: " + offset);
+    Mockito.doCallRealMethod()
+        .when(mockHttpOperation)
+        .processResponse(Mockito.nullable(byte[].class),
+            Mockito.nullable(Integer.class), Mockito.nullable(Integer.class));
+    mockHttpOperation.processResponse(buffer, offset, length);
+    int iterator = 0;
+    int currPointer = actualServerReadByte.currPointer;
+    while (actualServerReadByte.currPointer < actualServerReadByte.size
+        && iterator < buffer.length) {
+      actualServerReadByte.bytes[actualServerReadByte.currPointer++]
+          = buffer[iterator++];
+    }
+    actualServerReadByte.currPointer = currPointer + byteLenMockServerReturn;
+    Boolean isOriginalAndReceivedFileEqual = true;
+    if (actualServerReadByte.currPointer == actualServerReadByte.size) {
+      for (int i = 0; i < actualServerReadByte.size; i++) {
+        if (actualServerReadByte.bytes[i]
+            != actualServerReadByte.originalFile[i]) {
+          isOriginalAndReceivedFileEqual = false;
+          break;
+        }
+      }
+      Assertions.assertThat(isOriginalAndReceivedFileEqual)
+          .describedAs("Parsed data is not equal to original file")
+          .isTrue();
+    }
+  }
+
   private class ActualServerReadByte {
 
     byte[] bytes;
@@ -384,10 +416,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       this.size = size;
       this.originalFile = originalFile;
     }
-  }
-  
-  public class AbfsHttpOperationWrapper {
-    public AbfsHttpOperation abfsHttpOperation;
   }
 
 }

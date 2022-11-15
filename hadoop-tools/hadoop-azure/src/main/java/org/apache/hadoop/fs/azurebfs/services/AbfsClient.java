@@ -793,7 +793,8 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+  @VisibleForTesting
+  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,
