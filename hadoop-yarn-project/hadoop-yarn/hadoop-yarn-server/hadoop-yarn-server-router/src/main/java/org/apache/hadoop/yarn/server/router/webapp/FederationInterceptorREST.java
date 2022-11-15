@@ -153,6 +153,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   @Override
   public void init(String user) {
+
+    super.init(user);
+
     federationFacade = FederationStateStoreFacade.getInstance();
     rand = new Random();
 
@@ -244,7 +247,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           .isAssignableFrom(interceptorClass)) {
         interceptorInstance = (DefaultRequestInterceptorREST) ReflectionUtils
             .newInstance(interceptorClass, conf);
-
+        String userName = getUser().getUserName();
+        interceptorInstance.init(userName);
       } else {
         throw new YarnRuntimeException(
             "Class: " + interceptorClassName + " not instance of "
@@ -1278,8 +1282,37 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       routerMetrics.incrNodeToLabelsFailedRetrieved();
       RouterServerUtil.logAndThrowIOException("getNodeToLabels error.", e);
     }
-    routerMetrics.incrGetAppStatisticsFailedRetrieved();
+    routerMetrics.incrNodeToLabelsFailedRetrieved();
     throw new RuntimeException("getNodeToLabels Failed.");
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{HttpServletRequest.class};
+      Object[] args = new Object[]{hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("getRMNodeLabels", argsClasses, args);
+      Map<SubClusterInfo, NodeLabelsInfo> nodeToLabelsInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, NodeLabelsInfo.class);
+      NodeLabelsInfo nodeToLabelsInfo =
+          RouterWebServiceUtil.mergeNodeLabelsInfo(nodeToLabelsInfoMap);
+      if (nodeToLabelsInfo != null) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededGetRMNodeLabelsRetrieved(stopTime - startTime);
+        return nodeToLabelsInfo;
+      }
+    } catch (NotFoundException e) {
+      routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("get all active sub cluster(s) error.", e);
+    } catch (YarnException e) {
+      routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+      RouterServerUtil.logAndThrowIOException("getRMNodeLabels error.", e);
+    }
+    routerMetrics.incrGetRMNodeLabelsFailedRetrieved();
+    throw new RuntimeException("getRMNodeLabels Failed.");
   }
 
   @Override
