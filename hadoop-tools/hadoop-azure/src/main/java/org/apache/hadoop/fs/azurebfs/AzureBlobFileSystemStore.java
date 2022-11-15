@@ -197,7 +197,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException Throw IOE in case of failure during constructing.
    */
   public AzureBlobFileSystemStore(
-      AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
+      AzureBlobFileSystemStoreBuilder abfsStoreBuilder, TracingContext tracingContext) throws IOException {
     this.uri = abfsStoreBuilder.uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
@@ -239,7 +239,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
-    initializeClient(uri, fileSystemName, accountName, useHttps);
+    initializeClient(uri, fileSystemName, accountName, useHttps, tracingContext);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1572,7 +1572,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
-      String accountName, boolean isSecure)
+      String accountName, boolean isSecure, TracingContext tracingContext)
       throws IOException {
     if (this.client != null) {
       return;
@@ -1608,20 +1608,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS token provider");
-      sasTokenProvider = abfsConfiguration.getSASTokenProvider();
+      sasTokenProvider = abfsConfiguration.getSASTokenProvider(getIsNamespaceEnabled(tracingContext));
     } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,
             abfsConfiguration.getRawConfiguration());
     }
-
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
     if (tokenProvider != null) {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           tokenProvider,
           populateAbfsClientContext());
     } else {
+      // determine whether to use config or tokenProvider
+
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           sasTokenProvider,
           populateAbfsClientContext());
