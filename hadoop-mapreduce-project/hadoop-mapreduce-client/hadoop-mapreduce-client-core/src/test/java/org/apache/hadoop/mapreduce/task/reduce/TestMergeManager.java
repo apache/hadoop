@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,7 +43,6 @@ import org.apache.hadoop.mapred.MapOutputFile;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
-import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -217,8 +215,7 @@ public class TestMergeManager {
 
   @SuppressWarnings({ "unchecked", "deprecation" })
   @Test(timeout=10000)
-  public void testOnDiskMerger() throws IOException, URISyntaxException,
-    InterruptedException {
+  public void testOnDiskMerger() throws IOException {
     JobConf jobConf = new JobConf();
     final int SORT_FACTOR = 5;
     jobConf.setInt(MRJobConfig.IO_SORT_FACTOR, SORT_FACTOR);
@@ -229,12 +226,8 @@ public class TestMergeManager {
       new MergeManagerImpl<IntWritable, IntWritable>(null, jobConf, fs, null
         , null, null, null, null, null, null, null, null, null, mapOutputFile);
 
-    MergeThread<MapOutput<IntWritable, IntWritable>, IntWritable, IntWritable>
-      onDiskMerger = (MergeThread<MapOutput<IntWritable, IntWritable>,
-        IntWritable, IntWritable>) Whitebox.getInternalState(manager,
-          "onDiskMerger");
-    int mergeFactor = (Integer) Whitebox.getInternalState(onDiskMerger,
-      "mergeFactor");
+    MergeThread onDiskMerger = manager.getOnDiskMerger();
+    int mergeFactor = onDiskMerger.getMergeFactor();
 
     // make sure the io.sort.factor is set properly
     assertEquals(mergeFactor, SORT_FACTOR);
@@ -252,9 +245,7 @@ public class TestMergeManager {
     }
 
     //Check that the files pending to be merged are in sorted order.
-    LinkedList<List<CompressAwarePath>> pendingToBeMerged =
-      (LinkedList<List<CompressAwarePath>>) Whitebox.getInternalState(
-        onDiskMerger, "pendingToBeMerged");
+    LinkedList<List<CompressAwarePath>> pendingToBeMerged = onDiskMerger.getPendingToBeMerged();
     assertTrue("No inputs were added to list pending to merge",
       pendingToBeMerged.size() > 0);
     for(int i = 0; i < pendingToBeMerged.size(); ++i) {
