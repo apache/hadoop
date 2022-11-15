@@ -520,7 +520,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     for (final NamespaceInfo nsInfo : nsInfos) {
       String bpid = nsInfo.getBlockPoolID();
-      try (AutoCloseDataSetLock l = lockManager.writeLock(LockLevel.BLOCK_POOl, bpid)) {
+      try {
         fsVolume.addBlockPool(bpid, this.conf, this.timer);
         fsVolume.getVolumeMap(bpid, tempVolumeMap, ramDiskReplicaTracker);
       } catch (IOException e) {
