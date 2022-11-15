@@ -22,17 +22,17 @@ import java.io.IOException;
 
 /**
  * Interface to be instantiated with different behaviours by the test-classes
- * when using following mock classes:
+ * when using following spy of:
  * <ol>
- *   <li>{@link org.apache.hadoop.fs.azurebfs.services.MockAbfsClient}</li>
- *   <li>{@link org.apache.hadoop.fs.azurebfs.services.MockAbfsRestOperation}</li>
- *   <li>{@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperation}</li>
+ *   <li>{@link org.apache.hadoop.fs.azurebfs.services.AbfsClient}</li>
+ *   <li>{@link org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation}</li>
+ *   <li>{@link org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation}</li>
  * </ol>
  * */
 public interface MockHttpOperationTestIntercept {
 
   /**
-   * Called by {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperation#processResponse(byte[], int, int)}
+   * Called by spy of {@link org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation#processResponse(byte[], int, int)}
    * Implementation can define how the mocking has to be done for communication
    * between the client and the backend.
    * @return {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult}

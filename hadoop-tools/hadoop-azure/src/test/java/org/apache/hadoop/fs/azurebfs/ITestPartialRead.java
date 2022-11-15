@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingInterceptTestU
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
-import org.apache.hadoop.fs.azurebfs.services.MockAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsClientThrottlingAnalyzer;
 import org.apache.hadoop.fs.azurebfs.services.MockClassUtils;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept;
