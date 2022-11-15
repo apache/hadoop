@@ -85,6 +85,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -821,8 +822,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Verify that the bucket exists. This does not check permissions,
-   * not even read access.
+   * Verify that the bucket exists.
+   * TODO: Review: this used to call doesBucketExist in v1, which does not check permissions, not even read access.
    * Retry policy: retrying, translated.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
@@ -834,11 +835,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
             () -> {
-              s3V2.headBucket(HeadBucketRequest.builder()
-                  .bucket(bucket)
-                  .build());
-              return true;
-            }))) {
+          try {
+            s3V2.headBucket(HeadBucketRequest.builder()
+                .bucket(bucket)
+                .build());
+          } catch (NoSuchBucketException e) {
+            return false;
+          } catch (AwsServiceException ex) {
+            int statusCode = ex.statusCode();
+            if (statusCode == SC_404 || statusCode == SC_403) {
+              return false;
+            }
+          }
+          return true;
+        }))) {
       throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
           + "not exist");
     }
@@ -847,6 +857,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Verify that the bucket exists. This will correctly throw an exception
    * when credentials are invalid.
+   * TODO: Review. May be redundant in v2.
    * Retry policy: retrying, translated.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
@@ -1347,6 +1358,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Get the region of a bucket; fixing up the region so it can be used
    * in the builders of other AWS clients.
+   * TODO: Review. Used only for S3Guard?
    * Requires the caller to have the AWS role permission
    * {@code s3:GetBucketLocation}.
    * Retry policy: retrying, translated.
