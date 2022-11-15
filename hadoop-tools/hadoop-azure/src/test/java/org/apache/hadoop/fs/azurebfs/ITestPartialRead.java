@@ -114,7 +114,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final MockHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -191,7 +191,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final MockHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -241,7 +241,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
 
             AbfsHttpOperation abfsHttpOperation = (AbfsHttpOperation) processResponseObjs[0];
 
-            MockHttpOperationTestInterceptResult result = mockHttpOperationTestIntercept.intercept(null, buffer, offset, length);
+            MockHttpOperationTestInterceptResult result = mockHttpOperationTestIntercept.intercept(abfsHttpOperation, buffer, offset, length);
             MockClassUtils.setHttpOpStatus(result.getStatus(), abfsHttpOperation);
             MockClassUtils.setHttpOpBytesReceived(result.getBytesRead(), abfsHttpOperation);
             if(result.getException() != null) {
@@ -284,14 +284,20 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         .isEqualTo(3);
   }
 
-  private void callActualServerAndAssertBehaviour(final MockHttpOperation mockHttpOperation,
+  private void callActualServerAndAssertBehaviour(final AbfsHttpOperation mockHttpOperation,
       final byte[] buffer,
       final int offset,
       final int length,
       final ActualServerReadByte actualServerReadByte,
       final int byteLenMockServerReturn, FSDataInputStream inputStream) throws IOException {
     LOG.info("length: " + length + "; offset: " + offset);
-    inputStream.read(offset, buffer, 0, length);
+    Mockito.doCallRealMethod().when(mockHttpOperation).processResponse(Mockito.nullable(byte[].class), Mockito.nullable(Integer.class), Mockito.nullable(Integer.class));
+    mockHttpOperation.processResponse(buffer, offset, length);
+//    inputStream.read(offset, buffer, 0, length);
+//    inputStream.unbuffer();
+
+
+
 //    Assertions.assertThat(mockHttpOperation.getStatusCode() == HTTP_PARTIAL
 //            || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK)
 //        .describedAs("Http-response should have statusCode equal to 200 or 206")
@@ -336,7 +342,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final MockHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -345,7 +351,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
          * 2. return 1MB data with connection-reset exception to test-client.
          */
 
-        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset,
+        callActualServerAndAssertBehaviour(null, buffer, offset,
             length, actualServerReadByte, ONE_MB, fs.open(testPath));
 
         MockHttpOperationTestInterceptResult
@@ -403,6 +409,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       this.size = size;
       this.originalFile = originalFile;
     }
+  }
+  
+  public class AbfsHttpOperationWrapper {
+    public AbfsHttpOperation abfsHttpOperation;
   }
 
 }
