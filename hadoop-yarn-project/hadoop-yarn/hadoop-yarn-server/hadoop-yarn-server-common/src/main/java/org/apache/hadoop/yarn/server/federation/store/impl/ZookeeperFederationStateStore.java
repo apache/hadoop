@@ -1477,12 +1477,13 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * To ensure data consistency, we will use the synchronized keyword.
    *
    * For ZookeeperFederationStateStore, in order to reduce the interaction with ZK,
-   * we will apply for SequenceNum from ZK in batches(Apply when currentSeqNum >= currentMaxSeqNum),
+   * we will apply for SequenceNum from ZK in batches(Apply
+   * when currentSeqNum &gt;= currentMaxSeqNum),
    * and assign this value to the variable currentMaxSeqNum.
    *
    * When calling the method incrementDelegationTokenSeqNum,
-   * if currentSeqNum < currentMaxSeqNum, we return ++currentMaxSeqNum,
-   * When currentSeqNum >= currentMaxSeqNum, we re-apply SequenceNum from zk.
+   * if currentSeqNum &lt; currentMaxSeqNum, we return ++currentMaxSeqNum,
+   * When currentSeqNum &gt;= currentMaxSeqNum, we re-apply SequenceNum from zk.
    *
    * @return SequenceNum.
    */
