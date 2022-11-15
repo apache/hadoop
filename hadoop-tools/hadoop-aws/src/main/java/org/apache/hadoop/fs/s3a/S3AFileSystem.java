@@ -2094,8 +2094,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           innerRename(src, dst));
       LOG.debug("Copied {} bytes", bytesCopied);
       return true;
-    } catch (CompletionException e) {
-      throw extractException("rename(" + src +", " + dst + ")", src.toString(), e);
     } catch (SdkException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
@@ -3961,13 +3959,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Execute a PUT via the transfer manager, blocking for completion.
-   * If the waiting for completion is interrupted, the upload will be
-   * aborted before an {@code InterruptedIOException} is thrown.
    * @param putObjectRequest request
    * @param progress optional progress callback
    * @param putOptions put object options
    * @return the upload result
-   * @throws InterruptedIOException if the blocking was interrupted.
+   * @throws IOException IO failure
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
   PutObjectResponse executePut(
@@ -3975,7 +3971,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Progressable progress,
       final PutObjectOptions putOptions,
       final File file)
-      throws InterruptedIOException {
+      throws IOException {
     String key = putObjectRequest.key();
     long len = getPutRequestLength(putObjectRequest);
     ProgressableProgressListener listener =
@@ -3992,8 +3988,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Wait for an upload to complete.
-   * If the waiting for completion is interrupted, the upload will be
-   * aborted before an {@code InterruptedIOException} is thrown.
    * If the upload (or its result collection) failed, this is where
    * the failure is raised as an AWS exception.
    * Calls {@link #incrementPutCompletedStatistics(boolean, long)}
@@ -4001,27 +3995,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param key destination key
    * @param uploadInfo upload to wait for
    * @return the upload result
-   * @throws InterruptedIOException if the blocking was interrupted.
+   * @throws IOException IO failure
    */
   @Retries.OnceRaw
   CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
-      throws InterruptedIOException {
+      throws IOException {
     FileUpload upload = uploadInfo.getFileUpload();
-    // TODO: Check what this logic should be updated to. 
-    //  this no longer throws an interrupted exception.
-  //  try {
+    try {
       CompletedFileUpload result = upload.completionFuture().join();
       incrementPutCompletedStatistics(true, uploadInfo.getLength());
       return result;
-//    } catch (InterruptedException e) {
-//      LOG.info("Interrupted: aborting upload");
-//      incrementPutCompletedStatistics(false, uploadInfo.getLength());
-//      upload.completionFuture().cancel(true);
-//      throw (InterruptedIOException)
-//          new InterruptedIOException("Interrupted in PUT to "
-//              + keyToQualifiedPath(key))
-//          .initCause(e);
-//    }
+    } catch (CompletionException e) {
+      LOG.info("Interrupted: aborting upload");
+      incrementPutCompletedStatistics(false, uploadInfo.getLength());
+      throw extractException("upload", key, e);
+    }
   }
 
   /**
@@ -4345,28 +4333,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 //                      .addListener(progressListener))
                   .build());
 
-          CompletedCopy completedCopy = copy.completionFuture().join();
+          try {
+            CompletedCopy completedCopy = copy.completionFuture().join();
 
-          // TODO: Check what should happen for these exceptions.
-//          InterruptedException interruptedException =
-//              copyOutcome.getInterruptedException();
-//          if (interruptedException != null) {
-//            // copy interrupted: convert to an IOException.
-//            throw (IOException)new InterruptedIOException(
-//                "Interrupted copying " + srcKey
-//                    + " to " + dstKey + ", cancelling")
-//                .initCause(interruptedException);
-//          }
+// TODO: Check what should happen for these exceptions.
 //          SdkBaseException awsException = copyOutcome.getAwsException();
 //          if (awsException != null) {
 //            changeTracker.processException(awsException, "copy");
 //            throw awsException;
 //          }
-          CopyObjectResponse result = completedCopy.response();
-          changeTracker.processResponse(result);
-          incrementWriteOperations();
-          instrumentation.filesCopied(1, size);
-          return result;
+            CopyObjectResponse result = completedCopy.response();
+            changeTracker.processResponse(result);
+            incrementWriteOperations();
+            instrumentation.filesCopied(1, size);
+            return result;
+          } catch (CompletionException e) {
+            throw extractException(action, srcKey, e);
+          }
         });
   }
 
