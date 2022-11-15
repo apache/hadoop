@@ -232,8 +232,7 @@ public final class ConfigurationKeys {
 
   /** Key for fixed SAS token **/
   public static final String FS_AZURE_SAS_FIXED_TOKEN = "fs.azure.sas.fixed.token";
-  /** Key for fixed SAS token provider class **/
-  public static final String FS_AZURE_SAS_FIXED_TOKEN_PROVIDER = "fs.azure.sas.fixed.token.provider";
+
   /** Key for SAS token provider **/
   public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
 
