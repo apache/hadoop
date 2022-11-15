@@ -23,8 +23,6 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.util.Map;
-
 /**
  * Wrap a {@link S3Exception} as an IOE, relaying all
  * getters.

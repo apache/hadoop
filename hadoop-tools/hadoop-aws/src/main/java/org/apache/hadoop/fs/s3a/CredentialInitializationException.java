@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.classification.InterfaceAudience;

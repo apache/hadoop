@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.util.Map;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 

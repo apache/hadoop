@@ -52,7 +52,7 @@ import software.amazon.awssdk.core.exception.SdkException;
  * <ol>
  *   <li>Allows extra providers to be added dynamically.</li>
  *   <li>If any provider in the chain throws an exception other than
- *   an {@link AmazonClientException}, that is rethrown, rather than
+ *   an {@link SdkException}, that is rethrown, rather than
  *   swallowed.</li>
  *   <li>Has some more diagnostics.</li>
  *   <li>On failure, the last "relevant" {@link SdkException} raised is
