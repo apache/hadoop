@@ -63,7 +63,7 @@ public class MockAbfsClient extends AbfsClient {
   }
 
   @Override
-  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+  public AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,

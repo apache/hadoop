@@ -16,15 +16,16 @@ public class MockClassUtils {
     Mockito.doAnswer(answer -> {
       return (AbfsRestOperation) mockClassIntercepter.intercept(answer,
           mockedClient);
-    }).when(mockedClient).getAbfsRestOperation(
-        Mockito.any(AbfsRestOperationType.class),
-        Mockito.anyString(),
-        Mockito.any(URL.class),
-        Mockito.anyList(),
-        Mockito.any(byte[].class),
-        Mockito.anyInt(),
-        Mockito.anyInt(),
-        Mockito.anyString()
+    })
+.when(mockedClient).getAbfsRestOperation(
+        Mockito.nullable(AbfsRestOperationType.class),
+        Mockito.nullable(String.class),
+        Mockito.nullable(URL.class),
+        Mockito.nullable(List.class),
+        Mockito.nullable(byte[].class),
+        Mockito.nullable(int.class),
+        Mockito.nullable(int.class),
+        Mockito.nullable(String.class)
     );
   }
 
@@ -40,11 +41,11 @@ public class MockClassUtils {
   public static void mockAbfsHttpOperationProcessResponse(MockClassIntercepter mockClassIntercepter,
       AbfsHttpOperation httpOp) throws IOException {
     Mockito.doAnswer(answer -> {
-      return mockClassIntercepter.intercept(answer);
+      return mockClassIntercepter.intercept(answer, httpOp);
     }).when(httpOp).processResponse(
-        Mockito.any(byte[].class),
-        Mockito.anyInt(),
-        Mockito.anyInt()
+        Mockito.nullable(byte[].class),
+        Mockito.nullable(Integer.class),
+        Mockito.nullable(Integer.class)
     );
   }
 
