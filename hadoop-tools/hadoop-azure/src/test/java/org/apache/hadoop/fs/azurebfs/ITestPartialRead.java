@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URL;
 import java.util.List;
@@ -37,15 +36,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingInterceptTestUtil;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
-import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsClientThrottlingAnalyzer;
 import org.apache.hadoop.fs.azurebfs.services.MockClassUtils;
-import org.apache.hadoop.fs.azurebfs.services.MockHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult;
 
@@ -102,7 +98,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     byte[] originalFile = setup(testPath, fileSize);
 
     final AzureBlobFileSystem fs = getFileSystem();
-    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
 
     final Boolean[] oneMBSupplier = new Boolean[1];
     oneMBSupplier[0] = false;
@@ -114,7 +109,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation abfsHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -130,7 +125,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
           size = 0;
           oneMBSupplier[0] = true;
         }
-        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset,
+        callActualServerAndAssertBehaviour(abfsHttpOperation, buffer, offset,
             length, actualServerReadByte, size, fs.open(testPath));
 
         MockHttpOperationTestInterceptResult
@@ -146,17 +141,11 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         return callCount;
       }
     };
-    abfsClient.setMockHttpOperationTestIntercept(
-        mockHttpOperationTestIntercept);
-    fs.getAbfsStore().setClient(abfsClient);
 
-    AbfsClientThrottlingIntercept intercept
-        = AbfsClientThrottlingInterceptTestUtil.get();
-    MockAbfsClientThrottlingAnalyzer readAnalyzer
-        = new MockAbfsClientThrottlingAnalyzer("read");
-    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted
-        = (MockAbfsClientThrottlingAnalyzer) AbfsClientThrottlingInterceptTestUtil.setReadAnalyzer(
-        intercept, readAnalyzer);
+    setMocks(fs, fs.getAbfsClient(), mockHttpOperationTestIntercept);
+
+    MockAbfsClientThrottlingAnalyzer
+        analyzerToBeAsserted = setReadAnalyzer();
 
     FSDataInputStream inputStream = fs.open(testPath);
     byte[] buffer = new byte[fileSize];
@@ -168,6 +157,17 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         .describedAs(
             "Number of server calls counted as throttling case is incorrect")
         .isEqualTo(7);
+  }
+
+  private MockAbfsClientThrottlingAnalyzer setReadAnalyzer() {
+    AbfsClientThrottlingIntercept intercept
+        = AbfsClientThrottlingInterceptTestUtil.get();
+    MockAbfsClientThrottlingAnalyzer readAnalyzer
+        = new MockAbfsClientThrottlingAnalyzer("read");
+    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted
+        = (MockAbfsClientThrottlingAnalyzer) AbfsClientThrottlingInterceptTestUtil.setReadAnalyzer(
+        intercept, readAnalyzer);
+    return analyzerToBeAsserted;
   }
 
   @Test
@@ -182,7 +182,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         fileSize, originalFile);
 
     final AbfsClient originalClient = fs.getAbfsClient();
-    AbfsClient abfsClient = Mockito.spy(originalClient);
 
     FSDataInputStream inputStreamOriginal = fs.open(testPath);
 
@@ -191,7 +190,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation abfsHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -199,7 +198,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
          * 1. Check if server can handle the request parameters.
          * 2. return 1MB data to test-client.
          */
-        callActualServerAndAssertBehaviour(mockHttpOperation, buffer, offset,
+        callActualServerAndAssertBehaviour(abfsHttpOperation, buffer, offset,
             length, actualServerReadByte, ONE_MB, inputStreamOriginal);
 
         MockHttpOperationTestInterceptResult
@@ -216,6 +215,26 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       }
     };
 
+    setMocks(fs, originalClient, mockHttpOperationTestIntercept);
+
+    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted = setReadAnalyzer();
+
+    FSDataInputStream inputStream = fs.open(testPath);
+    byte[] buffer = new byte[fileSize];
+    inputStream.read(0, buffer, 0, fileSize);
+    Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
+        .describedAs("Number of server calls is wrong")
+        .isEqualTo(4);
+    Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
+        .describedAs(
+            "Number of server calls counted as throttling case is incorrect")
+        .isEqualTo(3);
+  }
+
+  private void setMocks(final AzureBlobFileSystem fs,
+      final AbfsClient originalClient,
+      final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
+    AbfsClient abfsClient = Mockito.spy(originalClient);
     MockClassUtils.mockAbfsClientGetAbfsRestOperation((getRestOpMockInvocation, objects) -> {
       AbfsRestOperation abfsRestOperation = MockClassUtils.createAbfsRestOperation(
           getRestOpMockInvocation.getArgument(0, AbfsRestOperationType.class),
@@ -255,33 +274,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       }
       return abfsRestOperation;
     }, abfsClient);
-
-
-//    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
-
-
-//    abfsClient.setMockHttpOperationTestIntercept(
-//        mockHttpOperationTestIntercept);
     fs.getAbfsStore().setClient(abfsClient);
-
-    AbfsClientThrottlingIntercept intercept
-        = AbfsClientThrottlingInterceptTestUtil.get();
-    MockAbfsClientThrottlingAnalyzer readAnalyzer
-        = new MockAbfsClientThrottlingAnalyzer("read");
-    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted
-        = (MockAbfsClientThrottlingAnalyzer) AbfsClientThrottlingInterceptTestUtil.setReadAnalyzer(
-        intercept, readAnalyzer);
-
-    FSDataInputStream inputStream = fs.open(testPath);
-    byte[] buffer = new byte[fileSize];
-    inputStream.read(0, buffer, 0, fileSize);
-    Assertions.assertThat(mockHttpOperationTestIntercept.getCallCount())
-        .describedAs("Number of server calls is wrong")
-        .isEqualTo(4);
-    Assertions.assertThat(analyzerToBeAsserted.getFailedInstances().intValue())
-        .describedAs(
-            "Number of server calls counted as throttling case is incorrect")
-        .isEqualTo(3);
   }
 
   private void callActualServerAndAssertBehaviour(final AbfsHttpOperation mockHttpOperation,
@@ -293,15 +286,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     LOG.info("length: " + length + "; offset: " + offset);
     Mockito.doCallRealMethod().when(mockHttpOperation).processResponse(Mockito.nullable(byte[].class), Mockito.nullable(Integer.class), Mockito.nullable(Integer.class));
     mockHttpOperation.processResponse(buffer, offset, length);
-//    inputStream.read(offset, buffer, 0, length);
-//    inputStream.unbuffer();
-
-
-
-//    Assertions.assertThat(mockHttpOperation.getStatusCode() == HTTP_PARTIAL
-//            || mockHttpOperation.getStatusCode() == HttpURLConnection.HTTP_OK)
-//        .describedAs("Http-response should have statusCode equal to 200 or 206")
-//        .isTrue();
     int iterator = 0;
     int currPointer = actualServerReadByte.currPointer;
     while (actualServerReadByte.currPointer < actualServerReadByte.size
@@ -332,7 +316,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     byte[] originalFile = setup(testPath, fileSize);
 
     final AzureBlobFileSystem fs = getFileSystem();
-    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
 
     ActualServerReadByte actualServerReadByte = new ActualServerReadByte(
         fileSize, originalFile);
@@ -342,7 +325,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
       private int callCount = 0;
 
       @Override
-      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation mockHttpOperation,
+      public MockHttpOperationTestInterceptResult intercept(final AbfsHttpOperation abfsHttpOperation,
           final byte[] buffer,
           final int offset,
           final int length) throws IOException {
@@ -351,7 +334,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
          * 2. return 1MB data with connection-reset exception to test-client.
          */
 
-        callActualServerAndAssertBehaviour(null, buffer, offset,
+        callActualServerAndAssertBehaviour(abfsHttpOperation, buffer, offset,
             length, actualServerReadByte, ONE_MB, fs.open(testPath));
 
         MockHttpOperationTestInterceptResult
@@ -369,17 +352,10 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         return callCount;
       }
     };
-    abfsClient.setMockHttpOperationTestIntercept(
-        mockHttpOperationTestIntercept);
-    fs.getAbfsStore().setClient(abfsClient);
 
-    AbfsClientThrottlingIntercept intercept
-        = AbfsClientThrottlingInterceptTestUtil.get();
-    MockAbfsClientThrottlingAnalyzer readAnalyzer
-        = new MockAbfsClientThrottlingAnalyzer("read");
-    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted
-        = (MockAbfsClientThrottlingAnalyzer) AbfsClientThrottlingInterceptTestUtil.setReadAnalyzer(
-        intercept, readAnalyzer);
+    setMocks(fs, fs.getAbfsClient(), mockHttpOperationTestIntercept);
+
+    MockAbfsClientThrottlingAnalyzer analyzerToBeAsserted = setReadAnalyzer();
 
     FSDataInputStream inputStream = fs.open(testPath);
     byte[] buffer = new byte[fileSize];

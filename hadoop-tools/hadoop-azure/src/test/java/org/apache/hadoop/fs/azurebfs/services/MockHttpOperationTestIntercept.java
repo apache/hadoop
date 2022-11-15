@@ -37,7 +37,7 @@ public interface MockHttpOperationTestIntercept {
    * between the client and the backend.
    * @return {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult}
    * */
-  MockHttpOperationTestInterceptResult intercept(AbfsHttpOperation mockHttpOperation,
+  MockHttpOperationTestInterceptResult intercept(AbfsHttpOperation abfsHttpOperation,
       byte[] buffer,
       int offset,
       int length) throws IOException;
