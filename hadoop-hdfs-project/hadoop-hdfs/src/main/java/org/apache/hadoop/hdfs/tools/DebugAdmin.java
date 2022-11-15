@@ -432,8 +432,16 @@ public class DebugAdmin extends Configured implements Tool {
 
     VerifyECCommand() {
       super("verifyEC",
-          "verifyEC -file <file>",
-          "  Verify HDFS erasure coding on all block groups of the file.");
+          "verifyEC -file <file> [-blockId <blk_Id>] [-ignoreFailures]",
+          "  -file Verify HDFS erasure coding on all block groups of the file." +
+              System.lineSeparator() +
+          "  -ignoreFailures specify ignores any block group failures during verify," +
+              System.lineSeparator() +
+          "  and continues verify all block groups of the file," +
+              System.lineSeparator() +
+          "  the default is not to ignore failures." +
+              System.lineSeparator() +
+          "  -blockId specify blk_Id to verify for a specific one block group.");
     }
 
     int run(List<String> args) throws IOException {
@@ -480,29 +488,45 @@ public class DebugAdmin extends Configured implements Tool {
       this.parityBlkNum = ecPolicy.getNumParityUnits();
       this.cellSize = ecPolicy.getCellSize();
       this.encoder = CodecUtil.createRawEncoder(getConf(), ecPolicy.getCodecName(),
-          new ErasureCoderOptions(
-              ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits()));
+          new ErasureCoderOptions(dataBlkNum, parityBlkNum));
       int blockNum = dataBlkNum + parityBlkNum;
       this.readService = new ExecutorCompletionService<>(
           DFSUtilClient.getThreadPoolExecutor(blockNum, blockNum, 60,
               new LinkedBlockingQueue<>(), "read-", false));
-      this.blockReaders = new BlockReader[dataBlkNum + parityBlkNum];
+      this.blockReaders = new BlockReader[blockNum];
+
+      String blockId = StringUtils.popOptionWithArgument("-blockId", args);
+      boolean ignoreFailures = StringUtils.popOption("-ignoreFailures", args);
+      boolean isHealthy = true;
 
       for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
-        System.out.println("Checking EC block group: blk_" + locatedBlock.getBlock().getBlockId());
-        LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
+        if (blockId == null || blockId.equals(
+            locatedBlock.getBlock().getLocalBlock().getBlockName())) {
+          System.out.println("Checking EC block group: blk_" +
+              locatedBlock.getBlock().getBlockId());
+          LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
 
-        try {
-          verifyBlockGroup(blockGroup);
-          System.out.println("Status: OK");
-        } catch (Exception e) {
-          System.err.println("Status: ERROR, message: " + e.getMessage());
-          return 1;
-        } finally {
-          closeBlockReaders();
+          try {
+            verifyBlockGroup(blockGroup);
+            System.out.println("Status: OK");
+          } catch (Exception e) {
+            System.err.println("Status: ERROR, message: " + e.getMessage());
+            if (!ignoreFailures) {
+              return 1;
+            }
+            isHealthy = false;
+          } finally {
+            closeBlockReaders();
+          }
+
+          if (blockId != null) {
+            break;
+          }
         }
       }
-      System.out.println("\nAll EC block group status: OK");
+      if (isHealthy && blockId == null) {
+        System.out.println("\nAll EC block group status: OK");
+      }
       return 0;
     }
 
