@@ -114,7 +114,7 @@ public abstract class AbstractSessionCredentialsProvider
    * is thrown here before any attempt to return the credentials
    * is made.
    * @return credentials, if set.
-   * @throws SdkBaseException if one was raised during init
+   * @throws SdkException if one was raised during init
    * @throws CredentialInitializationException on other failures.
    */
   public AWSCredentials getCredentials() throws SdkException {

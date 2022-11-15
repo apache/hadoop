@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -224,6 +225,24 @@ public class TestInvoker extends Assert {
   public void testExtractSocketTimeoutException() throws Throwable {
     throw extractException("", "",
         new ExecutionException(
+            SdkException.builder()
+                .cause(SOCKET_TIMEOUT_EX)
+                .build()));
+  }
+
+  @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
+  public void testExtractConnectTimeoutExceptionFromCompletionException() throws Throwable {
+    throw extractException("", "",
+        new CompletionException(
+            SdkException.builder()
+                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+                .build()));
+  }
+
+  @Test(expected = SocketTimeoutException.class)
+  public void testExtractSocketTimeoutExceptionFromCompletionException() throws Throwable {
+    throw extractException("", "",
+        new CompletionException(
             SdkException.builder()
                 .cause(SOCKET_TIMEOUT_EX)
                 .build()));
