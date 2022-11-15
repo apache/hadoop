@@ -169,6 +169,7 @@ public class AbfsRestOperation {
    * @param bufferLength The length of the data in the buffer.
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
    */
+  @VisibleForTesting
   AbfsRestOperation(AbfsRestOperationType operationType,
                     AbfsClient client,
                     String method,

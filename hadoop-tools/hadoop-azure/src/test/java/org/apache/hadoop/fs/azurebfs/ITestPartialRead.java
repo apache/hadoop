@@ -21,20 +21,29 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
+import java.net.URL;
+import java.util.List;
 import java.util.Random;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingInterceptTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.MockAbfsClientThrottlingAnalyzer;
+import org.apache.hadoop.fs.azurebfs.services.MockClassUtils;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept;
 import org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestInterceptResult;
@@ -167,7 +176,6 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
     byte[] originalFile = setup(testPath, fileSize);
 
     final AzureBlobFileSystem fs = getFileSystem();
-    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
 
     ActualServerReadByte actualServerReadByte = new ActualServerReadByte(
         fileSize, originalFile);
@@ -200,8 +208,56 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         return callCount;
       }
     };
-    abfsClient.setMockHttpOperationTestIntercept(
-        mockHttpOperationTestIntercept);
+
+    final AbfsClient originalClient = fs.getAbfsClient();
+    AbfsClient abfsClient = Mockito.spy(originalClient);
+
+    MockClassUtils.mockAbfsClientGetAbfsRestOperation((getRestOpMockInvocation, objects) -> {
+      AbfsRestOperation abfsRestOperation = MockClassUtils.createAbfsRestOperation(
+          getRestOpMockInvocation.getArgument(0, AbfsRestOperationType.class),
+          (AbfsClient) objects[0],
+          getRestOpMockInvocation.getArgument(1, String.class),
+          getRestOpMockInvocation.getArgument(2, URL.class),
+          getRestOpMockInvocation.getArgument(3, List.class),
+          getRestOpMockInvocation.getArgument(4, byte[].class),
+          getRestOpMockInvocation.getArgument(5, int.class),
+          getRestOpMockInvocation.getArgument(6, int.class),
+          getRestOpMockInvocation.getArgument(7, String.class)
+      );
+      if(AbfsRestOperationType.ReadFile == getRestOpMockInvocation.getArgument(0, AbfsRestOperationType.class)) {
+        AbfsRestOperation mockRestOp = Mockito.spy(abfsRestOperation);
+        MockClassUtils.mockAbfsRestOperationGetHttpOperation((getHttpOpInvocationMock, getHttpOpObjects) -> {
+          AbfsRestOperation op = (AbfsRestOperation) getHttpOpObjects[0];
+          AbfsHttpOperation httpOperation = new AbfsHttpOperation(op.getUrl(), op.getMethod(), op.getRequestHeaders());
+          AbfsHttpOperation spiedOp = Mockito.spy(httpOperation);
+          MockClassUtils.mockAbfsHttpOperationProcessResponse((processResponseInvokation, processResponseObjs) -> {
+            byte[] buffer = processResponseInvokation.getArgument(0, byte[].class);
+            int offset = processResponseInvokation.getArgument(1, int.class);
+            int length = processResponseInvokation.getArgument(2, int.class);
+
+            AbfsHttpOperation abfsHttpOperation = (AbfsHttpOperation) processResponseObjs[0];
+
+            MockHttpOperationTestInterceptResult result = mockHttpOperationTestIntercept.intercept(null, buffer, offset, length);
+            MockClassUtils.setHttpOpStatus(result.getStatus(), abfsHttpOperation);
+            MockClassUtils.setHttpOpBytesReceived(result.getBytesRead(), abfsHttpOperation);
+            if(result.getException() != null) {
+              throw result.getException();
+            }
+            return null;
+          }, spiedOp);
+          return spiedOp;
+        }, mockRestOp);
+        return mockRestOp;
+      }
+      return abfsRestOperation;
+    }, abfsClient);
+
+
+//    MockAbfsClient abfsClient = new MockAbfsClient(fs.getAbfsClient());
+
+
+//    abfsClient.setMockHttpOperationTestIntercept(
+//        mockHttpOperationTestIntercept);
     fs.getAbfsStore().setClient(abfsClient);
 
     AbfsClientThrottlingIntercept intercept
