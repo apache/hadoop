@@ -1487,7 +1487,6 @@ public class FederationClientInterceptor
     }
 
     try {
-
       // Verify that the connection is kerberos authenticated
       if (!RouterServerUtil.isAllowedDelegationTokenOp()) {
         routerMetrics.incrGetDelegationTokenFailedRetrieved();
@@ -2088,5 +2087,4 @@ public class FederationClientInterceptor
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
   }
-
 }

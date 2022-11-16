@@ -184,7 +184,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
   private final static long DEFAULT_DURATION = 10 * 60 * 1000;
 
   @Override
-  public void setUp() {
+  public void setUp() throws IOException {
     super.setUpConfig();
     interceptor = new TestableFederationClientInterceptor();
 
@@ -197,13 +197,9 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     interceptor.init(user);
     RouterDelegationTokenSecretManager tokenSecretManager =
         interceptor.createRouterRMDelegationTokenSecretManager(this.getConf());
-    try {
-      tokenSecretManager.startThreads();
-      interceptor.setTokenSecretManager(tokenSecretManager);
-    } catch (Exception e) {
-      LOG.error(e.getMessage());
-      Assert.fail();
-    }
+
+    tokenSecretManager.startThreads();
+    interceptor.setTokenSecretManager(tokenSecretManager);
 
     subClusters = new ArrayList<>();
 
@@ -1616,7 +1612,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     long tokenMaxLifetime = this.getConf().getLong(
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
-    Assert.assertEquals((issueDate + tokenMaxLifetime), maxDate);
+    Assert.assertEquals(issueDate + tokenMaxLifetime, maxDate);
 
     RouterRMDTSecretManagerState managerState = stateStore.getRouterRMSecretManagerState();
     Assert.assertNotNull(managerState);
@@ -1629,7 +1625,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
     long renewDate = delegationTokenState.get(rMDelegationTokenIdentifier);
-    Assert.assertEquals((issueDate + tokenRenewInterval), renewDate);
+    Assert.assertEquals(issueDate + tokenRenewInterval, renewDate);
   }
 
   @Test
