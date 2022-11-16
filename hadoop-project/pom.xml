@@ -131,7 +131,6 @@
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp.version>2.7.5</okhttp.version>
     <okhttp3.version>4.10.0</okhttp3.version>
     <okio.version>3.2.0</okio.version>
     <kotlin-stdlib.verion>1.6.20</kotlin-stdlib.verion>
