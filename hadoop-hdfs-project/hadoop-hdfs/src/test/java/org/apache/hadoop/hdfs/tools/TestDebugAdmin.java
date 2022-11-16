@@ -308,7 +308,7 @@ public class TestDebugAdmin {
     LocatedStripedBlock blockGroup2 = (LocatedStripedBlock) blocks.get(1);
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-ignoreFailures"})
         .contains("Status: ERROR, message: EC compute result not match." +
-            "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK" ));
+            "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK"));
   }
 
 }
