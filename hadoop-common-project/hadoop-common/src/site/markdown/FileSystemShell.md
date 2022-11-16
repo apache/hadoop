@@ -59,7 +59,7 @@ Copies source paths to stdout.
 
 Options
 
-* The `-ignoreCrc` option disables checkshum verification.
+* The `-ignoreCrc` option disables checksum verification.
 
 Example:
 
