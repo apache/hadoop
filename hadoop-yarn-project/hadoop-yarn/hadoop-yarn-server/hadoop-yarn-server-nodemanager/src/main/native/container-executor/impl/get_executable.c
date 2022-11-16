@@ -126,7 +126,7 @@ char* get_executable(char *argv0) {
   if (proc_pidpath(pid,filename,PROC_PIDPATHINFO_MAXSIZE) <= 0) {
     fprintf(ERRORFILE,"Can't get executable name from pid %u - %s\n", pid,
             strerror(errno));
-    exit(INVALID_CONTAINER_PID);
+    exit(CANT_GET_EXECUTABLE_NAME_FROM_PID);
   }
   return filename;
 }
@@ -194,7 +194,7 @@ char* get_executable (char *argv0) {
 
   if (!filename) {
     fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
-    exit(INVALID_CONFIG_FILE);
+    exit(WRONGPATH_OF_EXECUTABLE);
   }
   return filename;
 }

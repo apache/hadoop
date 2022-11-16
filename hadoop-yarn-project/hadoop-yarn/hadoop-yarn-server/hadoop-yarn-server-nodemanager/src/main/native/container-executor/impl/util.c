@@ -343,6 +343,10 @@ const char *get_error_message(const int error_code) {
         return "Too long executor path";
       case CANT_GET_EXECUTABLE_NAME_FROM_KERNEL:
         return "Can't get executable name from kernel";
+      case CANT_GET_EXECUTABLE_NAME_FROM_PID:
+        return "Can't get executable name from pid";
+      case WRONGPATH_OF_EXECUTABLE:
+        return "Wrongpath of executable";
       default:
         return "Unknown error code";
     }
