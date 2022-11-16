@@ -22,7 +22,16 @@ import java.io.IOException;
 
 import org.mockito.invocation.InvocationOnMock;
 
-public interface MockClassIntercepter {
+/**
+ * Implementation of this class would define how the mockito's doAnswer() function
+ * should work on the mocked/spied object.
+ * <p>
+ *   Mockito.doAnswer(answer -> {<br>
+ *      &emsp;mockClassInterceptorImpl.intercept(answer, additionalAttributesToBeSentForProcessing)<br>
+ *   }).when(mockedObj).methodToBeMocked(args...)
+ * </p>
+ * */
+public interface MockClassInterceptor {
   public Object intercept(InvocationOnMock invocationOnMock, Object... objects)
       throws IOException;
 }

@@ -24,22 +24,30 @@ import java.util.List;
 
 import org.mockito.Mockito;
 
+/**
+ * Utility class to expose methods to attach mocking logic to package-protected
+ * methods of
+ * <ol>
+ *   <li>{@link org.apache.hadoop.fs.azurebfs.services.AbfsClient}</li>
+ *   <li>{@link org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation}</li>
+ * </ol>
+ * */
 public class MockClassUtils {
 
   private MockClassUtils() {
   }
 
-  public static void mockAbfsClientGetAbfsRestOperation(MockClassIntercepter mockClassIntercepter,
+  public static void mockAbfsClientGetAbfsRestOperation(MockClassInterceptor mockClassInterceptor,
       AbfsClient mockedClient) {
     Mockito.doAnswer(answer -> {
-          return (AbfsRestOperation) mockClassIntercepter.intercept(answer,
+          return (AbfsRestOperation) mockClassInterceptor.intercept(answer,
               mockedClient);
         })
         .when(mockedClient).getAbfsRestOperation(
             Mockito.nullable(AbfsRestOperationType.class),
             Mockito.nullable(String.class),
             Mockito.nullable(URL.class),
-            Mockito.nullable(List.class),
+            (List<AbfsHttpHeader>) Mockito.nullable(List.class),
             Mockito.nullable(byte[].class),
             Mockito.nullable(int.class),
             Mockito.nullable(int.class),
@@ -47,19 +55,19 @@ public class MockClassUtils {
         );
   }
 
-  public static void mockAbfsRestOperationGetHttpOperation(MockClassIntercepter mockClassIntercepter,
+  public static void mockAbfsRestOperationGetHttpOperation(MockClassInterceptor mockClassInterceptor,
       AbfsRestOperation abfsRestOperation)
       throws IOException {
     Mockito.doAnswer(answer -> {
-      return (AbfsHttpOperation) mockClassIntercepter.intercept(answer,
+      return (AbfsHttpOperation) mockClassInterceptor.intercept(answer,
           abfsRestOperation);
     }).when(abfsRestOperation).getHttpOperation();
   }
 
-  public static void mockAbfsHttpOperationProcessResponse(MockClassIntercepter mockClassIntercepter,
+  public static void mockAbfsHttpOperationProcessResponse(MockClassInterceptor mockClassInterceptor,
       AbfsHttpOperation httpOp) throws IOException {
     Mockito.doAnswer(answer -> {
-      return mockClassIntercepter.intercept(answer, httpOp);
+      return mockClassInterceptor.intercept(answer, httpOp);
     }).when(httpOp).processResponse(
         Mockito.nullable(byte[].class),
         Mockito.nullable(Integer.class),

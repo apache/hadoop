@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingInterceptTestUtil;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType;
@@ -304,7 +305,8 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
               (AbfsClient) objects[0],
               getRestOpMockInvocation.getArgument(1, String.class),
               getRestOpMockInvocation.getArgument(2, URL.class),
-              getRestOpMockInvocation.getArgument(3, List.class),
+              (List<AbfsHttpHeader>) getRestOpMockInvocation.getArgument(3,
+                  List.class),
               getRestOpMockInvocation.getArgument(4, byte[].class),
               getRestOpMockInvocation.getArgument(5, Integer.class),
               getRestOpMockInvocation.getArgument(6, Integer.class),

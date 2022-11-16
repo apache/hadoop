@@ -23,7 +23,7 @@ import java.io.IOException;
 /**
  * Used by the implementations of {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperationTestIntercept}
  * to provide with the mock result of server-client communication to
- * {@link org.apache.hadoop.fs.azurebfs.services.MockHttpOperation} to take further actions.
+ * {@link org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation} to take further actions.
  * */
 public class MockHttpOperationTestInterceptResult {
   private int bytesRead;
