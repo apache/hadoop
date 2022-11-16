@@ -47,7 +47,8 @@ public class MockClassUtils {
             Mockito.nullable(AbfsRestOperationType.class),
             Mockito.nullable(String.class),
             Mockito.nullable(URL.class),
-            (List<AbfsHttpHeader>) Mockito.nullable(List.class),
+            Mockito.nullable(
+                (Class<List<AbfsHttpHeader>>) (Object) List.class),
             Mockito.nullable(byte[].class),
             Mockito.nullable(int.class),
             Mockito.nullable(int.class),

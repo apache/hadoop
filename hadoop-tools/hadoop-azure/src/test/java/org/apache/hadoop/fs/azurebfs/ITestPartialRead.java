@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -305,8 +306,8 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
               (AbfsClient) objects[0],
               getRestOpMockInvocation.getArgument(1, String.class),
               getRestOpMockInvocation.getArgument(2, URL.class),
-              (List<AbfsHttpHeader>) getRestOpMockInvocation.getArgument(3,
-                  List.class),
+              getRestOpMockInvocation.getArgument(3,
+                  (Class<List<AbfsHttpHeader>>) (Object) List.class),
               getRestOpMockInvocation.getArgument(4, byte[].class),
               getRestOpMockInvocation.getArgument(5, Integer.class),
               getRestOpMockInvocation.getArgument(6, Integer.class),
