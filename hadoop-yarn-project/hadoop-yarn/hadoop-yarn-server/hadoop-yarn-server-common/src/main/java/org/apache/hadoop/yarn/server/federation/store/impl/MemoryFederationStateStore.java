@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.AddApplicationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
@@ -139,12 +140,13 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public SubClusterRegisterResponse registerSubCluster(SubClusterRegisterRequest request)
       throws YarnException {
+    long startTime = clock.getTime();
+
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
 
     long currentTime =
         Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTimeInMillis();
-
     SubClusterInfo subClusterInfoToSave =
         SubClusterInfo.newInstance(subClusterInfo.getSubClusterId(),
             subClusterInfo.getAMRMServiceAddress(),
@@ -155,12 +157,15 @@ public class MemoryFederationStateStore implements FederationStateStore {
             subClusterInfo.getCapability());
 
     membership.put(subClusterInfo.getSubClusterId(), subClusterInfoToSave);
+    long stopTime = clock.getTime();
+
+    FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     return SubClusterRegisterResponse.newInstance();
   }
 
   @Override
-  public SubClusterDeregisterResponse deregisterSubCluster(
-      SubClusterDeregisterRequest request) throws YarnException {
+  public SubClusterDeregisterResponse deregisterSubCluster(SubClusterDeregisterRequest request)
+      throws YarnException {
 
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = membership.get(request.getSubClusterId());
@@ -175,8 +180,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public SubClusterHeartbeatResponse subClusterHeartbeat(
-      SubClusterHeartbeatRequest request) throws YarnException {
+  public SubClusterHeartbeatResponse subClusterHeartbeat(SubClusterHeartbeatRequest request)
+      throws YarnException {
 
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
@@ -242,7 +247,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
       applications.put(appId, homeSubCluster);
     }
 
-    return AddApplicationHomeSubClusterResponse.newInstance(applications.get(appId).getHomeSubCluster());
+    ApplicationHomeSubCluster respHomeSubCluster = applications.get(appId);
+    return AddApplicationHomeSubClusterResponse.newInstance(respHomeSubCluster.getHomeSubCluster());
   }
 
   @Override
@@ -253,9 +259,10 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     ApplicationId appId =
         request.getApplicationHomeSubCluster().getApplicationId();
+
     if (!applications.containsKey(appId)) {
-      String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Application %s does not exist.", appId);
     }
 
     applications.put(appId, request.getApplicationHomeSubCluster());
@@ -269,8 +276,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     if (!applications.containsKey(appId)) {
-      String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Application %s does not exist.", appId);
     }
 
     return GetApplicationHomeSubClusterResponse.newInstance(appId,
@@ -309,8 +316,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     if (!applications.containsKey(appId)) {
-      String errMsg = "Application " + appId + " does not exist";
-      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Application %s does not exist.", appId);
     }
 
     applications.remove(appId);
@@ -324,12 +331,11 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
     if (!policies.containsKey(queue)) {
-      LOG.warn("Policy for queue: {} does not exist.", queue);
+      LOG.warn("Policy for queue : {} does not exist.", queue);
       return null;
     }
 
-    return GetSubClusterPolicyConfigurationResponse
-        .newInstance(policies.get(queue));
+    return GetSubClusterPolicyConfigurationResponse.newInstance(policies.get(queue));
   }
 
   @Override
@@ -345,8 +351,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
-    ArrayList<SubClusterPolicyConfiguration> result =
-        new ArrayList<SubClusterPolicyConfiguration>();
+    ArrayList<SubClusterPolicyConfiguration> result = new ArrayList<>();
     for (SubClusterPolicyConfiguration policy : policies.values()) {
       result.add(policy);
     }
@@ -381,7 +386,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     if (!reservations.containsKey(reservationId)) {
-      throw new YarnException("Reservation " + reservationId + " does not exist");
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Reservation %s does not exist.", reservationId);
     }
     SubClusterId subClusterId = reservations.get(reservationId);
     ReservationHomeSubCluster homeSubCluster =
@@ -412,7 +418,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     ReservationId reservationId = request.getReservationHomeSubCluster().getReservationId();
 
     if (!reservations.containsKey(reservationId)) {
-      throw new YarnException("Reservation " + reservationId + " does not exist.");
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Reservation %s does not exist.", reservationId);
     }
 
     SubClusterId subClusterId = request.getReservationHomeSubCluster().getHomeSubCluster();
@@ -426,7 +433,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
     FederationReservationHomeSubClusterStoreInputValidator.validate(request);
     ReservationId reservationId = request.getReservationId();
     if (!reservations.containsKey(reservationId)) {
-      throw new YarnException("Reservation " + reservationId + " does not exist");
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Reservation %s does not exist.", reservationId);
     }
     reservations.remove(reservationId);
     return DeleteReservationHomeSubClusterResponse.newInstance();
@@ -441,9 +449,8 @@ public class MemoryFederationStateStore implements FederationStateStore {
 
     Set<DelegationKey> rmDTMasterKeyState = routerRMSecretManagerState.getMasterKeyState();
     if (rmDTMasterKeyState.contains(delegationKey)) {
-      LOG.info("Error storing info for RMDTMasterKey with keyID: {}.", delegationKey.getKeyId());
-      throw new IOException("RMDTMasterKey with keyID: " + delegationKey.getKeyId() +
-          " is already stored");
+      FederationStateStoreUtils.logAndThrowStoreException(LOG,
+          "Error storing info for RMDTMasterKey with keyID: %s.", delegationKey.getKeyId());
     }
 
     routerRMSecretManagerState.getMasterKeyState().add(delegationKey);
