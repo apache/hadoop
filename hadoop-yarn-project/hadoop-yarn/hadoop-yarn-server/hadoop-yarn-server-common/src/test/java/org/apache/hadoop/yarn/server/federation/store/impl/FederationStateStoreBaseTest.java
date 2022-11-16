@@ -905,7 +905,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+  public void testRemoveStoredMasterKey() throws IOException, YarnException {
     // store delegation key;
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     Set<DelegationKey> keySet = new HashSet<>();
@@ -929,7 +929,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testStoreNewToken() throws YarnException, IOException {
+  public void testStoreNewToken() throws IOException, YarnException {
     // prepare parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner1"), new Text("renewer1"), new Text("realuser1"));
@@ -952,7 +952,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testUpdateStoredToken() throws YarnException, IOException {
+  public void testUpdateStoredToken() throws IOException, YarnException {
     // prepare saveToken parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
@@ -984,7 +984,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testRemoveStoredToken() throws YarnException, IOException {
+  public void testRemoveStoredToken() throws IOException, YarnException {
     // prepare saveToken parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
@@ -1008,7 +1008,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testGetTokenByRouterStoreToken() throws YarnException, IOException {
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
     // prepare saveToken parameters
     RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
         new Text("owner4"), new Text("renewer4"), new Text("realuser4"));

@@ -141,7 +141,7 @@ import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
  * |     |       |----- RM_DELEGATION_TOKEN_3
  * |     |----- ROUTER_RM_DT_MASTER_KEYS_ROOT
  * |     |       |----- DELEGATION_KEY_1
- * |      |----- ROUTER_RM_DT_SEQUENTIAL_NUMBER
+ * |     |----- ROUTER_RM_DT_SEQUENTIAL_NUMBER
  */
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
