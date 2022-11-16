@@ -2171,7 +2171,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This operation throws an exception on any failure which needs to be
    * reported and downgraded to a failure.
    * Retries: retry translated, assuming all operations it is called do
-   * so. For safely, consider catch and handle AmazonClientException
+   * so. For safely, consider catch and handle SdkException
    * because this is such a complex method there's a risk it could surface.
    * @param source path to be renamed
    * @param dest new path after rename
@@ -3840,7 +3840,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO problem
    * @throws FileAlreadyExistsException the destination file exists and
    * overwrite==false
-   * @throws AmazonClientException failure in the AWS SDK
+   * @throws SdkException failure in the AWS SDK
    */
   @Override
   @AuditEntryPoint
@@ -4331,7 +4331,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: none + untranslated.
    * @param request request to initiate
    * @return the result of the call
-   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws SdkException on failures inside the AWS SDK
    * @throws IOException Other IO problems
    */
   @Retries.OnceRaw
@@ -5042,7 +5042,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Retry policy: retry, translated.
    * @return a listing of multipart uploads.
    * @param prefix prefix to scan for, "" for none
-   * @throws IOException IO failure, including any uprated AmazonClientException
+   * @throws IOException IO failure, including any uprated SdkException
    */
   @InterfaceAudience.Private
   @Retries.RetryTranslated

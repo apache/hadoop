@@ -70,7 +70,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  * particularly those extracted from
  * {@link S3AUtils#translateException(String, Path, SdkException)}.
  * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
- * does this translation if an {@code AmazonClientException} is processed,
+ * does this translation if an {@code SdkException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
  *
  * Put differently: this retry policy aims to work for handlers of the
