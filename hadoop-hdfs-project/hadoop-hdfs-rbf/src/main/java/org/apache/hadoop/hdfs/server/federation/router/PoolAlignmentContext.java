@@ -71,8 +71,7 @@ public class PoolAlignmentContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcHeaderProtos.RpcRequestHeaderProto.Builder header) {
-    long maxStateId = Long.max(poolLocalStateId.get(), sharedGlobalStateId.get());
-    header.setStateId(maxStateId);
+    header.setStateId(poolLocalStateId.get());
   }
 
   /**
