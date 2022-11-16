@@ -1131,7 +1131,7 @@ public class AbfsClient implements Closeable {
           LOG.trace("Using cached SAS token.");
         }
         // if SAS Token contains a prefix of ?, it should be removed
-        if(sasToken.charAt(0) == '?') {
+        if (sasToken.charAt(0) == '?') {
           sasToken = sasToken.substring(1);
         }
         queryBuilder.setSASToken(sasToken);
