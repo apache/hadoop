@@ -492,7 +492,7 @@ jakarta.xml.bind:jakarta.xml.bind-api:2.3.2
 HSQL License
 ------------
 
-org.hsqldb:hsqldb:2.3.4
+org.hsqldb:hsqldb:2.7.1
 
 
 JDOM License
