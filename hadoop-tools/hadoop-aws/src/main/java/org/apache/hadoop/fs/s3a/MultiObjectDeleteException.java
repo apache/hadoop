@@ -29,6 +29,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Exception raised in {@link S3AFileSystem#deleteObjects} when
  * one or more of the keys could not be deleted.
+ *
+ * Used to reproduce the behaviour of SDK v1 for partial failures
+ * on DeleteObjects. In SDK v2, the errors are returned as part of
+ * the response objects.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable

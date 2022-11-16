@@ -50,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -839,15 +840,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             s3V2.headBucket(HeadBucketRequest.builder()
                 .bucket(bucket)
                 .build());
+            return true;
           } catch (NoSuchBucketException e) {
             return false;
-          } catch (AwsServiceException ex) {
-            int statusCode = ex.statusCode();
-            if (statusCode == SC_404 || statusCode == SC_403) {
-              return false;
-            }
           }
-          return true;
         }))) {
       throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
           + "not exist");
@@ -4335,19 +4331,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
           try {
             CompletedCopy completedCopy = copy.completionFuture().join();
-
-// TODO: Check what should happen for these exceptions.
-//          SdkBaseException awsException = copyOutcome.getAwsException();
-//          if (awsException != null) {
-//            changeTracker.processException(awsException, "copy");
-//            throw awsException;
-//          }
             CopyObjectResponse result = completedCopy.response();
             changeTracker.processResponse(result);
             incrementWriteOperations();
             instrumentation.filesCopied(1, size);
             return result;
           } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof SdkBaseException) {
+              SdkBaseException awsException = (SdkBaseException)cause;
+              changeTracker.processException(awsException, "copy");
+              throw awsException;
+            }
             throw extractException(action, srcKey, e);
           }
         });
