@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
@@ -185,7 +186,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
               response.getType().toString());
           String xml = response.getEntity(String.class);
-          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+          DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
           DocumentBuilder db = dbf.newDocumentBuilder();
           InputSource is = new InputSource();
           is.setCharacterStream(new StringReader(xml));
@@ -259,7 +260,7 @@ public class TestAMWebServicesAttempt extends JerseyTestBase {
           assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
               response.getType().toString());
           String xml = response.getEntity(String.class);
-          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+          DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
           DocumentBuilder db = dbf.newDocumentBuilder();
           InputSource is = new InputSource();
           is.setCharacterStream(new StringReader(xml));

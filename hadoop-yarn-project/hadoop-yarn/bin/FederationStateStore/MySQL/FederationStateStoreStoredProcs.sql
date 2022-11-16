@@ -122,10 +122,21 @@ BEGIN
    WHERE applicationId = applicationID_IN;
 END //
 
-CREATE PROCEDURE sp_getApplicationsHomeSubCluster()
+CREATE PROCEDURE sp_getApplicationsHomeSubCluster(IN limit_IN int, IN homeSubCluster_IN varchar(256))
 BEGIN
-   SELECT applicationId, homeSubCluster
-   FROM applicationsHomeSubCluster;
+   SELECT
+       applicationId,
+       homeSubCluster,
+       createTime
+   FROM (SELECT
+             applicationId,
+             homeSubCluster,
+             createTime,
+             @rownum := 0
+         FROM applicationshomesubcluster
+         ORDER BY createTime DESC) AS applicationshomesubcluster
+   WHERE (homeSubCluster_IN = '' OR homeSubCluster = homeSubCluster_IN)
+     AND (@rownum := @rownum + 1) <= limit_IN;
 END //
 
 CREATE PROCEDURE sp_deleteApplicationHomeSubCluster(

@@ -575,6 +575,10 @@ public final class S3ATestUtils {
         DEFAULT_DIRECTORY_MARKER_POLICY);
     conf.set(DIRECTORY_MARKER_POLICY, directoryRetention);
 
+    boolean prefetchEnabled =
+        getTestPropertyBool(conf, PREFETCH_ENABLED_KEY, PREFETCH_ENABLED_DEFAULT);
+    conf.setBoolean(PREFETCH_ENABLED_KEY, prefetchEnabled);
+
     return conf;
   }
 

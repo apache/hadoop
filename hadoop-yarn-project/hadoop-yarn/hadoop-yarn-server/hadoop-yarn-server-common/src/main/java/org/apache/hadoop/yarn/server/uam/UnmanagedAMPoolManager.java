@@ -522,6 +522,15 @@ public class UnmanagedAMPoolManager extends AbstractService {
     };
   }
 
+  public void unAttachUAM(String uamId) {
+    if (this.unmanagedAppMasterMap.containsKey(uamId)) {
+      UnmanagedApplicationManager appManager = this.unmanagedAppMasterMap.get(uamId);
+      appManager.shutDownConnections();
+    }
+    this.unmanagedAppMasterMap.remove(uamId);
+    this.appIdMap.remove(uamId);
+  }
+
   @VisibleForTesting
   protected Map<String, UnmanagedApplicationManager> getUnmanagedAppMasterMap() {
     return unmanagedAppMasterMap;

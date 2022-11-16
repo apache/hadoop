@@ -84,7 +84,7 @@ public interface StreamCapabilities {
    * Support for vectored IO api.
    * See {@code PositionedReadable#readVectored(List, IntFunction)}.
    */
-  String VECTOREDIO = "readvectored";
+  String VECTOREDIO = "in:readvectored";
 
   /**
    * Stream abort() capability implemented by {@link Abortable#abort()}.

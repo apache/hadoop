@@ -2310,7 +2310,7 @@ public class TestFsck {
       dnProp.setPort(datanodeID.getXferPort());
       dnProp.setUpgradeDomain(upgradeDomain);
       hostsFileWriter.initIncludeHosts(new DatanodeAdminProperties[]{dnProp});
-      cluster.getFileSystem().refreshNodes();
+      cluster.getNamesystem(0).getBlockManager().getDatanodeManager().refreshNodes(conf);
     }
 
     // create files

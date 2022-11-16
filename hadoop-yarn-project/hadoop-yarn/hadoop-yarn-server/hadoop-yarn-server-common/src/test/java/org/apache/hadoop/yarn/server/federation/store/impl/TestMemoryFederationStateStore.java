@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 
 /**
@@ -29,6 +30,7 @@ public class TestMemoryFederationStateStore
   @Override
   protected FederationStateStore createStateStore() {
     Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new MemoryFederationStateStore();
   }

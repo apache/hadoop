@@ -77,12 +77,16 @@ public abstract class S3ARemoteInputStream
   private volatile boolean closed;
 
   /**
-   * Current position within the file.
+   * Internal position within the file. Updated lazily
+   * after a seek before a read.
    */
   private FilePosition fpos;
 
-  /** The target of the most recent seek operation. */
-  private long seekTargetPos;
+  /**
+   * This is the actual position within the file, used by
+   * lazy seek to decide whether to seek on the next read or not.
+   */
+  private long nextReadPos;
 
   /** Information about each block of the mapped S3 file. */
   private BlockData blockData;
@@ -146,7 +150,7 @@ public abstract class S3ARemoteInputStream
     this.remoteObject = getS3File();
     this.reader = new S3ARemoteObjectReader(remoteObject);
 
-    this.seekTargetPos = 0;
+    this.nextReadPos = 0;
   }
 
   /**
@@ -212,7 +216,8 @@ public abstract class S3ARemoteInputStream
   public int available() throws IOException {
     throwIfClosed();
 
-    if (!ensureCurrentBuffer()) {
+    // Update the current position in the current buffer, if possible.
+    if (!fpos.setAbsolute(nextReadPos)) {
       return 0;
     }
 
@@ -228,11 +233,7 @@ public abstract class S3ARemoteInputStream
   public long getPos() throws IOException {
     throwIfClosed();
 
-    if (fpos.isValid()) {
-      return fpos.absolute();
-    } else {
-      return seekTargetPos;
-    }
+    return nextReadPos;
   }
 
   /**
@@ -247,10 +248,7 @@ public abstract class S3ARemoteInputStream
     throwIfClosed();
     throwIfInvalidSeek(pos);
 
-    if (!fpos.setAbsolute(pos)) {
-      fpos.invalidate();
-      seekTargetPos = pos;
-    }
+    nextReadPos = pos;
   }
 
   /**
@@ -268,7 +266,7 @@ public abstract class S3ARemoteInputStream
     throwIfClosed();
 
     if (remoteObject.size() == 0
-        || seekTargetPos >= remoteObject.size()) {
+        || nextReadPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -276,6 +274,7 @@ public abstract class S3ARemoteInputStream
       return -1;
     }
 
+    nextReadPos++;
     incrementBytesRead(1);
 
     return fpos.buffer().get() & 0xff;
@@ -315,7 +314,7 @@ public abstract class S3ARemoteInputStream
     }
 
     if (remoteObject.size() == 0
-        || seekTargetPos >= remoteObject.size()) {
+        || nextReadPos >= remoteObject.size()) {
       return -1;
     }
 
@@ -334,6 +333,7 @@ public abstract class S3ARemoteInputStream
       ByteBuffer buf = fpos.buffer();
       int bytesToRead = Math.min(numBytesRemaining, buf.remaining());
       buf.get(buffer, offset, bytesToRead);
+      nextReadPos += bytesToRead;
       incrementBytesRead(bytesToRead);
       offset += bytesToRead;
       numBytesRemaining -= bytesToRead;
@@ -367,12 +367,8 @@ public abstract class S3ARemoteInputStream
     return closed;
   }
 
-  protected long getSeekTargetPos() {
-    return seekTargetPos;
-  }
-
-  protected void setSeekTargetPos(long pos) {
-    seekTargetPos = pos;
+  protected long getNextReadPos() {
+    return nextReadPos;
   }
 
   protected BlockData getBlockData() {
@@ -443,6 +439,18 @@ public abstract class S3ARemoteInputStream
     return false;
   }
 
+  @Override
+  public String toString() {
+    if (isClosed()) {
+      return "closed";
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("nextReadPos = (%d)%n", nextReadPos));
+    sb.append(String.format("fpos = (%s)", fpos));
+    return sb.toString();
+  }
+
   protected void throwIfClosed() throws IOException {
     if (closed) {
       throw new IOException(
@@ -453,6 +461,8 @@ public abstract class S3ARemoteInputStream
   protected void throwIfInvalidSeek(long pos) throws EOFException {
     if (pos < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK + " " + pos);
+    } else if (pos > this.getBlockData().getFileSize()) {
+      throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF + " " + pos);
     }
   }
 

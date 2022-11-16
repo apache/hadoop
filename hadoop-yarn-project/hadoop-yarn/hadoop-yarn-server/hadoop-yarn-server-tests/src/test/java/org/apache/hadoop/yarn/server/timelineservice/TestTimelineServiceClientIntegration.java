@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.timelineservice;
 
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -54,9 +54,9 @@ import org.apache.hadoop.yarn.server.timelineservice.collector.NodeTimelineColle
 import org.apache.hadoop.yarn.server.timelineservice.collector.PerNodeTimelineCollectorsAuxService;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class TestTimelineServiceClientIntegration {
   private static final String ROOT_DIR = new File("target",
@@ -66,7 +66,7 @@ public class TestTimelineServiceClientIntegration {
   private static PerNodeTimelineCollectorsAuxService auxService;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     try {
       collectorManager = new MockNodeTimelineCollectorManager();
@@ -88,7 +88,7 @@ public class TestTimelineServiceClientIntegration {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     if (auxService != null) {
       auxService.stop();
@@ -97,7 +97,7 @@ public class TestTimelineServiceClientIntegration {
   }
 
   @Test
-  public void testPutEntities() throws Exception {
+  void testPutEntities() throws Exception {
     TimelineV2Client client =
         TimelineV2Client.createTimelineClient(ApplicationId.newInstance(0, 1));
     try {
@@ -123,7 +123,7 @@ public class TestTimelineServiceClientIntegration {
   }
 
   @Test
-  public void testPutExtendedEntities() throws Exception {
+  void testPutExtendedEntities() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
     TimelineV2Client client =
         TimelineV2Client.createTimelineClient(appId);

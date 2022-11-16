@@ -17,6 +17,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -83,6 +84,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
         DATABASE_URL + System.currentTimeMillis());
+    conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new HSQLDBFederationStateStore();
   }
@@ -445,7 +447,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -482,7 +484,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -528,7 +530,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_DELETERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -554,5 +556,40 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     LambdaTestUtils.intercept(YarnException.class, errorMsg,
         () -> stateStore.deleteReservationHomeSubCluster(delRequest));
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewMasterKey() throws Exception {
+    super.testStoreNewMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
+    super.testGetMasterKeyByDelegationKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
+    super.testRemoveStoredMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
   }
 }

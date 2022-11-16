@@ -91,6 +91,7 @@ import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -231,6 +232,20 @@ public class MiniRouterDFSCluster {
 
     public FileSystem getFileSystem() throws IOException {
       return DistributedFileSystem.get(conf);
+    }
+
+    public FileSystem getFileSystemWithObserverReadsEnabled() throws IOException {
+      Configuration observerReadConf = new Configuration(conf);
+      observerReadConf.set(DFS_NAMESERVICES,
+          observerReadConf.get(DFS_NAMESERVICES)+ ",router-service");
+      observerReadConf.set(DFS_HA_NAMENODES_KEY_PREFIX + ".router-service", "router1");
+      observerReadConf.set(DFS_NAMENODE_RPC_ADDRESS_KEY+ ".router-service.router1",
+          getFileSystemURI().toString());
+      observerReadConf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX
+          + "." + "router-service", ObserverReadProxyProvider.class.getName());
+      DistributedFileSystem.setDefaultUri(observerReadConf, "hdfs://router-service");
+
+      return DistributedFileSystem.get(observerReadConf);
     }
 
     public DFSClient getClient(UserGroupInformation user)

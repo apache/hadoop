@@ -119,13 +119,14 @@ public class GetReservationHomeSubClusterRequestPBImpl
   }
 
   @Override
-  public void setReservationId(ReservationId reservationId) {
+  public void setReservationId(ReservationId paramReservationId) {
     maybeInitBuilder();
-    if (reservationId == null) {
+    if (paramReservationId == null) {
       builder.clearReservationId();
       return;
     }
-    this.reservationId = reservationId;
+    this.reservationId = paramReservationId;
+    builder.setReservationId(convertToProtoFormat(paramReservationId));
   }
 
   private ReservationId convertFromProtoFormat(ReservationIdProto appId) {

@@ -77,7 +77,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
             CONSTRAINT [pk_subClusterId] PRIMARY KEY
             (
                 [subClusterId]
-            )
+            ),
             CONSTRAINT [uc_lastStartTime] UNIQUE
             (
                 [lastStartTime]
@@ -140,7 +140,7 @@ IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
         CREATE TABLE [dbo].[reservationsHomeSubCluster](
             reservationId   VARCHAR(128) COLLATE Latin1_General_100_BIN2 NOT NULL,
             homeSubCluster  VARCHAR(256) NOT NULL,
-            createTime      DATETIME2 NOT NULL CONSTRAINT ts_createAppTime DEFAULT GETUTCDATE(),
+            createTime      DATETIME2 NOT NULL CONSTRAINT ts_createResTime DEFAULT GETUTCDATE(),
 
             CONSTRAINT [pk_reservationId] PRIMARY KEY
             (

@@ -82,11 +82,11 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     AllocateResponse allocateResponse = allocate(testAppId);
     Assert.assertNotNull(allocateResponse);
 
-    FinishApplicationMasterResponse finshResponse =
+    FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
 
-    Assert.assertNotNull(finshResponse);
-    Assert.assertEquals(true, finshResponse.getIsUnregistered());
+    Assert.assertNotNull(finishResponse);
+    Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
     Assert.assertEquals(failedAppStartRequests, metrics.getFailedAppStartRequests());
     Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());
@@ -126,10 +126,10 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
     Assert
         .assertEquals(Integer.toString(testAppId), registerResponse.getQueue());
 
-    FinishApplicationMasterResponse finshResponse =
+    FinishApplicationMasterResponse finishResponse =
         finishApplicationMaster(testAppId, FinalApplicationStatus.FAILED);
 
-    Assert.assertNotNull(finshResponse);
+    Assert.assertNotNull(finishResponse);
 
     try {
       // Try to finish an application master that is already finished.

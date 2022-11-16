@@ -1327,8 +1327,8 @@ public class DatanodeManager {
     // Update the file names and refresh internal includes and excludes list.
     if (conf == null) {
       conf = new HdfsConfiguration();
-      this.hostConfigManager.setConf(conf);
     }
+    this.hostConfigManager.setConf(conf);
     this.hostConfigManager.refresh();
   }
   
