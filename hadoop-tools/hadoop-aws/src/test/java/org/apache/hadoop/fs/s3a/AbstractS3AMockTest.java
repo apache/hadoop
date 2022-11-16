@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 
 import java.net.URI;
@@ -31,6 +30,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
+
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -40,11 +42,14 @@ import software.amazon.awssdk.services.s3.S3Client;
 public abstract class AbstractS3AMockTest {
 
   protected static final String BUCKET = "mock-bucket";
-  protected static final AmazonServiceException NOT_FOUND;
-  static {
-    NOT_FOUND = new AmazonServiceException("Not Found");
-    NOT_FOUND.setStatusCode(404);
-  }
+  protected static final AwsServiceException NOT_FOUND =
+      AwsServiceException.builder()
+          .message("Not Found")
+          .statusCode(404)
+          .awsErrorDetails(AwsErrorDetails.builder()
+              .errorCode("")
+              .build())
+          .build();
 
   @Rule
   public ExpectedException exception = ExpectedException.none();

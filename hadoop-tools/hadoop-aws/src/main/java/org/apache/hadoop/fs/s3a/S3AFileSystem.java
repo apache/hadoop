@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -49,8 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
@@ -63,12 +62,16 @@ import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.GetBucketAclRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
@@ -83,6 +86,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -239,7 +243,6 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucketV2;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_INACCESSIBLE;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
@@ -647,7 +650,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                         DEFAULT_ASYNC_DRAIN_THRESHOLD, 0),
           inputPolicy);
       vectoredIOContext = populateVectoredIOContext(conf);
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
@@ -820,8 +823,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Verify that the bucket exists. This does not check permissions,
-   * not even read access.
+   * Verify that the bucket exists.
+   * TODO: Review: this used to call doesBucketExist in v1, which does not check permissions, not even read access.
    * Retry policy: retrying, translated.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
@@ -832,7 +835,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     if (!invoker.retry("doesBucketExist", bucket, true,
         trackDurationOfOperation(getDurationTrackerFactory(),
             STORE_EXISTS_PROBE.getSymbol(),
-            () -> s3.doesBucketExist(bucket)))) {
+            () -> {
+          try {
+            s3V2.headBucket(HeadBucketRequest.builder()
+                .bucket(bucket)
+                .build());
+            return true;
+          } catch (NoSuchBucketException e) {
+            return false;
+          }
+        }))) {
       throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does "
           + "not exist");
     }
@@ -841,6 +853,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Verify that the bucket exists. This will correctly throw an exception
    * when credentials are invalid.
+   * TODO: Review. May be redundant in v2.
    * Retry policy: retrying, translated.
    * @throws UnknownStoreException the bucket is absent
    * @throws IOException any other problem talking to S3
@@ -855,9 +868,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               // Bug in SDK always returns `true` for AccessPoint ARNs with `doesBucketExistV2()`
               // expanding implementation to use ARNs and buckets correctly
               try {
-                s3.getBucketAcl(bucket);
-              } catch (AmazonServiceException ex) {
-                int statusCode = ex.getStatusCode();
+                s3V2.getBucketAcl(GetBucketAclRequest.builder()
+                    .bucket(bucket)
+                    .build());
+              } catch (AwsServiceException ex) {
+                int statusCode = ex.statusCode();
                 if (statusCode == SC_404 ||
                     (statusCode == SC_403 && ex.getMessage().contains(AP_INACCESSIBLE))) {
                   return false;
@@ -1339,6 +1354,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Get the region of a bucket; fixing up the region so it can be used
    * in the builders of other AWS clients.
+   * TODO: Review. Used only for S3Guard?
    * Requires the caller to have the AWS role permission
    * {@code s3:GetBucketLocation}.
    * Retry policy: retrying, translated.
@@ -1357,7 +1373,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                 // If accessPoint then region is known from Arn
                 accessPoint != null
                     ? accessPoint.getRegion()
-                    : s3.getBucketLocation(bucketName)));
+                    : s3V2.getBucketLocation(GetBucketLocationRequest.builder()
+                        .bucket(bucketName)
+                        .build())
+                    .locationConstraintAsString()));
     return fixBucketRegion(region);
   }
 
@@ -2071,7 +2090,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           innerRename(src, dst));
       LOG.debug("Copied {} bytes", bytesCopied);
       return true;
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
       LOG.info("{}", e.getMessage());
@@ -2193,12 +2212,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the number of bytes copied.
    * @throws FileNotFoundException there's no source file.
    * @throws IOException on IO failure.
-   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws SdkException on failures inside the AWS SDK
    */
   @Retries.RetryMixed
   private long innerRename(Path source, Path dest)
       throws RenameFailedException, FileNotFoundException, IOException,
-        AmazonClientException {
+      SdkException {
     Path src = qualify(source);
     Path dst = qualify(dest);
 
@@ -2306,7 +2325,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public void removeKeys(
             final List<ObjectIdentifier> keysToDelete,
             final boolean deleteFakeDir)
-        throws MultiObjectDeleteException, AmazonClientException, IOException {
+        throws MultiObjectDeleteException, SdkException, IOException {
       auditSpan.activate();
       S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir);
     }
@@ -2802,14 +2821,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param key key to blob to delete.
-   * @throws AmazonClientException problems working with S3
+   * @throws SdkException problems working with S3
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    */
   @VisibleForTesting
   @Retries.RetryRaw
   protected void deleteObject(String key)
-      throws AmazonClientException, IOException {
+      throws SdkException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
     try (DurationInfo ignored =
@@ -2836,14 +2855,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param f path path to delete
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
-   * @throws AmazonClientException problems working with S3
+   * @throws SdkException problems working with S3
    * @throws IOException from invoker signature only -should not be raised.
    */
   @Retries.RetryRaw
   void deleteObjectAtPath(Path f,
       String key,
       boolean isFile)
-      throws AmazonClientException, IOException {
+      throws SdkException, IOException {
     if (isFile) {
       instrumentation.fileDeleted(1);
     } else {
@@ -2885,11 +2904,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted.
-   * @throws AwsServiceException amazon-layer failure.
+   * @throws SdkException amazon-layer failure.
    */
   @Retries.RetryRaw
   private DeleteObjectsResponse deleteObjects(DeleteObjectsRequest deleteRequest)
-      throws MultiObjectDeleteException, AwsServiceException, IOException {
+      throws MultiObjectDeleteException, SdkException, IOException {
     incrementWriteOperations();
     BulkDeleteRetryHandler retryHandler =
         new BulkDeleteRetryHandler(createStoreContext());
@@ -2985,14 +3004,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param uploadData data to be uploaded
    * @param isFile represents if data to be uploaded is a file
    * @return the upload initiated
-   * @throws AmazonClientException on problems
+   * @throws SdkException on problems
    */
   @VisibleForTesting
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
       S3ADataBlocks.BlockUploadData uploadData, boolean isFile)
-      throws AmazonClientException {
+      throws SdkException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
@@ -3010,7 +3029,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           response.eTag(), response.versionId(),
           putOptions);
       return response;
-    } catch (SdkBaseException e) {
+    } catch (SdkException e) {
       incrementPutCompletedStatistics(false, len);
       throw e;
     }
@@ -3284,7 +3303,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Couldn't delete {} - does not exist: {}", path, e.toString());
       instrumentation.errorIgnored();
       return false;
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw translateException("delete", path, e);
     }
   }
@@ -3298,7 +3317,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryTranslated
   private void createFakeDirectoryIfNecessary(Path f)
-      throws IOException, AmazonClientException {
+      throws IOException, SdkException {
     String key = pathToKey(f);
     // we only make the LIST call; the codepaths to get here should not
     // be reached if there is an empty dir marker -and if they do, it
@@ -3318,7 +3337,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   @VisibleForTesting
   protected void maybeCreateFakeParentDirectory(Path path)
-      throws IOException, AmazonClientException {
+      throws IOException, SdkException {
     Path parent = path.getParent();
     if (parent != null && !parent.isRoot() && !isUnderMagicCommitPath(parent)) {
       createFakeDirectoryIfNecessary(parent);
@@ -3372,11 +3391,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the statuses of the files/directories in the given patch
    * @throws FileNotFoundException when the path does not exist;
    * @throws IOException due to an IO problem.
-   * @throws AmazonClientException on failures inside the AWS SDK
+   * @throws SdkException on failures inside the AWS SDK
    */
   private RemoteIterator<S3AFileStatus> innerListStatus(Path f)
           throws FileNotFoundException,
-          IOException, AmazonClientException {
+          IOException, SdkException {
     Path path = qualify(f);
     LOG.debug("List status for path: {}", path);
 
@@ -3752,22 +3771,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             username,
             meta.eTag(),
             meta.versionId());
-      } catch (AmazonServiceException e) {
+      } catch (AwsServiceException e) {
         // if the response is a 404 error, it just means that there is
         // no file at that path...the remaining checks will be needed.
         // But: an empty bucket is also a 404, so check for that
         // and fail.
-        if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
+        if (e.statusCode() != SC_404 || isUnknownBucket(e)) {
           throw translateException("getFileStatus", path, e);
         }
-      } catch (AmazonClientException e) {
+      } catch (SdkException e) {
         throw translateException("getFileStatus", path, e);
-      }  catch (AwsServiceException e) {
-        // TODO: This and above exception handling blocks will be updated during exception
-        //  handling work.
-        if (e.statusCode() != SC_404 || isUnknownBucketV2(e)) {
-          throw translateExceptionV2("getFileStatus", path.toString(), e);
-        }
       }
     }
 
@@ -3809,16 +3822,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           LOG.debug("Found root directory");
           return new S3AFileStatus(Tristate.TRUE, path, username);
         }
-      } catch (AmazonServiceException e) {
-        if (e.getStatusCode() != SC_404 || isUnknownBucket(e)) {
+      } catch (AwsServiceException e) {
+        if (e.statusCode() != SC_404 || isUnknownBucket(e)) {
           throw translateException("getFileStatus", path, e);
         }
-      } catch (AmazonClientException e) {
+      } catch (SdkException e) {
         throw translateException("getFileStatus", path, e);
-      } catch (AwsServiceException e) {
-        if (e.statusCode() != SC_404 || isUnknownBucketV2(e)) {
-          throw translateExceptionV2("getFileStatus", path.toString(), e);
-        }
       }
     }
 
@@ -3946,13 +3955,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Execute a PUT via the transfer manager, blocking for completion.
-   * If the waiting for completion is interrupted, the upload will be
-   * aborted before an {@code InterruptedIOException} is thrown.
    * @param putObjectRequest request
    * @param progress optional progress callback
    * @param putOptions put object options
    * @return the upload result
-   * @throws InterruptedIOException if the blocking was interrupted.
+   * @throws IOException IO failure
    */
   @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
   PutObjectResponse executePut(
@@ -3960,7 +3967,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final Progressable progress,
       final PutObjectOptions putOptions,
       final File file)
-      throws InterruptedIOException {
+      throws IOException {
     String key = putObjectRequest.key();
     long len = getPutRequestLength(putObjectRequest);
     ProgressableProgressListener listener =
@@ -3977,8 +3984,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Wait for an upload to complete.
-   * If the waiting for completion is interrupted, the upload will be
-   * aborted before an {@code InterruptedIOException} is thrown.
    * If the upload (or its result collection) failed, this is where
    * the failure is raised as an AWS exception.
    * Calls {@link #incrementPutCompletedStatistics(boolean, long)}
@@ -3986,27 +3991,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param key destination key
    * @param uploadInfo upload to wait for
    * @return the upload result
-   * @throws InterruptedIOException if the blocking was interrupted.
+   * @throws IOException IO failure
    */
   @Retries.OnceRaw
   CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
-      throws InterruptedIOException {
+      throws IOException {
     FileUpload upload = uploadInfo.getFileUpload();
-    // TODO: Check what this logic should be updated to. 
-    //  this no longer throws an interrupted exception.
-  //  try {
+    try {
       CompletedFileUpload result = upload.completionFuture().join();
       incrementPutCompletedStatistics(true, uploadInfo.getLength());
       return result;
-//    } catch (InterruptedException e) {
-//      LOG.info("Interrupted: aborting upload");
-//      incrementPutCompletedStatistics(false, uploadInfo.getLength());
-//      upload.completionFuture().cancel(true);
-//      throw (InterruptedIOException)
-//          new InterruptedIOException("Interrupted in PUT to "
-//              + keyToQualifiedPath(key))
-//          .initCause(e);
-//    }
+    } catch (CompletionException e) {
+      LOG.info("Interrupted: aborting upload");
+      incrementPutCompletedStatistics(false, uploadInfo.getLength());
+      throw extractException("upload", key, e);
+    }
   }
 
   /**
@@ -4330,28 +4329,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 //                      .addListener(progressListener))
                   .build());
 
-          CompletedCopy completedCopy = copy.completionFuture().join();
-
-          // TODO: Check what should happen for these exceptions.
-//          InterruptedException interruptedException =
-//              copyOutcome.getInterruptedException();
-//          if (interruptedException != null) {
-//            // copy interrupted: convert to an IOException.
-//            throw (IOException)new InterruptedIOException(
-//                "Interrupted copying " + srcKey
-//                    + " to " + dstKey + ", cancelling")
-//                .initCause(interruptedException);
-//          }
-//          SdkBaseException awsException = copyOutcome.getAwsException();
-//          if (awsException != null) {
-//            changeTracker.processException(awsException, "copy");
-//            throw awsException;
-//          }
-          CopyObjectResponse result = completedCopy.response();
-          changeTracker.processResponse(result);
-          incrementWriteOperations();
-          instrumentation.filesCopied(1, size);
-          return result;
+          try {
+            CompletedCopy completedCopy = copy.completionFuture().join();
+            CopyObjectResponse result = completedCopy.response();
+            changeTracker.processResponse(result);
+            incrementWriteOperations();
+            instrumentation.filesCopied(1, size);
+            return result;
+          } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof SdkBaseException) {
+              SdkBaseException awsException = (SdkBaseException)cause;
+              changeTracker.processException(awsException, "copy");
+              throw awsException;
+            }
+            throw extractException(action, srcKey, e);
+          }
         });
   }
 
@@ -4961,7 +4954,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // If we have reached here, it means either there are files
       // in this directory or it is empty.
       return listFilesAssumingDir;
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw translateException("listFiles", path, e);
     }
   }

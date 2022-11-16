@@ -25,12 +25,13 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetBucketEncryptionResult;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
+import software.amazon.awssdk.services.s3.model.GetBucketEncryptionResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.apache.hadoop.conf.Configuration;
@@ -408,13 +409,15 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
    * Gets default encryption settings for the bucket or returns null if default
    * encryption is disabled.
    */
-  private GetBucketEncryptionResult getDefaultEncryption() throws IOException {
+  private GetBucketEncryptionResponse getDefaultEncryption() throws IOException {
     S3AFileSystem fs = getFileSystem();
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("check default encryption");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("check default encryption");
     try {
       return Invoker.once("getBucketEncryption()",
           fs.getBucket(),
-          () -> s3.getBucketEncryption(fs.getBucket()));
+          () -> s3.getBucketEncryption(GetBucketEncryptionRequest.builder()
+              .bucket(fs.getBucket())
+              .build()));
     } catch (FileNotFoundException e) {
       return null;
     }

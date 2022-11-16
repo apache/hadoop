@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.SdkBaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +41,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
 
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
@@ -269,7 +268,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       } else {
         recursiveDirectoryRename();
       }
-    } catch (AmazonClientException | IOException ex) {
+    } catch (SdkException | IOException ex) {
       // rename failed.
       // block for all ongoing copies to complete, successfully or not
       try {
@@ -620,10 +619,10 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   protected IOException convertToIOException(final Exception ex) {
     if (ex instanceof IOException) {
       return (IOException) ex;
-    } else if (ex instanceof SdkBaseException) {
+    } else if (ex instanceof SdkException) {
       return translateException("rename " + sourcePath + " to " + destPath,
           sourcePath.toString(),
-          (SdkBaseException) ex);
+          (SdkException) ex);
     } else {
       // should never happen, but for completeness
       return new IOException(ex);

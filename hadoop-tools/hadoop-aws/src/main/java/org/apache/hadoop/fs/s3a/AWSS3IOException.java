@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.AmazonS3Exception;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.util.Map;
-
 /**
- * Wrap a {@link AmazonS3Exception} as an IOE, relaying all
+ * Wrap a {@link S3Exception} as an IOE, relaying all
  * getters.
  */
 @InterfaceAudience.Public
@@ -38,24 +37,12 @@ public class AWSS3IOException extends AWSServiceIOException {
    * @param cause the underlying cause
    */
   public AWSS3IOException(String operation,
-      AmazonS3Exception cause) {
+      S3Exception cause) {
     super(operation, cause);
   }
 
-  public AmazonS3Exception getCause() {
-    return (AmazonS3Exception) super.getCause();
-  }
-
-  public String getErrorResponseXml() {
-    return getCause().getErrorResponseXml();
-  }
-
-  public Map<String, String> getAdditionalDetails() {
-    return getCause().getAdditionalDetails();
-  }
-
-  public String getExtendedRequestId() {
-    return getCause().getExtendedRequestId();
+  public S3Exception getCause() {
+    return (S3Exception) super.getCause();
   }
 
 }

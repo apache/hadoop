@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.util.List;
 
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -28,15 +29,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Exception raised in {@link S3AFileSystem#deleteObjects} when
  * one or more of the keys could not be deleted.
+ *
+ * Used to reproduce the behaviour of SDK v1 for partial failures
+ * on DeleteObjects. In SDK v2, the errors are returned as part of
+ * the response objects.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class MultiObjectDeleteException extends RuntimeException {
+public class MultiObjectDeleteException extends S3Exception {
 
   private final List<S3Error> errors;
 
   public MultiObjectDeleteException(List<S3Error> errors) {
-    super(errors.toString());
+    super(builder().message(errors.toString()));
     this.errors = errors;
   }
 
