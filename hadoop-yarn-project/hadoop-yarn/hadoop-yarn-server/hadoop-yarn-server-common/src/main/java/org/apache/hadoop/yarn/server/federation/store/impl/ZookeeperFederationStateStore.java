@@ -272,6 +272,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     try {
       if (delTokSeqCounter != null) {
         delTokSeqCounter.close();
+        delTokSeqCounter = null;
       }
     } catch (Exception e) {
       LOG.error("Could not Stop Delegation Token Counter", e);
@@ -1005,7 +1006,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     }
 
     // Get the stored masterKey from zk.
-    RouterMasterKey masterKeyFromZK = getRouterMasterKeyFromZK(nodeCreatePath, false);
+    RouterMasterKey masterKeyFromZK = getRouterMasterKeyFromZK(nodeCreatePath);
     long end = clock.getTime();
     opDurations.addStoreNewMasterKeyDuration(start, end);
     return RouterMasterKeyResponse.newInstance(masterKeyFromZK);
@@ -1080,7 +1081,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // Get the stored masterKey from zk.
-      RouterMasterKey routerMasterKey = getRouterMasterKeyFromZK(nodePath, false);
+      RouterMasterKey routerMasterKey = getRouterMasterKeyFromZK(nodePath);
       long end = clock.getTime();
       opDurations.getMasterKeyByDelegationKeyDuration(start, end);
       return RouterMasterKeyResponse.newInstance(routerMasterKey);
@@ -1114,13 +1115,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * Get RouterMasterKey from ZK.
    *
    * @param nodePath The path where masterKey is stored in zk.
-   * @param quiet If true is silent mode, no error message is printed at this time,
-   * if false is non-silent mode, error message is printed at this time.
    *
-   * @return
-   * @throws IOException
+   * @return RouterMasterKey.
+   * @throws IOException An IO Error occurred.
    */
-  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath, boolean quiet)
+  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath)
       throws IOException {
     try {
       byte[] data = get(nodePath);
@@ -1136,9 +1135,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       return RouterMasterKey.newInstance(key.getKeyId(),
           ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
     } catch (Exception ex) {
-      if (!quiet) {
-        LOG.error("No node in path [" + nodePath + "]");
-      }
+      LOG.error("No node in path {}.", nodePath);
       throw new IOException(ex);
     }
   }

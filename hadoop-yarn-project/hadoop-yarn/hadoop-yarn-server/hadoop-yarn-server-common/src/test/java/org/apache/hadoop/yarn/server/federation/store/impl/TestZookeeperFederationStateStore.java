@@ -53,9 +53,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.util.curator.ZKCuratorManager.getNodePath;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Unit tests for ZookeeperFederationStateStore.
@@ -202,6 +203,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     MetricsRecords.assertMetric(record, "UpdateReservationHomeSubClusterNumOps",  expectOps);
   }
 
+  @Test
   public void testStoreNewMasterKey() throws Exception {
 
     // Manually create a DelegationKey,
@@ -233,7 +235,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertEquals(zkRouterMasterKey, respRouterMasterKey);
   }
 
-  public void testGetMasterKeyByDelegationKey() throws Exception {
+  @Test
+  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
 
     // Manually create a DelegationKey,
     // and call the interface storeNewMasterKey to write the data to zk.
@@ -266,7 +269,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertEquals(zkRouterMasterKey, respRouterMasterKey);
   }
 
-  public void testRemoveStoredMasterKey() throws Exception {
+  @Test
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
 
     // Manually create a DelegationKey,
     // and call the interface storeNewMasterKey to write the data to zk.
@@ -286,7 +290,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     // We will check if delegationToken exists in zk.
     String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + key.getKeyId();
     String nodePath = ZNODE_MASTER_KEY_PREFIX + nodeName;
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) != null);
+    assertTrue(isExists(nodePath));
 
     // Call removeStoredMasterKey to remove the MasterKey data in zk.
     RouterMasterKeyResponse response1 = stateStore.removeStoredMasterKey(routerMasterKeyRequest);
@@ -297,10 +301,11 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
 
     // We have removed the RouterMasterKey data from zk,
     // the path should be empty at this point.
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) == null);
+    assertFalse(isExists(nodePath));
   }
 
-  public void testStoreNewToken() throws Exception {
+  @Test
+  public void testStoreNewToken() throws YarnException, IOException {
 
     // We manually generate the DelegationToken,
     // and then call the StoreNewToken method to store the Token in zk.
@@ -324,7 +329,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
 
     // Check if the path exists, we expect the result to exist.
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) != null);
+    assertTrue(isExists(nodePath));
 
     // Check whether the token (paramStoreToken)
     // We generated is consistent with the data stored in zk.
@@ -335,7 +340,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertEquals(respStoreToken, zkRouterStoreToken);
   }
 
-  public void testUpdateStoredToken() throws Exception {
+  @Test
+  public void testUpdateStoredToken() throws YarnException, IOException {
 
     // We manually generate the DelegationToken,
     // and then call the StoreNewToken method to store the Token in zk.
@@ -369,7 +375,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
 
     // Check if the path exists, we expect the result to exist.
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) != null);
+    assertTrue(isExists(nodePath));
 
     // Check whether the token (paramStoreToken)
     // We generated is consistent with the data stored in zk.
@@ -380,7 +386,8 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     assertEquals(updateTokenResp, zkRouterStoreToken);
   }
 
-  public void testRemoveStoredToken() throws Exception {
+  @Test
+  public void testRemoveStoredToken() throws YarnException, IOException {
 
     // We manually generate the DelegationToken,
     // and then call the StoreNewToken method to store the Token in zk.
@@ -402,16 +409,17 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
 
     // Check if the path exists, we expect the result to exist.
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) != null);
+    assertTrue(isExists(nodePath));
 
     // Remove stored-token
     stateStore.removeStoredToken(request);
 
     // After the data is deleted, the path should not exist in zk
-    assertTrue(curatorFramework.checkExists().forPath(nodePath) == null);
+    assertFalse(isExists(nodePath));
   }
 
-  public void testGetTokenByRouterStoreToken() throws Exception {
+  @Test
+  public void testGetTokenByRouterStoreToken() throws YarnException, IOException {
 
     // We manually generate the DelegationToken,
     // and then call the StoreNewToken method to store the Token in zk.
@@ -446,26 +454,42 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
   }
 
   private RouterStoreToken getStoreTokenFromZK(String nodePath)
-      throws Exception {
-    byte[] data = curatorFramework.getData().forPath(nodePath);
-    if ((data == null) || (data.length == 0)) {
-      return null;
+      throws YarnException {
+    try {
+      byte[] data = curatorFramework.getData().forPath(nodePath);
+      if ((data == null) || (data.length == 0)) {
+        return null;
+      }
+      ByteArrayInputStream bin = new ByteArrayInputStream(data);
+      DataInputStream din = new DataInputStream(bin);
+      RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
+      storeToken.readFields(din);
+      return storeToken;
+    } catch (Exception e) {
+      throw new YarnException(e);
     }
-    ByteArrayInputStream bin = new ByteArrayInputStream(data);
-    DataInputStream din = new DataInputStream(bin);
-    RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
-    storeToken.readFields(din);
-    return storeToken;
   }
 
-  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath) throws Exception {
-    byte[] data = curatorFramework.getData().forPath(nodePath);
-    ByteArrayInputStream bin = new ByteArrayInputStream(data);
-    DataInputStream din = new DataInputStream(bin);
-    DelegationKey zkDT = new DelegationKey();
-    zkDT.readFields(din);
-    RouterMasterKey zkRouterMasterKey = RouterMasterKey.newInstance(
-        zkDT.getKeyId(), ByteBuffer.wrap(zkDT.getEncodedKey()), zkDT.getExpiryDate());
-    return zkRouterMasterKey;
+  private RouterMasterKey getRouterMasterKeyFromZK(String nodePath) throws YarnException {
+    try {
+      byte[] data = curatorFramework.getData().forPath(nodePath);
+      ByteArrayInputStream bin = new ByteArrayInputStream(data);
+      DataInputStream din = new DataInputStream(bin);
+      DelegationKey zkDT = new DelegationKey();
+      zkDT.readFields(din);
+      RouterMasterKey zkRouterMasterKey = RouterMasterKey.newInstance(
+          zkDT.getKeyId(), ByteBuffer.wrap(zkDT.getEncodedKey()), zkDT.getExpiryDate());
+      return zkRouterMasterKey;
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
+  }
+
+  private boolean isExists(String path) throws YarnException {
+    try {
+      return (curatorFramework.checkExists().forPath(path) != null);
+    } catch (Exception e) {
+      throw new YarnException(e);
+    }
   }
 }
