@@ -293,6 +293,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
         .isEqualTo(3);
   }
 
+  @SuppressWarnings("unchecked") // suppressing unchecked since, className of List<AbfsHttpHeader> not possible and need to supply List.class
   private void setMocks(final AzureBlobFileSystem fs,
       final AbfsClient originalClient,
       final MockHttpOperationTestIntercept mockHttpOperationTestIntercept) {
@@ -306,8 +307,7 @@ public class ITestPartialRead extends AbstractAbfsIntegrationTest {
               (AbfsClient) objects[0],
               getRestOpMockInvocation.getArgument(1, String.class),
               getRestOpMockInvocation.getArgument(2, URL.class),
-              getRestOpMockInvocation.getArgument(3,
-                  (Class<List<AbfsHttpHeader>>) (Object) List.class),
+              getRestOpMockInvocation.getArgument(3,List.class),
               getRestOpMockInvocation.getArgument(4, byte[].class),
               getRestOpMockInvocation.getArgument(5, Integer.class),
               getRestOpMockInvocation.getArgument(6, Integer.class),
