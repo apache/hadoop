@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.impl.WeakRefMetricsSource;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
@@ -160,7 +161,10 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
 
   private final DurationTrackerFactory durationTrackerFactory;
 
-  private String metricsSourceName;
+  /**
+   * Weak reference so there's no back reference to the instrumentation.
+   */
+  private WeakRefMetricsSource metricsSourceReference;
 
   private final MetricsRegistry registry =
       new MetricsRegistry("s3aFileSystem").setContext(CONTEXT);
@@ -257,7 +261,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
       number = ++metricsSourceNameCounter;
     }
     String msName = METRICS_SOURCE_BASENAME + number;
-    metricsSourceName = msName + "-" + name.getHost();
+    String metricsSourceName = msName + "-" + name.getHost();
+    metricsSourceReference = new WeakRefMetricsSource(metricsSourceName, this);
     metricsSystem.register(metricsSourceName, "", this);
   }
 
@@ -681,11 +686,12 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   public void close() {
+    LOG.debug("Unregistering metrics");
     synchronized (METRICS_SYSTEM_LOCK) {
       // it is critical to close each quantile, as they start a scheduled
       // task in a shared thread pool.
       throttleRateQuantile.stop();
-      metricsSystem.unregisterSource(metricsSourceName);
+      metricsSystem.unregisterSource(metricsSourceReference.getName());
       metricsSourceActiveCounter--;
       int activeSources = metricsSourceActiveCounter;
       if (activeSources == 0) {

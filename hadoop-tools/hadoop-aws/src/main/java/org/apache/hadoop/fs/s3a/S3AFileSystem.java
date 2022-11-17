@@ -4016,6 +4016,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Statistics for {}: {}", uri,
           IOStatisticsLogging.ioStatisticsToPrettyString(getIOStatistics()));
     }
+    // and shut down the statistics, which includes deregistering the metrics
+    cleanupWithLogger(LOG, instrumentation);
   }
 
   /**
