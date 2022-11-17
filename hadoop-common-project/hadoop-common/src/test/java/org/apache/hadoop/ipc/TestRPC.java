@@ -1163,7 +1163,7 @@ public class TestRPC extends TestRpcBase {
     RPC.setProtocolEngine(clientConf, TestRpcService.class,
         ProtobufRpcEngine.class);
     TestRpcService client = null;
-    int numThreads = Thread.getAllStackTraces().size();
+    int threadCount = Thread.getAllStackTraces().size();
     try {
       try {
         client = RPC.getProtocolProxy(
@@ -1177,8 +1177,8 @@ public class TestRPC extends TestRpcBase {
         assertTrue("Didn't throw exception!", false);
       } catch (ServiceException nfe) {
         // ensure no extra threads are running.
-        assertEquals(numThreads, Thread.getAllStackTraces().size());
-       } catch (Throwable t) {
+        assertEquals(threadCount, Thread.getAllStackTraces().size());
+      } catch (Throwable t) {
         assertTrue("wrong exception: " + t, false);
       }
     } finally {
