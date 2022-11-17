@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -1286,20 +1287,8 @@ public class AbfsClient implements Closeable {
     if(isNamespaceEnabled != null) {
       return isNamespaceEnabled;
     }
-    try {
-      this.getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
-      isNamespaceEnabled = true;
-    } catch (AbfsRestOperationException ex) {
-      // Get ACL status is a HEAD request, its response doesn't contain
-      // errorCode
-      // So can only rely on its status code to determine its account type.
-      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
-        throw ex;
-      }
-      isNamespaceEnabled = false;
-    } catch (AzureBlobFileSystemException ex) {
-      throw ex;
-    }
+
+    isNamespaceEnabled = NamespaceUtil.isNamespaceEnabled(this, tracingContext);
     return isNamespaceEnabled;
   }
 

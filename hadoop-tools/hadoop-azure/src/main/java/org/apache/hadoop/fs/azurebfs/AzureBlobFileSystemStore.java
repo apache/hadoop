@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -362,25 +363,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           + " getAcl server call", e);
     }
 
-    LOG.debug("Get root ACL status");
-    try (AbfsPerfInfo perfInfo = startTracking("getIsNamespaceEnabled",
-        "getAclStatus")) {
-      AbfsRestOperation op = client
-          .getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
-      perfInfo.registerResult(op.getResult());
-      isNamespaceEnabled = Trilean.getTrilean(true);
-      perfInfo.registerSuccess(true);
-    } catch (AbfsRestOperationException ex) {
-      // Get ACL status is a HEAD request, its response doesn't contain
-      // errorCode
-      // So can only rely on its status code to determine its account type.
-      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
-        throw ex;
-      }
-
-      isNamespaceEnabled = Trilean.getTrilean(false);
-    }
-
+    isNamespaceEnabled = Trilean.getTrilean(NamespaceUtil.isNamespaceEnabled(client, tracingContext));
     return isNamespaceEnabled.toBoolean();
   }
 
