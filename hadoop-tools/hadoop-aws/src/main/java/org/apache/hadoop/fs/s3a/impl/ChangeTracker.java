@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -230,13 +230,14 @@ public class ChangeTracker {
    * generated (e.g. "copy", "read", "select").
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processException(SdkBaseException e, String operation) throws
+  public void processException(SdkException e, String operation) throws
       RemoteFileChangedException {
-    if (e instanceof AmazonServiceException) {
-      AmazonServiceException serviceException = (AmazonServiceException) e;
-      // This isn't really going to be hit due to
+    if (e instanceof AwsServiceException) {
+      AwsServiceException serviceException = (AwsServiceException)e;
+      // TODO: Verify whether this is fixed in SDK v2.
+      // In SDK v1, this wasn't really going to be hit due to
       // https://github.com/aws/aws-sdk-java/issues/1644
-      if (serviceException.getStatusCode() == SC_PRECONDITION_FAILED) {
+      if (serviceException.statusCode() == SC_PRECONDITION_FAILED) {
         versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation, String.format(
             RemoteFileChangedException.PRECONDITIONS_FAILED

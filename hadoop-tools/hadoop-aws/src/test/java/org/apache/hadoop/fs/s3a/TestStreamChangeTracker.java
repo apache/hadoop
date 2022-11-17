@@ -18,13 +18,12 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
-
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.CopyObjectResult;
@@ -250,14 +249,16 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     // 412 is translated to RemoteFileChangedException
     // note: this scenario is never currently hit due to
     // https://github.com/aws/aws-sdk-java/issues/1644
-    AmazonServiceException awsException =
-        new AmazonServiceException("aws exception");
-    awsException.setStatusCode(ChangeTracker.SC_PRECONDITION_FAILED);
+    AwsServiceException awsException =
+        AwsServiceException.builder()
+            .message("aws exception")
+            .statusCode(ChangeTracker.SC_PRECONDITION_FAILED)
+            .build();
     expectChangeException(tracker, awsException, "copy",
         RemoteFileChangedException.PRECONDITIONS_FAILED);
 
     // processing another type of exception does nothing
-    tracker.processException(new SdkBaseException("foo"), "copy");
+    tracker.processException(SdkException.builder().message("foo").build(), "copy");
   }
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
@@ -282,7 +283,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected RemoteFileChangedException expectChangeException(
       final ChangeTracker tracker,
-      final SdkBaseException exception,
+      final SdkException exception,
       final String operation,
       final String message) throws Exception {
     return expectException(tracker, exception, operation, message,
@@ -335,7 +336,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
-      final SdkBaseException exception,
+      final SdkException exception,
       final String operation,
       final String message,
       final Class<T> clazz) throws Exception {

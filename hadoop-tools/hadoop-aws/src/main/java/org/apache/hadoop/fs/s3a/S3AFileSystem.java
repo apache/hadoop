@@ -50,7 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
-import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -4338,8 +4337,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             return result;
           } catch (CompletionException e) {
             Throwable cause = e.getCause();
-            if (cause instanceof SdkBaseException) {
-              SdkBaseException awsException = (SdkBaseException)cause;
+            if (cause instanceof SdkException) {
+              SdkException awsException = (SdkException)cause;
               changeTracker.processException(awsException, "copy");
               throw awsException;
             }
