@@ -1061,7 +1061,7 @@ public class TestDatanodeManager {
     verifyPendingRecoveryTasks(400, 1, 20, 30, 20, 1, false);
 
     // Tasks use dfs.namenode.replication.max-streams-hard-limit for decommissioning node
-    verifyPendingRecoveryTasks(30, 30, 20, 30, 15, 15, true);
+    verifyPendingRecoveryTasks(30, 30, 20, 30, 10, 15, true);
   }
 
   @Test

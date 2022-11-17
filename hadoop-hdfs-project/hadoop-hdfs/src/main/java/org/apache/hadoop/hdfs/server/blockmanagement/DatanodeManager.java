@@ -1829,18 +1829,20 @@ public class DatanodeManager {
     int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
     int totalBlocks = totalReplicateBlocks + totalECBlocks;
     if (totalBlocks > 0) {
-      int maxTransfers;
+      int maxECTransfers;
+      int maxReplicationTransfers = blockManager.getMaxReplicationStreams()
+              - xmitsInProgress;;
       if (nodeinfo.isDecommissionInProgress()) {
-        maxTransfers = blockManager.getReplicationStreamsHardLimit()
+        maxECTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
       } else {
-        maxTransfers = blockManager.getMaxReplicationStreams()
+        maxECTransfers = blockManager.getMaxReplicationStreams()
             - xmitsInProgress;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
+          (double) (totalReplicateBlocks * maxReplicationTransfers) / totalBlocks);
       int numECTasks = (int) Math.ceil(
-          (double) (totalECBlocks * maxTransfers) / totalBlocks);
+          (double) (totalECBlocks * maxECTransfers) / totalBlocks);
       LOG.debug("Pending replication tasks: {} erasure-coded tasks: {}.",
           numReplicationTasks, numECTasks);
       // check pending replication tasks
