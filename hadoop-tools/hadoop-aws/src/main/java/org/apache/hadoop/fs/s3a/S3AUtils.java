@@ -38,7 +38,6 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
-import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
@@ -50,10 +49,10 @@ import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.core.exception.SdkServiceException;
 import software.amazon.awssdk.core.retry.RetryUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
@@ -109,6 +108,8 @@ public final class S3AUtils {
       = "instantiation exception";
   static final String NOT_AWS_PROVIDER =
       "does not implement AWSCredentialsProvider";
+  static final String NOT_AWS_V2_PROVIDER =
+      "does not implement AwsCredentialsProvider";
   static final String ABSTRACT_PROVIDER =
       "is abstract and therefore cannot be created";
   static final String ENDPOINT_KEY = "Endpoint";
@@ -653,16 +654,22 @@ public final class S3AUtils {
     AWSCredentialProviderList providers = new AWSCredentialProviderList();
     for (Class<?> aClass : awsClasses) {
 
-      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
-        V2Migration.v1ProviderReferenced(aClass.getName());
-      }
-
       if (forbidden.contains(aClass)) {
         throw new IOException(E_FORBIDDEN_AWS_PROVIDER
             + " in option " + key + ": " + aClass);
       }
-      providers.add(createAWSCredentialProvider(conf,
-          aClass, binding));
+
+      // TODO: Not sure what to do here yet.
+      //  There were some V1 providers for which we suppressed warnings, how do we map those?
+      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
+        // V2Migration.v1ProviderReferenced(aClass.getName());
+
+        providers.add(createAWSV1CredentialProvider(conf,
+            aClass, binding));
+      } else {
+        providers.add(createAWSV2CredentialProvider(conf, aClass, binding));
+      }
+
     }
     return providers;
   }
@@ -689,7 +696,7 @@ public final class S3AUtils {
    * @return the instantiated class
    * @throws IOException on any instantiation failure.
    */
-  private static AWSCredentialsProvider createAWSCredentialProvider(
+  private static AWSCredentialsProvider createAWSV1CredentialProvider(
       Configuration conf,
       Class<?> credClass,
       @Nullable URI uri) throws IOException {
@@ -762,6 +769,105 @@ public final class S3AUtils {
           e);
     }
   }
+
+  /**
+   * Create an AWS credential provider from its class by using reflection.  The
+   * class must implement one of the following means of construction, which are
+   * attempted in order:
+   *
+   * <ol>
+   * <li>a public constructor accepting java.net.URI and
+   *     org.apache.hadoop.conf.Configuration</li>
+   * <li>a public constructor accepting
+   *    org.apache.hadoop.conf.Configuration</li>
+   * <li>a public static method named getInstance that accepts no
+   *    arguments and returns an instance of
+   *    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider, or</li>
+   * <li>a public default constructor.</li>
+   * </ol>
+   *
+   * @param conf configuration
+   * @param credClass credential class
+   * @param uri URI of the FS
+   * @return the instantiated class
+   * @throws IOException on any instantiation failure.
+   */
+  private static AwsCredentialsProvider createAWSV2CredentialProvider(
+      Configuration conf,
+      Class<?> credClass,
+      @Nullable URI uri) throws IOException {
+    AwsCredentialsProvider credentials = null;
+    String className = credClass.getName();
+    if (!AwsCredentialsProvider.class.isAssignableFrom(credClass)) {
+      throw new IOException("Class " + credClass + " " + NOT_AWS_V2_PROVIDER);
+    }
+    if (Modifier.isAbstract(credClass.getModifiers())) {
+      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
+    }
+    LOG.debug("Credential provider class is {}", className);
+
+    try {
+      // new X(uri, conf)
+      Constructor cons = getConstructor(credClass, URI.class,
+          Configuration.class);
+      if (cons != null) {
+        credentials = (AwsCredentialsProvider)cons.newInstance(uri, conf);
+        return credentials;
+      }
+      // new X(conf)
+      cons = getConstructor(credClass, Configuration.class);
+      if (cons != null) {
+        credentials = (AwsCredentialsProvider)cons.newInstance(conf);
+        return credentials;
+      }
+
+      // X.getInstance()
+      Method factory = getFactoryMethod(credClass, AwsCredentialsProvider.class,
+          "getInstance");
+      if (factory != null) {
+        credentials = (AwsCredentialsProvider)factory.invoke(null);
+        return credentials;
+      }
+
+      // new X()
+      cons = getConstructor(credClass);
+      if (cons != null) {
+        credentials = (AwsCredentialsProvider)cons.newInstance();
+        return credentials;
+      }
+
+      // no supported constructor or factory method found
+      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
+              + ".  A class specified in %s must provide a public constructor "
+              + "of a supported signature, or a public factory method named "
+              + "getInstance that accepts no arguments.",
+          className, AWS_CREDENTIALS_PROVIDER));
+    } catch (InvocationTargetException e) {
+      // TODO: Can probably be moved to a common method, but before doing this, check if we still
+      //  want to extend V2 providers the same way v1 providers are.
+      Throwable targetException = e.getTargetException();
+      if (targetException == null) {
+        targetException =  e;
+      }
+      if (targetException instanceof IOException) {
+        throw (IOException) targetException;
+      } else if (targetException instanceof SdkException) {
+        throw translateException("Instantiate " + className, "",
+            (SdkException) targetException);
+      } else {
+        // supported constructor or factory method found, but the call failed
+        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+            + ": " + targetException,
+            targetException);
+      }
+    } catch (ReflectiveOperationException | IllegalArgumentException e) {
+      // supported constructor or factory method found, but the call failed
+      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
+          + ": " + e,
+          e);
+    }
+  }
+
 
   /**
    * Set a key if the value is non-empty.

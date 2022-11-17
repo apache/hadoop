@@ -34,6 +34,7 @@ import org.apache.hadoop.util.Sets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -351,12 +352,12 @@ public class TestS3AAWSCredentialsProvider {
       List<Class<?>> expectedClasses,
       AWSCredentialProviderList list) {
     assertNotNull(list);
-    List<AWSCredentialsProvider> providers = list.getProviders();
+    List<AwsCredentialsProvider> providers = list.getProviders();
     assertEquals(expectedClasses.size(), providers.size());
     for (int i = 0; i < expectedClasses.size(); ++i) {
       Class<?> expectedClass =
           expectedClasses.get(i);
-      AWSCredentialsProvider provider = providers.get(i);
+      AwsCredentialsProvider provider = providers.get(i);
       assertNotNull(
           String.format("At position %d, expected class is %s, but found null.",
               i, expectedClass), provider);
@@ -390,7 +391,7 @@ public class TestS3AAWSCredentialsProvider {
     // verify you can't get credentials from it
     NoAuthWithAWSException noAuth = intercept(NoAuthWithAWSException.class,
         AWSCredentialProviderList.NO_AWS_CREDENTIAL_PROVIDERS,
-        () -> providers.getCredentials());
+        () -> providers.resolveCredentials());
     // but that it closes safely
     providers.close();
 
@@ -439,11 +440,10 @@ public class TestS3AAWSCredentialsProvider {
     providers.close();
     assertEquals("Ref count after close() for " + providers,
         0, providers.getRefCount());
-    providers.refresh();
 
     intercept(NoAuthWithAWSException.class,
         AWSCredentialProviderList.CREDENTIALS_REQUESTED_WHEN_CLOSED,
-        () -> providers.getCredentials());
+        () -> providers.resolveCredentials());
   }
 
   /**

@@ -50,6 +50,8 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.SdkClient;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
@@ -194,6 +196,7 @@ public class DefaultS3ClientFactory extends Configured
 
     Configuration conf = getConf();
     bucket = uri.getHost();
+
     ApacheHttpClient.Builder httpClientBuilder = AWSClientConfig
         .createHttpClientBuilder(conf)
         .proxyConfiguration(AWSClientConfig.createProxyConfiguration(conf, bucket));
@@ -250,10 +253,7 @@ public class DefaultS3ClientFactory extends Configured
 
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
-        .credentialsProvider(
-            // use adapter classes so V1 credential providers continue to work. This will
-            // be moved to AWSCredentialProviderList.add() when that class is updated.
-            V1V2AwsCredentialProviderAdapter.adapt(parameters.getCredentialSet()))
+        .credentialsProvider(parameters.getCredentialSet())
         .endpointOverride(endpoint)
         .region(region)
         .serviceConfiguration(serviceConfiguration);
@@ -386,7 +386,8 @@ public class DefaultS3ClientFactory extends Configured
    */
   private void configureBasicParams(AmazonS3Builder builder,
       ClientConfiguration awsConf, S3ClientCreationParameters parameters) {
-    builder.withCredentials(parameters.getCredentialSet());
+    // TODO: This whole block will be removed when we remove the V1 client.
+   // builder.withCredentials(parameters.getCredentialSet());
     builder.withClientConfiguration(awsConf);
     builder.withPathStyleAccessEnabled(parameters.isPathStyleAccess());
 
@@ -561,7 +562,7 @@ public class DefaultS3ClientFactory extends Configured
    * @return region of the bucket.
    */
   private static Region getS3Region(String region, String bucket,
-      AWSCredentialsProvider credentialsProvider) {
+      AwsCredentialsProvider credentialsProvider) {
 
     if (!StringUtils.isBlank(region)) {
       return Region.of(region);
@@ -574,7 +575,7 @@ public class DefaultS3ClientFactory extends Configured
       // the actual region the bucket is in. As the request is signed with us-east-1 and not the
       // bucket's region, it fails.
       S3Client s3Client = S3Client.builder().region(Region.EU_WEST_1)
-          .credentialsProvider(V1V2AwsCredentialProviderAdapter.adapt(credentialsProvider))
+          .credentialsProvider(credentialsProvider)
           .build();
 
       HeadBucketResponse headBucketResponse =

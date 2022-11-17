@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import com.amazonaws.auth.AWSCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -85,7 +86,7 @@ public class MarshalledCredentialProvider extends
    * @throws IOException on a failure
    */
   @Override
-  protected AWSCredentials createCredentials(final Configuration config)
+  protected AwsCredentials createCredentials(final Configuration config)
       throws IOException {
     return toAWSCredentials(credentials, typeRequired, component);
   }

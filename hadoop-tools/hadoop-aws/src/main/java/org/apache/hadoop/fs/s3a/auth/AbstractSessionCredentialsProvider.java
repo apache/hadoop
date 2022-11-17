@@ -32,21 +32,19 @@ import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * Base class for session credential support.
  *
- * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
- * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Private
-@Deprecated
 public abstract class AbstractSessionCredentialsProvider
     extends AbstractAWSCredentialProvider {
 
   /** Credentials, created in {@link #init()}. */
-  private AWSCredentials awsCredentials;
+  private AwsCredentials awsCredentials;
 
   /** Atomic flag for on-demand initialization. */
   private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -104,7 +102,7 @@ public abstract class AbstractSessionCredentialsProvider
    * @return the credentials
    * @throws IOException on any failure.
    */
-  protected abstract AWSCredentials createCredentials(Configuration config)
+  protected abstract AwsCredentials createCredentials(Configuration config)
       throws IOException;
 
   /**
@@ -117,7 +115,7 @@ public abstract class AbstractSessionCredentialsProvider
    * @throws SdkException if one was raised during init
    * @throws CredentialInitializationException on other failures.
    */
-  public AWSCredentials getCredentials() throws SdkException {
+  public AwsCredentials resolveCredentials() throws SdkException {
     // do an on-demand init then raise an AWS SDK exception if
     // there was a failure.
     try {

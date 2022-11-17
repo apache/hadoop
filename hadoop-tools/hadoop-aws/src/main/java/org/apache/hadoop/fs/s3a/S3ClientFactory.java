@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -105,7 +106,7 @@ public interface S3ClientFactory {
     /**
      * Credentials.
      */
-    private AWSCredentialsProvider credentialSet;
+    private AwsCredentialsProvider credentialSet;
 
     /**
      * Endpoint.
@@ -222,7 +223,7 @@ public interface S3ClientFactory {
       return requesterPays;
     }
 
-    public AWSCredentialsProvider getCredentialSet() {
+    public AwsCredentialsProvider getCredentialSet() {
       return credentialSet;
     }
 
@@ -233,7 +234,7 @@ public interface S3ClientFactory {
      */
 
     public S3ClientCreationParameters withCredentialSet(
-        final AWSCredentialsProvider value) {
+        final AwsCredentialsProvider value) {
       credentialSet = value;
       return this;
     }

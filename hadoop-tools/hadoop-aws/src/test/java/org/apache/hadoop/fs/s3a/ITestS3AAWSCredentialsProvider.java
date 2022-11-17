@@ -37,6 +37,9 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
@@ -77,20 +80,17 @@ public class ITestS3AAWSCredentialsProvider {
    * or a public default constructor.
    */
   static class BadCredentialsProviderConstructor
-      implements AWSCredentialsProvider {
+      implements AwsCredentialsProvider {
 
     @SuppressWarnings("unused")
     public BadCredentialsProviderConstructor(String fsUri, Configuration conf) {
     }
 
     @Override
-    public AWSCredentials getCredentials() {
-      return new BasicAWSCredentials("dummy_key", "dummy_secret");
+    public AwsCredentials resolveCredentials() {
+      return AwsBasicCredentials.create("dummy_key", "dummy_secret");
     }
 
-    @Override
-    public void refresh() {
-    }
   }
 
   @Test
@@ -125,20 +125,17 @@ public class ITestS3AAWSCredentialsProvider {
     fail("Expected exception - got " + fs);
   }
 
-  static class BadCredentialsProvider implements AWSCredentialsProvider {
+  static class BadCredentialsProvider implements AwsCredentialsProvider {
 
     @SuppressWarnings("unused")
     public BadCredentialsProvider(Configuration conf) {
     }
 
     @Override
-    public AWSCredentials getCredentials() {
-      return new BasicAWSCredentials("bad_key", "bad_secret");
+    public AwsCredentials resolveCredentials() {
+      return AwsBasicCredentials.create("bad_key", "bad_secret");
     }
 
-    @Override
-    public void refresh() {
-    }
   }
 
   @Test
@@ -157,7 +154,6 @@ public class ITestS3AAWSCredentialsProvider {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAnonymousProvider() throws Exception {
     Configuration conf = new Configuration();
     conf.set(AWS_CREDENTIALS_PROVIDER,

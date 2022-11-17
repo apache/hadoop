@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,8 +46,17 @@ public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
     LOG.warn("List inconsistency is no longer emulated; only throttling and read errors");
     InconsistentAmazonS3Client s3
-        = new InconsistentAmazonS3Client(
-            parameters.getCredentialSet(), awsConf, getConf());
+        = new InconsistentAmazonS3Client(new AWSStaticCredentialsProvider(new AWSCredentials() {
+      @Override
+      public String getAWSAccessKeyId() {
+        return null;
+      }
+
+      @Override
+      public String getAWSSecretKey() {
+        return null;
+      }
+    }), awsConf, getConf());
     configureAmazonS3Client(s3,
         parameters.getEndpoint(),
         parameters.isPathStyleAccess());

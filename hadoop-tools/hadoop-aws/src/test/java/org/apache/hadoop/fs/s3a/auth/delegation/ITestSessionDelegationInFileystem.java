@@ -255,7 +255,6 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAddTokensFromFileSystem() throws Throwable {
     describe("verify FileSystem.addDelegationTokens() collects tokens");
     S3AFileSystem fs = getFileSystem();
@@ -277,7 +276,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     AWSCredentialProviderList providerList = requireNonNull(
         delegationTokens.getCredentialProviders(), "providers");
 
-    providerList.getCredentials();
+    providerList.resolveCredentials();
   }
 
   @Test

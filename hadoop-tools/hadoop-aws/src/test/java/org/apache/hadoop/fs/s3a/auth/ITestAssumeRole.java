@@ -33,6 +33,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -140,7 +141,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
@@ -148,13 +148,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -162,7 +161,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(null, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
