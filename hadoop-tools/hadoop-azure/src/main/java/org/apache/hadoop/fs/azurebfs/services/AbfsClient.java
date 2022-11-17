@@ -36,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -108,6 +109,7 @@ public class AbfsClient implements Closeable {
   private EncryptionType encryptionType = EncryptionType.NONE;
 
   private final ListeningScheduledExecutorService executorService;
+  private Boolean isNamespaceEnabled;
 
 
   /** logging the rename failure if metadata is in an incomplete state. */
@@ -252,6 +254,9 @@ public class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
       throws IOException {
+    if(!getIsNamespaceEnabled(tracingContext)) {
+      return;
+    }
     String encodedKey, encodedKeySHA256;
     boolean encryptionAdapterCreated = false;
     switch (encryptionType) {
@@ -1274,6 +1279,28 @@ public class AbfsClient implements Closeable {
     } else {
       return null;
     }
+  }
+
+  private synchronized Boolean getIsNamespaceEnabled(TracingContext tracingContext)
+      throws AzureBlobFileSystemException {
+    if(isNamespaceEnabled != null) {
+      return isNamespaceEnabled;
+    }
+    try {
+      this.getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      isNamespaceEnabled = true;
+    } catch (AbfsRestOperationException ex) {
+      // Get ACL status is a HEAD request, its response doesn't contain
+      // errorCode
+      // So can only rely on its status code to determine its account type.
+      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+        throw ex;
+      }
+      isNamespaceEnabled = false;
+    } catch (AzureBlobFileSystemException ex) {
+      throw ex;
+    }
+    return isNamespaceEnabled;
   }
 
   public AuthType getAuthType() {
