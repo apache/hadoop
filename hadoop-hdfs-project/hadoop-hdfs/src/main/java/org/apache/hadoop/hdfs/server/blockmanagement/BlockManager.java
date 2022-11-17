@@ -2611,7 +2611,7 @@ public class BlockManager implements BlockStatsMXBean {
       }
 
       if (node.getNumberOfBlocksToBeReplicated() +
-          node.getNumberOfBlocksToBeErasureCoded()>= replicationStreamsHardLimit) {
+          node.getNumberOfBlocksToBeErasureCoded() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
