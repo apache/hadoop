@@ -1623,6 +1623,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsClientContext());
     } else {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+          sasTokenProvider,
           populateAbfsClientContext());
       LOG.trace("Fetching actual SAS token provider");
       sasTokenProvider = this.abfsConfiguration.getSASTokenProvider(getIsNamespaceEnabled(tracingContext));
