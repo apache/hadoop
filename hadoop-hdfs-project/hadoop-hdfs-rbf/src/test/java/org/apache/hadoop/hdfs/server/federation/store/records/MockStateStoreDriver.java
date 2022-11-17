@@ -83,7 +83,8 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
   public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz) throws IOException {
     checkErrors();
     Map<String, BaseRecord> map = valueMap.get(StateStoreUtils.getRecordName(clazz));
-    List<T> results = map != null ? new ArrayList<>((Collection<T>) map.values()) : new ArrayList<>();
+    List<T> results =
+        map != null ? new ArrayList<>((Collection<T>) map.values()) : new ArrayList<>();
     return new QueryResult<>(results, System.currentTimeMillis());
   }
 
@@ -125,7 +126,7 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
     Map<String, BaseRecord> map =
         valueMap.get(StateStoreUtils.getRecordName(clazz));
     if (map != null) {
-      for (Iterator<BaseRecord> itr = map.values().iterator(); itr.hasNext(); ) {
+      for (Iterator<BaseRecord> itr = map.values().iterator(); itr.hasNext();) {
         BaseRecord record = itr.next();
         if (query.matches((T) record)) {
           itr.remove();
