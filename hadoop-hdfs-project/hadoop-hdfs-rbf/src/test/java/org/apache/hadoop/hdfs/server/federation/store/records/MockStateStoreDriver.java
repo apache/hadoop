@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreBase
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,9 +33,9 @@ import java.util.Map;
  * upon demand.
  */
 public class MockStateStoreDriver extends StateStoreBaseImpl {
-  boolean giveErrors = false;
-  boolean initialized = false;
-  Map<String, Map<String, BaseRecord>> valueMap = new HashMap<>();
+  private boolean giveErrors = false;
+  private boolean initialized = false;
+  private final Map<String, Map<String, BaseRecord>> valueMap = new HashMap<>();
 
   @Override
   public boolean initDriver() {
@@ -59,6 +60,18 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
     initialized = false;
   }
 
+  /**
+   * Should this object throw an IOException on each following call?
+   * @param value should we throw errors?
+   */
+  public void setGiveErrors(boolean value) {
+    giveErrors = value;
+  }
+
+  /**
+   * Check to see if this StateStore should throw IOException on each call.
+   * @throws IOException thrown if giveErrors has been set
+   */
   private void checkErrors() throws IOException {
     if (giveErrors) {
       throw new IOException("Induced errors");
@@ -66,11 +79,11 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
   }
 
   @Override
-  @SuppressWarnings({"rawtypes"})
-  public <T extends BaseRecord> QueryResult get(Class<T> clazz) throws IOException {
+  @SuppressWarnings("unchecked")
+  public <T extends BaseRecord> QueryResult<T> get(Class<T> clazz) throws IOException {
     checkErrors();
     Map<String, BaseRecord> map = valueMap.get(StateStoreUtils.getRecordName(clazz));
-    List<BaseRecord> results = map != null ? new ArrayList<>(map.values()) : new ArrayList<>();
+    List<T> results = map != null ? new ArrayList<>((Collection<T>) map.values()) : new ArrayList<>();
     return new QueryResult<>(results, System.currentTimeMillis());
   }
 

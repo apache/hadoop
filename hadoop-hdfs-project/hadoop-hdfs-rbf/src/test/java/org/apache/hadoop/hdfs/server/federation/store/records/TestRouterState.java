@@ -121,8 +121,10 @@ public class TestRouterState {
     assertEquals(2, result.size());
 
     // cause io errors and then reload the cache
-    driver.giveErrors = true;
+    driver.setGiveErrors(true);
+    long previousUpdate = service.getCacheUpdateTime();
     service.refreshCaches(true);
+    assertEquals(previousUpdate, service.getCacheUpdateTime());
 
     // make sure the old cache is still there
     result = resolver.getNamenodesForBlockPoolId("block1");
