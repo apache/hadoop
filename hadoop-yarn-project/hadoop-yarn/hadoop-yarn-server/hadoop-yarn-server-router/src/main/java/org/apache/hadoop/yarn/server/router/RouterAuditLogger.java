@@ -30,7 +30,7 @@ import java.net.InetAddress;
  * Manages Router audit logs.
  * Audit log format is written as key=value pairs. Tab separated.
  */
-public class RouterAuditLogger {
+public final class RouterAuditLogger {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterAuditLogger.class);
 
@@ -148,6 +148,27 @@ public class RouterAuditLogger {
       LOG.info(
           createFailureLog(user, operation, perm, target, description, null,
               null));
+    }
+  }
+
+  /**
+   * Create a readable and parseable audit log string for a failed event.
+   *
+   * @param user User who made the service request.
+   * @param operation Operation requested by the user.
+   * @param perm Target permissions.
+   * @param target The target on which the operation is being performed.
+   * @param descriptionFormat the description message format string.
+   *
+   * <br><br>
+   * Note that the {@link RouterAuditLogger} uses tabs ('\t') as a key-val
+   * delimiter and hence the value fields should not contains tabs ('\t').
+   */
+  public static void logFailure(String user, String operation, String perm,
+      String target, String descriptionFormat, Object... args) {
+    if (LOG.isInfoEnabled()) {
+      String description = String.format(descriptionFormat, args);
+      LOG.info(createFailureLog(user, operation, perm, target, description, null, null));
     }
   }
 

@@ -111,6 +111,19 @@ public final class RouterServerUtil {
     }
   }
 
+  /**
+   * Throws an exception due to an error.
+   *
+   * @param errMsg the error message
+   * @throws YarnException on failure
+   */
+  @Public
+  @Unstable
+  public static void logAndThrowException(String errMsg) throws YarnException {
+    LOG.error(errMsg);
+    throw new YarnException(errMsg);
+  }
+
   public static <R> R createRequestInterceptorChain(Configuration conf, String pipeLineClassName,
       String interceptorClassName, Class<R> clazz) {
 
