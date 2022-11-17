@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -122,7 +123,9 @@ public class TestObserverWithRouter {
 
     cluster.waitActiveNamespaces();
     routerContext  = cluster.getRandomRouter();
-    fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
+    Configuration confToEnableObserverRead = new Configuration();
+    confToEnableObserverRead.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+    fileSystem = routerContext.getFileSystem(confToEnableObserverRead);
   }
 
   @Test
@@ -417,8 +420,6 @@ public class TestObserverWithRouter {
     assertTrue("There must be unavailable namenodes", hasUnavailable);
   }
 
-
-
   @Test
   public void testRouterMsync() throws Exception {
     Path path = new Path("/testFile");
@@ -438,5 +439,61 @@ public class TestObserverWithRouter {
     // 2 msync calls should be sent. One to each active namenode in the two namespaces.
     assertEquals("Four calls should be sent to active", 4,
         rpcCountForActive);
+  }
+
+  @Test
+  public void testSingleRead() throws Exception {
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+    Path path = new Path("/");
+
+    long rpcCountForActive;
+    long rpcCountForObserver;
+
+    // Send read request
+    fileSystem.listFiles(path, false);
+    fileSystem.close();
+
+    rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // getListingCall sent to active.
+    assertEquals("Only one call should be sent to active", 1, rpcCountForActive);
+
+    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    // getList call should be sent to observer
+    assertEquals("No calls should be sent to observer", 0, rpcCountForObserver);
+  }
+
+  @Test
+  public void testSingleReadUsingObserverReadProxyProvider() throws Exception {
+    fileSystem.close();
+    fileSystem = routerContext.getFileSystemWithObserverReadProxyProvider();
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+    Path path = new Path("/");
+
+    long rpcCountForActive;
+    long rpcCountForObserver;
+
+    // Send read request
+    fileSystem.listFiles(path, false);
+    fileSystem.close();
+
+    rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // Two msync calls to the active namenodes.
+    assertEquals("Two calls should be sent to active", 2, rpcCountForActive);
+
+    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    // getList call should be sent to observer
+    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
   }
 }

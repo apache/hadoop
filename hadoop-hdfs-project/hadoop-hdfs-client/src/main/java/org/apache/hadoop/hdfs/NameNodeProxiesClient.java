@@ -349,6 +349,13 @@ public class NameNodeProxiesClient {
       boolean withRetries, AtomicBoolean fallbackToSimpleAuth,
       AlignmentContext alignmentContext)
       throws IOException {
+    if (conf.getBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE,
+        HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE_DEFAULT)) {
+      if (alignmentContext == null) {
+        alignmentContext = new ClientGSIContext();
+      }
+    }
+
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
         ProtobufRpcEngine2.class);
 
