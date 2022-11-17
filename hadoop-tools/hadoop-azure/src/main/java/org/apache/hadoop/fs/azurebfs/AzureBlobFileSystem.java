@@ -191,6 +191,8 @@ public class AzureBlobFileSystem extends FileSystem
             .withBlockOutputActiveBlocks(blockOutputActiveBlocks)
             .build();
 
+    this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder, fileSystemId, listener);
+    LOG.trace("AzureBlobFileSystemStore init complete");
     final AbfsConfiguration abfsConfiguration = abfsStore
         .getAbfsConfiguration();
     clientCorrelationId = TracingContext.validateClientCorrelationID(
@@ -200,9 +202,6 @@ public class AzureBlobFileSystem extends FileSystem
 
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
-
-    this.abfsStore = new AzureBlobFileSystemStore(systemStoreBuilder, tracingContext);
-    LOG.trace("AzureBlobFileSystemStore init complete");
 
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
