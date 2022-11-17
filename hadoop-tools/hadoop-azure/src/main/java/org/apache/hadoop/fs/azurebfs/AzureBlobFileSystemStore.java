@@ -1608,8 +1608,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
-      LOG.trace("Fetching SAS token provider");
-      sasTokenProvider = abfsConfiguration.getSASTokenProvider(getIsNamespaceEnabled(tracingContext));
+      LOG.trace("Setting SAS token provider to temporary value");
+      sasTokenProvider = null;
     } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
@@ -1623,8 +1623,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsClientContext());
     } else {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
-          sasTokenProvider,
           populateAbfsClientContext());
+      LOG.trace("Fetching actual SAS token provider");
+      sasTokenProvider = this.abfsConfiguration.getSASTokenProvider(getIsNamespaceEnabled(tracingContext));
+      client.setSasTokenProvider(sasTokenProvider);
     }
     LOG.trace("AbfsClient init complete");
   }

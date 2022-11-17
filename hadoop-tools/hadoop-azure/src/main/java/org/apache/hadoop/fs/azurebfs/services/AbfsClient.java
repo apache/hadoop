@@ -198,6 +198,9 @@ public class AbfsClient implements Closeable {
     return Base64.getEncoder().encodeToString(bytes);
   }
 
+  public void setSasTokenProvider(final SASTokenProvider sasTokenProvider) {
+    this.sasTokenProvider = sasTokenProvider;
+  }
   @Override
   public void close() throws IOException {
     if (tokenProvider instanceof Closeable) {
