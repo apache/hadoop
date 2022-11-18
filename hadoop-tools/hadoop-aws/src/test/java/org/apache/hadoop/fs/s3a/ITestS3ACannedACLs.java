@@ -105,6 +105,8 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
     for (Grant grant : grants) {
       LOG.info("{}", grant.toString());
     }
+    // TODO: Review whether this test is required in v2.
+    //   Reproduces v1's GroupGrantee.LogDelivery
     Grant loggingGrant = Grant.builder()
         .grantee(Grantee.builder()
             .type(Type.GROUP)
