@@ -678,9 +678,8 @@ public final class S3AUtils {
             + " in option " + key + ": " + aClass);
       }
 
-      if (Arrays.asList("EnvironmentVariableCredentialsProvider",
-              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
-          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)){
+      if (v1v2CredentialProviderMap.containsKey(aClass.getSimpleName()) &&
+          aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)){
         providers.add(createAWSV2CredentialProvider(conf,
             v1v2CredentialProviderMap.get(aClass.getSimpleName()), binding));
       } else if (AWSCredentialsProvider.class.isAssignableFrom(aClass)) {
