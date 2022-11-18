@@ -517,7 +517,7 @@ public final class RouterServerUtil {
     // Randomly choose a SubCluster
     return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
-  
+
   public static boolean isAllowedDelegationTokenOp() throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
@@ -538,7 +538,7 @@ public final class RouterServerUtil {
     return loginUser.getUserName().equals(user.getUserName())
         ? token.decodeIdentifier().getRenewer().toString() : user.getShortUserName();
   }
-  
+
   public static UserGroupInformation setupUser(final String userName) {
     UserGroupInformation user = null;
     try {
