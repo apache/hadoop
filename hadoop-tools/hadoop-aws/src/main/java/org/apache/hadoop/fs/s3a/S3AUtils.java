@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -50,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -76,6 +76,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -622,6 +623,22 @@ public final class S3AUtils {
   }
 
   /**
+   * Maps V1 credential providers to either their equivalent SDK V2 class or hadoop provider.
+   */
+  private static Map<String, Class> initCredentialProvidersMap() {
+    Map<String, Class> v1v2CredentialProviderMap = new HashMap<>();
+
+    v1v2CredentialProviderMap.put("EnvironmentVariableCredentialsProvider",
+        EnvironmentVariableCredentialsProvider.class);
+    v1v2CredentialProviderMap.put("EC2ContainerCredentialsProviderWrapper",
+        IAMInstanceCredentialsProvider.class);
+    v1v2CredentialProviderMap.put("InstanceProfileCredentialsProvider",
+        IAMInstanceCredentialsProvider.class);
+
+    return v1v2CredentialProviderMap;
+  }
+
+  /**
    * Load list of AWS credential provider/credential provider factory classes;
    * support a forbidden list to prevent loops, mandate full secrets, etc.
    * @param binding Binding URI -may be null
@@ -643,6 +660,8 @@ public final class S3AUtils {
     List<Class<?>> awsClasses = loadAWSProviderClasses(conf,
         key,
         defaultValues.toArray(new Class[defaultValues.size()]));
+
+    Map<String, Class> v1v2CredentialProviderMap = initCredentialProvidersMap();
     // and if the list is empty, switch back to the defaults.
     // this is to address the issue that configuration.getClasses()
     // doesn't return the default if the config value is just whitespace.
@@ -659,11 +678,12 @@ public final class S3AUtils {
             + " in option " + key + ": " + aClass);
       }
 
-      // TODO: Not sure what to do here yet.
-      //  There were some V1 providers for which we suppressed warnings, how do we map those?
-      if (aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
-        // V2Migration.v1ProviderReferenced(aClass.getName());
-
+      if (Arrays.asList("EnvironmentVariableCredentialsProvider",
+              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
+          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)){
+        providers.add(createAWSV2CredentialProvider(conf,
+            v1v2CredentialProviderMap.get(aClass.getSimpleName()), binding));
+      } else if (AWSCredentialsProvider.class.isAssignableFrom(aClass)) {
         providers.add(createAWSV1CredentialProvider(conf,
             aClass, binding));
       } else {
@@ -823,7 +843,7 @@ public final class S3AUtils {
 
       // X.getInstance()
       Method factory = getFactoryMethod(credClass, AwsCredentialsProvider.class,
-          "getInstance");
+          "create");
       if (factory != null) {
         credentials = (AwsCredentialsProvider)factory.invoke(null);
         return credentials;
@@ -840,7 +860,7 @@ public final class S3AUtils {
       throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
               + ".  A class specified in %s must provide a public constructor "
               + "of a supported signature, or a public factory method named "
-              + "getInstance that accepts no arguments.",
+              + "create that accepts no arguments.",
           className, AWS_CREDENTIALS_PROVIDER));
     } catch (InvocationTargetException e) {
       // TODO: Can probably be moved to a common method, but before doing this, check if we still
