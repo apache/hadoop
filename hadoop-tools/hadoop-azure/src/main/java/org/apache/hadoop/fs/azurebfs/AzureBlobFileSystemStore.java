@@ -55,8 +55,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.constants.*;
-import org.apache.hadoop.fs.azurebfs.utils.*;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Futures;
@@ -71,6 +69,10 @@ import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConcurrentWriteOperationDetectedException;
@@ -112,6 +114,11 @@ import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.CRC64;
+import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -232,7 +239,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     boolean useHttps = (usingOauth || abfsConfiguration.isHttpsAlwaysUsed()) ? true : abfsStoreBuilder.isSecureScheme;
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
-
     initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
@@ -1602,13 +1608,14 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS Token Provider");
-      sasTokenProvider = this.abfsConfiguration.getSASTokenProvider();
+      sasTokenProvider = abfsConfiguration.getSASTokenProvider();
     } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
       ExtensionHelper.bind(tokenProvider, uri,
             abfsConfiguration.getRawConfiguration());
     }
+
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
     if (tokenProvider != null) {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,

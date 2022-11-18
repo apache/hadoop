@@ -889,8 +889,7 @@ public class AbfsConfiguration{
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType != AuthType.SAS) {
-      throw new SASTokenProviderException(String.format(
-              "Invalid auth type: %s is being used, expecting SAS", authType));
+      throw new SASTokenProviderException(String.format("Invalid auth type: %s is being used, expecting SAS", authType));
     }
 
     try {
@@ -917,10 +916,8 @@ public class AbfsConfiguration{
         finalSasTokenProviderClass = FixedSASTokenProvider.class;
       }
 
-      SASTokenProvider sasTokenProvider = ReflectionUtils
-              .newInstance(finalSasTokenProviderClass, rawConfig);
-      Preconditions.checkArgument(sasTokenProvider != null,
-              String.format("Failed to initialize %s", finalSasTokenProviderClass));
+      SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(finalSasTokenProviderClass, rawConfig);
+      Preconditions.checkArgument(sasTokenProvider != null, String.format("Failed to initialize %s", finalSasTokenProviderClass));
 
       LOG.trace("Initializing {}", finalSasTokenProviderClass.getName());
       sasTokenProvider.initialize(rawConfig, accountName);
