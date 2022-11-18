@@ -190,7 +190,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException Throw IOE in case of failure during constructing.
    */
   public AzureBlobFileSystemStore(
-      AzureBlobFileSystemStoreBuilder abfsStoreBuilder, String fileSystemId, Listener listener) throws IOException {
+      AzureBlobFileSystemStoreBuilder abfsStoreBuilder) throws IOException {
     this.uri = abfsStoreBuilder.uri;
     String[] authorityParts = authorityParts(uri);
     final String fileSystemName = authorityParts[0];
@@ -233,14 +233,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     this.abfsPerfTracker = new AbfsPerfTracker(fileSystemName, accountName, this.abfsConfiguration);
     this.abfsCounters = abfsStoreBuilder.abfsCounters;
 
-    // creating tracing context to be used by getSASTokenProvider
-    String clientCorrelationId = TracingContext.validateClientCorrelationID(
-            abfsConfiguration.getClientCorrelationId());
-    TracingHeaderFormat tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
-    TracingContext tracingContext = new TracingContext(clientCorrelationId,
-            fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
-
-    initializeClient(uri, fileSystemName, accountName, useHttps, tracingContext);
+    initializeClient(uri, fileSystemName, accountName, useHttps);
     final Class<? extends IdentityTransformerInterface> identityTransformerClass =
         abfsStoreBuilder.configuration.getClass(FS_AZURE_IDENTITY_TRANSFORM_CLASS, IdentityTransformer.class,
             IdentityTransformerInterface.class);
@@ -1573,7 +1566,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @throws IOException
    */
   private void initializeClient(URI uri, String fileSystemName,
-      String accountName, boolean isSecure, TracingContext tracingContext)
+      String accountName, boolean isSecure)
       throws IOException {
     if (this.client != null) {
       return;
@@ -1608,8 +1601,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
-      LOG.trace("Setting SAS token provider to temporary value");
-      sasTokenProvider = null;
+      LOG.trace("Fetching SAS Token Provider");
+      sasTokenProvider = this.abfsConfiguration.getSASTokenProvider();
     } else {
       LOG.trace("Fetching token provider");
       tokenProvider = abfsConfiguration.getTokenProvider();
@@ -1625,9 +1618,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
           sasTokenProvider,
           populateAbfsClientContext());
-      LOG.trace("Fetching actual SAS token provider");
-      sasTokenProvider = this.abfsConfiguration.getSASTokenProvider(getIsNamespaceEnabled(tracingContext));
-      client.setSasTokenProvider(sasTokenProvider);
     }
     LOG.trace("AbfsClient init complete");
   }
