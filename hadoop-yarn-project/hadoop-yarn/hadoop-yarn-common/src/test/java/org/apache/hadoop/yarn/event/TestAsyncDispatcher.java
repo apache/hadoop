@@ -43,6 +43,7 @@ import org.junit.Test;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 
 public class TestAsyncDispatcher {
@@ -406,5 +407,42 @@ public class TestAsyncDispatcher {
       dispatcher.close();
     }
 
+  }
+
+  @Test(timeout = 60000)
+  public void testDispatcherHandleTimeout() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setLong(YarnConfiguration.YARN_DISPATCHER_MONITOR_EVENT_TIMEOUT_MSEC,
+        1000l);
+    conf.setLong(YarnConfiguration.YARN_DISPATCHER_MONITOR_EVENT_INTERVAL_MSEC,
+        10l);
+
+    AsyncDispatcher dispatcher = new AsyncDispatcher();
+    dispatcher.setMonitorEnable(true);
+    dispatcher.register(TestEnum.class, new TestHandler(5000));
+    dispatcher.disableExitOnDispatchException();
+    dispatcher.init(conf);
+    dispatcher.start();
+
+    for (int i = 0; i < 10; ++i) {
+      Event event = mock(Event.class);
+      when(event.getType()).thenReturn(TestEnum.TestEventType);
+      dispatcher.getEventHandler().handle(event);
+    }
+
+    // wait dispatcher drain or exit
+    boolean drained;
+    boolean alive;
+    while (true) {
+      drained = dispatcher.isDrained();
+      alive = dispatcher.getMonitorThread().isAlive();
+      if (drained || !alive)
+        break;
+      Thread.sleep(1000);
+    }
+    dispatcher.stop();
+
+    assertFalse("Dispatcher should not drain", drained);
+    assertFalse("Monitor thread should not be alive", alive);
   }
 }

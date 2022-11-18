@@ -2994,6 +2994,17 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_YARN_DISPATCHER_CPU_MONITOR_SAMPLES_PER_MIN = 60;
 
+  public static final String YARN_DISPATCHER_MONITOR_EVENT_TIMEOUT_MSEC =
+      "yarn.dispatcher.monitor.event.timeout.msec";
+  public static final long DEFAULT_YARN_DISPATCHER_MONITOR_EVENT_TIMEOUT_MSEC =
+      600000l;
+  public static final String YARN_DISPATCHER_MONITOR_EVENT_INTERVAL_MSEC =
+      "yarn.dispatcher.monitor.event.interval.msec";
+  public static final long DEFAULT_YARN_DISPATCHER_MONITOR_EVENT_INTERVAL_MSEC =
+      10000;
+  public static final String YARN_RM_DISPATCHER_MONITOR_ENABLE =
+      "yarn.rm.dispatcher.monitor.enable";
+
   /**
    * Resource manager dispatcher has a thread pool that prints EventQueue,
    * configure the corePoolSize of this thread pool,
