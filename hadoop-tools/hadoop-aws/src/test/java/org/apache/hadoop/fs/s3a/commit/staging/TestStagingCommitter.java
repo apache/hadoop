@@ -113,7 +113,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
   // created in Before
   private StagingTestBase.ClientResults results = null;
   private StagingTestBase.ClientErrors errors = null;
-  private Pair<AmazonS3, S3Client> mockClient = null;
+  private S3Client mockClient = null;
   private File tmpDir;
 
   /**

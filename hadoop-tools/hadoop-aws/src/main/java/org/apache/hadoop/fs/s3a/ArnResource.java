@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nonnull;
 
-import com.amazonaws.arn.Arn;
+import software.amazon.awssdk.arns.Arn;
 
 /**
  * Represents an Arn Resource, this can be an accesspoint or bucket.
@@ -120,14 +120,14 @@ public final class ArnResource {
   public static ArnResource accessPointFromArn(String arn) throws IllegalArgumentException {
     Arn parsed = Arn.fromString(arn);
 
-    if (parsed.getRegion().isEmpty() || parsed.getAccountId().isEmpty() ||
-        parsed.getResourceAsString().isEmpty()) {
+    if (!parsed.region().isPresent() || !parsed.accountId().isPresent() ||
+        parsed.resourceAsString().isEmpty()) {
       throw new IllegalArgumentException(
           String.format("Access Point Arn %s has an invalid format or missing properties", arn));
     }
 
-    String resourceName = parsed.getResource().getResource();
-    return new ArnResource(resourceName, parsed.getAccountId(), parsed.getRegion(),
-        parsed.getPartition(), arn);
+    String resourceName = parsed.resource().resource();
+    return new ArnResource(resourceName, parsed.accountId().get(), parsed.region().get(),
+        parsed.partition(), arn);
   }
 }

@@ -170,7 +170,7 @@ public class Invoker {
 
   /**
    *
-   * Wait for a future, translating AmazonClientException into an IOException.
+   * Wait for a future, translating SdkException into an IOException.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param future future to await for

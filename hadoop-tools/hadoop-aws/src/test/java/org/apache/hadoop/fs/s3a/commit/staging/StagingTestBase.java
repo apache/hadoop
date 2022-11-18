@@ -29,9 +29,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.junit.AfterClass;
@@ -342,7 +339,7 @@ public class StagingTestBase {
     // created in Before
     private StagingTestBase.ClientResults results = null;
     private StagingTestBase.ClientErrors errors = null;
-    private Pair<AmazonS3, S3Client> mockClient = null;
+    private S3Client mockClient = null;
 
     @Before
     public void setupJob() throws Exception {
@@ -622,9 +619,8 @@ public class StagingTestBase {
    * @param errors when (if any) to fail
    * @return the mock client to patch in to a committer/FS instance
    */
-  public static Pair<AmazonS3, S3Client> newMockS3Client(final ClientResults results,
+  public static S3Client newMockS3Client(final ClientResults results,
       final ClientErrors errors) {
-    AmazonS3Client mockClient = mock(AmazonS3Client.class);
     S3Client mockClientV2 = mock(S3Client.class);
     final Object lock = new Object();
 
@@ -741,8 +737,6 @@ public class StagingTestBase {
         .deleteObject(any(DeleteObjectRequest.class));
 
     // to String returns the debug information
-    when(mockClient.toString()).thenAnswer(
-        invocation -> "Mock3AClient " + results + " " + errors);
     when(mockClientV2.toString()).thenAnswer(
         invocation -> "Mock3AClient " + results + " " + errors);
 
@@ -761,7 +755,7 @@ public class StagingTestBase {
           }
         });
 
-    return Pair.of(mockClient, mockClientV2);
+    return mockClientV2;
   }
 
   /**

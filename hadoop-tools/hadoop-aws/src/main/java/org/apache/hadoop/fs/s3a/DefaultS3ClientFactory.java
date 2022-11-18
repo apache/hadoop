@@ -231,7 +231,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
    */
-  private static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT>
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT>
   BuilderT configureClientBuilder(
       BuilderT builder,
       S3ClientCreationParameters parameters,
@@ -265,7 +265,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf configuration object
    * @return the override configuration
    */
-  private static ClientOverrideConfiguration createClientOverrideConfiguration(
+  protected ClientOverrideConfiguration createClientOverrideConfiguration(
       S3ClientCreationParameters parameters, Configuration conf) {
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
         AWSClientConfig.createClientConfigBuilder(conf);
