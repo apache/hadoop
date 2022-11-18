@@ -71,6 +71,8 @@ public class ExampleDriver {
       pgd.addClass("teragen", TeraGen.class, "Generate data for the terasort");
       pgd.addClass("terasort", TeraSort.class, "Run the terasort");
       pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
+      pgd.addClass("sentimentanalysis", SentimentAnalysis.class,
+                    "to evaluate sentiments for a tweet or review or article");
       exitCode = pgd.run(argv);
     }
     catch(Throwable e){
