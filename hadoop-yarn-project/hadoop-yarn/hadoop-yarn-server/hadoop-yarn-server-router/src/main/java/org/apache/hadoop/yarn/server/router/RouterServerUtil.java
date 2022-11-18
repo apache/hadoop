@@ -470,42 +470,6 @@ public final class RouterServerUtil {
     }
   }
 
-  /**
-   * Randomly pick ActiveSubCluster.
-   * During the selection process, we will exclude SubClusters from the blacklist.
-   *
-   * @param activeSubClusters List of active subClusters.
-   * @param blackList blacklist.
-   * @return Active SubClusterId.
-   * @throws YarnException When there is no Active SubCluster,
-   * an exception will be thrown (No active SubCluster available to submit the request.)
-   */
-  public static SubClusterId getRandomActiveSubCluster(
-      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-      throws YarnException {
-
-    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
-    if (MapUtils.isEmpty(activeSubClusters)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
-    }
-
-    // Change activeSubClusters to List
-    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
-
-    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
-    if (CollectionUtils.isNotEmpty(blackList)) {
-      subClusterIds.removeAll(blackList);
-    }
-
-    // Check there are still active subcluster after removing the blacklist
-    if (CollectionUtils.isEmpty(subClusterIds)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
-    }
-
-    // Randomly choose a SubCluster
-    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
-  }
-
   public static UserGroupInformation setupUser(final String userName) {
     UserGroupInformation user = null;
     try {
