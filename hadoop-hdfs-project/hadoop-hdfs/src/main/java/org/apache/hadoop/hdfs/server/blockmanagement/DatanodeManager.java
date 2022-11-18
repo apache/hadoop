@@ -1829,9 +1829,9 @@ public class DatanodeManager {
     int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
     int totalBlocks = totalReplicateBlocks + totalECBlocks;
     if (totalBlocks > 0) {
-      int maxECTransfers;
       int maxReplicationTransfers = blockManager.getMaxReplicationStreams()
-              - xmitsInProgress;;
+              - xmitsInProgress;
+      int maxECTransfers;
       if (nodeinfo.isDecommissionInProgress()) {
         maxECTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
