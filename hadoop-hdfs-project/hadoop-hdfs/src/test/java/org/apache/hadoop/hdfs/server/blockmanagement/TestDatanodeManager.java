@@ -978,9 +978,9 @@ public class TestDatanodeManager {
    * @throws IOException
    */
   private void verifyPendingRecoveryTasks(
-      int numReplicationBlocks, int numECBlocks,
-      int maxTransfers, int maxTransfersHardLimit,
-      int numReplicationTasks, int numECTasks, boolean isDecommissioning)
+      int numReplicationBlocks, int numEcReplicatedBlocks, int numECBlocks,
+      int maxTransfers, int maxTransfersHardLimit, int numReplicationTasks,
+      int numECReplicatedTasks, int numECTasks, boolean isDecommissioning)
       throws IOException {
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
@@ -1007,6 +1007,18 @@ public class TestDatanodeManager {
               new BlockTargetPair(null, null));
       Mockito.when(nodeInfo.getReplicationCommand(numReplicationTasks))
           .thenReturn(tasks);
+    }
+
+    if (numEcReplicatedBlocks > 0) {
+      Mockito.when(nodeInfo.getNumberOfECReplicatedBlocks())
+              .thenReturn(numEcReplicatedBlocks);
+
+      List<BlockTargetPair> ecReplicatedTasks =
+              Collections.nCopies(
+                      Math.min(numECReplicatedTasks, numEcReplicatedBlocks),
+                      new BlockTargetPair(null, null));
+      Mockito.when(nodeInfo.getReplicationCommand(numECReplicatedTasks))
+              .thenReturn(ecReplicatedTasks);
     }
 
     if (numECBlocks > 0) {
@@ -1054,14 +1066,14 @@ public class TestDatanodeManager {
   @Test
   public void testPendingRecoveryTasks() throws IOException {
     // Tasks are slitted according to the ratio between queue lengths.
-    verifyPendingRecoveryTasks(20, 20, 20, 30, 10, 10, false);
-    verifyPendingRecoveryTasks(40, 10, 20, 30, 16, 4, false);
+    verifyPendingRecoveryTasks(20, 0, 20, 20, 30, 10, 0, 10, false);
+    verifyPendingRecoveryTasks(40, 0, 10, 20, 30, 16, 0, 4, false);
 
     // Approximately load tasks if the ratio between queue length is large.
-    verifyPendingRecoveryTasks(400, 1, 20, 30, 20, 1, false);
+    verifyPendingRecoveryTasks(400, 0, 1, 20, 30, 20, 0, 1, false);
 
     // Tasks use dfs.namenode.replication.max-streams-hard-limit for decommissioning node
-    verifyPendingRecoveryTasks(30, 30, 20, 30, 10, 15, true);
+    verifyPendingRecoveryTasks(20, 10, 10, 20, 40, 10, 10, 10, true);
   }
 
   @Test

@@ -197,6 +197,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A queue of blocks to be replicated by this datanode */
   private final BlockQueue<BlockTargetPair> replicateBlocks =
       new BlockQueue<>();
+  /** A queue of ec blocks to be replicated by this datanode. */
+  private final BlockQueue<BlockTargetPair> ecReplicatedBlocks =
+          new BlockQueue<>();
   /** A queue of blocks to be erasure coded by this datanode */
   private final BlockQueue<BlockECReconstructionInfo> erasurecodeBlocks =
       new BlockQueue<>();
@@ -358,6 +361,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
     this.recoverBlocks.clear();
     this.replicateBlocks.clear();
+    this.ecReplicatedBlocks.clear();
     this.erasurecodeBlocks.clear();
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
@@ -679,6 +683,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * Store ec block to be replicated work.
+   */
+  @VisibleForTesting
+  public void addECBlockToBeReplicated(Block block,
+                                     DatanodeStorageInfo[] targets) {
+    assert(block != null && targets != null && targets.length > 0);
+    ecReplicatedBlocks.offer(new BlockTargetPair(block, targets));
+  }
+
+  /**
    * Store block erasure coding work.
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
@@ -720,7 +734,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * The number of work items that are pending to be replicated.
    */
   int getNumberOfBlocksToBeReplicated() {
-    return pendingReplicationWithoutTargets + replicateBlocks.size();
+    return pendingReplicationWithoutTargets
+            + replicateBlocks.size() + ecReplicatedBlocks.size();
   }
 
   /**
@@ -731,6 +746,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return erasurecodeBlocks.size();
   }
 
+  /**
+   * The number of ec work items that are pending to be replicated.
+   */
+  @VisibleForTesting
+  public int getNumberOfECReplicatedBlocks() {
+    return ecReplicatedBlocks.size();
+  }
+
   @VisibleForTesting
   public int getNumberOfReplicateBlocks() {
     return replicateBlocks.size();
@@ -738,6 +761,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
     return replicateBlocks.poll(maxTransfers);
+  }
+
+  List<BlockTargetPair> getECReplicatedCommand(int maxTransfers) {
+    return ecReplicatedBlocks.poll(maxTransfers);
   }
 
   public List<BlockECReconstructionInfo> getErasureCodeCommand(
@@ -993,6 +1020,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     int repl = replicateBlocks.size();
     if (repl > 0) {
       sb.append(" ").append(repl).append(" blocks to be replicated;");
+    }
+    int ecRepl = ecReplicatedBlocks.size();
+    if (ecRepl > 0) {
+      sb.append(" ").append(ecRepl).append(" ec blocks to be replicated;");
     }
     int ec = erasurecodeBlocks.size();
     if(ec > 0) {
