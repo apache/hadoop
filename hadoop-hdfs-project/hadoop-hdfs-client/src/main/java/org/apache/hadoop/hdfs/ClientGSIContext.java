@@ -25,6 +25,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
 
@@ -66,7 +67,8 @@ public class ClientGSIContext implements AlignmentContext {
    * It does not provide state alignment info therefore this does nothing.
    */
   @Override
-  public void updateResponseState(RpcResponseHeaderProto.Builder header) {
+  public void updateResponseState(RpcResponseHeaderProto.Builder header,
+      Map<String, Long> federatedState) {
     // Do nothing.
   }
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -43,7 +44,7 @@ public interface AlignmentContext {
    *
    * @param header The RPC response header builder.
    */
-  void updateResponseState(RpcResponseHeaderProto.Builder header);
+  void updateResponseState(RpcResponseHeaderProto.Builder header, Map<String, Long> federatedState);
 
   /**
    * This is the intended client method call to implement to receive state info

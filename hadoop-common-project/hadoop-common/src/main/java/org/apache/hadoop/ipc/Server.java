@@ -95,6 +95,7 @@ import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcKindProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
@@ -119,6 +120,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -937,9 +939,8 @@ public abstract class Server {
     // the priority level assigned by scheduler, 0 by default
     private long clientStateId;
     private boolean isCallCoordinated;
-    // Serialized RouterFederatedStateProto message to
-    // store last seen states for multiple namespaces.
-    private ByteString federatedNamespaceState;
+    // Store last seen states for multiple namespaces.
+    private Map<String, Long> federatedNamespaceState = new HashMap<>();
 
     Call() {
       this(RpcConstants.INVALID_CALL_ID, RpcConstants.INVALID_RETRY_COUNT,
@@ -997,11 +998,19 @@ public abstract class Server {
       return processingDetails;
     }
 
-    public void setFederatedNamespaceState(ByteString federatedNamespaceState) {
-      this.federatedNamespaceState = federatedNamespaceState;
+    public void setFederatedNamespaceState(ByteString byteString) {
+      if (byteString != null) {
+        RpcHeaderProtos.RouterFederatedStateProto federatedState;
+        try {
+          federatedState = RpcHeaderProtos.RouterFederatedStateProto.parseFrom(byteString);
+        } catch (InvalidProtocolBufferException e) {
+          throw new RuntimeException(e);
+        }
+        this.federatedNamespaceState.putAll(federatedState.getNamespaceStateIdsMap());
+      }
     }
 
-    public ByteString getFederatedNamespaceState() {
+    public Map<String, Long> getFederatedNamespaceState() {
       return this.federatedNamespaceState;
     }
 
@@ -2878,9 +2887,9 @@ public abstract class Server {
             stateId = alignmentContext.receiveRequestState(
                 header, getMaxIdleTime());
             call.setClientStateId(stateId);
-            if (header.hasRouterFederatedState()) {
-              call.setFederatedNamespaceState(header.getRouterFederatedState());
-            }
+          }
+          if (header.hasRouterFederatedState()) {
+            call.setFederatedNamespaceState(header.getRouterFederatedState());
           }
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
@@ -3418,7 +3427,7 @@ public abstract class Server {
     headerBuilder.setStatus(status);
     headerBuilder.setServerIpcVersionNum(CURRENT_VERSION);
     if (alignmentContext != null) {
-      alignmentContext.updateResponseState(headerBuilder);
+      alignmentContext.updateResponseState(headerBuilder, call.getFederatedNamespaceState());
     }
 
     if (status == RpcStatusProto.SUCCESS) {

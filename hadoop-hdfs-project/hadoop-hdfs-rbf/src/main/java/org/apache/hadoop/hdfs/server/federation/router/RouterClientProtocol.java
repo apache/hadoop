@@ -1916,12 +1916,28 @@ public class RouterClientProtocol implements ClientProtocol {
     return null;
   }
 
+  private List<FederationNamespaceInfo> getMsyncNSs() throws IOException {
+    Set<String> nss = RouterStateIdContext.getNSsFromCurrentCall();
+    List<FederationNamespaceInfo> result = new ArrayList<>();
+    Map<String, FederationNamespaceInfo> allAvailableNamespaces = getAvailableNamespaces();
+    for (String ns : nss) {
+      if (allAvailableNamespaces.containsKey(ns)) {
+        result.add(allAvailableNamespaces.get(ns));
+      }
+    }
+    return result;
+  }
+
   @Override
   public void msync() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
-    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    List<FederationNamespaceInfo> nss = getMsyncNSs();
     RemoteMethod method = new RemoteMethod("msync");
-    rpcClient.invokeConcurrent(nss, method);
+    if (nss.size() == 1) {
+      rpcClient.invokeSingle(nss.get(0).getNameserviceId(), method);
+    } else if (nss.size() > 1) {
+      rpcClient.invokeConcurrent(nss, method, false, false);
+    }
   }
 
   @Override

@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -82,7 +83,8 @@ class GlobalStateIdContext implements AlignmentContext {
    * Server side implementation for providing state alignment info in responses.
    */
   @Override
-  public void updateResponseState(RpcResponseHeaderProto.Builder header) {
+  public void updateResponseState(RpcResponseHeaderProto.Builder header,
+      Map<String, Long> federatedState) {
     // Using getCorrectLastAppliedOrWrittenTxId will acquire the lock on
     // FSEditLog. This is needed so that ANN will return the correct state id
     // it currently has. But this may not be necessary for Observer, may want

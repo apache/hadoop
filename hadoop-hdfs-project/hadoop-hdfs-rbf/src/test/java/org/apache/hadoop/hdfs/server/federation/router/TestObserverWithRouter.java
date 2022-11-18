@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -34,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +55,7 @@ import org.junit.jupiter.api.TestInfo;
 
 public class TestObserverWithRouter {
   private static final String SKIP_BEFORE_EACH_CLUSTER_STARTUP = "SkipBeforeEachClusterStartup";
+  public static final String FEDERATION_NS = "ns-fed";
   private MiniRouterDFSCluster cluster;
   private RouterContext routerContext;
   private FileSystem fileSystem;
@@ -81,6 +86,7 @@ public class TestObserverWithRouter {
   public void startUpCluster(int numberOfObserver, Configuration confOverrides) throws Exception {
     int numberOfNamenode = 2 + numberOfObserver;
     Configuration conf = new Configuration(false);
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
@@ -165,6 +171,72 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
     // getBlockLocations should be sent to observer
     assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testObserverReadMultiNameservice() throws Exception {
+    Configuration confOverrides = new Configuration(false);
+    confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
+    startUpCluster(1, confOverrides);
+    RouterContext routerContext = cluster.getRandomRouter();
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+
+    // 1 Create or open file in ns0
+    Configuration clientConf = new Configuration();
+    clientConf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    clientConf.set(HdfsClientConfigKeys.Failover.PROXY_PROVIDER_KEY_PREFIX + "." + FEDERATION_NS,
+        ObserverReadProxyProvider.class.getCanonicalName());
+    FileSystem fs0 = cluster.getRBFFileSystem(FEDERATION_NS, clientConf);
+    Path path0 = new Path("/ns0/testFile");
+    // Send msync, should ignore it.
+    fs0.msync();
+
+    // Send Create call to active
+    fs0.create(path0).close();
+
+    // Send read request to observer
+    fs0.open(path0).close();
+
+    // Send msync to active, only connect ns0 active
+    fs0.msync();
+
+    // 2 Create or open file in ns1
+    FileSystem fs1 = cluster.getRBFFileSystem(FEDERATION_NS, clientConf);
+    // Send msync, router should ignore it.
+    fs1.msync();
+
+    Path path1 = new Path("/ns1/testFile");
+    // Send msync, should ignore it.
+    fs1.msync();
+
+    // Send Create call to active
+    fs1.create(path1).close();
+
+    // Send read request to observer
+    fs1.open(path1).close();
+
+    // Send msync to active, only connect ns1 active
+    fs1.msync();
+
+    // Create and complete and second msync calls should be sent to active
+    long rpcCountForActive = cluster.getRouters().stream()
+        .map(s -> s.getRouter().getRpcServer().getRPCMetrics().getActiveProxyOps())
+        .reduce(0L, Long::sum);
+    assertEquals("Six calls should be sent to active", 6, rpcCountForActive);
+
+    // getBlockLocations should be sent to observer
+    long rpcCountForObserver = cluster.getRouters().stream()
+        .map(s -> s.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps())
+        .reduce(0L, Long::sum);
+    assertEquals("Two call should be sent to observer", 2, rpcCountForObserver);
+
+    fs0.close();
+    fs1.close();
   }
 
   @Test
@@ -435,8 +507,7 @@ public class TestObserverWithRouter {
     fileSystem.msync();
     rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
-    // 2 msync calls should be sent. One to each active namenode in the two namespaces.
-    assertEquals("Four calls should be sent to active", 4,
-        rpcCountForActive);
+    // 1 msync calls should be sent.
+    assertEquals("Four calls should be sent to active", 3, rpcCountForActive);
   }
 }

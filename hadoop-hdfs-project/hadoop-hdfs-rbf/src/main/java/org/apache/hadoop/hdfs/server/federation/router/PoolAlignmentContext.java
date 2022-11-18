@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
@@ -41,10 +42,12 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 public class PoolAlignmentContext implements AlignmentContext {
   private LongAccumulator sharedGlobalStateId;
   private LongAccumulator poolLocalStateId;
+  private String nsId;
 
   PoolAlignmentContext(RouterStateIdContext routerStateIdContext, String namespaceId) {
     sharedGlobalStateId = routerStateIdContext.getNamespaceStateId(namespaceId);
     poolLocalStateId = new LongAccumulator(Math::max, Long.MIN_VALUE);
+    nsId = namespaceId;
   }
 
   /**
@@ -52,7 +55,8 @@ public class PoolAlignmentContext implements AlignmentContext {
    * It does not provide state alignment info therefore this does nothing.
    */
   @Override
-  public void updateResponseState(RpcHeaderProtos.RpcResponseHeaderProto.Builder header) {
+  public void updateResponseState(RpcHeaderProtos.RpcResponseHeaderProto.Builder header,
+      Map<String, Long> federatedState) {
     // Do nothing.
   }
 
@@ -71,7 +75,9 @@ public class PoolAlignmentContext implements AlignmentContext {
    */
   @Override
   public void updateRequestState(RpcHeaderProtos.RpcRequestHeaderProto.Builder header) {
-    header.setStateId(poolLocalStateId.get());
+    long stateId = poolLocalStateId.get();
+    header.setStateId(stateId);
+    RouterStateIdContext.updateClientStateIdToCurrentCall(nsId, stateId);
   }
 
   /**
