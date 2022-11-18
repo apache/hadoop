@@ -304,6 +304,28 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Throws an YarnRuntimeException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return YarnRuntimeException
+   */
+  @Public
+  @Unstable
+  public static YarnRuntimeException logAndReturnYarnRunTimeException(
+      Throwable t, String errMsgFormat, Object... args) {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      return new YarnRuntimeException(msg, t);
+    } else {
+      LOG.error(msg);
+      return new YarnRuntimeException(msg);
+    }
+  }
+
+  /**
    * Check applicationId is accurate.
    *
    * We need to ensure that applicationId cannot be empty and
@@ -495,7 +517,7 @@ public final class RouterServerUtil {
     // Randomly choose a SubCluster
     return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
-
+  
   public static boolean isAllowedDelegationTokenOp() throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
@@ -515,5 +537,28 @@ public final class RouterServerUtil {
     // we can always renew our own tokens
     return loginUser.getUserName().equals(user.getUserName())
         ? token.decodeIdentifier().getRenewer().toString() : user.getShortUserName();
+  }
+  
+  public static UserGroupInformation setupUser(final String userName) {
+    UserGroupInformation user = null;
+    try {
+      // If userName is empty, we will return UserGroupInformation.getCurrentUser.
+      // Do not create a proxy user if user name matches the user name on
+      // current UGI
+      if (userName == null || userName.trim().isEmpty()) {
+        user = UserGroupInformation.getCurrentUser();
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+      } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
+        user = UserGroupInformation.getCurrentUser();
+      } else {
+        user = UserGroupInformation.createProxyUser(userName,
+            UserGroupInformation.getCurrentUser());
+      }
+      return user;
+    } catch (IOException e) {
+      throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
+          "Error while creating Router RMAdmin Service for user : %s.", user);
+    }
   }
 }
