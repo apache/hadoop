@@ -124,13 +124,13 @@ public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
   }
 
   @Override
-  public String getSubClusterId() {
+  public synchronized String getSubClusterId() {
     RefreshNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
     return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
   }
 
   @Override
-  public void setSubClusterId(String subClusterId) {
+  public synchronized void setSubClusterId(String subClusterId) {
     maybeInitBuilder();
     if (subClusterId == null) {
       builder.clearSubClusterId();

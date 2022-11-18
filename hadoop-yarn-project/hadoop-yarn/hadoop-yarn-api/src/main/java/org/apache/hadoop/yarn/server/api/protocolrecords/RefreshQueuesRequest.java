@@ -43,20 +43,10 @@ public abstract class RefreshQueuesRequest {
     return request;
   }
 
-  /**
-   * Get the subClusterId.
-   *
-   * @return subClusterId.
-   */
   @Public
   @Unstable
   public abstract String getSubClusterId();
 
-  /**
-   * Set the subClusterId.
-   *
-   * @param subClusterId subCluster Id.
-   */
   @Private
   @Unstable
   public abstract void setSubClusterId(String subClusterId);

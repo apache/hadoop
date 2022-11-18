@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
@@ -98,8 +97,6 @@ public abstract class RefreshNodesRequest {
    *
    * @return subClusterId.
    */
-  @Public
-  @Unstable
   public abstract String getSubClusterId();
 
   /**
@@ -107,7 +104,5 @@ public abstract class RefreshNodesRequest {
    *
    * @param subClusterId subCluster Id.
    */
-  @Private
-  @Unstable
   public abstract void setSubClusterId(String subClusterId);
 }

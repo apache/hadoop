@@ -34,7 +34,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -144,7 +143,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
 
     String notExistsSubCluster = "SC-NON";
     RefreshQueuesRequest request1 = RefreshQueuesRequest.newInstance(notExistsSubCluster);
-    LambdaTestUtils.intercept(YarnException.class, "subClusterId = SC-NON is not an active subCluster.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.refreshQueues(request1));
   }
 
@@ -178,7 +178,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     String notExistsSubCluster = "SC-NON";
     RefreshNodesRequest request1 = RefreshNodesRequest.newInstance(
         DecommissionType.NORMAL, 10, notExistsSubCluster);
-    LambdaTestUtils.intercept(YarnException.class, "subClusterId = SC-NON is not an active subCluster.",
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.refreshNodes(request1));
   }
 }
