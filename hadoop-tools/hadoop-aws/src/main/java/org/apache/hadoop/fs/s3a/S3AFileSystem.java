@@ -4071,21 +4071,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * both the expected state of this FS and of failures while being stopped.
    */
   protected synchronized void stopAllServices() {
-    // TODO: Do we need this for v2?
-    try {
-      if (transferManagerV2 != null) {
-        transferManagerV2.close();
-      }
-      if (s3V2 != null) {
-        s3V2.close();
-      }
-      if (s3AsyncClient != null) {
-        s3AsyncClient.close();
-      }
-    } catch (RuntimeException e) {
-      // catch and swallow for resilience.
-      LOG.debug("When shutting down", e);
-    }
+    closeAutocloseables(LOG,
+        transferManagerV2,
+        s3V2,
+        s3AsyncClient);
     transferManagerV2 = null;
     s3V2 = null;
     s3AsyncClient = null;
