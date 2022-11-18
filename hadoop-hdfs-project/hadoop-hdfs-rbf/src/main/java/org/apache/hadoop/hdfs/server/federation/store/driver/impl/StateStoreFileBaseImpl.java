@@ -366,7 +366,7 @@ public abstract class StateStoreFileBaseImpl
         }
       }
       // Commit
-      if (!rename(recordPathTemp, recordPath)) {
+      if (success && !rename(recordPathTemp, recordPath)) {
         LOG.error("Failed committing record into {}", recordPath);
         success = false;
       }
