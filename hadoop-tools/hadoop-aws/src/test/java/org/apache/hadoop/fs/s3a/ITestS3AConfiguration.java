@@ -124,8 +124,11 @@ public class ITestS3AConfiguration {
       } else {
         fail("Unexpected endpoint");
       }
+      // TODO: review way to get the bucket region.
+      String region = s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost()))
+          .locationConstraintAsString();
       assertEquals("Endpoint config setting and bucket location differ: ",
-          endPointRegion, s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost())));
+          endPointRegion, region);
     }
   }
 
@@ -532,6 +535,8 @@ public class ITestS3AConfiguration {
     // Default SIGNING_ALGORITHM, overridden for S3 only
     config = new Configuration();
     config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+
+    // TODO: update during signer work.
     clientConfiguration = S3AUtils
         .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
     Assert.assertEquals(s3SignerOverride,
