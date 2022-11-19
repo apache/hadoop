@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.ipc.Client.IpcStreams;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.ResponseBuffer;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcWritable;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
@@ -69,6 +68,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.util.ProtoUtil;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -459,11 +459,22 @@ public class SaslRpcClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending sasl message "+message);
     }
-    ResponseBuffer buf = new ResponseBuffer();
-    saslHeader.writeDelimitedTo(buf);
-    message.writeDelimitedTo(buf);
+    int requestSize = 0;
+    int headerSize = saslHeader.getSerializedSize();
+    requestSize += headerSize;
+    requestSize += CodedOutputStream.computeUInt32SizeNoTag(headerSize);
+    int messageSize = message.getSerializedSize();
+    requestSize += messageSize;
+    requestSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+    byte[] dataLengthBuf = new byte[4];
+    dataLengthBuf[0] = (byte)((requestSize >>> 24) & 0xFF);
+    dataLengthBuf[1] = (byte)((requestSize >>> 16) & 0xFF);
+    dataLengthBuf[2] = (byte)((requestSize >>>  8) & 0xFF);
+    dataLengthBuf[3] = (byte)(requestSize & 0xFF);
     synchronized (out) {
-      buf.writeTo(out);
+      out.write(dataLengthBuf);
+      saslHeader.writeDelimitedTo(out);
+      message.writeDelimitedTo(out);
       out.flush();
     }
   }
