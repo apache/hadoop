@@ -1189,7 +1189,7 @@ public class Client implements AutoCloseable {
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
           call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
           clientId, call.alignmentContext);
-  
+
       if (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest) {
         int computedSize = header.getSerializedSize();
         computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);

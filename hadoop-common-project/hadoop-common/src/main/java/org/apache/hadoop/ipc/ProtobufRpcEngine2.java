@@ -644,14 +644,14 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       }
     }
   }
-  
+
   static class RpcProtobufRequestWithHeader {
     private int length;
     private RpcHeaderProtos.RpcRequestHeaderProto header;
     private RpcProtobufRequest rpcRequest;
-  
+
     RpcProtobufRequestWithHeader() {}
-  
+
     RpcProtobufRequestWithHeader(int length,
                                  RpcHeaderProtos.RpcRequestHeaderProto header,
                                  RpcProtobufRequest rpcRequest) {
@@ -659,15 +659,15 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       this.header = header;
       this.rpcRequest = rpcRequest;
     }
-  
+
     public int getLength() {
       return length;
     }
-  
+
     public RpcHeaderProtos.RpcRequestHeaderProto getHeader() {
       return header;
     }
-  
+
     public RpcProtobufRequest getRpcRequest() {
       return rpcRequest;
     }
@@ -702,14 +702,14 @@ public class ProtobufRpcEngine2 implements RpcEngine {
         payload.writeDelimitedTo(out);
       }
     }
-  
+
     public void writeTo(DataOutputStream out) throws IOException {
       requestHeader.writeDelimitedTo(out);
       if (payload != null) {
         payload.writeDelimitedTo(out);
       }
     }
-  
+
     public int computeRequestSize() {
       int length = 0;
       if (requestHeader != null) {
