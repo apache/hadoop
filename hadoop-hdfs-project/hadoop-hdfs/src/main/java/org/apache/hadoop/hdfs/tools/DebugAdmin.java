@@ -432,15 +432,12 @@ public class DebugAdmin extends Configured implements Tool {
 
     VerifyECCommand() {
       super("verifyEC",
-          "verifyEC -file <file> [-blockId <blk_Id>] [-ignoreFailures]",
+          "verifyEC -file <file> [-blockId <blk_Id>] [-verifyAllFailures]",
           "  -file Verify HDFS erasure coding on all block groups of the file." +
               System.lineSeparator() +
-          "  -ignoreFailures specify ignores any block group failures during verify," +
+          "  -verifyAllFailures specify verify all failures block groups of the file," +
               System.lineSeparator() +
-          "  and continues verify all block groups of the file," +
-              System.lineSeparator() +
-          "  the default is not to ignore failures." +
-              System.lineSeparator() +
+          "  the default is not to verify all failures." + System.lineSeparator() +
           "  -blockId specify blk_Id to verify for a specific one block group.");
     }
 
@@ -495,12 +492,12 @@ public class DebugAdmin extends Configured implements Tool {
               new LinkedBlockingQueue<>(), "read-", false));
       this.blockReaders = new BlockReader[blockNum];
 
-      String blockId = StringUtils.popOptionWithArgument("-blockId", args);
-      boolean ignoreFailures = StringUtils.popOption("-ignoreFailures", args);
+      String needToVerifyBlockId = StringUtils.popOptionWithArgument("-blockId", args);
+      boolean verifyAllFailures = StringUtils.popOption("-verifyAllFailures", args);
       boolean isHealthy = true;
 
       for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
-        if (blockId == null || blockId.equals(
+        if (needToVerifyBlockId == null || needToVerifyBlockId.equals(
             locatedBlock.getBlock().getLocalBlock().getBlockName())) {
           System.out.println("Checking EC block group: blk_" +
               locatedBlock.getBlock().getBlockId());
@@ -511,7 +508,7 @@ public class DebugAdmin extends Configured implements Tool {
             System.out.println("Status: OK");
           } catch (Exception e) {
             System.err.println("Status: ERROR, message: " + e.getMessage());
-            if (!ignoreFailures) {
+            if (!verifyAllFailures) {
               return 1;
             }
             isHealthy = false;
@@ -519,12 +516,12 @@ public class DebugAdmin extends Configured implements Tool {
             closeBlockReaders();
           }
 
-          if (blockId != null) {
+          if (needToVerifyBlockId != null) {
             break;
           }
         }
       }
-      if (isHealthy && blockId == null) {
+      if (isHealthy && needToVerifyBlockId == null) {
         System.out.println("\nAll EC block group status: OK");
       }
       return 0;

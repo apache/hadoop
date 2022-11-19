@@ -195,10 +195,9 @@ public class TestDebugAdmin {
     DistributedFileSystem fs = cluster.getFileSystem();
 
     assertEquals("ret: 1, verifyEC -file <file> [-blockId <blk_Id>] " +
-        "[-ignoreFailures]  -file Verify HDFS erasure coding on all block groups of the file." +
-        "  -ignoreFailures specify ignores any block group failures during verify," +
-        "  and continues verify all block groups of the file," +
-        "  the default is not to ignore failures." +
+        "[-verifyAllFailures]  -file Verify HDFS erasure coding on all block groups of the file." +
+        "  -verifyAllFailures specify verify all failures block groups of the file," +
+        "  the default is not to verify all failures." +
         "  -blockId specify blk_Id to verify for a specific one block group.",
         runCmd(new String[]{"verifyEC"}));
 
@@ -286,7 +285,7 @@ public class TestDebugAdmin {
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-blockId", blockName})
         .contains("Checking EC block group: " + blockName + "Status: OK"));
 
-    // Specify -ignoreFailures.
+    // Specify -verifyAllFailures.
     indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
         ecPolicy.getCellSize(), ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
     // Try corrupt block 0 in block group.
@@ -304,9 +303,9 @@ public class TestDebugAdmin {
     FileUtils.writeByteArrayToFile(blockFile, errorBytes);
     runCmd(new String[]{"computeMeta", "-block", blockFile.getAbsolutePath(),
         "-out", metaFile.getAbsolutePath()});
-    // VerifyEC and set ignoreFailures.
+    // VerifyEC and set verifyAllFailures.
     LocatedStripedBlock blockGroup2 = (LocatedStripedBlock) blocks.get(1);
-    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-ignoreFailures"})
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-verifyAllFailures"})
         .contains("Status: ERROR, message: EC compute result not match." +
             "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK"));
   }
