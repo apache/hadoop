@@ -1963,14 +1963,14 @@ public class Client implements AutoCloseable {
     public void sendRequest(byte[] buf) throws IOException {
       out.write(buf);
     }
-  
+
     public void sendRequest(ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcRequest)
             throws IOException {
       out.writeInt(rpcRequest.getLength());
       rpcRequest.getHeader().writeDelimitedTo(out);
       rpcRequest.getRpcRequest().writeTo(out);
     }
-  
+
     public void sendRequest(int totalSize, RpcRequestHeaderProto header,
                             Message rpcRequest) throws IOException {
       out.writeInt(totalSize);
