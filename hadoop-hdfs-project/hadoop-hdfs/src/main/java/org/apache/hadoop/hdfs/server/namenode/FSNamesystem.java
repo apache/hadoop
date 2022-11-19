@@ -2203,7 +2203,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               }
             }
           }
-        } else if (isObserver() && res.blocks != null) {
+        } else if (isObserver()) {
           checkBlockLocationsWhenObserver(res.blocks, srcArg);
         }
       } finally {
@@ -3467,9 +3467,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     }
     if (needLocation && isObserver() && stat instanceof HdfsLocatedFileStatus) {
       LocatedBlocks lbs = ((HdfsLocatedFileStatus) stat).getLocatedBlocks();
-      if (lbs != null) {
-        checkBlockLocationsWhenObserver(lbs, src);
-      }
+      checkBlockLocationsWhenObserver(lbs, src);
     }
     logAuditEvent(true, operationName, src);
     return stat;
@@ -4180,9 +4178,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       for (HdfsFileStatus fs : dl.getPartialListing()) {
         if (fs instanceof HdfsLocatedFileStatus) {
           LocatedBlocks lbs = ((HdfsLocatedFileStatus) fs).getLocatedBlocks();
-          if (lbs != null) {
-            checkBlockLocationsWhenObserver(lbs, fs.toString());
-          }
+          checkBlockLocationsWhenObserver(lbs, fs.toString());
         }
       }
     }
@@ -9038,6 +9034,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
+    if (blocks == null) {
+      return;
+    }
     List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
     if (locatedBlockList != null) {
       for (LocatedBlock b : locatedBlockList) {
