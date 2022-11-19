@@ -27,15 +27,13 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos.RequestHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+import org.apache.hadoop.thirdparty.protobuf.*;
 import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
-import org.apache.hadoop.thirdparty.protobuf.Message;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.apache.hadoop.tracing.Tracer;
@@ -44,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.SocketFactory;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -641,6 +640,34 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       }
     }
   }
+  
+  static class RpcProtobufRequestWithHeader {
+    private int length;
+    private RpcHeaderProtos.RpcRequestHeaderProto header;
+    private RpcProtobufRequest rpcRequest;
+  
+    RpcProtobufRequestWithHeader() {}
+  
+    RpcProtobufRequestWithHeader(int length,
+                                 RpcHeaderProtos.RpcRequestHeaderProto header,
+                                 RpcProtobufRequest rpcRequest) {
+      this.length = length;
+      this.header = header;
+      this.rpcRequest = rpcRequest;
+    }
+  
+    public int getLength() {
+      return length;
+    }
+  
+    public RpcHeaderProtos.RpcRequestHeaderProto getHeader() {
+      return header;
+    }
+  
+    public RpcProtobufRequest getRpcRequest() {
+      return rpcRequest;
+    }
+  }
 
   // htrace in the ipc layer creates the span name based on toString()
   // which uses the rpc header.  in the normal case we want to defer decoding
@@ -670,6 +697,28 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       if (payload != null) {
         payload.writeDelimitedTo(out);
       }
+    }
+  
+    public void writeTo(DataOutputStream out) throws IOException {
+      requestHeader.writeDelimitedTo(out);
+      if (payload != null) {
+        payload.writeDelimitedTo(out);
+      }
+    }
+  
+    public int computeRequestSize() {
+      int length = 0;
+      if (requestHeader != null) {
+        int headerLength = requestHeader.getSerializedSize();
+        length += headerLength;
+        length += CodedOutputStream.computeUInt32SizeNoTag(headerLength);
+      }
+      if (payload != null) {
+        int payloadLength = payload.getSerializedSize();
+        length += payloadLength;
+        length += CodedOutputStream.computeUInt32SizeNoTag(payloadLength);
+      }
+      return length;
     }
 
     // this is used by htrace to name the span.

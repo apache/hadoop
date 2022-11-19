@@ -21,6 +21,8 @@ package org.apache.hadoop.ipc;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -392,7 +394,7 @@ public class Client implements AutoCloseable {
     private IOException closeException; // close reason
 
     private final Thread rpcRequestThread;
-    private final SynchronousQueue<Pair<Call, ResponseBuffer>> rpcRequestQueue =
+    private final SynchronousQueue<Pair<Call, Object>> rpcRequestQueue =
         new SynchronousQueue<>(true);
 
     private AtomicReference<Thread> connectingThread = new AtomicReference<>();
@@ -1021,11 +1023,15 @@ public class Client implements AutoCloseable {
       // do not flush.  the context and first ipc call request must be sent
       // together to avoid possibility of broken pipes upon authz failure.
       // see writeConnectionHeader
-      final ResponseBuffer buf = new ResponseBuffer();
-      connectionContextHeader.writeDelimitedTo(buf);
-      message.writeDelimitedTo(buf);
+      int requestSize = 0;
+      int headerSize = connectionContextHeader.getSerializedSize();
+      requestSize += headerSize;
+      requestSize += CodedOutputStream.computeUInt32SizeNoTag(headerSize);
+      int messageSize = message.getSerializedSize();
+      requestSize += messageSize;
+      requestSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
       synchronized (ipcStreams.out) {
-        ipcStreams.sendRequest(buf.toByteArray());
+        ipcStreams.sendRequest(requestSize, connectionContextHeader, message);
       }
     }
 
@@ -1119,12 +1125,12 @@ public class Client implements AutoCloseable {
         while (!shouldCloseConnection.get()) {
           ResponseBuffer buf = null;
           try {
-            Pair<Call, ResponseBuffer> pair =
+            Pair<Call, Object> pair =
                 rpcRequestQueue.poll(maxIdleTime, TimeUnit.MILLISECONDS);
             if (pair == null || shouldCloseConnection.get()) {
               continue;
             }
-            buf = pair.getRight();
+            Object right = pair.getRight();
             synchronized (ipcStreams.out) {
               if (LOG.isDebugEnabled()) {
                 Call call = pair.getLeft();
@@ -1132,7 +1138,12 @@ public class Client implements AutoCloseable {
                     call.rpcRequest);
               }
               // RpcRequestHeader + RpcRequest
-              ipcStreams.sendRequest(buf.toByteArray());
+              if (right instanceof ProtobufRpcEngine2.RpcProtobufRequestWithHeader) {
+                ipcStreams.sendRequest((ProtobufRpcEngine2.RpcProtobufRequestWithHeader) right);
+              } else {
+                buf = (ResponseBuffer) right;
+                ipcStreams.sendRequest(buf.toByteArray());
+              }
               ipcStreams.flush();
             }
           } catch (InterruptedException ie) {
@@ -1178,11 +1189,22 @@ public class Client implements AutoCloseable {
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
           call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
           clientId, call.alignmentContext);
-
-      final ResponseBuffer buf = new ResponseBuffer();
-      header.writeDelimitedTo(buf);
-      RpcWritable.wrap(call.rpcRequest).writeTo(buf);
-      rpcRequestQueue.put(Pair.of(call, buf));
+  
+      if (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest) {
+        int computedSize = header.getSerializedSize();
+        computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
+        computedSize += ((ProtobufRpcEngine2.RpcProtobufRequest)
+                call.rpcRequest).computeRequestSize();
+        ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcProtobufRequestWithHeader =
+                new ProtobufRpcEngine2.RpcProtobufRequestWithHeader(computedSize,
+                        header, (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest);
+        rpcRequestQueue.put(Pair.of(call, rpcProtobufRequestWithHeader));
+      } else {
+        ResponseBuffer buf = new ResponseBuffer();
+        header.writeDelimitedTo(buf);
+        RpcWritable.wrap(call.rpcRequest).writeTo(buf);
+        rpcRequestQueue.put(Pair.of(call, buf));
+      }
     }
 
     /* Receive a response.
@@ -1940,6 +1962,20 @@ public class Client implements AutoCloseable {
 
     public void sendRequest(byte[] buf) throws IOException {
       out.write(buf);
+    }
+  
+    public void sendRequest(ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcRequest)
+            throws IOException {
+      out.writeInt(rpcRequest.getLength());
+      rpcRequest.getHeader().writeDelimitedTo(out);
+      rpcRequest.getRpcRequest().writeTo(out);
+    }
+  
+    public void sendRequest(int totalSize, RpcRequestHeaderProto header,
+                            Message rpcRequest) throws IOException {
+      out.writeInt(totalSize);
+      header.writeDelimitedTo(out);
+      rpcRequest.writeDelimitedTo(out);
     }
 
     @Override
