@@ -38,6 +38,8 @@ public abstract class SerializedException {
   /**
    * Constructs a new <code>SerializedException</code> with the specified detail
    * message and cause.
+   * @param message exception detail message.
+   * @param cause cause of the exception.
    */
   @Private
   @Unstable
@@ -46,6 +48,7 @@ public abstract class SerializedException {
   /**
    * Constructs a new <code>SerializedException</code> with the specified detail
    * message.
+   * @param message exception detail message.
    */
   @Private
   @Unstable
@@ -53,6 +56,7 @@ public abstract class SerializedException {
 
   /**
    * Constructs a new <code>SerializedException</code> with the specified cause.
+   * @param cause cause of the exception.
    */
   @Private
   @Unstable
