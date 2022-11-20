@@ -432,12 +432,12 @@ public class DebugAdmin extends Configured implements Tool {
 
     VerifyECCommand() {
       super("verifyEC",
-          "verifyEC -file <file> [-blockId <blk_Id>] [-verifyAllFailures]",
+          "verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks]",
           "  -file Verify HDFS erasure coding on all block groups of the file." +
               System.lineSeparator() +
-          "  -verifyAllFailures specify verify all failures block groups of the file," +
-              System.lineSeparator() +
-          "  the default is not to verify all failures." + System.lineSeparator() +
+          "  -skipFailureBlocks specify will skip any block group failures during verify," +
+          "  and continues verify all block groups of the file," + System.lineSeparator() +
+          "  the default is not to skip failure blocks." + System.lineSeparator() +
           "  -blockId specify blk_Id to verify for a specific one block group.");
     }
 
@@ -493,14 +493,13 @@ public class DebugAdmin extends Configured implements Tool {
       this.blockReaders = new BlockReader[blockNum];
 
       String needToVerifyBlockId = StringUtils.popOptionWithArgument("-blockId", args);
-      boolean verifyAllFailures = StringUtils.popOption("-verifyAllFailures", args);
+      boolean skipFailureBlocks = StringUtils.popOption("-skipFailureBlocks", args);
       boolean isHealthy = true;
 
       for (LocatedBlock locatedBlock : locatedBlocks.getLocatedBlocks()) {
-        if (needToVerifyBlockId == null || needToVerifyBlockId.equals(
-            locatedBlock.getBlock().getLocalBlock().getBlockName())) {
-          System.out.println("Checking EC block group: blk_" +
-              locatedBlock.getBlock().getBlockId());
+        String blockName = locatedBlock.getBlock().getBlockName();
+        if (needToVerifyBlockId == null || needToVerifyBlockId.equals(blockName)) {
+          System.out.println("Checking EC block group: " + blockName);
           LocatedStripedBlock blockGroup = (LocatedStripedBlock) locatedBlock;
 
           try {
@@ -508,10 +507,10 @@ public class DebugAdmin extends Configured implements Tool {
             System.out.println("Status: OK");
           } catch (Exception e) {
             System.err.println("Status: ERROR, message: " + e.getMessage());
-            if (!verifyAllFailures) {
-              return 1;
-            }
             isHealthy = false;
+            if (!skipFailureBlocks) {
+              break;
+            }
           } finally {
             closeBlockReaders();
           }
@@ -521,10 +520,13 @@ public class DebugAdmin extends Configured implements Tool {
           }
         }
       }
-      if (isHealthy && needToVerifyBlockId == null) {
-        System.out.println("\nAll EC block group status: OK");
+      if (isHealthy) {
+        if (needToVerifyBlockId == null) {
+          System.out.println("\nAll EC block group status: OK");
+        }
+        return 0;
       }
-      return 0;
+      return 1;
     }
 
     private void verifyBlockGroup(LocatedStripedBlock blockGroup) throws Exception {

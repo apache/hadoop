@@ -195,9 +195,10 @@ public class TestDebugAdmin {
     DistributedFileSystem fs = cluster.getFileSystem();
 
     assertEquals("ret: 1, verifyEC -file <file> [-blockId <blk_Id>] " +
-        "[-verifyAllFailures]  -file Verify HDFS erasure coding on all block groups of the file." +
-        "  -verifyAllFailures specify verify all failures block groups of the file," +
-        "  the default is not to verify all failures." +
+        "[-skipFailureBlocks]  -file Verify HDFS erasure coding on all block groups of the file." +
+        "  -skipFailureBlocks specify will skip any block group failures during verify," +
+        "  and continues verify all block groups of the file," +
+        "  the default is not to skip failure blocks." +
         "  -blockId specify blk_Id to verify for a specific one block group.",
         runCmd(new String[]{"verifyEC"}));
 
@@ -283,7 +284,7 @@ public class TestDebugAdmin {
     blockGroup = (LocatedStripedBlock) blocks.get(0);
     String blockName = blockGroup.getBlock().getBlockName();
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-blockId", blockName})
-        .contains("Checking EC block group: " + blockName + "Status: OK"));
+        .contains("ret: 0, Checking EC block group: " + blockName + "Status: OK"));
 
     // Specify -verifyAllFailures.
     indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
@@ -303,10 +304,11 @@ public class TestDebugAdmin {
     FileUtils.writeByteArrayToFile(blockFile, errorBytes);
     runCmd(new String[]{"computeMeta", "-block", blockFile.getAbsolutePath(),
         "-out", metaFile.getAbsolutePath()});
-    // VerifyEC and set verifyAllFailures.
+    // VerifyEC and set skipFailureBlocks.
     LocatedStripedBlock blockGroup2 = (LocatedStripedBlock) blocks.get(1);
-    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-verifyAllFailures"})
-        .contains("Status: ERROR, message: EC compute result not match." +
+    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-skipFailureBlocks"})
+        .contains("ret: 1, Checking EC block group: " + blockGroup.getBlock().getBlockName() +
+            "Status: ERROR, message: EC compute result not match." +
             "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK"));
   }
 
