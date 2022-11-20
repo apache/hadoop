@@ -109,10 +109,13 @@ public class TestResponseBuffer {
         .newBuilder().setMessage("hello").build();
     ProtobufRpcEngine2.RpcProtobufRequest rpcRequest =
         new ProtobufRpcEngine2.RpcProtobufRequest(header, message);
-    ResponseBuffer buf = new ResponseBuffer();
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    DataOutputStream dataOutputStream = new DataOutputStream(out);
+    ResponseBuffer buf = null;
+    ByteArrayOutputStream out = null;
+    DataOutputStream dataOutputStream = null;
     try {
+      buf = new ResponseBuffer();
+      out = new ByteArrayOutputStream();
+      dataOutputStream = new DataOutputStream(out);
       rpcHeader.writeDelimitedTo(buf);
       RpcWritable.wrap(rpcRequest).writeTo(buf);
       ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcProtobufRequestWithHeader =
@@ -122,6 +125,7 @@ public class TestResponseBuffer {
     } finally {
       IOUtils.closeStream(buf);
       IOUtils.closeStream(out);
+      IOUtils.closeStream(dataOutputStream);
     }
   }
 }
