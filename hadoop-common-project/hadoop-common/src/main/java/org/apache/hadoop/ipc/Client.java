@@ -1023,15 +1023,18 @@ public class Client implements AutoCloseable {
       // do not flush.  the context and first ipc call request must be sent
       // together to avoid possibility of broken pipes upon authz failure.
       // see writeConnectionHeader
-      int requestSize = 0;
-      int headerSize = connectionContextHeader.getSerializedSize();
-      requestSize += headerSize;
-      requestSize += CodedOutputStream.computeUInt32SizeNoTag(headerSize);
+      int computedSize = connectionContextHeader.getSerializedSize();
+      computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
       int messageSize = message.getSerializedSize();
-      requestSize += messageSize;
-      requestSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+      computedSize += messageSize;
+      computedSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+      byte[] dataLengthBuffer = new byte[4];
+      dataLengthBuffer[0] = (byte)((computedSize >>> 24) & 0xFF);
+      dataLengthBuffer[1] = (byte)((computedSize >>> 16) & 0xFF);
+      dataLengthBuffer[2] = (byte)((computedSize >>>  8) & 0xFF);
+      dataLengthBuffer[3] = (byte)(computedSize & 0xFF);
       synchronized (ipcStreams.out) {
-        ipcStreams.sendRequest(requestSize, connectionContextHeader, message);
+        ipcStreams.sendRequest(dataLengthBuffer, connectionContextHeader, message);
       }
     }
 
@@ -1191,13 +1194,9 @@ public class Client implements AutoCloseable {
           clientId, call.alignmentContext);
 
       if (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest) {
-        int computedSize = header.getSerializedSize();
-        computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
-        computedSize += ((ProtobufRpcEngine2.RpcProtobufRequest)
-                call.rpcRequest).computeRequestSize();
         ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcProtobufRequestWithHeader =
-                new ProtobufRpcEngine2.RpcProtobufRequestWithHeader(computedSize,
-                        header, (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest);
+            new ProtobufRpcEngine2.RpcProtobufRequestWithHeader(header,
+            (ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest);
         rpcRequestQueue.put(Pair.of(call, rpcProtobufRequestWithHeader));
       } else {
         ResponseBuffer buf = new ResponseBuffer();
@@ -1965,15 +1964,13 @@ public class Client implements AutoCloseable {
     }
 
     public void sendRequest(ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcRequest)
-            throws IOException {
-      out.writeInt(rpcRequest.getLength());
-      rpcRequest.getHeader().writeDelimitedTo(out);
-      rpcRequest.getRpcRequest().writeTo(out);
+        throws IOException {
+      rpcRequest.writeTo(out);
     }
 
-    public void sendRequest(int totalSize, RpcRequestHeaderProto header,
-                            Message rpcRequest) throws IOException {
-      out.writeInt(totalSize);
+    public void sendRequest(byte[] dataLengthBuffer, RpcRequestHeaderProto header,
+        Message rpcRequest) throws IOException {
+      out.write(dataLengthBuffer);
       header.writeDelimitedTo(out);
       rpcRequest.writeDelimitedTo(out);
     }

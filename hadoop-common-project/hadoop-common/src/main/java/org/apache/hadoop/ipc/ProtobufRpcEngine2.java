@@ -646,30 +646,34 @@ public class ProtobufRpcEngine2 implements RpcEngine {
   }
 
   static class RpcProtobufRequestWithHeader {
-    private int length;
+    private byte[] dataLengthBuffer;
     private RpcHeaderProtos.RpcRequestHeaderProto header;
     private RpcProtobufRequest rpcRequest;
 
     RpcProtobufRequestWithHeader() {}
 
-    RpcProtobufRequestWithHeader(int length,
-                                 RpcHeaderProtos.RpcRequestHeaderProto header,
-                                 RpcProtobufRequest rpcRequest) {
-      this.length = length;
+    RpcProtobufRequestWithHeader(RpcHeaderProtos.RpcRequestHeaderProto header,
+        RpcProtobufRequest rpcRequest) {
+      int computedSize = header.getSerializedSize();
+      computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
+      if (rpcRequest != null) {
+        computedSize += rpcRequest.computeRequestSize();
+      }
+      this.dataLengthBuffer = new byte[4];
+      dataLengthBuffer[0] = (byte)((computedSize >>> 24) & 0xFF);
+      dataLengthBuffer[1] = (byte)((computedSize >>> 16) & 0xFF);
+      dataLengthBuffer[2] = (byte)((computedSize >>>  8) & 0xFF);
+      dataLengthBuffer[3] = (byte)(computedSize & 0xFF);
       this.header = header;
       this.rpcRequest = rpcRequest;
     }
 
-    public int getLength() {
-      return length;
-    }
-
-    public RpcHeaderProtos.RpcRequestHeaderProto getHeader() {
-      return header;
-    }
-
-    public RpcProtobufRequest getRpcRequest() {
-      return rpcRequest;
+    public void writeTo(DataOutputStream out) throws IOException {
+      out.write(dataLengthBuffer);
+      header.writeDelimitedTo(out);
+      if (rpcRequest != null) {
+        rpcRequest.writeTo(out);
+      }
     }
   }
 
@@ -711,12 +715,8 @@ public class ProtobufRpcEngine2 implements RpcEngine {
     }
 
     public int computeRequestSize() {
-      int length = 0;
-      if (requestHeader != null) {
-        int headerLength = requestHeader.getSerializedSize();
-        length += headerLength;
-        length += CodedOutputStream.computeUInt32SizeNoTag(headerLength);
-      }
+      int length = requestHeader.getSerializedSize();
+      length += CodedOutputStream.computeUInt32SizeNoTag(length);
       if (payload != null) {
         int payloadLength = payload.getSerializedSize();
         length += payloadLength;

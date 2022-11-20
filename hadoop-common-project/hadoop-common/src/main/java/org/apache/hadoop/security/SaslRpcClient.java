@@ -459,20 +459,18 @@ public class SaslRpcClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending sasl message "+message);
     }
-    int requestSize = 0;
-    int headerSize = saslHeader.getSerializedSize();
-    requestSize += headerSize;
-    requestSize += CodedOutputStream.computeUInt32SizeNoTag(headerSize);
+    int computedSize = saslHeader.getSerializedSize();
+    computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
     int messageSize = message.getSerializedSize();
-    requestSize += messageSize;
-    requestSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
-    byte[] dataLengthBuf = new byte[4];
-    dataLengthBuf[0] = (byte)((requestSize >>> 24) & 0xFF);
-    dataLengthBuf[1] = (byte)((requestSize >>> 16) & 0xFF);
-    dataLengthBuf[2] = (byte)((requestSize >>>  8) & 0xFF);
-    dataLengthBuf[3] = (byte)(requestSize & 0xFF);
+    computedSize += messageSize;
+    computedSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+    byte[] dataLengthBuffer = new byte[4];
+    dataLengthBuffer[0] = (byte)((computedSize >>> 24) & 0xFF);
+    dataLengthBuffer[1] = (byte)((computedSize >>> 16) & 0xFF);
+    dataLengthBuffer[2] = (byte)((computedSize >>>  8) & 0xFF);
+    dataLengthBuffer[3] = (byte)(computedSize & 0xFF);
     synchronized (out) {
-      out.write(dataLengthBuf);
+      out.write(dataLengthBuffer);
       saslHeader.writeDelimitedTo(out);
       message.writeDelimitedTo(out);
       out.flush();

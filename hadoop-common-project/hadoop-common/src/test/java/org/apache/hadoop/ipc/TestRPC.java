@@ -107,6 +107,7 @@ import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
@@ -539,14 +540,12 @@ public class TestRPC extends TestRpcBase {
               Arrays.asList(strings)).build();
       TestProtos.EchoResponseProto2 echoResponse2 =
           proxy.echo2(null, echoRequest2);
-      assertTrue(Arrays.equals(echoResponse2.getMessageList().toArray(),
-          strings));
+      assertArrayEquals(echoResponse2.getMessageList().toArray(), strings);
 
       echoRequest2 = TestProtos.EchoRequestProto2.newBuilder()
           .addAllMessage(Collections.<String>emptyList()).build();
       echoResponse2 = proxy.echo2(null, echoRequest2);
-      assertTrue(Arrays.equals(echoResponse2.getMessageList().toArray(),
-          new String[]{}));
+      assertArrayEquals(echoResponse2.getMessageList().toArray(), new String[]{});
 
       TestProtos.AddRequestProto addRequest =
           TestProtos.AddRequestProto.newBuilder().setParam1(1)
