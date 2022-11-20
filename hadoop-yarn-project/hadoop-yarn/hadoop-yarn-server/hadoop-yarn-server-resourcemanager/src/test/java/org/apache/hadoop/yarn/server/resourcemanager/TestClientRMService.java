@@ -2757,7 +2757,7 @@ public class TestClientRMService {
     };
     rm.start();
 
-    Resource resource = BuilderUtils.newResource(1024, 1);
+    Resource resource = Resources.createResource(1024);
     resource.setResourceInformation("memory-mb",
         ResourceInformation.newInstance("memory-mb", "G", 1024));
     resource.setResourceInformation("resource1",

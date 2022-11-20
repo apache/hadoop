@@ -143,6 +143,7 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -610,7 +611,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -652,7 +653,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -701,7 +702,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -754,7 +755,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -805,7 +806,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -848,7 +849,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     NodeAttribute nodeAttribute1 = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "Attr1",
             NodeAttributeType.STRING, "V1");
@@ -895,7 +896,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     NodeAttribute validNodeAttribute = NodeAttribute
         .newInstance(NodeAttribute.PREFIX_DISTRIBUTED, "Attr1",
             NodeAttributeType.STRING, "V1");
@@ -998,7 +999,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1070,7 +1071,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1147,7 +1148,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1281,7 +1282,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1438,7 +1439,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest registerReq =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     registerReq.setResource(capability);
     registerReq.setNodeId(nodeId);
     registerReq.setHttpPort(1234);
@@ -1491,7 +1492,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req =
         Records.newRecord(RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -1539,7 +1540,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     req.setNodeId(nodeId);
     req.setHttpPort(1234);
@@ -1608,7 +1609,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     NodeId nodeId = BuilderUtils.newNodeId("host", 1234);
     req.setNodeId(nodeId);
 
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
     req.setResource(capability);
     RegisterNodeManagerResponse response1 =
         resourceTrackerService.registerNodeManager(req);
@@ -2775,7 +2776,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     NodeId nodeId = NodeId.newInstance("host2", 1234);
-    Resource capability = BuilderUtils.newResource(1024, 1);
+    Resource capability = Resources.createResource(1024);
 
     NodeStatus mockNodeStatus = createMockNodeStatus();
 
@@ -3044,7 +3045,7 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
         recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request.setNodeId(nodeId);
     request.setHttpPort(1234);
-    request.setResource(BuilderUtils.newResource(1024, 1));
+    request.setResource(Resources.createResource(1024));
     resourceTrackerService.registerNodeManager(request);
 
     org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus =
