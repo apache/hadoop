@@ -199,6 +199,7 @@ function run_ci() {
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
 
+  set -x
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
 
