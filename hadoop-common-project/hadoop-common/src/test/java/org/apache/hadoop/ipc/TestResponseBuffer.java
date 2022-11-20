@@ -18,11 +18,19 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import org.apache.hadoop.ipc.ResponseBuffer;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.apache.hadoop.ipc.protobuf.TestProtos;
+import org.apache.hadoop.util.ProtoUtil;
 import org.junit.Test;
 
 /** Unit tests for ResponseBuffer. */
@@ -83,5 +91,37 @@ public class TestResponseBuffer {
     byte[] payload = new byte[expectedLength];
     dis.readFully(payload);
     assertEquals(expected, new String(payload));
+  }
+
+  @Test
+  public void testRpcProtobufRequestWithHeader() throws IOException {
+    RpcHeaderProtos.RpcRequestHeaderProto rpcHeader = ProtoUtil
+        .makeRpcRequestHeader(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
+        RpcHeaderProtos.RpcRequestHeaderProto.OperationProto.RPC_FINAL_PACKET,
+        0, 0, ClientId.getClientId(), null);
+    ProtobufRpcEngine2Protos.RequestHeaderProto.Builder builder =
+        ProtobufRpcEngine2Protos.RequestHeaderProto.newBuilder();
+    builder.setMethodName("echo");
+    builder.setDeclaringClassProtocolName("EchoRequestProto");
+    builder.setClientProtocolVersion(1L);
+    ProtobufRpcEngine2Protos.RequestHeaderProto header = builder.build();
+    TestProtos.EchoRequestProto message = TestProtos.EchoRequestProto
+        .newBuilder().setMessage("hello").build();
+    ProtobufRpcEngine2.RpcProtobufRequest rpcRequest =
+        new ProtobufRpcEngine2.RpcProtobufRequest(header, message);
+    ResponseBuffer buf = new ResponseBuffer();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    DataOutputStream dataOutputStream = new DataOutputStream(out);
+    try {
+      rpcHeader.writeDelimitedTo(buf);
+      RpcWritable.wrap(rpcRequest).writeTo(buf);
+      ProtobufRpcEngine2.RpcProtobufRequestWithHeader rpcProtobufRequestWithHeader =
+          new ProtobufRpcEngine2.RpcProtobufRequestWithHeader(rpcHeader, rpcRequest);
+      rpcProtobufRequestWithHeader.writeTo(dataOutputStream);
+      assertArrayEquals(buf.toByteArray(), out.toByteArray());
+    } finally {
+      IOUtils.closeStream(buf);
+      IOUtils.closeStream(out);
+    }
   }
 }
