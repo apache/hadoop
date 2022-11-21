@@ -60,9 +60,9 @@ char *__get_exec_readproc(char *procfn) {
   }
   len = readlink(procfn, filename, EXECUTOR_PATH_MAX);
   if (len == -1) {
-    fprintf(ERRORFILE,"Can't get executable name from %s - %s\n", procfn,
+    fprintf(ERRORFILE,"Cannot get executable name from %s - %s\n", procfn,
             strerror(errno));
-    exit(CANT_GET_EXECUTABLE_NAME_FROM_READLINK);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_READLINK);
   } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE,"Resolved path for %s [%s] is longer than %d characters.\n",
             procfn, filename, EXECUTOR_PATH_MAX);
@@ -88,9 +88,9 @@ char *__get_exec_sysctl(int *mib)
 
   len = sizeof(buffer);
   if (sysctl(mib, 4, buffer, &len, NULL, 0) == -1) {
-    fprintf(ERRORFILE,"Can't get executable name from kernel: %s\n",
+    fprintf(ERRORFILE,"Cannot get executable name from kernel: %s\n",
       strerror(errno));
-    exit(CANT_GET_EXECUTABLE_NAME_FROM_KERNEL);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_KERNEL);
   }
   filename=malloc(EXECUTOR_PATH_MAX);
   if (!filename) {
@@ -124,9 +124,9 @@ char* get_executable(char *argv0) {
   }
   pid = getpid();
   if (proc_pidpath(pid,filename,PROC_PIDPATHINFO_MAXSIZE) <= 0) {
-    fprintf(ERRORFILE,"Can't get executable name from pid %u - %s\n", pid,
+    fprintf(ERRORFILE,"Cannot get executable name from pid %u - %s\n", pid,
             strerror(errno));
-    exit(CANT_GET_EXECUTABLE_NAME_FROM_PID);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_PID);
   }
   return filename;
 }
@@ -194,7 +194,7 @@ char* get_executable (char *argv0) {
 
   if (!filename) {
     fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
-    exit(WRONGPATH_OF_EXECUTABLE);
+    exit(WRONG_PATH_OF_EXECUTABLE);
   }
   return filename;
 }
