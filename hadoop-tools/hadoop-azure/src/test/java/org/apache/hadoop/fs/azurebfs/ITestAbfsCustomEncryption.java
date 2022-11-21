@@ -104,48 +104,50 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   @Parameterized.Parameter(6)
   public boolean isCpkResponseHdrExpected;
 
+  @Parameterized.Parameter(7)
+  public Boolean isCpkResponseKeyExpected = false;
 
   @Parameterized.Parameters(name = "{0} mode, {2}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][] {
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.READ, true, false, false, true},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.WRITE, false, true, false, true},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.APPEND, false, true, false, true},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.SET_ACL, false, false, false, false},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.GET_ATTR, true, false, false, true},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.SET_ATTR, false, true, false, true},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.LISTSTATUS, false, false, false, false},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.RENAME, false, false, false, false},
-        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.DELETE, false, false, false, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.READ, true, false, false, true, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.WRITE, false, true, false, true, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.APPEND, false, true, false, true, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.SET_ACL, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.GET_ATTR, true, false, false, true, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.SET_ATTR, false, true, false, true, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.LISTSTATUS, false, false, false, false, true},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.RENAME, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, ENCRYPTION_CONTEXT, FSOperationType.DELETE, false, false, false, false, false},
 
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.WRITE, false, false, true, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.GET_ATTR, true, false, true, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.READ, false, false, true, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_ATTR, false, true, true, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.RENAME, false, false, false, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.LISTSTATUS, false, false, false, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.DELETE, false, false, false, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_ACL, false, false, false, false},
-        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_PERMISSION, false, false, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.WRITE, false, false, true, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.GET_ATTR, true, false, true, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.READ, false, false, true, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_ATTR, false, true, true, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.RENAME, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.LISTSTATUS, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.DELETE, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_ACL, false, false, false, false, false},
+        {ENCRYPTION_CONTEXT, NONE, FSOperationType.SET_PERMISSION, false, false, false, false, false},
 
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.READ, true, false, false, true},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.WRITE, false, true, false, true},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.APPEND, false, true, false, true},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.SET_ACL, false, false, false, false},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.LISTSTATUS, false, false, false, false},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.RENAME, false, false, false, false},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.DELETE, false, false, false, false},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.GET_ATTR, true, false, false, true},
-        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.SET_ATTR, false, true, false, true},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.READ, true, false, false, true, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.WRITE, false, true, false, true, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.APPEND, false, true, false, true, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.SET_ACL, false, false, false, false, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.LISTSTATUS, false, false, false, false, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.RENAME, false, false, false, false, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.DELETE, false, false, false, false, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.GET_ATTR, true, false, false, true, false},
+        {GLOBAL_KEY, GLOBAL_KEY, FSOperationType.SET_ATTR, false, true, false, true, false},
 
-        {GLOBAL_KEY, NONE, FSOperationType.READ, true, false, true, true},
-        {GLOBAL_KEY, NONE, FSOperationType.WRITE, false, true, true, true},
-        {GLOBAL_KEY, NONE, FSOperationType.SET_ATTR, false, false, true, true},
-        {GLOBAL_KEY, NONE, FSOperationType.SET_ACL, false, false, false, false},
-        {GLOBAL_KEY, NONE, FSOperationType.RENAME, false, false, false, false},
-        {GLOBAL_KEY, NONE, FSOperationType.LISTSTATUS, false, false, false, false},
-        {GLOBAL_KEY, NONE, FSOperationType.DELETE, false, false, false, false},
-        {GLOBAL_KEY, NONE, FSOperationType.SET_PERMISSION, false, false, false, false},
+        {GLOBAL_KEY, NONE, FSOperationType.READ, true, false, true, true, false},
+        {GLOBAL_KEY, NONE, FSOperationType.WRITE, false, true, true, true, false},
+        {GLOBAL_KEY, NONE, FSOperationType.SET_ATTR, false, false, true, true, false},
+        {GLOBAL_KEY, NONE, FSOperationType.SET_ACL, false, false, false, false, false},
+        {GLOBAL_KEY, NONE, FSOperationType.RENAME, false, false, false, false, false},
+        {GLOBAL_KEY, NONE, FSOperationType.LISTSTATUS, false, false, false, false, false},
+        {GLOBAL_KEY, NONE, FSOperationType.DELETE, false, false, false, false, false},
+        {GLOBAL_KEY, NONE, FSOperationType.SET_PERMISSION, false, false, false, false, false},
     });
   }
 
@@ -183,8 +185,20 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
             .isEqualTo(cpkSHAEncoded);
       }
     } else {
-      Assertions.assertThat(httpOp.getResponseHeader(X_MS_ENCRYPTION_KEY_SHA256))
-          .isEqualTo(null);
+      if(isCpkResponseKeyExpected) {
+        if (requestEncryptionType == ENCRYPTION_CONTEXT) {
+          String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
+          String expectedKeySHA = EncodingHelper.getBase64EncodedString(
+              EncodingHelper.getSHA256Hash(
+                  ecp.getEncryptionKeyForTest(encryptionContext)));
+          Assertions.assertThat(httpOp.getListResultSchema().paths().get(0)
+              .getCustomerProvidedKeySha256()).isEqualTo(expectedKeySHA);
+        }
+      } else {
+        Assertions.assertThat(
+                httpOp.getResponseHeader(X_MS_ENCRYPTION_KEY_SHA256))
+            .isEqualTo(null);
+      }
     }
     Assertions.assertThat(httpOp.getResponseHeader(X_MS_SERVER_ENCRYPTED))
         .isEqualTo(responseHeaderServerEnc? "true" : null);

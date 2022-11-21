@@ -80,8 +80,14 @@ public class ListResultEntrySchema {
   /**
    *  The encryption context property
    */
-  @JsonProperty(value = "x-ms-encryption-context")
+  @JsonProperty(value = "EncryptionContext")
   private String xMsEncryptionContext;
+
+  /**
+   * The customer-provided encryption-256 value
+   * */
+  @JsonProperty(value = "CustomerProvidedKeySha256")
+  private String customerProvidedKeySha256;
 
   /**
    * Get the name value.
@@ -246,9 +252,17 @@ public class ListResultEntrySchema {
 
   /**
    * Get the x-ms-encryption-context value.
-   * @return the x-ms-encryption-context value
+   * @return the x-ms-encryption-context value.
    * */
-  public String xMsEncryptionContext() {
+  public String getXMsEncryptionContext() {
     return xMsEncryptionContext;
+  }
+
+  /**
+   * Get the customer-provided sha-256 key
+   * @return the x-ms-encryption-key-sha256 value used by client.
+   * */
+  public String getCustomerProvidedKeySha256() {
+    return customerProvidedKeySha256;
   }
 }
