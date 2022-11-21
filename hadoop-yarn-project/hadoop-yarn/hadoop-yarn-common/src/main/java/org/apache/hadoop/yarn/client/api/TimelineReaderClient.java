@@ -42,6 +42,8 @@ public abstract class TimelineReaderClient extends CompositeService {
 
   /**
    * Create a new instance of Timeline Reader Client.
+   *
+   * @return instance of Timeline Reader Client.
    */
   @InterfaceAudience.Public
   public static TimelineReaderClient createTimelineReaderClient() {

@@ -258,9 +258,9 @@ public class Apps {
    * because downstream frameworks like Spark and Tez have been using it.
    * Downstream frameworks are expected to move off of it.
    *
-   * @param environment
-   * @param variable
-   * @param value
+   * @param environment map of environment variable.
+   * @param variable variable.
+   * @param value value.
    */
   @Deprecated
   public static void addToEnvironment(

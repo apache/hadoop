@@ -341,6 +341,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    *
    * @param labels
    *          new node labels added
+   * @throws IOException io error occur.
    */
   @VisibleForTesting
   public void addToCluserNodeLabelsWithDefaultExclusivity(Set<String> labels)
