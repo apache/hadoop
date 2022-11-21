@@ -308,7 +308,7 @@ public abstract class AppAdminClient extends CompositeService {
    *
    * @param appName the name of the application
    * @return exit code
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public

@@ -114,7 +114,7 @@ public abstract class TimelineClient extends CompositeService implements
    * 
    * @param domain
    *          an {@link TimelineDomain} object
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public
@@ -133,7 +133,7 @@ public abstract class TimelineClient extends CompositeService implements
    * @param domain
    *          an {@link TimelineDomain} object
    * @param appAttemptId {@link ApplicationAttemptId}
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public
@@ -151,7 +151,7 @@ public abstract class TimelineClient extends CompositeService implements
    *          securely talking to the timeline server
    * @return a delegation token ({@link Token}) that can be used to talk to the
    *         timeline server
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public
@@ -166,7 +166,7 @@ public abstract class TimelineClient extends CompositeService implements
    * @param timelineDT
    *          the delegation token to renew
    * @return the new expiration time
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public
@@ -181,7 +181,7 @@ public abstract class TimelineClient extends CompositeService implements
    * 
    * @param timelineDT
    *          the delegation token to cancel
-   * @throws IOException
+   * @throws IOException io error occur.
    * @throws YarnException
    */
   @Public

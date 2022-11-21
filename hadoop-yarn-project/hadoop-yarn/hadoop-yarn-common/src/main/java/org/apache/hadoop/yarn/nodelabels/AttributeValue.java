@@ -35,7 +35,7 @@ public interface AttributeValue {
    * operations.
    *
    * @param value
-   * @throws IOException
+   * @throws IOException io error occur.
    */
   void validateAndInitializeValue(String value) throws IOException;
 

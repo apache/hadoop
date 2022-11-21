@@ -257,6 +257,10 @@ public class Apps {
    * This older version of this method is kept around for compatibility
    * because downstream frameworks like Spark and Tez have been using it.
    * Downstream frameworks are expected to move off of it.
+   *
+   * @param environment
+   * @param variable
+   * @param value
    */
   @Deprecated
   public static void addToEnvironment(
