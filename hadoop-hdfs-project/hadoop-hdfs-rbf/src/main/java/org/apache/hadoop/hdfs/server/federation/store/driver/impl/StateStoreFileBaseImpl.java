@@ -89,6 +89,15 @@ public abstract class StateStoreFileBaseImpl
       String path);
 
   /**
+   * Convenience method to allow to mocking of protected
+   * {@link #getWriter(String)}
+   */
+  @VisibleForTesting
+  public BufferedWriter getBufferedWriter(String path) {
+    return getWriter(path);
+  }
+
+  /**
    * Check if a path exists.
    *
    * @param path Path to check.
@@ -348,7 +357,7 @@ public abstract class StateStoreFileBaseImpl
     for (Entry<String, T> entry : toWrite.entrySet()) {
       String recordPath = entry.getKey();
       String recordPathTemp = recordPath + "." + now() + TMP_MARK;
-      BufferedWriter writer = getWriter(recordPathTemp);
+      BufferedWriter writer = getBufferedWriter(recordPathTemp);
       try {
         T record = entry.getValue();
         String line = serializeString(record);
