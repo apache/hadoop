@@ -17,6 +17,25 @@
  */
 package org.apache.hadoop.yarn.api;
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.commons.lang3.Range;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.Lists;
@@ -24,20 +43,12 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-
-import org.junit.Assert;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.*;
-import java.nio.ByteBuffer;
-import java.util.*;
-
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints
-    .PlacementTargets.allocationTag;
+import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Generic helper class to validate protocol records.
@@ -223,7 +234,7 @@ public class BasePBImplRecordsTest {
             p.getMethod = m;
             ret.put(propertyName, p);
           } else {
-            Assert.fail("Multiple get method with same name: " + recordClass
+            fail("Multiple get method with same name: " + recordClass
                 + p.propertyName);
           }
         }
@@ -284,18 +295,17 @@ public class BasePBImplRecordsTest {
       gsp.setMethod.invoke(origRecord, gsp.testValue);
     }
     Object ret = getProto.invoke(origRecord);
-    Assert.assertNotNull(recordClass.getName() + "#getProto returns null", ret);
+    assertNotNull(ret, recordClass.getName() + "#getProto returns null");
     if (!(protoClass.isAssignableFrom(ret.getClass()))) {
-      Assert.fail("Illegal getProto method return type: " + ret.getClass());
+      fail("Illegal getProto method return type: " + ret.getClass());
     }
     R deserRecord = pbConstructor.newInstance(ret);
-    Assert.assertEquals("whole " + recordClass + " records should be equal",
-        origRecord, deserRecord);
+    assertEquals(origRecord, deserRecord, "whole " + recordClass + " records should be equal");
     for (GetSetPair gsp : getSetPairs.values()) {
       Object origValue = gsp.getMethod.invoke(origRecord);
       Object deserValue = gsp.getMethod.invoke(deserRecord);
-      Assert.assertEquals("property " + recordClass.getName() + "#"
-          + gsp.propertyName + " should be equal", origValue, deserValue);
+      assertEquals(origValue, deserValue, "property " + recordClass.getName() + "#"
+          + gsp.propertyName + " should be equal");
     }
   }
 }
