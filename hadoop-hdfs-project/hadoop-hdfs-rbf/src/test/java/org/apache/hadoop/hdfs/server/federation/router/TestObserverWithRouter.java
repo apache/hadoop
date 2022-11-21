@@ -123,13 +123,17 @@ public class TestObserverWithRouter {
 
     cluster.waitActiveNamespaces();
     routerContext  = cluster.getRandomRouter();
-    Configuration confToEnableObserverRead = new Configuration();
-    confToEnableObserverRead.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
-    fileSystem = routerContext.getFileSystem(confToEnableObserverRead);
+  }
+
+  private static Configuration getConfToEnableObserverReads() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+    return conf;
   }
 
   @Test
   public void testObserverRead() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     internalTestObserverRead();
   }
 
@@ -140,7 +144,6 @@ public class TestObserverWithRouter {
    */
   @Test
   public void testReadWithoutObserverClientConfigurations() throws Exception {
-    fileSystem.close();
     fileSystem = routerContext.getFileSystem();
     assertThrows(AssertionError.class, this::internalTestObserverRead);
   }
@@ -176,6 +179,7 @@ public class TestObserverWithRouter {
     Configuration confOverrides = new Configuration(false);
     confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
     startUpCluster(2, confOverrides);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -205,6 +209,7 @@ public class TestObserverWithRouter {
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(2, confOverrides);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
 
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
@@ -222,6 +227,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testReadWhenObserverIsDown() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -249,6 +255,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testMultipleObserver() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -387,6 +394,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testUnavailableObserverNN() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     stopObserver(2);
 
     Path path = new Path("/testFile");
@@ -422,6 +430,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testRouterMsync() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile");
 
     // Send Create call to active
@@ -443,6 +452,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testSingleRead() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -470,7 +480,6 @@ public class TestObserverWithRouter {
 
   @Test
   public void testSingleReadUsingObserverReadProxyProvider() throws Exception {
-    fileSystem.close();
     fileSystem = routerContext.getFileSystemWithObserverReadProxyProvider();
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
