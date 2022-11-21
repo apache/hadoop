@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 
 import java.util.Set;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -1476,6 +1477,19 @@ public class ViewFs extends AbstractFileSystem {
     public void setStoragePolicy(Path path, String policyName)
         throws IOException {
       throw readOnlyMountTable("setStoragePolicy", path);
+    }
+
+    @Override
+    public Path getEnclosingRoot(Path path) throws IOException {
+      InodeTree.ResolveResult<AbstractFileSystem> res;
+      try {
+        res = fsState.resolve((path.toString()), true);
+      } catch (FileNotFoundException ex) {
+        throw new NotInMountpointException(path, "getEnclosingRoot");
+      }
+      Path fullPath = new Path(res.resolvedPath);
+      Path enclosingPath = res.targetFileSystem.getEnclosingRoot(path);
+      return enclosingPath.depth() > fullPath.depth() ?  enclosingPath : fullPath;
     }
   }
 }

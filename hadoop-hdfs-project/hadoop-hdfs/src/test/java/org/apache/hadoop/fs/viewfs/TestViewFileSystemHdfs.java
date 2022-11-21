@@ -561,4 +561,35 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         ()-> fsView.getEnclosingRoot(new Path("hdfs://fakeauthority/")));
   }
+
+  @Test
+  public void testEnclosingRootWrapped() throws Exception {
+    try {
+      final Path zone = new Path("/data/EZ");
+      fsTarget.mkdirs(zone);
+      final Path zone1 = new Path("/data/EZ/zone1");
+      fsTarget.mkdirs(zone1);
+
+      DFSTestUtil.createKey("test_key", cluster, 0, CONF);
+      HdfsAdmin hdfsAdmin = new HdfsAdmin(cluster.getURI(0), CONF);
+      final EnumSet<CreateEncryptionZoneFlag> provisionTrash = EnumSet.of(CreateEncryptionZoneFlag.PROVISION_TRASH);
+      hdfsAdmin.createEncryptionZone(zone1, "test_key", provisionTrash);
+
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
+      Path p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+        FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
+        return wFs.getEnclosingRoot(zone);
+      });
+      assertEquals(p, getViewFsPath("/data", fsView));
+      p = (Path) ugi.doAs((PrivilegedExceptionAction) () -> {
+        FileSystem wFs = FileSystem.get(FsConstants.VIEWFS_URI, this.conf);
+        return wFs.getEnclosingRoot(zone1);
+      });
+      assertEquals(p, getViewFsPath(zone1, fsView));
+
+
+    } finally {
+      DFSTestUtil.deleteKey("test_key", cluster, 0);
+    }
+  }
 }
