@@ -1198,6 +1198,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         for (ListResultEntrySchema entry : retrievedSchema.paths()) {
           final String owner = identityTransformer.transformIdentityForGetRequest(entry.owner(), true, userName);
           final String group = identityTransformer.transformIdentityForGetRequest(entry.group(), false, primaryUserGroup);
+          final String encryptionContext = entry.xMsEncryptionContext();
           final FsPermission fsPermission = entry.permissions() == null
                   ? new AbfsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL)
                   : AbfsPermission.valueOf(entry.permissions());
@@ -1227,7 +1228,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                           lastModifiedMillis,
                           entryPath,
                           entry.eTag(),
-                          null));
+                          encryptionContext));
         }
 
         perfInfo.registerSuccess(true);

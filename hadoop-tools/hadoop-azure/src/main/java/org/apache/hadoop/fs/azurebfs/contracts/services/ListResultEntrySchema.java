@@ -78,6 +78,12 @@ public class ListResultEntrySchema {
   private String permissions;
 
   /**
+   *  The encryption context property
+   */
+  @JsonProperty(value = "x-ms-encryption-context")
+  private String xMsEncryptionContext;
+
+  /**
    * Get the name value.
    *
    * @return the name value
@@ -238,4 +244,11 @@ public class ListResultEntrySchema {
     return this;
   }
 
+  /**
+   * Get the x-ms-encryption-context value.
+   * @return the x-ms-encryption-context value
+   * */
+  public String xMsEncryptionContext() {
+    return xMsEncryptionContext;
+  }
 }
