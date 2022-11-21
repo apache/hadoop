@@ -35,7 +35,7 @@ import java.util.Map;
 public class MockStateStoreDriver extends StateStoreBaseImpl {
   private boolean giveErrors = false;
   private boolean initialized = false;
-  private final Map<String, Map<String, BaseRecord>> valueMap = new HashMap<>();
+  private static final Map<String, Map<String, BaseRecord>> valueMap = new HashMap<>();
 
   @Override
   public boolean initDriver() {
@@ -108,6 +108,13 @@ public class MockStateStoreDriver extends StateStoreBaseImpl {
       }
     }
     return true;
+  }
+
+  /**
+   * Clear all records from the store.
+   */
+  public void clearAll() {
+    valueMap.clear();
   }
 
   @Override

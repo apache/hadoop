@@ -104,7 +104,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.Quota.andByStorage
 public class RouterAdmin extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RouterAdmin.class);
-  private static final String DUMP_COMMAND = "-dump";
+  private static final String DUMP_COMMAND = "-dumpState";
 
   private RouterClient client;
 
@@ -1329,7 +1329,7 @@ public class RouterAdmin extends Configured implements Tool {
    * Dumps the contents of the StateStore to stdout.
    * @return true if it was successful
    */
-  static boolean dumpStateStore(Configuration conf,
+  public static boolean dumpStateStore(Configuration conf,
                                 PrintStream output) throws IOException {
     StateStoreService service = new StateStoreService();
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE, false);
