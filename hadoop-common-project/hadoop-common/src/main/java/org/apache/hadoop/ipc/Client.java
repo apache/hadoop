@@ -1023,18 +1023,10 @@ public class Client implements AutoCloseable {
       // do not flush.  the context and first ipc call request must be sent
       // together to avoid possibility of broken pipes upon authz failure.
       // see writeConnectionHeader
-      int computedSize = connectionContextHeader.getSerializedSize();
-      computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
-      int messageSize = message.getSerializedSize();
-      computedSize += messageSize;
-      computedSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
-      byte[] dataLengthBuffer = new byte[4];
-      dataLengthBuffer[0] = (byte)((computedSize >>> 24) & 0xFF);
-      dataLengthBuffer[1] = (byte)((computedSize >>> 16) & 0xFF);
-      dataLengthBuffer[2] = (byte)((computedSize >>>  8) & 0xFF);
-      dataLengthBuffer[3] = (byte)(computedSize & 0xFF);
+      int computedSize = ProtoUtil.computeProtobufRpcRequestSize(
+           connectionContextHeader, message);
       synchronized (ipcStreams.out) {
-        ipcStreams.sendRequest(dataLengthBuffer, connectionContextHeader, message);
+        ipcStreams.sendRequest(computedSize, connectionContextHeader, message);
       }
     }
 
@@ -1968,9 +1960,9 @@ public class Client implements AutoCloseable {
       rpcRequest.writeTo(out);
     }
 
-    public void sendRequest(byte[] dataLengthBuffer, RpcRequestHeaderProto header,
+    public void sendRequest(int dataLength, RpcRequestHeaderProto header,
         Message rpcRequest) throws IOException {
-      out.write(dataLengthBuffer);
+      out.writeInt(dataLength);
       header.writeDelimitedTo(out);
       rpcRequest.writeDelimitedTo(out);
     }

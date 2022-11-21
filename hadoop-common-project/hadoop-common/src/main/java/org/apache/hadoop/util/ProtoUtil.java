@@ -29,6 +29,8 @@ import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformation
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
@@ -209,5 +211,19 @@ public abstract class ProtoUtil {
     }
 
     return result.build();
+  }
+
+  public static int computeProtobufRpcRequestSize(Message header, Message message) {
+    int computedSize = 0;
+    if (header != null) {
+      computedSize = header.getSerializedSize();
+      computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
+    }
+    if (message != null) {
+      int messageSize = message.getSerializedSize();
+      computedSize += messageSize;
+      computedSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+    }
+    return computedSize;
   }
 }

@@ -459,16 +459,13 @@ public class SaslRpcClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending sasl message "+message);
     }
-    int computedSize = saslHeader.getSerializedSize();
-    computedSize += CodedOutputStream.computeUInt32SizeNoTag(computedSize);
-    int messageSize = message.getSerializedSize();
-    computedSize += messageSize;
-    computedSize += CodedOutputStream.computeUInt32SizeNoTag(messageSize);
+    int computedSize = ProtoUtil.computeProtobufRpcRequestSize(
+         saslHeader, message);
     byte[] dataLengthBuffer = new byte[4];
     dataLengthBuffer[0] = (byte)((computedSize >>> 24) & 0xFF);
     dataLengthBuffer[1] = (byte)((computedSize >>> 16) & 0xFF);
     dataLengthBuffer[2] = (byte)((computedSize >>>  8) & 0xFF);
-    dataLengthBuffer[3] = (byte)(computedSize & 0xFF);
+    dataLengthBuffer[3] = (byte)((computedSize >>>  0) & 0xFF);
     synchronized (out) {
       out.write(dataLengthBuffer);
       saslHeader.writeDelimitedTo(out);
