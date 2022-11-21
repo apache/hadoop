@@ -1900,9 +1900,11 @@ public class NameNode extends ReconfigurableBase implements
     state.setState(haContext, STANDBY_STATE);
   }
 
-  synchronized void transitionToObserver()
-      throws ServiceFailedException, AccessControlException {
+  synchronized void transitionToObserver() throws IOException {
     namesystem.checkSuperuserPrivilege();
+    if (notBecomeActiveInSafemode && isInSafeMode()) {
+      throw new ServiceFailedException(getRole() + " still not leave safemode");
+    }
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
