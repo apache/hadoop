@@ -229,6 +229,8 @@ public class Apps {
    * This older version of this method is kept around for compatibility
    * because downstream frameworks like Spark and Tez have been using it.
    * Downstream frameworks are expected to move off of it.
+   * @param env the environment to update.
+   * @param envString String containing env variable definitions.
    */
   @Deprecated
   public static void setEnvFromInputString(Map<String, String> env,

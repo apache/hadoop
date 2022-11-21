@@ -148,7 +148,7 @@ public class FSDownload implements Callable<Path> {
    */
   @Private
   public static boolean isPublic(FileSystem fs, Path current, FileStatus sStat,
-      LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
+      LoadingCache<Path, Future<FileStatus>> statCache) throws IOException {
     current = fs.makeQualified(current);
     //the leaf level file should be readable by others
     if (!checkPublicPermsForAll(fs, sStat, FsAction.READ_EXECUTE, FsAction.READ)) {
