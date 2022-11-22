@@ -68,8 +68,11 @@ public class KeyProviderCache {
         })
         .build();
 
-    ShutdownHookManager.get().addShutdownHook(new KeyProviderCacheFinalizer(),
-        SHUTDOWN_HOOK_PRIORITY);
+    try {
+      ShutdownHookManager.get().addShutdownHook(new KeyProviderCacheFinalizer(), SHUTDOWN_HOOK_PRIORITY);
+    } catch (IllegalStateException e) {
+      LOG.warn("shutdownHook not added", e);
+    }
   }
 
   public KeyProvider get(final Configuration conf,
