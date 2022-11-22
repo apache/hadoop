@@ -56,17 +56,17 @@ char *__get_exec_readproc(char *procfn) {
   filename = malloc(EXECUTOR_PATH_MAX);
   if (!filename) {
     fprintf(ERRORFILE,"cannot allocate memory for filename before readlink: %s\n",strerror(errno));
-    exit(-1);
+    exit(OUT_OF_MEMORY);
   }
   len = readlink(procfn, filename, EXECUTOR_PATH_MAX);
   if (len == -1) {
-    fprintf(ERRORFILE,"Can't get executable name from %s - %s\n", procfn,
+    fprintf(ERRORFILE,"Cannot get executable name from %s - %s\n", procfn,
             strerror(errno));
-    exit(-1);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_READLINK);
   } else if (len >= EXECUTOR_PATH_MAX) {
     fprintf(ERRORFILE,"Resolved path for %s [%s] is longer than %d characters.\n",
             procfn, filename, EXECUTOR_PATH_MAX);
-    exit(-1);
+    exit(TOO_LONG_EXECUTOR_PATH);
   }
   filename[len] = '\0';
   return filename;
@@ -88,14 +88,14 @@ char *__get_exec_sysctl(int *mib)
 
   len = sizeof(buffer);
   if (sysctl(mib, 4, buffer, &len, NULL, 0) == -1) {
-    fprintf(ERRORFILE,"Can't get executable name from kernel: %s\n",
+    fprintf(ERRORFILE,"Cannot get executable name from kernel: %s\n",
       strerror(errno));
-    exit(-1);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_KERNEL);
   }
   filename=malloc(EXECUTOR_PATH_MAX);
   if (!filename) {
     fprintf(ERRORFILE,"cannot allocate memory for filename after sysctl: %s\n",strerror(errno));
-    exit(-1);
+    exit(OUT_OF_MEMORY);
   }
   snprintf(filename,EXECUTOR_PATH_MAX,"%s",buffer);
   return filename;
@@ -120,13 +120,13 @@ char* get_executable(char *argv0) {
   filename = malloc(PROC_PIDPATHINFO_MAXSIZE);
   if (!filename) {
     fprintf(ERRORFILE,"cannot allocate memory for filename before proc_pidpath: %s\n",strerror(errno));
-    exit(-1);
+    exit(OUT_OF_MEMORY);
   }
   pid = getpid();
   if (proc_pidpath(pid,filename,PROC_PIDPATHINFO_MAXSIZE) <= 0) {
-    fprintf(ERRORFILE,"Can't get executable name from pid %u - %s\n", pid,
+    fprintf(ERRORFILE,"Cannot get executable name from pid %u - %s\n", pid,
             strerror(errno));
-    exit(-1);
+    exit(CANNOT_GET_EXECUTABLE_NAME_FROM_PID);
   }
   return filename;
 }
@@ -194,7 +194,7 @@ char* get_executable (char *argv0) {
 
   if (!filename) {
     fprintf(ERRORFILE,"realpath of executable: %s\n",strerror(errno));
-    exit(-1);
+    exit(WRONG_PATH_OF_EXECUTABLE);
   }
   return filename;
 }
