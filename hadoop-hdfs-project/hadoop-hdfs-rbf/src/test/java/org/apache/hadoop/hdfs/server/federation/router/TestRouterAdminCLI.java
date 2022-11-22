@@ -1786,7 +1786,7 @@ public class TestRouterAdminCLI {
       RouterAdmin.dumpStateStore(conf, stream);
     }
     final String expected =
-        "---- RouterState ----\n" +
+        "---- DisabledNameservice ----\n" +
             "\n" +
             "---- MembershipState ----\n" +
             "  ns1-ha1-ns1-routerId:\n" +
@@ -1824,7 +1824,7 @@ public class TestRouterAdminCLI {
             "\n" +
             "---- MountTable ----\n" +
             "\n" +
-            "---- DisabledNameservice ----";
+            "---- RouterState ----";
     // Replace the time values with XXX
     assertEquals(expected,
         buffer.toString().trim().replaceAll("[0-9]{4,}+", "XXX"));

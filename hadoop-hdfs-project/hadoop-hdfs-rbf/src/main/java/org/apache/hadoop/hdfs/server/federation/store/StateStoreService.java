@@ -276,6 +276,7 @@ public class StateStoreService extends CompositeService {
    * Get the list of all RecordStores.
    * @return a list of each RecordStore.
    */
+  @SuppressWarnings("unchecked")
   public <T extends RecordStore<? extends BaseRecord>> List<T> getRecordStores() {
     return new ArrayList<>((Collection<T>) recordStores.values());
   }

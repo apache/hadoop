@@ -27,6 +27,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -1339,11 +1341,15 @@ public class RouterAdmin extends Configured implements Tool {
       System.err.println("Can't initialize driver");
       return false;
     }
+    // Get the stores sorted by name
+    Map<String, RecordStore<? extends BaseRecord>> stores = new TreeMap<>();
     for(RecordStore<? extends BaseRecord> store: service.getRecordStores()) {
-      if (store instanceof CachedRecordStore) {
-        output.println(String.format("---- %s ----",
-            StateStoreUtils.getRecordName(store.getRecordClass())));
-        for (Object record: ((CachedRecordStore) store).getCachedRecords()) {
+      stores.put(StateStoreUtils.getRecordName(store.getRecordClass()), store);
+    }
+    for (Entry<String, RecordStore<? extends BaseRecord>> pair: stores.entrySet()) {
+      output.println(String.format("---- %s ----", pair.getKey()));
+      if (pair.getValue() instanceof CachedRecordStore) {
+        for (Object record: ((CachedRecordStore) pair.getValue()).getCachedRecords()) {
           if (record instanceof BaseRecord) {
             BaseRecord baseRecord = (BaseRecord) record;
             if (record instanceof PBRecord) {
