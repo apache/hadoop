@@ -21,7 +21,6 @@ package org.apache.hadoop.ipc;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
