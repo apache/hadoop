@@ -33,6 +33,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
@@ -74,10 +75,14 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   public static final String FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE =
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "client.size";
   public static final int FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT = 10;
+  public static final String FEDERATION_STORE_ZK_CLIENT_CONCURRENT =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "client.concurrent";
+  public static final boolean FEDERATION_STORE_ZK_CLIENT_CONCURRENT_DEFAULT = false;
   public static final String FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT =
       "/hdfs-federation";
   /** Service to get/update zk state. */
   private ThreadPoolExecutor executorService;
+  private boolean enableConcurrent;
 
 
   /** Directory to store the state store data. */
@@ -97,14 +102,20 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     baseZNode = conf.get(
         FEDERATION_STORE_ZK_PARENT_PATH,
         FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
-    int numThreads = conf.getInt(
-        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE,
-        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT);
-    ThreadFactory threadFactory = new ThreadFactoryBuilder()
-        .setNameFormat("StateStore ZK Client-%d")
-        .build();
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), threadFactory);
+    this.enableConcurrent = conf.getBoolean(
+        FEDERATION_STORE_ZK_CLIENT_CONCURRENT,
+        FEDERATION_STORE_ZK_CLIENT_CONCURRENT_DEFAULT
+    );
+    if(enableConcurrent) {
+      int numThreads = conf.getInt(
+          FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE,
+          FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT);
+      ThreadFactory threadFactory = new ThreadFactoryBuilder()
+          .setNameFormat("StateStore ZK Client-%d")
+          .build();
+      this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+          0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), threadFactory);
+    }
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start();
@@ -128,6 +139,11 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
           className, e.getMessage());
       return false;
     }
+  }
+
+  @VisibleForTesting
+  public void setEnableConcurrent(boolean enableConcurrent) {
+    this.enableConcurrent = enableConcurrent;
   }
 
   @Override
@@ -162,16 +178,25 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     try {
       List<String> children = zkManager.getChildren(znode);
       List<Callable<T>> callables = new ArrayList<>();
-      children.forEach(child ->
-          callables.add(
-              () -> getRecord(clazz, znode, child)
-          )
-      );
-      List<Future<T>> futures = executorService.invokeAll(callables);
-      for (Future<T> future : futures) {
-        if (future.get() != null) {
-          ret.add(future.get());
+      if(enableConcurrent) {
+        children.forEach(child ->
+            callables.add(
+                () -> getRecord(clazz, znode, child)
+            )
+        );
+        List<Future<T>> futures = executorService.invokeAll(callables);
+        for (Future<T> future : futures) {
+          if (future.get() != null) {
+            ret.add(future.get());
+          }
         }
+      } else {
+        children.forEach(child -> {
+          T record = getRecord(clazz, znode, child);
+          if(record != null) {
+            ret.add(record);
+          }
+        });
       }
     } catch (Exception e) {
       getMetrics().addFailure(monotonicNow() - start);
@@ -239,25 +264,36 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
     long start = monotonicNow();
     final AtomicBoolean status = new AtomicBoolean(true);
-    List<Callable<Void>> callables = new ArrayList<>();
-    records.forEach(record ->
-        callables.add(
-            () -> {
-              String primaryKey = getPrimaryKey(record);
-              String recordZNode = getNodePath(znode, primaryKey);
-              byte[] data = serialize(record);
-              if(!writeNode(recordZNode, data, update, error)) {
-                status.set(false);
+    if(enableConcurrent){
+      List<Callable<Void>> callables = new ArrayList<>();
+      records.forEach(record ->
+          callables.add(
+              () -> {
+                String primaryKey = getPrimaryKey(record);
+                String recordZNode = getNodePath(znode, primaryKey);
+                byte[] data = serialize(record);
+                if(!writeNode(recordZNode, data, update, error)) {
+                  status.set(false);
+                }
+                return null;
               }
-              return null;
-            }
-        )
-    );
-    try {
-      executorService.invokeAll(callables);
-    } catch (Exception e) {
-      LOG.error("Write record failed : {}", e.getMessage(), e);
-      throw new IOException(e);
+          )
+      );
+      try {
+        executorService.invokeAll(callables);
+      } catch (Exception e) {
+        LOG.error("Write record failed : {}", e.getMessage(), e);
+        throw new IOException(e);
+      }
+    } else {
+      records.forEach(record -> {
+        String primaryKey = getPrimaryKey(record);
+        String recordZNode = getNodePath(znode, primaryKey);
+        byte[] data = serialize(record);
+        if(!writeNode(recordZNode, data, update, error)) {
+          status.set(false);
+        }
+      });
     }
     long end = monotonicNow();
     if (status.get()) {

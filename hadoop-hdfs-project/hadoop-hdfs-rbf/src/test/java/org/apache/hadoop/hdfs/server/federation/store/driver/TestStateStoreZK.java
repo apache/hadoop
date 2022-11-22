@@ -73,6 +73,8 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
+    conf.setBoolean(StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_CLIENT_CONCURRENT,
+        true);
 
     baseZNode = conf.get(FEDERATION_STORE_ZK_PARENT_PATH,
         FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
@@ -91,6 +93,8 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
   @Before
   public void startup() throws IOException {
     removeAll(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreZooKeeper = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    stateStoreZooKeeper.setEnableConcurrent(false);
   }
 
   private <T extends BaseRecord> String generateFakeZNode(
@@ -128,31 +132,46 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
 
   @Test
   public void testGetNullRecord() throws Exception {
-    testGetNullRecord(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testGetNullRecord(stateStoreDriver);
+    stateStoreDriver.setEnableConcurrent(true);
+    testGetNullRecord(stateStoreDriver);
   }
 
   @Test
   public void testInsert()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testInsert(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testInsert(stateStoreDriver);
+    stateStoreDriver.setEnableConcurrent(true);
+    testInsert(stateStoreDriver);
   }
 
   @Test
   public void testUpdate()
       throws IllegalArgumentException, ReflectiveOperationException,
       IOException, SecurityException {
-    testPut(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testPut(stateStoreDriver);
+    stateStoreDriver.setEnableConcurrent(true);
+    testPut(stateStoreDriver);
   }
 
   @Test
   public void testDelete()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testRemove(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testRemove(stateStoreDriver);
+    stateStoreDriver.setEnableConcurrent(true);
+    testRemove(stateStoreDriver);
   }
 
   @Test
   public void testFetchErrors()
       throws IllegalArgumentException, IllegalAccessException, IOException {
-    testFetchErrors(getStateStoreDriver());
+    StateStoreZooKeeperImpl stateStoreDriver = (StateStoreZooKeeperImpl) getStateStoreDriver();
+    testFetchErrors(stateStoreDriver);
+    stateStoreDriver.setEnableConcurrent(true);
+    testFetchErrors(stateStoreDriver);
   }
 }
