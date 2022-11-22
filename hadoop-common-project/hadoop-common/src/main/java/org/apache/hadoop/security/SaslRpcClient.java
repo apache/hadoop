@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.GlobPattern;
 import org.apache.hadoop.ipc.Client.IpcStreams;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.ResponseBuffer;
 import org.apache.hadoop.ipc.RpcConstants;
 import org.apache.hadoop.ipc.RpcWritable;
 import org.apache.hadoop.ipc.Server.AuthProtocol;
@@ -76,6 +75,8 @@ import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import com.google.re2j.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.util.ProtoUtil.encodeMessageWithHeaderForProtobuf;
 
 /**
  * A utility class that encapsulates SASL logic for RPC client
@@ -459,11 +460,9 @@ public class SaslRpcClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Sending sasl message "+message);
     }
-    ResponseBuffer buf = new ResponseBuffer();
-    saslHeader.writeDelimitedTo(buf);
-    message.writeDelimitedTo(buf);
+    byte[] buf = encodeMessageWithHeaderForProtobuf(saslHeader, message);
     synchronized (out) {
-      buf.writeTo(out);
+      out.write(buf);
       out.flush();
     }
   }

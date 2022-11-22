@@ -27,6 +27,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.protobuf.ProtobufRpcEngine2Protos.RequestHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -36,6 +37,7 @@ import org.apache.hadoop.thirdparty.protobuf.Descriptors.MethodDescriptor;
 import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 import org.apache.hadoop.thirdparty.protobuf.TextFormat;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGet;
 import org.apache.hadoop.tracing.Tracer;
@@ -52,6 +54,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.apache.hadoop.util.ProtoUtil.getDelimitedLength;
+import static org.apache.hadoop.util.ProtoUtil.writeLengthToCodedOutputStream;
+import static org.apache.hadoop.util.ProtoUtil.writeDelimitedTo;
 
 /**
  * RPC Engine for for protobuf based RPCs.
@@ -670,6 +676,24 @@ public class ProtobufRpcEngine2 implements RpcEngine {
       if (payload != null) {
         payload.writeDelimitedTo(out);
       }
+    }
+
+    public byte[] encodeRpcProtobufRequestWithHeader(
+        RpcHeaderProtos.RpcRequestHeaderProto header) throws IOException {
+      int length = getDelimitedLength(header);
+      length += getDelimitedLength(requestHeader);
+      if (payload != null) {
+        length += getDelimitedLength(payload);
+      }
+      byte[] buf = new byte[length + 4];
+      CodedOutputStream cos = CodedOutputStream.newInstance(buf);
+      writeLengthToCodedOutputStream(cos, length);
+      writeDelimitedTo(cos, header);
+      writeDelimitedTo(cos, requestHeader);
+      if (payload != null) {
+        writeDelimitedTo(cos, payload);
+      }
+      return buf;
     }
 
     // this is used by htrace to name the span.

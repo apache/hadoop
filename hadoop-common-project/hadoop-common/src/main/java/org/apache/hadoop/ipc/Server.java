@@ -24,6 +24,7 @@ import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.CURRENT_VERSION;
 import static org.apache.hadoop.ipc.RpcConstants.HEADER_LEN_AFTER_HRPC_PART;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
+import static org.apache.hadoop.util.ProtoUtil.encodeMessageWithHeaderForProtobuf;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -133,7 +134,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
 import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -3484,29 +3484,7 @@ public abstract class Server {
       RpcResponseHeaderProto header, Writable rv) throws IOException {
     Message payload = (rv != null)
         ? ((RpcWritable.ProtobufWrapper)rv).getMessage() : null;
-    int length = getDelimitedLength(header);
-    if (payload != null) {
-      length += getDelimitedLength(payload);
-    }
-    byte[] buf = new byte[length + 4];
-    CodedOutputStream cos = CodedOutputStream.newInstance(buf);
-    // the stream only supports little endian ints
-    cos.writeRawByte((byte)((length >>> 24) & 0xFF));
-    cos.writeRawByte((byte)((length >>> 16) & 0xFF));
-    cos.writeRawByte((byte)((length >>>  8) & 0xFF));
-    cos.writeRawByte((byte)((length >>>  0) & 0xFF));
-    cos.writeUInt32NoTag(header.getSerializedSize());
-    header.writeTo(cos);
-    if (payload != null) {
-      cos.writeUInt32NoTag(payload.getSerializedSize());
-      payload.writeTo(cos);
-    }
-    return buf;
-  }
-
-  private static int getDelimitedLength(Message message) {
-    int length = message.getSerializedSize();
-    return length + CodedOutputStream.computeUInt32SizeNoTag(length);
+    return encodeMessageWithHeaderForProtobuf(header, payload);
   }
 
   /**

@@ -77,6 +77,7 @@ import java.util.function.Consumer;
 
 import static org.apache.hadoop.ipc.RpcConstants.CONNECTION_CONTEXT_CALL_ID;
 import static org.apache.hadoop.ipc.RpcConstants.PING_CALL_ID;
+import static org.apache.hadoop.util.ProtoUtil.encodeMessageWithHeaderForProtobuf;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -392,7 +393,7 @@ public class Client implements AutoCloseable {
     private IOException closeException; // close reason
 
     private final Thread rpcRequestThread;
-    private final SynchronousQueue<Pair<Call, ResponseBuffer>> rpcRequestQueue =
+    private final SynchronousQueue<Pair<Call, byte[]>> rpcRequestQueue =
         new SynchronousQueue<>(true);
 
     private AtomicReference<Thread> connectingThread = new AtomicReference<>();
@@ -1021,11 +1022,10 @@ public class Client implements AutoCloseable {
       // do not flush.  the context and first ipc call request must be sent
       // together to avoid possibility of broken pipes upon authz failure.
       // see writeConnectionHeader
-      final ResponseBuffer buf = new ResponseBuffer();
-      connectionContextHeader.writeDelimitedTo(buf);
-      message.writeDelimitedTo(buf);
+      byte[] buf = encodeMessageWithHeaderForProtobuf(
+          connectionContextHeader, message);
       synchronized (ipcStreams.out) {
-        ipcStreams.sendRequest(buf.toByteArray());
+        ipcStreams.sendRequest(buf);
       }
     }
 
@@ -1117,14 +1117,12 @@ public class Client implements AutoCloseable {
       @Override
       public void run() {
         while (!shouldCloseConnection.get()) {
-          ResponseBuffer buf = null;
           try {
-            Pair<Call, ResponseBuffer> pair =
+            Pair<Call, byte[]> pair =
                 rpcRequestQueue.poll(maxIdleTime, TimeUnit.MILLISECONDS);
             if (pair == null || shouldCloseConnection.get()) {
               continue;
             }
-            buf = pair.getRight();
             synchronized (ipcStreams.out) {
               if (LOG.isDebugEnabled()) {
                 Call call = pair.getLeft();
@@ -1132,7 +1130,7 @@ public class Client implements AutoCloseable {
                     call.rpcRequest);
               }
               // RpcRequestHeader + RpcRequest
-              ipcStreams.sendRequest(buf.toByteArray());
+              ipcStreams.sendRequest(pair.getRight());
               ipcStreams.flush();
             }
           } catch (InterruptedException ie) {
@@ -1143,10 +1141,6 @@ public class Client implements AutoCloseable {
             // unrecoverable state (eg half a call left on the wire).
             // So, close the connection, killing any outstanding calls
             markClosed(e);
-          } finally {
-            //the buffer is just an in-memory buffer, but it is still polite to
-            // close early
-            IOUtils.closeStream(buf);
           }
         }
       }
@@ -1178,10 +1172,24 @@ public class Client implements AutoCloseable {
       RpcRequestHeaderProto header = ProtoUtil.makeRpcRequestHeader(
           call.rpcKind, OperationProto.RPC_FINAL_PACKET, call.id, call.retry,
           clientId, call.alignmentContext);
-
-      final ResponseBuffer buf = new ResponseBuffer();
-      header.writeDelimitedTo(buf);
-      RpcWritable.wrap(call.rpcRequest).writeTo(buf);
+      
+      byte[] buf;
+      if (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest) {
+        buf = ((ProtobufRpcEngine2.RpcProtobufRequest) call.rpcRequest)
+            .encodeRpcProtobufRequestWithHeader(header);
+      } else {
+        ResponseBuffer responseBuffer = null;
+        try {
+          responseBuffer = new ResponseBuffer();
+          header.writeDelimitedTo(responseBuffer);
+          RpcWritable.wrap(call.rpcRequest).writeTo(responseBuffer);
+          buf = responseBuffer.toByteArray();
+        } finally {
+          //the buffer is just an in-memory buffer, but it is still polite to
+          // close early
+          IOUtils.closeStream(responseBuffer);
+        }
+      }
       rpcRequestQueue.put(Pair.of(call, buf));
     }
 

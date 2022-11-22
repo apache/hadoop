@@ -29,6 +29,8 @@ import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformation
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.thirdparty.protobuf.CodedOutputStream;
+import org.apache.hadoop.thirdparty.protobuf.Message;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
@@ -209,5 +211,41 @@ public abstract class ProtoUtil {
     }
 
     return result.build();
+  }
+
+  public static byte[] encodeMessageWithHeaderForProtobuf(
+          Message header, Message message)  throws IOException {
+    int length = getDelimitedLength(header);
+    if (message != null) {
+      length += getDelimitedLength(message);
+    }
+    byte[] buf = new byte[length + 4];
+    CodedOutputStream cos = CodedOutputStream.newInstance(buf);
+    writeLengthToCodedOutputStream(cos, length);
+    writeDelimitedTo(cos, header);
+    if (message != null) {
+      writeDelimitedTo(cos, message);
+    }
+    return buf;
+  }
+
+  public static void writeLengthToCodedOutputStream(
+      CodedOutputStream cos, int length) throws IOException {
+    // the stream only supports little endian ints
+    cos.writeRawByte((byte)((length >>> 24) & 0xFF));
+    cos.writeRawByte((byte)((length >>> 16) & 0xFF));
+    cos.writeRawByte((byte)((length >>>  8) & 0xFF));
+    cos.writeRawByte((byte)((length >>>  0) & 0xFF));
+  }
+
+  public static int getDelimitedLength(Message message) {
+    int length = message.getSerializedSize();
+    return length + CodedOutputStream.computeUInt32SizeNoTag(length);
+  }
+
+  public static void writeDelimitedTo(CodedOutputStream cos,
+      Message message) throws IOException {
+    cos.writeUInt32NoTag(message.getSerializedSize());
+    message.writeTo(cos);
   }
 }
