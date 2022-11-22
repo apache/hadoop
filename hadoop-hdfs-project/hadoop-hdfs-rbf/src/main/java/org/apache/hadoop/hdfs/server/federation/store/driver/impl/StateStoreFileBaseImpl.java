@@ -85,17 +85,9 @@ public abstract class StateStoreFileBaseImpl
    * @param path Path of the record to write.
    * @return Writer for the record.
    */
-  protected abstract <T extends BaseRecord> BufferedWriter getWriter(
-      String path);
-
-  /**
-   * Convenience method to allow to mocking of protected
-   * {@link #getWriter(String)}
-   */
   @VisibleForTesting
-  public BufferedWriter getBufferedWriter(String path) {
-    return getWriter(path);
-  }
+  public abstract <T extends BaseRecord> BufferedWriter getWriter(
+      String path);
 
   /**
    * Check if a path exists.
@@ -357,16 +349,16 @@ public abstract class StateStoreFileBaseImpl
     for (Entry<String, T> entry : toWrite.entrySet()) {
       String recordPath = entry.getKey();
       String recordPathTemp = recordPath + "." + now() + TMP_MARK;
-      BufferedWriter writer = getBufferedWriter(recordPathTemp);
-      boolean recordWrittenSuccessfully = true;
+      BufferedWriter writer = getWriter(recordPathTemp);
+      boolean recordWrittenSuccessfully = false;
       try {
         T record = entry.getValue();
         String line = serializeString(record);
         writer.write(line);
+        recordWrittenSuccessfully = true;
       } catch (IOException e) {
         LOG.error("Cannot write {}", recordPathTemp, e);
         success = false;
-        recordWrittenSuccessfully = false;
       } finally {
         if (writer != null) {
           try {

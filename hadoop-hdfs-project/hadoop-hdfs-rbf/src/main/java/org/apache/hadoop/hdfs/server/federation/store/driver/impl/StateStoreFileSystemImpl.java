@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -139,7 +140,8 @@ public class StateStoreFileSystemImpl extends StateStoreFileBaseImpl {
   }
 
   @Override
-  protected <T extends BaseRecord> BufferedWriter getWriter(String pathName) {
+  @VisibleForTesting
+  public <T extends BaseRecord> BufferedWriter getWriter(String pathName) {
     BufferedWriter writer = null;
     Path path = new Path(pathName);
     try {

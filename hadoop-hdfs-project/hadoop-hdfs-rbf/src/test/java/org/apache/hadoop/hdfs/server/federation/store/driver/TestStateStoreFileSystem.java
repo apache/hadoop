@@ -111,7 +111,7 @@ public class TestStateStoreFileSystem extends TestStateStoreDriverBase {
       BufferedWriter spyWriter = spy(writer);
       doThrow(IOException.class).when(spyWriter).write(any(String.class));
       return spyWriter;
-    }).when(driver).getBufferedWriter(any());
+    }).when(driver).getWriter(any());
 
     testInsertWithErrorDuringWrite(driver, MembershipState.class);
   }
