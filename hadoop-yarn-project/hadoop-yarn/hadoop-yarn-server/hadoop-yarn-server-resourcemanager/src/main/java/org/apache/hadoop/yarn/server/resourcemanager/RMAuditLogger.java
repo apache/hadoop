@@ -65,6 +65,8 @@ public class RMAuditLogger {
         "Get Queue Info Request";
     public static final String GET_APPLICATIONS_REQUEST =
         "Get Applications Request";
+    public static final String GET_APP_REPORT =
+        "Get Application Report";
     public static final String FINISH_SUCCESS_APP = "Application Finished - Succeeded";
     public static final String FINISH_FAILED_APP = "Application Finished - Failed";
     public static final String FINISH_KILLED_APP = "Application Finished - Killed";

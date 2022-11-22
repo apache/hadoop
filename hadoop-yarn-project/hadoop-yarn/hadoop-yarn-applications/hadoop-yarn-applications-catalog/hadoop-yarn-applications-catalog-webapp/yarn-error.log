@@ -1,0 +1,52 @@
+Arguments: 
+  C:\Users\84507\Documents\GitHub\hadoop\hadoop-yarn-project\hadoop-yarn\hadoop-yarn-applications\hadoop-yarn-applications-catalog\hadoop-yarn-applications-catalog-webapp\target\node\node.exe C:\Users\84507\Documents\GitHub\hadoop\hadoop-yarn-project\hadoop-yarn\hadoop-yarn-applications\hadoop-yarn-applications-catalog\hadoop-yarn-applications-catalog-webapp\target\node\yarn\dist\bin\yarn.js
+
+PATH: 
+  C:\Users\84507\Documents\GitHub\hadoop\hadoop-yarn-project\hadoop-yarn\hadoop-yarn-applications\hadoop-yarn-applications-catalog\hadoop-yarn-applications-catalog-webapp\target\node\yarn\dist\bin;C:\Users\84507\Documents\GitHub\hadoop\hadoop-yarn-project\hadoop-yarn\hadoop-yarn-applications\hadoop-yarn-applications-catalog\hadoop-yarn-applications-catalog-webapp\target\node;C:\Program Files\Zulu\zulu-11\bin\;C:\Program Files (x86)\VMware\VMware Workstation\bin\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Docker\Docker\resources\bin;C:\ProgramData\DockerDesktop\version-bin;C:\Program Files\Git\cmd;C:\Users\84507\AppData\Local\Microsoft\WindowsApps;C:\Users\84507\AppData\Local\Programs\Microsoft VS Code\bin;C:\Program Files\JetBrains\IntelliJ IDEA 2022.1.4\bin;;C:\Program Files\SciTools\bin\pc-win64;C:\Users\84507\AppData\Local\GitHubDesktop\bin;
+
+Yarn version: 
+  1.22.5
+
+Node version: 
+  12.22.1
+
+Platform: 
+  win32 x64
+
+Trace: 
+  Error: read ECONNRESET
+      at TLSWrap.onStreamRead (internal/stream_base_commons.js:209:20)
+
+npm manifest: 
+  {
+      "name": "AppCatalog",
+      "private": true,
+      "version": "0.0.0",
+      "description": "YARN App Catalog",
+      "repository": "git://git.apache.org/hadoop.git",
+      "license": "Apache 2.0",
+      "dependencies": {
+          "jquery": "3.3.1",
+          "angular-loader": "~1.6.4",
+          "angular-mocks": "~1.6.4",
+          "angular-route": "~1.6.4",
+          "angular": "~1.6.4",
+          "bootstrap": "~3.3.7",
+          "roboto-fontface": "0.10.0"
+      },
+      "devDependencies": {
+          "requirejs": "^2.1.0",
+          "shelljs": "^0.2.6",
+          "apidoc": "0.17.7"
+      },
+      "scripts": {
+          "prestart": "npm install & mvn clean package",
+          "pretest": "npm install"
+      }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
