@@ -349,25 +349,15 @@ public abstract class StateStoreFileBaseImpl
     for (Entry<String, T> entry : toWrite.entrySet()) {
       String recordPath = entry.getKey();
       String recordPathTemp = recordPath + "." + now() + TMP_MARK;
-      BufferedWriter writer = getWriter(recordPathTemp);
-      boolean recordWrittenSuccessfully = false;
-      try {
+      boolean recordWrittenSuccessfully = true;
+      try (BufferedWriter writer = getWriter(recordPathTemp)) {
         T record = entry.getValue();
         String line = serializeString(record);
         writer.write(line);
-        recordWrittenSuccessfully = true;
       } catch (IOException e) {
         LOG.error("Cannot write {}", recordPathTemp, e);
+        recordWrittenSuccessfully = false;
         success = false;
-      } finally {
-        if (writer != null) {
-          try {
-            writer.close();
-          } catch (IOException e) {
-            recordWrittenSuccessfully = false;
-            LOG.error("Cannot close the writer for {}", recordPathTemp, e);
-          }
-        }
       }
       // Commit
       if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
