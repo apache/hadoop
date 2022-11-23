@@ -29,6 +29,10 @@ import static java.util.Objects.requireNonNull;
 /**
  * A weak referenced metrics source which avoids hanging on to large objects
  * if somehow they don't get fully closed/cleaned up.
+ * The JVM may clean up all objects which are only weakly referenced whenever
+ * it does a GC, <i>even if there is no memory pressure</i>.
+ * To avoid these refs being removed, always keep a strong reference around
+ * somewhere.
  */
 @InterfaceAudience.Private
 public class WeakRefMetricsSource implements MetricsSource {

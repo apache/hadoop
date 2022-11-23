@@ -237,15 +237,29 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
         new MetricDurationTrackerFactory());
   }
 
+  /**
+   * Get the current metrics system; demand creating.
+   * @return a metric system, creating if need be.
+   */
   @VisibleForTesting
-  public MetricsSystem getMetricsSystem() {
+  static MetricsSystem getMetricsSystem() {
     synchronized (METRICS_SYSTEM_LOCK) {
       if (metricsSystem == null) {
         metricsSystem = new MetricsSystemImpl();
         metricsSystem.init(METRICS_SYSTEM_NAME);
+        LOG.debug("Metrics system inited {}", metricsSystem);
       }
     }
     return metricsSystem;
+  }
+
+  /**
+   * Does the instrumentation have a metrics system?
+   * @return true if the metrics system is present.
+   */
+  @VisibleForTesting
+  static boolean hasMetricSystem() {
+    return metricsSystem != null;
   }
 
   /**
@@ -686,19 +700,30 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   public void close() {
-    LOG.debug("Unregistering metrics");
-    synchronized (METRICS_SYSTEM_LOCK) {
-      // it is critical to close each quantile, as they start a scheduled
-      // task in a shared thread pool.
-      throttleRateQuantile.stop();
-      metricsSystem.unregisterSource(metricsSourceReference.getName());
-      metricsSourceActiveCounter--;
-      int activeSources = metricsSourceActiveCounter;
-      if (activeSources == 0) {
-        LOG.debug("Shutting down metrics publisher");
-        metricsSystem.publishMetricsNow();
-        metricsSystem.shutdown();
-        metricsSystem = null;
+    if (metricsSourceReference != null) {
+      // get the name
+      String name = metricsSourceReference.getName();
+      LOG.debug("Unregistering metrics for {}", name);
+      // then set to null so a second close() is a noop here.
+      metricsSourceReference = null;
+      synchronized (METRICS_SYSTEM_LOCK) {
+        // it is critical to close each quantile, as they start a scheduled
+        // task in a shared thread pool.
+        if (metricsSystem == null) {
+          LOG.debug("there is no metric system to unregister {} from", name);
+          return;
+        }
+        throttleRateQuantile.stop();
+
+        metricsSystem.unregisterSource(name);
+        metricsSourceActiveCounter--;
+        int activeSources = metricsSourceActiveCounter;
+        if (activeSources == 0) {
+          LOG.debug("Shutting down metrics publisher");
+          metricsSystem.publishMetricsNow();
+          metricsSystem.shutdown();
+          metricsSystem = null;
+        }
       }
     }
   }
