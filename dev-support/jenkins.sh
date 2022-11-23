@@ -181,6 +181,7 @@ function run_ci() {
   YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
   YETUS_ARGS+=("--dockercmd=/f/jenkins/tools/docker/resources/bin/docker.exe")
   YETUS_ARGS+=("--mvn-custom-repos")
+  YETUS_ARGS+=("--mvn-custom-repos-dir=/f/yetus/m2")
 
   # effectively treat dev-suport as a custom maven module
   YETUS_ARGS+=("--skip-dirs=dev-support")

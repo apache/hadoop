@@ -273,6 +273,7 @@ pipeline {
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources"'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin"'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "/f/jenkins/tools/docker/resources/bin/docker.exe --version"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
 //                       bat 'F:\\jenkins\\tools\\docker\\resources\\dockerd.exe'
 
