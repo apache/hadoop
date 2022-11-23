@@ -390,6 +390,7 @@ public class Client implements AutoCloseable {
     private AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     private AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
+    private final Object sendRpcRequestLock = new Object();
 
     private final Thread rpcRequestThread;
     private final SynchronousQueue<Pair<Call, ResponseBuffer>> rpcRequestQueue =
@@ -1182,7 +1183,12 @@ public class Client implements AutoCloseable {
       final ResponseBuffer buf = new ResponseBuffer();
       header.writeDelimitedTo(buf);
       RpcWritable.wrap(call.rpcRequest).writeTo(buf);
-      rpcRequestQueue.put(Pair.of(call, buf));
+      synchronized (sendRpcRequestLock) {
+        if (shouldCloseConnection.get()) {
+          return;
+        }
+        rpcRequestQueue.put(Pair.of(call, buf));
+      }
     }
 
     /* Receive a response.
@@ -1245,6 +1251,7 @@ public class Client implements AutoCloseable {
     
     private synchronized void markClosed(IOException e) {
       if (shouldCloseConnection.compareAndSet(false, true)) {
+        while (rpcRequestQueue.poll() != null);
         closeException = e;
         notifyAll();
       }
