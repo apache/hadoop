@@ -223,7 +223,7 @@ Here are the fields which may be found in a request.
 If any of the field values were `null`, the field is omitted.
 
 | Name | Meaning | Example |
-|------|--|---------|
+|------|---------|---------|
 | `cm` | Command | `S3GuardTool$BucketInfo` |
 | `fs` | FileSystem ID | `af5943a9-b6f6-4eec-9c58-008982fc492a` |
 | `id` | Span ID | `3c0d9b7e-2a63-43d9-a220-3c574d768ef3-3` |
