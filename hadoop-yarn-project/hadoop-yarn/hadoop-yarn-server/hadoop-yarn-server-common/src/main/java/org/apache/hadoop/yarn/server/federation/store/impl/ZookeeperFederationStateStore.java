@@ -161,6 +161,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       "router_rm_delegation_tokens_root";
   private static final String ROUTER_RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =
       "router_rm_dt_sequential_number";
+  private static final String ROUTER_RM_DT_MASTER_KEY_ID_ZNODE_NAME =
+      "router_rm_dt_master_key_id";
   private static final String ROUTER_RM_DELEGATION_KEY_PREFIX = "delegation_key_";
   private static final String ROUTER_RM_DELEGATION_TOKEN_PREFIX = "rm_delegation_token_";
 
@@ -172,6 +174,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private int currentSeqNum;
   private int currentMaxSeqNum;
   private SharedCount delTokSeqCounter;
+  private SharedCount keyIdSeqCounter;
 
   /** Directory to store the state store data. */
   private String baseZNode;
@@ -187,6 +190,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String routerRMDTMasterKeysRootPath;
   private String routerRMDelegationTokensRootPath;
   private String routerRMSequenceNumberPath;
+  private String routerRMMasterKeyIdPath;
 
   private volatile Clock clock = SystemClock.getInstance();
 
@@ -227,6 +231,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         ROUTER_RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
     routerRMSequenceNumberPath = getNodePath(routerRMDTSecretManagerRoot,
         ROUTER_RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
+    routerRMMasterKeyIdPath = getNodePath(routerRMDTSecretManagerRoot,
+        ROUTER_RM_DT_MASTER_KEY_ID_ZNODE_NAME);
 
     // Create base znode for each entity
     try {
@@ -264,6 +270,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     } catch (Exception e) {
       throw new YarnException("Could not start Sequence Counter.", e);
     }
+
+    // Distributed masterKeyId.
+    try {
+      keyIdSeqCounter = new SharedCount(zkManager.getCurator(), routerRMMasterKeyIdPath, 0);
+      if (keyIdSeqCounter != null) {
+        keyIdSeqCounter.start();
+      }
+    } catch (Exception e) {
+      throw new YarnException("Could not start Master KeyId Counter", e);
+    }
   }
 
   @Override
@@ -275,7 +291,16 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         delTokSeqCounter = null;
       }
     } catch (Exception e) {
-      LOG.error("Could not Stop Delegation Token Counter", e);
+      LOG.error("Could not Stop Delegation Token Counter.", e);
+    }
+
+    try {
+      if (keyIdSeqCounter != null) {
+        keyIdSeqCounter.close();
+        keyIdSeqCounter = null;
+      }
+    } catch (Exception e) {
+      LOG.error("Could not stop Master KeyId Counter.", e);
     }
 
     if (zkManager != null) {
@@ -1497,7 +1522,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         LOG.info("Fetched new range of seq num, from {} to {} ",
             currentSeqNum + 1, currentMaxSeqNum);
       } catch (InterruptedException e) {
-        // The ExpirationThread is just finishing.. so dont do anything..
+        // The ExpirationThread is just finishing.. so don't do anything..
         LOG.debug("Thread interrupted while performing token counter increment", e);
         Thread.currentThread().interrupt();
       } catch (Exception e) {
@@ -1524,5 +1549,59 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         return versionedValue.getValue();
       }
     }
+  }
+
+  /**
+   * Get DelegationToken SeqNum.
+   *
+   * @return delegationTokenSeqNum.
+   */
+  @Override
+  public int getDelegationTokenSeqNum() {
+    return delTokSeqCounter.getCount();
+  }
+
+  /**
+   * Set DelegationToken SeqNum.
+   *
+   * @param seqNum sequenceNum.
+   */
+  @Override
+  public void setDelegationTokenSeqNum(int seqNum) {
+    try {
+      delTokSeqCounter.setCount(seqNum);
+    } catch (Exception e) {
+      throw new RuntimeException("Could not set shared counter !!", e);
+    }
+  }
+
+  /**
+   * Get Current KeyId.
+   *
+   * @return currentKeyId.
+   */
+  @Override
+  public int getCurrentKeyId() {
+    return keyIdSeqCounter.getCount();
+  }
+
+  /**
+   * The Router Supports incrementCurrentKeyId.
+   *
+   * @return CurrentKeyId.
+   */
+  @Override
+  public int incrementCurrentKeyId() {
+    try {
+      // It should be noted that the BatchSize of MasterKeyId defaults to 1.
+      incrSharedCount(keyIdSeqCounter, 1);
+    } catch (InterruptedException e) {
+      // The ExpirationThread is just finishing.. so don't do anything..
+      LOG.debug("Thread interrupted while performing Master keyId increment", e);
+      Thread.currentThread().interrupt();
+    } catch (Exception e) {
+      throw new RuntimeException("Could not increment shared Master keyId counter !!", e);
+    }
+    return keyIdSeqCounter.getCount();
   }
 }

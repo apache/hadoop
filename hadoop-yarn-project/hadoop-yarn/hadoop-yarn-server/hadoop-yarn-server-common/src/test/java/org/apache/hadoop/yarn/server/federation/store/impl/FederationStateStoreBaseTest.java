@@ -905,7 +905,7 @@ public abstract class FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testRemoveStoredMasterKey() throws IOException, YarnException {
+  public void testRemoveStoredMasterKey() throws YarnException, IOException {
     // store delegation key;
     DelegationKey key = new DelegationKey(1234, 4321, "keyBytes".getBytes());
     Set<DelegationKey> keySet = new HashSet<>();

@@ -1399,4 +1399,24 @@ public class SQLFederationStateStore implements FederationStateStore {
   public int incrementDelegationTokenSeqNum() {
     return 0;
   }
+
+  @Override
+  public int getDelegationTokenSeqNum() {
+    return 0;
+  }
+
+  @Override
+  public void setDelegationTokenSeqNum(int seqNum) {
+    return;
+  }
+
+  @Override
+  public int getCurrentKeyId() {
+    return 0;
+  }
+
+  @Override
+  public int incrementCurrentKeyId() {
+    return 0;
+  }
 }

@@ -112,6 +112,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   private RouterRMDTSecretManagerState routerRMSecretManagerState;
   private int maxAppsInStateStore;
   private AtomicInteger sequenceNum;
+  private AtomicInteger masterKeyId;
 
   private final MonotonicClock clock = new MonotonicClock();
 
@@ -129,6 +130,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
         YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
     sequenceNum = new AtomicInteger();
+    masterKeyId = new AtomicInteger();
   }
 
   @Override
@@ -540,6 +542,26 @@ public class MemoryFederationStateStore implements FederationStateStore {
   @Override
   public synchronized int incrementDelegationTokenSeqNum() {
     return sequenceNum.incrementAndGet();
+  }
+
+  @Override
+  public int getDelegationTokenSeqNum() {
+    return sequenceNum.get();
+  }
+
+  @Override
+  public synchronized void setDelegationTokenSeqNum(int seqNum) {
+    sequenceNum.set(seqNum);
+  }
+
+  @Override
+  public int getCurrentKeyId() {
+    return masterKeyId.get();
+  }
+
+  @Override
+  public synchronized int incrementCurrentKeyId() {
+    return masterKeyId.incrementAndGet();
   }
 
   private void storeOrUpdateRouterRMDT(RMDelegationTokenIdentifier rmDTIdentifier,

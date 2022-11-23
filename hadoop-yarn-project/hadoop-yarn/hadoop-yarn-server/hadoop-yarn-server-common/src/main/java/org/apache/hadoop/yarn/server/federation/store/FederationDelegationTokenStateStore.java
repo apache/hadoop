@@ -119,4 +119,32 @@ public interface FederationDelegationTokenStateStore {
    * @return DelegationTokenSeqNum.
    */
   int incrementDelegationTokenSeqNum();
+
+  /**
+   * The Router Supports getDelegationTokenSeqNum.
+   *
+   * @return DelegationTokenSeqNum.
+   */
+  int getDelegationTokenSeqNum();
+
+  /**
+   * The Router Supports setDelegationTokenSeqNum.
+   *
+   * @param seqNum
+   */
+  void setDelegationTokenSeqNum(int seqNum);
+
+  /**
+   * The Router Supports getCurrentKeyId.
+   *
+   * @return CurrentKeyId.
+   */
+  int getCurrentKeyId();
+
+  /**
+   * The Router Supports incrementCurrentKeyId.
+   *
+   * @return CurrentKeyId.
+   */
+  int incrementCurrentKeyId();
 }

@@ -862,12 +862,48 @@ public final class FederationStateStoreFacade {
   /**
    * stateStore provides DelegationTokenSeqNum increase.
    *
-   * @return delegationTokenSequenceNumber
+   * @return delegationTokenSequenceNumber.
    */
   public int incrementDelegationTokenSeqNum() {
     return stateStore.incrementDelegationTokenSeqNum();
   }
-  
+
+  /**
+   * Get SeqNum from stateStore.
+   *
+   * @return delegationTokenSequenceNumber.
+   */
+  public int getDelegationTokenSeqNum() {
+    return stateStore.getDelegationTokenSeqNum();
+  }
+
+  /**
+   * Set SeqNum from stateStore.
+   *
+   * @return delegationTokenSequenceNumber.
+   */
+  public void setDelegationTokenSeqNum(int seqNum) {
+    stateStore.setDelegationTokenSeqNum(seqNum);
+  }
+
+  /**
+   * Get CurrentKeyId from stateStore.
+   *
+   * @return currentKeyId.
+   */
+  public int getCurrentKeyId() {
+    return stateStore.getCurrentKeyId();
+  }
+
+  /**
+   * stateStore provides CurrentKeyId increase.
+   *
+   * @return currentKeyId.
+   */
+  public int incrementCurrentKeyId() {
+    return stateStore.incrementCurrentKeyId();
+  }
+
   /**
    * Get the number of active cluster nodes.
    *
