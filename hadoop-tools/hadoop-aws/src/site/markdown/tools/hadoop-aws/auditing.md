@@ -207,7 +207,6 @@ and the http referrer header extracted.
 ```
 https://audit.example.org/hadoop/1/op_rename/3c0d9b7e-2a63-43d9-a220-3c574d768ef3-3/
     ?op=op_rename
-    ?op=op_get_file_status
     &p1=s3a://alice-london/path1
     &pr=alice
     &p2=s3a://alice-london/path2
