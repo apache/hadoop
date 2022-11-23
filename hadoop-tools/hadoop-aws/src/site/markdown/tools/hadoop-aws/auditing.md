@@ -237,6 +237,7 @@ If any of the field values were `null`, the field is omitted.
 | `t0` | Thread 0: thread span was created in | `100` |
 | `t1` | Thread 1: thread this operation was executed in | `200` |
 | `ts` | Timestamp (UTC epoch millis) | `1617116985923` |
+
 _Notes_
 
 * Thread IDs are from the current thread in the JVM, so can be compared to those in`````````
