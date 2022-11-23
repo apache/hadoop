@@ -432,7 +432,7 @@ public class ClientRMService extends AbstractService implements
         .newRecordInstance(GetApplicationReportResponse.class);
     response.setApplicationReport(report);
     RMAuditLogger.logSuccess(callerUGI.getUserName(),
-        AuditConstants.GET_CONTAINERS, "ClientRMService", appId);
+        AuditConstants.GET_CONTAINERS, "ClientRMService", applicationId);
     return response;
   }
 
@@ -463,12 +463,12 @@ public class ClientRMService extends AbstractService implements
           .createApplicationAttemptReport();
       response = GetApplicationAttemptReportResponse.newInstance(attemptReport);
       RMAuditLogger.logSuccess(callerUGI.getUserName(),
-          AuditConstants.GET_APP_ATTEMPT_REPORT, "ClientRMService", appAttemptId);
+          AuditConstants.GET_APP_ATTEMPT_REPORT, "ClientRMService", applicationId, appAttemptId);
     }else{
       RMAuditLogger.logFailure(callerUGI.getShortUserName(),
           AuditConstants.GET_APP_ATTEMPT_REPORT, "User does not have privilege to "
               + ApplicationAccessType.VIEW_APP.toString(), "ClientRMService",
-          AuditConstants.UNAUTHORIZED_USER, appAttemptId);
+          AuditConstants.UNAUTHORIZED_USER, applicationId, appAttemptId);
 
       throw new YarnException("User " + callerUGI.getShortUserName()
           + " does not have privilege to see this attempt " + appAttemptId);
