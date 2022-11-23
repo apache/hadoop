@@ -2858,8 +2858,7 @@ public abstract class Server {
 
       // Save the priority level assignment by the scheduler
       call.setPriorityLevel(callQueue.getPriorityLevel(call));
-      call.markCallCoordinated(false);
-      if(alignmentContext != null && call.rpcRequest != null &&
+      if(alignmentContext != null &&
           (call.rpcRequest instanceof ProtobufRpcEngine2.RpcProtobufRequest)) {
         // if call.rpcRequest is not RpcProtobufRequest, will skip the following
         // step and treat the call as uncoordinated. As currently only certain
