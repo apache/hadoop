@@ -251,11 +251,10 @@ public class LoggingAuditor
           return;
         }
         if (rangeValue.length != 2) {
-          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements. Got "
-              + rangeValue.length + " elements. Ignoring");
+          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements. Got {} elements. Ignoring.", rangeValue.length);
           return;
         }
-        String combinedRangeValue = String.format("bytes=%d-%d", rangeValue[0], rangeValue[1]);
+        String combinedRangeValue = String.format("%d-%d", rangeValue[0], rangeValue[1]);
         referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
       }
     }

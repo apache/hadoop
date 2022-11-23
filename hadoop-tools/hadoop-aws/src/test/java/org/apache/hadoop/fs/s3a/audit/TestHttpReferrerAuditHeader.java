@@ -328,7 +328,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     LOG.info("Header is {}", header);
     Map<String, String> params
             = HttpReferrerAuditHeader.extractQueryParameters(header);
-    assertMapContains(params, PARAM_RANGE, "bytes=100-200");
+    assertMapContains(params, PARAM_RANGE, "100-200");
   }
 
   /**
