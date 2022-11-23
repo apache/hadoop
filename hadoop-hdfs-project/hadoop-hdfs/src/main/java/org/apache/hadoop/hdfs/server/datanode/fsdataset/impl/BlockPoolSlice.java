@@ -1138,7 +1138,7 @@ public class BlockPoolSlice {
   }
 
   @VisibleForTesting
-  public static void reInitializeAddReplicaThreadPool() {
+  public synchronized static void reInitializeAddReplicaThreadPool() {
     if (addReplicaThreadPool != null) {
       addReplicaThreadPool.shutdown();
       addReplicaThreadPool = null;
