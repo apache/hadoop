@@ -1591,7 +1591,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return CurrentKeyId.
    */
   @Override
-  public int incrementCurrentKeyId() {
+  public synchronized int incrementCurrentKeyId() {
     try {
       // It should be noted that the BatchSize of MasterKeyId defaults to 1.
       incrSharedCount(keyIdSeqCounter, 1);
