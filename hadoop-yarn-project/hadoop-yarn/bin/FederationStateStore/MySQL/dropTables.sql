@@ -27,3 +27,5 @@ DROP TABLE membership;
 DROP TABLE policies;
 
 DROP TABLE reservationsHomeSubCluster;
+
+DROP TABLE masterKeys;

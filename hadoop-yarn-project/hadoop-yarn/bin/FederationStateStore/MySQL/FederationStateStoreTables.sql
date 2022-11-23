@@ -53,3 +53,9 @@ CREATE TABLE reservationsHomeSubCluster (
    homeSubCluster varchar(256) NOT NULL,
    CONSTRAINT pk_reservationId PRIMARY KEY (reservationId)
 );
+
+CREATE TABLE masterKeys (
+   keyId bigint NOT NULL,
+   masterKey varbinary(1024) NOT NULL,
+   CONSTRAINT pk_keyId PRIMARY KEY (keyId)
+);

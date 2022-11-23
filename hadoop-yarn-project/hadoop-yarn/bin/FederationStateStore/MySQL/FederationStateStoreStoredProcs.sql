@@ -219,4 +219,25 @@ BEGIN
    SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
+CREATE PROCEDURE sp_addMasterKey(
+   IN keyId_IN int, IN masterKey_IN varchar(1024),
+   OUT rowCount_OUT int)
+BEGIN
+   INSERT INTO masterKeys(keyId, masterKey)
+     (SELECT keyId_IN, masterKey_IN
+        FROM masterKeys
+       WHERE keyId = keyId_IN
+      HAVING COUNT(*) = 0);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getMasterKey(
+   IN keyId_IN int,
+   OUT masterKey_OUT varchar(1024))
+BEGIN
+   SELECT masterKey INTO masterKey_OUT
+   FROM masterKeys
+   WHERE keyId = keyId_IN;
+END //
+
 DELIMITER ;
