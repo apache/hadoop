@@ -146,7 +146,6 @@ public final class RoleTestUtils {
    * @param roleARN ARN of role
    * @return the new configuration
    */
-  @SuppressWarnings("deprecation")
   public static Configuration newAssumedRoleConfig(
       final Configuration srcConf,
       final String roleARN) {

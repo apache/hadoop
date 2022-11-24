@@ -126,7 +126,7 @@ public class ITestS3AHugeFilesStorageClass extends AbstractSTestS3AHugeFiles {
 
   protected void assertStorageClass(Path hugeFile) throws IOException {
     S3AFileSystem fs = getFileSystem();
-    String actual = fs.getObjectMetadata(hugeFile).getStorageClass();
+    String actual = fs.getObjectMetadata(hugeFile).storageClassAsString();
 
     assertTrue(
         "Storage class of object is " + actual + ", expected " + STORAGE_CLASS_REDUCED_REDUNDANCY,
