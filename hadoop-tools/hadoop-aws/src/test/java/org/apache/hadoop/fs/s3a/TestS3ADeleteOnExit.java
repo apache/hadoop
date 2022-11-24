@@ -27,15 +27,15 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 /**
  * deleteOnExit test for S3A.
@@ -74,25 +74,25 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     testFs.initialize(uri, conf);
-    AmazonS3 testS3 = testFs.getAmazonS3ClientForTesting("mocking");
+    S3Client testS3 = testFs.getAmazonS3V2ClientForTesting("mocking");
 
     Path path = new Path("/file");
     String key = path.toUri().getPath().substring(1);
-    ObjectMetadata meta = new ObjectMetadata();
-    meta.setContentLength(1L);
-    meta.setLastModified(new Date(2L));
-    when(testS3.getObjectMetadata(argThat(correctGetMetadataRequest(BUCKET, key))))
-            .thenReturn(meta);
+    HeadObjectResponse objectMetadata =
+        HeadObjectResponse.builder().contentLength(1L).lastModified(new Date(2L).toInstant())
+            .build();
+    when(testS3.headObject(argThat(correctGetMetadataRequest(BUCKET, key))))
+            .thenReturn(objectMetadata);
 
     testFs.deleteOnExit(path);
     testFs.close();
     assertEquals(0, testFs.getDeleteOnDnExitCount());
   }
 
-  private ArgumentMatcher<GetObjectMetadataRequest> correctGetMetadataRequest(
+  private ArgumentMatcher<HeadObjectRequest> correctGetMetadataRequest(
           String bucket, String key) {
     return request -> request != null
-            && request.getBucketName().equals(bucket)
-            && request.getKey().equals(key);
+            && request.bucket().equals(bucket)
+            && request.key().equals(key);
   }
 }

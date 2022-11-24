@@ -19,11 +19,10 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -37,6 +36,12 @@ import org.apache.hadoop.fs.statistics.IOStatisticAssertions;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
@@ -133,11 +138,24 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   /**
    * Create a head request and pass it through the manager's beforeExecution()
    * callback.
+   *
    * @return a processed request.
    */
-  protected GetObjectMetadataRequest head() {
-    return manager.beforeExecution(
-        requestFactory.newGetObjectMetadataRequest("/"));
+  protected SdkHttpRequest head() {
+    HeadObjectRequest.Builder headObjectRequestBuilder =
+        requestFactory.newHeadObjectRequestBuilder("/");
+    manager.requestCreated(headObjectRequestBuilder);
+    HeadObjectRequest headObjectRequest = headObjectRequestBuilder.build();
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build();
+    InterceptorContext context = InterceptorContext.builder()
+        .request(headObjectRequest)
+        .httpRequest(SdkHttpRequest.builder()
+            .uri(URI.create("https://test"))
+            .method(SdkHttpMethod.HEAD)
+            .build())
+        .build();
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
   /**

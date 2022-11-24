@@ -20,8 +20,8 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 
@@ -29,21 +29,16 @@ import org.apache.hadoop.fs.s3a.CredentialInitializationException;
  * Simple AWS credential provider which counts how often it is invoked.
  */
 public class CountInvocationsProvider
-    implements AWSCredentialsProvider {
+    implements AwsCredentialsProvider {
 
   public static final String NAME = CountInvocationsProvider.class.getName();
 
   public static final AtomicLong COUNTER = new AtomicLong(0);
 
   @Override
-  public AWSCredentials getCredentials() {
+  public AwsCredentials resolveCredentials() {
     COUNTER.incrementAndGet();
     throw new CredentialInitializationException("no credentials");
-  }
-
-  @Override
-  public void refresh() {
-
   }
 
   public static long getInvocationCount() {

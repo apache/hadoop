@@ -30,7 +30,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_REQUEST_EXECUTION;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_SPAN_CREATION;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.LOGGING_AUDIT_SERVICE;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.NOOP_AUDIT_SERVICE;
@@ -119,7 +119,7 @@ public final class AuditTestSupport {
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
         REFERRER_HEADER_ENABLED,
         REJECT_OUT_OF_SPAN_OPERATIONS,
-        AUDIT_REQUEST_HANDLERS,
+        AUDIT_EXECUTION_INTERCEPTORS,
         AUDIT_SERVICE_CLASSNAME,
         AUDIT_ENABLED);
     return conf;

@@ -33,10 +33,10 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.MultipartUpload;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -694,11 +694,11 @@ public abstract class S3GuardTool extends Configured implements Tool,
         count++;
         if (mode == Mode.ABORT || mode == Mode.LIST || verbose) {
           println(out, "%s%s %s", mode == Mode.ABORT ? "Deleting: " : "",
-              upload.getKey(), upload.getUploadId());
+              upload.key(), upload.uploadId());
         }
         if (mode == Mode.ABORT) {
           writeOperationHelper
-              .abortMultipartUpload(upload.getKey(), upload.getUploadId(),
+              .abortMultipartUpload(upload.key(), upload.uploadId(),
                   true, LOG_EVENT);
         }
       }
@@ -726,7 +726,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
         return true;
       }
       Date ageDate = new Date(System.currentTimeMillis() - msec);
-      return ageDate.compareTo(u.getInitiated()) >= 0;
+      return ageDate.compareTo(Date.from(u.initiated())) >= 0;
     }
 
     private void processArgs(List<String> args, PrintStream out)

@@ -25,14 +25,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.monitoring.MonitoringListener;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
+
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 
@@ -49,7 +52,6 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
  */
 @InterfaceAudience.LimitedPrivate("HBoss")
 @InterfaceStability.Evolving
-@Deprecated
 public interface S3ClientFactory {
 
   /**
@@ -64,6 +66,34 @@ public interface S3ClientFactory {
       S3ClientCreationParameters parameters) throws IOException;
 
   /**
+   * Creates a new {@link S3Client}.
+   * The client returned supports synchronous operations. For
+   * asynchronous operations, use
+   * {@link #createS3AsyncClient(URI, S3ClientCreationParameters)}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return S3 client
+   * @throws IOException on any IO problem
+   */
+  S3Client createS3ClientV2(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link S3AsyncClient}.
+   * The client returned supports asynchronous operations. For
+   * synchronous operations, use
+   * {@link #createS3ClientV2(URI, S3ClientCreationParameters)}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return Async S3 client
+   * @throws IOException on any IO problem
+   */
+  S3AsyncClient createS3AsyncClient(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
+
+  /**
    * Settings for the S3 Client.
    * Implemented as a class to pass in so that adding
    * new parameters does not break the binding of
@@ -74,7 +104,7 @@ public interface S3ClientFactory {
     /**
      * Credentials.
      */
-    private AWSCredentialsProvider credentialSet;
+    private AwsCredentialsProvider credentialSet;
 
     /**
      * Endpoint.
@@ -109,9 +139,9 @@ public interface S3ClientFactory {
     private boolean requesterPays;
 
     /**
-     * Request handlers; used for auditing, X-Ray etc.
-     */
-    private List<RequestHandler2> requestHandlers;
+     * Execution interceptors; used for auditing, X-Ray etc.
+     * */
+    private List<ExecutionInterceptor> executionInterceptors;
 
     /**
      * Suffix to UA.
@@ -125,22 +155,22 @@ public interface S3ClientFactory {
     private URI pathUri;
 
     /**
-     * List of request handlers to include in the chain
-     * of request execution in the SDK.
-     * @return the handler list
+     * List of execution interceptors to include in the chain
+     * of interceptors in the SDK.
+     * @return the interceptors list
      */
-    public List<RequestHandler2> getRequestHandlers() {
-      return requestHandlers;
+    public List<ExecutionInterceptor> getExecutionInterceptors() {
+      return executionInterceptors;
     }
 
     /**
-     * List of request handlers.
-     * @param handlers handler list.
+     * List of execution interceptors.
+     * @param interceptors interceptors list.
      * @return this object
      */
-    public S3ClientCreationParameters withRequestHandlers(
-        @Nullable final List<RequestHandler2> handlers) {
-      requestHandlers = handlers;
+    public S3ClientCreationParameters withExecutionInterceptors(
+        @Nullable final List<ExecutionInterceptor> interceptors) {
+      executionInterceptors = interceptors;
       return this;
     }
 
@@ -191,7 +221,7 @@ public interface S3ClientFactory {
       return requesterPays;
     }
 
-    public AWSCredentialsProvider getCredentialSet() {
+    public AwsCredentialsProvider getCredentialSet() {
       return credentialSet;
     }
 
@@ -202,7 +232,7 @@ public interface S3ClientFactory {
      */
 
     public S3ClientCreationParameters withCredentialSet(
-        final AWSCredentialsProvider value) {
+        final AwsCredentialsProvider value) {
       credentialSet = value;
       return this;
     }

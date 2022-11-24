@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+
 /**
  * A specific exception from AWS operations.
- * The exception must always be created with an {@link AmazonServiceException}.
+ * The exception must always be created with an {@link AwsServiceException}.
  * The attributes of this exception can all be directly accessed.
  */
 @InterfaceAudience.Public
@@ -37,36 +39,31 @@ public class AWSServiceIOException extends AWSClientIOException {
    * @param cause the underlying cause
    */
   public AWSServiceIOException(String operation,
-      AmazonServiceException cause) {
+      AwsServiceException cause) {
     super(operation, cause);
   }
 
-  public AmazonServiceException getCause() {
-    return (AmazonServiceException) super.getCause();
+  public AwsServiceException getCause() {
+    return (AwsServiceException) super.getCause();
   }
 
-  public String getRequestId() {
-    return getCause().getRequestId();
+  public boolean retryable() {
+    return getCause().retryable();
   }
 
-  public String getServiceName() {
-    return getCause().getServiceName();
+  public String requestId() {
+    return getCause().requestId();
   }
 
-  public String getErrorCode() {
-    return getCause().getErrorCode();
+  public AwsErrorDetails awsErrorDetails() {
+    return getCause().awsErrorDetails();
   }
 
-  public int getStatusCode() {
-    return getCause().getStatusCode();
+  public int statusCode() {
+    return getCause().statusCode();
   }
 
-  public String getRawResponseContent() {
-    return getCause().getRawResponseContent();
+  public String extendedRequestId() {
+    return getCause().extendedRequestId();
   }
-
-  public boolean isRetryable() {
-    return getCause().isRetryable();
-  }
-
 }

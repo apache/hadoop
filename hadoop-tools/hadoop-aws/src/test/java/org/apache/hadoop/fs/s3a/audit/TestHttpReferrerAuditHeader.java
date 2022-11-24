@@ -19,11 +19,10 @@
 package org.apache.hadoop.fs.s3a.audit;
 
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,6 +34,8 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import software.amazon.awssdk.http.SdkHttpRequest;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;
@@ -94,13 +95,16 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
   public void testHttpReferrerPatchesTheRequest() throws Throwable {
     AuditSpan span = span();
     long ts = span.getTimestamp();
-    GetObjectMetadataRequest request = head();
-    Map<String, String> headers
-        = request.getCustomRequestHeaders();
+    SdkHttpRequest request = head();
+    Map<String, List<String>> headers = request.headers();
     assertThat(headers)
         .describedAs("Custom headers")
         .containsKey(HEADER_REFERRER);
-    String header = headers.get(HEADER_REFERRER);
+    List<String> headerValues = headers.get(HEADER_REFERRER);
+    assertThat(headerValues)
+        .describedAs("Multiple referrer headers")
+        .hasSize(1);
+    String header = headerValues.get(0);
     LOG.info("Header is {}", header);
     Map<String, String> params
         = HttpReferrerAuditHeader.extractQueryParameters(header);

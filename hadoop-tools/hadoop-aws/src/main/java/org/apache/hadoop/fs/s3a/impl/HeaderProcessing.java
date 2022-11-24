@@ -23,15 +23,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -275,7 +277,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
       final Statistic statistic) throws IOException {
     StoreContext context = getStoreContext();
     String objectKey = context.pathToKey(path);
-    ObjectMetadata md;
+    HeadObjectResponse md;
     String symbol = statistic.getSymbol();
     S3AStatisticsContext instrumentation = context.getInstrumentation();
     try {
@@ -287,59 +289,67 @@ public class HeaderProcessing extends AbstractStoreOperation {
           callbacks.getObjectMetadata(objectKey + "/"));
     }
     // all user metadata
-    Map<String, String> rawHeaders = md.getUserMetadata();
+    Map<String, String> rawHeaders = md.metadata();
     Map<String, byte[]> headers = new TreeMap<>();
     rawHeaders.forEach((key, value) ->
         headers.put(XA_HEADER_PREFIX + key, encodeBytes(value)));
 
     // and add the usual content length &c, if set
     maybeSetHeader(headers, XA_CACHE_CONTROL,
-        md.getCacheControl());
+        md.cacheControl());
     maybeSetHeader(headers, XA_CONTENT_DISPOSITION,
-        md.getContentDisposition());
+        md.contentDisposition());
     maybeSetHeader(headers, XA_CONTENT_ENCODING,
-        md.getContentEncoding());
+        md.contentEncoding());
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
-        md.getContentLanguage());
+        md.contentLanguage());
     // If CSE is enabled, use the unencrypted content length.
-    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
-        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
-      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
-    } else {
-      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-          md.getContentLength());
+    // TODO: CSE is not supported yet, add these headers in during CSE work.
+//    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
+//        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
+//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+//          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
+//    } else {
+//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+//          md.contentLength());
+//    }
+//    maybeSetHeader(headers, XA_CONTENT_MD5,
+//        md.getContentMD5());
+    // TODO: Add back in else block during CSE work.
+    maybeSetHeader(headers, XA_CONTENT_LENGTH,
+        md.contentLength());
+    if (md.sdkHttpResponse() != null && md.sdkHttpResponse().headers() != null
+        && md.sdkHttpResponse().headers().get("Content-Range") != null) {
+      maybeSetHeader(headers, XA_CONTENT_RANGE,
+          md.sdkHttpResponse().headers().get("Content-Range").get(0));
     }
-    maybeSetHeader(headers, XA_CONTENT_MD5,
-        md.getContentMD5());
-    maybeSetHeader(headers, XA_CONTENT_RANGE,
-        md.getContentRange());
     maybeSetHeader(headers, XA_CONTENT_TYPE,
-        md.getContentType());
+        md.contentType());
     maybeSetHeader(headers, XA_ETAG,
-        md.getETag());
+        md.eTag());
     maybeSetHeader(headers, XA_LAST_MODIFIED,
-        md.getLastModified());
+       Date.from(md.lastModified()));
 
     // AWS custom headers
     maybeSetHeader(headers, XA_ARCHIVE_STATUS,
-        md.getArchiveStatus());
+        md.archiveStatus());
     maybeSetHeader(headers, XA_OBJECT_LOCK_LEGAL_HOLD_STATUS,
-        md.getObjectLockLegalHoldStatus());
+        md.objectLockLegalHoldStatus());
     maybeSetHeader(headers, XA_OBJECT_LOCK_MODE,
-        md.getObjectLockMode());
+        md.objectLockMode());
     maybeSetHeader(headers, XA_OBJECT_LOCK_RETAIN_UNTIL_DATE,
-        md.getObjectLockRetainUntilDate());
+        md.objectLockRetainUntilDate());
     maybeSetHeader(headers, XA_OBJECT_REPLICATION_STATUS,
-        md.getReplicationStatus());
+        md.replicationStatus());
     maybeSetHeader(headers, XA_S3_VERSION_ID,
-        md.getVersionId());
+        md.versionId());
     maybeSetHeader(headers, XA_SERVER_SIDE_ENCRYPTION,
-        md.getSSEAlgorithm());
+        md.serverSideEncryptionAsString());
     maybeSetHeader(headers, XA_STORAGE_CLASS,
-        md.getStorageClass());
-    maybeSetHeader(headers, XA_STORAGE_CLASS,
-        md.getReplicationStatus());
+        md.storageClassAsString());
+    // TODO: check this, looks wrong.
+    //    maybeSetHeader(headers, XA_STORAGE_CLASS,
+//        md.getReplicationStatus());
     return headers;
   }
 
@@ -458,70 +468,51 @@ public class HeaderProcessing extends AbstractStoreOperation {
   }
 
   /**
-   * Creates a copy of the passed {@link ObjectMetadata}.
-   * Does so without using the {@link ObjectMetadata#clone()} method,
-   * to avoid copying unnecessary headers.
+   * Creates a copy of the passed metadata.
    * This operation does not copy the {@code X_HEADER_MAGIC_MARKER}
    * header to avoid confusion. If a marker file is renamed,
    * it loses information about any remapped file.
    * If new fields are added to ObjectMetadata which are not
    * present in the user metadata headers, they will not be picked
    * up or cloned unless this operation is updated.
-   * @param source the {@link ObjectMetadata} to copy
+   * @param source the source metadata to copy
    * @param dest the metadata to update; this is the return value.
+   * @param copyObjectRequestBuilder CopyObjectRequest builder
    */
-  public static void cloneObjectMetadata(ObjectMetadata source,
-      ObjectMetadata dest) {
+  public static void cloneObjectMetadata(HeadObjectResponse source,
+      Map<String, String> dest, CopyObjectRequest.Builder copyObjectRequestBuilder) {
 
     // Possibly null attributes
     // Allowing nulls to pass breaks it during later use
-    if (source.getCacheControl() != null) {
-      dest.setCacheControl(source.getCacheControl());
+    if (source.cacheControl() != null) {
+      copyObjectRequestBuilder.cacheControl(source.cacheControl());
     }
-    if (source.getContentDisposition() != null) {
-      dest.setContentDisposition(source.getContentDisposition());
+    if (source.contentDisposition() != null) {
+      copyObjectRequestBuilder.contentDisposition(source.contentDisposition());
     }
-    if (source.getContentEncoding() != null) {
-      dest.setContentEncoding(source.getContentEncoding());
+    if (source.contentEncoding() != null) {
+      copyObjectRequestBuilder.contentEncoding(source.contentEncoding());
     }
-    if (source.getContentMD5() != null) {
-      dest.setContentMD5(source.getContentMD5());
+
+    if (source.contentType() != null) {
+      copyObjectRequestBuilder.contentType(source.contentType());
     }
-    if (source.getContentType() != null) {
-      dest.setContentType(source.getContentType());
+
+    if (source.serverSideEncryption() != null) {
+      copyObjectRequestBuilder.serverSideEncryption(source.serverSideEncryption());
     }
-    if (source.getExpirationTime() != null) {
-      dest.setExpirationTime(source.getExpirationTime());
+
+    if (source.sseCustomerAlgorithm() != null) {
+      copyObjectRequestBuilder.copySourceSSECustomerAlgorithm(source.sseCustomerAlgorithm());
     }
-    if (source.getExpirationTimeRuleId() != null) {
-      dest.setExpirationTimeRuleId(source.getExpirationTimeRuleId());
-    }
-    if (source.getHttpExpiresDate() != null) {
-      dest.setHttpExpiresDate(source.getHttpExpiresDate());
-    }
-    if (source.getLastModified() != null) {
-      dest.setLastModified(source.getLastModified());
-    }
-    if (source.getOngoingRestore() != null) {
-      dest.setOngoingRestore(source.getOngoingRestore());
-    }
-    if (source.getRestoreExpirationTime() != null) {
-      dest.setRestoreExpirationTime(source.getRestoreExpirationTime());
-    }
-    if (source.getSSEAlgorithm() != null) {
-      dest.setSSEAlgorithm(source.getSSEAlgorithm());
-    }
-    if (source.getSSECustomerAlgorithm() != null) {
-      dest.setSSECustomerAlgorithm(source.getSSECustomerAlgorithm());
-    }
-    if (source.getSSECustomerKeyMd5() != null) {
-      dest.setSSECustomerKeyMd5(source.getSSECustomerKeyMd5());
+    if (source.sseCustomerKeyMD5() != null) {
+      copyObjectRequestBuilder.copySourceSSECustomerKeyMD5(source.sseCustomerKeyMD5());
     }
 
     // copy user metadata except the magic marker header.
-    source.getUserMetadata().entrySet().stream()
+    source.metadata().entrySet().stream()
         .filter(e -> !e.getKey().equals(X_HEADER_MAGIC_MARKER))
-        .forEach(e -> dest.addUserMetadata(e.getKey(), e.getValue()));
+        .forEach(e -> dest.put(e.getKey(), e.getValue()));
   }
 
   public interface HeaderProcessingCallbacks {
@@ -534,6 +525,6 @@ public class HeaderProcessing extends AbstractStoreOperation {
      * @throws IOException IO and object access problems.
      */
     @Retries.RetryTranslated
-    ObjectMetadata getObjectMetadata(String key) throws IOException;
+    HeadObjectResponse getObjectMetadata(String key) throws IOException;
   }
 }

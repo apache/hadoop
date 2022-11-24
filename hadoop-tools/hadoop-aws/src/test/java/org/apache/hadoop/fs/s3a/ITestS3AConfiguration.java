@@ -19,9 +19,6 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.S3ClientOptions;
-
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -31,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,6 +49,11 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 import org.junit.rules.TemporaryFolder;
+
+import software.amazon.awssdk.core.client.config.SdkClientConfiguration;
+import software.amazon.awssdk.core.client.config.SdkClientOption;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -109,7 +113,7 @@ public class ITestS3AConfiguration {
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
       fs = S3ATestUtils.createTestFileSystem(conf);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("test endpoint");
+      S3Client s3 = fs.getAmazonS3V2ClientForTesting("test endpoint");
       String endPointRegion = "";
       // Differentiate handling of "s3-" and "s3." based endpoint identifiers
       String[] endpointParts = StringUtils.split(endpoint, '.');
@@ -120,8 +124,11 @@ public class ITestS3AConfiguration {
       } else {
         fail("Unexpected endpoint");
       }
+      // TODO: review way to get the bucket region.
+      String region = s3.getBucketLocation(b -> b.bucket(fs.getUri().getHost()))
+          .locationConstraintAsString();
       assertEquals("Endpoint config setting and bucket location differ: ",
-          endPointRegion, s3.getBucketLocation(fs.getUri().getHost()));
+          endPointRegion, region);
     }
   }
 
@@ -346,22 +353,25 @@ public class ITestS3AConfiguration {
     try {
       fs = S3ATestUtils.createTestFileSystem(conf);
       assertNotNull(fs);
-      AmazonS3 s3 = fs.getAmazonS3ClientForTesting("configuration");
+      S3Client s3 = fs.getAmazonS3V2ClientForTesting("configuration");
       assertNotNull(s3);
-      S3ClientOptions clientOptions = getField(s3, S3ClientOptions.class,
-          "clientOptions");
+
+      SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
+          "clientConfiguration");
+      S3Configuration s3Configuration =
+          (S3Configuration)clientConfiguration.option(SdkClientOption.SERVICE_CONFIGURATION);
       assertTrue("Expected to find path style access to be switched on!",
-          clientOptions.isPathStyleAccess());
+          s3Configuration.pathStyleAccessEnabled());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
           new Path("/path/style/access/testFile"), file, file.length,
               (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
-    } catch (final AWSS3IOException e) {
+    } catch (final AWSRedirectException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
       // isn't in the same region as the s3 client default. See
       // http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html
-      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.getStatusCode());
+      assertEquals(HttpStatus.SC_MOVED_PERMANENTLY, e.statusCode());
     } catch (final IllegalArgumentException e) {
       // Path style addressing does not work with AP ARNs
       if (!fs.getBucket().contains("arn:")) {
@@ -378,12 +388,13 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User Agent");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User Agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -392,12 +403,13 @@ public class ITestS3AConfiguration {
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("User agent");
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("User agent");
     assertNotNull(s3);
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
-    assertEquals("MyApp, Hadoop " + VersionInfo.getVersion(),
-        awsConf.getUserAgentPrefix());
+    Assertions.assertThat(clientConfiguration.option(SdkClientOption.CLIENT_USER_AGENT))
+        .describedAs("User Agent prefix")
+        .startsWith("MyApp, Hadoop " + VersionInfo.getVersion());
   }
 
   @Test
@@ -405,16 +417,16 @@ public class ITestS3AConfiguration {
     conf = new Configuration();
     conf.set(REQUEST_TIMEOUT, "120");
     fs = S3ATestUtils.createTestFileSystem(conf);
-    AmazonS3 s3 = fs.getAmazonS3ClientForTesting("Request timeout (ms)");
-    ClientConfiguration awsConf = getField(s3, ClientConfiguration.class,
+    S3Client s3 = fs.getAmazonS3V2ClientForTesting("Request timeout (ms)");
+    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
         "clientConfiguration");
     assertEquals("Configured " + REQUEST_TIMEOUT +
         " is different than what AWS sdk configuration uses internally",
-        120000, awsConf.getRequestTimeout());
+        120000,
+        clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT).toMillis());
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCloseIdempotent() throws Throwable {
     conf = new Configuration();
     fs = S3ATestUtils.createTestFileSystem(conf);
@@ -522,6 +534,8 @@ public class ITestS3AConfiguration {
     // Default SIGNING_ALGORITHM, overridden for S3 only
     config = new Configuration();
     config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+
+    // TODO: update during signer work.
     clientConfiguration = S3AUtils
         .createAwsConf(config, "dontcare", AWS_SERVICE_IDENTIFIER_S3);
     Assert.assertEquals(s3SignerOverride,

@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.services.s3.AmazonS3;
+import java.util.concurrent.atomic.AtomicLong;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * S3 Client factory used for testing with eventual consistency fault injection.
@@ -30,25 +37,74 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@code hadoop-aws} module to enable integration tests to use this
  * just by editing the Hadoop configuration used to bring up the client.
  *
- * The factory uses the older constructor-based instantiation/configuration
- * of the client, so does not wire up metrics, handlers etc.
+ * The factory injects an {@link ExecutionInterceptor} to inject failures.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class InconsistentS3ClientFactory extends DefaultS3ClientFactory {
 
   @Override
-  protected AmazonS3 buildAmazonS3Client(
-      final ClientConfiguration awsConf,
-      final S3ClientCreationParameters parameters) {
+  protected ClientOverrideConfiguration createClientOverrideConfiguration(
+      S3ClientCreationParameters parameters, Configuration conf) {
     LOG.warn("** FAILURE INJECTION ENABLED.  Do not run in production! **");
     LOG.warn("List inconsistency is no longer emulated; only throttling and read errors");
-    InconsistentAmazonS3Client s3
-        = new InconsistentAmazonS3Client(
-            parameters.getCredentialSet(), awsConf, getConf());
-    configureAmazonS3Client(s3,
-        parameters.getEndpoint(),
-        parameters.isPathStyleAccess());
-    return s3;
+    return super.createClientOverrideConfiguration(parameters, conf)
+        .toBuilder()
+        .addExecutionInterceptor(new FailureInjectionInterceptor(
+            new FailureInjectionPolicy(conf)))
+        .build();
+  }
+
+  private static class FailureInjectionInterceptor implements ExecutionInterceptor {
+
+    private final FailureInjectionPolicy policy;
+
+    /**
+     * Counter of failures since last reset.
+     */
+    private final AtomicLong failureCounter = new AtomicLong(0);
+
+    public FailureInjectionInterceptor(FailureInjectionPolicy policy) {
+      this.policy = policy;
+    }
+
+    @Override
+    public void beforeExecution(Context.BeforeExecution context,
+        ExecutionAttributes executionAttributes) {
+      maybeFail();
+    }
+
+    private void maybeFail() {
+      maybeFail("throttled", 503);
+    }
+
+    /**
+     * Conditionally fail the operation.
+     * @param errorMsg description of failure
+     * @param statusCode http status code for error
+     * @throws SdkException if the client chooses to fail
+     * the request.
+     */
+    private void maybeFail(String errorMsg, int statusCode)
+        throws SdkException {
+      // code structure here is to line up for more failures later
+      AwsServiceException ex = null;
+      if (FailureInjectionPolicy.trueWithProbability(policy.getThrottleProbability())) {
+        // throttle the request
+        ex = AwsServiceException.builder()
+            .message(errorMsg + " count = " + (failureCounter.get() + 1))
+            .statusCode(statusCode)
+            .build();
+      }
+
+      int failureLimit = policy.getFailureLimit();
+      if (ex != null) {
+        long count = failureCounter.incrementAndGet();
+        if (failureLimit == 0
+            || (failureLimit > 0 && count < failureLimit)) {
+          throw ex;
+        }
+      }
+    }
   }
 }

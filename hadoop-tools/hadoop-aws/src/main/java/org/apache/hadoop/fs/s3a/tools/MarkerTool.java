@@ -32,10 +32,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.s3a.MultiObjectDeleteException;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +58,9 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
@@ -784,7 +785,7 @@ public final class MarkerTool extends S3GuardTool {
   private MarkerPurgeSummary purgeMarkers(
       final DirMarkerTracker tracker,
       final int deletePageSize)
-      throws MultiObjectDeleteException, AmazonClientException, IOException {
+      throws MultiObjectDeleteException, AwsServiceException, IOException {
 
     MarkerPurgeSummary summary = new MarkerPurgeSummary();
     // we get a map of surplus markers to delete.
@@ -792,13 +793,13 @@ public final class MarkerTool extends S3GuardTool {
         = tracker.getSurplusMarkers();
     int size = markers.size();
     // build a list from the strings in the map
-    List<DeleteObjectsRequest.KeyVersion> collect =
+    List<ObjectIdentifier> collect =
         markers.values().stream()
-            .map(p -> new DeleteObjectsRequest.KeyVersion(p.getKey()))
+            .map(p -> ObjectIdentifier.builder().key(p.getKey()).build())
             .collect(Collectors.toList());
     // build an array list for ease of creating the lists of
     // keys in each page through the subList() method.
-    List<DeleteObjectsRequest.KeyVersion> markerKeys =
+    List<ObjectIdentifier> markerKeys =
         new ArrayList<>(collect);
 
     // now randomize. Why so? if the list spans multiple S3 partitions,
@@ -819,7 +820,7 @@ public final class MarkerTool extends S3GuardTool {
     while (start < size) {
       // end is one past the end of the page
       int end = Math.min(start + deletePageSize, size);
-      List<DeleteObjectsRequest.KeyVersion> page = markerKeys.subList(start,
+      List<ObjectIdentifier> page = markerKeys.subList(start,
           end);
       once("Remove S3 Keys",
           tracker.getBasePath().toString(), () ->

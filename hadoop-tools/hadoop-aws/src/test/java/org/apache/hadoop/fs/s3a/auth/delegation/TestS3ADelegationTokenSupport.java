@@ -37,7 +37,6 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.FULL_
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.SESSION_TOKEN_KIND;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
