@@ -741,8 +741,8 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    */
   private void validateStorageClass(Path dir, String expectedStorageClass) throws Exception {
     Path expectedFile = getPart0000(dir);
-    S3AFileSystem fs = getFileSystem();
-    String actualStorageClass = fs.getObjectMetadata(expectedFile).getStorageClass();
+    String actualStorageClass = getS3AInternals().getObjectMetadata(expectedFile)
+        .storageClassAsString();
 
     Assertions.assertThat(actualStorageClass)
         .describedAs("Storage class of object %s", expectedFile)

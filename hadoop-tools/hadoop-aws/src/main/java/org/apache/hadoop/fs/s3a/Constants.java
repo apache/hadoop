@@ -140,7 +140,6 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
-  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -597,7 +596,7 @@ public final class Constants {
 
   public static final String SIGNING_ALGORITHM_STS =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + "signing-algorithm";
+          + ".signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -739,14 +738,21 @@ public final class Constants {
   public static final String STREAM_READ_GAUGE_INPUT_POLICY =
       "stream_read_gauge_input_policy";
 
+  /**
+   * S3 Client Factory implementation class: {@value}.
+   * Unstable and incompatible between v1 and v2 SDK versions.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =
       "fs.s3a.s3.client.factory.impl";
 
+  /**
+   * Default factory:
+   * {@code org.apache.hadoop.fs.s3a.DefaultS3ClientFactory}.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1299,4 +1305,8 @@ public final class Constants {
    */
   public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
 
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
 }

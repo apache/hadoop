@@ -22,14 +22,12 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.amazonaws.auth.Signer;
-import com.amazonaws.auth.SignerFactory;
+import software.amazon.awssdk.core.signer.Signer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
-import org.apache.hadoop.fs.s3a.impl.V2Migration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -70,8 +68,6 @@ public class SignerManager implements Closeable {
       LOG.debug("No custom signers specified");
       return;
     }
-
-    V2Migration.v1CustomSignerUsed();
 
     for (String customSigner : customSigners) {
       String[] parts = customSigner.split(":");
@@ -119,7 +115,7 @@ public class SignerManager implements Closeable {
   private static void maybeRegisterSigner(String signerName,
       String signerClassName, Configuration conf) {
     try {
-      SignerFactory.getSignerByTypeAndService(signerName, null);
+      SignerFactory.verifySignerRegistered(signerName);
     } catch (IllegalArgumentException e) {
       // Signer is not registered with the AWS SDK.
       // Load the class and register the signer.

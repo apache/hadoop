@@ -249,56 +249,39 @@ a warning has been printed since Hadoop 2.8 whenever such a URL was used.
 ```xml
 <property>
   <name>fs.s3a.access.key</name>
-  <description>AWS access key ID.
-   Omit for IAM role-based or provider-based authentication.</description>
+  <description>AWS access key ID used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
 
 <property>
   <name>fs.s3a.secret.key</name>
-  <description>AWS secret key.
-   Omit for IAM role-based or provider-based authentication.</description>
-</property>
-
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <description>
-    Comma-separated class names of credential provider classes which implement
-    com.amazonaws.auth.AWSCredentialsProvider.
-
-    These are loaded and queried in sequence for a valid set of credentials.
-    Each listed class must implement one of the following means of
-    construction, which are attempted in order:
-    1. a public constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration,
-    2. a public static method named getInstance that accepts no
-       arguments and returns an instance of
-       com.amazonaws.auth.AWSCredentialsProvider, or
-    3. a public default constructor.
-
-    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
-    anonymous access to a publicly accessible S3 bucket without any credentials.
-    Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases. It can be useful
-    for accessing public data sets without requiring AWS credentials.
-
-    If unspecified, then the default list of credential provider classes,
-    queried in sequence, is:
-    1. org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
-       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    2. com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
-        configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID and
-        AWS_SECRET_ACCESS_KEY, as documented in the AWS SDK.
-    3. com.amazonaws.auth.InstanceProfileCredentialsProvider: supports use
-        of instance profile credentials if running in an EC2 VM.
-  </description>
+  <description>AWS secret key used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
 </property>
 
 <property>
   <name>fs.s3a.session.token</name>
-  <description>
-    Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
+  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
     as one of the providers.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>
+    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
+    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider,
+    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+  </value>
+  <description>
+    Comma-separated class names of credential provider classes which implement
+    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
+
+    When S3A delegation tokens are not enabled, this list will be used
+    to directly authenticate with S3 and other AWS services.
+    When S3A Delegation tokens are enabled, depending upon the delegation
+    token binding it may be used
+    to communicate wih the STS endpoint to request session/role
+    credentials.
   </description>
 </property>
 ```
@@ -350,13 +333,19 @@ credentials if they are defined.
 1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
 are then looked for: these will return session or full credentials depending
 on which values are set.
-1. An attempt is made to query the Amazon EC2 Instance Metadata Service to
+1. An attempt is made to query the Amazon EC2 Instance/k8s container Metadata Service to
  retrieve credentials published to EC2 VMs.
 
 S3A can be configured to obtain client authentication providers from classes
-which integrate with the AWS SDK by implementing the `com.amazonaws.auth.AWSCredentialsProvider`
-Interface. This is done by listing the implementation classes, in order of
+which integrate with the AWS SDK by implementing the
+`software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`
+interface.
+This is done by listing the implementation classes, in order of
 preference, in the configuration option `fs.s3a.aws.credentials.provider`.
+In previous hadoop releases, providers were required to
+implement the AWS V1 SDK interface `com.amazonaws.auth.AWSCredentialsProvider`.
+Consult the [Upgrading S3A to AWS SDK V2](./aws_sdk_upgrade.html) documentation
+to see how to migrate credential providers.
 
 *Important*: AWS Credential Providers are distinct from _Hadoop Credential Providers_.
 As will be covered later, Hadoop Credential Providers allow passwords and other secrets
@@ -371,21 +360,23 @@ this is advised as a more secure way to store valuable secrets.
 
 There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
 
+| Hadoop module credential provider                              | Authentication Mechanism                         |
+|----------------------------------------------------------------|--------------------------------------------------|
+| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`     | Session Credentials in configuration             |
+| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`        | Simple name/secret credentials in configuration  |
+| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`     | Anonymous Login                                  |
+| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`  | [Assumed Role credentials](./assumed_roles.html) |
+| `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` | EC2/k8s instance credentials                     |
+
+
+There are also many in the Amazon SDKs, with the common ones being.
+
 | classname | description |
 |-----------|-------------|
-| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`| Session Credentials |
-| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`| Simple name/secret credentials |
-| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`| Anonymous Login |
-| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider<`| [Assumed Role credentials](assumed_roles.html) |
+| `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` | AWS Environment Variables |
+| `software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
+| `software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider`| EC2/k8s Metadata Credentials |
 
-
-There are also many in the Amazon SDKs, in particular two which are automatically
-set up in the authentication chain:
-
-| classname | description |
-|-----------|-------------|
-| `com.amazonaws.auth.InstanceProfileCredentialsProvider`| EC2 Metadata Credentials |
-| `com.amazonaws.auth.EnvironmentVariableCredentialsProvider`| AWS Environment Variables |
 
 
 ### <a name="auth_iam"></a> EC2 IAM Metadata Authentication with `InstanceProfileCredentialsProvider`
@@ -402,7 +393,7 @@ You can configure Hadoop to authenticate to AWS using a [named profile](https://
 
 To authenticate with a named profile:
 
-1. Declare `com.amazonaws.auth.profile.ProfileCredentialsProvider` as the provider.
+1. Declare `software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider` as the provider.
 1. Set your profile via the `AWS_PROFILE` environment variable.
 1. Due to a [bug in version 1 of the AWS Java SDK](https://github.com/aws/aws-sdk-java/issues/803),
 you'll need to remove the `profile` prefix from the AWS configuration section heading.
@@ -525,50 +516,9 @@ This means that the default S3A authentication chain can be defined as
   <value>
     org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
     org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    com.amazonaws.auth.EnvironmentVariableCredentialsProvider,
+    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
     org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
   </value>
-  <description>
-    Comma-separated class names of credential provider classes which implement
-    com.amazonaws.auth.AWSCredentialsProvider.
-
-    When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and other AWS services.
-    When S3A Delegation tokens are enabled, depending upon the delegation
-    token binding it may be used
-    to communicate with the STS endpoint to request session/role
-    credentials.
-
-    These are loaded and queried in sequence for a valid set of credentials.
-    Each listed class must implement one of the following means of
-    construction, which are attempted in order:
-    * a public constructor accepting java.net.URI and
-        org.apache.hadoop.conf.Configuration,
-    * a public constructor accepting org.apache.hadoop.conf.Configuration,
-    * a public static method named getInstance that accepts no
-       arguments and returns an instance of
-       com.amazonaws.auth.AWSCredentialsProvider, or
-    * a public default constructor.
-
-    Specifying org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider allows
-    anonymous access to a publicly accessible S3 bucket without any credentials.
-    Please note that allowing anonymous access to an S3 bucket compromises
-    security and therefore is unsuitable for most use cases. It can be useful
-    for accessing public data sets without requiring AWS credentials.
-
-    If unspecified, then the default list of credential provider classes,
-    queried in sequence, is:
-    * org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider: looks
-       for session login secrets in the Hadoop configuration.
-    * org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider:
-       Uses the values of fs.s3a.access.key and fs.s3a.secret.key.
-    * com.amazonaws.auth.EnvironmentVariableCredentialsProvider: supports
-        configuration of AWS access key ID and secret access key in
-        environment variables named AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-        and AWS_SESSION_TOKEN as documented in the AWS SDK.
-    * org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider: picks up
-       IAM credentials of any EC2 VM or AWS container in which the process is running.
-  </description>
 </property>
 ```
 
@@ -1415,7 +1365,7 @@ role information available when deployed in Amazon EC2.
 ```xml
 <property>
   <name>fs.s3a.aws.credentials.provider</name>
-  <value>com.amazonaws.auth.InstanceProfileCredentialsProvider</value>
+  <value>org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider</value>
 </property>
 ```
 
@@ -2155,7 +2105,7 @@ If no custom signers are being used - this value does not need to be set.
 
 `SignerName:SignerClassName` - register a new signer with the specified name,
 and the class for this signer.
-The Signer Class must implement `com.amazonaws.auth.Signer`.
+The Signer Class must implement `software.amazon.awssdk.core.signer.Signer`.
 
 `SignerName:SignerClassName:SignerInitializerClassName` - similar time above
 except also allows for a custom SignerInitializer

@@ -263,9 +263,9 @@ public abstract class AbstractS3SelectTest extends AbstractS3ATestBase {
   protected static AWSServiceIOException verifyErrorCode(final String code,
       final AWSServiceIOException ex) {
     logIntercepted(ex);
-    if (!code.equals(ex.getErrorCode())) {
+    if (!code.equals(ex.awsErrorDetails().errorCode())) {
       throw new AssertionError("Expected Error code" + code
-          + " actual " + ex.getErrorCode(),
+          + " actual " + ex.awsErrorDetails().errorCode(),
           ex);
     }
     return ex;
