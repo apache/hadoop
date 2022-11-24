@@ -18,15 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.Request;
-import com.amazonaws.Response;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.handlers.HandlerAfterAttemptContext;
-import com.amazonaws.handlers.HandlerBeforeAttemptContext;
-import com.amazonaws.http.HttpResponse;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 
-import org.apache.hadoop.fs.s3a.Retries;
 
 /**
  * Callbacks for audit spans. This is implemented
@@ -37,10 +31,10 @@ import org.apache.hadoop.fs.s3a.Retries;
  * detect this and raise an exception.
  *
  * Look at the documentation for
- * {@code com.amazonaws.handlers.IRequestHandler2} for details
+ * {@code ExecutionInterceptor} for details
  * on the callbacks.
  */
-public interface AWSAuditEventCallbacks {
+public interface AWSAuditEventCallbacks extends ExecutionInterceptor {
 
   /**
    * Return a span ID which must be unique for all spans within
@@ -66,95 +60,8 @@ public interface AWSAuditEventCallbacks {
    * It is not invoked on any AWS requests created in the SDK.
    * Avoid raising exceptions or talking to any remote service;
    * this callback is for annotation rather than validation.
-   * @param request request request.
-   * @param <T> type of request
-   * @return the request, possibly modified.
+   * @param builder the request builder.
    */
-  default <T extends AmazonWebServiceRequest> T requestCreated(T request) {
-    return request;
-  }
+  default void requestCreated(SdkRequest.Builder builder) {}
 
-  /**
-   * Preflight preparation of AWS request.
-   * @param request request
-   * @param <T> type of request
-   * @return an updated request.
-   * @throws AuditFailureException for generic audit failures
-   * @throws SdkBaseException for other reasons.
-   */
-  @Retries.OnceRaw
-  default <T extends AmazonWebServiceRequest> T beforeExecution(T request)
-      throws AuditFailureException, SdkBaseException {
-    return request;
-  }
-
-  /**
-   * Callback after S3 responded to a request.
-   * @param request request
-   * @param response response.
-   * @throws AuditFailureException for generic audit failures
-   * @throws SdkBaseException for other reasons.
-   */
-  default void afterResponse(Request<?> request,
-      Response<?> response)
-      throws AuditFailureException, SdkBaseException {
-  }
-
-  /**
-   * Callback after a request resulted in an error.
-   * @param request request
-   * @param response response.
-   * @param exception exception raised.
-   * @throws AuditFailureException for generic audit failures
-   * @throws SdkBaseException for other reasons.
-   */
-  default void afterError(Request<?> request,
-      Response<?> response,
-      Exception exception)
-      throws AuditFailureException, SdkBaseException {
-  }
-
-  /**
-   * Request before marshalling.
-   * @param request request
-   * @return possibly modified request.
-   */
-  default AmazonWebServiceRequest beforeMarshalling(
-      AmazonWebServiceRequest request) {
-    return request;
-  }
-
-  /**
-   * Request before marshalling.
-   * @param request request
-   */
-  default void beforeRequest(Request<?> request) {
-  }
-
-  /**
-   * Before any attempt is made.
-   * @param context full context, including the request.
-   */
-  default void beforeAttempt(HandlerBeforeAttemptContext context) {
-  }
-
-  /**
-   * After any attempt is made.
-   * @param context full context, including the request.
-   */
-  default void afterAttempt(
-      HandlerAfterAttemptContext context) {
-  }
-
-  /**
-   * Before unmarshalling the response.
-   * @param request request made.
-   * @param httpResponse response received
-   * @return updated response.
-   */
-  default HttpResponse beforeUnmarshalling(
-      final Request<?> request,
-      final HttpResponse httpResponse) {
-    return httpResponse;
-  }
 }

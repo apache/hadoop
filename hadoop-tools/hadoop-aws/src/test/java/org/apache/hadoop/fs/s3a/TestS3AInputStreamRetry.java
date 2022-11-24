@@ -19,16 +19,12 @@
 package org.apache.hadoop.fs.s3a;
 
 import javax.net.ssl.SSLException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
@@ -36,6 +32,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import static java.lang.Math.min;
 import static org.apache.hadoop.util.functional.FutureIO.eval;
@@ -121,13 +124,22 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
    * @return mocked object.
    */
   private S3AInputStream.InputStreamCallbacks getMockedInputStreamCallback() {
-    return new S3AInputStream.InputStreamCallbacks() {
+    GetObjectResponse objectResponse = GetObjectResponse.builder()
+        .eTag("test-etag")
+        .build();
 
-      private final S3Object mockedS3Object = getMockedS3Object();
+    ResponseInputStream<GetObjectResponse>[] responseInputStreams =
+        new ResponseInputStream[] {
+            getMockedInputStream(objectResponse, true),
+            getMockedInputStream(objectResponse, true),
+            getMockedInputStream(objectResponse, false)
+    };
+
+    return new S3AInputStream.InputStreamCallbacks() {
       private Integer mockedS3ObjectIndex = 0;
 
       @Override
-      public S3Object getObject(GetObjectRequest request) {
+      public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) {
         // Set s3 client to return mocked s3object with defined read behavior.
         mockedS3ObjectIndex++;
         // open() -> lazySeek() -> reopen()
@@ -144,14 +156,17 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
         //        -> getObjectContent(objectInputStreamGood)-> objectInputStreamGood
         //        -> wrappedStream.read
         if (mockedS3ObjectIndex == 3) {
-          throw new SdkClientException("Failed to get S3Object");
+          throw AwsServiceException.builder()
+              .message("Failed to get S3Object")
+              .awsErrorDetails(AwsErrorDetails.builder().errorCode("test-code").build())
+              .build();
         }
-        return mockedS3Object;
+        return responseInputStreams[min(mockedS3ObjectIndex, responseInputStreams.length) - 1];
       }
 
       @Override
-      public GetObjectRequest newGetRequest(String key) {
-        return new GetObjectRequest(fs.getBucket(), key);
+      public GetObjectRequest.Builder newGetRequestBuilder(String key) {
+        return GetObjectRequest.builder().bucket(fs.getBucket()).key(key);
       }
 
       @Override
@@ -166,70 +181,41 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
   }
 
   /**
-   * Get mocked S3Object that returns bad input stream on the initial of
-   * getObjectContent calls.
-   *
-   * @return mocked object.
-   */
-  private S3Object getMockedS3Object() {
-    S3ObjectInputStream objectInputStreamBad1 = getMockedInputStream(true);
-    S3ObjectInputStream objectInputStreamBad2 = getMockedInputStream(true);
-    S3ObjectInputStream objectInputStreamGood = getMockedInputStream(false);
-
-    return new S3Object() {
-      private final S3ObjectInputStream[] inputStreams =
-          {objectInputStreamBad1, objectInputStreamBad2, objectInputStreamGood};
-
-      private Integer inputStreamIndex = 0;
-
-      @Override
-      public S3ObjectInputStream getObjectContent() {
-        // Set getObjectContent behavior:
-        // Returns bad stream twice, and good stream afterwards.
-        inputStreamIndex++;
-        return inputStreams[min(inputStreamIndex, inputStreams.length) - 1];
-      }
-
-      @Override
-      public ObjectMetadata getObjectMetadata() {
-        // Set getObjectMetadata behavior: returns dummy metadata
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setHeader("ETag", "test-etag");
-        return metadata;
-      }
-    };
-  }
-
-  /**
-   * Get mocked S3ObjectInputStream where we can trigger IOException to
+   * Get mocked ResponseInputStream<GetObjectResponse> where we can trigger IOException to
    * simulate the read failure.
    *
    * @param triggerFailure true when a failure injection is enabled.
    * @return mocked object.
    */
-  private S3ObjectInputStream getMockedInputStream(boolean triggerFailure) {
-    return new S3ObjectInputStream(IOUtils.toInputStream(INPUT, StandardCharsets.UTF_8), null) {
+  private ResponseInputStream<GetObjectResponse> getMockedInputStream(
+      GetObjectResponse objectResponse, boolean triggerFailure) {
 
-      private final IOException exception =
-          new SSLException(new SocketException("Connection reset"));
+    FilterInputStream inputStream =
+        new FilterInputStream(IOUtils.toInputStream(INPUT, StandardCharsets.UTF_8)) {
 
-      @Override
-      public int read() throws IOException {
-        int result = super.read();
-        if (triggerFailure) {
-          throw exception;
-        }
-        return result;
-      }
+          private final IOException exception =
+              new SSLException(new SocketException("Connection reset"));
 
-      @Override
-      public int read(byte[] b, int off, int len) throws IOException {
-        int result = super.read(b, off, len);
-        if (triggerFailure) {
-          throw exception;
-        }
-        return result;
-      }
-    };
+          @Override
+          public int read() throws IOException {
+            int result = super.read();
+            if (triggerFailure) {
+              throw exception;
+            }
+            return result;
+          }
+
+          @Override
+          public int read(byte[] b, int off, int len) throws IOException {
+            int result = super.read(b, off, len);
+            if (triggerFailure) {
+              throw exception;
+            }
+            return result;
+          }
+        };
+
+    return new ResponseInputStream(objectResponse,
+        AbortableInputStream.create(inputStream, () -> {}));
   }
 }

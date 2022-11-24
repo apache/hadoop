@@ -29,7 +29,6 @@ import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.assertj.core.api.Assertions;
@@ -51,6 +50,8 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.Csvout;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
+
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import static org.apache.hadoop.fs.s3a.Constants.EXPERIMENTAL_AWS_INTERNAL_THROTTLING;
 import static org.apache.hadoop.fs.s3a.Constants.BULK_DELETE_PAGE_SIZE;
@@ -228,7 +229,7 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
     Path basePath = path("testDeleteObjectThrottling");
     final S3AFileSystem fs = getFileSystem();
     final String base = fs.pathToKey(basePath);
-    final List<DeleteObjectsRequest.KeyVersion> fileList
+    final List<ObjectIdentifier> fileList
         = buildDeleteRequest(base, entries);
     final FileWriter out = new FileWriter(csvFile);
     Csvout csvout = new Csvout(out, "\t", "\n");
@@ -304,12 +305,12 @@ public class ILoadTestS3ABulkDeleteThrottling extends S3AScaleTestBase {
   }
 
 
-  private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
+  private List<ObjectIdentifier> buildDeleteRequest(
       String base, int count) {
-    List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(count);
+    List<ObjectIdentifier> request = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
-      request.add(new DeleteObjectsRequest.KeyVersion(
-          String.format("%s/file-%04d", base, i)));
+      request.add(ObjectIdentifier.builder().key(
+          String.format("%s/file-%04d", base, i)).build());
     }
     return request;
   }

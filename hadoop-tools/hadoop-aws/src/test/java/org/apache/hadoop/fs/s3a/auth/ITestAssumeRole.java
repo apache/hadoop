@@ -26,13 +26,14 @@ import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.sts.model.StsException;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
@@ -140,7 +141,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
@@ -148,13 +148,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -162,7 +161,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(null, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
@@ -172,7 +171,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * @return a configuration set to use to the role ARN.
    * @throws JsonProcessingException problems working with JSON policies.
    */
-  @SuppressWarnings("deprecation")
   protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
@@ -186,11 +184,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedInvalidRole() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
-    interceptClosing(AWSSecurityTokenServiceException.class,
+    interceptClosing(StsException.class,
         "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
   }
@@ -204,7 +201,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleNoARN() throws Exception {
     describe("Attemnpt to create the FS with no ARN");
     Configuration conf = createAssumedRoleConfig();
@@ -237,7 +233,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleCannotAuthAssumedRole() throws Exception {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
@@ -251,7 +246,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth() throws Exception {
     describe("Try to authenticate with a keypair with spaces");
 
@@ -267,7 +261,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth2() throws Exception {
     describe("Try to authenticate with an invalid keypair");
 
@@ -351,7 +344,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleUndefined() throws Throwable {
     describe("Verify that you cannot instantiate the"
         + " AssumedRoleCredentialProvider without a role ARN");
@@ -363,12 +355,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedIllegalDuration() throws Throwable {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "30s");
-    interceptClosing(AWSSecurityTokenServiceException.class, "",
+    interceptClosing(StsException.class, "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
@@ -537,7 +528,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * don't break.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedRoleRetryHandler() throws Throwable {
     try(AssumedRoleCredentialProvider provider
             = new AssumedRoleCredentialProvider(getFileSystem().getUri(),

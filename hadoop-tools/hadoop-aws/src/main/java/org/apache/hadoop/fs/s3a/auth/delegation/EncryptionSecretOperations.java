@@ -20,9 +20,6 @@ package org.apache.hadoop.fs.s3a.auth.delegation;
 
 import java.util.Optional;
 
-import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
-import com.amazonaws.services.s3.model.SSECustomerKey;
-
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 
 /**
@@ -35,37 +32,30 @@ public final class EncryptionSecretOperations {
   private EncryptionSecretOperations() {
   }
 
-  /**
-   * Create SSE-C client side key encryption options on demand.
-   * @return an optional key to attach to a request.
+  /***
+   * Gets the SSE-C client side key if present.
+   *
    * @param secrets source of the encryption secrets.
+   * @return an optional key to attach to a request.
    */
-  public static Optional<SSECustomerKey> createSSECustomerKey(
-      final EncryptionSecrets secrets) {
-    if (secrets.hasEncryptionKey() &&
-        secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
-      return Optional.of(new SSECustomerKey(secrets.getEncryptionKey()));
+  public static Optional<String> getSSECustomerKey(final EncryptionSecrets secrets) {
+    if (secrets.hasEncryptionKey() && secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
+      return Optional.of(secrets.getEncryptionKey());
     } else {
-      return Optional.empty();
+     return Optional.empty();
     }
   }
 
   /**
-   * Create SSE-KMS options for a request, iff the encryption is SSE-KMS.
-   * @return an optional SSE-KMS param to attach to a request.
+   * Gets the SSE-KMS key if present, else let S3 use AWS managed key.
+   *
    * @param secrets source of the encryption secrets.
+   * @return an optional key to attach to a request.
    */
-  public static Optional<SSEAwsKeyManagementParams> createSSEAwsKeyManagementParams(
-      final EncryptionSecrets secrets) {
-
-    //Use specified key, otherwise default to default master aws/s3 key by AWS
-    if (secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS) {
-      if (secrets.hasEncryptionKey()) {
-        return Optional.of(new SSEAwsKeyManagementParams(
-            secrets.getEncryptionKey()));
-      } else {
-        return Optional.of(new SSEAwsKeyManagementParams());
-      }
+  public static Optional<String> getSSEAwsKMSKey(final EncryptionSecrets secrets) {
+    if (secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_KMS
+        && secrets.hasEncryptionKey()) {
+      return Optional.of(secrets.getEncryptionKey());
     } else {
       return Optional.empty();
     }

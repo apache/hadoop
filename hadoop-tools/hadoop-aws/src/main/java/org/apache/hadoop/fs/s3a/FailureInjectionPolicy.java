@@ -36,7 +36,7 @@ public class FailureInjectionPolicy {
   public static final String DEFAULT_DELAY_KEY_SUBSTRING = "DELAY_LISTING_ME";
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(InconsistentAmazonS3Client.class);
+      LoggerFactory.getLogger(FailureInjectionPolicy.class);
 
   /**
    * Probability of throttling a request.
