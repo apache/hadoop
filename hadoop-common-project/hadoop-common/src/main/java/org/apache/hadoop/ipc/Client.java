@@ -1250,7 +1250,10 @@ public class Client implements AutoCloseable {
     
     private synchronized void markClosed(IOException e) {
       if (shouldCloseConnection.compareAndSet(false, true)) {
-        while (rpcRequestQueue.poll() != null);
+        Pair<Call, ResponseBuffer> request;
+        while ((request = rpcRequestQueue.poll()) != null) {
+          LOG.debug("Clean {} from RpcRequestQueue.", request.getLeft());
+        }
         closeException = e;
         notifyAll();
       }
