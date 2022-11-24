@@ -540,7 +540,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public synchronized int incrementDelegationTokenSeqNum() {
+  public int incrementDelegationTokenSeqNum() {
     return sequenceNum.incrementAndGet();
   }
 
@@ -550,7 +550,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public synchronized void setDelegationTokenSeqNum(int seqNum) {
+  public void setDelegationTokenSeqNum(int seqNum) {
     sequenceNum.set(seqNum);
   }
 
@@ -560,7 +560,7 @@ public class MemoryFederationStateStore implements FederationStateStore {
   }
 
   @Override
-  public synchronized int incrementCurrentKeyId() {
+  public int incrementCurrentKeyId() {
     return masterKeyId.incrementAndGet();
   }
 

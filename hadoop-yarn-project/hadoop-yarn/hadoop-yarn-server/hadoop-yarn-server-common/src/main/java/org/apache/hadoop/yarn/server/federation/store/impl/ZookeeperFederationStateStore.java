@@ -1009,7 +1009,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @throws IOException An IO Error occurred.
    */
   @Override
-  public synchronized RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
     long start = clock.getTime();
@@ -1046,7 +1046,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @throws IOException An IO Error occurred.
    */
   @Override
-  public synchronized RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
     long start = clock.getTime();
@@ -1177,7 +1177,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @throws IOException An IO Error occurred.
    */
   @Override
-  public synchronized RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
     long start = clock.getTime();
@@ -1214,7 +1214,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @throws IOException An IO Error occurred.
    */
   @Override
-  public synchronized RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
     long start = clock.getTime();
@@ -1267,7 +1267,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @throws IOException An IO Error occurred.
    */
   @Override
-  public synchronized RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
 
     long start = clock.getTime();
@@ -1510,7 +1510,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return SequenceNum.
    */
   @Override
-  public synchronized int incrementDelegationTokenSeqNum() {
+  public int incrementDelegationTokenSeqNum() {
     // The secret manager will keep a local range of seq num which won't be
     // seen by peers, so only when the range is exhausted it will ask zk for
     // another range again
@@ -1591,7 +1591,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return CurrentKeyId.
    */
   @Override
-  public synchronized int incrementCurrentKeyId() {
+  public int incrementCurrentKeyId() {
     try {
       // It should be noted that the BatchSize of MasterKeyId defaults to 1.
       incrSharedCount(keyIdSeqCounter, 1);
