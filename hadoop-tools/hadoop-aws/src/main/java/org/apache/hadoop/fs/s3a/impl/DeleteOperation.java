@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -39,6 +38,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.DurationInfo;
+
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -386,9 +387,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                  "Delete page of %d keys", keyList.size())) {
       if (!keyList.isEmpty()) {
         // first delete the files.
-        List<DeleteObjectsRequest.KeyVersion> files = keyList.stream()
+        List<ObjectIdentifier> files = keyList.stream()
             .filter(e -> !e.isDirMarker)
-            .map(e -> e.keyVersion)
+            .map(e -> e.objectIdentifier)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
         Invoker.once("Remove S3 Files",
@@ -398,9 +399,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                 false
             ));
         // now the dirs
-        List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
+        List<ObjectIdentifier> dirs = keyList.stream()
             .filter(e -> e.isDirMarker)
-            .map(e -> e.keyVersion)
+            .map(e -> e.objectIdentifier)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} directory markers", dirs.size());
         // This is invoked with deleteFakeDir.
@@ -422,17 +423,17 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * to choose which statistics to update.
    */
   private static final class DeleteEntry {
-    private final DeleteObjectsRequest.KeyVersion keyVersion;
+    private final ObjectIdentifier objectIdentifier;
 
     private final boolean isDirMarker;
 
     private DeleteEntry(final String key, final boolean isDirMarker) {
-      this.keyVersion = new DeleteObjectsRequest.KeyVersion(key);
+      this.objectIdentifier = ObjectIdentifier.builder().key(key).build();
       this.isDirMarker = isDirMarker;
     }
 
     public String getKey() {
-      return keyVersion.getKey();
+      return objectIdentifier.key();
     }
 
     @Override

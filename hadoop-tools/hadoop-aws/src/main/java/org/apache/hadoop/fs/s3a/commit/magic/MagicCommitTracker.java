@@ -20,19 +20,22 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.S3ADataBlocks;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
@@ -125,7 +128,7 @@ public class MagicCommitTracker extends PutTracker {
    */
   @Override
   public boolean aboutToComplete(String uploadId,
-      List<PartETag> parts,
+      List<CompletedPart> parts,
       long bytesWritten,
       final IOStatistics iostatistics)
       throws IOException {
@@ -144,10 +147,9 @@ public class MagicCommitTracker extends PutTracker {
     headers.put(X_HEADER_MAGIC_MARKER, Long.toString(bytesWritten));
     PutObjectRequest originalDestPut = writer.createPutObjectRequest(
         originalDestKey,
-        new ByteArrayInputStream(EMPTY),
         0,
-        new PutObjectOptions(true, null, headers));
-    upload(originalDestPut);
+        new PutObjectOptions(true, null, headers), false);
+    upload(originalDestPut, new ByteArrayInputStream(EMPTY));
 
     // build the commit summary
     SinglePendingCommit commitData = new SinglePendingCommit();
@@ -170,22 +172,22 @@ public class MagicCommitTracker extends PutTracker {
         path, pendingPartKey, commitData);
     PutObjectRequest put = writer.createPutObjectRequest(
         pendingPartKey,
-        new ByteArrayInputStream(bytes),
-        bytes.length, null);
-    upload(put);
+        bytes.length, null, false);
+    upload(put, new ByteArrayInputStream(bytes));
     return false;
 
   }
   /**
    * PUT an object.
    * @param request the request
+   * @param inputStream input stream of data to be uploaded
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  private void upload(PutObjectRequest request) throws IOException {
-    trackDurationOfInvocation(trackerStatistics,
-        COMMITTER_MAGIC_MARKER_PUT.getSymbol(), () ->
-            writer.putObject(request, PutObjectOptions.keepingDirs(), null));
+  private void upload(PutObjectRequest request, InputStream inputStream) throws IOException {
+    trackDurationOfInvocation(trackerStatistics, COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
+        () -> writer.putObject(request, PutObjectOptions.keepingDirs(),
+            new S3ADataBlocks.BlockUploadData(inputStream), false, null));
   }
 
   @Override

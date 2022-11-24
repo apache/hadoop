@@ -25,9 +25,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +40,9 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
+
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
@@ -122,7 +122,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   /**
    * list of keys to delete on the next (bulk) delete call.
    */
-  private final List<DeleteObjectsRequest.KeyVersion> keysToDelete =
+  private final List<ObjectIdentifier> keysToDelete =
       new ArrayList<>();
 
   /**
@@ -199,7 +199,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    */
   private void queueToDelete(Path path, String key) {
     LOG.debug("Queueing to delete {}", path);
-    keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
+    keysToDelete.add(ObjectIdentifier.builder().key(key).build());
   }
 
   /**
@@ -268,7 +268,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       } else {
         recursiveDirectoryRename();
       }
-    } catch (AmazonClientException | IOException ex) {
+    } catch (SdkException | IOException ex) {
       // rename failed.
       // block for all ongoing copies to complete, successfully or not
       try {
@@ -572,7 +572,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    */
   @Retries.RetryTranslated
   private void removeSourceObjects(
-      final List<DeleteObjectsRequest.KeyVersion> keys)
+      final List<ObjectIdentifier> keys)
       throws IOException {
     // remove the keys
 
@@ -580,9 +580,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // who is trying to debug why objects are no longer there.
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initiating delete operation for {} objects", keys.size());
-      for (DeleteObjectsRequest.KeyVersion key : keys) {
-        LOG.debug(" {} {}", key.getKey(),
-            key.getVersion() != null ? key.getVersion() : "");
+      for (ObjectIdentifier objectIdentifier : keys) {
+        LOG.debug(" {} {}", objectIdentifier.key(),
+            objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
       }
     }
 
@@ -619,10 +619,10 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   protected IOException convertToIOException(final Exception ex) {
     if (ex instanceof IOException) {
       return (IOException) ex;
-    } else if (ex instanceof SdkBaseException) {
+    } else if (ex instanceof SdkException) {
       return translateException("rename " + sourcePath + " to " + destPath,
           sourcePath.toString(),
-          (SdkBaseException) ex);
+          (SdkException) ex);
     } else {
       // should never happen, but for completeness
       return new IOException(ex);

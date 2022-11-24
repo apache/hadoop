@@ -22,14 +22,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,6 +33,11 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
+
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -98,9 +99,11 @@ public class TestInvoker extends Assert {
   private int retryCount;
   private Invoker invoker = new Invoker(RETRY_POLICY,
       (text, e, retries, idempotent) -> retryCount++);
-  private static final AmazonClientException CLIENT_TIMEOUT_EXCEPTION =
-      new AmazonClientException(new Local.ConnectTimeoutException("timeout"));
-  private static final AmazonServiceException BAD_REQUEST = serviceException(
+  private static final SdkException CLIENT_TIMEOUT_EXCEPTION =
+      SdkException.builder()
+          .cause(new Local.ConnectTimeoutException("timeout"))
+          .build();
+  private static final AwsServiceException BAD_REQUEST = serviceException(
       AWSBadRequestException.STATUS_CODE,
       "bad request");
 
@@ -109,24 +112,26 @@ public class TestInvoker extends Assert {
     resetCounters();
   }
 
-  private static AmazonServiceException serviceException(int code,
+  private static AwsServiceException serviceException(int code,
       String text) {
-    AmazonServiceException ex = new AmazonServiceException(text);
-    ex.setStatusCode(code);
-    return ex;
+    return AwsServiceException.builder()
+        .message(text)
+        .statusCode(code)
+        .build();
   }
 
-  private static AmazonS3Exception createS3Exception(int code) {
+  private static S3Exception createS3Exception(int code) {
     return createS3Exception(code, "", null);
   }
 
-  private static AmazonS3Exception createS3Exception(int code,
+  private static S3Exception createS3Exception(int code,
       String message,
       Throwable inner) {
-    AmazonS3Exception ex = new AmazonS3Exception(message);
-    ex.setStatusCode(code);
-    ex.initCause(inner);
-    return ex;
+    return (S3Exception) S3Exception.builder()
+        .message(message)
+        .statusCode(code)
+        .cause(inner)
+        .build();
   }
 
   protected <E extends Throwable> void verifyTranslated(
@@ -136,7 +141,7 @@ public class TestInvoker extends Assert {
   }
 
   private static <E extends Throwable> E verifyTranslated(Class<E> clazz,
-      SdkBaseException exception) throws Exception {
+      SdkException exception) throws Exception {
     return verifyExceptionClass(clazz,
         translateException("test", "/", exception));
   }
@@ -157,16 +162,22 @@ public class TestInvoker extends Assert {
 
   @Test
   public void test500isStatus500Exception() throws Exception {
-    AmazonServiceException ex = new AmazonServiceException("");
-    ex.setStatusCode(500);
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("")
+        .statusCode(500)
+        .build();
     verifyTranslated(AWSStatus500Exception.class,
         ex);
   }
 
   @Test
   public void testExceptionsWithTranslatableMessage() throws Exception {
-    SdkBaseException xmlParsing = new SdkBaseException(EOF_MESSAGE_IN_XML_PARSER);
-    SdkBaseException differentLength = new SdkBaseException(EOF_READ_DIFFERENT_LENGTH);
+    SdkException xmlParsing = SdkException.builder()
+        .message(EOF_MESSAGE_IN_XML_PARSER)
+        .build();
+    SdkException differentLength = SdkException.builder()
+        .message(EOF_READ_DIFFERENT_LENGTH)
+        .build();
 
     verifyTranslated(EOFException.class, xmlParsing);
     verifyTranslated(EOFException.class, differentLength);
@@ -178,7 +189,9 @@ public class TestInvoker extends Assert {
     final AtomicInteger counter = new AtomicInteger(0);
     invoker.retry("test", null, false, () -> {
       if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
-        throw new SdkClientException(EOF_READ_DIFFERENT_LENGTH);
+        throw SdkClientException.builder()
+            .message(EOF_READ_DIFFERENT_LENGTH)
+            .build();
       }
     });
 
@@ -190,7 +203,9 @@ public class TestInvoker extends Assert {
     final AtomicInteger counter = new AtomicInteger(0);
     invoker.retry("test", null, false, () -> {
       if (counter.incrementAndGet() < ACTIVE_RETRY_LIMIT) {
-        throw new SdkClientException(EOF_MESSAGE_IN_XML_PARSER);
+        throw SdkClientException.builder()
+            .message(EOF_MESSAGE_IN_XML_PARSER)
+            .build();
       }
     });
 
@@ -201,14 +216,36 @@ public class TestInvoker extends Assert {
   public void testExtractConnectTimeoutException() throws Throwable {
     throw extractException("", "",
         new ExecutionException(
-            new AmazonClientException(LOCAL_CONNECTION_TIMEOUT_EX)));
+            SdkException.builder()
+                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+                .build()));
   }
 
   @Test(expected = SocketTimeoutException.class)
   public void testExtractSocketTimeoutException() throws Throwable {
     throw extractException("", "",
         new ExecutionException(
-            new AmazonClientException(SOCKET_TIMEOUT_EX)));
+            SdkException.builder()
+                .cause(SOCKET_TIMEOUT_EX)
+                .build()));
+  }
+
+  @Test(expected = org.apache.hadoop.net.ConnectTimeoutException.class)
+  public void testExtractConnectTimeoutExceptionFromCompletionException() throws Throwable {
+    throw extractException("", "",
+        new CompletionException(
+            SdkException.builder()
+                .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+                .build()));
+  }
+
+  @Test(expected = SocketTimeoutException.class)
+  public void testExtractSocketTimeoutExceptionFromCompletionException() throws Throwable {
+    throw extractException("", "",
+        new CompletionException(
+            SdkException.builder()
+                .cause(SOCKET_TIMEOUT_EX)
+                .build()));
   }
 
   /**
@@ -259,7 +296,7 @@ public class TestInvoker extends Assert {
         ex, retries, false);
   }
 
-  protected AmazonServiceException newThrottledException() {
+  protected AwsServiceException newThrottledException() {
     return serviceException(
         AWSServiceThrottledException.STATUS_CODE, "throttled");
   }
@@ -354,7 +391,9 @@ public class TestInvoker extends Assert {
     // connection timeout exceptions are special, but as AWS shades
     // theirs, we need to string match them
     verifyTranslated(ConnectTimeoutException.class,
-        new AmazonClientException(HTTP_CONNECTION_TIMEOUT_EX));
+        SdkException.builder()
+            .cause(HTTP_CONNECTION_TIMEOUT_EX)
+            .build());
   }
 
   @Test
@@ -362,14 +401,18 @@ public class TestInvoker extends Assert {
     // connection timeout exceptions are special, but as AWS shades
     // theirs, we need to string match them
     verifyTranslated(ConnectTimeoutException.class,
-        new AmazonClientException(LOCAL_CONNECTION_TIMEOUT_EX));
+        SdkException.builder()
+            .cause(LOCAL_CONNECTION_TIMEOUT_EX)
+            .build());
   }
 
   @Test
   public void testShadedConnectionTimeoutExceptionNotMatching()
       throws Throwable {
     InterruptedIOException ex = verifyTranslated(InterruptedIOException.class,
-        new AmazonClientException(new Local.NotAConnectTimeoutException()));
+        SdkException.builder()
+            .cause(new Local.NotAConnectTimeoutException())
+            .build());
     if (ex instanceof ConnectTimeoutException) {
       throw ex;
     }

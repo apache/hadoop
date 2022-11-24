@@ -27,12 +27,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AnonymousAWSCredentials;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.s3a.adapter.V1V2AwsCredentialProviderAdapter;
 import org.apache.hadoop.util.Preconditions;
+
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +45,12 @@ import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.io.IOUtils;
 
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.core.exception.SdkException;
+
 /**
  * A list of providers.
  *
@@ -51,17 +59,17 @@ import org.apache.hadoop.io.IOUtils;
  * <ol>
  *   <li>Allows extra providers to be added dynamically.</li>
  *   <li>If any provider in the chain throws an exception other than
- *   an {@link AmazonClientException}, that is rethrown, rather than
+ *   an {@link SdkException}, that is rethrown, rather than
  *   swallowed.</li>
  *   <li>Has some more diagnostics.</li>
- *   <li>On failure, the last "relevant" AmazonClientException raised is
+ *   <li>On failure, the last "relevant" {@link SdkException} raised is
  *   rethrown; exceptions other than 'no credentials' have priority.</li>
- *   <li>Special handling of {@link AnonymousAWSCredentials}.</li>
+ *   <li>Special handling of {@link AnonymousCredentialsProvider}.</li>
  * </ol>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class AWSCredentialProviderList implements AWSCredentialsProvider,
+public final class AWSCredentialProviderList implements AwsCredentialsProvider,
     AutoCloseable {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -73,9 +81,9 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
       CREDENTIALS_REQUESTED_WHEN_CLOSED
       = "Credentials requested after provider list was closed";
 
-  private final List<AWSCredentialsProvider> providers = new ArrayList<>(1);
+  private final List<AwsCredentialsProvider> providers = new ArrayList<>(1);
   private boolean reuseLastProvider = true;
-  private AWSCredentialsProvider lastProvider;
+  private AwsCredentialsProvider lastProvider;
 
   private final AtomicInteger refCount = new AtomicInteger(1);
 
@@ -99,7 +107,9 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
    */
   public AWSCredentialProviderList(
       Collection<AWSCredentialsProvider> providers) {
-    this.providers.addAll(providers);
+    for (AWSCredentialsProvider provider: providers) {
+      this.providers.add(V1V2AwsCredentialProviderAdapter.adapt(provider));
+    }
   }
 
   /**
@@ -109,6 +119,19 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
    */
   public AWSCredentialProviderList(final String name,
       final AWSCredentialsProvider... providerArgs) {
+    setName(name);
+    for (AWSCredentialsProvider provider: providerArgs) {
+      this.providers.add(V1V2AwsCredentialProviderAdapter.adapt(provider));
+    }
+  }
+
+  /**
+   * Create with an initial list of SDK V2 credential providers.
+   * @param name name for error messages, may be ""
+   * @param providerArgs provider list.
+   */
+  public AWSCredentialProviderList(final String name,
+      final AwsCredentialsProvider... providerArgs) {
     setName(name);
     Collections.addAll(providers, providerArgs);
   }
@@ -127,11 +150,20 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
 
   /**
    * Add a new provider.
-   * @param p provider
+   * @param provider provider
    */
-  public void add(AWSCredentialsProvider p) {
-    providers.add(p);
+  public void add(AWSCredentialsProvider provider) {
+    providers.add(V1V2AwsCredentialProviderAdapter.adapt(provider));
   }
+
+  /**
+   * Add a new SDK V2 provider.
+   * @param provider provider
+   */
+  public void add(AwsCredentialsProvider provider) {
+    providers.add(provider);
+  }
+
 
   /**
    * Add all providers from another list to this one.
@@ -142,15 +174,18 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
   }
 
   /**
-   * Refresh all child entries.
+   * This method will get credentials using SDK V2's resolveCredentials and then convert it into
+   * V1 credentials. This required by delegation token binding classes.
+   * @return SDK V1 credentials
    */
-  @Override
-  public void refresh() {
-    if (isClosed()) {
-      return;
-    }
-    for (AWSCredentialsProvider provider : providers) {
-      provider.refresh();
+  public AWSCredentials getCredentials() {
+    AwsCredentials credentials = resolveCredentials();
+    if (credentials instanceof AwsSessionCredentials) {
+      return new BasicSessionCredentials(credentials.accessKeyId(),
+          credentials.secretAccessKey(),
+          ((AwsSessionCredentials) credentials).sessionToken());
+    } else {
+      return new BasicAWSCredentials(credentials.accessKeyId(), credentials.secretAccessKey());
     }
   }
 
@@ -160,7 +195,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
    * @return a set of credentials (possibly anonymous), for authenticating.
    */
   @Override
-  public AWSCredentials getCredentials() {
+  public AwsCredentials resolveCredentials() {
     if (isClosed()) {
       LOG.warn(CREDENTIALS_REQUESTED_WHEN_CLOSED);
       throw new NoAuthWithAWSException(name +
@@ -168,18 +203,18 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
     }
     checkNotEmpty();
     if (reuseLastProvider && lastProvider != null) {
-      return lastProvider.getCredentials();
+      return lastProvider.resolveCredentials();
     }
 
-    AmazonClientException lastException = null;
-    for (AWSCredentialsProvider provider : providers) {
+    SdkException lastException = null;
+    for (AwsCredentialsProvider provider : providers) {
       try {
-        AWSCredentials credentials = provider.getCredentials();
+        AwsCredentials credentials = provider.resolveCredentials();
         Preconditions.checkNotNull(credentials,
             "Null credentials returned by %s", provider);
-        if ((credentials.getAWSAccessKeyId() != null &&
-            credentials.getAWSSecretKey() != null)
-            || (credentials instanceof AnonymousAWSCredentials)) {
+        if ((credentials.accessKeyId() != null && credentials.secretAccessKey() != null) || (
+            provider instanceof AnonymousCredentialsProvider
+                || provider instanceof AnonymousAWSCredentialsProvider)) {
           lastProvider = provider;
           LOG.debug("Using credentials from {}", provider);
           return credentials;
@@ -196,7 +231,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
         }
         LOG.debug("No credentials from {}: {}",
             provider, e.toString());
-      } catch (AmazonClientException e) {
+      } catch (SdkException e) {
         lastException = e;
         LOG.debug("No credentials provided by {}: {}",
             provider, e.toString(), e);
@@ -223,13 +258,13 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
    * @return providers
    */
   @VisibleForTesting
-  List<AWSCredentialsProvider> getProviders() {
+  List<AwsCredentialsProvider> getProviders() {
     return providers;
   }
 
   /**
    * Verify that the provider list is not empty.
-   * @throws AmazonClientException if there are no providers.
+   * @throws SdkException if there are no providers.
    */
   public void checkNotEmpty() {
     if (providers.isEmpty()) {
@@ -317,7 +352,7 @@ public final class AWSCredentialProviderList implements AWSCredentialsProvider,
     }
 
     // do this outside the synchronized block.
-    for (AWSCredentialsProvider p : providers) {
+    for (AwsCredentialsProvider p : providers) {
       if (p instanceof Closeable) {
         IOUtils.closeStream((Closeable) p);
       } else if (p instanceof AutoCloseable) {

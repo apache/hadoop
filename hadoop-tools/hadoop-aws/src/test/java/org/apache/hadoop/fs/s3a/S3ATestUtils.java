@@ -61,12 +61,12 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import java.io.Closeable;
 import java.io.File;
@@ -612,8 +612,7 @@ public final class S3ATestUtils {
    * @return a set of credentials
    * @throws IOException on a failure
    */
-  @SuppressWarnings("deprecation")
-  public static AWSCredentialsProvider buildAwsCredentialsProvider(
+  public static AwsCredentialsProvider buildAwsCredentialsProvider(
       final Configuration conf)
       throws IOException {
     assumeSessionTestsEnabled(conf);
@@ -668,13 +667,14 @@ public final class S3ATestUtils {
     MarshalledCredentials sc = MarshalledCredentialBinding
         .requestSessionCredentials(
           buildAwsCredentialsProvider(conf),
-          S3AUtils.createAwsConf(conf, bucket, AWS_SERVICE_IDENTIFIER_STS),
+          conf,
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
               DEFAULT_ASSUMED_ROLE_STS_ENDPOINT),
           conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT_REGION,
               ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT),
           duration,
-          new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT));
+          new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT),
+           bucket );
     sc.validate("requested session credentials: ",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     return sc;

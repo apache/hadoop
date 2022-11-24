@@ -18,21 +18,21 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
@@ -57,7 +57,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
   private final AWSRequestAnalyzer analyzer = new AWSRequestAnalyzer();
 
   /**
-   * Count of requests analyzed via the {@link #a(AmazonWebServiceRequest)}
+   * Count of requests analyzed via the {@link #a(AwsRequest.Builder)}
    * call.
    */
   private int requestsAnalyzed;
@@ -81,27 +81,28 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testRequestFactoryWithCannedACL() throws Throwable {
-    CannedAccessControlList acl = CannedAccessControlList.BucketOwnerFullControl;
+    ObjectCannedACL acl = ObjectCannedACL.BUCKET_OWNER_FULL_CONTROL;
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withCannedACL(acl)
         .build();
     String path = "path";
     String path2 = "path2";
-    ObjectMetadata md = factory.newObjectMetadata(128);
-    Assertions.assertThat(
-            factory.newPutObjectRequest(path, md,
-                    null, new ByteArrayInputStream(new byte[0]))
-                .getCannedAcl())
+    HeadObjectResponse md = HeadObjectResponse.builder().contentLength(128L).build();
+
+    Assertions.assertThat(factory.newPutObjectRequestBuilder(path, null, 128, false)
+            .build()
+            .acl())
         .describedAs("ACL of PUT")
         .isEqualTo(acl);
-    Assertions.assertThat(factory.newCopyObjectRequest(path, path2, md)
-            .getCannedAccessControlList())
+    Assertions.assertThat(factory.newCopyObjectRequestBuilder(path, path2, md)
+            .build()
+            .acl())
         .describedAs("ACL of COPY")
         .isEqualTo(acl);
-    Assertions.assertThat(factory.newMultipartUploadRequest(path,
-                null)
-            .getCannedACL())
+    Assertions.assertThat(factory.newMultipartUploadRequestBuilder(path, null)
+            .build()
+            .acl())
         .describedAs("ACL of MPU")
         .isEqualTo(acl);
   }
@@ -132,21 +133,18 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     private final AtomicLong counter = new AtomicLong();
 
     @Override
-    public <T extends AmazonWebServiceRequest> T prepareRequest(final T t) {
+    public void prepareRequest(final SdkRequest.Builder t) {
       counter.addAndGet(1);
-      return t;
     }
   }
 
   /**
    * Analyze the request, log the output, return the info.
-   * @param request request.
-   * @param <T> type of request.
+   * @param builder request builder.
    * @return value
    */
-  private <T extends AmazonWebServiceRequest> AWSRequestAnalyzer.RequestInfo
-      a(T request) {
-    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(request);
+  private AWSRequestAnalyzer.RequestInfo a(AwsRequest.Builder builder) {
+    AWSRequestAnalyzer.RequestInfo info = analyzer.analyze(builder.build());
     LOG.info("{}", info);
     requestsAnalyzed++;
     return info;
@@ -160,27 +158,25 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String path = "path";
     String path2 = "path2";
     String id = "1";
-    ObjectMetadata md = factory.newObjectMetadata(128);
-    a(factory.newAbortMultipartUploadRequest(path, id));
-    a(factory.newCompleteMultipartUploadRequest(path, id,
+    a(factory.newAbortMultipartUploadRequestBuilder(path, id));
+    a(factory.newCompleteMultipartUploadRequestBuilder(path, id,
         new ArrayList<>()));
-    a(factory.newCopyObjectRequest(path, path2, md));
-    a(factory.newDeleteObjectRequest(path));
-    a(factory.newBulkDeleteRequest(new ArrayList<>()));
+    a(factory.newCopyObjectRequestBuilder(path, path2,
+        HeadObjectResponse.builder().build()));
+    a(factory.newDeleteObjectRequestBuilder(path));
+    a(factory.newBulkDeleteRequestBuilder(new ArrayList<>()));
     a(factory.newDirectoryMarkerRequest(path));
-    a(factory.newGetObjectRequest(path));
-    a(factory.newGetObjectMetadataRequest(path));
-    a(factory.newListMultipartUploadsRequest(path));
-    a(factory.newListObjectsV1Request(path, "/", 1));
-    a(factory.newListNextBatchOfObjectsRequest(new ObjectListing()));
-    a(factory.newListObjectsV2Request(path, "/", 1));
-    a(factory.newMultipartUploadRequest(path, null));
-    File srcfile = new File("/tmp/a");
-    a(factory.newPutObjectRequest(path,
-        factory.newObjectMetadata(-1), null, srcfile));
-    ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
-    a(factory.newPutObjectRequest(path, md, null, stream));
-    a(factory.newSelectRequest(path));
+    a(factory.newGetObjectRequestBuilder(path));
+    a(factory.newHeadObjectRequestBuilder(path));
+    a(factory.newListMultipartUploadsRequestBuilder(path));
+    a(factory.newListObjectsV1RequestBuilder(path, "/", 1));
+    a(factory.newListObjectsV2RequestBuilder(path, "/", 1));
+    a(factory.newMultipartUploadRequestBuilder(path, null));
+    a(factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.keepingDirs(), -1, true));
+    a(factory.newPutObjectRequestBuilder(path,
+        PutObjectOptions.deletingDirs(), 1024, false));
+    a(factory.newSelectRequestBuilder(path));
   }
 
   /**
@@ -193,25 +189,18 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withRequestPreparer(countRequests)
+        .withMultipartPartCountLimit(2)
         .build();
 
     String path = "path";
-    String path2 = "path2";
     String id = "1";
-    File srcfile = File.createTempFile("file", "");
-    try {
-      ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
 
-      a(factory.newUploadPartRequest(path, id, 1, 0, stream, null, 0));
-      a(factory.newUploadPartRequest(path, id, 2, 128_000_000,
-          null, srcfile, 0));
-      // offset is past the EOF
-      intercept(IllegalArgumentException.class, () ->
-          factory.newUploadPartRequest(path, id, 3, 128_000_000,
-              null, srcfile, 128));
-    } finally {
-      srcfile.delete();
-    }
+    a(factory.newUploadPartRequestBuilder(path, id, 1, 0));
+    a(factory.newUploadPartRequestBuilder(path, id, 2, 128_000_000));
+    // partNumber is past the limit
+    intercept(PathIOException.class, () ->
+        factory.newUploadPartRequestBuilder(path, id, 3, 128_000_000));
+
     assertThat(countRequests.counter.get())
         .describedAs("request preparation count")
         .isEqualTo(requestsAnalyzed);

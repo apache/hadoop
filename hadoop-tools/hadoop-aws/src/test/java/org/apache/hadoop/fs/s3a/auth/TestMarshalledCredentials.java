@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import com.amazonaws.auth.AWSCredentials;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
@@ -94,13 +94,13 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         new Configuration(false),
         credentials,
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
-    AWSCredentials aws = provider.getCredentials();
+    AwsCredentials aws = provider.resolveCredentials();
     assertEquals(credentials.toString(),
         credentials.getAccessKey(),
-        aws.getAWSAccessKeyId());
+        aws.accessKeyId());
     assertEquals(credentials.toString(),
         credentials.getSecretKey(),
-        aws.getAWSSecretKey());
+        aws.secretAccessKey());
     // because the credentials are set to full only, creation will fail
   }
 
@@ -119,7 +119,7 @@ public class TestMarshalledCredentials extends HadoopTestBase {
         MarshalledCredentials.CredentialTypeRequired.FullOnly);
     // because the credentials are set to full only, creation will fail
     intercept(NoAuthWithAWSException.class, "test",
-        () ->  provider.getCredentials());
+        () ->  provider.resolveCredentials());
   }
 
   /**

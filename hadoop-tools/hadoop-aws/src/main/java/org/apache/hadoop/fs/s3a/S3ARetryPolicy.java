@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.AmazonClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +42,8 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.util.Preconditions;
+
+import software.amazon.awssdk.core.exception.SdkException;
 
 import static org.apache.hadoop.io.retry.RetryPolicies.*;
 
@@ -68,9 +69,9 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
  *
  * The retry policy is all built around that of the normal IO exceptions,
  * particularly those extracted from
- * {@link S3AUtils#translateException(String, Path, AmazonClientException)}.
+ * {@link S3AUtils#translateException(String, Path, SdkException)}.
  * Because the {@link #shouldRetry(Exception, int, int, boolean)} method
- * does this translation if an {@code AmazonClientException} is processed,
+ * does this translation if an {@code SdkException} is processed,
  * the policy defined for the IOEs also applies to the original exceptions.
  *
  * Put differently: this retry policy aims to work for handlers of the
@@ -242,11 +243,10 @@ public class S3ARetryPolicy implements RetryPolicy {
       boolean idempotent) throws Exception {
     Preconditions.checkArgument(exception != null, "Null exception");
     Exception ex = exception;
-    if (exception instanceof AmazonClientException) {
-      // uprate the amazon client exception for the purpose of exception
+    if (exception instanceof SdkException) {
+      // update the sdk exception for the purpose of exception
       // processing.
-      ex = S3AUtils.translateException("", "",
-          (AmazonClientException) exception);
+      ex = S3AUtils.translateException("", "", (SdkException) exception);
     }
     return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
   }

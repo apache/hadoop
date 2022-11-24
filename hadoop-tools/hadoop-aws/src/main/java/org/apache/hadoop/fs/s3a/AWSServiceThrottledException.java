@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 
 /**
  * Exception raised when a service was throttled.
@@ -36,7 +36,7 @@ public class AWSServiceThrottledException extends AWSServiceIOException {
    * @param cause the underlying cause
    */
   public AWSServiceThrottledException(String operation,
-      AmazonServiceException cause) {
+      AwsServiceException cause) {
     super(operation, cause);
   }
 }

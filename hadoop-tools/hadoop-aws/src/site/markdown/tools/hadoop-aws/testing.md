@@ -1004,20 +1004,18 @@ using an absolute XInclude reference to it.
 **Warning do not enable any type of failure injection in production.  The
 following settings are for testing only.**
 
-One of the challenges with S3A integration tests was the fact that S3 was an
-eventually-consistent storage system. To simulate inconsistencies more
-frequently than they would normally surface, S3A supports a shim layer on top of the `AmazonS3Client`
-class which artificially delays certain paths from appearing in listings.
-This is implemented in the class `InconsistentAmazonS3Client`.
+S3A provides an "Inconsistent S3 Client Factory" that can be used to
+simulate throttling by injecting random failures on S3 client requests.
 
-Now that S3 is consistent, injecting inconsistency is no longer needed
-during testing.
-However, it is stil useful to use the other feature of the client:
-throttling simulation.
 
-## Simulating List Inconsistencies
+**Note**
 
-### Enabling the InconsistentAmazonS3CClient
+In previous releases, this factory could also be used to simulate
+inconsistencies during testing of S3Guard. Now that S3 is consistent,
+injecting inconsistency is no longer needed during testing.
+
+
+### Enabling the InconsistentS3CClientFactory
 
 
 To enable the fault-injecting client via configuration, switch the
@@ -1047,7 +1045,7 @@ These exceptions are returned to S3; they do not test the
 AWS SDK retry logic.
 
 
-### Using the `InconsistentAmazonS3CClient` in downstream integration tests
+### Using the `InconsistentS3CClientFactory` in downstream integration tests
 
 The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
 be used in integration tests.

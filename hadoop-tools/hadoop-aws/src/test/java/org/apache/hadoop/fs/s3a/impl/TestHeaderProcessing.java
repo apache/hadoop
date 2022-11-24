@@ -26,11 +26,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.util.Lists;
 import org.junit.Before;
 import org.junit.Test;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.MockS3AFileSystem;
@@ -206,20 +207,20 @@ public class TestHeaderProcessing extends HadoopTestBase {
     final String owner = "x-header-owner";
     final String root = "root";
     CONTEXT_ACCESSORS.userHeaders.put(owner, root);
-    final ObjectMetadata source = CONTEXT_ACCESSORS
+    final HeadObjectResponse source = CONTEXT_ACCESSORS
         .getObjectMetadata(MAGIC_KEY);
-    final Map<String, String> sourceUserMD = source.getUserMetadata();
+    final Map<String, String> sourceUserMD = source.metadata();
     Assertions.assertThat(sourceUserMD.get(owner))
         .describedAs("owner header in copied MD")
         .isEqualTo(root);
 
-    ObjectMetadata dest = new ObjectMetadata();
-    headerProcessing.cloneObjectMetadata(source, dest);
+    Map<String, String> destUserMetadata = new HashMap<>();
+    headerProcessing.cloneObjectMetadata(source, destUserMetadata, CopyObjectRequest.builder());
 
-    Assertions.assertThat(dest.getUserMetadata().get(X_HEADER_MAGIC_MARKER))
+    Assertions.assertThat(destUserMetadata.get(X_HEADER_MAGIC_MARKER))
         .describedAs("Magic marker header in copied MD")
         .isNull();
-    Assertions.assertThat(dest.getUserMetadata().get(owner))
+    Assertions.assertThat(destUserMetadata.get(owner))
         .describedAs("owner header in copied MD")
         .isEqualTo(root);
   }
@@ -307,14 +308,13 @@ public class TestHeaderProcessing extends HadoopTestBase {
     }
 
     @Override
-    public ObjectMetadata getObjectMetadata(final String key)
+    public HeadObjectResponse getObjectMetadata(final String key)
         throws IOException {
       if (MAGIC_KEY.equals(key)) {
-        ObjectMetadata omd = new ObjectMetadata();
-        omd.setUserMetadata(userHeaders);
-        omd.setContentLength(len);
-        omd.setLastModified(date);
-        return omd;
+        return HeadObjectResponse.builder()
+            .metadata(userHeaders)
+            .contentLength(len)
+            .lastModified(date.toInstant()).build();
       } else {
         throw new FileNotFoundException(key);
       }

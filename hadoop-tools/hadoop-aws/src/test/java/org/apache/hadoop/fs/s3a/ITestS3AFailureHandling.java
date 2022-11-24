@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 
@@ -34,10 +32,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.nio.file.AccessDeniedException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
@@ -115,12 +117,12 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     }
   }
 
-  private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
+  private List<ObjectIdentifier> buildDeleteRequest(
       final String[] keys) {
-    List<DeleteObjectsRequest.KeyVersion> request = new ArrayList<>(
+    List<ObjectIdentifier> request = new ArrayList<>(
         keys.length);
     for (String key : keys) {
-      request.add(new DeleteObjectsRequest.KeyVersion(key));
+      request.add(ObjectIdentifier.builder().key(key).build());
     }
     return request;
   }
@@ -156,12 +158,26 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     // create a span, expect it to be activated.
     fs.getAuditSpanSource().createSpan(StoreStatisticNames.OP_DELETE,
         csvPath.toString(), null);
-    List<DeleteObjectsRequest.KeyVersion> keys
+    List<ObjectIdentifier> keys
         = buildDeleteRequest(
             new String[]{
                 fs.pathToKey(csvPath),
                 "missing-key.csv"
             });
+    MultiObjectDeleteException ex = intercept(
+        MultiObjectDeleteException.class,
+        () -> fs.removeKeys(keys, false));
+    final List<Path> undeleted = ex.errors().stream()
+        .map(S3Error::key)
+        .map(fs::keyToQualifiedPath)
+        .collect(Collectors.toList());
+    final String undeletedFiles = undeleted.stream()
+        .map(Path::toString)
+        .collect(Collectors.joining(", "));
+    failIf(undeleted.size() != 2,
+        "undeleted list size wrong: " + undeletedFiles,
+        ex);
+    assertTrue("no CSV in " +undeletedFiles, undeleted.contains(csvPath));
   }
 
   /**

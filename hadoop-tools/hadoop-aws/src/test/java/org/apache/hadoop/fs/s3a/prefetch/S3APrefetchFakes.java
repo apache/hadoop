@@ -31,11 +31,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -61,6 +56,11 @@ import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.HADOOP_TMP_DIR;
@@ -175,32 +175,26 @@ public final class S3APrefetchFakes {
         createObjectAttributes(bucket, key, fileSize));
   }
 
-  public static S3ObjectInputStream createS3ObjectInputStream(byte[] buffer) {
-    return new S3ObjectInputStream(new ByteArrayInputStream(buffer), null);
+  public static ResponseInputStream<GetObjectResponse> createS3ObjectInputStream(
+      GetObjectResponse objectResponse, byte[] buffer) {
+    return new ResponseInputStream(objectResponse,
+        AbortableInputStream.create(new ByteArrayInputStream(buffer), () -> {}));
   }
 
   public static S3AInputStream.InputStreamCallbacks createInputStreamCallbacks(
-      String bucket,
-      String key) {
+      String bucket) {
 
-    S3Object object = new S3Object() {
-      @Override
-      public S3ObjectInputStream getObjectContent() {
-        return createS3ObjectInputStream(new byte[8]);
-      }
+    GetObjectResponse objectResponse = GetObjectResponse.builder()
+        .eTag(E_TAG)
+        .build();
 
-      @Override
-      public ObjectMetadata getObjectMetadata() {
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setHeader("ETag", E_TAG);
-        return metadata;
-      }
-    };
+    ResponseInputStream<GetObjectResponse> responseInputStream =
+        createS3ObjectInputStream(objectResponse, new byte[8]);
 
     return new S3AInputStream.InputStreamCallbacks() {
       @Override
-      public S3Object getObject(GetObjectRequest request) {
-        return object;
+      public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) {
+        return responseInputStream;
       }
 
       @Override
@@ -209,8 +203,8 @@ public final class S3APrefetchFakes {
       }
 
       @Override
-      public GetObjectRequest newGetRequest(String key) {
-        return new GetObjectRequest(bucket, key);
+      public GetObjectRequest.Builder newGetRequestBuilder(String key) {
+        return GetObjectRequest.builder().bucket(bucket).key(key);
       }
 
       @Override
@@ -229,9 +223,6 @@ public final class S3APrefetchFakes {
       int prefetchBlockSize,
       int prefetchBlockCount) {
 
-    org.apache.hadoop.fs.Path path = new org.apache.hadoop.fs.Path(key);
-
-    S3AFileStatus fileStatus = createFileStatus(key, fileSize);
     S3ObjectAttributes s3ObjectAttributes =
         createObjectAttributes(bucket, key, fileSize);
     S3AReadOpContext s3AReadOpContext = createReadContext(
@@ -242,7 +233,7 @@ public final class S3APrefetchFakes {
         prefetchBlockCount);
 
     S3AInputStream.InputStreamCallbacks callbacks =
-        createInputStreamCallbacks(bucket, key);
+        createInputStreamCallbacks(bucket);
     S3AInputStreamStatistics stats =
         s3AReadOpContext.getS3AStatisticsContext().newInputStreamStatistics();
 

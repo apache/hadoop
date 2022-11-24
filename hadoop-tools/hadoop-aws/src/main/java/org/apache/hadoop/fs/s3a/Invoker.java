@@ -24,8 +24,6 @@ import java.util.Optional;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.SdkBaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +36,8 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 import org.apache.hadoop.util.Preconditions;
+
+import software.amazon.awssdk.core.exception.SdkException;
 
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
 
@@ -120,7 +120,7 @@ public class Invoker {
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return operation.apply();
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw S3AUtils.translateException(action, path, e);
     }
   }
@@ -145,7 +145,7 @@ public class Invoker {
       throws IOException {
     try {
       return invokeTrackingDuration(tracker, operation);
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw S3AUtils.translateException(action, path, e);
     }
   }
@@ -170,7 +170,7 @@ public class Invoker {
 
   /**
    *
-   * Wait for a future, translating AmazonClientException into an IOException.
+   * Wait for a future, translating SdkException into an IOException.
    * @param action action to execute (used in error messages)
    * @param path path of work (used in error messages)
    * @param future future to await for
@@ -186,7 +186,7 @@ public class Invoker {
       throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false, "%s", action)) {
       return FutureIO.awaitFuture(future);
-    } catch (AmazonClientException e) {
+    } catch (SdkException e) {
       throw S3AUtils.translateException(action, path, e);
     }
   }
@@ -466,7 +466,7 @@ public class Invoker {
         }
         // execute the operation, returning if successful
         return operation.apply();
-      } catch (IOException | SdkBaseException e) {
+      } catch (IOException | SdkException e) {
         caught = e;
       }
       // you only get here if the operation didn't complete
@@ -478,7 +478,7 @@ public class Invoker {
         translated = (IOException) caught;
       } else {
         translated = S3AUtils.translateException(text, "",
-            (SdkBaseException)caught);
+            (SdkException) caught);
       }
 
       try {
@@ -517,10 +517,9 @@ public class Invoker {
     if (caught instanceof IOException) {
       throw (IOException) caught;
     } else {
-      throw (SdkBaseException) caught;
+      throw (SdkException) caught;
     }
   }
-
 
   /**
    * Execute an operation; any exception raised is simply caught and

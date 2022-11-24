@@ -31,7 +31,6 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
@@ -112,16 +111,14 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
         new MinimalWriteOperationHelperCallbacks());
-    ByteArrayInputStream inputStream = new ByteArrayInputStream(
-        "a".getBytes());
     // first one works
     String key = "destKey";
-    woh.newUploadPartRequest(key,
-        "uploadId", 1, 1024, inputStream, null, 0L);
+    woh.newUploadPartRequestBuilder(key,
+        "uploadId", 1, 1024);
     // but ask past the limit and a PathIOE is raised
     intercept(PathIOException.class, key,
-        () -> woh.newUploadPartRequest(key,
-            "uploadId", 50000, 1024, inputStream, null, 0L));
+        () -> woh.newUploadPartRequestBuilder(key,
+            "uploadId", 50000, 1024));
   }
 
   static class StreamClosedException extends IOException {}

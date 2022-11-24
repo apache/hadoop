@@ -18,59 +18,56 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
-import com.amazonaws.services.s3.transfer.Upload;
-import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 
-import static com.amazonaws.event.ProgressEventType.TRANSFER_COMPLETED_EVENT;
-import static com.amazonaws.event.ProgressEventType.TRANSFER_PART_STARTED_EVENT;
+import software.amazon.awssdk.transfer.s3.ObjectTransfer;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
+
+import org.apache.hadoop.util.Progressable;
 
 /**
  * Listener to progress from AWS regarding transfers.
  */
-public class ProgressableProgressListener implements ProgressListener {
+public class ProgressableProgressListener implements TransferListener {
   private static final Logger LOG = S3AFileSystem.LOG;
   private final S3AFileSystem fs;
   private final String key;
   private final Progressable progress;
   private long lastBytesTransferred;
-  private final Upload upload;
 
   /**
    * Instantiate.
    * @param fs filesystem: will be invoked with statistics updates
    * @param key key for the upload
-   * @param upload source of events
    * @param progress optional callback for progress.
    */
   public ProgressableProgressListener(S3AFileSystem fs,
       String key,
-      Upload upload,
       Progressable progress) {
     this.fs = fs;
     this.key = key;
-    this.upload = upload;
     this.progress = progress;
     this.lastBytesTransferred = 0;
   }
 
   @Override
-  public void progressChanged(ProgressEvent progressEvent) {
-    if (progress != null) {
+  public void transferInitiated(TransferListener.Context.TransferInitiated context) {
+    fs.incrementWriteOperations();
+  }
+
+  @Override
+  public void transferComplete(TransferListener.Context.TransferComplete context) {
+    fs.incrementWriteOperations();
+  }
+
+  @Override
+  public void bytesTransferred(TransferListener.Context.BytesTransferred context) {
+
+    if(progress != null) {
       progress.progress();
     }
 
-    // There are 3 http ops here, but this should be close enough for now
-    ProgressEventType pet = progressEvent.getEventType();
-    if (pet == TRANSFER_PART_STARTED_EVENT ||
-        pet == TRANSFER_COMPLETED_EVENT) {
-      fs.incrementWriteOperations();
-    }
-
-    long transferred = upload.getProgress().getBytesTransferred();
+    long transferred = context.progressSnapshot().bytesTransferred();
     long delta = transferred - lastBytesTransferred;
     fs.incrementPutProgressStatistics(key, delta);
     lastBytesTransferred = transferred;
@@ -81,9 +78,10 @@ public class ProgressableProgressListener implements ProgressListener {
    * This can handle race conditions in setup/teardown.
    * @return the number of bytes which were transferred after the notification
    */
-  public long uploadCompleted() {
-    long delta = upload.getProgress().getBytesTransferred() -
-        lastBytesTransferred;
+  public long uploadCompleted(ObjectTransfer upload) {
+
+    long delta =
+        upload.progress().snapshot().bytesTransferred() - lastBytesTransferred;
     if (delta > 0) {
       LOG.debug("S3A write delta changed after finished: {} bytes", delta);
       fs.incrementPutProgressStatistics(key, delta);

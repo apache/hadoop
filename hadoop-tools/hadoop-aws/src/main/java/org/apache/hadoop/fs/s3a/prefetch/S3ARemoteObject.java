@@ -19,15 +19,8 @@
 
 package org.apache.hadoop.fs.s3a.prefetch;
 
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.IdentityHashMap;
-import java.util.Map;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +28,16 @@ import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.fs.statistics.DurationTracker;
+
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 /**
  * Encapsulates low level interactions with S3 object on AWS.
@@ -73,12 +71,6 @@ public class S3ARemoteObject {
    * Enforces change tracking related policies.
    */
   private final ChangeTracker changeTracker;
-
-  /**
-   * Maps a stream returned by openForRead() to the associated S3 object.
-   * That allows us to close the object when closing the stream.
-   */
-  private final Map<InputStream, S3Object> s3Objects;
 
   /**
    * uri of the object being read.
@@ -123,7 +115,6 @@ public class S3ARemoteObject {
     this.client = client;
     this.streamStatistics = streamStatistics;
     this.changeTracker = changeTracker;
-    this.s3Objects = new IdentityHashMap<>();
     this.uri = this.getPath();
   }
 
@@ -187,21 +178,23 @@ public class S3ARemoteObject {
    * @throws IllegalArgumentException if offset is greater than or equal to file size.
    * @throws IllegalArgumentException if size is greater than the remaining bytes.
    */
-  public InputStream openForRead(long offset, int size) throws IOException {
+  public ResponseInputStream<GetObjectResponse> openForRead(long offset, int size)
+      throws IOException {
     Validate.checkNotNegative(offset, "offset");
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
     streamStatistics.streamOpened();
-    final GetObjectRequest request =
-        client.newGetRequest(s3Attributes.getKey())
-            .withRange(offset, offset + size - 1);
-    changeTracker.maybeApplyConstraint(request);
+    final GetObjectRequest request = client
+        .newGetRequestBuilder(s3Attributes.getKey())
+        .range(S3AUtils.formatRange(offset, offset + size - 1))
+        .applyMutation(changeTracker::maybeApplyConstraint)
+        .build();
 
     String operation = String.format(
         "%s %s at %d", S3AInputStream.OPERATION_OPEN, uri, offset);
     DurationTracker tracker = streamStatistics.initiateGetRequest();
-    S3Object object = null;
+    ResponseInputStream<GetObjectResponse> object = null;
 
     try {
       object = Invoker.once(operation, uri, () -> client.getObject(request));
@@ -212,27 +205,14 @@ public class S3ARemoteObject {
       tracker.close();
     }
 
-    changeTracker.processResponse(object, operation, offset);
-    InputStream stream = object.getObjectContent();
-    synchronized (s3Objects) {
-      s3Objects.put(stream, object);
-    }
-
-    return stream;
+    changeTracker.processResponse(object.response(), operation, offset);
+    return object;
   }
 
-  void close(InputStream inputStream, int numRemainingBytes) {
-    S3Object obj;
-    synchronized (s3Objects) {
-      obj = s3Objects.remove(inputStream);
-      if (obj == null) {
-        throw new IllegalArgumentException("inputStream not found");
-      }
-    }
+  void close(ResponseInputStream<GetObjectResponse> inputStream, int numRemainingBytes) {
     SDKStreamDrainer drainer = new SDKStreamDrainer(
         uri,
-        obj,
-        (S3ObjectInputStream)inputStream,
+        inputStream,
         false,
         numRemainingBytes,
         streamStatistics,

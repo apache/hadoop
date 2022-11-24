@@ -16,38 +16,52 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl;
+package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.s3a.AWSS3IOException;
+import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_200_OK;
 
 /**
- * Support for Multi Object Deletion.
- * This is used to be a complex piece of code as it was required to
- * update s3guard.
- * Now all that is left is the exception extraction for better
- * reporting,
+ * Exception raised in {@link S3AFileSystem#deleteObjects} when
+ * one or more of the keys could not be deleted.
+ *
+ * Used to reproduce the behaviour of SDK v1 for partial failures
+ * on DeleteObjects. In SDK v2, the errors are returned as part of
+ * the response objects.
  */
-public final class MultiObjectDeleteSupport {
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public class MultiObjectDeleteException extends S3Exception {
 
   private static final Logger LOG = LoggerFactory.getLogger(
-      MultiObjectDeleteSupport.class);
-
-  private MultiObjectDeleteSupport() {
-  }
+      MultiObjectDeleteException.class);
 
   /**
    * This is the exception exit code if access was denied on a delete.
    * {@value}.
    */
   public static final String ACCESS_DENIED = "AccessDenied";
+
+  private final List<S3Error> errors;
+
+  public MultiObjectDeleteException(List<S3Error> errors) {
+    super(builder().message(errors.toString()).statusCode(SC_200_OK));
+    this.errors = errors;
+  }
+
+  public List<S3Error> errors() { return errors; }
 
   /**
    * A {@code MultiObjectDeleteException} is raised if one or more
@@ -58,29 +72,23 @@ public final class MultiObjectDeleteSupport {
    * the causes, otherwise grabs the status code and uses it in the
    * returned exception.
    * @param message text for the exception
-   * @param deleteException the delete exception. to translate
    * @return an IOE with more detail.
    */
-  public static IOException translateDeleteException(
-      final String message,
-      final MultiObjectDeleteException deleteException) {
-    List<MultiObjectDeleteException.DeleteError> errors
-        = deleteException.getErrors();
+  public IOException translateException(final String message) {
     LOG.info("Bulk delete operation failed to delete all objects;"
             + " failure count = {}",
-        errors.size());
+        errors().size());
     final StringBuilder result = new StringBuilder(
-        errors.size() * 256);
+        errors().size() * 256);
     result.append(message).append(": ");
     String exitCode = "";
-    for (MultiObjectDeleteException.DeleteError error :
-        deleteException.getErrors()) {
-      String code = error.getCode();
-      String item = String.format("%s: %s%s: %s%n", code, error.getKey(),
-          (error.getVersionId() != null
-              ? (" (" + error.getVersionId() + ")")
+    for (S3Error error : errors()) {
+      String code = error.code();
+      String item = String.format("%s: %s%s: %s%n", code, error.key(),
+          (error.versionId() != null
+              ? (" (" + error.versionId() + ")")
               : ""),
-          error.getMessage());
+          error.message());
       LOG.info(item);
       result.append(item);
       if (exitCode == null || exitCode.isEmpty() || ACCESS_DENIED.equals(code)) {
@@ -89,9 +97,9 @@ public final class MultiObjectDeleteSupport {
     }
     if (ACCESS_DENIED.equals(exitCode)) {
       return (IOException) new AccessDeniedException(result.toString())
-          .initCause(deleteException);
+          .initCause(this);
     } else {
-      return new AWSS3IOException(result.toString(), deleteException);
+      return new AWSS3IOException(result.toString(), this);
     }
   }
 }

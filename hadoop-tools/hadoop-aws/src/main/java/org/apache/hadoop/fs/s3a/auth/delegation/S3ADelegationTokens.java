@@ -228,7 +228,10 @@ public class S3ADelegationTokens extends AbstractDTService {
     try {
       super.serviceStop();
     } finally {
-      ServiceOperations.stopQuietly(LOG, tokenBinding);
+      // TODO: Importing the transfer manager preview outside of the bundle causes some
+      //  issues. Over here, it can no longer find the LOG. We expect this to be fixed with the
+      //  release of the TM.
+     // ServiceOperations.stopQuietly(LOG, tokenBinding);
     }
   }
 

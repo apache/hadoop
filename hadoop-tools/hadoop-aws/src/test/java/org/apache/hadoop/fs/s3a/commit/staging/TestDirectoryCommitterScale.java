@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.amazonaws.services.s3.model.PartETag;
-
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
@@ -38,6 +36,8 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -159,8 +159,8 @@ public class TestDirectoryCommitterScale
     // step1: a list of tags.
     // this is the md5sum of hadoop 3.2.1.tar
     String tag = "9062dcf18ffaee254821303bbd11c72b";
-    List<PartETag> etags = IntStream.rangeClosed(1, BLOCKS_PER_TASK + 1)
-        .mapToObj(i -> new PartETag(i, tag))
+    List<CompletedPart> etags = IntStream.rangeClosed(1, BLOCKS_PER_TASK + 1)
+        .mapToObj(i -> CompletedPart.builder().partNumber(i).eTag(tag).build())
         .collect(Collectors.toList());
     SinglePendingCommit base = new SinglePendingCommit();
     base.setBucket(BUCKET);
