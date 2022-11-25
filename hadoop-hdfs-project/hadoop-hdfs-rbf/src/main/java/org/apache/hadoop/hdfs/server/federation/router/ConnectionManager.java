@@ -226,12 +226,13 @@ public class ConnectionManager {
           this.pools.put(connectionId, pool);
           this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
-        long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
-        pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
       } finally {
         writeLock.unlock();
       }
     }
+
+    long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
+    pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
 
     ConnectionContext conn = pool.getConnection();
 
