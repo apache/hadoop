@@ -75,6 +75,12 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
            + " homeSubCluster varchar(256) NOT NULL,"
            + " CONSTRAINT pk_reservationId PRIMARY KEY (reservationId))";
 
+  private static final String TABLE_MASTERKEYS =
+      "CREATE TABLE masterKeys ("
+          + " keyId bigint NOT NULL,"
+          + " masterKey varchar(1024) NOT NULL,"
+          + " CONSTRAINT pk_keyId PRIMARY KEY (keyId))";
+
   private static final String SP_REGISTERSUBCLUSTER =
       "CREATE PROCEDURE sp_registerSubCluster("
           + " IN subClusterId_IN varchar(256),"
@@ -318,6 +324,33 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
+  protected static final String SP_DROP_ADDMASTERKEY = "DROP PROCEDURE sp_addMasterKey";
+
+  protected static final String SP_ADDMASTERKEY =
+      "CREATE PROCEDURE sp_addMasterKey("
+          + " IN keyId_IN int, IN masterKey_IN varchar(1024),"
+          + " OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " INSERT INTO masterKeys(keyId, masterKey)"
+          + " (SELECT keyId_IN, masterKey_IN"
+          + " FROM masterKeys "
+          + " WHERE keyId = keyId_IN "
+          + " HAVING COUNT(*) = 0);"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
+          + " END";
+
+  protected static final String SP_DROP_GETMASTERKEY = "DROP PROCEDURE sp_getMasterKey";
+
+  protected static final String SP_GETMASTERKEY =
+      "CREATE PROCEDURE sp_getMasterKey("
+          + " IN keyId_IN int,"
+          + " OUT masterKey_OUT varchar(1024))"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " SELECT masterKey INTO masterKey_OUT "
+          + " FROM masterKeys "
+          + " WHERE keyId = keyId_IN; "
+          + " END ";
+
   private List<String> tables = new ArrayList<>();
 
   @Override
@@ -333,6 +366,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(TABLE_MEMBERSHIP).execute();
       conn.prepareStatement(TABLE_POLICIES).execute();
       conn.prepareStatement(TABLE_RESERVATIONSHOMESUBCLUSTER).execute();
+      conn.prepareStatement(TABLE_MASTERKEYS).execute();
 
       conn.prepareStatement(SP_REGISTERSUBCLUSTER).execute();
       conn.prepareStatement(SP_DEREGISTERSUBCLUSTER).execute();
@@ -355,6 +389,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_GETRESERVATIONSHOMESUBCLUSTER).execute();
       conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER).execute();
       conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
+
+      conn.prepareStatement(SP_ADDMASTERKEY).execute();
+      conn.prepareStatement(SP_GETMASTERKEY).execute();
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {

@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -42,11 +40,7 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
 import org.apache.hadoop.yarn.server.federation.store.records.*;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
+import org.apache.hadoop.yarn.server.federation.store.utils.*;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -1315,18 +1309,29 @@ public class SQLFederationStateStore implements FederationStateStore {
     return conn;
   }
 
+  /**
+   * SQLFederationStateStore Supports Store New MasterKey.
+   *
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey.
+   * @return routerMasterKeyResponse, the response contains the RouterMasterKey.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
 
-    // Parse the delegationKey from the request and get the ZK storage path.
+    // Step1: Verify parameters to ensure that key fields are not empty.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    // Step2: Parse the parameters and serialize the DelegationKey as a string.
     DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
     int keyId = delegationKey.getKeyId();
     String delegationKeyStr = encodeWritable(delegationKey);
     CallableStatement cstmt = null;
 
+    // Step3. store data in database.
     try {
-
       // Call procedure
       cstmt = getCallableStatement(CALL_SP_ADD_MASTERKEY);
 
@@ -1338,7 +1343,6 @@ public class SQLFederationStateStore implements FederationStateStore {
       // 3) OUT rowCount_OUT int
       cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
 
-      // Execute the query
       long startTime = clock.getTime();
       cstmt.executeUpdate();
       long stopTime = clock.getTime();
@@ -1353,8 +1357,6 @@ public class SQLFederationStateStore implements FederationStateStore {
             "Wrong behavior during the insertion of masterKey, keyId = %s. " +
             "please check the records of the database.", String.valueOf(keyId));
       }
-
-      // Record successful call time
       FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
     } catch (SQLException e) {
       FederationStateStoreClientMetrics.failedStateStoreCall();
@@ -1365,7 +1367,8 @@ public class SQLFederationStateStore implements FederationStateStore {
       FederationStateStoreUtils.returnToPool(LOG, cstmt);
     }
 
-    return null;
+    // Step4. Query Data from the database and return the result.
+    return getMasterKeyByDelegationKey(request);
   }
 
   @Override
@@ -1374,10 +1377,75 @@ public class SQLFederationStateStore implements FederationStateStore {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * SQLFederationStateStore Supports Remove MasterKey.
+   *
+   * @param request The request contains RouterMasterKey, which is an abstraction for DelegationKey
+   * @return routerMasterKeyResponse, the response contains the RouterMasterKey.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    // Step1: Verify parameters to ensure that key fields are not empty.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    // Step2: Parse parameters and get KeyId.
+    int paramKeyId = request.getRouterMasterKey().getKeyId();
+    CallableStatement cstmt = null;
+
+    // Step3: Call the stored procedure to get the result.
+    try {
+      // Defined the sp_getMasterKey procedure
+      // this procedure requires 2 parameters
+      // Input parameters
+      // 1）IN keyId_IN int
+      // Output parameters
+      // 2）OUT masterKey_OUT varchar(1024)
+      cstmt = getCallableStatement(CALL_SP_GET_MASTERKEY);
+
+      // Set the parameters for the stored procedure
+      // 1）IN keyId_IN int
+      cstmt.setInt("keyId_IN", paramKeyId);
+      // 2）OUT masterKey_OUT varchar(1024)
+      cstmt.registerOutParameter("masterKey_OUT", java.sql.Types.VARCHAR);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.execute();
+      long stopTime = clock.getTime();
+
+      // Get Result
+      String resultMasterKey = cstmt.getString("masterKey_OUT");
+      DelegationKey key = new DelegationKey();
+      decodeWritable(key, resultMasterKey);
+
+      // Get RouterMasterKey
+      RouterMasterKey routerMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
+          ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
+
+      LOG.info("Got the information about the specified masterKey = {} according to keyId = {}.",
+          routerMasterKey, paramKeyId);
+
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+
+      // Return query result.
+      return RouterMasterKeyResponse.newInstance(routerMasterKey);
+
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to obtain the masterKey information according to %s.",
+          String.valueOf(paramKeyId));
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+
+    // Throw exception information
+    throw new YarnException(
+        "Unable to obtain the masterKey information according to " + paramKeyId);
   }
 
   @Override
@@ -1438,5 +1506,11 @@ public class SQLFederationStateStore implements FederationStateStore {
     key.write(dos);
     dos.flush();
     return Base64.getUrlEncoder().encodeToString(bos.toByteArray());
+  }
+
+  public static void decodeWritable(Writable w, String idStr) throws IOException {
+    DataInputStream in = new DataInputStream(
+        new ByteArrayInputStream(Base64.getUrlDecoder().decode(idStr)));
+    w.readFields(in);
   }
 }

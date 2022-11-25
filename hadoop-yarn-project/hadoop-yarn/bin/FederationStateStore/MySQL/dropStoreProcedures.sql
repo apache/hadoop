@@ -55,3 +55,7 @@ DROP PROCEDURE sp_getReservationsHomeSubCluster;
 DROP PROCEDURE sp_deleteReservationHomeSubCluster;
 
 DROP PROCEDURE sp_updateReservationHomeSubCluster;
+
+DROP PROCEDURE sp_addMasterKey;
+
+DROP PROCEDURE sp_getMasterKey;

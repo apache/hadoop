@@ -558,12 +558,12 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         () -> stateStore.deleteReservationHomeSubCluster(delRequest));
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testStoreNewMasterKey() throws Exception {
     super.testStoreNewMasterKey();
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
     super.testGetMasterKeyByDelegationKey();
   }
