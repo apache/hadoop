@@ -240,4 +240,12 @@ BEGIN
    WHERE keyId = keyId_IN;
 END //
 
+CREATE PROCEDURE sp_deleteMasterKey(
+   IN keyId_IN int, OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM masterKeys
+   WHERE keyId = keyId_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
 DELIMITER ;

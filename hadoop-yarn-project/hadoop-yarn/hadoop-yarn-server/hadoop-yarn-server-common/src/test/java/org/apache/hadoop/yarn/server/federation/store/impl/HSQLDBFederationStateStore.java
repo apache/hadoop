@@ -351,6 +351,15 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE keyId = keyId_IN; "
           + " END ";
 
+  protected static final String SP_DROP_DELETEMASTERKEY = "DROP PROCEDURE sp_deleteMasterKey";
+
+  protected static final String SP_DELETEMASTERKEY =
+      "CREATE PROCEDURE sp_deleteMasterKey("
+          + " IN keyId_IN int, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM masterKeys WHERE keyId = keyId_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; END";
+
   private List<String> tables = new ArrayList<>();
 
   @Override
@@ -392,6 +401,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
       conn.prepareStatement(SP_ADDMASTERKEY).execute();
       conn.prepareStatement(SP_GETMASTERKEY).execute();
+      conn.prepareStatement(SP_DELETEMASTERKEY).execute();
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {
