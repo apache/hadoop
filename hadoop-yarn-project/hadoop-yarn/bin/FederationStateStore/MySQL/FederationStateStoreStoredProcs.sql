@@ -220,7 +220,7 @@ BEGIN
 END //
 
 CREATE PROCEDURE sp_addMasterKey(
-   IN keyId_IN int, IN masterKey_IN varchar(1024),
+   IN keyId_IN bigint, IN masterKey_IN varchar(1024),
    OUT rowCount_OUT int)
 BEGIN
    INSERT INTO masterKeys(keyId, masterKey)
@@ -232,7 +232,7 @@ BEGIN
 END //
 
 CREATE PROCEDURE sp_getMasterKey(
-   IN keyId_IN int,
+   IN keyId_IN bigint,
    OUT masterKey_OUT varchar(1024))
 BEGIN
    SELECT masterKey INTO masterKey_OUT
@@ -241,7 +241,7 @@ BEGIN
 END //
 
 CREATE PROCEDURE sp_deleteMasterKey(
-   IN keyId_IN int, OUT rowCount_OUT int)
+   IN keyId_IN bigint, OUT rowCount_OUT int)
 BEGIN
    DELETE FROM masterKeys
    WHERE keyId = keyId_IN;

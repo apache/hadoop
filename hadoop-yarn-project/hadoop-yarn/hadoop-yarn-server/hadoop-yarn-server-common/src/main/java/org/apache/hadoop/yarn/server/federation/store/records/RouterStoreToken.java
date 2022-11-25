@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.federation.store.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.io.DataInput;
 import java.io.IOException;
 
 @Private
@@ -40,17 +43,44 @@ public abstract class RouterStoreToken {
 
   @Private
   @Unstable
+  public static RouterStoreToken newInstance(YARNDelegationTokenIdentifier identifier,
+      Long renewdate, String tokenInfo) {
+    RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
+    storeToken.setIdentifier(identifier);
+    storeToken.setRenewDate(renewdate);
+    storeToken.setTokenInfo(tokenInfo);
+    return storeToken;
+  }
+
+  @Public
+  @Stable
   public abstract YARNDelegationTokenIdentifier getTokenIdentifier() throws IOException;
 
   @Private
   @Unstable
   public abstract void setIdentifier(YARNDelegationTokenIdentifier identifier);
 
-  @Private
-  @Unstable
+  @Public
+  @Stable
   public abstract Long getRenewDate();
 
   @Private
   @Unstable
   public abstract void setRenewDate(Long renewDate);
+
+  @Private
+  @Unstable
+  public abstract byte[] toByteArray() throws IOException;
+
+  @Private
+  @Unstable
+  public abstract void readFields(DataInput in) throws IOException;
+
+  @Public
+  @Stable
+  public abstract String getTokenInfo();
+
+  @Private
+  @Unstable
+  protected abstract void setTokenInfo(String tokenInfo);
 }

@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -810,6 +811,24 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * The Router Supports Store RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM.
+   * @param renewDate renewDate.
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void storeNewToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("storing RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.storeNewToken(request);
+  }
+
+  /**
    * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
    *
    * @param identifier delegation tokens from the RM
@@ -822,6 +841,24 @@ public final class FederationStateStoreFacade {
     LOG.info("updating RMDelegation token with sequence number: {}.",
         identifier.getSequenceNumber());
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    stateStore.updateStoredToken(request);
+  }
+
+  /**
+   * The Router Supports Update RMDelegationTokenIdentifier{@link RMDelegationTokenIdentifier}.
+   *
+   * @param identifier delegation tokens from the RM
+   * @param renewDate renewDate
+   * @param tokenInfo tokenInfo.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
+  public void updateStoredToken(RMDelegationTokenIdentifier identifier,
+      long renewDate, String tokenInfo) throws YarnException, IOException {
+    LOG.info("updating RMDelegation token with sequence number: {}.",
+        identifier.getSequenceNumber());
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     stateStore.updateStoredToken(request);
   }

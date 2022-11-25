@@ -39,6 +39,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -1580,6 +1581,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
+    request.getRouterStoreToken();
     throw new NotImplementedException("Code is not implemented");
   }
 
@@ -1637,7 +1639,7 @@ public class SQLFederationStateStore implements FederationStateStore {
     return Base64.getUrlEncoder().encodeToString(bos.toByteArray());
   }
 
-  public static void decodeWritable(Writable w, String idStr) throws IOException {
+  private void decodeWritable(Writable w, String idStr) throws IOException {
     DataInputStream in = new DataInputStream(
         new ByteArrayInputStream(Base64.getUrlDecoder().decode(idStr)));
     w.readFields(in);
