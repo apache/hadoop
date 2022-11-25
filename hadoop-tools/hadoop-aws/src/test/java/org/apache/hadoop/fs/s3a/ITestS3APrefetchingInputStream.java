@@ -173,8 +173,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     // Verify that once stream is closed, all memory is freed
     verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-    assertThatStatisticMaximum(ioStats,
-            ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test
@@ -211,8 +209,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
     verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-    assertThatStatisticMaximum(ioStats,
-        ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test
