@@ -248,4 +248,26 @@ BEGIN
    SELECT ROW_COUNT() INTO rowCount_OUT;
 END //
 
+CREATE PROCEDURE sp_addDelegationToken(
+   IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),
+   IN token_IN varchar(1024), IN renewDate_IN bigint,
+   OUT rowCount_OUT int)
+BEGIN
+   INSERT INTO delegationTokens(sequenceNum, tokenIdent, token, renewDate)
+     (SELECT sequenceNum_IN, tokenIdent_IN, token_IN, renewDate_IN
+        FROM delegationTokens
+       WHERE sequenceNum = sequenceNum_IN
+      HAVING COUNT(*) = 0);
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_getDelegationToken(
+   IN sequenceNum_IN bigint, OUT tokenIdent_OUT varchar(1024),
+   OUT token_OUT varchar(1024), OUT renewDate_OUT bigint)
+BEGIN
+   SELECT tokenIdent INTO tokenIdent_OUT, token INTO token_OUT, renewDate INTO renewDate_OUT
+     FROM delegationTokens
+    WHERE sequenceNum = sequenceNum_IN;
+END //
+
 DELIMITER ;

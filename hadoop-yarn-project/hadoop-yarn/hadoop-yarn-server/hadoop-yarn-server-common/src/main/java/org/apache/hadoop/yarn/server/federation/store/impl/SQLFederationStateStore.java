@@ -24,11 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.nio.ByteBuffer;
-import java.sql.CallableStatement;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -39,12 +35,12 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
@@ -95,6 +91,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRes
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -104,6 +101,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTo
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
+import org.apache.hadoop.yarn.util.Records;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -182,6 +180,12 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   protected static final String CALL_SP_DELETE_MASTERKEY =
       "{call sp_deleteMasterKey(?, ?)}";
+
+  protected static final String CALL_SP_ADD_DELEGATIONTOKEN =
+      "{call sp_addDelegationToken(?, ?, ?, ?, ?)}";
+
+  protected static final String CALL_SP_GET_DELEGATIONTOKEN =
+      "{call sp_getDelegationToken(?, ?, ?, ?)}";
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1578,11 +1582,86 @@ public class SQLFederationStateStore implements FederationStateStore {
         "Unable to obtain the masterKey information according to " + paramKeyId);
   }
 
+  /**
+   * SQLFederationStateStore Supports Store RMDelegationTokenIdentifier.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return routerRMTokenResponse, the response contains the RouterStoreToken.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    request.getRouterStoreToken();
-    throw new NotImplementedException("Code is not implemented");
+
+    // Step1: Verify parameters to ensure that key fields are not empty.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    // Step2: Parse parameters and get KeyId.
+    RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+    YARNDelegationTokenIdentifier identifier = routerStoreToken.getTokenIdentifier();
+    String tokenIdentifier = encodeWritable(identifier);
+    String tokenInfo = routerStoreToken.getTokenInfo();
+    long renewDate = routerStoreToken.getRenewDate();
+    int sequenceNum = identifier.getSequenceNumber();
+    CallableStatement cstmt = null;
+
+    // Step3. store data in database.
+    try {
+
+      // Defined the sp_addDelegationToken procedure
+      // This procedure requires 4 input parameters, 1 output parameters
+      // Input parameters
+      // 1）IN sequenceNum_IN int
+      // 2）IN tokenIdent_IN varchar(1024)
+      // 3）IN token_IN varchar(1024)
+      // 4) IN renewDate_IN bigint
+      // Output parameters
+      // 4）OUT rowCount_OUT int
+
+      cstmt = getCallableStatement(CALL_SP_ADD_DELEGATIONTOKEN);
+
+      // Set the parameters for the stored procedure
+      // 1）IN sequenceNum_IN int
+      cstmt.setInt("sequenceNum_IN", sequenceNum);
+      // 2）IN tokenIdent_IN varchar(1024)
+      cstmt.setString("tokenIdent_IN", tokenIdentifier);
+      // 3) IN token_IN varchar(1024)
+      cstmt.setString("token_IN", tokenInfo);
+      // 4) IN renewDate_IN long
+      cstmt.setLong("renewDate_IN", renewDate);
+      // 5) OUT rowCount_OUT int
+      cstmt.registerOutParameter("rowCount_OUT", java.sql.Types.INTEGER);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      // Get rowCount
+      // We expect to get 1 record. If the number of records is 0, it means that this record
+      // already exists in the database.
+      // If the number of records is > 1, it means that there are duplicate records,
+      // which are not in line with expectations.
+      int rowCount = cstmt.getInt("rowCount_OUT");
+      if (rowCount != 1) {
+        FederationStateStoreUtils.logAndThrowStoreException(LOG,
+            "Wrong behavior during the insertion of delegationToken, tokenId = %s." +
+            "Please check the records of the database.", String.valueOf(sequenceNum));
+      }
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to insert the newly delegationToken, tokenId = %s.",
+          String.valueOf(sequenceNum));
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+
+    // Step4. Query Data from the database and return the result.
+    return getTokenByRouterStoreToken(request);
   }
 
   @Override
@@ -1597,10 +1676,77 @@ public class SQLFederationStateStore implements FederationStateStore {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * The Router Supports GetTokenByRouterStoreToken.
+   *
+   * @param request The request contains RouterRMToken (RMDelegationTokenIdentifier and renewDate)
+   * @return RouterRMTokenResponse.
+   * @throws YarnException if the call to the state store is unsuccessful.
+   * @throws IOException An IO Error occurred.
+   */
   @Override
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
-    throw new NotImplementedException("Code is not implemented");
+    // Step1: Verify parameters to ensure that key fields are not empty.
+    FederationRouterRMTokenInputValidator.validate(request);
+
+    // Step2: Parse parameters and get KeyId.
+    RouterStoreToken routerStoreToken = request.getRouterStoreToken();
+    YARNDelegationTokenIdentifier identifier = routerStoreToken.getTokenIdentifier();
+    int sequenceNum = identifier.getSequenceNumber();
+    CallableStatement cstmt = null;
+
+    try {
+      // Defined the sp_addReservationHomeSubCluster procedure
+      // this procedure requires 3 parameters
+      // Input parameters
+      // 1）IN sequenceNum_IN int
+      // Output parameters
+      // 2）OUT tokenIdent_OUT varchar(1024)
+      // 3）OUT token_OUT varchar(1024)
+      // 4）OUT renewDate_OUT bigint
+
+      // Call procedure
+      cstmt = getCallableStatement(CALL_SP_GET_DELEGATIONTOKEN);
+
+      // Set the parameters for the stored procedure
+      // 1）IN sequenceNum_IN int
+      cstmt.setInt("sequenceNum_IN", sequenceNum);
+      // 2) OUT tokenIdent_OUT varchar(1024)
+      cstmt.registerOutParameter("tokenIdent_OUT", java.sql.Types.VARCHAR);
+      // 3) OUT token_OUT varchar(1024)
+      cstmt.registerOutParameter("token_OUT", java.sql.Types.VARCHAR);
+      // 4) OUT renewDate_OUT bigint
+      cstmt.registerOutParameter("renewDate_OUT", Types.BIGINT);
+
+      // Execute the query
+      long startTime = clock.getTime();
+      cstmt.executeUpdate();
+      long stopTime = clock.getTime();
+
+      String tokenIdent = cstmt.getString("tokenIdent_OUT");
+      String token = cstmt.getString("token_OUT");
+      long renewDate = cstmt.getLong("renewDate_OUT");
+
+      YARNDelegationTokenIdentifier resultIdentifier =
+          Records.newRecord(YARNDelegationTokenIdentifier.class);
+      decodeWritable(resultIdentifier, tokenIdent);
+      RouterStoreToken resultToken = RouterStoreToken.newInstance(
+          resultIdentifier, renewDate, token);
+
+      FederationStateStoreClientMetrics.succeededStateStoreCall(stopTime - startTime);
+      return RouterRMTokenResponse.newInstance(resultToken);
+    } catch (SQLException e) {
+      FederationStateStoreClientMetrics.failedStateStoreCall();
+      FederationStateStoreUtils.logAndThrowRetriableException(e, LOG,
+          "Unable to get the delegationToken, tokenId = %s.", String.valueOf(sequenceNum));
+    } finally {
+      // Return to the pool the CallableStatement
+      FederationStateStoreUtils.returnToPool(LOG, cstmt);
+    }
+
+    // Throw exception information
+    throw new YarnException("Unable to get the delegationToken, tokenId = " + sequenceNum);
   }
 
   /**

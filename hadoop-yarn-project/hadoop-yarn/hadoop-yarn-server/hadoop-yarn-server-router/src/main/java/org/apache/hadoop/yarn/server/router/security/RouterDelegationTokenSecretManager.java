@@ -327,8 +327,8 @@ public class RouterDelegationTokenSecretManager
         RouterRMTokenResponse response = federationFacade.getTokenByRouterStoreToken(ident);
         RouterStoreToken routerStoreToken = response.getRouterStoreToken();
         String tokenStr = routerStoreToken.getTokenInfo();
-        byte[] tokenArr = Base64.getUrlDecoder().decode(tokenStr);
-        tokenInfo = RouterDelegationTokenSupport.decodeDelegationTokenInformation(tokenArr);
+        byte[] tokenBytes = Base64.getUrlDecoder().decode(tokenStr);
+        tokenInfo = RouterDelegationTokenSupport.decodeDelegationTokenInformation(tokenBytes);
       } catch (Exception e) {
         LOG.error("Error retrieving tokenInfo [" + ident.getSequenceNumber()
             + "] from StateStore.", e);

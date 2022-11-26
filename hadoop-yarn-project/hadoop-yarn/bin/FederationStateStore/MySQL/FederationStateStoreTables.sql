@@ -56,6 +56,15 @@ CREATE TABLE reservationsHomeSubCluster (
 
 CREATE TABLE masterKeys (
    keyId bigint NOT NULL,
-   masterKey varbinary(1024) NOT NULL,
+   masterKey varchar(1024) NOT NULL,
    CONSTRAINT pk_keyId PRIMARY KEY (keyId)
+);
+
+CREATE TABLE IF NOT EXISTS delegationTokens
+(
+   sequenceNum bigint NOT NULL,
+   tokenIdent varchar(1024) NOT NULL,
+   token varchar(1024) NOT NULL,
+   renewDate bigint NOT NULL,
+   CONSTRAINT pk_sequenceNum PRIMARY KEY (sequenceNum)
 );

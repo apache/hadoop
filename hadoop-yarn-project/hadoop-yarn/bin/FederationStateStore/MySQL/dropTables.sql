@@ -30,4 +30,4 @@ DROP TABLE reservationsHomeSubCluster;
 
 DROP TABLE masterKeys;
 
-DROP TABLE masterKeys;
+DROP TABLE delegationTokens;
