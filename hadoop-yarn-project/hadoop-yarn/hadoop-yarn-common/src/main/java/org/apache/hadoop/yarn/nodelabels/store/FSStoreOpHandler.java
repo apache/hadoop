@@ -100,7 +100,7 @@ public class FSStoreOpHandler {
   /**
    * Get mirror operation of store Type.
    *
-   * @param storeType
+   * @param storeType storeType.
    * @return instance of FSNodeStoreLogOp.
    */
   public static FSNodeStoreLogOp getMirrorOp(StoreType storeType) {
@@ -108,9 +108,9 @@ public class FSStoreOpHandler {
   }
 
   /**
-   * Will return StoreOp instance basead on opCode and StoreType.
-   * @param opCode
-   * @param storeType
+   * Will return StoreOp instance based on opCode and StoreType.
+   * @param opCode opCode.
+   * @param storeType storeType.
    * @return instance of FSNodeStoreLogOp.
    */
   public static FSNodeStoreLogOp get(int opCode, StoreType storeType) {
