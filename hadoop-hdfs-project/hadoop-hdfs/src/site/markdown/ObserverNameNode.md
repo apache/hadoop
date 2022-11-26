@@ -194,6 +194,25 @@ few configurations to your **hdfs-site.xml**:
           <value>1048576</value>
         </property>
 
+*  **dfs.journalnode.edit-cache-size.fraction** - the ratio refers to
+   the proportion of the maximum memory of the JVM.
+
+   Used to calculate the size of the edits cache that
+   is kept in the JournalNode's memory.
+   The recommended value is less than 0.9.
+   The cache is used for serving edits via
+   RPC-based tailing. This is only effective when
+   dfs.ha.tail-edits.in-progress is turned on. 
+   We recommend using dfs.journalnode.edit-cache-size.fraction 
+   instead of dfs.journalnode.edit-cache-size.bytes.
+   If we set dfs.journalnode.edit-cache-size.bytes, 
+   this parameter will not take effect. 
+
+        <property>
+          <name>dfs.journalnode.edit-cache-size.fraction</name>
+          <value>0.5f</value>
+        </property>
+
 *  **dfs.namenode.accesstime.precision** -- whether to enable access
    time for HDFS file.
 

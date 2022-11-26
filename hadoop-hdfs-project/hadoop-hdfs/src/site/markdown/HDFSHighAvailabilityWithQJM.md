@@ -502,6 +502,12 @@ lag time will be much longer. The relevant configurations are:
     the oldest data in the cache was at transaction ID 20, a value of 10 would be added to the
     average.
 
+*   **dfs.journalnode.edit-cache-size.fraction** - This ratio refers to the proportion of the maximum memory
+    of the JVM. Used to calculate the size of the edits cache that is kept in the JournalNode's memory.
+    The recommended value is less than 0.9. We recommend using dfs.journalnode.edit-cache-size.fraction 
+    instead of dfs.journalnode.edit-cache-size.bytes. If we set dfs.journalnode.edit-cache-size.bytes, 
+    this parameter will not take effect.
+
 This feature is primarily useful in conjunction with the Standby/Observer Read feature. Using this
 feature, read requests can be serviced from non-active NameNodes; thus tailing in-progress edits
 provides these nodes with the ability to serve requests with data which is much more fresh. See the
