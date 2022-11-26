@@ -202,11 +202,11 @@ few configurations to your **hdfs-site.xml**:
    The recommended value is less than 0.9.
    The cache is used for serving edits via
    RPC-based tailing. This is only effective when
-   dfs.ha.tail-edits.in-progress is turned on. 
-   We recommend using dfs.journalnode.edit-cache-size.fraction 
+   dfs.ha.tail-edits.in-progress is turned on.
+   We recommend using dfs.journalnode.edit-cache-size.fraction
    instead of dfs.journalnode.edit-cache-size.bytes.
-   If we set dfs.journalnode.edit-cache-size.bytes, 
-   this parameter will not take effect. 
+   If we set dfs.journalnode.edit-cache-size.bytes,
+   this parameter will not take effect.
 
         <property>
           <name>dfs.journalnode.edit-cache-size.fraction</name>

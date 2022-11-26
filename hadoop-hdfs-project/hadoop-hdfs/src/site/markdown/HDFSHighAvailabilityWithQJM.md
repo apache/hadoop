@@ -504,8 +504,8 @@ lag time will be much longer. The relevant configurations are:
 
 *   **dfs.journalnode.edit-cache-size.fraction** - This ratio refers to the proportion of the maximum memory
     of the JVM. Used to calculate the size of the edits cache that is kept in the JournalNode's memory.
-    The recommended value is less than 0.9. We recommend using dfs.journalnode.edit-cache-size.fraction 
-    instead of dfs.journalnode.edit-cache-size.bytes. If we set dfs.journalnode.edit-cache-size.bytes, 
+    The recommended value is less than 0.9. We recommend using dfs.journalnode.edit-cache-size.fraction
+    instead of dfs.journalnode.edit-cache-size.bytes. If we set dfs.journalnode.edit-cache-size.bytes,
     this parameter will not take effect.
 
 This feature is primarily useful in conjunction with the Standby/Observer Read feature. Using this
