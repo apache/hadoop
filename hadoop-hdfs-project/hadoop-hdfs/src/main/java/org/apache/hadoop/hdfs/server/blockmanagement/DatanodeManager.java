@@ -1826,32 +1826,25 @@ public class DatanodeManager {
     // NN chooses pending tasks based on the ratio between the lengths of
     // replication and erasure-coded block queues.
     int replicationBlocks = nodeinfo.getNumberOfReplicateBlocks();
-    int ecReplicatedBlocks = nodeinfo.getNumberOfECReplicatedBlocks();
-    int ecReconstructedBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
-    int totalBlocks = replicationBlocks + ecReplicatedBlocks + ecReconstructedBlocks;
+    int ecBlocksToBeReplicated = nodeinfo.getNumberOfECBlocksToBeReplicated();
+    int ecBlocksToBeErasureCoded = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = replicationBlocks + ecBlocksToBeReplicated + ecBlocksToBeErasureCoded;
     if (totalBlocks > 0) {
-      int maxReplicationTransfers = blockManager.getMaxReplicationStreams()
-              - xmitsInProgress;
+      int maxTransfers = blockManager.getMaxReplicationStreams() - xmitsInProgress;
       int maxECReplicatedTransfers;
-      int maxECReconstructedTransfers;
       if (nodeinfo.isDecommissionInProgress()) {
         maxECReplicatedTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
-        maxECReconstructedTransfers = blockManager.getReplicationStreamsHardLimit()
-                - xmitsInProgress;
       } else {
-        maxECReplicatedTransfers = blockManager.getMaxReplicationStreams()
-            - xmitsInProgress;
-        maxECReconstructedTransfers = blockManager.getMaxReplicationStreams()
-                - xmitsInProgress;
+        maxECReplicatedTransfers = maxTransfers;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (replicationBlocks * maxReplicationTransfers) / totalBlocks);
+          (double) (replicationBlocks * maxTransfers) / totalBlocks);
       int numEcReplicatedTasks = (int) Math.ceil(
-              (double) (ecReplicatedBlocks * maxECReplicatedTransfers) / totalBlocks);
+              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
       int numECReconstructedTasks = (int) Math.ceil(
-          (double) (ecReconstructedBlocks * maxECReconstructedTransfers) / totalBlocks);
-      LOG.debug("Pending replication tasks: {} ec replicated tasks: {} " +
+          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
+      LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
                       "ec reconstruction tasks: {}.",
           numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
       // check pending replication tasks
