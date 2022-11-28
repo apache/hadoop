@@ -19,8 +19,6 @@ package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -30,14 +28,23 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -598,14 +605,65 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     Assert.assertEquals(storeToken.getTokenInfo(), storeTokenResp.getTokenInfo());
   }
 
-  @Test(expected = NotImplementedException.class)
+  @Test
   public void testUpdateStoredToken() throws IOException, YarnException {
-    super.testUpdateStoredToken();
+    FederationStateStore stateStore = getStateStore();
+
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
+    int sequenceNumber = 2;
+    String tokenInfo = "tokenInfo";
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // prepare updateToken parameters
+    Long renewDate2 = Time.now();
+    String tokenInfo2 = "tokenInfo2";
+
+    // update rm-token
+    RouterStoreToken updateToken = RouterStoreToken.newInstance(identifier, renewDate2, tokenInfo2);
+    RouterRMTokenRequest updateTokenRequest = RouterRMTokenRequest.newInstance(updateToken);
+    RouterRMTokenResponse updateTokenResponse = stateStore.updateStoredToken(updateTokenRequest);
+
+    Assert.assertNotNull(updateTokenResponse);
+    RouterStoreToken updateTokenResp = updateTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(updateTokenResp);
+    Assert.assertEquals(updateToken.getRenewDate(), updateTokenResp.getRenewDate());
+    Assert.assertEquals(updateToken.getTokenIdentifier(), updateTokenResp.getTokenIdentifier());
+    Assert.assertEquals(updateToken.getTokenInfo(), updateTokenResp.getTokenInfo());
   }
 
-  @Test(expected = NotImplementedException.class)
   public void testRemoveStoredToken() throws IOException, YarnException {
-    super.testRemoveStoredToken();
+    FederationStateStore stateStore = getStateStore();
+
+    // prepare saveToken parameters
+    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
+        new Text("owner3"), new Text("renewer3"), new Text("realuser3"));
+    int sequenceNumber = 3;
+    identifier.setSequenceNumber(sequenceNumber);
+    Long renewDate = Time.now();
+    String tokenInfo = "tokenInfo";
+
+    // store new rm-token
+    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate, tokenInfo);
+    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
+    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
+    Assert.assertNotNull(routerRMTokenResponse);
+
+    // remove rm-token
+    RouterRMTokenResponse removeTokenResponse = stateStore.removeStoredToken(request);
+    Assert.assertNotNull(removeTokenResponse);
+    RouterStoreToken removeTokenResp = removeTokenResponse.getRouterStoreToken();
+    Assert.assertNotNull(removeTokenResp);
+    Assert.assertEquals(removeTokenResp.getRenewDate(), storeToken.getRenewDate());
+    Assert.assertEquals(removeTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
   }
 
   @Test

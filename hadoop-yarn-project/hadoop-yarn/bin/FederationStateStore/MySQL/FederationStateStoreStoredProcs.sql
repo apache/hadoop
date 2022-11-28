@@ -270,4 +270,24 @@ BEGIN
     WHERE sequenceNum = sequenceNum_IN;
 END //
 
+CREATE PROCEDURE sp_updateDelegationToken(
+   IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),
+   IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)
+BEGIN
+   UPDATE delegationTokens
+      SET tokenIdent = tokenIdent_IN,
+          token = token_IN,
+          renewDate = renewDate_IN
+    WHERE sequenceNum = sequenceNum_IN;
+    SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
+CREATE PROCEDURE sp_deleteDelegationToken(
+   IN sequenceNum_IN bigint, OUT rowCount_OUT int)
+BEGIN
+   DELETE FROM delegationTokens
+   WHERE sequenceNum = sequenceNum_IN;
+   SELECT ROW_COUNT() INTO rowCount_OUT;
+END //
+
 DELIMITER ;

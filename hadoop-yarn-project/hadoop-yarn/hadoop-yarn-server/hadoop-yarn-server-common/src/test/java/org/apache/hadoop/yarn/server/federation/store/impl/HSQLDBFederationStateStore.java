@@ -374,7 +374,7 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
   protected static final String SP_ADD_DELEGATIONTOKEN =
       "CREATE PROCEDURE sp_addDelegationToken("
           + " IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),"
-          + " IN token_IN varchar(1024),IN renewDate_IN bigint,OUT rowCount_OUT int)"
+          + " IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC "
           + " INSERT INTO delegationTokens(sequenceNum, tokenIdent, token, renewDate)"
           + " (SELECT sequenceNum_IN, tokenIdent_IN, token_IN, renewDate_IN"
@@ -396,6 +396,33 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " tokenIdent_OUT, token_OUT, renewDate_OUT"
           + " FROM delegationTokens"
           + " WHERE sequenceNum = sequenceNum_IN; "
+          + " END ";
+
+  protected static final String SP_DROP_UPDATE_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_updateDelegationToken";
+
+  protected static final String SP_UPDATE_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_updateDelegationToken("
+          + " IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),"
+          + " IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " UPDATE delegationTokens"
+          + " SET tokenIdent = tokenIdent_IN,"
+          + " token = token_IN, renewDate = renewDate_IN"
+          + " WHERE sequenceNum = sequenceNum_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
+          + " END ";
+
+  protected static final String SP_DROP_DELETE_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_deleteDelegationToken";
+
+  protected static final String SP_DELETE_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_deleteDelegationToken("
+          + " IN sequenceNum_IN bigint, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM delegationTokens"
+          + " WHERE sequenceNum = sequenceNum_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
           + " END ";
 
   private List<String> tables = new ArrayList<>();
@@ -444,6 +471,8 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
 
       conn.prepareStatement(SP_ADD_DELEGATIONTOKEN).execute();
       conn.prepareStatement(SP_GET_DELEGATIONTOKEN).execute();
+      conn.prepareStatement(SP_UPDATE_DELEGATIONTOKEN).execute();
+      conn.prepareStatement(SP_DELETE_DELEGATIONTOKEN).execute();
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {
