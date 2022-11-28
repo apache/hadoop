@@ -34,8 +34,8 @@ public interface AttributeValue {
    * validate the value based on the type and initialize for further compare
    * operations.
    *
-   * @param value
-   * @throws IOException
+   * @param value value.
+   * @throws IOException io error occur.
    */
   void validateAndInitializeValue(String value) throws IOException;
 
@@ -43,8 +43,8 @@ public interface AttributeValue {
    * compare the value against the other based on the
    * AttributeExpressionOperation.
    *
-   * @param other
-   * @param op
+   * @param other attribute value.
+   * @param op attribute expression operation.
    * @return true if value <code>other</code> matches the current value for the
    *         operation <code>op</code>.
    */
