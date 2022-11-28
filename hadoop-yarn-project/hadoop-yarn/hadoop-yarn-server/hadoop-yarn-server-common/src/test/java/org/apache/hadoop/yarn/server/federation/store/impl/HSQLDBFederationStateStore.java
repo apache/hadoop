@@ -332,8 +332,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
-  protected static final String SP_DROP_ADDMASTERKEY = "DROP PROCEDURE sp_addMasterKey";
-
   protected static final String SP_ADDMASTERKEY =
       "CREATE PROCEDURE sp_addMasterKey("
           + " IN keyId_IN int, IN masterKey_IN varchar(1024),"
@@ -347,8 +345,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
           + " END";
 
-  protected static final String SP_DROP_GETMASTERKEY = "DROP PROCEDURE sp_getMasterKey";
-
   protected static final String SP_GETMASTERKEY =
       "CREATE PROCEDURE sp_getMasterKey("
           + " IN keyId_IN int,"
@@ -359,17 +355,12 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE keyId = keyId_IN; "
           + " END ";
 
-  protected static final String SP_DROP_DELETEMASTERKEY = "DROP PROCEDURE sp_deleteMasterKey";
-
   protected static final String SP_DELETEMASTERKEY =
       "CREATE PROCEDURE sp_deleteMasterKey("
           + " IN keyId_IN int, OUT rowCount_OUT int)"
           + " MODIFIES SQL DATA BEGIN ATOMIC"
           + " DELETE FROM masterKeys WHERE keyId = keyId_IN;"
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; END";
-
-  protected static final String SP_DROP_ADD_DELEGATIONTOKEN =
-      "DROP PROCEDURE sp_addDelegationToken";
 
   protected static final String SP_ADD_DELEGATIONTOKEN =
       "CREATE PROCEDURE sp_addDelegationToken("
@@ -384,9 +375,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
           + " END";
 
-  protected static final String SP_DROP_GET_DELEGATIONTOKEN =
-      "DROP PROCEDURE sp_getDelegationToken";
-
   protected static final String SP_GET_DELEGATIONTOKEN =
       "CREATE PROCEDURE sp_getDelegationToken("
           + " IN sequenceNum_IN bigint, OUT tokenIdent_OUT varchar(1024), "
@@ -397,9 +385,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " FROM delegationTokens"
           + " WHERE sequenceNum = sequenceNum_IN; "
           + " END ";
-
-  protected static final String SP_DROP_UPDATE_DELEGATIONTOKEN =
-      "DROP PROCEDURE sp_updateDelegationToken";
 
   protected static final String SP_UPDATE_DELEGATIONTOKEN =
       "CREATE PROCEDURE sp_updateDelegationToken("
@@ -412,9 +397,6 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE sequenceNum = sequenceNum_IN;"
           + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
           + " END ";
-
-  protected static final String SP_DROP_DELETE_DELEGATIONTOKEN =
-      "DROP PROCEDURE sp_deleteDelegationToken";
 
   protected static final String SP_DELETE_DELEGATIONTOKEN =
       "CREATE PROCEDURE sp_deleteDelegationToken("
