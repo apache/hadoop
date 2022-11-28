@@ -97,7 +97,7 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembership
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
-import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTokenInputValidator;
+import org.apache.hadoop.yarn.server.federation.store.utils.FederationRouterRMTokenInputValidatorV2;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -1395,7 +1395,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
 
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse the parameters and serialize the DelegationKey as a string.
     DelegationKey delegationKey = convertMasterKeyToDelegationKey(request);
@@ -1456,7 +1456,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     RouterMasterKey paramMasterKey = request.getRouterMasterKey();
@@ -1528,7 +1528,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
       throws YarnException, IOException {
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     RouterMasterKey paramMasterKey = request.getRouterMasterKey();
@@ -1601,7 +1601,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
 
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     RouterStoreToken routerStoreToken = request.getRouterStoreToken();
@@ -1683,7 +1683,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
 
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     RouterStoreToken routerStoreToken = request.getRouterStoreToken();
@@ -1763,7 +1763,7 @@ public class SQLFederationStateStore implements FederationStateStore {
       throws YarnException, IOException {
 
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     CallableStatement cstmt = null;
@@ -1836,7 +1836,7 @@ public class SQLFederationStateStore implements FederationStateStore {
   public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException {
     // Step1: Verify parameters to ensure that key fields are not empty.
-    FederationRouterRMTokenInputValidator.validate(request);
+    FederationRouterRMTokenInputValidatorV2.validate(request);
 
     // Step2: Parse parameters and get KeyId.
     RouterStoreToken routerStoreToken = request.getRouterStoreToken();

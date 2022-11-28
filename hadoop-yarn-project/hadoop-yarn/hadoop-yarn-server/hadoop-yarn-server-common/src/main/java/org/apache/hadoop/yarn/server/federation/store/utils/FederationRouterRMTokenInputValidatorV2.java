@@ -26,12 +26,12 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class FederationRouterRMTokenInputValidator {
+public final class FederationRouterRMTokenInputValidatorV2 {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(FederationRouterRMTokenInputValidator.class);
+      LoggerFactory.getLogger(FederationRouterRMTokenInputValidatorV2.class);
 
-  private FederationRouterRMTokenInputValidator() {
+  private FederationRouterRMTokenInputValidatorV2() {
   }
 
   /**
