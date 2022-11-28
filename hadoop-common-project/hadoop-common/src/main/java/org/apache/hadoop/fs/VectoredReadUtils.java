@@ -310,6 +310,7 @@ public final class VectoredReadUtils {
     readData = readData.slice();
     readData.position(offsetChange);
     readData.limit(offsetChange + requestLength);
+    readData = readData.slice();
     return readData;
   }
 

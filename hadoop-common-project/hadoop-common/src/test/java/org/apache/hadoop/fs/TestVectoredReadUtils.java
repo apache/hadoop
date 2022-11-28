@@ -77,6 +77,9 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("Slicing should use the same underlying " +
                     "data")
             .isEqualTo(slice.array());
+    Assertions.assertThat(buffer.position())
+        .describedAs("Slicing should return buffers starting from position 0")
+        .isEqualTo(0);
     // test the contents of the slice
     intBuffer = slice.asIntBuffer();
     for(int i=0; i < sliceLength / Integer.BYTES; ++i) {
