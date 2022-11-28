@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
@@ -57,24 +58,39 @@ public class AliyunOSSInputStream extends FSInputStream {
   private ExecutorService readAheadExecutorService;
   private Queue<ReadBuffer> readBufferQueue = new ArrayDeque<>();
 
-  public AliyunOSSInputStream(Configuration conf,
-      ExecutorService readAheadExecutorService, int maxReadAheadPartNumber,
-      AliyunOSSFileSystemStore store, String key, Long contentLength,
-      Statistics statistics) throws IOException {
+  public AliyunOSSInputStream(
+          long downloadPartSize,
+          ExecutorService readAheadExecutorService,
+          int maxReadAheadPartNumber,
+          AliyunOSSFileSystemStore store,
+          String key,
+          Long contentLength,
+          Statistics statistics) throws IOException {
     this.readAheadExecutorService =
-        MoreExecutors.listeningDecorator(readAheadExecutorService);
+            MoreExecutors.listeningDecorator(readAheadExecutorService);
     this.store = store;
     this.key = key;
     this.statistics = statistics;
     this.contentLength = contentLength;
-    downloadPartSize = conf.getLong(MULTIPART_DOWNLOAD_SIZE_KEY,
-        MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+    this.downloadPartSize = Math.max(downloadPartSize, IO_FILE_BUFFER_SIZE_DEFAULT);
     this.maxReadAheadPartNumber = maxReadAheadPartNumber;
 
     this.expectNextPos = 0;
     this.lastByteStart = -1;
     reopen(0);
     closed = false;
+  }
+
+  public AliyunOSSInputStream(Configuration conf,
+      ExecutorService readAheadExecutorService, int maxReadAheadPartNumber,
+      AliyunOSSFileSystemStore store, String key, Long contentLength,
+      Statistics statistics) throws IOException {
+    this(conf.getLong(MULTIPART_DOWNLOAD_SIZE_KEY, MULTIPART_DOWNLOAD_SIZE_DEFAULT),
+            readAheadExecutorService, maxReadAheadPartNumber, store, key, contentLength, statistics);
+  }
+
+  long getDownloadPartSize() {
+    return downloadPartSize;
   }
 
   /**
