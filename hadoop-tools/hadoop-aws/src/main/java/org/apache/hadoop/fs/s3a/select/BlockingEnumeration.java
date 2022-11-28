@@ -40,15 +40,15 @@ import software.amazon.awssdk.core.exception.SdkException;
  */
 public final class BlockingEnumeration<T> implements Enumeration<T> {
   private static final class Signal<T> {
-    public final T element;
-    public final Throwable error;
+    private final T element;
+    private final Throwable error;
 
-    public Signal(T element) {
+    Signal(T element) {
       this.element = element;
       this.error = null;
     }
 
-    public Signal(Throwable error) {
+    Signal(Throwable error) {
       this.element = null;
       this.error = error;
     }

@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.core.exception.SdkException;
 import org.apache.hadoop.util.Preconditions;
 
 import java.io.IOException;
 
-import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * IOException equivalent of an {@link SdkException}.

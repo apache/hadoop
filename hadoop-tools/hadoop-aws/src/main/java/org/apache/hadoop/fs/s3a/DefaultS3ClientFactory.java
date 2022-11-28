@@ -43,6 +43,7 @@ import com.amazonaws.services.s3.model.KMSEncryptionMaterialsProvider;
 import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.RuntimeHttpUtils;
 
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
@@ -72,7 +73,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
-import static com.amazonaws.services.s3.Headers.REQUESTER_PAYS_HEADER;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.BUCKET_REGION_HEADER;
@@ -227,25 +228,20 @@ public class DefaultS3ClientFactory extends Configured
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
    */
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT>
-  BuilderT configureClientBuilder(
-      BuilderT builder,
-      S3ClientCreationParameters parameters,
-      Configuration conf,
-      String bucket) {
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> BuilderT configureClientBuilder(
+      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf, String bucket) {
 
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
-    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket,
-        parameters.getCredentialSet());
+    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters.getCredentialSet());
     LOG.debug("Using endpoint {}; and region {}", endpoint, region);
 
     // TODO: Some configuration done in configureBasicParams is not done yet.
     S3Configuration serviceConfiguration = S3Configuration.builder()
-        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-        // TODO: Review. Currently required to pass access point tests in ITestS3ABucketExistence,
-        //  but resolving the region from the ap may be the correct solution.
-        .useArnRegionEnabled(true)
-        .build();
+            .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+            // TODO: Review. Currently required to pass access point tests in ITestS3ABucketExistence,
+            //  but resolving the region from the ap may be the correct solution.
+            .useArnRegionEnabled(true)
+            .build();
 
     return builder
         .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))

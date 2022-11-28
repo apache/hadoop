@@ -25,6 +25,12 @@ import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
@@ -33,12 +39,6 @@ import org.apache.hadoop.fs.s3a.audit.impl.NoopSpan;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
-import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.http.AbortableInputStream;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import static java.lang.Math.min;
 import static org.apache.hadoop.util.functional.FutureIO.eval;
@@ -133,7 +133,7 @@ public class TestS3AInputStreamRetry extends AbstractS3AMockTest {
             getMockedInputStream(objectResponse, true),
             getMockedInputStream(objectResponse, true),
             getMockedInputStream(objectResponse, false)
-    };
+        };
 
     return new S3AInputStream.InputStreamCallbacks() {
       private Integer mockedS3ObjectIndex = 0;

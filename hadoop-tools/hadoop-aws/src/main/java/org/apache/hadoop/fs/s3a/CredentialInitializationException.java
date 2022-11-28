@@ -50,5 +50,7 @@ public class CredentialInitializationException extends SdkException {
    * @return false, always.
    */
   @Override
-  public boolean retryable() { return false; }
+  public boolean retryable() {
+    return false;
+  }
 }

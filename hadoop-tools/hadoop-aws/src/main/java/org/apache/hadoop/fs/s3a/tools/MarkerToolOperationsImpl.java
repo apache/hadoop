@@ -21,14 +21,15 @@ package org.apache.hadoop.fs.s3a.tools;
 import java.io.IOException;
 import java.util.List;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.OperationCallbacks;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 /**
  * Implement the marker tool operations by forwarding to the

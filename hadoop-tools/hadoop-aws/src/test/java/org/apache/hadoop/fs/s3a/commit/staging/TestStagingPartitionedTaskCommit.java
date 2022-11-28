@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 import org.assertj.core.api.Assertions;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathExistsException;
 import org.apache.hadoop.mapreduce.JobContext;
 
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;

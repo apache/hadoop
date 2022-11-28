@@ -23,6 +23,8 @@ import java.net.URI;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -30,8 +32,6 @@ import org.apache.hadoop.fs.s3a.CredentialInitializationException;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
 
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import software.amazon.awssdk.core.exception.SdkException;
 
 /**
  * Base class for session credential support.

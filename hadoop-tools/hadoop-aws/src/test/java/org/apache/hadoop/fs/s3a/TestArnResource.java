@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.regions.Region;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import software.amazon.awssdk.regions.Region;
 
 import org.apache.hadoop.test.HadoopTestBase;
 

@@ -21,12 +21,12 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.io.InputStream;
 
+import software.amazon.awssdk.http.Abortable;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.test.HadoopTestBase;
 
-import software.amazon.awssdk.http.Abortable;
 
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DRAIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS;

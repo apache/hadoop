@@ -25,9 +25,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -40,6 +37,9 @@ import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -711,7 +711,8 @@ public class WriteOperationHelper implements WriteOperations {
      * @param request selectObjectContent request
      * @return selectObjectContentResult
      */
-    CompletableFuture<Void> selectObjectContent(SelectObjectContentRequest request, SelectObjectContentResponseHandler t);
+    CompletableFuture<Void> selectObjectContent(SelectObjectContentRequest request,
+        SelectObjectContentResponseHandler t);
 
     /**
      * Initiates a complete multi-part upload request.

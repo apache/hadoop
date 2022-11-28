@@ -39,7 +39,10 @@ import static org.apache.hadoop.fs.s3a.WriteOperationHelper.WriteOperationHelper
  * Helper for SelectObjectContent queries against an S3 Bucket.
  */
 public final class SelectObjectContentHelper {
-  
+
+  private SelectObjectContentHelper() {
+  }
+
   /**
    * Execute an S3 Select operation.
    * @param writeOperationHelperCallbacks helper callbacks
@@ -90,8 +93,8 @@ public final class SelectObjectContentHelper {
     }
 
     @Override
-    public void responseReceived(SelectObjectContentResponse response) {
-      this.response = response;
+    public void responseReceived(SelectObjectContentResponse selectObjectContentResponse) {
+      this.response = selectObjectContentResponse;
     }
 
     @Override

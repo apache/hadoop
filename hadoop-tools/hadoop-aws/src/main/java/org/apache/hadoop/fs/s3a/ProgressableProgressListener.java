@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.slf4j.Logger;
-
 import software.amazon.awssdk.transfer.s3.ObjectTransfer;
 import software.amazon.awssdk.transfer.s3.progress.TransferListener;
-
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+
 
 /**
  * Listener to progress from AWS regarding transfers.

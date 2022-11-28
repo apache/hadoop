@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.services.s3.model.CommonPrefix;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -38,8 +40,6 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import org.slf4j.Logger;
-import software.amazon.awssdk.services.s3.model.CommonPrefix;
-import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.Closeable;
 import java.io.IOException;

@@ -23,6 +23,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.AccessDeniedException;
 
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +34,6 @@ import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
 import org.apache.hadoop.fs.s3a.audit.impl.NoopAuditManagerS3A;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 
-import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_ENABLED;

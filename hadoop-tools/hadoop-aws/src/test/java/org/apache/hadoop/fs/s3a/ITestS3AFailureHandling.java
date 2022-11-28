@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Error;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 
@@ -32,8 +35,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.S3Error;
 
 import java.io.IOException;
 import java.util.ArrayList;

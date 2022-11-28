@@ -24,10 +24,6 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
 
-import org.apache.hadoop.util.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -52,6 +48,9 @@ import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.utils.Md5Utils;
+import org.apache.hadoop.util.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -204,7 +203,7 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * Sets server side encryption parameters to the part upload
    * request when encryption is enabled.
-   * @param request upload part request
+   * @param builder upload part request builder
    */
   protected void uploadPartEncryptionParameters(
       UploadPartRequest.Builder builder) {
@@ -261,8 +260,7 @@ public class RequestFactoryImpl implements RequestFactory {
    */
   protected void copyEncryptionParameters(CopyObjectRequest.Builder copyObjectRequestBuilder) {
 
-    final S3AEncryptionMethods algorithm
-        = getServerSideEncryptionAlgorithm();
+    final S3AEncryptionMethods algorithm = getServerSideEncryptionAlgorithm();
 
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       copyObjectRequestBuilder.serverSideEncryption(algorithm.getMethod());
@@ -272,14 +270,16 @@ public class RequestFactoryImpl implements RequestFactory {
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
           .ifPresent(kmsKey -> copyObjectRequestBuilder.ssekmsKeyId(kmsKey));
     } else if (S3AEncryptionMethods.SSE_C == algorithm) {
-      EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
-        copyObjectRequestBuilder.copySourceSSECustomerAlgorithm(ServerSideEncryption.AES256.name())
-            .copySourceSSECustomerKey(base64customerKey).copySourceSSECustomerKeyMD5(
-                Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)))
-            .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-            .sseCustomerKey(base64customerKey)
-            .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-      });
+      EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
+          .ifPresent(base64customerKey -> {
+            copyObjectRequestBuilder.copySourceSSECustomerAlgorithm(
+                    ServerSideEncryption.AES256.name()).copySourceSSECustomerKey(base64customerKey)
+                .copySourceSSECustomerKeyMD5(
+                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)))
+                .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+                .sseCustomerKey(base64customerKey).sseCustomerKeyMD5(
+                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
+          });
     }
   }
   /**
@@ -394,9 +394,9 @@ public class RequestFactoryImpl implements RequestFactory {
     return prepareRequest(requestBuilder);
   }
 
-  private void multipartUploadEncryptionParameters(CreateMultipartUploadRequest.Builder mpuRequestBuilder) {
-    final S3AEncryptionMethods algorithm
-        = getServerSideEncryptionAlgorithm();
+  private void multipartUploadEncryptionParameters(
+      CreateMultipartUploadRequest.Builder mpuRequestBuilder) {
+    final S3AEncryptionMethods algorithm = getServerSideEncryptionAlgorithm();
 
     if (S3AEncryptionMethods.SSE_S3 == algorithm) {
       mpuRequestBuilder.serverSideEncryption(algorithm.getMethod());
@@ -523,18 +523,13 @@ public class RequestFactoryImpl implements RequestFactory {
   @Override
   public SelectObjectContentRequest.Builder newSelectRequestBuilder(String key) {
     SelectObjectContentRequest.Builder requestBuilder =
-        SelectObjectContentRequest.builder()
-            .bucket(bucket)
-            .key(key);
+        SelectObjectContentRequest.builder().bucket(bucket).key(key);
 
-      EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
-          .ifPresent(base64customerKey -> {
-            requestBuilder
-                .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-                .sseCustomerKey(base64customerKey)
-                .sseCustomerKeyMD5(Md5Utils.md5AsBase64(
-                    Base64.getDecoder().decode(base64customerKey)));
-          });
+    EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
+      requestBuilder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+          .sseCustomerKey(base64customerKey)
+          .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
+    });
 
     return prepareRequest(requestBuilder);
   }
