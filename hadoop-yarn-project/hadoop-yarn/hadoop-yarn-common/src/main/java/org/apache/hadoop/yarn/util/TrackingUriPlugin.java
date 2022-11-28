@@ -38,7 +38,8 @@ public abstract class TrackingUriPlugin extends Configured {
    * Given an application ID, return a tracking URI.
    * @param id the ID for which a URI is returned
    * @return the tracking URI
-   * @throws URISyntaxException
+   * @throws URISyntaxException exception thrown to indicate that a string could not be parsed as a
+   * URI reference.
    */
   public abstract URI getTrackingUri(ApplicationId id)
       throws URISyntaxException;
