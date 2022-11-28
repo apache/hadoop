@@ -1019,7 +1019,7 @@ public class TestDatanodeManager {
               Collections.nCopies(
                       Math.min(numECTasksToBeReplicated, numEcBlocksToBeReplicated),
                       new BlockTargetPair(null, null));
-      Mockito.when(nodeInfo.getReplicationCommand(numECTasksToBeReplicated))
+      Mockito.when(nodeInfo.getECReplicatedCommand(numECTasksToBeReplicated))
               .thenReturn(ecReplicatedTasks);
     }
 
@@ -1040,17 +1040,17 @@ public class TestDatanodeManager {
         SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
 
     long expectedNumCmds = Arrays.stream(
-        new int[]{numReplicationTasks, numECTasksToBeErasureCoded})
+        new int[]{numReplicationTasks + numECTasksToBeReplicated, numECTasksToBeErasureCoded})
         .filter(x -> x > 0)
         .count();
     assertEquals(expectedNumCmds, cmds.length);
 
     int idx = 0;
-    if (numReplicationTasks > 0) {
+    if (numReplicationTasks > 0 || numECTasksToBeReplicated > 0) {
       assertTrue(cmds[idx] instanceof BlockCommand);
       BlockCommand cmd = (BlockCommand) cmds[0];
-      assertEquals(numReplicationTasks, cmd.getBlocks().length);
-      assertEquals(numReplicationTasks, cmd.getTargets().length);
+      assertEquals(numReplicationTasks + numECTasksToBeReplicated, cmd.getBlocks().length);
+      assertEquals(numReplicationTasks + numECTasksToBeReplicated, cmd.getTargets().length);
       idx++;
     }
 
@@ -1062,6 +1062,7 @@ public class TestDatanodeManager {
     }
 
     Mockito.verify(nodeInfo).getReplicationCommand(numReplicationTasks);
+    Mockito.verify(nodeInfo).getECReplicatedCommand(numECTasksToBeReplicated);
     Mockito.verify(nodeInfo).getErasureCodeCommand(numECTasksToBeErasureCoded);
   }
 
