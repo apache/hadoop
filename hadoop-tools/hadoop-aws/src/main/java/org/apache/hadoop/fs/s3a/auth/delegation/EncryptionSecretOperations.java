@@ -42,7 +42,7 @@ public final class EncryptionSecretOperations {
     if (secrets.hasEncryptionKey() && secrets.getEncryptionMethod() == S3AEncryptionMethods.SSE_C) {
       return Optional.of(secrets.getEncryptionKey());
     } else {
-     return Optional.empty();
+      return Optional.empty();
     }
   }
 

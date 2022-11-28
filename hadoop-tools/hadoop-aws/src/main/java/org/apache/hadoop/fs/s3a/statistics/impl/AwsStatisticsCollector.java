@@ -100,32 +100,32 @@ public class AwsStatisticsCollector implements MetricPublisher {
     recurseThroughChildren(metricCollection)
         .collect(Collectors.toList())
         .forEach(m -> {
-      counter(m, CoreMetric.RETRY_COUNT, retries -> {
-        collector.updateAwsRetryCount(retries);
-        collector.updateAwsRequestCount(retries + 1);
-      });
+          counter(m, CoreMetric.RETRY_COUNT, retries -> {
+            collector.updateAwsRetryCount(retries);
+            collector.updateAwsRequestCount(retries + 1);
+          });
 
-      counter(m, HttpMetric.HTTP_STATUS_CODE, statusCode -> {
-        if (statusCode == HttpStatusCode.THROTTLING) {
-          throttling[0] += 1;
-        }
-      });
+          counter(m, HttpMetric.HTTP_STATUS_CODE, statusCode -> {
+            if (statusCode == HttpStatusCode.THROTTLING) {
+              throttling[0] += 1;
+            }
+          });
 
-      timing(m, CoreMetric.API_CALL_DURATION,
-          collector::noteAwsClientExecuteTime);
+          timing(m, CoreMetric.API_CALL_DURATION,
+              collector::noteAwsClientExecuteTime);
 
-      timing(m, CoreMetric.SERVICE_CALL_DURATION,
-          collector::noteAwsRequestTime);
+          timing(m, CoreMetric.SERVICE_CALL_DURATION,
+              collector::noteAwsRequestTime);
 
-      timing(m, CoreMetric.MARSHALLING_DURATION,
-          collector::noteRequestMarshallTime);
+          timing(m, CoreMetric.MARSHALLING_DURATION,
+              collector::noteRequestMarshallTime);
 
-      timing(m, CoreMetric.SIGNING_DURATION,
-          collector::noteRequestSigningTime);
+          timing(m, CoreMetric.SIGNING_DURATION,
+              collector::noteRequestSigningTime);
 
-      timing(m, CoreMetric.UNMARSHALLING_DURATION,
-          collector::noteResponseProcessingTime);
-    });
+          timing(m, CoreMetric.UNMARSHALLING_DURATION,
+              collector::noteResponseProcessingTime);
+        });
 
     collector.updateAwsThrottleExceptionsCount(throttling[0]);
   }

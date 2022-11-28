@@ -25,6 +25,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,15 +59,6 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.functional.FutureIO;
-
-import software.amazon.awssdk.core.SdkRequest;
-import software.amazon.awssdk.core.SdkResponse;
-import software.amazon.awssdk.core.interceptor.Context;
-import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.http.SdkHttpRequest;
-import software.amazon.awssdk.http.SdkHttpResponse;
-import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.Statistic.AUDIT_FAILURE;
@@ -411,7 +410,7 @@ public final class ActiveAuditManagerS3A
     }
 
     // TODO: should we remove this and use Global/Service interceptors, see:
-    // https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html
+    //  https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html
     final Class<?>[] interceptors = getConfig().getClasses(AUDIT_EXECUTION_INTERCEPTORS);
     if (interceptors != null) {
       for (Class<?> handler : interceptors) {
@@ -540,15 +539,16 @@ public final class ActiveAuditManagerS3A
 
   /**
    * Forward to active span.
-   * @param request request
+   * @param context execution context
+   * @param executionAttributes the execution attributes
    * {@inheritDoc}
-   */@Override
+   */
+  @Override
   public void onExecutionFailure(Context.FailedExecution context,
       ExecutionAttributes executionAttributes) {
     try {
-      extractAndActivateSpanFromRequest(context.request(),
-          executionAttributes)
-          .onExecutionFailure(context, executionAttributes);
+      extractAndActivateSpanFromRequest(context.request(), executionAttributes).onExecutionFailure(
+          context, executionAttributes);
     } catch (AuditFailureException e) {
       ioStatisticsStore.incrementCounter(AUDIT_FAILURE.getSymbol());
       throw e;

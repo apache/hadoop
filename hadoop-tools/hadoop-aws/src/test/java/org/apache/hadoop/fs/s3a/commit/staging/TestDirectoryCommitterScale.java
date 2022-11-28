@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
@@ -37,7 +39,6 @@ import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;

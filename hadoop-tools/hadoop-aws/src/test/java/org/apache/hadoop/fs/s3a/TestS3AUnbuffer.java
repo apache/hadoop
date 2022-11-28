@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.Path;
-
-import org.junit.Test;
-
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.Path;
+
+import org.junit.Test;
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,7 +61,7 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
         .lastModified(Instant.ofEpochMilli(2L))
         .eTag("mock-etag")
         .build();
-    when(s3V2.headObject((HeadObjectRequest) any())).thenReturn(objectMetadata);
+    when(s3.headObject((HeadObjectRequest) any())).thenReturn(objectMetadata);
 
     // Create mock ResponseInputStream<GetObjectResponse> and GetObjectResponse for open()
     GetObjectResponse objectResponse = GetObjectResponse.builder()
@@ -75,7 +76,7 @@ public class TestS3AUnbuffer extends AbstractS3AMockTest {
     ResponseInputStream<GetObjectResponse> getObjectResponseInputStream =
         new ResponseInputStream(objectResponse,
             AbortableInputStream.create(objectStream, () -> {}));
-    when(s3V2.getObject((GetObjectRequest) any())).thenReturn(getObjectResponseInputStream);
+    when(s3.getObject((GetObjectRequest) any())).thenReturn(getObjectResponseInputStream);
 
     // Call read and then unbuffer
     FSDataInputStream stream = fs.open(path);

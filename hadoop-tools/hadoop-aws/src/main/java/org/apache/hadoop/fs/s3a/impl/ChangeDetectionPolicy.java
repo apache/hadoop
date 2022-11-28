@@ -20,16 +20,15 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.util.Locale;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -435,7 +434,8 @@ public abstract class ChangeDetectionPolicy {
             CHANGE_DETECT_MODE + " set to " + Source.VersionId
                 + " but no versionId available while reading {}. "
                 + "Ensure your bucket has object versioning enabled. "
-                + "You may see inconsistent reads.", uri);
+                + "You may see inconsistent reads.",
+            uri);
       }
       return versionId;
     }

@@ -21,6 +21,9 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.IOException;
 import java.util.List;
 
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.transfer.s3.progress.TransferListener;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -29,8 +32,6 @@ import org.apache.hadoop.fs.store.audit.ActiveThreadSpanSource;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.service.Service;
 
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.transfer.s3.progress.TransferListener;
 
 /**
  * Interface for Audit Managers auditing operations through the

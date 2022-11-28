@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.auth;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import org.junit.Before;
 import org.junit.Test;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;

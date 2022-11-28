@@ -23,8 +23,9 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.http.AbortableInputStream;
 import org.apache.hadoop.util.Preconditions;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +41,6 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
-import software.amazon.awssdk.core.exception.AbortedException;
-import software.amazon.awssdk.http.AbortableInputStream;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
