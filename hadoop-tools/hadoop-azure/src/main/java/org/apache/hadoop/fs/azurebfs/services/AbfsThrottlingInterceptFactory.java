@@ -82,7 +82,7 @@ final class AbfsThrottlingInterceptFactory {
     abfsConfig =  abfsConfiguration;
     AbfsThrottlingIntercept intercept;
     if (!abfsConfiguration.isAutoThrottlingEnabled()) {
-      return new AbfsNoOpThrottlingIntercept();
+      return AbfsNoOpThrottlingIntercept.INSTANCE;
     }
     // If singleton is enabled use a static instance of the intercept class for all accounts
     if (!abfsConfiguration.accountThrottlingEnabled()) {

@@ -54,7 +54,7 @@ class AbfsClientThrottlingAnalyzer {
   private Timer timer = null;
   private AtomicReference<AbfsOperationMetrics> blobMetrics = null;
   private AtomicLong lastExecutionTime = null;
-  private AtomicBoolean isOperationOnAccountIdle = null;
+  private final AtomicBoolean isOperationOnAccountIdle = new AtomicBoolean(false);
   private AbfsConfiguration abfsConfiguration = null;
   private boolean accountLevelThrottlingEnabled = true;
 
@@ -85,7 +85,6 @@ class AbfsClientThrottlingAnalyzer {
     this.accountLevelThrottlingEnabled = abfsConfiguration.accountThrottlingEnabled();
     this.analysisPeriodMs = abfsConfiguration.getAnalysisPeriod();
     this.lastExecutionTime = new AtomicLong(now());
-    this.isOperationOnAccountIdle = new AtomicBoolean(false);
     this.blobMetrics = new AtomicReference<AbfsOperationMetrics>(
         new AbfsOperationMetrics(System.currentTimeMillis()));
     this.timer = new Timer(

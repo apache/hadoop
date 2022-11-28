@@ -148,6 +148,9 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AbfsThrottlingIntercept instance1 = AbfsThrottlingInterceptFactory.getInstance(accountName, configuration);
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
 
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
+        accountName1 != null && !accountName1.isEmpty());
+
     AbfsThrottlingIntercept instance2 = AbfsThrottlingInterceptFactory.getInstance(accountName1, configuration);
     //if singleton is enabled, for different accounts both the instances should return same value
     Assertions.assertThat(instance1)
@@ -205,6 +208,8 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs1 = new AzureBlobFileSystem();
     Configuration config = new Configuration(getRawConfiguration());
     String accountName1 = config.get(FS_AZURE_ABFS_ACCOUNT1_NAME);
+    assumeTrue("Not set: " + FS_AZURE_ABFS_ACCOUNT1_NAME,
+        accountName1 != null && !accountName1.isEmpty());
     final String abfsUrl1 = this.getFileSystemName() + "12" + "@" + accountName1;
     URI defaultUri1 = null;
     defaultUri1 = new URI("abfss", abfsUrl1, null, null, null);

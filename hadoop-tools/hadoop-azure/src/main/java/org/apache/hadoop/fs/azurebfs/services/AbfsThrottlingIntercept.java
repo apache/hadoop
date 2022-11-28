@@ -28,9 +28,21 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Unstable
 public interface AbfsThrottlingIntercept {
 
+  /**
+   * Updates the metrics for successful and failed read and write operations.
+   * @param operationType Only applicable for read and write operations.
+   * @param abfsHttpOperation Used for status code and data transferred.
+   */
   void updateMetrics(AbfsRestOperationType operationType,
       AbfsHttpOperation abfsHttpOperation);
 
+  /**
+   * Called before the request is sent.  Client-side throttling
+   * uses this to suspend the request, if necessary, to minimize errors and
+   * maximize throughput.
+   * @param operationType Only applicable for read and write operations.
+   * @param abfsCounters Used for counters.
+   */
   void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters);
 
