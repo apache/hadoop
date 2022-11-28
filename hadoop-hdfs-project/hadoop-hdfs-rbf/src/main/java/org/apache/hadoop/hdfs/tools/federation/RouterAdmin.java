@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +18,10 @@
 package org.apache.hadoop.hdfs.tools.federation;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,7 +57,6 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.DisableNameservic
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnableNameserviceResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDisabledNameservicesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
@@ -67,9 +64,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRes
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.GetSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.LeaveSafeModeResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RefreshMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
@@ -79,6 +74,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.BaseRecord;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.impl.pb.PBRecord;
+import org.apache.hadoop.hdfs.tools.AdminHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RefreshResponse;
@@ -97,6 +93,7 @@ import org.slf4j.LoggerFactory;
 import static org.apache.hadoop.hdfs.server.federation.router.Quota.eachByStorageType;
 import static org.apache.hadoop.hdfs.server.federation.router.Quota.orByStorageType;
 import static org.apache.hadoop.hdfs.server.federation.router.Quota.andByStorageType;
+import static org.apache.hadoop.hdfs.tools.AdminHelper.detailHelp;
 
 /**
  * This class provides some Federation administrative access shell commands.
@@ -105,9 +102,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.Quota.andByStorage
 public class RouterAdmin extends Configured implements Tool {
 
   private static final Logger LOG = LoggerFactory.getLogger(RouterAdmin.class);
-  private static final String DUMP_COMMAND = "-dumpState";
-
-  private RouterClient client;
 
   /** Pre-compiled regular expressions to detect duplicated slashes. */
   private static final Pattern SLASHES = Pattern.compile("/+");
@@ -116,8 +110,7 @@ public class RouterAdmin extends Configured implements Tool {
     Configuration conf = new HdfsConfiguration();
     RouterAdmin admin = new RouterAdmin(conf);
 
-    int res = ToolRunner.run(admin, argv);
-    System.exit(res);
+    System.exit(ToolRunner.run(admin, argv));
   }
 
   public RouterAdmin(Configuration conf) {
@@ -125,312 +118,146 @@ public class RouterAdmin extends Configured implements Tool {
   }
 
   /**
-   * Print the usage message.
+   * Get the configured address for the router admin port.
+   * @param conf the configuration to check
+   * @return the address
    */
-  public void printUsage() {
-    String usage = getUsage(null);
-    System.out.println(usage);
+  private static String getAddress(Configuration conf) {
+    return conf.getTrimmed(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
+        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
   }
 
-  private void printUsage(String cmd) {
-    String usage = getUsage(cmd);
-    System.out.println(usage);
-  }
-
-  private String getUsage(String cmd) {
-    if (cmd == null) {
-      String[] commands =
-          {"-add", "-update", "-rm", "-ls", "-getDestination", "-setQuota",
-              "-setStorageTypeQuota", "-clrQuota", "-clrStorageTypeQuota",
-              DUMP_COMMAND, "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh", "-refreshRouterArgs",
-              "-refreshSuperUserGroupsConfiguration", "-refreshCallQueue"};
-      StringBuilder usage = new StringBuilder();
-      usage.append("Usage: hdfs dfsrouteradmin :\n");
-      for (int i = 0; i < commands.length; i++) {
-        usage.append(getUsage(commands[i]));
-        if (i + 1 < commands.length) {
-          usage.append("\n");
-        }
-      }
-      return usage.toString();
+  private static RouterClient createClient(Configuration conf)
+      throws IOException {
+    try {
+      String address = getAddress(conf);
+      InetSocketAddress routerSocket = NetUtils.createSocketAddr(address);
+      return new RouterClient(routerSocket, conf);
+    } catch (RPC.VersionMismatch v) {
+      throw new IOException(
+          "Version mismatch between client and server... command aborted", v);
+    } catch (IOException e) {
+      throw new IOException("Bad connection to Router... command aborted", e);
     }
-    if (cmd.equals("-add")) {
-      return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-          + "[-readonly] [-faulttolerant] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner> -group <group> -mode <mode>]";
-    } else if (cmd.equals("-update")) {
-      return "\t[-update <source>"
-          + " [<nameservice1, nameservice2, ...> <destination>] "
-          + "[-readonly true|false] [-faulttolerant true|false] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner> -group <group> -mode <mode>]";
-    } else if (cmd.equals("-rm")) {
-      return "\t[-rm <source>]";
-    } else if (cmd.equals("-ls")) {
-      return "\t[-ls [-d] <path>]";
-    } else if (cmd.equals("-getDestination")) {
-      return "\t[-getDestination <path>]";
-    } else if (cmd.equals("-setQuota")) {
-      return "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-          + "<quota in bytes or quota size string>]";
-    } else if (cmd.equals("-setStorageTypeQuota")) {
-      return "\t[-setStorageTypeQuota <path> -storageType <storage type> "
-          + "<quota in bytes or quota size string>]";
-    } else if (cmd.equals("-clrQuota")) {
-      return "\t[-clrQuota <path>]";
-    } else if (cmd.equals("-clrStorageTypeQuota")) {
-      return "\t[-clrStorageTypeQuota <path>]";
-    } else if (cmd.equals("-safemode")) {
-      return "\t[-safemode enter | leave | get]";
-    } else if (cmd.equals("-nameservice")) {
-      return "\t[-nameservice enable | disable <nameservice>]";
-    } else if (cmd.equals("-getDisabledNameservices")) {
-      return "\t[-getDisabledNameservices]";
-    } else if (cmd.equals("-refresh")) {
-      return "\t[-refresh]";
-    } else if (cmd.equals("-refreshRouterArgs")) {
-      return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
-    } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
-      return "\t[-refreshSuperUserGroupsConfiguration]";
-    } else if (cmd.equals("-refreshCallQueue")) {
-      return "\t[-refreshCallQueue]";
-    } else if (cmd.equals(DUMP_COMMAND)) {
-      return "\t[" + DUMP_COMMAND + "]";
-    }
-    return getUsage(null);
-  }
-
-  /**
-   * Usage: validates the maximum number of arguments for a command.
-   * @param arg List of command line parameters.
-   */
-  private void validateMax(String[] arg) {
-    if (arg[0].equals("-ls")) {
-      if (arg.length > 3) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=2 argument allowed");
-      }
-    } else if (arg[0].equals("-getDestination")) {
-      if (arg.length > 2) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=1 argument allowed only");
-      }
-    } else if (arg[0].equals("-safemode")) {
-      if (arg.length > 2) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=1 argument allowed only");
-      }
-    } else if (arg[0].equals("-nameservice")) {
-      if (arg.length > 3) {
-        throw new IllegalArgumentException(
-            "Too many arguments, Max=2 arguments allowed");
-      }
-    } else if (arg[0].equals("-getDisabledNameservices")) {
-      if (arg.length > 1) {
-        throw new IllegalArgumentException("No arguments allowed");
-      }
-    } else if (arg[0].equals("-refreshSuperUserGroupsConfiguration")) {
-      if (arg.length > 1) {
-        throw new IllegalArgumentException("No arguments allowed");
-      }
-    } else if (arg[0].equals("-refreshCallQueue") ||
-        arg[0].equals(DUMP_COMMAND)) {
-      if (arg.length > 1) {
-        throw new IllegalArgumentException("No arguments allowed");
-      }
-    }
-  }
-
-  /**
-   * Usage: validates the minimum number of arguments for a command.
-   * @param argv List of of command line parameters.
-   * @return true if number of arguments are valid for the command else false.
-   */
-  private boolean validateMin(String[] argv) {
-    String cmd = argv[0];
-    if ("-add".equals(cmd)) {
-      if (argv.length < 4) {
-        return false;
-      }
-    } else if ("-update".equals(cmd)) {
-      if (argv.length < 4) {
-        return false;
-      }
-    } else if ("-rm".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    } else if ("-getDestination".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    } else if ("-setQuota".equals(cmd)) {
-      if (argv.length < 4) {
-        return false;
-      }
-    } else if ("-setStorageTypeQuota".equals(cmd)) {
-      if (argv.length < 5) {
-        return false;
-      }
-    } else if ("-clrQuota".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    } else if ("-clrStorageTypeQuota".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    } else if ("-safemode".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    } else if ("-nameservice".equals(cmd)) {
-      if (argv.length < 3) {
-        return false;
-      }
-    } else if ("-refreshRouterArgs".equals(cmd)) {
-      if (argv.length < 2) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Does this command run in the local process?
-   * @param cmd the string of the command
-   * @return is this a local command?
-   */
-  boolean isLocalCommand(String cmd) {
-    return DUMP_COMMAND.equals(cmd);
   }
 
   @Override
   public int run(String[] argv) throws Exception {
-    if (argv.length < 1) {
-      System.err.println("Not enough parameters specified");
-      printUsage();
-      return -1;
-    }
-
-    int exitCode = -1;
-    int i = 0;
-    String cmd = argv[i++];
-
-    // Verify that we have enough command line parameters
-    if (!validateMin(argv)) {
-      System.err.println("Not enough parameters specificed for cmd " + cmd);
-      printUsage(cmd);
-      return exitCode;
-    } else if (isLocalCommand(argv[0])) {
-      if (DUMP_COMMAND.equals(argv[0])) {
-        return dumpStateStore(getConf(), System.out) ? 0 : -1;
-      }
-    }
-    String address = null;
-    // Initialize RouterClient
-    try {
-      address = getConf().getTrimmed(
-          RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-          RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
-      InetSocketAddress routerSocket = NetUtils.createSocketAddr(address);
-      client = new RouterClient(routerSocket, getConf());
-    } catch (RPC.VersionMismatch v) {
-      System.err.println(
-          "Version mismatch between client and server... command aborted");
-      return exitCode;
-    } catch (IOException e) {
-      System.err.println("Bad connection to Router... command aborted");
-      return exitCode;
-    }
-
     Exception debugException = null;
-    exitCode = 0;
+    int exitCode;
+    String cmd = argv.length > 0 ? argv[0].substring(1) : "?";
     try {
-      validateMax(argv);
-      if ("-add".equals(cmd)) {
-        if (addMount(argv, i)) {
-          System.out.println("Successfully added mount point " + argv[i]);
-        } else {
-          exitCode = -1;
-        }
-      } else if ("-update".equals(cmd)) {
-        if (updateMount(argv, i)) {
-          System.out.println("Successfully updated mount point " + argv[i]);
-          System.out.println(
-              "WARN: Changing order/destinations may lead to inconsistencies");
-        } else {
-          exitCode = -1;
-        }
-      } else if ("-rm".equals(cmd)) {
-        while (i < argv.length) {
-          try {
-            if (removeMount(argv[i])) {
-              System.out.println("Successfully removed mount point " + argv[i]);
-            }
-          } catch (IOException e) {
-            exitCode = -1;
-            System.err
-                .println(cmd.substring(1) + ": " + e.getLocalizedMessage());
-          }
-          i++;
-        }
-      } else if ("-ls".equals(cmd)) {
-        listMounts(argv, i);
-      } else if ("-getDestination".equals(cmd)) {
-        getDestination(argv[i]);
-      } else if ("-setQuota".equals(cmd)) {
-        if (setQuota(argv, i)) {
-          System.out.println(
-              "Successfully set quota for mount point " + argv[i]);
-        }
-      } else if ("-setStorageTypeQuota".equals(cmd)) {
-        if (setStorageTypeQuota(argv, i)) {
-          System.out.println(
-              "Successfully set storage type quota for mount point " + argv[i]);
-        }
-      } else if ("-clrQuota".equals(cmd)) {
-        while (i < argv.length) {
-          if (clrQuota(argv[i])) {
-            System.out
-                .println("Successfully clear quota for mount point " + argv[i]);
-            i++;
-          }
-        }
-      } else if ("-clrStorageTypeQuota".equals(cmd)) {
-        while (i < argv.length) {
-          if (clrStorageTypeQuota(argv[i])) {
-            System.out.println("Successfully clear storage type quota for mount"
-                + " point " + argv[i]);
-            i++;
-          }
-        }
-      } else if ("-safemode".equals(cmd)) {
-        manageSafeMode(argv[i]);
-      } else if ("-nameservice".equals(cmd)) {
-        String subcmd = argv[i];
-        String nsId = argv[i + 1];
-        manageNameservice(subcmd, nsId);
-      } else if ("-getDisabledNameservices".equals(cmd)) {
-        getDisabledNameservices();
-      } else if ("-refresh".equals(cmd)) {
-        refresh(address);
-      } else if ("-refreshRouterArgs".equals(cmd)) {
-        exitCode = genericRefresh(argv, i);
-      } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
-        exitCode = refreshSuperUserGroupsConfiguration();
-      } else if ("-refreshCallQueue".equals(cmd)) {
-        exitCode = refreshCallQueue();
-      } else {
-        throw new IllegalArgumentException("Unknown Command: " + cmd);
-      }
-    } catch (IllegalArgumentException arge) {
-      debugException = arge;
-      exitCode = -1;
-      System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
-      printUsage(cmd);
+      return AdminHelper.runCommand("dfsrouteradmin", getConf(), argv,
+          AdminHelper.makeCommand("-add",
+              "Add or update a mount point.",
+              "[-readonly] [-faulttolerant] " +
+                  "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] " +
+                  "[-owner <owner>] [-group <group>] [-mode <mode>] " +
+                  "<source> <nameservices> <destination>",
+              this::addMount,
+              detailHelp("-readonly", "The mount point is read-only"),
+              detailHelp("-faulttolerant", "Should the mount point tolerate failures."),
+              detailHelp("-owner <owner>", "The owner of the mount point"),
+              detailHelp("-group <group>", "The group of the mount point"),
+              detailHelp("-mode <mode>", "The octal permissions of the mount point"),
+              detailHelp("<source>", "The virtual path"),
+              detailHelp("<nameservices>", "The comma separated list of target name services"),
+              detailHelp("<destination>", "The target path")
+          ),
+          AdminHelper.makeCommand("-clrQuota",
+              "Clear the quota on a mount point",
+              "<path>*",
+              this::clrQuota,
+              detailHelp("<path>", "Mount point to clear the quota")),
+          AdminHelper.makeCommand("-clrStorageTypeQuota",
+              "Clear the quota on a mount point for a storage type",
+              "<path>*",
+              this::clrStorageTypeQuota,
+              detailHelp("<path>", "Mount point to clear the quota")),
+          AdminHelper.makeCommand("-dumpState",
+              "Dump the routers' StateStore",
+              "",
+              RouterAdmin::dumpStateStore),
+          AdminHelper.makeCommand("-getDestination",
+              "Get the destination for a mount point",
+              "[<source>]",
+              this::getDestination,
+              detailHelp("<source>", "The virtual path")),
+          AdminHelper.makeCommand("-getDisabledNameservices",
+              "List the disabled name services",
+              "",
+              this::getDisabledNameservices),
+          AdminHelper.makeCommand("-ls",
+              "List mount points",
+              "[<source>] [-d]",
+              this::listMounts,
+              detailHelp("<source>", "The virtual path or '/'"),
+              detailHelp("d", "Display detailed information")),
+          AdminHelper.makeCommand("-nameservice",
+              "Change the state of a name service",
+              "(enable | disable) <nameservice>",
+              this::manageNameservice,
+              detailHelp("enable | disable", "Whether to enable or disable"),
+              detailHelp("<nameservice>", "The name service to modify")),
+          AdminHelper.makeCommand("-refresh",
+              "Refresh router caches",
+              "",
+              this::refresh),
+          AdminHelper.makeCommand("-refreshCallQueue",
+              "Refresh call queue",
+              "",
+              this::refreshCallQueue),
+          AdminHelper.makeCommand("-refreshRouterArgs",
+              "Generic refresh via the RefreshRegistry",
+              "<host:rpc_port> <key> [<arg>...]]",
+              this::genericRefresh,
+              detailHelp("<host:rpc_port>", "Router name and rpc port"),
+              detailHelp("<key>", "the refresher's key (eg. RefreshFairnessPolicyController)"),
+              detailHelp("<arg>", "The arguments to the refresher")),
+          AdminHelper.makeCommand("-refreshSuperUserGroupsConfiguration",
+              "Refresh super user configuration",
+              "",
+              this::refreshSuperUserGroupsConfiguration),
+          AdminHelper.makeCommand("-rm",
+              "Remove a mount point",
+              "<source>*",
+              this::removeMount),
+          AdminHelper.makeCommand("-safemode",
+              "Change the safemode state",
+              "enter | leave | get",
+              this::manageSafeMode),
+          AdminHelper.makeCommand("-setQuota",
+              "Set a quota on a mount point",
+              "-nsQuota <objectQuota> -ssQuota <byteQuota> <path>",
+              this::setQuota,
+              detailHelp("<objectQuota>", "Maximum number of files & directories"),
+              detailHelp("<byteQuota>", "Maximum number of bytes"),
+              detailHelp("<path>", "The mount point to set quota")),
+          AdminHelper.makeCommand("-setStorageTypeQuota",
+              "Set storage type quota for a mount table entry.",
+              "<path> <quota> -storageType <storageType>",
+              this::setStorageTypeQuota,
+              detailHelp("<path>", "The mount point where to set quota"),
+              detailHelp("<quota>", "Maximum number of bytes"),
+              detailHelp("<storageType>", "The type of storage (eg. disk)")),
+          AdminHelper.makeCommand("-update",
+              "Update a mount point.",
+                  "[-readonly (true | false)] " +
+                      "[-faulttolerant (true | false)] " +
+                      "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] " +
+                      "[-owner <owner>] [-group <group>] [-mode <mode>] " +
+                      "<source> [<nameservices> <destination>]",
+              this::updateMount,
+              detailHelp("-readonly", "The mount point is read-only"),
+              detailHelp("-faulttolerant", "Should the mount point tolerate failures."),
+              detailHelp("<owner>", "The owner of the mount point"),
+              detailHelp("<group>", "The group of the mount point"),
+              detailHelp("<mode>", "The octal permissions of the mount point"),
+              detailHelp("<source>", "The virtual path"),
+              detailHelp("<nameservices>", "The comma separated list of target name services"),
+              detailHelp("<destination>", "The target path")
+          )
+      );
     } catch (RemoteException e) {
       // This is an error returned by the server.
       // Print out the first line of the error message, ignore the stack trace.
@@ -439,24 +266,23 @@ public class RouterAdmin extends Configured implements Tool {
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
-        System.err.println(cmd.substring(1) + ": " + content[0]);
+        System.err.println(cmd+ ": " + content[0]);
         e.printStackTrace();
       } catch (Exception ex) {
-        System.err.println(cmd.substring(1) + ": " + ex.getLocalizedMessage());
+        System.err.println(cmd + ": " + ex.getLocalizedMessage());
         e.printStackTrace();
         debugException = ex;
       }
     } catch (IOException ioe) {
       exitCode = -1;
-      System.err.println(cmd.substring(1) + ": " + ioe.getLocalizedMessage());
-      printUsage(cmd);
+      System.err.printf("ERROR: %s: %s", cmd, ioe.getLocalizedMessage());
     } catch (Exception e) {
       exitCode = -1;
       debugException = e;
-      System.err.println(cmd.substring(1) + ": " + e.getLocalizedMessage());
+      System.err.printf("ERROR: %s: %s", cmd, e.getLocalizedMessage());
       e.printStackTrace();
     }
-    if (debugException != null) {
+    if (LOG.isDebugEnabled() && debugException != null) {
       LOG.debug("Exception encountered", debugException);
     }
     return exitCode;
@@ -467,310 +293,265 @@ public class RouterAdmin extends Configured implements Tool {
    *
    * @throws IOException if the operation was not successful.
    */
-  private int refreshSuperUserGroupsConfiguration()
+  private int refreshSuperUserGroupsConfiguration(Configuration conf,
+                                                  List<String> args)
       throws IOException{
-    RouterGenericManager proxy = client.getRouterGenericManager();
-    String address =  getConf().getTrimmed(
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
-    if(proxy.refreshSuperUserGroupsConfiguration()){
-      System.out.println(
-          "Successfully updated superuser proxy groups on router " + address);
-      return 0;
+    StringUtils.ensureAllUsed(args);
+    try (RouterClient client = createClient(conf)) {
+      RouterGenericManager proxy = client.getRouterGenericManager();
+      String address = getAddress(conf);
+      if (proxy.refreshSuperUserGroupsConfiguration()) {
+        System.out.println(
+            "Successfully updated superuser proxy groups on router " + address);
+        return 0;
+      }
     }
     return -1;
   }
 
-  private void refresh(String address) throws IOException {
-    if (refreshRouterCache()) {
+  private int refresh(Configuration conf, List<String> args) throws IOException {
+    StringUtils.ensureAllUsed(args);
+    if (refreshRouterCache(conf)) {
       System.out.println(
-          "Successfully updated mount table cache on router " + address);
+          "Successfully updated mount table cache on router " + getAddress(conf));
+      return 0;
+    } else {
+      return -1;
     }
   }
 
   /**
    * Refresh mount table cache on connected router.
-   *
+   * @param conf The configuration to use
    * @return true if cache refreshed successfully
-   * @throws IOException
    */
-  private boolean refreshRouterCache() throws IOException {
-    RefreshMountTableEntriesResponse response =
-        client.getMountTableManager().refreshMountTableEntries(
-            RefreshMountTableEntriesRequest.newInstance());
-    return response.getResult();
+  private boolean refreshRouterCache(Configuration conf) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      RefreshMountTableEntriesResponse response =
+          client.getMountTableManager().refreshMountTableEntries(
+              RefreshMountTableEntriesRequest.newInstance());
+      return response.getResult();
+    }
   }
-
 
   /**
    * Add a mount table entry or update if it exists.
-   *
+   * @param conf Configuration
    * @param parameters Parameters for the mount point.
-   * @param i Index in the parameters.
-   * @return If it was successful.
+   * @return 0 if it was successful.
    * @throws IOException If it cannot add the mount point.
    */
-  public boolean addMount(String[] parameters, int i) throws IOException {
-    // Mandatory parameters
-    String mount = parameters[i++];
-    String[] nss = parameters[i++].split(",");
-    String dest = parameters[i++];
-
-    // Optional parameters
-    boolean readOnly = false;
-    boolean faultTolerant = false;
-    String owner = null;
-    String group = null;
-    FsPermission mode = null;
-    DestinationOrder order = DestinationOrder.HASH;
-    while (i < parameters.length) {
-      if (parameters[i].equals("-readonly")) {
-        readOnly = true;
-      } else if (parameters[i].equals("-faulttolerant")) {
-        faultTolerant = true;
-      } else if (parameters[i].equals("-order")) {
-        i++;
-        try {
-          order = DestinationOrder.valueOf(parameters[i]);
-        } catch(Exception e) {
-          System.err.println("Cannot parse order: " + parameters[i]);
-        }
-      } else if (parameters[i].equals("-owner")) {
-        i++;
-        owner = parameters[i];
-      } else if (parameters[i].equals("-group")) {
-        i++;
-        group = parameters[i];
-      } else if (parameters[i].equals("-mode")) {
-        i++;
-        short modeValue = Short.parseShort(parameters[i], 8);
-        mode = new FsPermission(modeValue);
-      } else {
-        printUsage("-add");
-        return false;
-      }
-
-      i++;
+  public int addMount(Configuration conf,
+                      List<String> parameters) throws IOException {
+    boolean readOnly = StringUtils.popOption("-readonly", parameters);
+    boolean faultTolerant = StringUtils.popOption("-faulttolerant", parameters);
+    String owner = StringUtils.popOptionWithArgument("-owner", parameters);
+    String group = StringUtils.popOptionWithArgument("-group", parameters);
+    String modeStr = StringUtils.popOptionWithArgument("-mode", parameters);
+    DestinationOrder order = DestinationOrder.valueOf(
+        StringUtils.popOptionWithArgument("-order", parameters, "HASH"));
+    String mount = StringUtils.popFirstNonOption(parameters);
+    String nssString = StringUtils.popFirstNonOption(parameters);
+    String dest = StringUtils.popFirstNonOption(parameters);
+    if (mount == null || nssString == null || dest == null) {
+      throw new IllegalArgumentException("Required parameters not supplied.");
     }
+    StringUtils.ensureAllUsed(parameters);
+    String[] nss = nssString.split(",");
 
-    return addMount(mount, nss, dest, readOnly, faultTolerant, order,
-        new ACLEntity(owner, group, mode));
+    FsPermission mode = modeStr == null ?
+        null : new FsPermission(Short.parseShort(modeStr, 8));
+
+    return addMount(conf, mount, nss, dest, readOnly, faultTolerant, order,
+        new ACLEntity(owner, group, mode), true);
+  }
+
+  /**
+   * Check for an optional boolean argument.
+   * @param name the name of the argument
+   * @param parameters the list of all of the parameters
+   * @return null if the argument wasn't present, true or false based on the
+   * string
+   */
+  static Boolean parseOptionalBoolean(String name, List<String> parameters) {
+    String val = StringUtils.popOptionWithArgument(name, parameters);
+    if (val == null) {
+      return null;
+    } else {
+      switch (val.toLowerCase()) {
+        case "true": return true;
+        case "false": return false;
+        default: throw new IllegalArgumentException("Illegal boolean value " + val);
+      }
+    }
+  }
+
+  /**
+   * Update a mount table entry
+   * @param conf Configuration
+   * @param parameters Parameters for the mount point.
+   * @return 0 if it was successful.
+   * @throws IOException If it cannot add the mount point.
+   */
+  public int updateMount(Configuration conf,
+                         List<String> parameters) throws IOException {
+    Boolean readOnly = parseOptionalBoolean("-readonly", parameters);
+    Boolean faultTolerant = parseOptionalBoolean("-faulttolerant", parameters);
+    String owner = StringUtils.popOptionWithArgument("-owner", parameters);
+    String group = StringUtils.popOptionWithArgument("-group", parameters);
+    String modeStr = StringUtils.popOptionWithArgument("-mode", parameters);
+    String orderStr = StringUtils.popOptionWithArgument("-order", parameters);
+    DestinationOrder order =
+        orderStr == null ? null : DestinationOrder.valueOf(orderStr);
+    String mount = StringUtils.popFirstNonOption(parameters);
+    String nssString = StringUtils.popFirstNonOption(parameters);
+    String dest = StringUtils.popFirstNonOption(parameters);
+    if (mount == null) {
+      throw new IllegalArgumentException("Required mount parameter not supplied.");
+    }
+    if ((nssString == null) != (dest == null)) {
+      throw new IllegalArgumentException(
+          "Namespace and destination parameter should be supplied together.");
+    }
+    StringUtils.ensureAllUsed(parameters);
+    String[] nss = nssString == null ? null : nssString.split(",");
+
+    FsPermission mode = modeStr == null ?
+        null : new FsPermission(Short.parseShort(modeStr, 8));
+
+    return addMount(conf, mount, nss, dest, readOnly, faultTolerant, order,
+        new ACLEntity(owner, group, mode), false);
   }
 
   /**
    * Add a mount table entry or update if it exists.
-   *
+   * @param conf The configuration
    * @param mount Mount point.
    * @param nss Namespaces where this is mounted to.
    * @param dest Destination path.
    * @param readonly If the mount point is read only.
    * @param order Order of the destination locations.
    * @param aclInfo the ACL info for mount point.
-   * @return If the mount point was added.
+   * @param create should the mount be created if it doesn't exist yet?
+   * @return 0 if the mount point was added.
    * @throws IOException Error adding the mount point.
    */
-  public boolean addMount(String mount, String[] nss, String dest,
-      boolean readonly, boolean faultTolerant, DestinationOrder order,
-      ACLEntity aclInfo)
-      throws IOException {
+  public int addMount(Configuration conf,
+                      String mount, String[] nss, String dest,
+                      Boolean readonly, Boolean faultTolerant, DestinationOrder order,
+                      ACLEntity aclInfo, boolean create) throws IOException {
     mount = normalizeFileSystemPath(mount);
-    // Get the existing entry
-    MountTableManager mountTable = client.getMountTableManager();
-    MountTable existingEntry = getMountEntry(mount, mountTable);
+    try (RouterClient client = createClient(conf)) {
+      // Get the existing entry
+      MountTableManager mountTable = client.getMountTableManager();
+      MountTable existingEntry = getMountEntry(mount, mountTable);
 
-    if (existingEntry == null) {
-      // Create and add the entry if it doesn't exist
-      Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : nss) {
-        destMap.put(ns, dest);
-      }
-      MountTable newEntry = MountTable.newInstance(mount, destMap);
-      if (readonly) {
-        newEntry.setReadOnly(true);
-      }
-      if (faultTolerant) {
-        newEntry.setFaultTolerant(true);
-      }
-      if (order != null) {
-        newEntry.setDestOrder(order);
-      }
-
-      // Set ACL info for mount table entry
-      if (aclInfo.getOwner() != null) {
-        newEntry.setOwnerName(aclInfo.getOwner());
-      }
-
-      if (aclInfo.getGroup() != null) {
-        newEntry.setGroupName(aclInfo.getGroup());
-      }
-
-      if (aclInfo.getMode() != null) {
-        newEntry.setMode(aclInfo.getMode());
-      }
-
-      newEntry.validate();
-
-      AddMountTableEntryRequest request =
-          AddMountTableEntryRequest.newInstance(newEntry);
-      AddMountTableEntryResponse addResponse =
-          mountTable.addMountTableEntry(request);
-      boolean added = addResponse.getStatus();
-      if (!added) {
-        System.err.println("Cannot add mount point " + mount);
-      }
-      return added;
-    } else {
-      // Update the existing entry if it exists
-      for (String nsId : nss) {
-        if (!existingEntry.addDestination(nsId, dest)) {
-          System.err.println("Cannot add destination at " + nsId + " " + dest);
-          return false;
+      if (existingEntry == null) {
+        if (!create) {
+          System.err.println("Mount point " + mount + " does not exist, use -add.");
+          return -1;
         }
-      }
-      if (readonly) {
-        existingEntry.setReadOnly(true);
-      }
-      if (faultTolerant) {
-        existingEntry.setFaultTolerant(true);
-      }
-      if (order != null) {
-        existingEntry.setDestOrder(order);
-      }
+        // Create and add the entry if it doesn't exist
+        Map<String, String> destMap = new LinkedHashMap<>();
+        for (String ns : nss) {
+          destMap.put(ns, dest);
+        }
+        MountTable newEntry = MountTable.newInstance(mount, destMap);
+        if (readonly != null) {
+          newEntry.setReadOnly(readonly);
+        }
+        if (faultTolerant != null) {
+          newEntry.setFaultTolerant(faultTolerant);
+        }
+        if (order != null) {
+          newEntry.setDestOrder(order);
+        }
 
-      // Update ACL info of mount table entry
-      if (aclInfo.getOwner() != null) {
-        existingEntry.setOwnerName(aclInfo.getOwner());
-      }
+        // Set ACL info for mount table entry
+        if (aclInfo.getOwner() != null) {
+          newEntry.setOwnerName(aclInfo.getOwner());
+        }
 
-      if (aclInfo.getGroup() != null) {
-        existingEntry.setGroupName(aclInfo.getGroup());
-      }
+        if (aclInfo.getGroup() != null) {
+          newEntry.setGroupName(aclInfo.getGroup());
+        }
 
-      if (aclInfo.getMode() != null) {
-        existingEntry.setMode(aclInfo.getMode());
-      }
+        if (aclInfo.getMode() != null) {
+          newEntry.setMode(aclInfo.getMode());
+        }
 
-      existingEntry.validate();
+        newEntry.validate();
 
-      UpdateMountTableEntryRequest updateRequest =
-          UpdateMountTableEntryRequest.newInstance(existingEntry);
-      UpdateMountTableEntryResponse updateResponse =
-          mountTable.updateMountTableEntry(updateRequest);
-      boolean updated = updateResponse.getStatus();
-      if (!updated) {
-        System.err.println("Cannot update mount point " + mount);
-      }
-      return updated;
-    }
-  }
-
-  /**
-   * Update a mount table entry.
-   *
-   * @param parameters Parameters for the mount point.
-   * @param i Index in the parameters.
-   * @return If it updated the mount point successfully.
-   * @throws IOException If there is an error.
-   */
-  public boolean updateMount(String[] parameters, int i) throws IOException {
-    String mount = parameters[i++];
-    mount = normalizeFileSystemPath(mount);
-    MountTableManager mountTable = client.getMountTableManager();
-    MountTable existingEntry = getMountEntry(mount, mountTable);
-    if (existingEntry == null) {
-      throw new IOException(mount + " doesn't exist.");
-    }
-    // Check if the destination needs to be updated.
-
-    if (!parameters[i].startsWith("-")) {
-      String[] nss = parameters[i++].split(",");
-      String dest = parameters[i++];
-      Map<String, String> destMap = new LinkedHashMap<>();
-      for (String ns : nss) {
-        destMap.put(ns, dest);
-      }
-      final List<RemoteLocation> locations = new LinkedList<>();
-      for (Entry<String, String> entry : destMap.entrySet()) {
-        String nsId = entry.getKey();
-        String path = normalizeFileSystemPath(entry.getValue());
-        RemoteLocation location = new RemoteLocation(nsId, path, mount);
-        locations.add(location);
-      }
-      existingEntry.setDestinations(locations);
-    }
-    try {
-      while (i < parameters.length) {
-        switch (parameters[i]) {
-        case "-readonly":
-          i++;
-          existingEntry.setReadOnly(getBooleanValue(parameters[i]));
-          break;
-        case "-faulttolerant":
-          i++;
-          existingEntry.setFaultTolerant(getBooleanValue(parameters[i]));
-          break;
-        case "-order":
-          i++;
-          try {
-            existingEntry.setDestOrder(DestinationOrder.valueOf(parameters[i]));
-            break;
-          } catch (Exception e) {
-            throw new Exception("Cannot parse order: " + parameters[i]);
+        AddMountTableEntryRequest request =
+            AddMountTableEntryRequest.newInstance(newEntry);
+        AddMountTableEntryResponse addResponse =
+            mountTable.addMountTableEntry(request);
+        boolean added = addResponse.getStatus();
+        if (!added) {
+          System.err.println("Cannot add mount point " + mount);
+        } else {
+          System.out.println("Successfully added mount point " + mount);
+        }
+        return added ? 0 : -1;
+      } else {
+        // Update the destinations
+        if (nss != null && dest != null) {
+          if (create) {
+            // If they are using -add, we add new destinations
+            for (String nsId : nss) {
+              if (!existingEntry.addDestination(nsId, dest)) {
+                System.err.println("Cannot add destination at " + nsId + " " + dest);
+                return -1;
+              }
+            }
+          } else {
+            // On -update we replace the old destinations
+            List<RemoteLocation> locations = new ArrayList<>(nss.length);
+            String path = normalizeFileSystemPath(dest);
+            for (String nsId: nss) {
+              locations.add(new RemoteLocation(nsId, path, mount));
+            }
+            existingEntry.setDestinations(locations);
           }
-        case "-owner":
-          i++;
-          existingEntry.setOwnerName(parameters[i]);
-          break;
-        case "-group":
-          i++;
-          existingEntry.setGroupName(parameters[i]);
-          break;
-        case "-mode":
-          i++;
-          short modeValue = Short.parseShort(parameters[i], 8);
-          existingEntry.setMode(new FsPermission(modeValue));
-          break;
-        default:
-          printUsage("-update");
-          return false;
         }
-        i++;
-      }
-    } catch (IllegalArgumentException iae) {
-      throw iae;
-    } catch (Exception e) {
-      String msg = "Unable to parse arguments: " + e.getMessage();
-      if (e instanceof ArrayIndexOutOfBoundsException) {
-        msg = "Unable to parse arguments: no value provided for "
-            + parameters[i - 1];
-      }
-      throw new IOException(msg);
-    }
-    UpdateMountTableEntryRequest updateRequest =
-        UpdateMountTableEntryRequest.newInstance(existingEntry);
-    UpdateMountTableEntryResponse updateResponse =
-        mountTable.updateMountTableEntry(updateRequest);
-    boolean updated = updateResponse.getStatus();
-    if (!updated) {
-      System.err.println("Cannot update mount point " + mount);
-    }
-    return updated;
-  }
+        if (readonly != null) {
+          existingEntry.setReadOnly(readonly);
+        }
+        if (faultTolerant != null) {
+          existingEntry.setFaultTolerant(faultTolerant);
+        }
+        if (order != null) {
+          existingEntry.setDestOrder(order);
+        }
 
-  /**
-   * Parse string to boolean.
-   * @param value the string to be parsed.
-   * @return parsed boolean value.
-   * @throws Exception if other than true|false is provided.
-   */
-  private boolean getBooleanValue(String value) throws Exception {
-    if (value.equalsIgnoreCase("true")) {
-      return true;
-    } else if (value.equalsIgnoreCase("false")) {
-      return false;
+        // Update ACL info of mount table entry
+        if (aclInfo.getOwner() != null) {
+          existingEntry.setOwnerName(aclInfo.getOwner());
+        }
+
+        if (aclInfo.getGroup() != null) {
+          existingEntry.setGroupName(aclInfo.getGroup());
+        }
+
+        if (aclInfo.getMode() != null) {
+          existingEntry.setMode(aclInfo.getMode());
+        }
+
+        existingEntry.validate();
+
+        UpdateMountTableEntryRequest updateRequest =
+            UpdateMountTableEntryRequest.newInstance(existingEntry);
+        UpdateMountTableEntryResponse updateResponse =
+            mountTable.updateMountTableEntry(updateRequest);
+        boolean updated = updateResponse.getStatus();
+        if (!updated) {
+          System.err.println("Cannot update mount point " + mount);
+        } else {
+          System.out.println("Successfully updated mount point " + mount);
+        }
+        return updated ? 0 : -1;
+      }
     }
-    throw new IllegalArgumentException("Invalid argument: " + value
-        + ". Please specify either true or false.");
   }
 
   /**
@@ -798,68 +579,72 @@ public class RouterAdmin extends Configured implements Tool {
 
   /**
    * Remove mount point.
-   *
-   * @param path Path to remove.
-   * @return If the mount point was removed successfully.
+   * @param conf Configuration
+   * @param args Command arguements
+   * @return 0 if the mount point was removed successfully.
    * @throws IOException If it cannot be removed.
    */
-  public boolean removeMount(String path) throws IOException {
-    path = normalizeFileSystemPath(path);
-    MountTableManager mountTable = client.getMountTableManager();
-    RemoveMountTableEntryRequest request =
-        RemoveMountTableEntryRequest.newInstance(path);
-    RemoveMountTableEntryResponse response =
-        mountTable.removeMountTableEntry(request);
-    boolean removed = response.getStatus();
-    if (!removed) {
-      System.out.println("Cannot remove mount point " + path);
+  public int removeMount(Configuration conf, List<String> args) throws IOException {
+    String path = StringUtils.popFirstNonOption(args);
+    if (path == null) {
+      throw new IllegalArgumentException("Missing parameter for remove mount");
     }
-    return removed;
+    int result = 0;
+    try (RouterClient client = createClient(conf)) {
+      while (path != null) {
+        path = normalizeFileSystemPath(path);
+        MountTableManager mountTable = client.getMountTableManager();
+        RemoveMountTableEntryRequest request =
+            RemoveMountTableEntryRequest.newInstance(path);
+        RemoveMountTableEntryResponse response =
+            mountTable.removeMountTableEntry(request);
+        if (!response.getStatus()) {
+          System.err.println("Cannot remove mount point " + path);
+          result = -1;
+        }
+        path = StringUtils.popFirstNonOption(args);
+      }
+      return result;
+    }
   }
 
   /**
    * List mount points.
-   *
-   * @param argv Parameters of the path.
-   * @param i Index in the parameters.
+   * @param conf Configuration to use
+   * @param args Parameters of the path.
+   * @return 0 if the command is successful
    * @throws IOException If it cannot be listed.
    */
-  public void listMounts(String[] argv, int i) throws IOException {
-    String path;
-    boolean detail = false;
-    if (argv.length == 1) {
+  public int listMounts(Configuration conf, List<String> args) throws IOException {
+    boolean detail = StringUtils.popOption("-d", args);
+    String path = StringUtils.popFirstNonOption(args);
+    if (path == null) {
       path = "/";
-    } else if (argv[i].equals("-d")) { // Check if -d parameter is specified.
-      detail = true;
-      if (argv.length == 2) {
-        path = "/"; // If no path is provided with -ls -d.
-      } else {
-        path = argv[++i];
-      }
-    } else {
-      path = argv[i];
     }
+    StringUtils.ensureAllUsed(args);
 
-    path = normalizeFileSystemPath(path);
-    MountTableManager mountTable = client.getMountTableManager();
-    GetMountTableEntriesRequest request =
-        GetMountTableEntriesRequest.newInstance(path);
-    GetMountTableEntriesResponse response =
-        mountTable.getMountTableEntries(request);
-    List<MountTable> entries = response.getEntries();
-    printMounts(entries, detail);
+    try (RouterClient client = createClient(conf)) {
+      path = normalizeFileSystemPath(path);
+      MountTableManager mountTable = client.getMountTableManager();
+      GetMountTableEntriesRequest request =
+          GetMountTableEntriesRequest.newInstance(path);
+      GetMountTableEntriesResponse response =
+          mountTable.getMountTableEntries(request);
+      List<MountTable> entries = response.getEntries();
+      printMounts(entries, detail);
+    }
+    return 0;
   }
 
   private static void printMounts(List<MountTable> entries, boolean detail) {
     System.out.println("Mount Table Entries:");
     if (detail) {
-      System.out.println(
-          String.format("%-25s %-25s %-25s %-25s %-10s %-30s %-10s %-10s %-15s",
-              "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage",
-              "Order", "ReadOnly", "FaultTolerant"));
+      System.out.printf("%-25s %-25s %-25s %-25s %-10s %-30s %-10s %-10s %-15s%n",
+          "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage",
+          "Order", "ReadOnly", "FaultTolerant");
     } else {
-      System.out.println(String.format("%-25s %-25s %-25s %-25s %-10s %-30s",
-          "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage"));
+      System.out.printf("%-25s %-25s %-25s %-25s %-10s %-30s%n",
+          "Source", "Destinations", "Owner", "Group", "Mode", "Quota/Usage");
     }
     for (MountTable entry : entries) {
       StringBuilder destBuilder = new StringBuilder();
@@ -870,73 +655,58 @@ public class RouterAdmin extends Configured implements Tool {
         destBuilder.append(String.format("%s->%s", location.getNameserviceId(),
             location.getDest()));
       }
-      System.out.print(String.format("%-25s %-25s", entry.getSourcePath(),
-          destBuilder.toString()));
+      System.out.printf("%-25s %-25s", entry.getSourcePath(), destBuilder);
 
-      System.out.print(String.format(" %-25s %-25s %-10s",
-          entry.getOwnerName(), entry.getGroupName(), entry.getMode()));
+      System.out.printf(" %-25s %-25s %-10s",
+          entry.getOwnerName(), entry.getGroupName(), entry.getMode());
 
-      System.out.print(String.format(" %-30s", entry.getQuota()));
+      System.out.printf(" %-30s", entry.getQuota());
 
       if (detail) {
-        System.out.print(String.format(" %-10s", entry.getDestOrder()));
+        System.out.printf(" %-10s", entry.getDestOrder());
 
-        System.out.print(
-            String.format(" %-10s", entry.isReadOnly() ? "Read-Only" : ""));
+        System.out.printf(" %-10s", entry.isReadOnly() ? "Read-Only" : "");
 
-        System.out.print(String.format(" %-15s",
-            entry.isFaultTolerant() ? "Fault-Tolerant" : ""));
+        System.out.printf(" %-15s",
+            entry.isFaultTolerant() ? "Fault-Tolerant" : "");
       }
       System.out.println();
     }
   }
 
-  private void getDestination(String path) throws IOException {
-    path = normalizeFileSystemPath(path);
-    MountTableManager mountTable = client.getMountTableManager();
-    GetDestinationRequest request =
-        GetDestinationRequest.newInstance(path);
-    GetDestinationResponse response = mountTable.getDestination(request);
-    System.out.println("Destination: " +
-        StringUtils.join(",", response.getDestinations()));
+  private int getDestination(Configuration conf,
+                             List<String> args) throws IOException {
+    String path = StringUtils.popFirstNonOption(args);
+    if (path == null) {
+      throw new IllegalArgumentException("Missing source parameter");
+    }
+    StringUtils.ensureAllUsed(args);
+    try (RouterClient client = createClient(conf)) {
+      path = normalizeFileSystemPath(path);
+      MountTableManager mountTable = client.getMountTableManager();
+      GetDestinationRequest request =
+          GetDestinationRequest.newInstance(path);
+      GetDestinationResponse response = mountTable.getDestination(request);
+      System.out.println("Destination: " +
+          StringUtils.join(",", response.getDestinations()));
+    }
+    return 0;
   }
 
   /**
    * Set quota for a mount table entry.
    *
-   * @param parameters Parameters of the quota.
-   * @param i Index in the parameters.
+   * @param conf The configuration to use
+   * @param args Parameters of the quota.
    */
-  private boolean setQuota(String[] parameters, int i) throws IOException {
-    long nsQuota = HdfsConstants.QUOTA_DONT_SET;
-    long ssQuota = HdfsConstants.QUOTA_DONT_SET;
-
-    String mount = parameters[i++];
-    while (i < parameters.length) {
-      if (parameters[i].equals("-nsQuota")) {
-        i++;
-        try {
-          nsQuota = Long.parseLong(parameters[i]);
-        } catch (Exception e) {
-          throw new IllegalArgumentException(
-              "Cannot parse nsQuota: " + parameters[i]);
-        }
-      } else if (parameters[i].equals("-ssQuota")) {
-        i++;
-        try {
-          ssQuota = StringUtils.TraditionalBinaryPrefix
-              .string2long(parameters[i]);
-        } catch (Exception e) {
-          throw new IllegalArgumentException(
-              "Cannot parse ssQuota: " + parameters[i]);
-        }
-      } else {
-        throw new IllegalArgumentException(
-            "Invalid argument : " + parameters[i]);
-      }
-
-      i++;
-    }
+  private int setQuota(Configuration conf, List<String> args) throws IOException {
+    final String DONT_SET = Long.toString(HdfsConstants.QUOTA_DONT_SET);
+    long nsQuota = Long.parseLong(StringUtils.popOptionWithArgument(
+        "-nsQuota", args, DONT_SET));
+    long ssQuota = StringUtils.TraditionalBinaryPrefix.string2long(
+        StringUtils.popOptionWithArgument("-ssQuota", args, DONT_SET));
+    String mount = StringUtils.popFirstNonOption(args);
+    StringUtils.ensureAllUsed(args);
 
     if (nsQuota <= 0 || ssQuota <= 0) {
       throw new IllegalArgumentException(
@@ -949,29 +719,30 @@ public class RouterAdmin extends Configured implements Tool {
           "Must specify at least one of -nsQuota and -ssQuota.");
     }
 
-    return updateQuota(mount, nsQuota, ssQuota);
+    return updateQuota(conf, mount, nsQuota, ssQuota) ? 0 : -1;
   }
 
   /**
    * Set storage type quota for a mount table entry.
    *
-   * @param parameters Parameters of the quota.
-   * @param i Index in the parameters.
+   * @param conf The configuration to use
+   * @param args Parameters of the quota.
    */
-  private boolean setStorageTypeQuota(String[] parameters, int i)
-      throws IOException {
+  private int setStorageTypeQuota(Configuration conf,
+                                  List<String> args) throws IOException {
     long[] typeQuota = new long[StorageType.values().length];
     eachByStorageType(
         t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_DONT_SET);
 
-    String mount = parameters[i++];
-    if (parameters[i].equals("-storageType")) {
-      i++;
-      StorageType type = StorageType.parseStorageType(parameters[i++]);
-      typeQuota[type.ordinal()] = Long.parseLong(parameters[i]);
-    } else {
-      throw new IllegalArgumentException("Invalid argument : " + parameters[i]);
+    String storageStr = StringUtils.popOptionWithArgument("-storageType", args);
+    if (storageStr == null) {
+      throw new IllegalArgumentException("Missing -storageType parameter");
     }
+    StorageType type = StorageType.parseStorageType(storageStr);
+    String mount = StringUtils.popFirstNonOption(args);
+    long size = StringUtils.TraditionalBinaryPrefix.string2long(
+        StringUtils.popFirstNonOption(args));
+    typeQuota[type.ordinal()] = size;
 
     if (orByStorageType(t -> typeQuota[t.ordinal()] <= 0)) {
       throw new IllegalArgumentException(
@@ -984,267 +755,330 @@ public class RouterAdmin extends Configured implements Tool {
           "Must specify at least one of -nsQuota and -ssQuota.");
     }
 
-    return updateStorageTypeQuota(mount, typeQuota);
+    return updateStorageTypeQuota(conf, mount, typeQuota) ? 0 : 1;
   }
 
   /**
    * Clear quota of the mount point.
    *
-   * @param mount Mount table to clear
-   * @return If the quota was cleared.
+   * @param conf The configuration
+   * @param args The list of arguments
+   * @return 0 if the quota was cleared.
    * @throws IOException Error clearing the mount point.
    */
-  private boolean clrQuota(String mount) throws IOException {
-    return updateQuota(mount, HdfsConstants.QUOTA_RESET,
-        HdfsConstants.QUOTA_RESET);
+  private int clrQuota(Configuration conf, List<String> args) throws IOException {
+    String mount = StringUtils.popFirstNonOption(args);
+    if (mount == null) {
+      throw new IllegalArgumentException("Missing required parameter.");
+    }
+    while (mount != null) {
+      if (!updateQuota(conf, mount, HdfsConstants.QUOTA_RESET,
+          HdfsConstants.QUOTA_RESET)) {
+        System.err.println("Failed to clear quota for mount point " + mount);
+        return -1;
+      }
+      System.out.println("Successfully clear quota for mount point " + mount);
+      mount = StringUtils.popFirstNonOption(args);
+    }
+    return 0;
   }
 
   /**
    * Clear storage type quota of the mount point.
    *
-   * @param mount Mount table to clear
-   * @return If the quota was cleared.
+   * @param conf The configuration
+   * @param args The list of arguments
+   * @return 0 if the quota was cleared.
    * @throws IOException Error clearing the mount point.
    */
-  private boolean clrStorageTypeQuota(String mount) throws IOException {
-    long[] typeQuota = new long[StorageType.values().length];
-    eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
-    return updateStorageTypeQuota(mount, typeQuota);
+  private int clrStorageTypeQuota(Configuration conf,
+                                  List<String> args) throws IOException {
+    String mount = StringUtils.popFirstNonOption(args);
+    if (mount == null) {
+      throw new IllegalArgumentException("Missing required parameter.");
+    }
+    while (mount != null) {
+      long[] typeQuota = new long[StorageType.values().length];
+      eachByStorageType(t -> typeQuota[t.ordinal()] = HdfsConstants.QUOTA_RESET);
+      if (!updateStorageTypeQuota(conf, mount, typeQuota)) {
+        System.err.println("Failed to clear storage type quota for mount point "
+            + mount);
+        return -1;
+      }
+      System.out.println("Successfully clear storage type quota for mount point "
+          + mount);
+      mount = StringUtils.popFirstNonOption(args);
+    }
+    return 0;
   }
 
   /**
    * Update quota of specified mount table.
-   *
+   * @param conf The configuration
    * @param mount Specified mount table to update.
    * @param nsQuota Namespace quota.
    * @param ssQuota Storage space quota.
    * @return If the quota was updated.
    * @throws IOException Error updating quota.
    */
-  private boolean updateQuota(String mount, long nsQuota, long ssQuota)
-      throws IOException {
+  private boolean updateQuota(Configuration conf, String mount, long nsQuota,
+                              long ssQuota) throws IOException {
     // Get existing entry
-    MountTableManager mountTable = client.getMountTableManager();
-    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
-        .newInstance(mount);
-    GetMountTableEntriesResponse getResponse = mountTable
-        .getMountTableEntries(getRequest);
-    List<MountTable> results = getResponse.getEntries();
-    MountTable existingEntry = null;
-    for (MountTable result : results) {
-      if (mount.equals(result.getSourcePath())) {
-        existingEntry = result;
-        break;
+    try (RouterClient client = createClient(conf)) {
+      MountTableManager mountTable = client.getMountTableManager();
+      GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+          .newInstance(mount);
+      GetMountTableEntriesResponse getResponse = mountTable
+          .getMountTableEntries(getRequest);
+      List<MountTable> results = getResponse.getEntries();
+      MountTable existingEntry = null;
+      for (MountTable result : results) {
+        if (mount.equals(result.getSourcePath())) {
+          existingEntry = result;
+          break;
+        }
       }
-    }
 
-    if (existingEntry == null) {
-      throw new IOException(mount + " doesn't exist in mount table.");
-    } else {
-      long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
-      long ssCount = existingEntry.getQuota().getSpaceConsumed();
-      // If nsQuota and ssQuota were reset, clear nsQuota and ssQuota.
-      if (nsQuota == HdfsConstants.QUOTA_RESET &&
-          ssQuota == HdfsConstants.QUOTA_RESET) {
-        nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
-        ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+      if (existingEntry == null) {
+        throw new IOException(mount + " doesn't exist in mount table.");
       } else {
-        // If nsQuota or ssQuota was unset, use the value in mount table.
-        if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
-          nsQuota = existingEntry.getQuota().getQuota();
+        long nsCount = existingEntry.getQuota().getFileAndDirectoryCount();
+        long ssCount = existingEntry.getQuota().getSpaceConsumed();
+        // If nsQuota and ssQuota were reset, clear nsQuota and ssQuota.
+        if (nsQuota == HdfsConstants.QUOTA_RESET &&
+            ssQuota == HdfsConstants.QUOTA_RESET) {
+          nsCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+          ssCount = RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT;
+        } else {
+          // If nsQuota or ssQuota was unset, use the value in mount table.
+          if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
+            nsQuota = existingEntry.getQuota().getQuota();
+          }
+          if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
+            ssQuota = existingEntry.getQuota().getSpaceQuota();
+          }
         }
-        if (ssQuota == HdfsConstants.QUOTA_DONT_SET) {
-          ssQuota = existingEntry.getQuota().getSpaceQuota();
-        }
+
+        RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
+            .fileAndDirectoryCount(nsCount).quota(nsQuota)
+            .spaceConsumed(ssCount).spaceQuota(ssQuota).build();
+        existingEntry.setQuota(updatedQuota);
       }
 
-      RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
-          .fileAndDirectoryCount(nsCount).quota(nsQuota)
-          .spaceConsumed(ssCount).spaceQuota(ssQuota).build();
-      existingEntry.setQuota(updatedQuota);
+      UpdateMountTableEntryRequest updateRequest =
+          UpdateMountTableEntryRequest.newInstance(existingEntry);
+      UpdateMountTableEntryResponse updateResponse = mountTable
+          .updateMountTableEntry(updateRequest);
+      return updateResponse.getStatus();
     }
-
-    UpdateMountTableEntryRequest updateRequest =
-        UpdateMountTableEntryRequest.newInstance(existingEntry);
-    UpdateMountTableEntryResponse updateResponse = mountTable
-        .updateMountTableEntry(updateRequest);
-    return updateResponse.getStatus();
   }
 
   /**
    * Update storage type quota of specified mount table.
-   *
+   * @param conf The configuration
    * @param mount Specified mount table to update.
    * @param typeQuota Storage type quota.
    * @return If the quota was updated.
    * @throws IOException Error updating quota.
    */
-  private boolean updateStorageTypeQuota(String mount, long[] typeQuota)
-      throws IOException {
+  private boolean updateStorageTypeQuota(Configuration conf,
+                                         String mount,
+                                         long[] typeQuota) throws IOException {
     // Get existing entry
-    MountTableManager mountTable = client.getMountTableManager();
-    GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
-        .newInstance(mount);
-    GetMountTableEntriesResponse getResponse = mountTable
-        .getMountTableEntries(getRequest);
-    List<MountTable> results = getResponse.getEntries();
-    MountTable existingEntry = null;
-    for (MountTable result : results) {
-      if (mount.equals(result.getSourcePath())) {
-        existingEntry = result;
-        break;
+    try (RouterClient client = createClient(conf)) {
+      MountTableManager mountTable = client.getMountTableManager();
+      GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
+          .newInstance(mount);
+      GetMountTableEntriesResponse getResponse = mountTable
+          .getMountTableEntries(getRequest);
+      List<MountTable> results = getResponse.getEntries();
+      MountTable existingEntry = null;
+      for (MountTable result : results) {
+        if (mount.equals(result.getSourcePath())) {
+          existingEntry = result;
+          break;
+        }
       }
-    }
 
-    if (existingEntry == null) {
-      throw new IOException(mount + " doesn't exist in mount table.");
-    } else {
-      final RouterQuotaUsage quotaUsage = existingEntry.getQuota();
-      long[] typeCount = new long[StorageType.values().length];
-      eachByStorageType(
-          t -> typeCount[t.ordinal()] = quotaUsage.getTypeQuota(t));
-      // If all storage type quota were reset, clear the storage type quota.
-      if (andByStorageType(
-          t -> typeQuota[t.ordinal()] == HdfsConstants.QUOTA_RESET)) {
-        eachByStorageType(t -> typeCount[t.ordinal()] =
-            RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT);
+      if (existingEntry == null) {
+        throw new IOException(mount + " doesn't exist in mount table.");
       } else {
-        // If nsQuota or ssQuota was unset, use the value in mount table.
-        eachByStorageType(t -> {
-          if (typeQuota[t.ordinal()] == HdfsConstants.QUOTA_DONT_SET) {
-            typeQuota[t.ordinal()] = quotaUsage.getTypeQuota(t);
-          }
-        });
+        final RouterQuotaUsage quotaUsage = existingEntry.getQuota();
+        long[] typeCount = new long[StorageType.values().length];
+        eachByStorageType(
+            t -> typeCount[t.ordinal()] = quotaUsage.getTypeQuota(t));
+        // If all storage type quota were reset, clear the storage type quota.
+        if (andByStorageType(
+            t -> typeQuota[t.ordinal()] == HdfsConstants.QUOTA_RESET)) {
+          eachByStorageType(t -> typeCount[t.ordinal()] =
+              RouterQuotaUsage.QUOTA_USAGE_COUNT_DEFAULT);
+        } else {
+          // If nsQuota or ssQuota was unset, use the value in mount table.
+          eachByStorageType(t -> {
+            if (typeQuota[t.ordinal()] == HdfsConstants.QUOTA_DONT_SET) {
+              typeQuota[t.ordinal()] = quotaUsage.getTypeQuota(t);
+            }
+          });
+        }
+
+        RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
+            .typeQuota(typeQuota).typeConsumed(typeCount).build();
+        existingEntry.setQuota(updatedQuota);
       }
 
-      RouterQuotaUsage updatedQuota = new RouterQuotaUsage.Builder()
-          .typeQuota(typeQuota).typeConsumed(typeCount).build();
-      existingEntry.setQuota(updatedQuota);
+      UpdateMountTableEntryRequest updateRequest =
+          UpdateMountTableEntryRequest.newInstance(existingEntry);
+      UpdateMountTableEntryResponse updateResponse = mountTable
+          .updateMountTableEntry(updateRequest);
+      return updateResponse.getStatus();
     }
-
-    UpdateMountTableEntryRequest updateRequest =
-        UpdateMountTableEntryRequest.newInstance(existingEntry);
-    UpdateMountTableEntryResponse updateResponse = mountTable
-        .updateMountTableEntry(updateRequest);
-    return updateResponse.getStatus();
   }
 
   /**
    * Manager the safe mode state.
-   * @param cmd Input command, enter or leave safe mode.
-   * @throws IOException
+   * @param args Input command, enter or leave safe mode.
    */
-  private void manageSafeMode(String cmd) throws IOException {
-    if (cmd.equals("enter")) {
-      if (enterSafeMode()) {
-        System.out.println("Successfully enter safe mode.");
-      }
-    } else if (cmd.equals("leave")) {
-      if (leaveSafeMode()) {
-        System.out.println("Successfully leave safe mode.");
-      }
-    } else if (cmd.equals("get")) {
-      boolean result = getSafeMode();
-      System.out.println("Safe Mode: " + result);
-    } else {
-      throw new IllegalArgumentException("Invalid argument: " + cmd);
+  private int manageSafeMode(Configuration conf, List<String> args) throws IOException {
+    String cmd = StringUtils.popFirstNonOption(args);
+    StringUtils.ensureAllUsed(args);
+    if (cmd == null) {
+      throw new IllegalArgumentException("Please specify command: enter, leave, or get");
+    }
+    switch (cmd) {
+      case "enter":
+        if (enterSafeMode(conf)) {
+          System.out.println("Successfully enter safe mode.");
+          return 0;
+        }
+        break;
+      case "leave":
+        if (leaveSafeMode(conf)) {
+          System.out.println("Successfully leave safe mode.");
+          return 0;
+        }
+        break;
+      case "get":
+        boolean result = getSafeMode(conf);
+        System.out.println("Safe Mode: " + result);
+        return 0;
+      default:
+        throw new IllegalArgumentException("Invalid argument: " + cmd);
+    }
+    return 1;
+  }
+
+  /**
+   * Request the Router enter safemode state.
+   * @return Was operation successful?
+   */
+  private boolean enterSafeMode(Configuration conf) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      RouterStateManager stateManager = client.getRouterStateManager();
+      return stateManager.enterSafeMode(EnterSafeModeRequest.newInstance())
+          .getStatus();
     }
   }
 
   /**
-   * Request the Router entering safemode state.
-   * @return Return true if entering safemode successfully.
-   * @throws IOException
+   * Request the Router leave safemode state.
+   * @return Was operation successful?
    */
-  private boolean enterSafeMode() throws IOException {
-    RouterStateManager stateManager = client.getRouterStateManager();
-    EnterSafeModeResponse response = stateManager.enterSafeMode(
-        EnterSafeModeRequest.newInstance());
-    return response.getStatus();
-  }
-
-  /**
-   * Request the Router leaving safemode state.
-   * @return Return true if leaving safemode successfully.
-   * @throws IOException
-   */
-  private boolean leaveSafeMode() throws IOException {
-    RouterStateManager stateManager = client.getRouterStateManager();
-    LeaveSafeModeResponse response = stateManager.leaveSafeMode(
-        LeaveSafeModeRequest.newInstance());
-    return response.getStatus();
+  private boolean leaveSafeMode(Configuration conf) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      RouterStateManager stateManager = client.getRouterStateManager();
+      return stateManager.leaveSafeMode(LeaveSafeModeRequest.newInstance())
+          .getStatus();
+    }
   }
 
   /**
    * Verify if current Router state is safe mode state.
    * @return True if the Router is in safe mode.
-   * @throws IOException
    */
-  private boolean getSafeMode() throws IOException {
-    RouterStateManager stateManager = client.getRouterStateManager();
-    GetSafeModeResponse response = stateManager.getSafeMode(
-        GetSafeModeRequest.newInstance());
-    return response.isInSafeMode();
+  private boolean getSafeMode(Configuration conf) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      RouterStateManager stateManager = client.getRouterStateManager();
+      return stateManager.getSafeMode(GetSafeModeRequest.newInstance())
+          .isInSafeMode();
+    }
   }
 
   /**
    * Manage the name service: enabling/disabling.
-   * @param cmd Input command, disable or enable.
-   * @throws IOException
+   * @param args Input command, disable or enable.
    */
-  private void manageNameservice(String cmd, String nsId) throws IOException {
-    if (cmd.equals("enable")) {
-      if (enableNameservice(nsId)) {
-        System.out.println("Successfully enabled nameservice " + nsId);
-      } else {
-        System.err.println("Cannot enable " + nsId);
-      }
-    } else if (cmd.equals("disable")) {
-      if (disableNameservice(nsId)) {
-        System.out.println("Successfully disabled nameservice " + nsId);
-      } else {
-        System.err.println("Cannot disable " + nsId);
-      }
-    } else {
-      throw new IllegalArgumentException("Unknown command: " + cmd);
+  private int manageNameservice(Configuration conf, List<String> args) throws IOException {
+    String cmd = StringUtils.popFirstNonOption(args);
+    String nsId = StringUtils.popFirstNonOption(args);
+    StringUtils.ensureAllUsed(args);
+    if (cmd == null || nsId == null) {
+      throw new IllegalArgumentException("Too few parameters for command");
+    }
+    switch (cmd) {
+      case "enable":
+        if (enableNameservice(conf, nsId)) {
+          System.out.println("Successfully enabled nameservice " + nsId);
+          return 0;
+        } else {
+          System.err.println("Cannot enable " + nsId);
+          return 1;
+        }
+      case "disable":
+        if (disableNameservice(conf, nsId)) {
+          System.out.println("Successfully disabled nameservice " + nsId);
+          return 0;
+        } else {
+          System.err.println("Cannot disable " + nsId);
+          return 1;
+        }
+      default:
+        throw new IllegalArgumentException("Unknown command: " + cmd);
     }
   }
 
-  private boolean disableNameservice(String nsId) throws IOException {
-    NameserviceManager nameserviceManager = client.getNameserviceManager();
-    DisableNameserviceResponse response =
-        nameserviceManager.disableNameservice(
-            DisableNameserviceRequest.newInstance(nsId));
-    return response.getStatus();
-  }
-
-  private boolean enableNameservice(String nsId) throws IOException {
-    NameserviceManager nameserviceManager = client.getNameserviceManager();
-    EnableNameserviceResponse response =
-        nameserviceManager.enableNameservice(
-            EnableNameserviceRequest.newInstance(nsId));
-    return response.getStatus();
-  }
-
-  private void getDisabledNameservices() throws IOException {
-    NameserviceManager nameserviceManager = client.getNameserviceManager();
-    GetDisabledNameservicesRequest request =
-        GetDisabledNameservicesRequest.newInstance();
-    GetDisabledNameservicesResponse response =
-        nameserviceManager.getDisabledNameservices(request);
-    System.out.println("List of disabled nameservices:");
-    for (String nsId : response.getNameservices()) {
-      System.out.println(nsId);
+  private boolean disableNameservice(Configuration conf,
+                                     String nsId) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      NameserviceManager nameserviceManager = client.getNameserviceManager();
+      DisableNameserviceResponse response =
+          nameserviceManager.disableNameservice(
+              DisableNameserviceRequest.newInstance(nsId));
+      return response.getStatus();
     }
   }
 
-  public int genericRefresh(String[] argv, int i) throws IOException {
-    String hostport = argv[i++];
-    String identifier = argv[i++];
-    String[] args = Arrays.copyOfRange(argv, i, argv.length);
+  private boolean enableNameservice(Configuration conf,
+                                    String nsId) throws IOException {
+    try (RouterClient client = createClient(conf)) {
+      NameserviceManager nameserviceManager = client.getNameserviceManager();
+      EnableNameserviceResponse response =
+          nameserviceManager.enableNameservice(
+              EnableNameserviceRequest.newInstance(nsId));
+      return response.getStatus();
+    }
+  }
 
-    // Get the current configuration
-    Configuration conf = getConf();
+  private int getDisabledNameservices(Configuration conf,
+                                      List<String> args) throws IOException {
+    StringUtils.ensureAllUsed(args);
+    try (RouterClient client = createClient(conf)) {
+      NameserviceManager nameserviceManager = client.getNameserviceManager();
+      GetDisabledNameservicesRequest request =
+          GetDisabledNameservicesRequest.newInstance();
+      GetDisabledNameservicesResponse response =
+          nameserviceManager.getDisabledNameservices(request);
+      System.out.println("List of disabled nameservices:");
+      for (String nsId : response.getNameservices()) {
+        System.out.println(nsId);
+      }
+    }
+    return 0;
+  }
+
+  public int genericRefresh(Configuration conf, List<String> args) throws IOException {
+    String hostport = StringUtils.popFirstNonOption(args);
+    String identifier = StringUtils.popFirstNonOption(args);
+    String[] remaining = args.toArray(new String[]{});
 
     // for security authorization
     // server principal for this call
@@ -1262,11 +1096,11 @@ public class RouterAdmin extends Configured implements Tool {
         xface, RPC.getProtocolVersion(xface), address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf), 0);
 
-    Collection<RefreshResponse> responses = null;
+    Collection<RefreshResponse> responses;
     try (GenericRefreshProtocolClientSideTranslatorPB xlator =
         new GenericRefreshProtocolClientSideTranslatorPB(proxy)) {
       // Refresh
-      responses = xlator.refresh(identifier, args);
+      responses = xlator.refresh(identifier, remaining);
 
       int returnCode = 0;
 
@@ -1285,11 +1119,6 @@ public class RouterAdmin extends Configured implements Tool {
         }
       }
       return returnCode;
-    } finally {
-      if (responses == null) {
-        System.out.println("Failed to get response.\n");
-        return -1;
-      }
     }
   }
 
@@ -1298,11 +1127,10 @@ public class RouterAdmin extends Configured implements Tool {
    *
    * @throws IOException if the operation was not successful.
    */
-  private int refreshCallQueue() throws IOException {
-    Configuration conf = getConf();
-    String hostport =  getConf().getTrimmed(
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
-        RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_DEFAULT);
+  private int refreshCallQueue(Configuration conf,
+                               List<String> args) throws IOException {
+    StringUtils.ensureAllUsed(args);
+    String hostport =  getAddress(conf);
 
     // Create the client
     Class<?> xface = RefreshCallQueueProtocolPB.class;
@@ -1328,17 +1156,20 @@ public class RouterAdmin extends Configured implements Tool {
 
   /**
    * Dumps the contents of the StateStore to stdout.
-   * @return true if it was successful
+   * @param conf The configuration
+   * @param args The arguments to the command
+   * @return 0 if it was successful
    */
-  public static boolean dumpStateStore(Configuration conf,
-                                PrintStream output) throws IOException {
+  public static int dumpStateStore(Configuration conf,
+                                   List<String> args) throws IOException {
+    StringUtils.ensureAllUsed(args);
     StateStoreService service = new StateStoreService();
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE, false);
     service.init(conf);
     service.loadDriver();
     if (!service.isDriverReady()) {
       System.err.println("Can't initialize driver");
-      return false;
+      return -1;
     }
     // Get the stores sorted by name
     Map<String, RecordStore<? extends BaseRecord>> stores = new TreeMap<>();
@@ -1349,7 +1180,7 @@ public class RouterAdmin extends Configured implements Tool {
     for (Entry<String, RecordStore<? extends BaseRecord>> pair: stores.entrySet()) {
       String recordName = pair.getKey();
       RecordStore<? extends BaseRecord> store = pair.getValue();
-      output.println("---- " + recordName + " ----");
+      System.out.println("---- " + recordName + " ----");
       if (store instanceof CachedRecordStore) {
         for (Object record: ((CachedRecordStore) store).getCachedRecords()) {
           if (record instanceof BaseRecord && record instanceof PBRecord) {
@@ -1358,15 +1189,15 @@ public class RouterAdmin extends Configured implements Tool {
             String recordString = ((PBRecord) record).getProto().toString();
             // Indent each line
             recordString = "    " + recordString.replaceAll("\n", "\n    ");
-            output.println(String.format("  %s:", baseRecord.getPrimaryKey()));
-            output.println(recordString);
+            System.out.printf("  %s:%n", baseRecord.getPrimaryKey());
+            System.out.println(recordString);
           }
         }
-        output.println();
+        System.out.println();
       }
     }
     service.stop();
-    return true;
+    return 0;
   }
 
   /**

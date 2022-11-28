@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -166,7 +167,6 @@ public class TestRouterAdminCLI {
     String[] argv = new String[] {"-add", src, nsId, dest};
     assertEquals(0, ToolRunner.run(admin, argv));
     assertEquals(-1, ToolRunner.run(admin, argv));
-
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -322,10 +322,10 @@ public class TestRouterAdminCLI {
     // Test with wrong number of arguments
     argv = new String[] {"-ls", srcWithSlash, "check", "check2"};
     System.setErr(new PrintStream(err));
-    ToolRunner.run(admin, argv);
+    assertEquals(-1, ToolRunner.run(admin, argv));
     response = err.toString();
     assertTrue("Wrong response: " + response,
-        response.contains("Too many arguments, Max=2 argument allowed"));
+        response.contains("ERROR dfsrouteradmin -ls: Unknown arguments: check check2"));
 
     out.reset();
     GetMountTableEntriesRequest getRequest = GetMountTableEntriesRequest
@@ -432,10 +432,10 @@ public class TestRouterAdminCLI {
 
     // remove an invalid mount table
     String invalidPath = "/invalid";
-    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(err));
     argv = new String[] {"-rm", invalidPath};
-    assertEquals(0, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains(
+    assertEquals(-1, ToolRunner.run(admin, argv));
+    assertTrue(err.toString().contains(
         "Cannot remove mount point " + invalidPath));
   }
 
@@ -778,90 +778,96 @@ public class TestRouterAdminCLI {
   public void testInvalidArgumentMessage() throws Exception {
     String nsId = "ns0";
     String src = "/testSource";
-    System.setOut(new PrintStream(out));
+    System.setErr(new PrintStream(out));
     String[] argv = new String[] {"-add", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue("Wrong message: " + out, out.toString().contains(
-        "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-            + "[-readonly] [-faulttolerant] "
-            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-            + "-owner <owner> -group <group> -mode <mode>]"));
+    String actual = out.toString();
+    assertTrue("Wrong message: " + actual,
+        actual.contains("-add: Add or update a mount point.\n"+
+            "  [-readonly] [-faulttolerant] " +
+            "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] " +
+            "[-owner <owner>] [-group <group>] [-mode <mode>] " +
+            "<source> <nameservices> <destination>"));
     out.reset();
 
     argv = new String[] {"-update", src, nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue("Wrong message: " + out, out.toString().contains(
-        "\t[-update <source> [<nameservice1, nameservice2, ...> <destination>] "
-            + "[-readonly true|false] [-faulttolerant true|false] "
-            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-            + "-owner <owner> -group <group> -mode <mode>]"));
+    actual = out.toString();
+    assertTrue("Wrong message: " + actual,
+        actual.contains("-update: Update a mount point.\n"+
+            "  [-readonly (true | false)] [-faulttolerant (true | false)] " +
+            "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] " +
+            "[-owner <owner>] [-group <group>] [-mode <mode>] " +
+            "<source> [<nameservices> <destination>]"));
     out.reset();
 
     argv = new String[] {"-rm"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("\t[-rm <source>]"));
+    assertTrue("rm " + out,
+        out.toString().contains("-rm: Remove a mount point\n  <source>"));
     out.reset();
 
     argv = new String[] {"-setQuota", src};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(out.toString()
-        .contains("\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-            + "<quota in bytes or quota size string>]"));
+        .contains("-setQuota: Set a quota on a mount point\n" +
+            "  -nsQuota <objectQuota> -ssQuota <byteQuota> <path>"));
     out.reset();
 
     argv = new String[] {"-clrQuota"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("\t[-clrQuota <path>]"));
+    assertTrue(out.toString().contains("-clrQuota: Clear the quota on a mount point\n" +
+        "  <path>"));
     out.reset();
 
     argv = new String[] {"-safemode"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("\t[-safemode enter | leave | get]"));
+    assertTrue(out.toString().contains("-safemode: Change the safemode state\n" +
+        "  enter | leave | get"));
     out.reset();
 
     argv = new String[] {"-nameservice", nsId};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(out.toString()
-        .contains("\t[-nameservice enable | disable <nameservice>]"));
+        .contains("-nameservice: Change the state of a name service\n"+
+            "  (enable | disable) <nameservice>"));
     out.reset();
 
     argv = new String[] {"-getDestination"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("\t[-getDestination <path>]"));
+    assertTrue(out.toString().contains("-getDestination: Get the destination for a mount point\n" +
+        "  [<source>]"));
     out.reset();
 
     argv = new String[] {"-refreshRouterArgs"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("\t[-refreshRouterArgs " +
-            "<host:ipc_port> <key> [arg1..argn]]"));
+    assertTrue(out.toString().contains("-refreshRouterArgs: Generic refresh via the RefreshRegistry\n" +
+            "  <host:rpc_port> <key> [<arg>...]]"));
     out.reset();
 
     argv = new String[] {"-Random"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    String expected = "Usage: hdfs dfsrouteradmin :\n"
-        + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-        + "[-readonly] [-faulttolerant] "
-        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-        + "-owner <owner> -group <group> -mode <mode>]\n"
-        + "\t[-update <source> [<nameservice1, nameservice2, ...> "
-        + "<destination>] [-readonly true|false]"
-        + " [-faulttolerant true|false] "
-        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-        + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
-        + "\t[-ls [-d] <path>]\n"
-        + "\t[-getDestination <path>]\n"
-        + "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota"
-        + " <quota in bytes or quota size string>]\n"
-        + "\t[-setStorageTypeQuota <path> -storageType <storage type>"
-        + " <quota in bytes or quota size string>]\n"
-        + "\t[-clrQuota <path>]\n"
-        + "\t[-clrStorageTypeQuota <path>]\n"
-        + "\t[-dumpState]\n"
-        + "\t[-safemode enter | leave | get]\n"
-        + "\t[-nameservice enable | disable <nameservice>]\n"
-        + "\t[-getDisabledNameservices]\n"
-        + "\t[-refresh]\n"
-        + "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
+    String expected = "ERROR dfsrouteradmin: Can't understand command '-Random'\n" +
+        "\n" +
+        "Usage: bin/hdfs dfsrouteradmin [COMMAND]\n" +
+        "          [-add [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] [-owner <owner>] [-group <group>] [-mode <mode>] <source> <nameservices> <destination>]\n" +
+        "          [-clrQuota <path>*]\n" +
+        "          [-clrStorageTypeQuota <path>*]\n" +
+        "          [-dumpState ]\n" +
+        "          [-getDestination [<source>]]\n" +
+        "          [-getDisabledNameservices ]\n" +
+        "          [-ls [<source>] [-d]]\n" +
+        "          [-nameservice (enable | disable) <nameservice>]\n" +
+        "          [-refresh ]\n" +
+        "          [-refreshCallQueue ]\n" +
+        "          [-refreshRouterArgs <host:rpc_port> <key> [<arg>...]]]\n" +
+        "          [-refreshSuperUserGroupsConfiguration ]\n" +
+        "          [-rm <source>*]\n" +
+        "          [-safemode enter | leave | get]\n" +
+        "          [-setQuota -nsQuota <objectQuota> -ssQuota <byteQuota> <path>]\n" +
+        "          [-setStorageTypeQuota <path> <quota> -storageType <storageType>]\n" +
+        "          [-update [-readonly (true | false)] [-faulttolerant (true | false)] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] [-owner <owner>] [-group <group>] [-mode <mode>] <source> [<nameservices> <destination>]]\n" +
+        "          [-help <command-name>]";
     assertTrue("Wrong message: " + out, out.toString().contains(expected));
     out.reset();
   }
@@ -877,7 +883,7 @@ public class TestRouterAdminCLI {
     String[] argv =
         new String[] {"-setStorageTypeQuota", src, "check", "c2", "c3"};
     ToolRunner.run(admin, argv);
-    assertTrue(err.toString().contains("Invalid argument : check"));
+    assertTrue(err.toString().contains("Missing -storageType parameter"));
   }
 
   /**
@@ -1066,7 +1072,7 @@ public class TestRouterAdminCLI {
     System.setErr(new PrintStream(err));
     argv = new String[] {"-setQuota", src, "check", "check2"};
     ToolRunner.run(admin, argv);
-    assertTrue(err.toString().contains("Invalid argument : check"));
+    assertTrue(err.toString().contains("ERROR dfsrouteradmin -setQuota: Unknown arguments: check check2"));
   }
 
   @Test
@@ -1103,13 +1109,13 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-safemode", "get", "-random", "check" }));
     assertTrue(err.toString(), err.toString()
-        .contains("safemode: Too many arguments, Max=1 argument allowed only"));
+        .contains("ERROR dfsrouteradmin -safemode: Unknown arguments: -random check"));
     err.reset();
 
     assertEquals(-1,
         ToolRunner.run(admin, new String[] {"-safemode", "check" }));
     assertTrue(err.toString(),
-        err.toString().contains("safemode: Invalid argument: check"));
+        err.toString().contains("ERROR dfsrouteradmin -safemode: Invalid argument: check"));
     err.reset();
   }
 
@@ -1249,7 +1255,7 @@ public class TestRouterAdminCLI {
     System.setErr(new PrintStream(err));
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-nameservice", "enable"}));
-    String msg = "Not enough parameters specificed for cmd -nameservice";
+    String msg = "ERROR dfsrouteradmin -nameservice: Too few parameters for command";
     assertTrue("Got error: " + err.toString(),
         err.toString().startsWith(msg));
 
@@ -1257,16 +1263,16 @@ public class TestRouterAdminCLI {
     assertEquals(-1, ToolRunner.run(admin,
         new String[] {"-nameservice", "wrong", "ns0"}));
     assertTrue("Got error: " + err.toString(),
-        err.toString().startsWith("nameservice: Unknown command: wrong"));
+        err.toString().startsWith("ERROR dfsrouteradmin -nameservice: Unknown command: wrong"));
 
     err.reset();
     ToolRunner.run(admin,
         new String[] {"-nameservice", "enable", "ns0", "check"});
     assertTrue(
-        err.toString().contains("Too many arguments, Max=2 arguments allowed"));
+        err.toString().contains("ERROR dfsrouteradmin -nameservice: Unknown arguments: check"));
     err.reset();
     ToolRunner.run(admin, new String[] {"-getDisabledNameservices", "check"});
-    assertTrue(err.toString().contains("No arguments allowed"));
+    assertTrue(err.toString().contains("ERROR dfsrouteradmin -getDisabledNameservices: Unknown arguments: check"));
   }
 
   @Test
@@ -1316,7 +1322,7 @@ public class TestRouterAdminCLI {
     // Update shall fail if the mount entry doesn't exist.
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString(), err.toString()
-        .contains("update: /test-updateNonExistingMounttable doesn't exist."));
+        .contains("Mount point /test-updateNonExistingMounttable does not exist, use -add."));
   }
 
   @Test
@@ -1469,29 +1475,29 @@ public class TestRouterAdminCLI {
     System.setErr(new PrintStream(err));
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString(),
-        err.toString().contains("update: /noMount doesn't exist."));
+        err.toString().contains("Mount point /noMount does not exist, use -add."));
     err.reset();
 
     // Check update if no true/false value is passed for readonly.
     argv = new String[] {"-update", src, "-readonly", "check"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(), err.toString().contains("update: "
-        + "Invalid argument: check. Please specify either true or false."));
+    assertTrue(err.toString(), err.toString()
+        .contains("dfsrouteradmin -update: Illegal boolean value check"));
     err.reset();
 
     // Check update with missing value is passed for faulttolerant.
     argv = new String[] {"-update", src, "ns1", "/tmp", "-faulttolerant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString(),
-        err.toString().contains("update: Unable to parse arguments:"
-            + " no value provided for -faulttolerant"));
+    assertTrue(err.toString(), err.toString().contains(
+        "ERROR dfsrouteradmin -update: option -faulttolerant requires 1 argument."));
     err.reset();
 
     // Check update with invalid order.
     argv = new String[] {"-update", src, "ns1", "/tmp", "-order", "Invalid"};
     assertEquals(-1, ToolRunner.run(admin, argv));
     assertTrue(err.toString(), err.toString().contains(
-        "update: Unable to parse arguments: Cannot parse order: Invalid"));
+        "-update: No enum constant org.apache.hadoop.hdfs.server.federation." +
+            "resolver.order.DestinationOrder.Invalid"));
     err.reset();
   }
 
@@ -1757,11 +1763,12 @@ public class TestRouterAdminCLI {
 
     argv = new String[]{};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(out.toString().contains("-refreshCallQueue"));
+    assertTrue(err.toString().contains("-refreshCallQueue"));
+    err.reset();
 
     argv = new String[]{"-refreshCallQueue", "redundant"};
     assertEquals(-1, ToolRunner.run(admin, argv));
-    assertTrue(err.toString().contains("No arguments allowed"));
+    assertTrue(err.toString().startsWith("ERROR dfsrouteradmin -refreshCallQueue: Unknown arguments: redundant"));
   }
 
   @Test
@@ -1783,7 +1790,13 @@ public class TestRouterAdminCLI {
         StateStoreDriver.class);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     try (PrintStream stream = new PrintStream(buffer)) {
-      RouterAdmin.dumpStateStore(conf, stream);
+      PrintStream orig = System.out;
+      System.setOut(stream);
+      try {
+        RouterAdmin.dumpStateStore(conf, new ArrayList<>());
+      } finally {
+        System.setOut(orig);
+      }
     }
     final String expected =
         "---- DisabledNameservice ----\n" +

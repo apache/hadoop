@@ -1135,7 +1135,25 @@ public class StringUtils {
     }
     return val;
   }
-  
+
+  /**
+   * From a list of command-line arguments, remove both an option and the
+   * next argument.
+   * @param name the name of the option
+   * @param args the list of arguments
+   * @param defaultValue the desired default value
+   * @return the value of the argument or the default value if the option wasn't
+   *         present.
+   * @throws IllegalArgumentException if the option doesn't have an argument
+   */
+  public static String popOptionWithArgument(String name,
+                                             List<String> args,
+                                             String defaultValue)
+      throws IllegalArgumentException {
+    String result = popOptionWithArgument(name, args);
+    return result == null ? defaultValue : result;
+  }
+
   /**
    * From a list of command-line arguments, remove an option.
    *
@@ -1181,6 +1199,19 @@ public class StringUtils {
       }
     }
     return null;
+  }
+  /**
+   * From a list of command-line arguments, ensure that all of the arguments
+   * have been used except a possible "--".
+   *
+   * @param args  List of arguments.
+   * @throws IllegalArgumentException if some arguments were not used
+   */
+  public static void ensureAllUsed(List<String> args) throws IllegalArgumentException {
+    if (!args.isEmpty() && !(args.size() == 1 && "--".equals(args.get(0)))) {
+      throw new IllegalArgumentException("Unknown arguments: " +
+          String.join(" ", args));
+    }
   }
 
   /**
