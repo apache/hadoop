@@ -564,21 +564,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   }
 
   @Test
-  public void testStoreNewMasterKey() throws Exception {
-    super.testStoreNewMasterKey();
-  }
-
-  @Test
-  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
-    super.testGetMasterKeyByDelegationKey();
-  }
-
-  @Test
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
-    super.testRemoveStoredMasterKey();
-  }
-
-  @Test
   public void testStoreNewToken() throws IOException, YarnException {
     FederationStateStore stateStore = getStateStore();
 
