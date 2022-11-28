@@ -22,11 +22,10 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -61,7 +60,9 @@ public class MultiObjectDeleteException extends S3Exception {
     this.errors = errors;
   }
 
-  public List<S3Error> errors() { return errors; }
+  public List<S3Error> errors() {
+    return errors;
+  }
 
   /**
    * A {@code MultiObjectDeleteException} is raised if one or more

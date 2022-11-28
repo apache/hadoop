@@ -20,13 +20,13 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.util.List;
 
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditConfig;
 import static org.assertj.core.api.Assertions.assertThat;

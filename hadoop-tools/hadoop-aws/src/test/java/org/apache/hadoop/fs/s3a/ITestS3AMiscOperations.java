@@ -25,14 +25,14 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 
-import org.assertj.core.api.Assertions;
-import org.junit.Assume;
-import org.junit.Test;
-
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetBucketEncryptionRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketEncryptionResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import org.assertj.core.api.Assertions;
+import org.junit.Assume;
+import org.junit.Test;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonPathCapabilities;

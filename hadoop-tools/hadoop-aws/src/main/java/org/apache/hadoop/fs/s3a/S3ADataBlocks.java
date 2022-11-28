@@ -101,7 +101,7 @@ public final class S3ADataBlocks {
    * It can be one of a file or an input stream.
    * When closed, any stream is closed. Any source file is untouched.
    */
-public static final class BlockUploadData implements Closeable {
+  public static final class BlockUploadData implements Closeable {
     private final File file;
     private final InputStream uploadStream;
 
@@ -109,7 +109,7 @@ public static final class BlockUploadData implements Closeable {
      * File constructor; input stream will be null.
      * @param file file to upload
      */
-   public BlockUploadData(File file) {
+    public BlockUploadData(File file) {
       Preconditions.checkArgument(file.exists(), "No file: " + file);
       this.file = file;
       this.uploadStream = null;
@@ -119,7 +119,7 @@ public static final class BlockUploadData implements Closeable {
      * Stream constructor, file field will be null.
      * @param uploadStream stream to upload
      */
-   public BlockUploadData(InputStream uploadStream) {
+    public BlockUploadData(InputStream uploadStream) {
       Preconditions.checkNotNull(uploadStream, "rawUploadStream");
       this.uploadStream = uploadStream;
       this.file = null;

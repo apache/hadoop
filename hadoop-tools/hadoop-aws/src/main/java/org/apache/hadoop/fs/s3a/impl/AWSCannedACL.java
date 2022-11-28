@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.impl;
 
 /**
  * Enum to map AWS SDK V1 Acl values to SDK V2.
@@ -36,5 +36,7 @@ public enum AWSCannedACL {
     this.value = value;
   }
 
-  public String toString() { return this.value; }
+  public String toString() {
+    return this.value;
+  }
 }

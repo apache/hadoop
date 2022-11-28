@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import software.amazon.awssdk.http.Abortable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +29,6 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
-import software.amazon.awssdk.http.Abortable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DRAIN_BUFFER_SIZE;

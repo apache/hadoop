@@ -24,10 +24,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -35,6 +31,10 @@ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.model.Credentials;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
@@ -188,6 +188,7 @@ public final class MarshalledCredentialBinding {
    * @param stsRegion region; use if the endpoint isn't the AWS default.
    * @param duration duration of the credentials in seconds. Minimum value: 900.
    * @param invoker invoker to use for retrying the call.
+   * @param bucket bucket name.
    * @return the credentials
    * @throws IOException on a failure of the request
    */
@@ -205,7 +206,8 @@ public final class MarshalledCredentialBinding {
           STSClientFactory.builder(parentCredentials,
               configuration,
               stsEndpoint.isEmpty() ? null : stsEndpoint,
-              stsRegion, bucket)
+              stsRegion,
+              bucket)
               .build();
       try (STSClientFactory.STSClient stsClient = STSClientFactory.createClientConnection(
           tokenService, invoker)) {

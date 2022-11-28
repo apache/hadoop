@@ -15,10 +15,10 @@
 # Upgrade S3A to AWS SDK V2: Changelog
 
 Note: This document is not meant to be committed as part of the final merge, and instead just serves
-as a guide to help with reviewing the PR. 
+as a guide to help with reviewing the PR.
 
 This document tracks changes to S3A during the upgrade to AWS SDK V2. Once the upgrade
-is complete, some of its content will be added to the existing document 
+is complete, some of its content will be added to the existing document
 [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
 This work is tracked in [HADOOP-18073](https://issues.apache.org/jira/browse/HADOOP-18073).
@@ -47,7 +47,7 @@ This work is tracked in [HADOOP-18073](https://issues.apache.org/jira/browse/HAD
 * We now have two clients, a sync S3 Client and an async S3 Client. The async s3 client is required
   as the select operation is currently only supported on the async client. Once we are confident in
   the current set of changes, we will also be exploring moving other operations to the async client
-  as this could provide potential performance benefits. However those changes are not in the scope 
+  as this could provide potential performance benefits. However those changes are not in the scope
   of this PR, and will be done separately.
 * The [createAwsConf](https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-aws/src/main/java/org/apache/hadoop/fs/s3a/S3AUtils.java#L1190)
 method is now split into:
@@ -56,11 +56,11 @@ method is now split into:
    createHttpClientBuilder* // sets max connections, connection timeout, socket timeout
    createProxyConfigurationBuilder // sets proxy config, defined in table below
    ```
- 
+
 The table below lists the configurations S3A was using and what they now map to.
 
 |SDK V1    |SDK V2    |
-|---	|---	|
+|---|---|
 |setMaxConnections    |httpClientBuilder.maxConnections    |
 |setProtocol    |The protocol is now HTTPS by default, and can only be modified by setting an HTTP endpoint on the client builder. This is done when setting the endpoint in getS3Endpoint()    |
 |setMaxErrorRetry    |createRetryPolicyBuilder    |
@@ -193,11 +193,11 @@ in ` multipartUploadEncryptionParameters`.
 
 ### GetObject
 
-* Previously, GetObject returned a `S3Object` response which exposed its content in a 
-  `S3ObjectInputStream` through the `getObjectContent()` method. In SDK v2, the response is 
-  directly a `ResponseInputStream<GetObjectResponse>` with the content, while the 
+* Previously, GetObject returned a `S3Object` response which exposed its content in a
+  `S3ObjectInputStream` through the `getObjectContent()` method. In SDK v2, the response is
+  directly a `ResponseInputStream<GetObjectResponse>` with the content, while the
   `GetObjectResponse` instance can be retrieved by calling `response()` on it.
-* The above change simplifies managing the lifetime of the response input stream. In v1, 
+* The above change simplifies managing the lifetime of the response input stream. In v1,
   `S3AInputStream` had to keep a reference to the `S3Object` while holding the wrapped
   `S3ObjectInputStream`. When upgraded to SDK v2, it can simply wrap the new
   `ResponseInputStream<GetObjectResponse>`, which handles lifetime correctly. Same applies
@@ -233,14 +233,14 @@ In order to adapt the new API in S3A, three new classes have been introduced in
   future returned by the select call and wraps the original publisher. This class provides
   a `toRecordsInputStream()` method which returns an input stream containing the results,
   reproducing the behaviour of the old `SelectRecordsInputStream`.
-* `BlockingEnumeration`: an adapter which lazily requests new elements from the publisher and 
+* `BlockingEnumeration`: an adapter which lazily requests new elements from the publisher and
   exposes them through an `Enumeration` interface. Used in
   `SelectEventStreamPublisher.toRecordsInputStream()` to adapt the event publisher into
   an enumeration of input streams, eventually passed to a `SequenceInputStream`.
   Note that the "lazy" behaviour means that new elements are requested only on `read()` calls on
   the input stream.
 
-  
+
 
 ### CredentialsProvider
 
@@ -258,7 +258,7 @@ In order to adapt the new API in S3A, three new classes have been introduced in
   as `com.amazonaws.auth.EnvironmentVariableCredentialsProvider`, then map it to V2’s
 
 |`fs.s3a.aws.credentials.provider` value    |Mapped to    |
-|---	|---	|
+|---|---|
 |`com.amazonaws.auth.EnvironmentVariableCredentialsProvider`    |`software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider`    |
 |`com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper`    |`org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider`    |
 |`com.amazonaws.auth.`InstanceProfileCredentialsProvider``    |`org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider`    |
@@ -266,14 +266,14 @@ In order to adapt the new API in S3A, three new classes have been introduced in
 
 ### Auditing
 
-The SDK v2 offers a new `ExecutionInterceptor` 
-[interface](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html) 
-which broadly replaces the `RequestHandler2` abstract class from v1. 
+The SDK v2 offers a new `ExecutionInterceptor`
+[interface](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html)
+which broadly replaces the `RequestHandler2` abstract class from v1.
 Switching to the new mechanism in S3A brings:
 
 * Simplification in `AWSAuditEventCallbacks` (and implementors) which can now extend
   `ExecutionInterceptor`
-* "Registering" a Span with a request has moved from `requestCreated` to `beforeExecution` 
+* "Registering" a Span with a request has moved from `requestCreated` to `beforeExecution`
   (where an `ExecutionAttributes` instance is first available)
 * The ReferrerHeader is built and added to the http request in `modifyHttpRequest`,
   rather than in `beforeExecution`, where no http request is yet available
@@ -283,10 +283,10 @@ Switching to the new mechanism in S3A brings:
   under "Interceptor Registration", which could make it redundant.
 
 In the Transfer Manager, `TransferListener` replaces `TransferStateChangeListener`. S3A code
-has been updated and `AuditManagerS3A` implementations now provide an instance of the former to 
-switch to the active span, but registration of the new listeners is currently commented out because 
+has been updated and `AuditManagerS3A` implementations now provide an instance of the former to
+switch to the active span, but registration of the new listeners is currently commented out because
 it causes an incompatibility issue with the internal logger, resulting in `NoSuchMethodError`s,
-at least in the current TransferManager Preview release. 
+at least in the current TransferManager Preview release.
 
 
 ### Metric Collection
@@ -295,46 +295,46 @@ at least in the current TransferManager Preview release.
 and collect the metrics from a `MetricCollection` object.
 The following table maps SDK v2 metrics to their equivalent in v1:
 
-| v2 Metrics	                                                 | com.amazonaws.util.AWSRequestMetrics.Field	 | Comment	                       |
+| v2 Metrics| com.amazonaws.util.AWSRequestMetrics.Field| Comment|
 |-------------------------------------------------------------|---------------------------------------------|--------------------------------|
-| CoreMetric.RETRY_COUNT	                                     | HttpClientRetryCount	                       | 	                              |
-| CoreMetric.RETRY_COUNT	                                     | RequestCount	                               | always HttpClientRetryCount+1	 |
-| HttpMetric.HTTP_STATUS_CODE with HttpStatusCode.THROTTLING	 | ThrottleException	                          | to be confirmed	               |
-| CoreMetric.API_CALL_DURATION	                               | ClientExecuteTime	                          | 	                              |
-| CoreMetric.SERVICE_CALL_DURATION	                           | HttpRequestTime	                            | 	                              |
-| CoreMetric.MARSHALLING_DURATION	                            | RequestMarshallTime	                        | 	                              |
-| CoreMetric.SIGNING_DURATION	                                | RequestSigningTime	                         | 	                              |
-| CoreMetric.UNMARSHALLING_DURATION	                          | ResponseProcessingTime	                     | to be confirmed	               |
+| CoreMetric.RETRY_COUNT| HttpClientRetryCount||
+| CoreMetric.RETRY_COUNT| RequestCount| always HttpClientRetryCount+1|
+| HttpMetric.HTTP_STATUS_CODE with HttpStatusCode.THROTTLING| ThrottleException| to be confirmed|
+| CoreMetric.API_CALL_DURATION| ClientExecuteTime||
+| CoreMetric.SERVICE_CALL_DURATION| HttpRequestTime||
+| CoreMetric.MARSHALLING_DURATION| RequestMarshallTime||
+| CoreMetric.SIGNING_DURATION| RequestSigningTime||
+| CoreMetric.UNMARSHALLING_DURATION| ResponseProcessingTime| to be confirmed|
 
 Note that none of the timing metrics (`*_DURATION`) are currently collected in S3A.
 
 ### Exception Handling
 
-The code to handle exceptions thrown by the SDK has been updated to reflect the changes in v2: 
+The code to handle exceptions thrown by the SDK has been updated to reflect the changes in v2:
 
 * `com.amazonaws.SdkBaseException` and `com.amazonaws.AmazonClientException` changes:
-  * These classes have combined and replaced with 
+  * These classes have combined and replaced with
     `software.amazon.awssdk.core.exception.SdkException`.
 * `com.amazonaws.SdkClientException` changes:
   * This class has been replaced with `software.amazon.awssdk.core.exception.SdkClientException`.
   * This class now extends `software.amazon.awssdk.core.exception.SdkException`.
 * `com.amazonaws.AmazonServiceException` changes:
-  * This class has been replaced with 
+  * This class has been replaced with
     `software.amazon.awssdk.awscore.exception.AwsServiceException`.
-  * This class now extends `software.amazon.awssdk.core.exception.SdkServiceException`, 
+  * This class now extends `software.amazon.awssdk.core.exception.SdkServiceException`,
     a new exception type that extends `software.amazon.awssdk.core.exception.SdkException`.
 
-See also the 
+See also the
 [SDK changelog](https://github.com/aws/aws-sdk-java-v2/blob/master/docs/LaunchChangelog.md#3-exception-changes).
 
 
 ### Failure Injection
 
-While using the SDK v1, failure injection was implemented in `InconsistentAmazonS3CClient`, 
-which extended the S3 client. In SDK v2, reproducing this approach would not be straightforward, 
-since the default S3 client is an internal final class. Instead, the same fault injection strategy 
-is now performed by a `FailureInjectionInterceptor` (see 
-[ExecutionInterceptor](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html)) 
-registered on the default client by `InconsistentS3CClientFactory`. 
+While using the SDK v1, failure injection was implemented in `InconsistentAmazonS3CClient`,
+which extended the S3 client. In SDK v2, reproducing this approach would not be straightforward,
+since the default S3 client is an internal final class. Instead, the same fault injection strategy
+is now performed by a `FailureInjectionInterceptor` (see
+[ExecutionInterceptor](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html))
+registered on the default client by `InconsistentS3CClientFactory`.
 `InconsistentAmazonS3CClient` has been removed. No changes to the user configuration are required.
 

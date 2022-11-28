@@ -61,12 +61,12 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 import org.apache.hadoop.util.functional.FutureIO;
 
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import java.io.Closeable;
 import java.io.File;
@@ -674,7 +674,7 @@ public final class S3ATestUtils {
               ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT),
           duration,
           new Invoker(new S3ARetryPolicy(conf), Invoker.LOG_EVENT),
-           bucket );
+           bucket);
     sc.validate("requested session credentials: ",
         MarshalledCredentials.CredentialTypeRequired.SessionOnly);
     return sc;

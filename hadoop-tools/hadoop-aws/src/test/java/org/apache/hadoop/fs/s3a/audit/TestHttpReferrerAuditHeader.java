@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import software.amazon.awssdk.http.SdkHttpRequest;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import software.amazon.awssdk.http.SdkHttpRequest;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.loggingAuditConfig;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_FILTER;

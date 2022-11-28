@@ -31,9 +31,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import software.amazon.awssdk.services.s3.model.CompletedPart;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;

@@ -29,11 +29,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import com.amazonaws.services.s3.Headers;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -77,50 +76,50 @@ public class HeaderProcessing extends AbstractStoreOperation {
    * Standard HTTP header found on some S3 objects: {@value}.
    */
   public static final String XA_CACHE_CONTROL =
-      XA_HEADER_PREFIX + Headers.CACHE_CONTROL;
+      XA_HEADER_PREFIX + AWSHeaders.CACHE_CONTROL;
   /**
    * Standard HTTP header found on some S3 objects: {@value}.
    */
   public static final String XA_CONTENT_DISPOSITION =
-      XA_HEADER_PREFIX + Headers.CONTENT_DISPOSITION;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_DISPOSITION;
 
   /**
    * Content encoding; can be configured: {@value}.
    */
   public static final String XA_CONTENT_ENCODING =
-      XA_HEADER_PREFIX + Headers.CONTENT_ENCODING;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_ENCODING;
 
   /**
    * Standard HTTP header found on some S3 objects: {@value}.
    */
   public static final String XA_CONTENT_LANGUAGE =
-      XA_HEADER_PREFIX + Headers.CONTENT_LANGUAGE;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_LANGUAGE;
 
   /**
    * Length XAttr: {@value}.
    */
   public static final String XA_CONTENT_LENGTH =
-      XA_HEADER_PREFIX + Headers.CONTENT_LENGTH;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_LENGTH;
 
   /**
    * Standard HTTP header found on some S3 objects: {@value}.
    */
   public static final String XA_CONTENT_MD5 =
-      XA_HEADER_PREFIX + Headers.CONTENT_MD5;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_MD5;
 
   /**
    * Content range: {@value}.
    * This is returned on GET requests with ranges.
    */
   public static final String XA_CONTENT_RANGE =
-      XA_HEADER_PREFIX + Headers.CONTENT_RANGE;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_RANGE;
 
   /**
    * Content type: may be set when uploading.
    * {@value}.
    */
   public static final String XA_CONTENT_TYPE =
-      XA_HEADER_PREFIX + Headers.CONTENT_TYPE;
+      XA_HEADER_PREFIX + AWSHeaders.CONTENT_TYPE;
 
   /**
    * Etag Header {@value}.
@@ -128,14 +127,14 @@ public class HeaderProcessing extends AbstractStoreOperation {
    * it can be retrieved via {@code getFileChecksum(path)} if
    * the S3A connector is enabled.
    */
-  public static final String XA_ETAG = XA_HEADER_PREFIX + Headers.ETAG;
+  public static final String XA_ETAG = XA_HEADER_PREFIX + AWSHeaders.ETAG;
 
 
   /**
    * last modified XAttr: {@value}.
    */
   public static final String XA_LAST_MODIFIED =
-      XA_HEADER_PREFIX + Headers.LAST_MODIFIED;
+      XA_HEADER_PREFIX + AWSHeaders.LAST_MODIFIED;
 
   /* AWS Specific Headers. May not be found on other S3 endpoints. */
 
@@ -146,50 +145,50 @@ public class HeaderProcessing extends AbstractStoreOperation {
    * Value {@value}.
    */
   public static final String XA_ARCHIVE_STATUS =
-      XA_HEADER_PREFIX + Headers.ARCHIVE_STATUS;
+      XA_HEADER_PREFIX + AWSHeaders.ARCHIVE_STATUS;
 
   /**
    *  Object legal hold status. {@value}.
    */
   public static final String XA_OBJECT_LOCK_LEGAL_HOLD_STATUS =
-      XA_HEADER_PREFIX + Headers.OBJECT_LOCK_LEGAL_HOLD_STATUS;
+      XA_HEADER_PREFIX + AWSHeaders.OBJECT_LOCK_LEGAL_HOLD_STATUS;
 
   /**
    *  Object lock mode. {@value}.
    */
   public static final String XA_OBJECT_LOCK_MODE =
-      XA_HEADER_PREFIX + Headers.OBJECT_LOCK_MODE;
+      XA_HEADER_PREFIX + AWSHeaders.OBJECT_LOCK_MODE;
 
   /**
    *  ISO8601 expiry date of object lock hold. {@value}.
    */
   public static final String XA_OBJECT_LOCK_RETAIN_UNTIL_DATE =
-      XA_HEADER_PREFIX + Headers.OBJECT_LOCK_RETAIN_UNTIL_DATE;
+      XA_HEADER_PREFIX + AWSHeaders.OBJECT_LOCK_RETAIN_UNTIL_DATE;
 
   /**
    *  Replication status for cross-region replicated objects. {@value}.
    */
   public static final String XA_OBJECT_REPLICATION_STATUS =
-      XA_HEADER_PREFIX + Headers.OBJECT_REPLICATION_STATUS;
+      XA_HEADER_PREFIX + AWSHeaders.OBJECT_REPLICATION_STATUS;
 
   /**
    *  Version ID; empty for non-versioned buckets/data. {@value}.
    */
   public static final String XA_S3_VERSION_ID =
-      XA_HEADER_PREFIX + Headers.S3_VERSION_ID;
+      XA_HEADER_PREFIX + AWSHeaders.S3_VERSION_ID;
 
   /**
    * The server-side encryption algorithm to use
    * with AWS-managed keys: {@value}.
    */
   public static final String XA_SERVER_SIDE_ENCRYPTION =
-      XA_HEADER_PREFIX + Headers.SERVER_SIDE_ENCRYPTION;
+      XA_HEADER_PREFIX + AWSHeaders.SERVER_SIDE_ENCRYPTION;
 
   /**
    * Storage Class XAttr: {@value}.
    */
   public static final String XA_STORAGE_CLASS =
-      XA_HEADER_PREFIX + Headers.STORAGE_CLASS;
+      XA_HEADER_PREFIX + AWSHeaders.STORAGE_CLASS;
 
   /**
    * HTTP Referrer for logs: {@value}.
@@ -328,7 +327,7 @@ public class HeaderProcessing extends AbstractStoreOperation {
     maybeSetHeader(headers, XA_ETAG,
         md.eTag());
     maybeSetHeader(headers, XA_LAST_MODIFIED,
-       Date.from(md.lastModified()));
+        Date.from(md.lastModified()));
 
     // AWS custom headers
     maybeSetHeader(headers, XA_ARCHIVE_STATUS,

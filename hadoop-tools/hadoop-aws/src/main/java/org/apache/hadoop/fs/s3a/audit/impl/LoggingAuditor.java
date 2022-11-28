@@ -24,6 +24,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import software.amazon.awssdk.core.SdkRequest;
+import software.amazon.awssdk.core.interceptor.Context;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.http.SdkHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +41,6 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import software.amazon.awssdk.core.SdkRequest;
-import software.amazon.awssdk.core.interceptor.Context;
-import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
-import software.amazon.awssdk.http.SdkHttpRequest;
 
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_FILESYSTEM_ID;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;

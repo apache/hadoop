@@ -21,6 +21,13 @@ package org.apache.hadoop.fs.s3a.select;
 import java.io.IOException;
 import java.util.Locale;
 
+import software.amazon.awssdk.services.s3.model.CSVInput;
+import software.amazon.awssdk.services.s3.model.CSVOutput;
+import software.amazon.awssdk.services.s3.model.ExpressionType;
+import software.amazon.awssdk.services.s3.model.InputSerialization;
+import software.amazon.awssdk.services.s3.model.OutputSerialization;
+import software.amazon.awssdk.services.s3.model.QuoteFields;
+import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,14 +41,6 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
-
-import software.amazon.awssdk.services.s3.model.CSVInput;
-import software.amazon.awssdk.services.s3.model.CSVOutput;
-import software.amazon.awssdk.services.s3.model.ExpressionType;
-import software.amazon.awssdk.services.s3.model.InputSerialization;
-import software.amazon.awssdk.services.s3.model.OutputSerialization;
-import software.amazon.awssdk.services.s3.model.QuoteFields;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;

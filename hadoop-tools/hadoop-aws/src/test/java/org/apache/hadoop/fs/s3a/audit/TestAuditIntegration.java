@@ -22,6 +22,12 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,12 +38,6 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
-import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.core.interceptor.InterceptorContext;
-import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.http.SdkHttpRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToRequest;
@@ -179,7 +179,6 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
     // test the basic pre-request sequence while avoiding
     // the complexity of recreating the full sequence
     // (and probably getting it wrong)
-    // https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/interceptor/ExecutionInterceptor.html
     interceptor.beforeExecution(context, attributes);
     interceptor.modifyRequest(context, attributes);
     interceptor.beforeMarshalling(context, attributes);
