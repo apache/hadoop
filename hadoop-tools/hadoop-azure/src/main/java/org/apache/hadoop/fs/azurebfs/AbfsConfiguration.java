@@ -893,36 +893,27 @@ public class AbfsConfiguration{
     }
 
     try {
-      String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
       Class<? extends SASTokenProvider> sasTokenProviderClass =
-              getTokenProviderClass(authType, configKey, null,
+              getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, null,
                       SASTokenProvider.class);
-      String fixedConfigKey = FS_AZURE_SAS_FIXED_TOKEN;
-      String fixedToken = this.rawConfig.get(fixedConfigKey, null);
+      String fixedToken = this.rawConfig.get(FS_AZURE_SAS_FIXED_TOKEN, null);
 
       Preconditions.checkArgument(sasTokenProviderClass != null || fixedToken != null,
-              String.format("The configuration value for both \"%s\" and \"%s\" cannot be invalid.", configKey, fixedConfigKey));
+              String.format("The configuration value for both \"%s\" and \"%s\" cannot be invalid.", FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
 
-      Class<? extends SASTokenProvider> finalSasTokenProviderClass = null;
-      if (sasTokenProviderClass != null && fixedToken != null) {
+      if (sasTokenProviderClass != null) {
         LOG.trace("Using SASTokenProvider class instead of config although both are available for use");
-        finalSasTokenProviderClass = sasTokenProviderClass;
-      }
-      else if (sasTokenProviderClass != null) {
-        // document that access control exceptions might be encountered with filesystem level operations
-        finalSasTokenProviderClass = sasTokenProviderClass;
+        SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(sasTokenProviderClass, rawConfig);
+        Preconditions.checkArgument(sasTokenProvider != null, String.format("Failed to initialize %s", sasTokenProviderClass));
+
+        LOG.trace("Initializing {}", sasTokenProviderClass.getName());
+        sasTokenProvider.initialize(rawConfig, accountName);
+        LOG.trace("{} init complete", sasTokenProviderClass.getName());
+        return sasTokenProvider;
       }
       else {
-        finalSasTokenProviderClass = FixedSASTokenProvider.class;
+        return null;
       }
-
-      SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(finalSasTokenProviderClass, rawConfig);
-      Preconditions.checkArgument(sasTokenProvider != null, String.format("Failed to initialize %s", finalSasTokenProviderClass));
-
-      LOG.trace("Initializing {}", finalSasTokenProviderClass.getName());
-      sasTokenProvider.initialize(rawConfig, accountName);
-      LOG.trace("{} init complete", finalSasTokenProviderClass.getName());
-      return sasTokenProvider;
     } catch (Exception e) {
       throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
     }
