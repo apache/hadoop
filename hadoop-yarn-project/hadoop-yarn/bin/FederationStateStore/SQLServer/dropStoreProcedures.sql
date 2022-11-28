@@ -74,3 +74,24 @@ GO
 
 DROP PROCEDURE IF EXISTS [sp_deleteReservationHomeSubCluster];
 GO
+
+DROP PROCEDURE IF EXISTS [sp_addMasterKey];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_getMasterKey];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_deleteMasterKey];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_addDelegationToken];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_getDelegationToken];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_updateDelegationToken];
+GO
+
+DROP PROCEDURE IF EXISTS [sp_deleteDelegationToken];
+GO
