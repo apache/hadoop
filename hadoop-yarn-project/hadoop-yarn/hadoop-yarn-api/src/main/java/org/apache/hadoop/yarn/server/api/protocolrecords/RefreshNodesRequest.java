@@ -54,16 +54,16 @@ public abstract class RefreshNodesRequest {
   }
 
   /**
-   * Set the DecommissionType
+   * Set the DecommissionType.
    * 
-   * @param decommissionType
+   * @param decommissionType decommission type.
    */
   public abstract void setDecommissionType(DecommissionType decommissionType);
 
   /**
-   * Get the DecommissionType
+   * Get the DecommissionType.
    * 
-   * @return decommissionType
+   * @return decommissionType decommission type.
    */
   public abstract DecommissionType getDecommissionType();
 
