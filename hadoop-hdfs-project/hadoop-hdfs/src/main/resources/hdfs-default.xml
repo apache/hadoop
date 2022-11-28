@@ -3725,7 +3725,7 @@
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
-    This will prevent safe mode namenodes to become active while other standby
+    This will prevent safe mode namenodes to become active or observer while other standby
     namenodes might be ready to serve requests when it is set to true.
   </description>
 </property>
