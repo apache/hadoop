@@ -64,6 +64,7 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -123,9 +124,6 @@ public class DefaultS3ClientFactory extends Configured
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
 
-  /** Bucket name. */
-  private String bucket;
-
   /**
    * Create the client by preparing the AwsConf configuration
    * and then invoking {@code buildAmazonS3Client()}.
@@ -136,7 +134,7 @@ public class DefaultS3ClientFactory extends Configured
       final URI uri,
       final S3ClientCreationParameters parameters) throws IOException {
     Configuration conf = getConf();
-    bucket = uri.getHost();
+    String bucket = uri.getHost();
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf,
             bucket,
@@ -172,6 +170,7 @@ public class DefaultS3ClientFactory extends Configured
           .equals(encryptionMethods.getMethod())) {
         return buildAmazonS3EncryptionClient(
             awsConf,
+            bucket,
             parameters);
       } else {
         return buildAmazonS3Client(
@@ -192,7 +191,7 @@ public class DefaultS3ClientFactory extends Configured
       final S3ClientCreationParameters parameters) throws IOException {
 
     Configuration conf = getConf();
-    bucket = uri.getHost();
+    String bucket = uri.getHost();
 
     ApacheHttpClient.Builder httpClientBuilder = AWSClientConfig
         .createHttpClientBuilder(conf)
@@ -208,12 +207,32 @@ public class DefaultS3ClientFactory extends Configured
       final S3ClientCreationParameters parameters) throws IOException {
 
     Configuration conf = getConf();
-    bucket = uri.getHost();
+    String bucket = uri.getHost();
     NettyNioAsyncHttpClient.Builder httpClientBuilder = AWSClientConfig
         .createAsyncHttpClientBuilder(conf)
         .proxyConfiguration(AWSClientConfig.createAsyncProxyConfiguration(conf, bucket));
     return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
         .httpClientBuilder(httpClientBuilder)
+        .build();
+  }
+
+  @Override
+  public S3TransferManager createS3TransferManager(
+      final URI uri,
+      final S3ClientCreationParameters parameters)
+      throws IOException {
+    Configuration conf = getConf();
+    String bucket = uri.getHost();
+    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket,
+        parameters.getCredentialSet());
+    return S3TransferManager.builder()
+        .s3ClientConfiguration(clientConfiguration ->
+            clientConfiguration
+                .minimumPartSizeInBytes(parameters.getMinimumPartSize())
+                .credentialsProvider(parameters.getCredentialSet())
+                .region(region))
+        .transferConfiguration(transferConfiguration ->
+            transferConfiguration.executor(parameters.getTransferManagerExecutor()))
         .build();
   }
 
@@ -297,13 +316,14 @@ public class DefaultS3ClientFactory extends Configured
    * {@link AmazonS3EncryptionV2} if CSE is enabled.
    *
    * @param awsConf    AWS configuration.
+   * @param bucket bucket name.
    * @param parameters parameters.
-   *
    * @return new AmazonS3 client.
    * @throws IOException if lookupPassword() has any problem.
    */
   protected AmazonS3 buildAmazonS3EncryptionClient(
       final ClientConfiguration awsConf,
+      final String bucket,
       final S3ClientCreationParameters parameters) throws IOException {
 
     AmazonS3 client;

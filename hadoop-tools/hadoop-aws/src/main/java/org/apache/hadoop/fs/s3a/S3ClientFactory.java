@@ -24,18 +24,19 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 
+import com.amazonaws.monitoring.MonitoringListener;
+import com.amazonaws.services.s3.AmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
-import com.amazonaws.monitoring.MonitoringListener;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
-
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
 
@@ -91,6 +92,17 @@ public interface S3ClientFactory {
    * @throws IOException on any IO problem
    */
   S3AsyncClient createS3AsyncClient(URI uri,
+      S3ClientCreationParameters parameters) throws IOException;
+
+  /**
+   * Creates a new {@link S3TransferManager}.
+   *
+   * @param uri S3A file system URI
+   * @param parameters parameter object
+   * @return S3 transfer manager
+   * @throws IOException on any IO problem
+   */
+  S3TransferManager createS3TransferManager(URI uri,
       S3ClientCreationParameters parameters) throws IOException;
 
   /**
@@ -153,6 +165,16 @@ public interface S3ClientFactory {
      * added in HADOOP-18330
      */
     private URI pathUri;
+
+    /**
+     * Minimum part size for transfer parts.
+     */
+    private long minimumPartSize;
+
+    /**
+     * Executor that the transfer manager will use to execute background tasks.
+     */
+    private Executor transferManagerExecutor;
 
     /**
      * List of execution interceptors to include in the chain
@@ -322,6 +344,44 @@ public interface S3ClientFactory {
     public S3ClientCreationParameters withPathUri(
         final URI value) {
       pathUri = value;
+      return this;
+    }
+
+    /**
+     * Get the minimum part size for transfer parts.
+     * @return part size
+     */
+    public long getMinimumPartSize() {
+      return minimumPartSize;
+    }
+
+    /**
+     * Set the minimum part size for transfer parts.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withMinimumPartSize(
+        final long value) {
+      minimumPartSize = value;
+      return this;
+    }
+
+    /**
+     * Get the executor that the transfer manager will use to execute background tasks.
+     * @return part size
+     */
+    public Executor getTransferManagerExecutor() {
+      return transferManagerExecutor;
+    }
+
+    /**
+     * Set the executor that the transfer manager will use to execute background tasks.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withTransferManagerExecutor(
+        final Executor value) {
+      transferManagerExecutor = value;
       return this;
     }
   }

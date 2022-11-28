@@ -995,17 +995,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
         .withUserAgentSuffix(uaSuffix)
         .withRequesterPays(conf.getBoolean(ALLOW_REQUESTER_PAYS, DEFAULT_ALLOW_REQUESTER_PAYS))
-        .withExecutionInterceptors(auditManager.createExecutionInterceptors());
+        .withExecutionInterceptors(auditManager.createExecutionInterceptors())
+        .withMinimumPartSize(partSize)
+        .withTransferManagerExecutor(unboundedThreadPool);
 
-    s3Client = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3ClientV2(getUri(),
-            parameters);
-
-    s3AsyncClient = ReflectionUtils.newInstance(s3ClientFactoryClass, conf)
-        .createS3AsyncClient(getUri(),
-            parameters);
-
-    initTransferManager();
+    S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
+    s3Client = clientFactory.createS3ClientV2(getUri(), parameters);
+    s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
+    transferManager =  clientFactory.createS3TransferManager(getUri(), parameters);
   }
 
   /**
@@ -1177,23 +1174,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public EncryptionSecrets getEncryptionSecrets() {
     return encryptionSecrets;
-  }
-
-  private void initTransferManager() {
-    // TODO: move to client factory?
-    transferManager = S3TransferManager.builder()
-        .s3ClientConfiguration(clientConfiguration ->
-            // TODO: Temporarily using EU_WEST_1 as the region, ultimately this can maybe moved to
-            //  the DefaultS3ClientFactory and use the region resolution logic there. Wait till we
-            //  finalise region logic before making any changes here. Also add other
-            //  configuration options?
-            clientConfiguration
-                .minimumPartSizeInBytes(partSize)
-                .credentialsProvider(credentials)
-                .region(Region.EU_WEST_1))
-        .transferConfiguration(transferConfiguration ->
-            transferConfiguration.executor(unboundedThreadPool)) // TODO: double-check
-        .build();
   }
 
   private void initCannedAcls(Configuration conf) {
