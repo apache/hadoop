@@ -194,19 +194,18 @@ few configurations to your **hdfs-site.xml**:
           <value>1048576</value>
         </property>
 
-*  **dfs.journalnode.edit-cache-size.fraction** - the ratio refers to
+*  **dfs.journalnode.edit-cache-size.fraction** - the fraction refers to
    the proportion of the maximum memory of the JVM.
 
    Used to calculate the size of the edits cache that
    is kept in the JournalNode's memory.
-   The recommended value is less than 0.9.
-   The cache is used for serving edits via
-   RPC-based tailing. This is only effective when
-   dfs.ha.tail-edits.in-progress is turned on.
-   We recommend using dfs.journalnode.edit-cache-size.fraction
-   instead of dfs.journalnode.edit-cache-size.bytes.
-   If we set dfs.journalnode.edit-cache-size.bytes,
-   this parameter will not take effect.
+   This config is an alternative to the dfs.journalnode.edit-cache-size.bytes.
+   And it is used to serve edits for tailing via the RPC-based mechanism, and is only
+   enabled when dfs.ha.tail-edits.in-progress is true. Transactions range in size but
+   are around 200 bytes on average, so the default of 1MB can store around 5000 transactions.
+   So we can configure a reasonable value based on the maximum memory. The recommended value
+   is less than 0.9. If we set dfs.journalnode.edit-cache-size.bytes, this parameter will
+   not take effect.
 
         <property>
           <name>dfs.journalnode.edit-cache-size.fraction</name>

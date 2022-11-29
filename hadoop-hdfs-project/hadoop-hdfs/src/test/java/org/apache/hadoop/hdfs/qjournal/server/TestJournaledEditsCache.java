@@ -56,11 +56,8 @@ public class TestJournaledEditsCache {
       PathUtils.getTestDir(TestJournaledEditsCache.class, false);
   private JournaledEditsCache cache;
 
-  private long memory;
-
   @Before
   public void setup() throws Exception {
-    memory = Runtime.getRuntime().maxMemory();
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
         createTxnData(1, 1).length * EDITS_CAPACITY);
@@ -225,21 +222,24 @@ public class TestJournaledEditsCache {
   }
 
   @Test
-  public void testCacheFraction() {
-    // Set dfs.journalnode.edit-cache-size.bytes.
+  public void testCacheSizeConfigs() {
+    // Assert the default configs.
     Configuration config = new Configuration();
-    config.setInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, 1);
-    config.setFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.1f);
     cache = new JournaledEditsCache(config);
-    assertEquals(1, cache.getCapacity(), 0.0);
+    assertEquals((int) (Runtime.getRuntime().maxMemory() * 0.5f), cache.getCapacity());
 
-    // Don't set dfs.journalnode.edit-cache-size.bytes.
+    // Set dfs.journalnode.edit-cache-size.bytes.
     Configuration config1 = new Configuration();
+    config1.setInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, 1);
     config1.setFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.1f);
     cache = new JournaledEditsCache(config1);
-    assertEquals(
-        memory * config1.getFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.0f),
-        cache.getCapacity(), 0.0);
+    assertEquals(1, cache.getCapacity());
+
+    // Don't set dfs.journalnode.edit-cache-size.bytes.
+    Configuration config2 = new Configuration();
+    config2.setFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.1f);
+    cache = new JournaledEditsCache(config2);
+    assertEquals((int) (Runtime.getRuntime().maxMemory() * 0.1f), cache.getCapacity());
   }
 
   private void storeEdits(int startTxn, int endTxn) throws Exception {
