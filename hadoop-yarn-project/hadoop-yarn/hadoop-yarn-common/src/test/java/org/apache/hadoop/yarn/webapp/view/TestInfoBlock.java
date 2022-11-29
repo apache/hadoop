@@ -21,13 +21,15 @@ package org.apache.hadoop.yarn.webapp.view;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestInfoBlock {
 
@@ -86,30 +88,32 @@ public class TestInfoBlock {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     sw = new StringWriter();
     pw = new PrintWriter(sw);
   }
 
-  @Test(timeout=60000L)
-  public void testMultilineInfoBlock() throws Exception{
+  @Test
+  @Timeout(60000L)
+  void testMultilineInfoBlock() throws Exception {
 
     WebAppTests.testBlock(MultilineInfoBlock.class);
     TestInfoBlock.pw.flush();
     String output = TestInfoBlock.sw.toString().replaceAll(" +", " ");
     String expectedMultilineData1 = String.format("<tr class=\"odd\">%n"
-      + " <th>%n Multiple_line_value%n </th>%n"
-      + " <td>%n This is one line.%n </td>%n");
+        + " <th>%n Multiple_line_value%n </th>%n"
+        + " <td>%n This is one line.%n </td>%n");
     String expectedMultilineData2 = String.format("<tr class=\"even\">%n"
-      + " <th>%n Multiple_line_value%n </th>%n <td>%n <div>%n"
-      + " This is first line.%n </div>%n <div>%n"
-      + " This is second line.%n </div>%n");
+        + " <th>%n Multiple_line_value%n </th>%n <td>%n <div>%n"
+        + " This is first line.%n </div>%n <div>%n"
+        + " This is second line.%n </div>%n");
     assertTrue(output.contains(expectedMultilineData1) && output.contains(expectedMultilineData2));
   }
-  
-  @Test(timeout=60000L)
-  public void testJavaScriptInfoBlock() throws Exception{
+
+  @Test
+  @Timeout(60000L)
+  void testJavaScriptInfoBlock() throws Exception {
     WebAppTests.testBlock(JavaScriptInfoBlock.class);
     TestInfoBlock.pw.flush();
     String output = TestInfoBlock.sw.toString();

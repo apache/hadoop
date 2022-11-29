@@ -227,6 +227,9 @@ Usage: `hdfs oiv [OPTIONS] -i INPUT_FILE`
 | `-step` *size* | Specify the granularity of the distribution in bytes (2MB by default). This option is used with FileDistribution processor. |
 | `-format` | Format the output result in a human-readable fashion rather than a number of bytes. (false by default). This option is used with FileDistribution processor. |
 | `-delimiter` *arg* | Delimiting string to use with Delimited processor. |
+| `-sp` | Whether to print Storage policy(default is false). This option is used with Delimited processor only. |
+| `-ec` | Whether to print Erasure coding policy(default is false). This option is used with Delimited processor only. |
+| `-m`,`--multiThread` *arg* | Specify multiThread to process sub-sections. This option is used with Delimited processor only. |
 | `-t`,`--temp` *temporary dir* | Use temporary dir to cache intermediate result to generate Delimited outputs. If not set, Delimited processor constructs the namespace in memory before outputting text. |
 | `-h`,`--help` | Display the tool usage and help information and exit. |
 

@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.yarn.webapp.util;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.HttpServer2;
@@ -35,13 +39,10 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
 
-import javax.servlet.http.HttpServletRequest;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestWebAppUtils {
   private static final String RM1_NODE_ID = "rm1";
@@ -53,7 +54,7 @@ public class TestWebAppUtils {
   private static final String anyIpAddress = "1.2.3.4";
   private static Map<String, String> savedStaticResolution = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void initializeDummyHostnameResolution() throws Exception {
     String previousIpAddress;
     for (String hostName : dummyHostNames) {
@@ -64,7 +65,7 @@ public class TestWebAppUtils {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void restoreDummyHostnameResolution() throws Exception {
     for (Map.Entry<String, String> hostnameToIpEntry : savedStaticResolution.entrySet()) {
       NetUtils.addStaticResolution(hostnameToIpEntry.getKey(), hostnameToIpEntry.getValue());
@@ -72,7 +73,7 @@ public class TestWebAppUtils {
   }
 
   @Test
-  public void TestRMWebAppURLRemoteAndLocal() throws UnknownHostException {
+  void TestRMWebAppURLRemoteAndLocal() throws UnknownHostException {
     Configuration configuration = new Configuration();
     final String rmAddress = "host1:8088";
     configuration.set(YarnConfiguration.RM_WEBAPP_ADDRESS, rmAddress);
@@ -84,30 +85,32 @@ public class TestWebAppUtils {
     configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
 
     String rmRemoteUrl = WebAppUtils.getResolvedRemoteRMWebAppURLWithoutScheme(configuration);
-    Assert.assertEquals("ResolvedRemoteRMWebAppUrl should resolve to the first HA RM address", rm1Address, rmRemoteUrl);
+    assertEquals(rm1Address, rmRemoteUrl,
+        "ResolvedRemoteRMWebAppUrl should resolve to the first HA RM address");
 
     String rmLocalUrl = WebAppUtils.getResolvedRMWebAppURLWithoutScheme(configuration);
-    Assert.assertEquals("ResolvedRMWebAppUrl should resolve to the default RM webapp address", rmAddress, rmLocalUrl);
+    assertEquals(rmAddress, rmLocalUrl,
+        "ResolvedRMWebAppUrl should resolve to the default RM webapp address");
   }
 
   @Test
-  public void testGetPassword() throws Exception {
+  void testGetPassword() throws Exception {
     Configuration conf = provisionCredentialsForSSL();
 
     // use WebAppUtils as would be used by loadSslConfiguration
-    Assert.assertEquals("keypass",
+    assertEquals("keypass",
         WebAppUtils.getPassword(conf, WebAppUtils.WEB_APP_KEY_PASSWORD_KEY));
-    Assert.assertEquals("storepass",
+    assertEquals("storepass",
         WebAppUtils.getPassword(conf, WebAppUtils.WEB_APP_KEYSTORE_PASSWORD_KEY));
-    Assert.assertEquals("trustpass",
+    assertEquals("trustpass",
         WebAppUtils.getPassword(conf, WebAppUtils.WEB_APP_TRUSTSTORE_PASSWORD_KEY));
 
     // let's make sure that a password that doesn't exist returns null
-    Assert.assertEquals(null, WebAppUtils.getPassword(conf,"invalid-alias"));
+    assertNull(WebAppUtils.getPassword(conf, "invalid-alias"));
   }
 
   @Test
-  public void testLoadSslConfiguration() throws Exception {
+  void testLoadSslConfiguration() throws Exception {
     Configuration conf = provisionCredentialsForSSL();
     TestBuilder builder = (TestBuilder) new TestBuilder();
 
@@ -116,12 +119,12 @@ public class TestWebAppUtils {
 
     String keypass = "keypass";
     String storepass = "storepass";
-    String trustpass = "trustpass";    
+    String trustpass = "trustpass";
 
     // make sure we get the right passwords in the builder
-    assertEquals(keypass, ((TestBuilder)builder).keypass);
-    assertEquals(storepass, ((TestBuilder)builder).keystorePassword);
-    assertEquals(trustpass, ((TestBuilder)builder).truststorePassword);
+    assertEquals(keypass, ((TestBuilder) builder).keypass);
+    assertEquals(storepass, ((TestBuilder) builder).keystorePassword);
+    assertEquals(trustpass, ((TestBuilder) builder).truststorePassword);
   }
 
   protected Configuration provisionCredentialsForSSL() throws IOException,
@@ -145,11 +148,11 @@ public class TestWebAppUtils {
     char[] trustpass = {'t', 'r', 'u', 's', 't', 'p', 'a', 's', 's'};
 
     // ensure that we get nulls when the key isn't there
-    assertEquals(null, provider.getCredentialEntry(
+    assertNull(provider.getCredentialEntry(
         WebAppUtils.WEB_APP_KEY_PASSWORD_KEY));
-    assertEquals(null, provider.getCredentialEntry(
+    assertNull(provider.getCredentialEntry(
         WebAppUtils.WEB_APP_KEYSTORE_PASSWORD_KEY));
-    assertEquals(null, provider.getCredentialEntry(
+    assertNull(provider.getCredentialEntry(
         WebAppUtils.WEB_APP_TRUSTSTORE_PASSWORD_KEY));
 
     // create new aliases
@@ -180,7 +183,7 @@ public class TestWebAppUtils {
   }
 
   @Test
-  public void testAppendQueryParams() throws Exception {
+  void testAppendQueryParams() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     String targetUri = "/test/path";
     Mockito.when(request.getCharacterEncoding()).thenReturn(null);
@@ -194,12 +197,12 @@ public class TestWebAppUtils {
     for (Map.Entry<String, String> entry : paramResultMap.entrySet()) {
       Mockito.when(request.getQueryString()).thenReturn(entry.getKey());
       String uri = WebAppUtils.appendQueryParams(request, targetUri);
-      Assert.assertEquals(entry.getValue(), uri);
+      assertEquals(entry.getValue(), uri);
     }
   }
 
   @Test
-  public void testGetHtmlEscapedURIWithQueryString() throws Exception {
+  void testGetHtmlEscapedURIWithQueryString() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     String targetUri = "/test/path";
     Mockito.when(request.getCharacterEncoding()).thenReturn(null);
@@ -214,7 +217,7 @@ public class TestWebAppUtils {
     for (Map.Entry<String, String> entry : paramResultMap.entrySet()) {
       Mockito.when(request.getQueryString()).thenReturn(entry.getKey());
       String uri = WebAppUtils.getHtmlEscapedURIWithQueryString(request);
-      Assert.assertEquals(entry.getValue(), uri);
+      assertEquals(entry.getValue(), uri);
     }
   }
 
