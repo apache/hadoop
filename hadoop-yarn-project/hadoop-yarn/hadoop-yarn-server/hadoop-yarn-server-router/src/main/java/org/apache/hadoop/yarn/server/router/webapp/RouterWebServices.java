@@ -943,4 +943,15 @@ public class RouterWebServices implements RMWebServiceProtocol {
     return pipeline.getRootInterceptor()
         .signalToContainer(containerId, command, req);
   }
+
+  @GET
+  @Path(RMWSConsts.GET_RM_NODE_LABELS)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public NodeLabelsInfo getRMNodeLabels(@Context HttpServletRequest hsr)
+      throws IOException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);
+    return pipeline.getRootInterceptor().getRMNodeLabels(hsr);
+  }
 }

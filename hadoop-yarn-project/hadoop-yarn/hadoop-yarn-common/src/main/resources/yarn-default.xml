@@ -5048,6 +5048,35 @@
   </property>
 
   <property>
+    <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configurable is used to set the corePoolSize(minimumPoolSize)
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configuration is used to set the default value of maximumPoolSize
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
+    <value>0s</value>
+    <description>
+      This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+      Default is 0s.
+    </description>
+  </property>
+
+  <property>
     <name>yarn.router.submit.interval.time</name>
     <value>10ms</value>
     <description>

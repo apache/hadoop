@@ -18,28 +18,29 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import org.junit.Assert;
-
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-import org.junit.Test;
-
 import java.net.InetSocketAddress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import org.junit.jupiter.api.Test;
+
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestYarnConfiguration {
 
   @Test
-  public void testDefaultRMWebUrl() throws Exception {
+  void testDefaultRMWebUrl() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     String rmWebUrl = WebAppUtils.getRMWebAppURLWithScheme(conf);
     // shouldn't have a "/" on the end of the url as all the other uri routinnes
     // specifically add slashes and Jetty doesn't handle double slashes.
-    Assert.assertNotSame("RM Web Url is not correct", "http://0.0.0.0:8088",
-        rmWebUrl);
+    assertNotSame("http://0.0.0.0:8088",
+        rmWebUrl,
+        "RM Web Url is not correct");
 
     // test it in HA scenario
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -47,7 +48,7 @@ public class TestYarnConfiguration {
     conf.set("yarn.resourcemanager.webapp.address.rm1", "10.10.10.10:18088");
     conf.set("yarn.resourcemanager.webapp.address.rm2", "20.20.20.20:28088");
     String rmWebUrlinHA = WebAppUtils.getRMWebAppURLWithScheme(conf);
-    Assert.assertEquals("http://10.10.10.10:18088", rmWebUrlinHA);
+    assertEquals("http://10.10.10.10:18088", rmWebUrlinHA);
 
     YarnConfiguration conf2 = new YarnConfiguration();
     conf2.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
@@ -55,17 +56,17 @@ public class TestYarnConfiguration {
     conf2.set("yarn.resourcemanager.hostname.rm1", "30.30.30.30");
     conf2.set("yarn.resourcemanager.hostname.rm2", "40.40.40.40");
     String rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2);
-    Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+    assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
 
     rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 0);
-    Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+    assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
 
     rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 1);
-    Assert.assertEquals("http://40.40.40.40:8088", rmWebUrlinHA2);
+    assertEquals("http://40.40.40.40:8088", rmWebUrlinHA2);
   }
 
   @Test
-  public void testRMWebUrlSpecified() throws Exception {
+  void testRMWebUrlSpecified() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
     // seems a bit odd but right now we are forcing webapp for RM to be
     // RM_ADDRESS
@@ -74,15 +75,15 @@ public class TestYarnConfiguration {
     conf.set(YarnConfiguration.RM_ADDRESS, "rmtesting:9999");
     String rmWebUrl = WebAppUtils.getRMWebAppURLWithScheme(conf);
     String[] parts = rmWebUrl.split(":");
-    Assert.assertEquals("RM Web URL Port is incrrect", 24543,
-        Integer.parseInt(parts[parts.length - 1]));
-    Assert.assertNotSame(
-        "RM Web Url not resolved correctly. Should not be rmtesting",
-        "http://rmtesting:24543", rmWebUrl);
+    assertEquals(24543,
+        Integer.parseInt(parts[parts.length - 1]),
+        "RM Web URL Port is incrrect");
+    assertNotSame("http://rmtesting:24543", rmWebUrl,
+        "RM Web Url not resolved correctly. Should not be rmtesting");
   }
 
   @Test
-  public void testGetSocketAddressForNMWithHA() {
+  void testGetSocketAddressForNMWithHA() {
     YarnConfiguration conf = new YarnConfiguration();
 
     // Set NM address
@@ -100,7 +101,7 @@ public class TestYarnConfiguration {
   }
 
   @Test
-  public void testGetSocketAddr() throws Exception {
+  void testGetSocketAddr() throws Exception {
 
     YarnConfiguration conf;
     InetSocketAddress resourceTrackerAddress;
@@ -113,9 +114,9 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[0],
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        new InetSocketAddress(
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS.split(":")[0],
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
         resourceTrackerAddress);
 
     //with address
@@ -126,9 +127,9 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        "10.0.0.1",
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        new InetSocketAddress(
+            "10.0.0.1",
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
         resourceTrackerAddress);
 
     //address and socket
@@ -139,9 +140,9 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        "10.0.0.2",
-        5001),
+        new InetSocketAddress(
+            "10.0.0.2",
+            5001),
         resourceTrackerAddress);
 
     //bind host only
@@ -153,9 +154,9 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        "10.0.0.3",
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        new InetSocketAddress(
+            "10.0.0.3",
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
         resourceTrackerAddress);
 
     //bind host and address no port
@@ -167,9 +168,9 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        "0.0.0.0",
-        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
+        new InetSocketAddress(
+            "0.0.0.0",
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT),
         resourceTrackerAddress);
 
     //bind host and address with port
@@ -181,15 +182,15 @@ public class TestYarnConfiguration {
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
     assertEquals(
-      new InetSocketAddress(
-        "0.0.0.0",
-        5003),
+        new InetSocketAddress(
+            "0.0.0.0",
+            5003),
         resourceTrackerAddress);
 
   }
 
   @Test
-  public void testUpdateConnectAddr() throws Exception {
+  void testUpdateConnectAddr() throws Exception {
     YarnConfiguration conf;
     InetSocketAddress resourceTrackerConnectAddress;
     InetSocketAddress serverAddress;

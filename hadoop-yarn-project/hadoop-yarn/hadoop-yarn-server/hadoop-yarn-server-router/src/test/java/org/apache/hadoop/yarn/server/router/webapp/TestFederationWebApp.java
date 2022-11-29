@@ -23,14 +23,20 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class TestFederationWebApp extends TestRouterWebServicesREST {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFederationWebApp.class);
+
   @Test
   public void testFederationWebViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationWebView - NotEnable Federation.");
     // Test Federation is not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -40,6 +46,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationWebViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationWebView - Enable Federation.");
     // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -49,6 +56,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationAboutViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationAboutViewEnable - Enable Federation.");
     // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -58,6 +66,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationAboutViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationAboutViewNotEnable - NotEnable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -67,6 +76,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationNodeViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationNodeViewEnable - Enable Federation.");
     // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -76,6 +86,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationNodeViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationNodeViewNotEnable - NotEnable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
@@ -85,6 +96,7 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationAppViewEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationAppViewEnable - Enable Federation.");
     // Test Federation Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
@@ -94,9 +106,28 @@ public class TestFederationWebApp extends TestRouterWebServicesREST {
   @Test
   public void testFederationAppViewNotEnable()
       throws InterruptedException, YarnException, IOException {
+    LOG.info("testFederationAppViewNotEnable - NotEnable Federation.");
     // Test Federation Not Enabled
     Configuration config = new YarnConfiguration();
     config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
     WebAppTests.testPage(AppsPage.class, Router.class, new MockRouter(config));
+  }
+
+  @Test
+  public void testNodeLabelAppViewNotEnable()
+      throws InterruptedException, YarnException, IOException {
+    // Test Federation Not Enabled
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, false);
+    WebAppTests.testPage(NodeLabelsPage.class, Router.class, new MockRouter(config));
+  }
+
+  @Test
+  public void testNodeLabelAppViewEnable()
+      throws InterruptedException, YarnException, IOException {
+    // Test Federation Not Enabled
+    Configuration config = new YarnConfiguration();
+    config.setBoolean(YarnConfiguration.FEDERATION_ENABLED, true);
+    WebAppTests.testPage(NodeLabelsPage.class, Router.class, new MockRouter(config));
   }
 }
