@@ -1344,20 +1344,23 @@ public class RouterAdmin extends Configured implements Tool {
     // Get the stores sorted by name
     Map<String, RecordStore<? extends BaseRecord>> stores = new TreeMap<>();
     for(RecordStore<? extends BaseRecord> store: service.getRecordStores()) {
-      stores.put(StateStoreUtils.getRecordName(store.getRecordClass()), store);
+      String recordName = StateStoreUtils.getRecordName(store.getRecordClass());
+      stores.put(recordName, store);
     }
     for (Entry<String, RecordStore<? extends BaseRecord>> pair: stores.entrySet()) {
-      output.println(String.format("---- %s ----", pair.getKey()));
-      if (pair.getValue() instanceof CachedRecordStore) {
-        for (Object record: ((CachedRecordStore) pair.getValue()).getCachedRecords()) {
-          if (record instanceof BaseRecord) {
+      String recordName = pair.getKey();
+      RecordStore<? extends BaseRecord> store = pair.getValue();
+      output.println("---- " + recordName + " ----");
+      if (store instanceof CachedRecordStore) {
+        for (Object record: ((CachedRecordStore) store).getCachedRecords()) {
+          if (record instanceof BaseRecord && record instanceof PBRecord) {
             BaseRecord baseRecord = (BaseRecord) record;
-            if (record instanceof PBRecord) {
-              output.println(String.format("  %s:", baseRecord.getPrimaryKey()));
-              output.println("    " +
-                  ((PBRecord) record).getProto().toString()
-                      .replaceAll("\n", "\n    "));
-            }
+            // Generate the pseudo-json format of the protobuf record
+            String recordString = ((PBRecord) record).getProto().toString();
+            // Indent each line
+            recordString = "    " + recordString.replaceAll("\n", "\n    ");
+            output.println(String.format("  %s:", baseRecord.getPrimaryKey()));
+            output.println(recordString);
           }
         }
         output.println();
