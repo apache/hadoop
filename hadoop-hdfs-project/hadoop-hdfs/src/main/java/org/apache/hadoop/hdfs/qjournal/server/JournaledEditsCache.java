@@ -40,8 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.util.AutoCloseableLock;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * An in-memory cache of edits in their serialized form. This is used to serve
@@ -125,12 +124,10 @@ class JournaledEditsCache {
   JournaledEditsCache(Configuration conf) {
     float fraction = conf.getFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_DEFAULT);
-    if (fraction <= 0 || fraction >= 1.0f) {
-      terminate(1, new IllegalArgumentException(String.format(
-          "Cache config %s is set at %f. It should be a positive float value, " +
-          "not greater than 1.0. The recommended value is less than 0.9.",
-          DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, fraction)));
-    }
+    Preconditions.checkArgument((fraction > 0 && fraction < 1.0f),
+        String.format("Cache config %s is set at %f, it should be a positive float value, " +
+            "less than 1.0. The recommended value is less than 0.9.",
+            DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, fraction));
     capacity = conf.getInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY,
         (int) (Runtime.getRuntime().maxMemory() * fraction));
     if (capacity > 0.9 * Runtime.getRuntime().maxMemory()) {
