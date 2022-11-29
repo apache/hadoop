@@ -651,7 +651,7 @@ public class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
-    if (reqParams.getIsExpectHeaderEnabled()) {
+    if (reqParams.isExpectHeaderEnabled()) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -700,7 +700,8 @@ public class AbfsClient implements Closeable {
       // if someone has taken dependency on the exception message,
       // which is created using the error string present in the response header.
       int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
-      if (checkUserError(responseStatusCode) && reqParams.getIsExpectHeaderEnabled()) {
+      if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
+        LOG.debug("User error, retrying without 100 continue enabled");
         reqParams.setExpectHeaderEnabled(false);
         return this.append(path, buffer, reqParams, cachedSasToken,
             tracingContext);

@@ -76,7 +76,7 @@ public class AppendRequestParameters {
     return this.leaseId;
   }
 
-  public boolean getIsExpectHeaderEnabled() {
+  public boolean isExpectHeaderEnabled() {
     return isExpectHeaderEnabled;
   }
 
