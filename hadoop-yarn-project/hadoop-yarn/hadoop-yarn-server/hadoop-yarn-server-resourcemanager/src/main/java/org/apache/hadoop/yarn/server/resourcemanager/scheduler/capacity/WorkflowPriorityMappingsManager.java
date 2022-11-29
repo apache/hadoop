@@ -150,8 +150,8 @@ public class WorkflowPriorityMappingsManager {
     WorkflowPriorityMapping mapping;
     try {
       //Converting workflow id to lowercase as yarn converts application tags also to lowercase
-      mapping = new WorkflowPriorityMapping(StringUtils.toLowerCase(mappingArray[0]), mappingArray[1],
-          Priority.newInstance(Integer.parseInt(mappingArray[2])));
+      mapping = new WorkflowPriorityMapping(StringUtils.toLowerCase(mappingArray[0]),
+          mappingArray[1], Priority.newInstance(Integer.parseInt(mappingArray[2])));
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException(
           "Illegal workflow priority for mapping " + mappingString);
