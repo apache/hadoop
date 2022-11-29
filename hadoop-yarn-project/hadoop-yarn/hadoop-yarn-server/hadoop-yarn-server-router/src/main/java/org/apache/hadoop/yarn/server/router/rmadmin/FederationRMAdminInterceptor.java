@@ -192,11 +192,11 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     } catch (YarnException e) {
       routerMetrics.incrRefreshQueuesFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e, "Unable to refreshQueue due to exception.");
     }
 
     routerMetrics.incrRefreshQueuesFailedRetrieved();
-    throw new YarnException("Unable to refreshQueue to exception.");
+    throw new YarnException("Unable to refreshQueue.");
   }
 
   /**
@@ -225,8 +225,7 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     // because this parameter has a default value at the proto level.
     if (request == null) {
       routerMetrics.incrRefreshNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException(
-          "Missing RefreshNodes request.", null);
+      RouterServerUtil.logAndThrowException("Missing RefreshNodes request.", null);
     }
 
     // call refreshNodes of activeSubClusters.
@@ -244,10 +243,9 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         routerMetrics.succeededRefreshNodesRetrieved(stopTime - startTime);
         return RefreshNodesResponse.newInstance();
       }
-
     } catch (YarnException e) {
       routerMetrics.incrRefreshNodesFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e, "Unable to refreshNodes due to exception.");
     }
 
     routerMetrics.incrRefreshNodesFailedRetrieved();

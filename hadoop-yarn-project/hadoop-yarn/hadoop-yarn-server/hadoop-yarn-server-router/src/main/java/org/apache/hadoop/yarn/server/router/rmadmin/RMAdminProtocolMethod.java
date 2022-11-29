@@ -112,7 +112,8 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
           subClusterId = pair.getKey();
           Object result = pair.getValue();
           if (result != null) {
-            results.put(subClusterId, clazz.cast(result));
+            R rResult = clazz.cast(result);
+            results.put(subClusterId, rResult);
           }
         } catch (InterruptedException | ExecutionException e) {
           Throwable cause = e.getCause();
@@ -176,8 +177,10 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
         return Collections.singletonList(clazz.cast(result));
       }
     } catch (Exception e) {
-      throw new YarnException("invoke Failed.", e);
+      throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+          subClusterId, e);
     }
-    throw new YarnException("invoke Failed.");
+    throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+        subClusterId);
   }
 }
