@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.server.webapp.WebPageUtils;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -49,35 +48,14 @@ public class NavBlock extends RouterBlock {
 
     List<String> subClusterIds = getActiveSubClusterIds();
 
-    Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList1 =
-        mainList.li().a(url("nodes"), "Nodes").ul().$style("padding:0.3em 1em 0.1em 2em");
-
     // ### nodes info
-    subAppsList1.li().__();
-    for (String subClusterId : subClusterIds) {
-      subAppsList1.li().a(url("nodes", subClusterId), subClusterId).__();
-    }
-    subAppsList1.__().__();
+    initNodesMenu(mainList, subClusterIds);
+
+    // ### nodelabels info
+    initNodeLabelsMenu(mainList, subClusterIds);
 
     // ### applications info
-    Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> subAppsList2 =
-            mainList.li().a(url("apps"), "Applications").ul();
-
-    subAppsList2.li().__();
-    for (String subClusterId : subClusterIds) {
-      Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>> subAppsList3 = subAppsList2.
-          li().a(url("apps", subClusterId), subClusterId);
-      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>>> subAppsList4 =
-          subAppsList3.ul().$style("padding:0.3em 1em 0.1em 2em");
-      subAppsList4.li().__();
-      for (YarnApplicationState state : YarnApplicationState.values()) {
-        subAppsList4.
-            li().a(url("apps", subClusterId, state.toString()), state.toString()).__();
-      }
-      subAppsList4.li().__().__();
-      subAppsList3.__();
-    }
-    subAppsList2.__().__();
+    initApplicationsMenu(mainList, subClusterIds);
 
     // ### tools
     Hamlet.DIV<Hamlet> sectionBefore = mainList.__();

@@ -912,6 +912,7 @@ public class FSEditLogLoader {
       fsNamesys.getFSImage().updateStorageVersion();
       fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
+      fsNamesys.setNeedRollbackFsImage(false);
       break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {

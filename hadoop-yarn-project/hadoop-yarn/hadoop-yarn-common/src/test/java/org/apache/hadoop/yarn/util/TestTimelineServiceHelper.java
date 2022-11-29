@@ -17,34 +17,35 @@
  */
 package org.apache.hadoop.yarn.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestTimelineServiceHelper {
 
   @Test
-  public void testMapCastToHashMap() {
+  void testMapCastToHashMap() {
 
     // Test null map be casted to null
     Map<String, String> nullMap = null;
-    Assert.assertNull(TimelineServiceHelper.mapCastToHashMap(nullMap));
+    assertNull(TimelineServiceHelper.mapCastToHashMap(nullMap));
 
     // Test empty hashmap be casted to a empty hashmap
     Map<String, String> emptyHashMap = new HashMap<String, String>();
-    Assert.assertEquals(
+    assertEquals(
         TimelineServiceHelper.mapCastToHashMap(emptyHashMap).size(), 0);
 
     // Test empty non-hashmap be casted to a empty hashmap
     Map<String, String> emptyTreeMap = new TreeMap<String, String>();
-    Assert.assertEquals(
+    assertEquals(
         TimelineServiceHelper.mapCastToHashMap(emptyTreeMap).size(), 0);
 
     // Test non-empty hashmap be casted to hashmap correctly
@@ -52,7 +53,7 @@ public class TestTimelineServiceHelper {
     String key = "KEY";
     String value = "VALUE";
     firstHashMap.put(key, value);
-    Assert.assertEquals(
+    assertEquals(
         TimelineServiceHelper.mapCastToHashMap(firstHashMap), firstHashMap);
 
     // Test non-empty non-hashmap is casted correctly.
@@ -60,7 +61,7 @@ public class TestTimelineServiceHelper {
     firstTreeMap.put(key, value);
     HashMap<String, String> alternateHashMap =
         TimelineServiceHelper.mapCastToHashMap(firstTreeMap);
-    Assert.assertEquals(firstTreeMap.size(), alternateHashMap.size());
+    assertEquals(firstTreeMap.size(), alternateHashMap.size());
     assertThat(alternateHashMap.get(key)).isEqualTo(value);
 
     // Test complicated hashmap be casted correctly
@@ -69,7 +70,7 @@ public class TestTimelineServiceHelper {
     Set<String> hashSet = new HashSet<String>();
     hashSet.add(value);
     complicatedHashMap.put(key, hashSet);
-    Assert.assertEquals(
+    assertEquals(
         TimelineServiceHelper.mapCastToHashMap(complicatedHashMap),
         complicatedHashMap);
 
@@ -77,7 +78,7 @@ public class TestTimelineServiceHelper {
     Map<String, Set<String>> complicatedTreeMap =
         new TreeMap<String, Set<String>>();
     complicatedTreeMap.put(key, hashSet);
-    Assert.assertEquals(
+    assertEquals(
         TimelineServiceHelper.mapCastToHashMap(complicatedTreeMap).get(key),
         hashSet);
   }
