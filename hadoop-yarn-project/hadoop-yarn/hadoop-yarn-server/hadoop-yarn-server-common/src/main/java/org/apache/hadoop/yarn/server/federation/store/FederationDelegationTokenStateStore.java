@@ -130,7 +130,7 @@ public interface FederationDelegationTokenStateStore {
   /**
    * The Router Supports setDelegationTokenSeqNum.
    *
-   * @param seqNum
+   * @param seqNum DelegationTokenSeqNum.
    */
   void setDelegationTokenSeqNum(int seqNum);
 
