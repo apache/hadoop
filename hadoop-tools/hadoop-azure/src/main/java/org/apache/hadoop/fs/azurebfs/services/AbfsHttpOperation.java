@@ -320,17 +320,15 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         outputStream = this.connection.getOutputStream();
       } catch (IOException e) {
         // If getOutputStream fails with an exception due to 100-continue
-        // enabled, we update the bytes sent before they are sent
-        // in the catch block.
-        this.bytesSent = length;
-        throw e;
+        // enabled, we return back without throwing an exception.
+        return;
       }
-      // update bytes sent before they are sent so we may observe
-      // attempted sends as well as successful sends via the
-      // accompanying statusCode
-      this.bytesSent = length;
+      // This will normally throw an IOException.
       outputStream.write(buffer, offset, length);
     } finally {
+      // update bytes sent for successful as well as failed attempts via the
+      // accompanying statusCode.
+      this.bytesSent = length;
       if (this.isTraceEnabled) {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }
