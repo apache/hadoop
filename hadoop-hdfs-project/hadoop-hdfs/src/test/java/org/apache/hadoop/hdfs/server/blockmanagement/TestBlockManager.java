@@ -960,16 +960,16 @@ public class TestBlockManager {
   @Test
   public void testSkipReconstructionWithManyBusyNodes3() {
     NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
-    long blockId = -9223372036854775776L; // real ec block id
+    long blockId = -9223372036854775776L; // Real ec block id
     // RS-3-2 EC policy
     ErasureCodingPolicy ecPolicy =
             SystemErasureCodingPolicies.getPolicies().get(1);
 
-    // create an EC block group: 3 data blocks + 2 parity blocks
+    // Create an EC block group: 3 data blocks + 2 parity blocks.
     Block aBlockGroup = new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
     BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
 
-    // create 4 storageInfo, which means 1 block is missing
+    // Create 4 storageInfo, which means 1 block is missing.
     DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
             "storage1", "1.1.1.1", "rack1", "host1");
     DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
@@ -979,7 +979,7 @@ public class TestBlockManager {
     DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
             "storage4", "4.4.4.4", "rack4", "host4");
 
-    // link block with storage
+    // Link block with storage.
     aBlockInfoStriped.addStorage(ds1, aBlockGroup);
     aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
     aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
@@ -988,7 +988,7 @@ public class TestBlockManager {
     addEcBlockToBM(blockId, ecPolicy);
     aBlockInfoStriped.setBlockCollectionId(mockINodeId);
 
-    // reconstruction should be scheduled
+    // Reconstruction should be scheduled.
     BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNotNull(work);
 
@@ -996,15 +996,15 @@ public class TestBlockManager {
     DatanodeDescriptor dummyDD = ds1.getDatanodeDescriptor();
     DatanodeDescriptor[] dummyDDArray = new DatanodeDescriptor[]{dummyDD};
     DatanodeStorageInfo[] dummyDSArray = new DatanodeStorageInfo[]{ds1};
-    // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.maxReplicationStreams; i++){ //Add some dummy EC reconstruction task
+    // Simulate the 2 nodes reach maxReplicationStreams.
+    for(int i = 0; i < bm.maxReplicationStreams; i++){ //Add some dummy EC reconstruction task.
       ds3.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
-        dummyDSArray, new byte[0], new byte[0], ecPolicy);
+              dummyDSArray, new byte[0], new byte[0], ecPolicy);
       ds4.getDatanodeDescriptor().addBlockToBeErasureCoded(dummyBlock, dummyDDArray,
               dummyDSArray, new byte[0], new byte[0], ecPolicy);
     }
 
-    // reconstruction should be skipped since the number of non-busy nodes are not enough
+    // Reconstruction should be skipped since the number of non-busy nodes are not enough.
     work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
     assertNull(work);
   }
