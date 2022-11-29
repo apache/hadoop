@@ -6442,4 +6442,11 @@
       If the namespace is DEFAULT, it's best to change this conf to other value.
     </description>
   </property>
+  <property>
+    <name>dfs.client.rbf.observer.read.enable</name>
+    <value>false</value>
+    <description>
+      Enables observer reads for clients. This should only be enabled when clients are using routers.
+    </description>
+  </property>
 </configuration>
