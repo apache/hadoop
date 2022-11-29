@@ -1601,7 +1601,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     for (int i = 0; i < numSubmitRetries; ++i) {
       SubClusterId subClusterId = null;
       try {
-        subClusterId = getRandomActiveSubCluster(subClustersActive, blacklist);
+        subClusterId = federationFacade.getRandomActiveSubCluster(subClustersActive, blacklist);
         SubClusterInfo subClusterInfo = subClustersActive.get(subClusterId);
         DefaultRequestInterceptorREST interceptor = getOrCreateInterceptorForSubCluster(
             subClusterId, subClusterInfo.getRMWebServiceAddress());
