@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import org.apache.hadoop.yarn.api.records.QueueConfigurations;
@@ -13,18 +31,14 @@ import java.util.Set;
 
 public final class CSQueueInfoProvider {
 
-  private static final RecordFactory recordFactory =
+  private static final RecordFactory RECORD_FACTORY =
           RecordFactoryProvider.getRecordFactory(null);
 
-  public CSQueueInfoProvider() {
+  private CSQueueInfoProvider() {
   }
 
   public static QueueInfo getQueueInfo(AbstractCSQueue csQueue) {
-    // Deliberately doesn't use lock here, because this method will be invoked
-    // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
-    // consistency here.
-    // TODO, improve this
-    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    QueueInfo queueInfo = RECORD_FACTORY.newRecordInstance(QueueInfo.class);
     queueInfo.setQueueName(csQueue.getQueuePathObject().getLeafName());
     queueInfo.setQueuePath(csQueue.getQueuePathObject().getFullPath());
     queueInfo.setAccessibleNodeLabels(csQueue.getAccessibleNodeLabels());
@@ -38,17 +52,13 @@ public final class CSQueueInfoProvider {
     queueInfo.setIntraQueuePreemptionDisabled(
             csQueue.getIntraQueuePreemptionDisabled());
     queueInfo.setQueueConfigurations(getQueueConfigurations(csQueue));
-    queueInfo.setWeight(csQueue.getWeight());
+    queueInfo.setWeight(csQueue.getQueueCapacities().getWeight());
     queueInfo.setMaxParallelApps(csQueue.getMaxParallelApps());
     return queueInfo;
   }
 
   private static QueueStatistics getQueueStatistics(AbstractCSQueue csQueue) {
-    // Deliberately doesn't use lock here, because this method will be invoked
-    // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
-    // consistency here.
-    // TODO, improve this
-    QueueStatistics stats = recordFactory.newRecordInstance(
+    QueueStatistics stats = RECORD_FACTORY.newRecordInstance(
             QueueStatistics.class);
     CSQueueMetrics queueMetrics = csQueue.getMetrics();
     stats.setNumAppsSubmitted(queueMetrics.getAppsSubmitted());
@@ -78,14 +88,15 @@ public final class CSQueueInfoProvider {
     QueueResourceQuotas queueResourceQuotas = csQueue.getQueueResourceQuotas();
     for (String nodeLabel : nodeLabels) {
       QueueConfigurations queueConfiguration =
-              recordFactory.newRecordInstance(QueueConfigurations.class);
-      float capacity = csQueue.getCapacityByNodeLabel(nodeLabel);
-      float absoluteCapacity = csQueue.getAbsoluteCapacityByNodeLabel(nodeLabel);
-      float maxCapacity = csQueue.getMaximumCapacityByNodeLabel(nodeLabel);
+              RECORD_FACTORY.newRecordInstance(QueueConfigurations.class);
+      QueueCapacities queueCapacities = csQueue.getQueueCapacities();
+      float capacity = queueCapacities.getCapacity(nodeLabel);
+      float absoluteCapacity = queueCapacities.getAbsoluteCapacity(nodeLabel);
+      float maxCapacity = queueCapacities.getMaximumCapacity(nodeLabel);
       float absMaxCapacity =
-              csQueue.getAbsoluteMaximumCapacityByNodeLabel(nodeLabel);
+              queueCapacities.getAbsoluteMaximumCapacity(nodeLabel);
       float maxAMPercentage =
-              csQueue.getMaxAMResourcePercentageByNodeLabel(nodeLabel);
+              queueCapacities.getMaxAMResourcePercentage(nodeLabel);
       queueConfiguration.setCapacity(capacity);
       queueConfiguration.setAbsoluteCapacity(absoluteCapacity);
       queueConfiguration.setMaxCapacity(maxCapacity);

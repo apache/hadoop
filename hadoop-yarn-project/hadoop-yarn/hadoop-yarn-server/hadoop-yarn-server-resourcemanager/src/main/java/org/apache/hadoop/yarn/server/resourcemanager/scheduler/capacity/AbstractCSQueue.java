@@ -198,26 +198,14 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueCapacities.getCapacity();
   }
 
-  public float getCapacityByNodeLabel(String nodeLabel) {
-    return queueCapacities.getCapacity(nodeLabel);
-  }
-
   @Override
   public float getAbsoluteCapacity() {
     return queueCapacities.getAbsoluteCapacity();
   }
 
-  public float getAbsoluteCapacityByNodeLabel(String nodeLabel) {
-    return queueCapacities.getAbsoluteCapacity(nodeLabel);
-  }
-
   @Override
   public float getAbsoluteMaximumCapacity() {
     return queueCapacities.getAbsoluteMaximumCapacity();
-  }
-
-  public float getAbsoluteMaximumCapacityByNodeLabel(String nodeLabel) {
-    return queueCapacities.getAbsoluteMaximumCapacity(nodeLabel);
   }
 
   @Override
@@ -230,21 +218,9 @@ public abstract class AbstractCSQueue implements CSQueue {
     return queueCapacities.getMaximumCapacity();
   }
 
-  public float getMaximumCapacityByNodeLabel(String nodeLabel) {
-    return queueCapacities.getMaximumCapacity(nodeLabel);
-  }
-
-  public float getMaxAMResourcePercentageByNodeLabel(String nodeLabel) {
-    return queueCapacities.getMaxAMResourcePercentage(nodeLabel);
-  }
-
   @Override
   public float getUsedCapacity() {
     return queueCapacities.getUsedCapacity();
-  }
-
-  public float getWeight() {
-    return queueCapacities.getWeight();
   }
 
   @Override
@@ -602,6 +578,10 @@ public abstract class AbstractCSQueue implements CSQueue {
   }
 
   protected QueueInfo getQueueInfo() {
+    // Deliberately doesn't use lock here, because this method will be invoked
+    // from schedulerApplicationAttempt, to avoid deadlock, sacrifice
+    // consistency here.
+    // TODO, improve this
     return CSQueueInfoProvider.getQueueInfo(this);
   }
 
