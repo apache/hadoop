@@ -92,11 +92,12 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
   private void openFS() throws Exception {
     Configuration conf = getConfiguration();
+    String largeFileUri = S3ATestUtils.getCSVTestFile(conf);
 
-    largeFile = new Path(DEFAULT_CSVTEST_FILE);
+    largeFile = new Path(largeFileUri);
     blockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, PREFETCH_BLOCK_DEFAULT_SIZE);
     largeFileFS = new S3AFileSystem();
-    largeFileFS.initialize(new URI(DEFAULT_CSVTEST_FILE), getConfiguration());
+    largeFileFS.initialize(new URI(largeFileUri), getConfiguration());
     FileStatus fileStatus = largeFileFS.getFileStatus(largeFile);
     largeFileSize = fileStatus.getLen();
     numBlocks = calculateNumBlocks(largeFileSize, blockSize);
@@ -172,8 +173,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     // Verify that once stream is closed, all memory is freed
     verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-    assertThatStatisticMaximum(ioStats,
-            ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test
@@ -210,8 +209,6 @@ public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
     }
     verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
     verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-    assertThatStatisticMaximum(ioStats,
-        ACTION_EXECUTOR_ACQUIRED + SUFFIX_MAX).isGreaterThan(0);
   }
 
   @Test

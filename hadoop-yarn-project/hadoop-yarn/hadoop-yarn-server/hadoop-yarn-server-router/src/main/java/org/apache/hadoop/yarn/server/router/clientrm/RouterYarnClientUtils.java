@@ -80,6 +80,9 @@ public final class RouterYarnClientUtils {
           tmp.getNumNodeManagers() + metrics.getNumNodeManagers());
       tmp.setNumActiveNodeManagers(
           tmp.getNumActiveNodeManagers() + metrics.getNumActiveNodeManagers());
+      tmp.setNumDecommissioningNodeManagers(
+          tmp.getNumDecommissioningNodeManagers() + metrics
+              .getNumDecommissioningNodeManagers());
       tmp.setNumDecommissionedNodeManagers(
           tmp.getNumDecommissionedNodeManagers() + metrics
               .getNumDecommissionedNodeManagers());
@@ -90,6 +93,9 @@ public final class RouterYarnClientUtils {
       tmp.setNumUnhealthyNodeManagers(
           tmp.getNumUnhealthyNodeManagers() + metrics
               .getNumUnhealthyNodeManagers());
+      tmp.setNumShutdownNodeManagers(
+          tmp.getNumShutdownNodeManagers() + metrics
+              .getNumShutdownNodeManagers());
     }
     return GetClusterMetricsResponse.newInstance(tmp);
   }
@@ -526,4 +532,3 @@ public final class RouterYarnClientUtils {
     return GetNodesToAttributesResponse.newInstance(attributesMap);
   }
 }
-

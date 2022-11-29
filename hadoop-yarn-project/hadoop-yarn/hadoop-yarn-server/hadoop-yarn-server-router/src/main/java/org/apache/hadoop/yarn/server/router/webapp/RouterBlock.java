@@ -18,7 +18,9 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.sun.jersey.api.client.Client;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -27,6 +29,7 @@ import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
+import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
@@ -173,5 +176,85 @@ public abstract class RouterBlock extends HtmlBlock {
 
   public FederationStateStoreFacade getFacade() {
     return facade;
+  }
+
+  /**
+   * Initialize the Nodes menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
+  protected void initNodesMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
+      List<String> subClusterIds) {
+    if (CollectionUtils.isNotEmpty(subClusterIds)) {
+      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> nodesList =
+          mainList.li().a(url("nodes"), "Nodes").ul().
+          $style("padding:0.3em 1em 0.1em 2em");
+
+      // ### nodes info
+      nodesList.li().__();
+      for (String subClusterId : subClusterIds) {
+        nodesList.li().a(url("nodes", subClusterId), subClusterId).__();
+      }
+      nodesList.__().__();
+    } else {
+      mainList.li().a(url("nodes"), "Nodes").__();
+    }
+  }
+
+  /**
+   * Initialize the Applications menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
+  protected void initApplicationsMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
+      List<String> subClusterIds) {
+    if (CollectionUtils.isNotEmpty(subClusterIds)) {
+      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> apps =
+          mainList.li().a(url("apps"), "Applications").ul();
+      apps.li().__();
+      for (String subClusterId : subClusterIds) {
+        Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>> subClusterList = apps.
+            li().a(url("apps", subClusterId), subClusterId);
+        Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>>>> subAppStates =
+            subClusterList.ul().$style("padding:0.3em 1em 0.1em 2em");
+        subAppStates.li().__();
+        for (YarnApplicationState state : YarnApplicationState.values()) {
+          subAppStates.
+              li().a(url("apps", subClusterId, state.toString()), state.toString()).__();
+        }
+        subAppStates.li().__().__();
+        subClusterList.__();
+      }
+      apps.__().__();
+    } else {
+      mainList.li().a(url("apps"), "Applications").__();
+    }
+  }
+
+  /**
+   * Initialize the NodeLabels menu.
+   *
+   * @param mainList HTML Object.
+   * @param subClusterIds subCluster List.
+   */
+  protected void initNodeLabelsMenu(Hamlet.UL<Hamlet.DIV<Hamlet>> mainList,
+      List<String> subClusterIds) {
+
+    if (CollectionUtils.isNotEmpty(subClusterIds)) {
+      Hamlet.UL<Hamlet.LI<Hamlet.UL<Hamlet.DIV<Hamlet>>>> nodesList =
+          mainList.li().a(url("nodelabels"), "Node Labels").ul().
+          $style("padding:0.3em 1em 0.1em 2em");
+
+      // ### nodelabels info
+      nodesList.li().__();
+      for (String subClusterId : subClusterIds) {
+        nodesList.li().a(url("nodelabels", subClusterId), subClusterId).__();
+      }
+      nodesList.__().__();
+    } else {
+      mainList.li().a(url("nodelabels"), "Node Labels").__();
+    }
   }
 }

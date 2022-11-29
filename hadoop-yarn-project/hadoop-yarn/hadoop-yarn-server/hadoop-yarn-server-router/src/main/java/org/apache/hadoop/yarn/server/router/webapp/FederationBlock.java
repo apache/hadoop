@@ -23,12 +23,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Date;
 
 import com.google.gson.Gson;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
@@ -149,32 +150,51 @@ class FederationBlock extends RouterBlock {
         ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
 
         // Prepare LastStartTime & LastHeartBeat
-        String lastStartTime =
-            DateFormatUtils.format(subcluster.getLastStartTime(), DATE_PATTERN);
-        String lastHeartBeat =
-            DateFormatUtils.format(subcluster.getLastHeartBeat(), DATE_PATTERN);
+        Date lastStartTime = new Date(subcluster.getLastStartTime());
+        Date lastHeartBeat = new Date(subcluster.getLastHeartBeat());
 
         // Prepare Resource
         long totalMB = subClusterInfo.getTotalMB();
         String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
         long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
-        String resources = String.format("<Memory:%s, VCore:%s>", totalMBDesc, totalVirtualCores);
+        String resources = String.format("<memory:%s, vCores:%s>", totalMBDesc, totalVirtualCores);
 
         // Prepare Node
         long totalNodes = subClusterInfo.getTotalNodes();
         long activeNodes = subClusterInfo.getActiveNodes();
-        String nodes = String.format("<Total Nodes:%s, Active Nodes:%s>", totalNodes, activeNodes);
+        String nodes = String.format("<totalNodes:%s, activeNodes:%s>", totalNodes, activeNodes);
 
         // Prepare HTML Table
+        String stateStyle = "color:#dc3545;font-weight:bolder";
+        SubClusterState state = subcluster.getState();
+        if (SubClusterState.SC_RUNNING == state) {
+          stateStyle = "color:#28a745;font-weight:bolder";
+        }
+
         tbody.tr().$id(subClusterIdText)
             .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
-            .td(subcluster.getState().name())
-            .td(lastStartTime)
-            .td(lastHeartBeat)
+            .td().$style(stateStyle).__(state.name()).__()
+            .td().__(lastStartTime).__()
+            .td().__(lastHeartBeat).__()
             .td(resources)
             .td(nodes)
             .__();
 
+        // Formatted memory information
+        long allocatedMB = subClusterInfo.getAllocatedMB();
+        String allocatedMBDesc = StringUtils.byteDesc(allocatedMB * BYTES_IN_MB);
+        long availableMB = subClusterInfo.getAvailableMB();
+        String availableMBDesc = StringUtils.byteDesc(availableMB * BYTES_IN_MB);
+        long pendingMB = subClusterInfo.getPendingMB();
+        String pendingMBDesc = StringUtils.byteDesc(pendingMB * BYTES_IN_MB);
+        long reservedMB = subClusterInfo.getReservedMB();
+        String reservedMBDesc = StringUtils.byteDesc(reservedMB * BYTES_IN_MB);
+
+        subclusterMap.put("totalmemory", totalMBDesc);
+        subclusterMap.put("allocatedmemory", allocatedMBDesc);
+        subclusterMap.put("availablememory", availableMBDesc);
+        subclusterMap.put("pendingmemory", pendingMBDesc);
+        subclusterMap.put("reservedmemory", reservedMBDesc);
         subclusterMap.put("subcluster", subClusterId.getId());
         subclusterMap.put("capability", capability);
         lists.add(subclusterMap);

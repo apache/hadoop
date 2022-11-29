@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
@@ -32,14 +33,18 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -60,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeout;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
@@ -70,6 +76,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -111,6 +118,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemIn
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -118,12 +128,14 @@ import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
+import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -887,6 +899,21 @@ public class MockDefaultRequestInterceptorREST
     return Response.status(Status.OK).entity(resResponse).build();
   }
 
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) {
+
+    NodeLabelInfo nodeLabelInfo = new NodeLabelInfo();
+    nodeLabelInfo.setExclusivity(true);
+    nodeLabelInfo.setName("Test-Label");
+    nodeLabelInfo.setActiveNMs(10);
+    PartitionInfo partitionInfo = new PartitionInfo();
+
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().add(nodeLabelInfo);
+
+    return nodeLabelsInfo;
+  }
+
   private MockRM setupResourceManager() throws Exception {
     DefaultMetricsSystem.setMiniClusterMode(true);
 
@@ -906,5 +933,110 @@ public class MockDefaultRequestInterceptorREST
     rm.start();
     rm.registerNode("127.0.0.1:5678", 100*1024, 100);
     return rm;
+  }
+
+  @Override
+  public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
+      String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
+
+    ResourceManager mockRM = mock(ResourceManager.class);
+    Configuration conf = new YarnConfiguration();
+
+    ResourceScheduler mockScheduler = new CapacityScheduler() {
+      @Override
+      public synchronized boolean checkAccess(UserGroupInformation callerUGI,
+          QueueACL acl, String queueName) {
+        if (acl == QueueACL.ADMINISTER_QUEUE) {
+          if (callerUGI.getUserName().equals("admin")) {
+            return true;
+          }
+        } else {
+          if (ImmutableSet.of("admin", "yarn").contains(callerUGI.getUserName())) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+
+    when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
+    MockRMWebServices webSvc = new MockRMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
+  }
+
+  class MockRMWebServices {
+
+    @Context
+    private HttpServletResponse httpServletResponse;
+    private ResourceManager resourceManager;
+
+    private void initForReadableEndpoints() {
+      // clear content type
+      httpServletResponse.setContentType(null);
+    }
+
+    MockRMWebServices(ResourceManager rm, Configuration conf, HttpServletResponse response) {
+      this.resourceManager = rm;
+      this.httpServletResponse = response;
+    }
+
+    private UserGroupInformation getCallerUserGroupInformation(
+        HttpServletRequest hsr, boolean usePrincipal) {
+
+      String remoteUser = hsr.getRemoteUser();
+
+      if (usePrincipal) {
+        Principal princ = hsr.getUserPrincipal();
+        remoteUser = princ == null ? null : princ.getName();
+      }
+
+      UserGroupInformation callerUGI = null;
+      if (remoteUser != null) {
+        callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+      }
+
+      return callerUGI;
+    }
+
+    public RMQueueAclInfo checkUserAccessToQueue(
+        String queue, String username, String queueAclType, HttpServletRequest hsr)
+        throws AuthorizationException {
+      initForReadableEndpoints();
+
+      // For the user who invokes this REST call, he/she should have admin access
+      // to the queue. Otherwise we will reject the call.
+      UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+      if (callerUGI != null && !this.resourceManager.getResourceScheduler().checkAccess(
+              callerUGI, QueueACL.ADMINISTER_QUEUE, queue)) {
+        throw new ForbiddenException(
+                "User=" + callerUGI.getUserName() + " doesn't haven access to queue="
+                        + queue + " so it cannot check ACLs for other users.");
+      }
+
+      // Create UGI for the to-be-checked user.
+      UserGroupInformation user = UserGroupInformation.createRemoteUser(username);
+      if (user == null) {
+        throw new ForbiddenException(
+           "Failed to retrieve UserGroupInformation for user=" + username);
+      }
+
+      // Check if the specified queue acl is valid.
+      QueueACL queueACL;
+      try {
+        queueACL = QueueACL.valueOf(queueAclType);
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException("Specified queueAclType=" + queueAclType
+            + " is not a valid type, valid queue acl types={"
+            + "SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}");
+      }
+
+      if (!this.resourceManager.getResourceScheduler().checkAccess(user, queueACL, queue)) {
+        return new RMQueueAclInfo(false, user.getUserName(),
+            "User=" + username + " doesn't have access to queue=" + queue
+            + " with acl-type=" + queueAclType);
+      }
+
+      return new RMQueueAclInfo(true, user.getUserName(), "");
+    }
   }
 }

@@ -1393,8 +1393,7 @@ public abstract class Server {
       bind(acceptChannel.socket(), address, backlogLength, conf, portRangeConfig);
       //Could be an ephemeral port
       this.listenPort = acceptChannel.socket().getLocalPort();
-      Thread.currentThread().setName("Listener at " +
-          bindAddress + "/" + this.listenPort);
+      LOG.info("Listener at {}:{}", bindAddress, this.listenPort);
       // create a selector;
       selector= Selector.open();
       readers = new Reader[readThreads];

@@ -16,16 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timeline;
+package org.apache.hadoop.fs.azurebfs.extensions;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.io.IOException;
 
-@Retention(value = RetentionPolicy.RUNTIME)
-@Target(value = {ElementType.METHOD})
-public @interface TimelineVersion {
-  float value() default TimelineVersionWatcher.DEFAULT_TIMELINE_VERSION;
+public class MockWithPrefixSASTokenProvider extends MockSASTokenProvider {
+
+    /**
+     * Function to return an already generated SAS Token with a '?' prefix
+     * @param accountName the name of the storage account.
+     * @param fileSystem the name of the fileSystem.
+     * @param path the file or directory path.
+     * @param operation the operation to be performed on the path.
+     * @return
+     * @throws IOException
+     */
+    @Override
+    public String getSASToken(String accountName, String fileSystem, String path,
+                              String operation) throws IOException {
+        String token = super.getSASToken(accountName, fileSystem, path, operation);
+        return "?" + token;
+    }
 }
-

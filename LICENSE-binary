@@ -225,7 +225,7 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-base:2.12.7
 com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7
 com.fasterxml.uuid:java-uuid-generator:3.1.4
-com.fasterxml.woodstox:woodstox-core:5.3.0
+com.fasterxml.woodstox:woodstox-core:5.4.0
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
@@ -241,10 +241,10 @@ com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
 com.nimbusds:nimbus-jose-jwt:9.8.1
-com.squareup.okhttp3:okhttp:4.9.3
-com.squareup.okio:okio:1.6.0
+com.squareup.okhttp3:okhttp:4.10.0
+com.squareup.okio:okio:3.2.0
 com.zaxxer:HikariCP:4.0.3
-commons-beanutils:commons-beanutils:1.9.3
+commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.2
 commons-codec:commons-codec:1.11
 commons-collections:commons-collections:3.2.2
@@ -362,7 +362,7 @@ org.ehcache:ehcache:3.3.1
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.0.5
-org.yaml:snakeyaml:1.32
+org.yaml:snakeyaml:1.33
 org.wildfly.openssl:wildfly-openssl:1.0.7.Final
 
 
@@ -427,7 +427,7 @@ hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/bootstrap.min.js
 hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/jquery.js
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap.min.css
 hadoop-tools/hadoop-sls/src/main/html/css/bootstrap-responsive.min.css
-hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/dt-1.10.18/*
+hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/dt-1.11.5/*
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jquery
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/static/jt/jquery.jstree.js
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/resources/TERMINAL
@@ -523,7 +523,7 @@ junit:junit:4.13.2
 HSQL License
 ------------
 
-org.hsqldb:hsqldb:2.5.2
+org.hsqldb:hsqldb:2.7.1
 
 
 JDOM License

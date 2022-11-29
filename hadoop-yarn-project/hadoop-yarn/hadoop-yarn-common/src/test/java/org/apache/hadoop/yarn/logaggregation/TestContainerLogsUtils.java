@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.logaggregation;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -27,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,6 +37,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This class contains several utility functions for log aggregation tests.

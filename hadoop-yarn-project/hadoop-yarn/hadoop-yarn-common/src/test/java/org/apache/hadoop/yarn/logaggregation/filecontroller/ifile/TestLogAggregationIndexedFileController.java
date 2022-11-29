@@ -32,6 +32,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,27 +54,24 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogMeta;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRequest;
 import org.apache.hadoop.yarn.logaggregation.ExtendedLogMetaRequest;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
-import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
-import org.apache.hadoop.yarn.logaggregation.ContainerLogFileInfo;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -104,7 +107,7 @@ public class TestLogAggregationIndexedFileController
     return conf;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     setConf(getTestConf());
     appId = ApplicationId.newInstance(123456, 1);
@@ -122,14 +125,15 @@ public class TestLogAggregationIndexedFileController
     System.setErr(sysErr);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     fs.delete(rootLocalLogDirPath, true);
     fs.delete(new Path(remoteLogDir), true);
   }
 
-  @Test(timeout = 15000)
-  public void testLogAggregationIndexFileFormat() throws Exception {
+  @Test
+  @Timeout(15000)
+  void testLogAggregationIndexFileFormat() throws Exception {
     if (fs.exists(rootLocalLogDirPath)) {
       fs.delete(rootLocalLogDirPath, true);
     }
@@ -150,7 +154,7 @@ public class TestLogAggregationIndexedFileController
 
     LogKey key1 = new LogKey(containerId.toString());
 
-    for(String logType : logTypes) {
+    for (String logType : logTypes) {
       File file = createAndWriteLocalLogFile(containerId, appLogsDir,
           logType);
       files.add(file);
@@ -162,24 +166,23 @@ public class TestLogAggregationIndexedFileController
 
     final ControlledClock clock = new ControlledClock();
     clock.setTime(System.currentTimeMillis());
-    LogAggregationIndexedFileController fileFormat
-        = new LogAggregationIndexedFileController() {
-          private int rollOverCheck = 0;
-          @Override
-          public Clock getSystemClock() {
-            return clock;
-          }
+    LogAggregationIndexedFileController fileFormat = new LogAggregationIndexedFileController() {
+      private int rollOverCheck = 0;
 
-          @Override
-          public boolean isRollover(final FileContext fc,
-              final Path candidate) throws IOException {
-            rollOverCheck++;
-            if (rollOverCheck >= 3) {
-              return true;
-            }
-            return false;
-          }
-        };
+      @Override
+      public Clock getSystemClock() {
+        return clock;
+      }
+
+      @Override
+      public boolean isRollover(final FileContext fc, final Path candidate) throws IOException {
+        rollOverCheck++;
+        if (rollOverCheck >= 3) {
+          return true;
+        }
+        return false;
+      }
+    };
 
     fileFormat.initialize(getConf(), "Indexed");
 
@@ -238,7 +241,7 @@ public class TestLogAggregationIndexedFileController
     factoryConf.set("yarn.log-aggregation.file-formats", "Indexed");
     factoryConf.set("yarn.log-aggregation.file-controller.Indexed.class",
         "org.apache.hadoop.yarn.logaggregation.filecontroller.ifile"
-        + ".LogAggregationIndexedFileController");
+            + ".LogAggregationIndexedFileController");
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(factoryConf);
     LogAggregationFileController fileController = factory
@@ -255,9 +258,9 @@ public class TestLogAggregationIndexedFileController
 
     // create a checksum file
     Path checksumFile = new Path(fileFormat.getRemoteAppLogDir(
-        appId, USER_UGI.getShortUserName()),
+            appId, USER_UGI.getShortUserName()),
         LogAggregationUtils.getNodeString(nodeId)
-        + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
+            + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
     FSDataOutputStream fInput = null;
     try {
       String nodeName = logPath.getName() + "_" + clock.getTime();
@@ -330,7 +333,7 @@ public class TestLogAggregationIndexedFileController
     fileFormat.postWrite(context);
     fileFormat.closeWriter();
     meta = fileFormat.readAggregatedLogsMeta(
-            logRequest);
+        logRequest);
     assertThat(meta.size()).isEqualTo(2);
     for (ContainerLogMeta log : meta) {
       assertEquals(containerId.toString(), log.getContainerId());
@@ -380,8 +383,9 @@ public class TestLogAggregationIndexedFileController
     sysOutStream.reset();
   }
 
-  @Test(timeout = 15000)
-  public void testFetchApplictionLogsHar() throws Exception {
+  @Test
+  @Timeout(15000)
+  void testFetchApplictionLogsHar() throws Exception {
     List<String> newLogTypes = new ArrayList<>();
     newLogTypes.add("syslog");
     newLogTypes.add("stdout");
@@ -472,7 +476,7 @@ public class TestLogAggregationIndexedFileController
   }
 
   @Test
-  public void testGetRollOverLogMaxSize() {
+  void testGetRollOverLogMaxSize() {
     String fileControllerName = "testController";
     String remoteDirConf = String.format(
         YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
@@ -500,7 +504,7 @@ public class TestLogAggregationIndexedFileController
   }
 
   @Test
-  public void testGetLogMetaFilesOfNode() throws Exception {
+  void testGetLogMetaFilesOfNode() throws Exception {
     if (fs.exists(rootLocalLogDirPath)) {
       fs.delete(rootLocalLogDirPath, true);
     }
@@ -521,7 +525,7 @@ public class TestLogAggregationIndexedFileController
 
     LogKey key1 = new LogKey(containerId.toString());
 
-    for(String logType : logTypes) {
+    for (String logType : logTypes) {
       File file = createAndWriteLocalLogFile(containerId, appLogsDir,
           logType);
       files.add(file);
@@ -566,7 +570,7 @@ public class TestLogAggregationIndexedFileController
     final ControlledClock clock = new ControlledClock();
     clock.setTime(System.currentTimeMillis());
     Path checksumFile = new Path(fileFormat.getRemoteAppLogDir(
-        appId, USER_UGI.getShortUserName()),
+            appId, USER_UGI.getShortUserName()),
         LogAggregationUtils.getNodeString(nodeId)
             + LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX);
     FSDataOutputStream fInput = null;
@@ -593,11 +597,11 @@ public class TestLogAggregationIndexedFileController
 
       if (node.getPath().getName().contains(
           LogAggregationIndexedFileController.CHECK_SUM_FILE_SUFFIX)) {
-        assertTrue("Checksum node files should not contain any logs",
-            metas.isEmpty());
+        assertTrue(metas.isEmpty(),
+            "Checksum node files should not contain any logs");
       } else {
-        assertFalse("Non-checksum node files should contain log files",
-            metas.isEmpty());
+        assertFalse(metas.isEmpty(),
+            "Non-checksum node files should contain log files");
         assertEquals(4, metas.values().stream().findFirst().get().size());
       }
     }
