@@ -98,7 +98,7 @@ public class TestCapacitySchedulerWorkflowPriorityMapping {
     CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
     mockRM.start();
     cs.start();
-    
+
     Map<String, Object> expected = ImmutableMap.of(
         A, ImmutableMap.of("workflow3", Priority.newInstance(4)),
         B, ImmutableMap.of("workflow1", Priority.newInstance(2)),
