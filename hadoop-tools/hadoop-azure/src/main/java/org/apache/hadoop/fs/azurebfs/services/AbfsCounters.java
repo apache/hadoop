@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Map;
-
+import java.util.List;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
-
+import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
 /**
  * An interface for Abfs counters.
  */
@@ -74,4 +74,8 @@ public interface AbfsCounters extends IOStatisticsSource, DurationTrackerFactory
    */
   @Override
   DurationTracker trackDuration(String key);
+
+  AbfsBackoffMetrics getAbfsBackoffMetrics();
+
+  List<AbfsReadFooterMetrics> getAbfsReadFooterMetrics();
 }

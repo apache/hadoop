@@ -742,12 +742,22 @@ input is invalid.
 
 #### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
 
-Config `fs.azure.tracingcontext.format` provides an option to select the format
+Config `fs.azure.tracingheader.format` provides an option to select the format
 of IDs included in the `request-id-header`. This config accepts a String value
 corresponding to the following enum options.
   `SINGLE_ID_FORMAT` : clientRequestId
   `ALL_ID_FORMAT` : all IDs (default)
   `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
+
+Config `fs.azure.tracingmetricheader.format` provides an option to select the
+format
+of IDs included in the `request-id-header` for metrics. This config accepts a
+String value
+corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : all IDs + backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : all IDs (default) + backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : all IDs (default) + footer metrics
+`EMPTY` : default
 
 ### <a name="flushconfigoptions"></a> Flush Options
 
@@ -990,6 +1000,22 @@ logged with the last callee)
 Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
 in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
 settings to track their end-to-end latency.
+
+### <a name="drivermetricoptions"></a> Driver Metric Options
+
+`fs.azure.metric.account.name`: This configuration parameter is used to specify
+the name of the account which will be used to push a failed(404) GetPathStatus
+request to the
+backend. We can configure a separate account to push metrics to the store or use
+the same for as the existing account on which other requests are made.
+
+`fs.azure.metric.account.key`: This is the access key for the storage account
+used for pushing metrics to the store.
+
+`fs.azure.metric.uri`: This configuration provides the uri in the format of
+containername@accountname.dfs.core.windows.net.
+This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
 
 ## <a name="troubleshooting"></a> Troubleshooting
 
