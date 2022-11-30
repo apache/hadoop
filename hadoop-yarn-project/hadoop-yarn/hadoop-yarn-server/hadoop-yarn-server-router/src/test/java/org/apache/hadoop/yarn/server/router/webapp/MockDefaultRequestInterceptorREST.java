@@ -87,7 +87,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
-import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystemTestUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -139,7 +138,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDelet
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -176,13 +174,6 @@ public class MockDefaultRequestInterceptorREST
   private boolean isRunning = true;
   private Map<ApplicationId, ApplicationReport> applicationMap = new HashMap<>();
   public static final String APP_STATE_RUNNING = "RUNNING";
-
-  private static final String QUEUE_DEFAULT = "default";
-  private static final String QUEUE_DEFAULT_FULL = CapacitySchedulerConfiguration.ROOT +
-      CapacitySchedulerConfiguration.DOT + QUEUE_DEFAULT;
-  private static final String QUEUE_DEDICATED = "dedicated";
-  public static final String QUEUE_DEDICATED_FULL = CapacitySchedulerConfiguration.ROOT +
-      CapacitySchedulerConfiguration.DOT + QUEUE_DEDICATED;
 
   // duration(milliseconds), 1mins
   public static final long DURATION = 60*1000;
@@ -1114,7 +1105,7 @@ public class MockDefaultRequestInterceptorREST
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
 
-    ResourceManager mockRM = mock(ResourceManager.class);
+    ResourceManager mockResourceManager = mock(ResourceManager.class);
     Configuration conf = new YarnConfiguration();
 
     ResourceScheduler mockScheduler = new CapacityScheduler() {
@@ -1134,8 +1125,9 @@ public class MockDefaultRequestInterceptorREST
       }
     };
 
-    when(mockRM.getResourceScheduler()).thenReturn(mockScheduler);
-    MockRMWebServices webSvc = new MockRMWebServices(mockRM, conf, mock(HttpServletResponse.class));
+    when(mockResourceManager.getResourceScheduler()).thenReturn(mockScheduler);
+    MockRMWebServices webSvc = new MockRMWebServices(mockResourceManager, conf,
+        mock(HttpServletResponse.class));
     return webSvc.checkUserAccessToQueue(queue, username, queueAclType, hsr);
   }
 
