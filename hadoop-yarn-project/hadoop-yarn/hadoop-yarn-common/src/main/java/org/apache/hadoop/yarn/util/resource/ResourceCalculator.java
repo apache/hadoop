@@ -286,7 +286,8 @@ public abstract class ResourceCalculator {
    * @param resource resource
    * @return returns true if any resource is zero.
    */
-  public abstract boolean isAnyRequestedResourceZeroOrNegative(Resource available, Resource resource);
+  public abstract boolean isAnyRequestedResourceZeroOrNegative(
+      Resource available, Resource resource);
 
   /**
    * Get resource <code>r</code>and normalize down using step-factor

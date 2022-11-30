@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.mockito.Matchers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -132,10 +131,10 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
     policy.editSchedule();
 
     // Preemption should happen in Queue a, preempt to Queue b
-    verify(eventHandler, times(1)).handle(Matchers.argThat(
+    verify(eventHandler, times(1)).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(1))));
-    verify(eventHandler, never()).handle(Matchers.argThat(
+    verify(eventHandler, never()).handle(argThat(
         new TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor(
             getAppAttemptId(2))));
   }
