@@ -458,6 +458,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AuditSpan span = null;
     try {
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      if (LOG.isTraceEnabled()) {
+        // log a full trace for deep diagnostics of where an object is created,
+        // for tracking down memory leak issues.
+        LOG.trace("Filesystem for {} creation stack",
+            name, new RuntimeException(super.toString()));
+      }
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
       // HADOOP-17894. remove references to s3a stores in JCEKS credentials.

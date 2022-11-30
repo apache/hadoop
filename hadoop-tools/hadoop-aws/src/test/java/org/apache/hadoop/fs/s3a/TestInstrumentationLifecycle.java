@@ -22,7 +22,6 @@ import java.net.URI;
 
 import org.junit.Test;
 
-import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
