@@ -26,6 +26,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ReservationRequest;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ReservationRequests;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDefinitionInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
+import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.slf4j.Logger;
@@ -53,6 +63,8 @@ public final class RouterServerUtil {
   private static final String CONTAINER_PREFIX = "container_";
 
   private static final String EPOCH_PREFIX = "e";
+
+  private static final String RESERVEIDSTR_PREFIX = "reservation_";
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -491,5 +503,76 @@ public final class RouterServerUtil {
       throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
           "Error while creating Router RMAdmin Service for user : %s.", user);
     }
+  }
+
+  @Public
+  @Unstable
+  public static void validateReservationId(String reservationId) throws IllegalArgumentException {
+
+    if (reservationId == null || reservationId.isEmpty()) {
+      throw new IllegalArgumentException("Parameter error, the reservationId is empty or null.");
+    }
+
+    if (!reservationId.startsWith(RESERVEIDSTR_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+
+    String[] resFields = reservationId.split("_");
+    if (resFields.length != 3) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+
+    String clusterTimestamp = resFields[1];
+    String id = resFields[2];
+    if (!NumberUtils.isDigits(id) || !NumberUtils.isDigits(clusterTimestamp)) {
+      throw new IllegalArgumentException("Invalid ReservationId: " + reservationId);
+    }
+  }
+
+  public static ReservationDefinition convertReservationDefinition(
+      ReservationDefinitionInfo definitionInfo) {
+    if (definitionInfo == null || definitionInfo.getReservationRequests() == null
+        || definitionInfo.getReservationRequests().getReservationRequest() == null
+        || definitionInfo.getReservationRequests().getReservationRequest().isEmpty()) {
+      throw new RuntimeException("definitionInfo Or ReservationRequests is Null.");
+    }
+
+    // basic variable
+    long arrival = definitionInfo.getArrival();
+    long deadline = definitionInfo.getDeadline();
+
+    // ReservationRequests reservationRequests
+    String name = definitionInfo.getReservationName();
+    String recurrenceExpression = definitionInfo.getRecurrenceExpression();
+    Priority priority = Priority.newInstance(definitionInfo.getPriority());
+
+    // reservation requests info
+    List<ReservationRequest> reservationRequestList = new ArrayList<>();
+
+    ReservationRequestsInfo reservationRequestsInfo = definitionInfo.getReservationRequests();
+
+    List<ReservationRequestInfo> reservationRequestInfos =
+        reservationRequestsInfo.getReservationRequest();
+
+    for (ReservationRequestInfo resRequestInfo : reservationRequestInfos) {
+      ResourceInfo resourceInfo = resRequestInfo.getCapability();
+      Resource capability =
+          Resource.newInstance(resourceInfo.getMemorySize(), resourceInfo.getvCores());
+      ReservationRequest reservationRequest = ReservationRequest.newInstance(capability,
+          resRequestInfo.getNumContainers(), resRequestInfo.getMinConcurrency(),
+          resRequestInfo.getDuration());
+      reservationRequestList.add(reservationRequest);
+    }
+
+    ReservationRequestInterpreter[] values = ReservationRequestInterpreter.values();
+    ReservationRequestInterpreter reservationRequestInterpreter =
+        values[reservationRequestsInfo.getReservationRequestsInterpreter()];
+    ReservationRequests reservationRequests = ReservationRequests.newInstance(
+        reservationRequestList, reservationRequestInterpreter);
+
+    ReservationDefinition definition = ReservationDefinition.newInstance(
+        arrival, deadline, reservationRequests, name, recurrenceExpression, priority);
+
+    return definition;
   }
 }
