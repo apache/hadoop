@@ -87,7 +87,7 @@ public final class AbfsClientThrottlingIntercept {
         }
         break;
       case ReadFile:
-        String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
+        String range = abfsHttpOperation.getRequestHeader(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           singleton.readThrottler.addBytesTransferred(contentLength,

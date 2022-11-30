@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
@@ -102,6 +103,17 @@ public class AbfsRestOperation {
 
   String getSasToken() {
     return sasToken;
+  }
+
+  public ListResultSchema getListResultSchema()
+      throws AzureBlobFileSystemException {
+    if (result instanceof AbfsHttpConnection) {
+      return ((AbfsHttpConnection) this.result).getListResultSchema();
+    } else {
+      throw new AbfsRestOperationException(-1, null,
+          "Invalid operation. Listing is supported only over HttpConnection.",
+          null);
+    }
   }
 
   /**
@@ -241,30 +253,32 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation = null;
+    // At the moment there is only one type of AbfsHttpOperation
+    // which is AbfsHttpConnection thats possible.
+    AbfsHttpConnection httpConnection = null;
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpConnection = new AbfsHttpConnection(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation);
+      tracingContext.constructHeader(httpConnection);
 
       switch(client.getAuthType()) {
         case Custom:
         case OAuth:
           LOG.debug("Authenticating request with OAuth2 access token");
-          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+          httpConnection.setHeader(HttpHeaderConfigurations.AUTHORIZATION,
               client.getAccessToken());
           break;
         case SAS:
           // do nothing; the SAS token should already be appended to the query string
-          httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+          httpConnection.setMaskForSAS(); //mask sig/oid from url for logs
           break;
         case SharedKey:
           // sign the HTTP request
           LOG.debug("Signing request with shared key");
           // sign the HTTP request
           client.getSharedKeyCredentials().signRequest(
-              httpOperation.getConnection(),
+              httpConnection.getConnection(),
               hasRequestBody ? bufferLength : 0);
           break;
       }
@@ -277,29 +291,29 @@ public class AbfsRestOperation {
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+          httpConnection.getConnection().getRequestProperties());
       AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
 
       if (hasRequestBody) {
         // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        httpConnection.sendRequest(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
-      httpOperation.processResponse(buffer, bufferOffset, bufferLength);
+      httpConnection.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
-      if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
-          && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
+      if (httpConnection.getStatusCode() >= HttpURLConnection.HTTP_OK
+          && httpConnection.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
-            httpOperation.getBytesReceived());
-      } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+            httpConnection.getBytesReceived());
+      } else if (httpConnection.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      hostname = httpOperation.getHost();
+      hostname = httpConnection.getHost();
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -308,7 +322,7 @@ public class AbfsRestOperation {
       return false;
     } catch (IOException ex) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
+        LOG.debug("HttpRequestFailure: {}, {}", httpConnection, ex);
       }
 
       if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
@@ -317,16 +331,16 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
+      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpConnection);
     }
 
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
+    LOG.debug("HttpRequest: {}: {}", operationType, httpConnection);
 
-    if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
+    if (client.getRetryPolicy().shouldRetry(retryCount, httpConnection.getStatusCode())) {
       return false;
     }
 
-    result = httpOperation;
+    result = httpConnection;
 
     return true;
   }
