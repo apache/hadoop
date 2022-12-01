@@ -129,6 +129,12 @@ public final class RouterMetrics {
   private MutableGaugeInt numCheckUserAccessToQueueFailedRetrieved;
   @Metric("# of refreshNodes failed to be retrieved")
   private MutableGaugeInt numRefreshNodesFailedRetrieved;
+  @Metric("# of getDelegationToken failed to be retrieved")
+  private MutableGaugeInt numGetDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
+  @Metric("# of renewDelegationToken failed to be retrieved")
+  private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -219,6 +225,12 @@ public final class RouterMetrics {
   private MutableRate totalSucceededCheckUserAccessToQueueRetrieved;
   @Metric("Total number of successful Retrieved RefreshNodes and latency(ms)")
   private MutableRate totalSucceededRefreshNodesRetrieved;
+  @Metric("Total number of successful Retrieved GetDelegationToken and latency(ms)")
+  private MutableRate totalSucceededGetDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved RenewDelegationToken and latency(ms)")
+  private MutableRate totalSucceededRenewDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
+  private MutableRate totalSucceededCancelDelegationTokenRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -267,6 +279,9 @@ public final class RouterMetrics {
   private MutableQuantiles getRMNodeLabelsLatency;
   private MutableQuantiles checkUserAccessToQueueLatency;
   private MutableQuantiles refreshNodesLatency;
+  private MutableQuantiles getDelegationTokenLatency;
+  private MutableQuantiles renewDelegationTokenLatency;
+  private MutableQuantiles cancelDelegationTokenLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -431,6 +446,16 @@ public final class RouterMetrics {
 
     refreshNodesLatency = registry.newQuantiles("refreshNodesLatency",
         "latency of get refresh nodes timeouts", "ops", "latency", 10);
+
+    getDelegationTokenLatency = registry.newQuantiles("getDelegationTokenLatency",
+        "latency of get delegation token timeouts", "ops", "latency", 10);
+
+    renewDelegationTokenLatency = registry.newQuantiles("renewDelegationTokenLatency",
+       "latency of renew delegation token timeouts", "ops", "latency", 10);
+
+    cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
+        "latency of cancel delegation token timeouts", "ops", "latency", 10);
+
   }
 
   public static RouterMetrics getMetrics() {
@@ -668,8 +693,23 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
-  public long getNumSucceededCheckUserAccessToQueueRetrievedRetrieved() {
+  public long getNumSucceededCheckUserAccessToQueueRetrieved() {
     return totalSucceededCheckUserAccessToQueueRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
+  public long getNumSucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().numSamples();
   }
 
   @VisibleForTesting
@@ -893,6 +933,21 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetDelegationTokenRetrieved() {
+    return totalSucceededGetDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededRenewDelegationTokenRetrieved() {
+    return totalSucceededRenewDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededCancelDelegationTokenRetrieved() {
+    return totalSucceededCancelDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -1088,6 +1143,18 @@ public final class RouterMetrics {
 
   public int getNumRefreshNodesFailedRetrieved() {
     return numRefreshNodesFailedRetrieved.value();
+  }
+  
+  public int getDelegationTokenFailedRetrieved() {
+    return numGetDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getRenewDelegationTokenFailedRetrieved() {
+    return numRenewDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getCancelDelegationTokenFailedRetrieved() {
+    return numCancelDelegationTokenFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1310,6 +1377,21 @@ public final class RouterMetrics {
     checkUserAccessToQueueLatency.add(duration);
   }
 
+  public void succeededGetDelegationTokenRetrieved(long duration) {
+    totalSucceededGetDelegationTokenRetrieved.add(duration);
+    getDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededRenewDelegationTokenRetrieved(long duration) {
+    totalSucceededRenewDelegationTokenRetrieved.add(duration);
+    renewDelegationTokenLatency.add(duration);
+  }
+
+  public void succeededCancelDelegationTokenRetrieved(long duration) {
+    totalSucceededCancelDelegationTokenRetrieved.add(duration);
+    cancelDelegationTokenLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1484,5 +1566,17 @@ public final class RouterMetrics {
 
   public void incrRefreshNodesFailedRetrieved() {
     numRefreshNodesFailedRetrieved.incr();
+  }
+
+  public void incrGetDelegationTokenFailedRetrieved() {
+    numGetDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrRenewDelegationTokenFailedRetrieved() {
+    numRenewDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrCancelDelegationTokenFailedRetrieved() {
+    numCancelDelegationTokenFailedRetrieved.incr();
   }
 }
