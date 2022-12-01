@@ -118,7 +118,6 @@ public class TestAbfsInputStream extends
   private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
       String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
-    inputStreamContext.isReadAheadEnabled(true);
     // Create AbfsInputStream with the client instance
     AbfsInputStream inputStream = new AbfsInputStream(
         mockAbfsClient,
@@ -144,7 +143,6 @@ public class TestAbfsInputStream extends
       boolean alwaysReadBufferSize,
       int readAheadBlockSize) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
-    inputStreamContext.isReadAheadEnabled(true);
     // Create AbfsInputStream with the client instance
     AbfsInputStream inputStream = new AbfsInputStream(
         abfsClient,
