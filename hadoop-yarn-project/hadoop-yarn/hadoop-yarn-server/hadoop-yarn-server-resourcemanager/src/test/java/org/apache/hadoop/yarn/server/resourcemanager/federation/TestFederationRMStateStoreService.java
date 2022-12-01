@@ -275,10 +275,8 @@ public class TestFederationRMStateStoreService {
 
     // init subCluster Heartbeat,
     // and check that the subCluster is in a running state
-    FederationStateStoreService stateStoreService =
-        rm.getFederationStateStoreService();
-    FederationStateStoreHeartbeat storeHeartbeat =
-        stateStoreService.getStateStoreHeartbeatThread();
+    FederationStateStoreService stateStoreService = rm.getFederationStateStoreService();
+    FederationStateStoreHeartbeat storeHeartbeat = stateStoreService.getStateStoreHeartbeatThread();
     storeHeartbeat.run();
     checkSubClusterInfo(SubClusterState.SC_RUNNING);
 
@@ -508,19 +506,15 @@ public class TestFederationRMStateStoreService {
     rmAppMaps.putIfAbsent(application.getApplicationId(), application);
   }
 
+
   @Test
   public void testPolicyConfigurationMethod() throws YarnException {
 
-    /**
-     * This test case tests 3 methods.
-     *
-     * 1.setPolicyConfiguration
-     * 2.getPolicyConfiguration
-     * 3.getPolicyConfigurations
-     */
-
-    FederationStateStoreService stateStoreService =
-        mockRM.getFederationStateStoreService();
+    // This test case tests 3 methods.
+    // 1.setPolicyConfiguration
+    // 2.getPolicyConfiguration
+    // 3.getPolicyConfigurations
+    FederationStateStoreService stateStoreService = mockRM.getFederationStateStoreService();
 
     // set queue basic information (queue1)
     String queue1 = "queue1";
@@ -575,15 +569,12 @@ public class TestFederationRMStateStoreService {
   @Test
   public void testSubClusterMethod() throws YarnException {
 
-    /**
-     * This test case tests 5 methods.
-     *
-     * 1.registerSubCluster
-     * 2.deregisterSubCluster
-     * 3.subClusterHeartbeat
-     * 4.getSubCluster
-     * 5.getSubClusters
-     */
+    // This test case tests 5 methods.
+    // 1.registerSubCluster
+    // 2.deregisterSubCluster
+    // 3.subClusterHeartbeat
+    // 4.getSubCluster
+    // 5.getSubClusters
 
     FederationStateStoreService stateStoreService =
         mockRM.getFederationStateStoreService();

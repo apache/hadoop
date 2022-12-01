@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.federation;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -135,30 +136,31 @@ public final class FederationStateStoreServiceMetrics {
   }
 
   public static void succeededStateStoreServiceCall(long duration) {
-    String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
-    MutableRate methodMetric = SUCCESSFUL_CALLS.get(methodName);
-    MutableQuantiles methodQuantileMetric = QUANTILE_METRICS.get(methodName);
-
-    if (methodMetric == null || methodQuantileMetric == null) {
-      LOG.error(UNKNOWN_SUCCESS_ERROR_MSG, methodName);
-      return;
+    StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+    if (ArrayUtils.isNotEmpty(stackTraceElements) && stackTraceElements.length > 2) {
+      String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
+      if(SUCCESSFUL_CALLS.containsKey(methodName)) {
+        succeededStateStoreServiceCall(methodName, duration);
+      } else {
+        LOG.error(UNKNOWN_SUCCESS_ERROR_MSG, methodName);
+      }
+    } else {
+      LOG.error("stackTraceElements is empty or length < 2.");
     }
-
-    totalSucceededCalls.add(duration);
-    methodMetric.add(duration);
-    methodQuantileMetric.add(duration);
   }
 
   public static void succeededStateStoreServiceCall(String methodName, long duration) {
-    MutableRate methodMetric = SUCCESSFUL_CALLS.get(methodName);
-    MutableQuantiles methodQuantileMetric = QUANTILE_METRICS.get(methodName);
-    if (methodMetric == null || methodQuantileMetric == null) {
-      LOG.error(UNKNOWN_SUCCESS_ERROR_MSG, methodName);
-      return;
+    if (SUCCESSFUL_CALLS.containsKey(methodName)) {
+      MutableRate methodMetric = SUCCESSFUL_CALLS.get(methodName);
+      MutableQuantiles methodQuantileMetric = QUANTILE_METRICS.get(methodName);
+      if (methodMetric == null || methodQuantileMetric == null) {
+        LOG.error(UNKNOWN_SUCCESS_ERROR_MSG, methodName);
+        return;
+      }
+      totalSucceededCalls.add(duration);
+      methodMetric.add(duration);
+      methodQuantileMetric.add(duration);
     }
-    totalSucceededCalls.add(duration);
-    methodMetric.add(duration);
-    methodQuantileMetric.add(duration);
   }
 
   // Getters for unit testing

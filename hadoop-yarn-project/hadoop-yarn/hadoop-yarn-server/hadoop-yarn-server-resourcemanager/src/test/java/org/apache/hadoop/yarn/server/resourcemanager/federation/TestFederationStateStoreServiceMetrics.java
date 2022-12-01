@@ -32,7 +32,7 @@ public class TestFederationStateStoreServiceMetrics {
       LoggerFactory.getLogger(TestFederationStateStoreServiceMetrics.class);
 
   private static FederationStateStoreServiceMetrics metrics =
-      FederationStateStoreServiceMetrics.getMetrics();;
+      FederationStateStoreServiceMetrics.getMetrics();
 
   private MockBadFederationStateStoreService badStateStore =
       new MockBadFederationStateStoreService();
