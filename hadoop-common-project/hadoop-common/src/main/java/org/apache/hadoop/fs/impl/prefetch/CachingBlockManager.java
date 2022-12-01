@@ -369,6 +369,7 @@ public abstract class CachingBlockManager extends BlockManager {
           tracker.failed();
         }
 
+
         numReadErrors.incrementAndGet();
         data.setDone();
         throw e;
@@ -406,8 +407,8 @@ public abstract class CachingBlockManager extends BlockManager {
       try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        LOG.info("error during prefetch");
-        LOG.debug(e.getMessage(), e);
+        LOG.info("error during prefetch. {}", e.getMessage());
+        LOG.debug("error during prefetch", e);
       }
       return null;
     }
@@ -494,8 +495,8 @@ public abstract class CachingBlockManager extends BlockManager {
         return;
       }
     } catch (Exception e) {
-      LOG.info("error waiting on blockFuture: {}", data);
-      LOG.debug(e.getMessage(), e);
+      LOG.info("error waiting on blockFuture: {}. {}", data, e.getMessage());
+      LOG.debug("error waiting on blockFuture: {}", data, e);
       data.setDone();
       return;
     }
@@ -526,8 +527,8 @@ public abstract class CachingBlockManager extends BlockManager {
       } catch (Exception e) {
         numCachingErrors.incrementAndGet();
         String message = String.format("error adding block to cache after wait: %s", data);
-        LOG.info(message);
-        LOG.debug(e.getMessage(), e);
+        LOG.info(message, e.getMessage());
+        LOG.debug(message, e);
         data.setDone();
       }
 
