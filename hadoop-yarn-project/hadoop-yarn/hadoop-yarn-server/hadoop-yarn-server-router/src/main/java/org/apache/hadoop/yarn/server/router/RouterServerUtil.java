@@ -482,6 +482,14 @@ public final class RouterServerUtil {
     }
   }
 
+  /**
+   * Set User information.
+   *
+   * If the username is empty, we will use the Yarn Router user directly.
+   * Do not create a proxy user if userName matches the userName on current UGI.
+   *
+   * @param userName userName.
+   */
   public static UserGroupInformation setupUser(final String userName) {
     UserGroupInformation user = null;
     try {
@@ -501,10 +509,20 @@ public final class RouterServerUtil {
       return user;
     } catch (IOException e) {
       throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
-          "Error while creating Router RMAdmin Service for user : %s.", user);
+          "Error while creating Router Service for user : %s.", user);
     }
   }
 
+  /**
+   * Check reservationId is accurate.
+   *
+   * We need to ensure that reservationId cannot be empty and
+   * can be converted to ReservationId object normally.
+   *
+   * @param reservationId reservationId.
+   * @throws IllegalArgumentException If the format of the reservationId is not accurate,
+   * an IllegalArgumentException needs to be thrown.
+   */
   @Public
   @Unstable
   public static void validateReservationId(String reservationId) throws IllegalArgumentException {
@@ -529,6 +547,12 @@ public final class RouterServerUtil {
     }
   }
 
+  /**
+   * Convert ReservationDefinitionInfo to ReservationDefinition.
+   *
+   * @param definitionInfo ReservationDefinitionInfo Object.
+   * @return ReservationDefinition.
+   */
   public static ReservationDefinition convertReservationDefinition(
       ReservationDefinitionInfo definitionInfo) {
     if (definitionInfo == null || definitionInfo.getReservationRequests() == null

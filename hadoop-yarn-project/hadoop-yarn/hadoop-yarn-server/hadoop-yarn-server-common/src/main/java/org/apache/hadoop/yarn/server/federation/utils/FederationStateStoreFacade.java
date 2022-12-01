@@ -1082,6 +1082,14 @@ public final class FederationStateStoreFacade {
     }
   }
 
+  /**
+   * Add or Update ReservationHomeSubCluster.
+   *
+   * @param reservationId reservationId.
+   * @param subClusterId homeSubClusterId, this is selected by strategy.
+   * @param retryCount number of retries.
+   * @throws YarnException yarn exception.
+   */
   public void addOrUpdateReservationHomeSubCluster(ReservationId reservationId,
       SubClusterId subClusterId, int retryCount) throws YarnException {
     Boolean exists = existsReservationHomeSubCluster(reservationId);
