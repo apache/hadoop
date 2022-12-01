@@ -22,8 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
-import java.io.IOException;
-
 /**
  * Extends the RequestInterceptor class and provides common functionality which
  * can be used and/or extended by other concrete interceptor classes.

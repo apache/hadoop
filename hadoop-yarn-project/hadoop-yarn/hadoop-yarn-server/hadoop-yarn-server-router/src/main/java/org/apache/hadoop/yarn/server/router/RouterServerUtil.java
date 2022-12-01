@@ -489,6 +489,7 @@ public final class RouterServerUtil {
    * Do not create a proxy user if userName matches the userName on current UGI.
    *
    * @param userName userName.
+   * @return UserGroupInformation.
    */
   public static UserGroupInformation setupUser(final String userName) {
     UserGroupInformation user = null;
