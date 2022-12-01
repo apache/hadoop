@@ -106,8 +106,8 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    * 
    * @param request request to update resource for a node in cluster.
    * @return (empty) response on accepting update.
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Private
   @Idempotent

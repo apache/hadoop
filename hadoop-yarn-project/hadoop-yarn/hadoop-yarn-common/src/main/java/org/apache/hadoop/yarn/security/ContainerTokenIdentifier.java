@@ -418,7 +418,8 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     }
   }
   /**
-   * Get the node-label-expression in the original ResourceRequest
+   * Get the node-label-expression in the original ResourceRequest.
+   * @return node label expression.
    */
   public String getNodeLabelExpression() {
     if (proto.hasNodeLabelExpression()) {

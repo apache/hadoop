@@ -307,9 +307,16 @@ public final class VectoredReadUtils {
                                    FileRange request) {
     int offsetChange = (int) (request.getOffset() - readOffset);
     int requestLength = request.getLength();
+    // Create a new buffer that is backed by the original contents
+    // The buffer will have position 0 and the same limit as the original one
     readData = readData.slice();
+    // Change the offset and the limit of the buffer as the reader wants to see
+    // only relevant data
     readData.position(offsetChange);
     readData.limit(offsetChange + requestLength);
+    // Create a new buffer after the limit change so that only that portion of the data is
+    // returned to the reader.
+    readData = readData.slice();
     return readData;
   }
 

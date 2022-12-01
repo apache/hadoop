@@ -128,9 +128,13 @@ public class MembershipNamenodeResolver
     // Our cache depends on the store, update it first
     try {
       MembershipStore membership = getMembershipStore();
-      membership.loadCache(force);
+      if (!membership.loadCache(force)) {
+        return false;
+      }
       DisabledNameserviceStore disabled = getDisabledNameserviceStore();
-      disabled.loadCache(force);
+      if (!disabled.loadCache(force)) {
+        return false;
+      }
     } catch (IOException e) {
       LOG.error("Cannot update membership from the State Store", e);
     }
