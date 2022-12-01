@@ -23,8 +23,11 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -81,6 +84,14 @@ public class TestAbfsInputStream extends
   private static final int INCREASED_READ_BUFFER_AGE_THRESHOLD =
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
+
+  @After
+  public void afterTest() {
+    ReadBufferManager readBufferManager = ReadBufferManager.getBufferManager();
+    while(readBufferManager.getCompletedReadListSize() > 0) {
+      readBufferManager.callTryEvict();
+    }
+  }
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
@@ -493,6 +504,140 @@ public class TestAbfsInputStream extends
     // Stub will throw exception for client.read() for 4th and later calls
     // if not using the read-ahead buffer exception will be thrown on read
     checkEvictedStatus(inputStream, 0, true);
+  }
+
+  /**
+   * This test expects InProgressList is not purged by the inputStream close.
+   * The readBuffer will move to completedList and then finally should get evicted.
+   */
+  @Test
+  public void testStreamPurgeDuringReadAheadCallExecuting() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+
+    final AtomicInteger movedToInProgressList = new AtomicInteger(0);
+    final AtomicInteger movedToCompletedList = new AtomicInteger(0);
+    final AtomicBoolean preClosedAssertion = new AtomicBoolean(false);
+
+    Mockito.doAnswer(invocationOnMock -> {
+      movedToInProgressList.incrementAndGet();
+      while(movedToInProgressList.get() < 3 || !preClosedAssertion.get()) {
+
+      }
+      movedToCompletedList.incrementAndGet();
+      return successOp;
+        })
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class), any(TracingContext.class));
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
+    queueReadAheads(inputStream);
+
+    final ReadBufferManager readBufferManager = ReadBufferManager.getBufferManager();
+    while(movedToInProgressList.get() < 3) {
+
+    }
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList().size()).describedAs("InProgressList should have 3 elements").isEqualTo(3);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(0);
+
+    inputStream.close();
+
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList().size()).describedAs("InProgressList should have 3 elements").isEqualTo(3);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(0);
+    preClosedAssertion.set(true);
+
+    while(movedToCompletedList.get() < 3) {
+
+    }
+
+    //Sleep so that response from mockedClient gets back to ReadBufferWorker and
+    // can populate into completedList.
+    Thread.sleep(1000l);
+
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(3);
+
+    Thread.sleep(readBufferManager.getThresholdAgeMilliseconds());
+
+    readBufferManager.callTryEvict();
+    readBufferManager.callTryEvict();
+    readBufferManager.callTryEvict();
+
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 0 elements").isEqualTo(0);
+  }
+
+
+  /**
+   * This test expects InProgressList is not purged by the inputStream close.
+   * The readBuffer will move to completedList and then finally should get evicted.
+   */
+  @Test
+  public void testStreamPurgeDuringReadAheadCallExecutingWithSomeCompletedBuffers() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+
+    final AtomicInteger movedToInProgressList = new AtomicInteger(0);
+    final AtomicInteger movedToCompletedList = new AtomicInteger(0);
+    final AtomicBoolean preClosedAssertion = new AtomicBoolean(false);
+
+    Mockito.doAnswer(invocationOnMock -> {
+          return successOp;
+        }).when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class), any(TracingContext.class));
+
+    AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
+    ReadBufferManager.getBufferManager()
+        .queueReadAhead(inputStream, 4 * ONE_KB, TWO_KB,
+            inputStream.getTracingContext());
+
+    Mockito.doAnswer(invocationOnMock -> {
+      movedToInProgressList.incrementAndGet();
+      while(movedToInProgressList.get() < 3 || !preClosedAssertion.get()) {
+
+      }
+      movedToCompletedList.incrementAndGet();
+      return successOp;
+    })
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class), any(TracingContext.class));
+
+    queueReadAheads(inputStream);
+
+    final ReadBufferManager readBufferManager = ReadBufferManager.getBufferManager();
+    while(movedToInProgressList.get() < 3) {
+
+    }
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList().size()).describedAs("InProgressList should have 3 elements").isEqualTo(3);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(1);
+
+    inputStream.close();
+
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList().size()).describedAs("InProgressList should have 3 elements").isEqualTo(3);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(0);
+    preClosedAssertion.set(true);
+
+    while(movedToCompletedList.get() < 3) {
+
+    }
+
+    //Sleep so that response from mockedClient gets back to ReadBufferWorker and
+    // can populate into completedList.
+    Thread.sleep(1000l);
+
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 3 elements").isEqualTo(3);
+
+    Thread.sleep(readBufferManager.getThresholdAgeMilliseconds());
+
+    readBufferManager.callTryEvict();
+    readBufferManager.callTryEvict();
+    readBufferManager.callTryEvict();
+
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size()).describedAs("CompletedList should have 0 elements").isEqualTo(0);
   }
 
   /**
