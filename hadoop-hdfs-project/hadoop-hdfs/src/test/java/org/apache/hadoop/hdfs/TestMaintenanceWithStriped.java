@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -99,7 +100,7 @@ public class TestMaintenanceWithStriped {
     conf = createConfiguration();
     if (useCombinedHostFileManager) {
       conf.setClass(DFSConfigKeys.DFS_NAMENODE_HOSTS_PROVIDER_CLASSNAME_KEY,
-              CombinedHostFileManager.class, HostConfigManager.class);
+          CombinedHostFileManager.class, HostConfigManager.class);
     }
     hostsFileWriter.initialize(conf, "temp/admin");
 
@@ -187,8 +188,8 @@ public class TestMaintenanceWithStriped {
     LocatedStripedBlock bg = (LocatedStripedBlock) (lbs.get(0));
 
     BlockInfoStriped blockInfo =
-            (BlockInfoStriped)bm.getStoredBlock(
-                    new Block(bg.getBlock().getBlockId()));
+        (BlockInfoStriped)bm.getStoredBlock(
+            new Block(bg.getBlock().getBlockId()));
 
     // So far, there are 11 total internal blocks, 6 live (d0 d1 d2 d3 d4' d5')
     // and 5 in maintenance (d4 d5 d6 d7 d8) internal blocks.
@@ -223,8 +224,8 @@ public class TestMaintenanceWithStriped {
    * maintenance the DN at index dnIndex or one random node if dnIndex is set
    * to -1 and wait for the node to reach the given {@code waitForState}.
    */
-  private void maintenanceNode(int nnIndex,
-      List<DatanodeInfo> maintenancedNodes, AdminStates waitForState, long maintenanceExpirationInMS)
+  private void maintenanceNode(int nnIndex, List<DatanodeInfo> maintenancedNodes,
+      AdminStates waitForState, long maintenanceExpirationInMS)
           throws IOException {
     DFSClient client = getDfsClient(cluster.getNameNode(nnIndex), conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
