@@ -1191,7 +1191,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       storeOrUpdateRouterRMDT(request, false);
 
       // Get the stored delegationToken from ZK and return.
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
       long end = clock.getTime();
       opDurations.getStoreNewTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
@@ -1244,7 +1244,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // Get the stored delegationToken from ZK and return.
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
       long end = clock.getTime();
       opDurations.updateStoredTokenDuration(start, end);
       return RouterRMTokenResponse.newInstance(resultStoreToken);
@@ -1287,7 +1287,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
 
       // Check again, first get the data from ZK,
       // if the data is not empty, then delete it
-      RouterStoreToken storeToken = getStoreTokenFromZK(request, false);
+      RouterStoreToken storeToken = getStoreTokenFromZK(request);
       if (storeToken != null) {
         zkManager.delete(nodePath);
       }
@@ -1331,7 +1331,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       }
 
       // Get the stored delegationToken from ZK and return.
-      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request, false);
+      RouterStoreToken resultStoreToken = getStoreTokenFromZK(request);
       // return deleted token data.
       long end = clock.getTime();
       opDurations.getTokenByRouterStoreTokenDuration(start, end);
@@ -1437,44 +1437,36 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * Get RouterStoreToken from ZK.
    *
    * @param request RouterMasterKeyRequest.
-   * @param quiet If true is silent mode, no error message is printed at this time,
-   * if false is non-silent mode, error message is printed at this time.
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  private RouterStoreToken getStoreTokenFromZK(RouterRMTokenRequest request,
-      boolean quiet) throws IOException {
+  private RouterStoreToken getStoreTokenFromZK(RouterRMTokenRequest request) throws IOException {
     RouterStoreToken routerStoreToken = request.getRouterStoreToken();
     YARNDelegationTokenIdentifier identifier = routerStoreToken.getTokenIdentifier();
-    return getStoreTokenFromZK(identifier, quiet);
+    return getStoreTokenFromZK(identifier);
   }
 
   /**
    * Get RouterStoreToken from ZK.
    *
-   * @param identifier YARN DelegationToken Identifier
-   * @param quiet Whether it is in quiet mode,
-   *        if it is in quiet mode, no exception information will be output.
+   * @param identifier YARN DelegationToken Identifier.
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  private RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier,
-      boolean quiet) throws IOException {
+  private RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier) throws IOException {
     // get the Token storage path
     String nodePath = getStoreTokenZNodePathByIdentifier(identifier);
-    return getStoreTokenFromZK(nodePath, quiet);
+    return getStoreTokenFromZK(nodePath);
   }
 
   /**
    * Get RouterStoreToken from ZK.
    *
    * @param nodePath Znode location where data is stored.
-   * @param quiet Whether it is in quiet mode,
-   *        if it is in quiet mode, no exception information will be output.
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  private RouterStoreToken getStoreTokenFromZK(String nodePath, boolean quiet)
+  private RouterStoreToken getStoreTokenFromZK(String nodePath)
       throws IOException {
     try {
       byte[] data = get(nodePath);
@@ -1487,9 +1479,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       storeToken.readFields(din);
       return storeToken;
     } catch (Exception ex) {
-      if (!quiet) {
-        LOG.error("No node in path [" + nodePath + "]");
-      }
+      LOG.error("No node in path [{}]", nodePath, ex);
       throw new IOException(ex);
     }
   }
