@@ -593,7 +593,10 @@ public class TestAbfsInputStream extends
 
   /**
    * This test expects InProgressList is not purged by the inputStream close.
-   * The readBuffer will move to completedList and then finally should get evicted.
+   * The already readBuffer present in the completedList shall be purged by the
+   * inputStream close.
+   * The readBuffer from inProgressList will move to completedList and then
+   * finally should get evicted.
    */
   @Test
   public void testStreamPurgeDuringReadAheadCallExecutingWithSomeCompletedBuffers()
