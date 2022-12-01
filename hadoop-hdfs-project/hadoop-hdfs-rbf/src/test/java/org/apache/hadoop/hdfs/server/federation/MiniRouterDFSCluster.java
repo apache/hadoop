@@ -234,7 +234,12 @@ public class MiniRouterDFSCluster {
       return DistributedFileSystem.get(conf);
     }
 
-    public FileSystem getFileSystemWithObserverReadsEnabled() throws IOException {
+    public FileSystem getFileSystem(Configuration configuration) throws  IOException {
+      configuration.addResource(conf);
+      return DistributedFileSystem.get(configuration);
+    }
+
+    public FileSystem getFileSystemWithObserverReadProxyProvider() throws IOException {
       Configuration observerReadConf = new Configuration(conf);
       observerReadConf.set(DFS_NAMESERVICES,
           observerReadConf.get(DFS_NAMESERVICES)+ ",router-service");
