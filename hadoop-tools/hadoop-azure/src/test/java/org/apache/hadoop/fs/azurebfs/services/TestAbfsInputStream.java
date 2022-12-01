@@ -87,7 +87,9 @@ public class TestAbfsInputStream extends
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
 
   @After
-  public void afterTest() {
+  public void afterTest() throws InterruptedException {
+    //thread wait so that previous test's inProgress buffers are processed and removed.
+    Thread.sleep(10000l);
     ReadBufferManager readBufferManager = ReadBufferManager.getBufferManager();
     while(readBufferManager.getCompletedReadListSize() > 0) {
       readBufferManager.callTryEvict();
@@ -571,7 +573,7 @@ public class TestAbfsInputStream extends
 
     //Sleep so that response from mockedClient gets back to ReadBufferWorker and
     // can populate into completedList.
-    Thread.sleep(1000l);
+    Thread.sleep(10000l);
 
     Assertions.assertThat(getStreamRelatedBufferCount(
             readBufferManager.getCompletedReadListCopy(), inputStream))
@@ -670,7 +672,7 @@ public class TestAbfsInputStream extends
 
     //Sleep so that response from mockedClient gets back to ReadBufferWorker and
     // can populate into completedList.
-    Thread.sleep(1000l);
+    Thread.sleep(10000l);
 
     Assertions.assertThat(getStreamRelatedBufferCount(
             readBufferManager.getCompletedReadListCopy(), inputStream))
