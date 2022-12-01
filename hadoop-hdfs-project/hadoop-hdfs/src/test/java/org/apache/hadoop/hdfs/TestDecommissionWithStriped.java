@@ -759,7 +759,7 @@ public class TestDecommissionWithStriped {
     DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
     DatanodeDescriptor target = bm.getDatanodeManager()
         .getDatanode(extraDn.getDatanodeUuid());
-    dn0.addBlockToBeReplicated(targetBlk,
+    dn0.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // dn0 replicates in success
@@ -883,7 +883,7 @@ public class TestDecommissionWithStriped {
         .getDatanode(extraDn.getDatanodeUuid());
     DatanodeDescriptor dnStartIndexDecommission = bm.getDatanodeManager()
         .getDatanode(dnLocs[decommNodeIndex].getDatanodeUuid());
-    dnStartIndexDecommission.addBlockToBeReplicated(targetBlk,
+    dnStartIndexDecommission.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // Wait for replication success.
@@ -972,7 +972,7 @@ public class TestDecommissionWithStriped {
     DatanodeInfo extraDn = getDatanodeOutOfTheBlock(blk);
     DatanodeDescriptor target = bm.getDatanodeManager()
         .getDatanode(extraDn.getDatanodeUuid());
-    dn0.addBlockToBeReplicated(targetBlk,
+    dn0.addECBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target.getStorageInfos()[0]});
 
     // dn0 replicates in success

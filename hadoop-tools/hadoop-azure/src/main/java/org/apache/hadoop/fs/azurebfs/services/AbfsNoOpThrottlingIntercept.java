@@ -15,7 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@Private
-package org.apache.hadoop.yarn.server.api.protocolrecords;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 
+package org.apache.hadoop.fs.azurebfs.services;
+
+final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
+
+  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
+
+  private AbfsNoOpThrottlingIntercept() {
+  }
+
+  @Override
+  public void updateMetrics(final AbfsRestOperationType operationType,
+      final AbfsHttpOperation abfsHttpOperation) {
+  }
+
+  @Override
+  public void sendingRequest(final AbfsRestOperationType operationType,
+      final AbfsCounters abfsCounters) {
+  }
+}
