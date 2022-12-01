@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
+import static org.apache.hadoop.metrics2.impl.MsInfo.Context;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.mockito.AdditionalMatchers.eq;
@@ -499,5 +500,16 @@ public class TestMutableMetrics {
     quantiles.snapshot(mb, false);
     verify(mb, times(2)).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
+  }
+
+  /**
+   * Test {@link MutableGaugeFloat#incr()}.
+   */
+  @Test(timeout = 30000)
+  public void testMutableGaugeFloat() {
+    MutableGaugeFloat mgf = new MutableGaugeFloat(Context, 3.2f);
+    assertEquals(3.2f, mgf.value(), 0.0);
+    mgf.incr();
+    assertEquals(4.2f, mgf.value(), 0.0);
   }
 }

@@ -328,6 +328,17 @@ To trigger a runtime-refresh of the resource specified by \<key\> on \<host:ipc\
 
     [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -refreshRouterArgs <host:ipc_port> <key> [arg1..argn]
 
+### Router state dump
+
+To diagnose the current state of the routers, you can use the
+dumpState command. It generates a text dump of the records in the
+State Store. Since it uses the configuration to find and read the
+state store, it is often easiest to use the machine where the routers
+run. The command runs locally, so the routers do not have to be up to
+use this command.
+
+    [hdfs]$ $HADOOP_HOME/bin/hdfs dfsrouteradmin -dumpState
+
 Client configuration
 --------------------
 
