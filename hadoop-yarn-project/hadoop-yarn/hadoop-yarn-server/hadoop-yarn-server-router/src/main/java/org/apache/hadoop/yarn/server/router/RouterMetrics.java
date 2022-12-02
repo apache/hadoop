@@ -1144,7 +1144,7 @@ public final class RouterMetrics {
   public int getNumRefreshNodesFailedRetrieved() {
     return numRefreshNodesFailedRetrieved.value();
   }
-  
+
   public int getDelegationTokenFailedRetrieved() {
     return numGetDelegationTokenFailedRetrieved.value();
   }
