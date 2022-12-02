@@ -251,6 +251,7 @@ public abstract class QueueInfo {
   
   /**
    * Set the <code>accessible node labels</code> of the queue.
+   * @param labels node label expression of the queue.
    */
   @Private
   @Unstable
