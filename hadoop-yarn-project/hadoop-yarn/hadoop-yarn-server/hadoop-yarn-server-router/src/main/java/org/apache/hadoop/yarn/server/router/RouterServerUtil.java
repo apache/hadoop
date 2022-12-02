@@ -484,7 +484,7 @@ public final class RouterServerUtil {
       throw new IllegalArgumentException("Invalid ContainerId: " + containerId);
     }
   }
-  
+
   public static boolean isAllowedDelegationTokenOp() throws IOException {
     if (UserGroupInformation.isSecurityEnabled()) {
       return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
