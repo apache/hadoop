@@ -20,10 +20,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
@@ -509,9 +510,30 @@ public class TestAbfsInputStream extends
     AbfsClient client = getMockAbfsClient();
     AbfsRestOperation successOp = getMockRestOp();
 
+    final AtomicInteger startedClientServerCommunication = new AtomicInteger(0);
+    final AtomicBoolean preStreamCloseAssertionDone = new AtomicBoolean(false);
+    final AtomicBoolean streamClosed = new AtomicBoolean(false);
+    final AtomicBoolean postStreamCloseAssertionDone = new AtomicBoolean(false);
+    final AtomicInteger communicationCompletedCount = new AtomicInteger(0);
+
     Mockito.doAnswer(invocationOnMock -> {
-          //sleeping thread to mock the network latency from client to backend.
-          Thread.sleep(3000l);
+          startedClientServerCommunication.incrementAndGet();
+
+          /*Wait for preStreamClose assertions to be done, so that the processing
+          of this thread doesn't change the number of inProgress and completed
+          buffers expected.*/
+          while (!preStreamCloseAssertionDone.get()) {
+
+          }
+
+          /*once stream is closed, the processing of this thread should not move
+          ahead until postStream close assertions are done, so that processing
+          of this thread doesn't change the number of completed and freeList
+          buffers expected.*/
+          while(streamClosed.get() && !postStreamCloseAssertionDone.get()) {
+
+          }
+          communicationCompletedCount.incrementAndGet();
           return successOp;
         })
         .when(client)
@@ -526,8 +548,10 @@ public class TestAbfsInputStream extends
     final ReadBufferManager readBufferManager
         = ReadBufferManager.getBufferManager();
 
-    //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
-    Thread.sleep(1_000L);
+    //Wait until all thread readBuffers are moved to inProgressList.
+    while(startedClientServerCommunication.get() < 3) {
+
+    }
 
     Assertions.assertThat(readBufferManager.getInProgressCopiedList())
         .describedAs("InProgressList should have 3 elements")
@@ -538,6 +562,10 @@ public class TestAbfsInputStream extends
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
         .hasSize(0);
+
+    preStreamCloseAssertionDone.set(true);
+    streamClosed.set(true);
+    int completedBufferTillNow = readBufferManager.getCompletedReadListSize();
 
     inputStream.close();
 
@@ -547,24 +575,40 @@ public class TestAbfsInputStream extends
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
         .hasSize(0);
-    Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 13 elements")
-        .hasSize(13);
 
-    //Sleep so that response from mockedClient gets back to ReadBufferWorker and
-    // can populate into completedList.
+    /*FreeList will include the buffers from completedList since that list is
+    purged on stream closure.*/
+    final int expectedFreeListSize = 13 + completedBufferTillNow;
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
+        .describedAs("FreeList should have " + expectedFreeListSize
+            + " elements")
+        .hasSize(expectedFreeListSize);
+
+    postStreamCloseAssertionDone.set(true);
+
+    final int expectedCommunicationCompleted = (3 - completedBufferTillNow);
+    while(communicationCompletedCount.get() < expectedCommunicationCompleted) {
+
+    }
+
+    /*Sleep so that response from mockedClient gets back to ReadBufferWorker and
+    can populate into completedList.*/
     Thread.sleep(3_000L);
 
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
-        .describedAs("CompletedList should have 3 elements")
-        .hasSize(3);
+        .describedAs("CompletedList should have " +
+            expectedCommunicationCompleted + " elements")
+        .hasSize(expectedCommunicationCompleted);
     Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 13 elements")
-        .hasSize(13);
+        .describedAs("FreeList should have " + expectedFreeListSize
+            + " elements")
+        .hasSize(expectedFreeListSize);
     Assertions.assertThat(readBufferManager.getInProgressCopiedList())
         .describedAs("InProgressList should have 0 elements")
         .hasSize(0);
 
+    /*Sleep so that thresholdAgeMilliseconds is elapsed for all the buffers in
+    the completedList.*/
     Thread.sleep(readBufferManager.getThresholdAgeMilliseconds());
 
     readBufferManager.callTryEvict();
@@ -577,17 +621,6 @@ public class TestAbfsInputStream extends
     Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 16 elements")
         .hasSize(16);
-  }
-
-  private int getStreamRelatedBufferCount(final List<ReadBuffer> bufferList,
-      final AbfsInputStream inputStream) {
-    int count = 0;
-    for (ReadBuffer buffer : bufferList) {
-      if (buffer.getStream() == inputStream) {
-        count++;
-      }
-    }
-    return count;
   }
 
   /**
