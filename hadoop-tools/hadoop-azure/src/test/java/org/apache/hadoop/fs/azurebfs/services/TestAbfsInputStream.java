@@ -26,7 +26,6 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -84,14 +83,10 @@ public class TestAbfsInputStream extends
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
 
-  @After
-  public void afterTest() throws InterruptedException {
-    //thread wait so that previous test's inProgress buffers are processed and removed.
-    Thread.sleep(10000l);
-    ReadBufferManager readBufferManager = ReadBufferManager.getBufferManager();
-    while(readBufferManager.getCompletedReadListSize() > 0) {
-      readBufferManager.callTryEvict();
-    }
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    ReadBufferManager.getBufferManager().testResetReadBufferManager();
   }
 
   private AbfsRestOperation getMockRestOp() {
@@ -532,51 +527,43 @@ public class TestAbfsInputStream extends
         = ReadBufferManager.getBufferManager();
 
     //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
-    Thread.sleep(1000l);
+    Thread.sleep(1_000L);
 
-    Assertions.assertThat(
-            getStreamRelatedBufferCount(readBufferManager.getInProgressCopiedList(),
-                inputStream))
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
         .describedAs("InProgressList should have 3 elements")
-        .isEqualTo(3);
-    Assertions.assertThat(readBufferManager.getFreeListCopy().size())
+        .hasSize(3);
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 13 elements")
-        .isEqualTo(13);
-    Assertions.assertThat(readBufferManager.getCompletedReadListCopy().size())
+        .hasSize(13);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
-        .isEqualTo(0);
+        .hasSize(0);
 
     inputStream.close();
 
-    Assertions.assertThat(
-            getStreamRelatedBufferCount(readBufferManager.getInProgressCopiedList(),
-                inputStream))
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
         .describedAs("InProgressList should have 3 elements")
-        .isEqualTo(3);
-    Assertions.assertThat(getStreamRelatedBufferCount(
-            readBufferManager.getCompletedReadListCopy(), inputStream))
+        .hasSize(3);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
-        .isEqualTo(0);
-    Assertions.assertThat(readBufferManager.getFreeListCopy().size())
+        .hasSize(0);
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 13 elements")
-        .isEqualTo(13);
+        .hasSize(13);
 
     //Sleep so that response from mockedClient gets back to ReadBufferWorker and
     // can populate into completedList.
-    Thread.sleep(3000l);
+    Thread.sleep(3_000L);
 
-    Assertions.assertThat(getStreamRelatedBufferCount(
-            readBufferManager.getCompletedReadListCopy(), inputStream))
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 3 elements")
-        .isEqualTo(3);
-    Assertions.assertThat(readBufferManager.getFreeListCopy().size())
+        .hasSize(3);
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 13 elements")
-        .isEqualTo(13);
-    Assertions.assertThat(
-            getStreamRelatedBufferCount(readBufferManager.getInProgressCopiedList(),
-                inputStream))
+        .hasSize(13);
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
         .describedAs("InProgressList should have 0 elements")
-        .isEqualTo(0);
+        .hasSize(0);
 
     Thread.sleep(readBufferManager.getThresholdAgeMilliseconds());
 
@@ -584,13 +571,12 @@ public class TestAbfsInputStream extends
     readBufferManager.callTryEvict();
     readBufferManager.callTryEvict();
 
-    Assertions.assertThat(getStreamRelatedBufferCount(
-            readBufferManager.getCompletedReadListCopy(), inputStream))
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
-        .isEqualTo(0);
-    Assertions.assertThat(readBufferManager.getFreeListCopy().size())
+        .hasSize(0);
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 16 elements")
-        .isEqualTo(16);
+        .hasSize(16);
   }
 
   private int getStreamRelatedBufferCount(final List<ReadBuffer> bufferList,
