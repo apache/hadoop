@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.yarn.server.router;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,8 +38,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.EnumSet;
 import java.io.IOException;
 
 /**
@@ -59,8 +56,6 @@ public final class RouterServerUtil {
   private static final String CONTAINER_PREFIX = "container_";
 
   private static final String EPOCH_PREFIX = "e";
-
-  private static Random rand = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -300,6 +295,28 @@ public final class RouterServerUtil {
   }
 
   /**
+   * Throws an YarnRuntimeException due to an error.
+   *
+   * @param t the throwable raised in the called class.
+   * @param errMsgFormat the error message format string.
+   * @param args referenced by the format specifiers in the format string.
+   * @return YarnRuntimeException
+   */
+  @Public
+  @Unstable
+  public static YarnRuntimeException logAndReturnYarnRunTimeException(
+      Throwable t, String errMsgFormat, Object... args) {
+    String msg = String.format(errMsgFormat, args);
+    if (t != null) {
+      LOG.error(msg, t);
+      return new YarnRuntimeException(msg, t);
+    } else {
+      LOG.error(msg);
+      return new YarnRuntimeException(msg);
+    }
+  }
+
+  /**
    * Check applicationId is accurate.
    *
    * We need to ensure that applicationId cannot be empty and
@@ -456,39 +473,47 @@ public final class RouterServerUtil {
     }
   }
 
-  /**
-   * Randomly pick ActiveSubCluster.
-   * During the selection process, we will exclude SubClusters from the blacklist.
-   *
-   * @param activeSubClusters List of active subClusters.
-   * @param blackList blacklist.
-   * @return Active SubClusterId.
-   * @throws YarnException When there is no Active SubCluster,
-   * an exception will be thrown (No active SubCluster available to submit the request.)
-   */
-  public static SubClusterId getRandomActiveSubCluster(
-      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
-      throws YarnException {
-
-    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
-    if (MapUtils.isEmpty(activeSubClusters)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+  public static boolean isAllowedDelegationTokenOp() throws IOException {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
+          UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
+          UserGroupInformation.AuthenticationMethod.CERTIFICATE)
+          .contains(UserGroupInformation.getCurrentUser()
+          .getRealAuthenticationMethod());
+    } else {
+      return true;
     }
+  }
 
-    // Change activeSubClusters to List
-    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
+  public static String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)
+      throws IOException {
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+    // we can always renew our own tokens
+    return loginUser.getUserName().equals(user.getUserName())
+        ? token.decodeIdentifier().getRenewer().toString() : user.getShortUserName();
+  }
 
-    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
-    if (CollectionUtils.isNotEmpty(blackList)) {
-      subClusterIds.removeAll(blackList);
+  public static UserGroupInformation setupUser(final String userName) {
+    UserGroupInformation user = null;
+    try {
+      // If userName is empty, we will return UserGroupInformation.getCurrentUser.
+      // Do not create a proxy user if user name matches the user name on
+      // current UGI
+      if (userName == null || userName.trim().isEmpty()) {
+        user = UserGroupInformation.getCurrentUser();
+      } else if (UserGroupInformation.isSecurityEnabled()) {
+        user = UserGroupInformation.createProxyUser(userName, UserGroupInformation.getLoginUser());
+      } else if (userName.equalsIgnoreCase(UserGroupInformation.getCurrentUser().getUserName())) {
+        user = UserGroupInformation.getCurrentUser();
+      } else {
+        user = UserGroupInformation.createProxyUser(userName,
+            UserGroupInformation.getCurrentUser());
+      }
+      return user;
+    } catch (IOException e) {
+      throw RouterServerUtil.logAndReturnYarnRunTimeException(e,
+          "Error while creating Router RMAdmin Service for user : %s.", user);
     }
-
-    // Check there are still active subcluster after removing the blacklist
-    if (CollectionUtils.isEmpty(subClusterIds)) {
-      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
-    }
-
-    // Randomly choose a SubCluster
-    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
 }

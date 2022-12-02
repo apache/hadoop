@@ -60,7 +60,7 @@ final public class StateMachineFactory
    * Constructor
    *
    * This is the only constructor in the API.
-   *
+   * @param defaultInitialState default initial state.
    */
   public StateMachineFactory(STATE defaultInitialState) {
     this.transitionsListNode = null;
