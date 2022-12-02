@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -511,7 +510,7 @@ public class TestAbfsInputStream extends
 
     Mockito.doAnswer(invocationOnMock -> {
           //sleeping thread to mock the network latency from client to backend.
-          Thread.sleep(3000l);
+          Thread.sleep(3_000L);
           return successOp;
         })
         .when(client)
@@ -550,44 +549,6 @@ public class TestAbfsInputStream extends
     Assertions.assertThat(readBufferManager.getFreeListCopy())
         .describedAs("FreeList should have 13 elements")
         .hasSize(13);
-
-    //Sleep so that response from mockedClient gets back to ReadBufferWorker and
-    // can populate into completedList.
-    Thread.sleep(3_000L);
-
-    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
-        .describedAs("CompletedList should have 3 elements")
-        .hasSize(3);
-    Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 13 elements")
-        .hasSize(13);
-    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
-        .describedAs("InProgressList should have 0 elements")
-        .hasSize(0);
-
-    Thread.sleep(readBufferManager.getThresholdAgeMilliseconds());
-
-    readBufferManager.callTryEvict();
-    readBufferManager.callTryEvict();
-    readBufferManager.callTryEvict();
-
-    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
-        .describedAs("CompletedList should have 0 elements")
-        .hasSize(0);
-    Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 16 elements")
-        .hasSize(16);
-  }
-
-  private int getStreamRelatedBufferCount(final List<ReadBuffer> bufferList,
-      final AbfsInputStream inputStream) {
-    int count = 0;
-    for (ReadBuffer buffer : bufferList) {
-      if (buffer.getStream() == inputStream) {
-        count++;
-      }
-    }
-    return count;
   }
 
   /**
