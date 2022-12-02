@@ -509,7 +509,7 @@ public class TestObserverWithRouter {
     rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
     // getList call should be sent to observer
-    assertEquals("One call should be sent to observer", 1, rpcCountForObserver); 
+    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
   }
 
   @Test
