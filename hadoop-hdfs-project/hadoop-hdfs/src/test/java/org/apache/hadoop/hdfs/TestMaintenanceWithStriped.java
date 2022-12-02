@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileChecksum;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,8 +60,8 @@ import org.slf4j.LoggerFactory;
  * This class tests the in maintenance of datanode with striped blocks.
  */
 public class TestMaintenanceWithStriped {
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TestMaintenanceWithStriped.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestMaintenanceWithStriped.class);
 
   // heartbeat interval in seconds
   private static final int HEARTBEAT_INTERVAL = 1;
@@ -67,7 +69,6 @@ public class TestMaintenanceWithStriped {
   private static final int BLOCKREPORT_INTERVAL_MSEC = 1000;
   // replication interval
   private static final int NAMENODE_REPLICATION_INTERVAL = 1;
-
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -83,8 +84,6 @@ public class TestMaintenanceWithStriped {
   private final Path ecDir = new Path("/" + this.getClass().getSimpleName());
   private HostsFileWriter hostsFileWriter;
   private boolean useCombinedHostFileManager = true;
-
-
 
   private FSNamesystem fsn;
   private BlockManager bm;
@@ -160,7 +159,6 @@ public class TestMaintenanceWithStriped {
     Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
 
-
     final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
         .getINode4Write(ecFile.toString()).asFile();
     BlockInfo firstBlock = fileNode.getBlocks()[0];
@@ -169,10 +167,10 @@ public class TestMaintenanceWithStriped {
     //2. maintenance node
     // d4 d5 d6 d7 d8
     int maintenanceDNIndex = 4;
-    int numMaintenancen= 5;
+    int numMaintenance= 5;
     List<DatanodeInfo> maintenanceNodes = new ArrayList<>();
 
-    for (int i = maintenanceDNIndex; i < numMaintenancen + maintenanceDNIndex; ++i) {
+    for (int i = maintenanceDNIndex; i < numMaintenance + maintenanceDNIndex; ++i) {
       maintenanceNodes.add(dnStorageInfos[i].getDatanodeDescriptor());
     }
 
@@ -198,8 +196,7 @@ public class TestMaintenanceWithStriped {
     assertEquals(5, bm.countNodes(blockInfo).maintenanceNotForReadReplicas());
 
     FileChecksum fileChecksum2 = dfs.getFileChecksum(ecFile, writeBytes);
-    Assert.assertTrue("Checksum mismatches!",
-        fileChecksum1.equals(fileChecksum2));
+    Assert.assertEquals("Checksum mismatches!", fileChecksum1, fileChecksum2);
   }
 
 
@@ -226,7 +223,7 @@ public class TestMaintenanceWithStriped {
    */
   private void maintenanceNode(int nnIndex, List<DatanodeInfo> maintenancedNodes,
       AdminStates waitForState, long maintenanceExpirationInMS)
-          throws IOException {
+          throws IOException, TimeoutException, InterruptedException {
     DFSClient client = getDfsClient(cluster.getNameNode(nnIndex), conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
 
@@ -252,31 +249,18 @@ public class TestMaintenanceWithStriped {
     for (DatanodeInfo dn : maintenancedNodes) {
       DatanodeInfo ret = NameNodeAdapter
           .getDatanode(cluster.getNamesystem(nnIndex), dn);
-      waitNodeState(ret, waitForState);
+      LOG.info("Waiting for node " + ret + " to change state to " + waitForState
+          + " current state: " + ret.getAdminState());
+      GenericTestUtils.waitFor(
+          () -> ret.getAdminState() == waitForState,
+              100, 60000);
+      LOG.info("node " + ret + " reached the state " + waitForState);
     }
   }
 
   private static void refreshNodes(final FSNamesystem ns,
       final Configuration conf) throws IOException {
     ns.getBlockManager().getDatanodeManager().refreshNodes(conf);
-  }
-
-  /*
-   * Wait till node is fully maintenance.
-   */
-  private void waitNodeState(DatanodeInfo node, AdminStates state) {
-    boolean done = state == node.getAdminState();
-    while (!done) {
-      LOG.info("Waiting for node " + node + " to change state to " + state
-          + " current state: " + node.getAdminState());
-      try {
-        Thread.sleep(HEARTBEAT_INTERVAL * 500);
-      } catch (InterruptedException e) {
-        // nothing
-      }
-      done = state == node.getAdminState();
-    }
-    LOG.info("node " + node + " reached the state " + state);
   }
 
 }
