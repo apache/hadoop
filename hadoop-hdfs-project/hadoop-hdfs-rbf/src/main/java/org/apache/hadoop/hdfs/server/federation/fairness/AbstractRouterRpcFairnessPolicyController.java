@@ -63,10 +63,14 @@ public class AbstractRouterRpcFairnessPolicyController
   @Override
   public boolean acquirePermit(String nsId) {
     try {
-      LOG.debug("Taking lock for nameservice {}", nsId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Taking lock for nameservice {}", nsId);
+      }
       return this.permits.get(nsId).tryAcquire(acquireTimeoutMs, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
-      LOG.debug("Cannot get a permit for nameservice {}", nsId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Cannot get a permit for nameservice {}", nsId);
+      }
     }
     return false;
   }
@@ -78,7 +82,9 @@ public class AbstractRouterRpcFairnessPolicyController
 
   @Override
   public void shutdown() {
-    LOG.debug("Shutting down router fairness policy controller");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Shutting down router fairness policy controller");
+    }
     // drain all semaphores
     for (Semaphore sema: this.permits.values()) {
       sema.drainPermits();
