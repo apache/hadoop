@@ -177,8 +177,9 @@ public class TestMaintenanceWithStriped {
     maintenanceNode(0, maintenanceNodes, AdminStates.IN_MAINTENANCE, Long.MAX_VALUE);
 
     //3. wait for maintenance block to replicate
-    Thread.sleep(3000);
-    assertEquals(maintenanceNodes.size(), fsn.getNumInMaintenanceLiveDataNodes());
+    GenericTestUtils.waitFor(
+        () -> maintenanceNodes.size() == fsn.getNumInMaintenanceLiveDataNodes(),
+            100, 60000);
 
     //4. check DN status, it should be reconstructed again
     LocatedBlocks lbs = cluster.getNameNodeRpc().getBlockLocations(
