@@ -71,7 +71,7 @@ public class ResourceRequestSet {
    * with the same resource name, override it and update accordingly.
    *
    * @param ask the new {@link ResourceRequest}
-   * @throws YarnException
+   * @throws YarnException indicates exceptions from yarn servers.
    */
   public void addAndOverrideRR(ResourceRequest ask) throws YarnException {
     if (!this.key.equals(new ResourceRequestSetKey(ask))) {
@@ -102,7 +102,7 @@ public class ResourceRequestSet {
    * Merge a requestSet into this one.
    *
    * @param requestSet the requestSet to merge
-   * @throws YarnException
+   * @throws YarnException indicates exceptions from yarn servers.
    */
   public void addAndOverrideRRSet(ResourceRequestSet requestSet)
       throws YarnException {
@@ -149,7 +149,7 @@ public class ResourceRequestSet {
    * Force set the # of containers to ask for this requestSet to a given value.
    *
    * @param newValue the new # of containers value
-   * @throws YarnException
+   * @throws YarnException indicates exceptions from yarn servers.
    */
   public void setNumContainers(int newValue) throws YarnException {
     if (this.numContainers == 0) {
