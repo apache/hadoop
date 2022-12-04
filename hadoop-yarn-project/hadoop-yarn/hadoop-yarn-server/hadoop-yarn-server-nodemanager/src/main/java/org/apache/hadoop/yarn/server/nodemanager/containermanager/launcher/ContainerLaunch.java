@@ -1665,7 +1665,7 @@ public class ContainerLaunch implements Callable<Integer> {
    *
    * @param environment The environment variables map to add the configuration values to.
    */
-  private void addConfigsToEnv(Map<String, String> environment) {
+  public void addConfigsToEnv(Map<String, String> environment) {
     // variables here will be forced in, even if the container has
     // specified them.  Note: we do not track these in nmVars, to
     // allow them to be ordered properly if they reference variables
