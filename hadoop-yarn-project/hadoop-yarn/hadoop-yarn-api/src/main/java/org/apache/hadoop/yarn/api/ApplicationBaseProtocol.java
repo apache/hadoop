@@ -94,8 +94,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request for an application report
    * @return application report
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Stable
@@ -126,8 +126,8 @@ public interface ApplicationBaseProtocol {
    *          request for report on applications
    * @return report on applications matching the given application types defined
    *         in the request
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    * @see GetApplicationsRequest
    */
   @Public
@@ -166,8 +166,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request for an application attempt report
    * @return application attempt report
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Unstable
@@ -199,8 +199,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request for reports on all application attempts of an application
    * @return reports on all application attempts of an application
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Unstable
@@ -234,8 +234,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request for a container report
    * @return container report
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Unstable
@@ -271,8 +271,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request for a list of container reports of an application attempt.
    * @return reports on all containers of an application attempt
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Unstable
@@ -293,8 +293,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          request to get a delegation token for the client.
    * @return delegation token that can be used to talk to this service
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Public
   @Stable
@@ -308,8 +308,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          the delegation token to be renewed.
    * @return the new expiry time for the delegation token.
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Private
   @Unstable
@@ -323,8 +323,8 @@ public interface ApplicationBaseProtocol {
    * @param request
    *          the delegation token to be cancelled.
    * @return an empty response.
-   * @throws YarnException
-   * @throws IOException
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
    */
   @Private
   @Unstable
