@@ -27,14 +27,18 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -43,6 +47,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -504,5 +510,39 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getObserverProxyOps();
     // getList call should be sent to observer
     assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testClientReceiveResponseState() {
+    ClientGSIContext clientGSIContext = new ClientGSIContext();
+
+    Map<String, Long> mockMapping = new HashMap<>();
+    mockMapping.put("ns0", 10L);
+    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
+    mockMapping.forEach(builder::putNamespaceStateIds);
+    RpcHeaderProtos.RpcResponseHeaderProto header = RpcHeaderProtos.RpcResponseHeaderProto
+        .newBuilder()
+        .setCallId(1)
+        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .setRouterFederatedState(builder.build().toByteString())
+        .build();
+    clientGSIContext.receiveResponseState(header);
+
+    Map<String, Long> mockLowerMapping = new HashMap<>();
+    mockLowerMapping.put("ns0", 8L);
+    builder = RouterFederatedStateProto.newBuilder();
+    mockLowerMapping.forEach(builder::putNamespaceStateIds);
+    header = RpcHeaderProtos.RpcResponseHeaderProto.newBuilder()
+        .setRouterFederatedState(builder.build().toByteString())
+        .setCallId(2)
+        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .build();
+    clientGSIContext.receiveResponseState(header);
+
+    Map<String, Long> latestFederateState = ClientGSIContext.getRouterFederatedStateMap(
+        clientGSIContext.getRouterFederatedState());
+    Assertions.assertEquals(1, latestFederateState.size());
+    Assertions.assertEquals(10L, latestFederateState.get("ns0"));
   }
 }
