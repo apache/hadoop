@@ -15,7 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@Public
-package org.apache.hadoop.yarn.util;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
+
+package org.apache.hadoop.fs.azurebfs.services;
+
+public enum TimerFunctionality {
+  RESUME,
+
+  SUSPEND
+}
 

@@ -15,7 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@Public
-package org.apache.hadoop.yarn.util;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
 
+package org.apache.hadoop.fs.azurebfs.services;
+
+final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
+
+  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
+
+  private AbfsNoOpThrottlingIntercept() {
+  }
+
+  @Override
+  public void updateMetrics(final AbfsRestOperationType operationType,
+      final AbfsHttpOperation abfsHttpOperation) {
+  }
+
+  @Override
+  public void sendingRequest(final AbfsRestOperationType operationType,
+      final AbfsCounters abfsCounters) {
+  }
+}
