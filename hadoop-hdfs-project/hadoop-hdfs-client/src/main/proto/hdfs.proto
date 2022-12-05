@@ -723,3 +723,15 @@ message BlockTokenSecretProto {
   repeated string storageIds = 8;
   optional bytes handshakeSecret = 9;
 }
+
+/////////////////////////////////////////////////
+// Alignment state for namespaces.
+/////////////////////////////////////////////////
+/**
+ * Clients should receive this message in RPC responses and forward it
+ * in RPC requests without interpreting it. It should be encoded
+ * as an obscure byte array when being sent to clients.
+ */
+message RouterFederatedStateProto {
+  map<string, int64> namespaceStateIds = 1; // Last seen state IDs for multiple namespaces.
+}
