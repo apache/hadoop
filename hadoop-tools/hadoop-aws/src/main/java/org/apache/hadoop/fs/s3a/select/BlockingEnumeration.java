@@ -96,13 +96,18 @@ public final class BlockingEnumeration<T> implements Enumeration<T> {
       } catch (InterruptedException e) {
         current = new Signal<>(e);
         subscription.thenAccept(Subscription::cancel);
+        Thread.currentThread().interrupt();
       }
     }
     if (current.error != null) {
-      if (current.error instanceof SdkException) {
-        throw (SdkException)current.error;
+      Throwable error = current.error;
+      current = END_SIGNAL;
+      if (error instanceof Error) {
+        throw (Error)error;
+      } else if (error instanceof SdkException) {
+        throw (SdkException)error;
       } else {
-        throw SdkException.create("Unexpected error", current.error);
+        throw SdkException.create("Unexpected error", error);
       }
     }
     return current != END_SIGNAL;
