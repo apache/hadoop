@@ -1660,7 +1660,7 @@ public class ContainerLaunch implements Callable<Integer> {
   }
 
   /**
-   * There are some configurations (such as {@link YarnConfiguration.NM_ADMIN_USER_ENV}) whose
+   * There are some configurations (such as {@value YarnConfiguration#NM_ADMIN_USER_ENV}) whose
    * values need to be added to the environment variables.
    *
    * @param environment The environment variables map to add the configuration values to.
