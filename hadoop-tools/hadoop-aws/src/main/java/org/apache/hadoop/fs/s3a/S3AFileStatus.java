@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.EtagSource;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -30,7 +31,7 @@ import org.apache.hadoop.fs.Path;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class S3AFileStatus extends FileStatus {
+public class S3AFileStatus extends FileStatus implements EtagSource {
 
   private static final long serialVersionUID = -5955674081978903922L;
 
@@ -166,8 +167,16 @@ public class S3AFileStatus extends FileStatus {
 
   /**
    * @return the S3 object eTag when available, else null.
+   * @deprecated use {@link EtagSource#getEtag()} for
+   * public access.
    */
+  @Deprecated
   public String getETag() {
+    return getEtag();
+  }
+
+  @Override
+  public String getEtag() {
     return eTag;
   }
 

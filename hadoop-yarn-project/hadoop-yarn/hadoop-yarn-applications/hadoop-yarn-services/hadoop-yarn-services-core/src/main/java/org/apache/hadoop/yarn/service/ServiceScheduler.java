@@ -1139,7 +1139,7 @@ public class ServiceScheduler extends CompositeService {
         LOG.info("YARN sysfs synchronized.");
       }
     } catch (IOException | URISyntaxException | InterruptedException e) {
-      LOG.error("Fail to sync service spec: {}", e);
+      LOG.error("Fail to sync service spec.", e);
     }
   }
 }

@@ -124,7 +124,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     nodemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*" before
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
       # Backwards compatibility
       if [[ -n "${YARN_NODEMANAGER_HEAPSIZE}" ]]; then
@@ -151,7 +151,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     resourcemanager)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*" before
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
       # Backwards compatibility
       if [[ -n "${YARN_RESOURCEMANAGER_HEAPSIZE}" ]]; then
@@ -175,6 +175,10 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     router)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.router.Router'
+      # Backwards compatibility
+      if [[ -n "${YARN_ROUTER_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${YARN_ROUTER_HEAPSIZE}"
+      fi
     ;;
     schedulerconf)
     HADOOP_CLASSNAME='org.apache.hadoop.yarn.client.cli.SchedConfCLI'
@@ -189,7 +193,7 @@ ${HADOOP_COMMON_HOME}/${HADOOP_COMMON_LIB_JARS_DIR}"
     timelinereader)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/*"
-      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*"
+      hadoop_add_classpath "$HADOOP_YARN_HOME/$YARN_DIR/timelineservice/lib/*" before
       HADOOP_CLASSNAME='org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderServer'
     ;;
 	nodeattributes)

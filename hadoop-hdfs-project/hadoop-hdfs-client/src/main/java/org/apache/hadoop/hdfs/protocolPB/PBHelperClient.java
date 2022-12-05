@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -1764,7 +1764,7 @@ public class PBHelperClient {
     EnumSet<HdfsFileStatus.Flags> flags = fs.hasFlags()
         ? convertFlags(fs.getFlags())
         : convertFlags(fs.getPermission());
-    return new HdfsFileStatus.Builder()
+    HdfsFileStatus hdfsFileStatus = new HdfsFileStatus.Builder()
         .length(fs.getLength())
         .isdir(fs.getFileType().equals(FileType.IS_DIR))
         .replication(fs.getBlockReplication())
@@ -1794,6 +1794,10 @@ public class PBHelperClient {
             ? convertErasureCodingPolicy(fs.getEcPolicy())
             : null)
         .build();
+    if (fs.hasNamespace()) {
+      hdfsFileStatus.setNamespace(fs.getNamespace());
+    }
+    return hdfsFileStatus;
   }
 
   private static EnumSet<HdfsFileStatus.Flags> convertFlags(int flags) {
@@ -2399,6 +2403,9 @@ public class PBHelperClient {
     flags |= fs.isSnapshotEnabled() ? HdfsFileStatusProto.Flags
         .SNAPSHOT_ENABLED_VALUE : 0;
     builder.setFlags(flags);
+    if (fs.getNamespace() != null && !fs.getNamespace().isEmpty()) {
+      builder.setNamespace(fs.getNamespace());
+    }
     return builder.build();
   }
 

@@ -36,9 +36,12 @@ import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
 import org.junit.Assert;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 public class BlockManagerTestUtil {
+
+  static final long SLEEP_TIME = 1000;
+
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
     blockManager.maxReplicationStreams = limit;
@@ -178,7 +181,20 @@ public class BlockManagerTestUtil {
    */
   public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
     return blockManager.corruptReplicas;
-    
+
+  }
+
+  /**
+   * Wait for the processing of the marked deleted block to complete.
+   */
+  public static void waitForMarkedDeleteQueueIsEmpty(
+      BlockManager blockManager) throws InterruptedException {
+    while (true) {
+      if (blockManager.getMarkedDeleteQueue().isEmpty()) {
+        return;
+      }
+      Thread.sleep(SLEEP_TIME);
+    }
   }
 
   /**
@@ -365,6 +381,16 @@ public class BlockManagerTestUtil {
   public static void recheckDecommissionState(DatanodeManager dm)
       throws ExecutionException, InterruptedException {
     dm.getDatanodeAdminManager().runMonitorForTest();
+  }
+
+  /**
+   * Have BlockManager check isNodeHealthyForDecommissionOrMaintenance for a given datanode.
+   * @param blockManager the BlockManager to check against
+   * @param dn the datanode to check
+   */
+  public static boolean isNodeHealthyForDecommissionOrMaintenance(BlockManager blockManager,
+      DatanodeDescriptor dn) {
+    return blockManager.isNodeHealthyForDecommissionOrMaintenance(dn);
   }
 
   /**

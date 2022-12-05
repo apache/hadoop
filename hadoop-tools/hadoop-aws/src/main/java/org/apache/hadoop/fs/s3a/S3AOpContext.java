@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import javax.annotation.Nullable;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,64 +38,34 @@ import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 @SuppressWarnings("visibilitymodifier")
 public class S3AOpContext extends ActiveOperationContext {
 
-  final boolean isS3GuardEnabled;
   final Invoker invoker;
   @Nullable final FileSystem.Statistics stats;
-  @Nullable final Invoker s3guardInvoker;
 
   /** FileStatus for "destination" path being operated on. */
   protected final FileStatus dstFileStatus;
 
   /**
-   * Alternate constructor that allows passing in two invokers, the common
-   * one, and another with the S3Guard Retry Policy.
-   * @param isS3GuardEnabled true if s3Guard is active
+   * Constructor.
    * @param invoker invoker, which contains retry policy
-   * @param s3guardInvoker s3guard-specific retry policy invoker
    * @param stats optional stats object
    * @param instrumentation instrumentation to use
    * @param dstFileStatus file status from existence check
    */
-  public S3AOpContext(boolean isS3GuardEnabled, Invoker invoker,
-      @Nullable Invoker s3guardInvoker,
+  public S3AOpContext(Invoker invoker,
       @Nullable FileSystem.Statistics stats,
       S3AStatisticsContext instrumentation,
       FileStatus dstFileStatus) {
 
     super(newOperationId(),
-        instrumentation,
-        null);
+        instrumentation
+    );
     Preconditions.checkNotNull(invoker, "Null invoker arg");
     Preconditions.checkNotNull(instrumentation, "Null instrumentation arg");
     Preconditions.checkNotNull(dstFileStatus, "Null dstFileStatus arg");
-    this.isS3GuardEnabled = isS3GuardEnabled;
-    Preconditions.checkArgument(!isS3GuardEnabled || s3guardInvoker != null,
-        "S3Guard invoker required: S3Guard is enabled.");
+
     this.invoker = invoker;
-    this.s3guardInvoker = s3guardInvoker;
     this.stats = stats;
     this.dstFileStatus = dstFileStatus;
-  }
-
-  /**
-   * Constructor using common invoker and retry policy.
-   * @param isS3GuardEnabled true if s3Guard is active
-   * @param invoker invoker, which contains retry policy
-   * @param stats optional stats object
-   * @param instrumentation instrumentation to use
-   * @param dstFileStatus file status from existence check
-   */
-  public S3AOpContext(boolean isS3GuardEnabled,
-      Invoker invoker,
-      @Nullable FileSystem.Statistics stats,
-      S3AStatisticsContext instrumentation,
-      FileStatus dstFileStatus) {
-    this(isS3GuardEnabled, invoker, null, stats, instrumentation,
-        dstFileStatus);
-  }
-
-  public boolean isS3GuardEnabled() {
-    return isS3GuardEnabled;
   }
 
   public Invoker getInvoker() {
@@ -105,11 +75,6 @@ public class S3AOpContext extends ActiveOperationContext {
   @Nullable
   public FileSystem.Statistics getStats() {
     return stats;
-  }
-
-  @Nullable
-  public Invoker getS3guardInvoker() {
-    return s3guardInvoker;
   }
 
   public FileStatus getDstFileStatus() {

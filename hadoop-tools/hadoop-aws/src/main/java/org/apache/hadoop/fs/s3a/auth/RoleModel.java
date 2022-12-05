@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.util.JsonSerialization;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkState;
+import static org.apache.hadoop.util.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -45,7 +45,6 @@ import static java.util.Objects.requireNonNull;
  * don't expect to be able to parse everything.
  * It can generate simple models.
  * @see <a href="https://docs.aws.amazon.com/AmazonS3/latest/dev/s3-arn-format.html">Example S3 Policies</a>
- * @see <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/api-permissions-reference.html">Dynamno DB Permissions</a>
  */
 @InterfaceAudience.LimitedPrivate("Tests")
 @InterfaceStability.Unstable

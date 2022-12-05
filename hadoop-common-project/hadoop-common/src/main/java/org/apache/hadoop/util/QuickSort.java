@@ -40,6 +40,9 @@ public final class QuickSort implements IndexedSorter {
   /**
    * Deepest recursion before giving up and doing a heapsort.
    * Returns 2 * ceil(log(n)).
+   *
+   * @param x x.
+   * @return MaxDepth.
    */
   protected static int getMaxDepth(int x) {
     if (x <= 0)

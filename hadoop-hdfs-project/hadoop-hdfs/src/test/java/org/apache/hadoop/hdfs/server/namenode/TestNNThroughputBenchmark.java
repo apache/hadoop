@@ -166,4 +166,25 @@ public class TestNNThroughputBenchmark {
       }
     }
   }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * for block report operation.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputForBlockReportOp() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).
+        numDataNodes(3).build()) {
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[]{"-fs", cluster.getURI().toString(), "-op",
+              "blockReport", "-datanodes", "3", "-reports", "2"});
+    }
+  }
 }

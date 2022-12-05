@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.UploadHandle;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.hadoop.fs.Path.mergePaths;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -98,7 +99,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
   public CompletableFuture<UploadHandle> startUpload(Path filePath)
       throws IOException {
     checkPath(filePath);
-    return FutureIOSupport.eval(() -> {
+    return FutureIO.eval(() -> {
       Path collectorPath = createCollectorPath(filePath);
       fs.mkdirs(collectorPath, FsPermission.getDirDefault());
 
@@ -116,7 +117,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       throws IOException {
     checkPutArguments(filePath, inputStream, partNumber, uploadId,
         lengthInBytes);
-    return FutureIOSupport.eval(() -> innerPutPart(filePath,
+    return FutureIO.eval(() -> innerPutPart(filePath,
         inputStream, partNumber, uploadId, lengthInBytes));
   }
 
@@ -179,7 +180,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       Map<Integer, PartHandle> handleMap) throws IOException {
 
     checkPath(filePath);
-    return FutureIOSupport.eval(() ->
+    return FutureIO.eval(() ->
         innerComplete(uploadId, filePath, handleMap));
   }
 
@@ -251,7 +252,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
         uploadIdByteArray.length, Charsets.UTF_8));
 
-    return FutureIOSupport.eval(() -> {
+    return FutureIO.eval(() -> {
       // force a check for a file existing; raises FNFE if not found
       fs.getFileStatus(collectorPath);
       fs.delete(collectorPath, true);

@@ -92,6 +92,9 @@ public class AuthenticatedURL {
     @Override
     public void put(URI uri, Map<String, List<String>> responseHeaders) {
       List<String> headers = responseHeaders.get("Set-Cookie");
+      if (headers == null) {
+        headers = responseHeaders.get("set-cookie");
+      }
       if (headers != null) {
         for (String header : headers) {
           List<HttpCookie> cookies;

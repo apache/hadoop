@@ -128,9 +128,16 @@ public class RpcMetrics {
   MutableCounterLong rpcClientBackoff;
   @Metric("Number of Slow RPC calls")
   MutableCounterLong rpcSlowCalls;
+  @Metric("Number of requeue calls")
+  MutableCounterLong rpcRequeueCalls;
 
   @Metric("Number of open connections") public int numOpenConnections() {
     return server.getNumOpenConnections();
+  }
+
+  @Metric("Number of in process handlers")
+  public int getNumInProcessHandler() {
+    return server.getNumInProcessHandler();
   }
 
   @Metric("Number of open connections per user")
@@ -144,6 +151,16 @@ public class RpcMetrics {
 
   @Metric("Number of dropped connections") public long numDroppedConnections() {
     return server.getNumDroppedConnections();
+  }
+
+  @Metric("Number of total requests")
+  public long getTotalRequests() {
+    return server.getTotalRequests();
+  }
+
+  @Metric("Number of total requests per second")
+  public long getTotalRequestsPerSecond() {
+    return server.getTotalRequestsPerSecond();
   }
 
   public TimeUnit getMetricsTimeUnit() {
@@ -288,6 +305,14 @@ public class RpcMetrics {
   public  void incrSlowRpc() {
     rpcSlowCalls.incr();
   }
+
+  /**
+   * Increments the Requeue Calls counter.
+   */
+  public void incrRequeueCalls() {
+    rpcRequeueCalls.incr();
+  }
+
   /**
    * Returns a MutableRate Counter.
    * @return Mutable Rate
@@ -328,6 +353,15 @@ public class RpcMetrics {
     return rpcSlowCalls.value();
   }
 
+  /**
+   * Returns the number of requeue calls.
+   * @return long
+   */
+  @VisibleForTesting
+  public long getRpcRequeueCalls() {
+    return rpcRequeueCalls.value();
+  }
+
   public MutableRate getDeferredRpcProcessingTime() {
     return deferredRpcProcessingTime;
   }
@@ -347,5 +381,10 @@ public class RpcMetrics {
   @VisibleForTesting
   public MetricsTag getTag(String tagName) {
     return registry.getTag(tagName);
+  }
+
+  @VisibleForTesting
+  public MutableCounterLong getRpcAuthorizationSuccesses() {
+    return rpcAuthorizationSuccesses;
   }
 }

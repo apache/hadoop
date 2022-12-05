@@ -18,18 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.statistics;
 
-import org.apache.hadoop.fs.s3a.s3guard.MetastoreInstrumentation;
-
 /**
  * This is the statistics context for ongoing operations in S3A.
  */
 public interface S3AStatisticsContext extends CountersAndGauges {
-
-  /**
-   * Get the metastore instrumentation.
-   * @return an instance of the metastore statistics tracking.
-   */
-  MetastoreInstrumentation getS3GuardInstrumentation();
 
   /**
    * Create a stream input statistics instance.

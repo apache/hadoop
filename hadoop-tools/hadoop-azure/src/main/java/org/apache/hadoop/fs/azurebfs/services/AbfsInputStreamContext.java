@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Class to hold extra input stream configs.
@@ -34,6 +34,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private int readAheadQueueDepth;
 
   private boolean tolerateOobAppends;
+
+  private boolean isReadAheadEnabled = false;
 
   private boolean alwaysReadBufferSize;
 
@@ -69,6 +71,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   public AbfsInputStreamContext withTolerateOobAppends(
           final boolean tolerateOobAppends) {
     this.tolerateOobAppends = tolerateOobAppends;
+    return this;
+  }
+
+  public AbfsInputStreamContext isReadAheadEnabled(
+          final boolean isReadAheadEnabled) {
+    this.isReadAheadEnabled = isReadAheadEnabled;
     return this;
   }
 
@@ -139,6 +147,10 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isTolerateOobAppends() {
     return tolerateOobAppends;
+  }
+
+  public boolean isReadAheadEnabled() {
+    return isReadAheadEnabled;
   }
 
   public int getReadAheadRange() {

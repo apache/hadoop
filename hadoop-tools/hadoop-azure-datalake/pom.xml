@@ -29,7 +29,6 @@
   </description>
   <packaging>jar</packaging>
   <properties>
-    <okHttpVersion>${okhttp.version}</okHttpVersion>
     <minimalJsonVersion>0.9.1</minimalJsonVersion>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
@@ -61,38 +60,6 @@
             <configuration>
               <!-- build a shellprofile -->
               <outputFile>${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt</outputFile>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>de.skuzzle.enforcer</groupId>
-            <artifactId>restrict-imports-enforcer-rule</artifactId>
-            <version>${restrict-imports.enforcer.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>banned-illegal-imports</id>
-            <phase>process-sources</phase>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
-                  <includeTestCode>true</includeTestCode>
-                  <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
-                  <bannedImports>
-                    <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
-                    <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
-                  </bannedImports>
-                </restrictImports>
-              </rules>
             </configuration>
           </execution>
         </executions>
@@ -151,12 +118,6 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.squareup.okhttp</groupId>
-      <artifactId>okhttp</artifactId>
-      <version>${okhttp.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -172,12 +133,6 @@
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
       <type>test-jar</type>
-    </dependency>
-    <dependency>
-      <groupId>com.squareup.okhttp</groupId>
-      <artifactId>mockwebserver</artifactId>
-      <version>${okhttp.version}</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>

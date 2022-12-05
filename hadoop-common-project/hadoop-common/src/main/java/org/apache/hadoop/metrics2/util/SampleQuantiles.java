@@ -108,7 +108,7 @@ public class SampleQuantiles implements QuantileEstimator {
   /**
    * Add a new value from the stream.
    * 
-   * @param v
+   * @param v v.
    */
   synchronized public void insert(long v) {
     buffer[bufferCount] = v;

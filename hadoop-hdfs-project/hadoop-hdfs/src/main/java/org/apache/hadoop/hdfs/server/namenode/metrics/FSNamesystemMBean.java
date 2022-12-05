@@ -254,4 +254,11 @@ public interface FSNamesystemMBean {
    * @return number of DTs
    */
   long getCurrentTokensCount();
+
+  /**
+   * Returns the number of paths to be processed by storage policy satisfier.
+   *
+   * @return The number of paths to be processed by sps.
+   */
+  int getPendingSPSPaths();
 }

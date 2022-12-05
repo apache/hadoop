@@ -154,8 +154,6 @@ public class TestViewfsWithNfs3 {
     DFSTestUtil.createFile(viewFs, new Path("/hdfs2/write2"), 0, (short) 1, 0);
     DFSTestUtil.createFile(viewFs, new Path("/hdfs1/renameMultiNN"),
         0, (short) 1, 0);
-    DFSTestUtil.createFile(viewFs, new Path("/hdfs1/renameSingleNN"),
-        0, (short) 1, 0);
   }
 
   @AfterClass
@@ -307,6 +305,8 @@ public class TestViewfsWithNfs3 {
 
   @Test (timeout = 60000)
   public void testNfsRenameSingleNN() throws Exception {
+    DFSTestUtil.createFile(viewFs, new Path("/hdfs1/renameSingleNN"),
+            0, (short) 1, 0);
     HdfsFileStatus fromFileStatus = nn1.getRpcServer().getFileInfo("/user1");
     int fromNNId = Nfs3Utils.getNamenodeId(config, hdfs1.getUri());
     FileHandle fromHandle =
@@ -316,6 +316,8 @@ public class TestViewfsWithNfs3 {
         nn1.getRpcServer().getFileInfo("/user1/renameSingleNN");
     Assert.assertEquals(statusBeforeRename.isDirectory(), false);
 
+    Path successFilePath = new Path("/user1/renameSingleNNSucess");
+    hdfs1.delete(successFilePath, false);
     testNfsRename(fromHandle, "renameSingleNN",
         fromHandle, "renameSingleNNSucess", Nfs3Status.NFS3_OK);
 

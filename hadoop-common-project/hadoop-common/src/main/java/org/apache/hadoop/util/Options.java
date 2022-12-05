@@ -126,7 +126,7 @@ public class Options {
    * @param cls the dynamic class to find
    * @param opts the list of options to look through
    * @return the first option that matches
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @SuppressWarnings("unchecked")
   public static <base, T extends base> T getOption(Class<T> cls, base [] opts

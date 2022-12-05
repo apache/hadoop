@@ -40,7 +40,7 @@ public interface GetUserMappingsProtocol {
    * Get the groups which are mapped to the given user.
    * @param user The user to get the groups for.
    * @return The set of groups the user belongs to.
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   @Idempotent
   public String[] getGroupsForUser(String user) throws IOException;

@@ -73,6 +73,14 @@ public class ConnectionManager {
 
   /** Queue for creating new connections. */
   private final BlockingQueue<ConnectionPool> creatorQueue;
+  /**
+   * Global federated namespace context for router.
+   */
+  private final RouterStateIdContext routerStateIdContext;
+  /**
+   * Map from connection pool ID to namespace.
+   */
+  private final Map<ConnectionPoolId, String> connectionPoolToNamespaceMap;
   /** Max size of queue for creating new connections. */
   private final int creatorQueueMaxSize;
 
@@ -85,15 +93,19 @@ public class ConnectionManager {
   /** If the connection manager is running. */
   private boolean running = false;
 
+  public ConnectionManager(Configuration config) {
+    this(config, new RouterStateIdContext(config));
+  }
 
   /**
    * Creates a proxy client connection pool manager.
    *
    * @param config Configuration for the connections.
    */
-  public ConnectionManager(Configuration config) {
+  public ConnectionManager(Configuration config, RouterStateIdContext routerStateIdContext) {
     this.conf = config;
-
+    this.routerStateIdContext = routerStateIdContext;
+    this.connectionPoolToNamespaceMap = new HashMap<>();
     // Configure minimum, maximum and active connection pools
     this.maxSize = this.conf.getInt(
         RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_SIZE,
@@ -135,12 +147,12 @@ public class ConnectionManager {
     this.creator.start();
 
     // Schedule a task to remove stale connection pools and sockets
-    long recyleTimeMs = Math.min(
+    long recycleTimeMs = Math.min(
         poolCleanupPeriodMs, connectionCleanupPeriodMs);
     LOG.info("Cleaning every {} seconds",
-        TimeUnit.MILLISECONDS.toSeconds(recyleTimeMs));
+        TimeUnit.MILLISECONDS.toSeconds(recycleTimeMs));
     this.cleaner.scheduleAtFixedRate(
-        new CleanupTask(), 0, recyleTimeMs, TimeUnit.MILLISECONDS);
+        new CleanupTask(), 0, recycleTimeMs, TimeUnit.MILLISECONDS);
 
     // Mark the manager as running
     this.running = true;
@@ -160,6 +172,10 @@ public class ConnectionManager {
         pool.close();
       }
       this.pools.clear();
+      for (String nsID: connectionPoolToNamespaceMap.values()) {
+        routerStateIdContext.removeNamespaceStateId(nsID);
+      }
+      connectionPoolToNamespaceMap.clear();
     } finally {
       writeLock.unlock();
     }
@@ -172,12 +188,12 @@ public class ConnectionManager {
    * @param ugi User group information.
    * @param nnAddress Namenode address for the connection.
    * @param protocol Protocol for the connection.
+   * @param nsId Nameservice identity.
    * @return Proxy client to connect to nnId as UGI.
    * @throws IOException If the connection cannot be obtained.
    */
   public ConnectionContext getConnection(UserGroupInformation ugi,
-      String nnAddress, Class<?> protocol) throws IOException {
-
+      String nnAddress, Class<?> protocol, String nsId) throws IOException {
     // Check if the manager is shutdown
     if (!this.running) {
       LOG.error(
@@ -205,13 +221,18 @@ public class ConnectionManager {
         if (pool == null) {
           pool = new ConnectionPool(
               this.conf, nnAddress, ugi, this.minSize, this.maxSize,
-              this.minActiveRatio, protocol);
+              this.minActiveRatio, protocol,
+              new PoolAlignmentContext(this.routerStateIdContext, nsId));
           this.pools.put(connectionId, pool);
+          this.connectionPoolToNamespaceMap.put(connectionId, nsId);
         }
       } finally {
         writeLock.unlock();
       }
     }
+
+    long clientStateId = RouterStateIdContext.getClientStateIdFromCurrentCall(nsId);
+    pool.getPoolAlignmentContext().advanceClientStateId(clientStateId);
 
     ConnectionContext conn = pool.getConnection();
 
@@ -364,9 +385,9 @@ public class ConnectionManager {
       long timeSinceLastActive = Time.now() - pool.getLastActiveTime();
       int total = pool.getNumConnections();
       // Active is a transient status in many cases for a connection since
-      // the handler thread uses the connection very quickly. Thus the number
+      // the handler thread uses the connection very quickly. Thus, the number
       // of connections with handlers using at the call time is constantly low.
-      // Recently active is more lasting status and it shows how many
+      // Recently active is more lasting status, and it shows how many
       // connections have been used with a recent time period. (i.e. 30 seconds)
       int active = pool.getNumActiveConnectionsRecently();
       float poolMinActiveRatio = pool.getMinActiveRatio();
@@ -376,9 +397,9 @@ public class ConnectionManager {
         // The number should at least be 1
         int targetConnectionsCount = Math.max(1,
             (int)(poolMinActiveRatio * total) - active);
-        List<ConnectionContext> conns =
+        List<ConnectionContext> connections =
             pool.removeConnections(targetConnectionsCount);
-        for (ConnectionContext conn : conns) {
+        for (ConnectionContext conn : connections) {
           conn.close();
         }
         LOG.debug("Removed connection {} used {} seconds ago. " +
@@ -430,6 +451,11 @@ public class ConnectionManager {
         try {
           for (ConnectionPoolId poolId : toRemove) {
             pools.remove(poolId);
+            String nsID = connectionPoolToNamespaceMap.get(poolId);
+            connectionPoolToNamespaceMap.remove(poolId);
+            if (!connectionPoolToNamespaceMap.values().contains(nsID)) {
+              routerStateIdContext.removeNamespaceStateId(nsID);
+            }
           }
         } finally {
           writeLock.unlock();

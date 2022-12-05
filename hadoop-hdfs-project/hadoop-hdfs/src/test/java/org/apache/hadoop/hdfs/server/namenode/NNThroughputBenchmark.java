@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -569,18 +569,21 @@ public class NNThroughputBenchmark implements Tool {
       // int generatedFileIdx = 0;
       LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        fileNames[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          fileNames[idx][jdx] = nameGenerator.
-                                  getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          fileNames[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            fileNames[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} files to be created. " +
+            "If you want to test more files, please update the -filesPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
-    }
-
-    void dummyActionNoSynch(int daemonId, int fileIdx) {
-      for(int i=0; i < 2000; i++)
-        fileNames[daemonId][fileIdx].contains(""+i);
     }
 
     /**
@@ -598,7 +601,6 @@ public class NNThroughputBenchmark implements Tool {
     long executeOp(int daemonId, int inputIdx, String clientName) 
     throws IOException {
       long start = Time.now();
-      // dummyActionNoSynch(fileIdx);
       clientProto.create(fileNames[daemonId][inputIdx],
           FsPermission.getDefault(), clientName,
           new EnumSetWritable<CreateFlag>(EnumSet
@@ -675,12 +677,20 @@ public class NNThroughputBenchmark implements Tool {
           false);
       LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
       dirPaths = new String[numThreads][];
-      for(int idx=0; idx < numThreads; idx++) {
-        int threadOps = opsPerThread[idx];
-        dirPaths[idx] = new String[threadOps];
-        for(int jdx=0; jdx < threadOps; jdx++)
-          dirPaths[idx][jdx] = nameGenerator.
-              getNextFileName("ThroughputBench");
+      try {
+        for(int idx=0; idx < numThreads; idx++) {
+          int threadOps = opsPerThread[idx];
+          dirPaths[idx] = new String[threadOps];
+          for(int jdx=0; jdx < threadOps; jdx++) {
+            dirPaths[idx][jdx] = nameGenerator.
+                    getNextFileName("ThroughputBench");
+          }
+        }
+      } catch (ArrayIndexOutOfBoundsException e) {
+        LOG.error("The current environment allows {} directories to be created. " +
+            "If you want to test more directories, please update the -dirsPerDir parameter.",
+                nameGenerator.getFileCount());
+        throw e;
       }
     }
 
@@ -1219,10 +1229,28 @@ public class NNThroughputBenchmark implements Tool {
 
     private ExtendedBlock addBlocks(String fileName, String clientName)
     throws IOException {
+      DatanodeInfo[] excludeNodes = null;
+      DatanodeInfo[] dnInfos = clientProto.getDatanodeReport(
+          HdfsConstants.DatanodeReportType.LIVE);
+      if (dnInfos != null && dnInfos.length > 0) {
+        List<DatanodeInfo> tmpNodes = new ArrayList<>();
+        String localHost = DNS.getDefaultHost("default", "default");
+        for (DatanodeInfo dnInfo : dnInfos) {
+          if (!localHost.equals(dnInfo.getHostName()) ||
+              (dnInfo.getXferPort() > datanodes.length)) {
+            tmpNodes.add(dnInfo);
+          }
+        }
+
+        if (tmpNodes.size() > 0) {
+          excludeNodes = tmpNodes.toArray(new DatanodeInfo[tmpNodes.size()]);
+        }
+      }
+
       ExtendedBlock prevBlock = null;
       for(int jdx = 0; jdx < blocksPerFile; jdx++) {
         LocatedBlock loc = addBlock(fileName, clientName,
-            prevBlock, null, HdfsConstants.GRANDFATHER_INODE_ID, null);
+            prevBlock, excludeNodes, HdfsConstants.GRANDFATHER_INODE_ID, null);
         prevBlock = loc.getBlock();
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = dnInfo.getXferPort() - 1;

@@ -122,7 +122,7 @@ extends OutputFormat<K,V> {
         key.write(statement);
         statement.addBatch();
       } catch (SQLException e) {
-        e.printStackTrace();
+        throw new IOException("Failed to execute SQL statement for key " + key, e);
       }
     }
   }

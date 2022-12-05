@@ -39,12 +39,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.impl.FutureIOSupport;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
@@ -261,10 +261,10 @@ public class SelectTool extends S3GuardTool {
     FSDataInputStream stream;
     try(DurationInfo ignored =
             new DurationInfo(LOG, "Selecting stream")) {
-      stream = FutureIOSupport.awaitFuture(builder.build());
+      stream = FutureIO.awaitFuture(builder.build());
     } catch (FileNotFoundException e) {
       // the source file is missing.
-      throw storeNotFound(e);
+      throw notFound(e);
     }
     try {
       if (toConsole) {

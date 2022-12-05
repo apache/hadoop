@@ -20,157 +20,194 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Date;
 
-import org.apache.hadoop.conf.Configuration;
+import com.google.gson.Gson;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.router.Router;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONUnmarshaller;
 
-class FederationBlock extends HtmlBlock {
-
-  private static final long BYTES_IN_MB = 1024 * 1024;
+class FederationBlock extends RouterBlock {
 
   private final Router router;
 
   @Inject
   FederationBlock(ViewContext ctx, Router router) {
-    super(ctx);
+    super(router, ctx);
     this.router = router;
   }
 
   @Override
   public void render(Block html) {
-    Configuration conf = this.router.getConfig();
-    boolean isEnabled = conf.getBoolean(
-        YarnConfiguration.FEDERATION_ENABLED,
-        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
-    if (isEnabled) {
-      setTitle("Federation");
 
-      // Table header
-      TBODY<TABLE<Hamlet>> tbody = html.table("#rms").thead().tr()
-          .th(".id", "SubCluster")
-          .th(".submittedA", "Applications Submitted*")
-          .th(".pendingA", "Applications Pending*")
-          .th(".runningA", "Applications Running*")
-          .th(".failedA", "Applications Failed*")
-          .th(".killedA", "Applications Killed*")
-          .th(".completedA", "Applications Completed*")
-          .th(".contAllocated", "Containers Allocated")
-          .th(".contReserved", "Containers Reserved")
-          .th(".contPending", "Containers Pending")
-          .th(".availableM", "Available Memory")
-          .th(".allocatedM", "Allocated Memory")
-          .th(".reservedM", "Reserved Memory")
-          .th(".totalM", "Total Memory")
-          .th(".availableVC", "Available VirtualCores")
-          .th(".allocatedVC", "Allocated VirtualCores")
-          .th(".reservedVC", "Reserved VirtualCores")
-          .th(".totalVC", "Total VirtualCores")
-          .th(".activeN", "Active Nodes")
-          .th(".lostN", "Lost Nodes")
-          .th(".availableN", "Available Nodes")
-          .th(".unhealtyN", "Unhealthy Nodes")
-          .th(".rebootedN", "Rebooted Nodes")
-          .th(".totalN", "Total Nodes")
-          .__().__().tbody();
+    boolean isEnabled = isYarnFederationEnabled();
 
-      try {
-        // Binding to the FederationStateStore
-        FederationStateStoreFacade facade =
-            FederationStateStoreFacade.getInstance();
-        Map<SubClusterId, SubClusterInfo> subClustersInfo =
-            facade.getSubClusters(true);
-
-        // Sort the SubClusters
-        List<SubClusterInfo> subclusters = new ArrayList<>();
-        subclusters.addAll(subClustersInfo.values());
-        Comparator<? super SubClusterInfo> cmp =
-            new Comparator<SubClusterInfo>() {
-              @Override
-              public int compare(SubClusterInfo o1, SubClusterInfo o2) {
-                return o1.getSubClusterId().compareTo(o2.getSubClusterId());
-              }
-            };
-        Collections.sort(subclusters, cmp);
-
-        for (SubClusterInfo subcluster : subclusters) {
-          SubClusterId subClusterId = subcluster.getSubClusterId();
-          String webAppAddress = subcluster.getRMWebServiceAddress();
-          String capability = subcluster.getCapability();
-          ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
-
-          // Building row per SubCluster
-          tbody.tr().td().a("//" + webAppAddress, subClusterId.toString()).__()
-              .td(Integer.toString(subClusterInfo.getAppsSubmitted()))
-              .td(Integer.toString(subClusterInfo.getAppsPending()))
-              .td(Integer.toString(subClusterInfo.getAppsRunning()))
-              .td(Integer.toString(subClusterInfo.getAppsFailed()))
-              .td(Integer.toString(subClusterInfo.getAppsKilled()))
-              .td(Integer.toString(subClusterInfo.getAppsCompleted()))
-              .td(Integer.toString(subClusterInfo.getContainersAllocated()))
-              .td(Integer.toString(subClusterInfo.getReservedContainers()))
-              .td(Integer.toString(subClusterInfo.getPendingContainers()))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getAvailableMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getAllocatedMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getReservedMB() * BYTES_IN_MB))
-              .td(StringUtils.byteDesc(
-                  subClusterInfo.getTotalMB() * BYTES_IN_MB))
-              .td(Long.toString(subClusterInfo.getAvailableVirtualCores()))
-              .td(Long.toString(subClusterInfo.getAllocatedVirtualCores()))
-              .td(Long.toString(subClusterInfo.getReservedVirtualCores()))
-              .td(Long.toString(subClusterInfo.getTotalVirtualCores()))
-              .td(Integer.toString(subClusterInfo.getActiveNodes()))
-              .td(Integer.toString(subClusterInfo.getLostNodes()))
-              .td(Integer.toString(subClusterInfo.getDecommissionedNodes()))
-              .td(Integer.toString(subClusterInfo.getUnhealthyNodes()))
-              .td(Integer.toString(subClusterInfo.getRebootedNodes()))
-              .td(Integer.toString(subClusterInfo.getTotalNodes())).__();
-        }
-      } catch (YarnException e) {
-        LOG.error("Cannot render ResourceManager", e);
-      }
-
-      tbody.__().__().div()
-          .p().__("*The application counts are local per subcluster").__().__();
-    } else {
-      setTitle("Federation is not Enabled!");
-    }
+    // init Html Page Federation
+    initHtmlPageFederation(html, isEnabled);
   }
 
-  private static ClusterMetricsInfo getClusterMetricsInfo(String capability) {
-    ClusterMetricsInfo clusterMetrics = null;
+  /**
+   * Parse the capability and obtain the metric information of the cluster.
+   *
+   * @param capability metric json obtained from RM.
+   * @return ClusterMetricsInfo Object
+   */
+  private ClusterMetricsInfo getClusterMetricsInfo(String capability) {
     try {
-      JSONJAXBContext jc = new JSONJAXBContext(
-          JSONConfiguration.mapped().rootUnwrapping(false).build(),
-          ClusterMetricsInfo.class);
-      JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
-      clusterMetrics = unmarshaller.unmarshalFromJSON(
-          new StringReader(capability), ClusterMetricsInfo.class);
+      if (capability != null && !capability.isEmpty()) {
+        JSONJAXBContext jc = new JSONJAXBContext(
+            JSONConfiguration.mapped().rootUnwrapping(false).build(), ClusterMetricsInfo.class);
+        JSONUnmarshaller unmarShaller = jc.createJSONUnmarshaller();
+        StringReader stringReader = new StringReader(capability);
+        ClusterMetricsInfo clusterMetrics =
+            unmarShaller.unmarshalFromJSON(stringReader, ClusterMetricsInfo.class);
+        return clusterMetrics;
+      }
     } catch (Exception e) {
       LOG.error("Cannot parse SubCluster info", e);
     }
-    return clusterMetrics;
+    return null;
+  }
+
+  /**
+   * Initialize the subCluster details JavaScript of the Federation page.
+   *
+   * This part of the js script will control to display or hide the detailed information
+   * of the subCluster when the user clicks on the subClusterId.
+   *
+   * We will obtain the specific information of a SubCluster,
+   * including the information of Applications, Resources, and Nodes.
+   *
+   * @param html html object
+   * @param subClusterDetailMap subCluster Detail Map
+   */
+  private void initFederationSubClusterDetailTableJs(Block html,
+      List<Map<String, String>> subClusterDetailMap) {
+    Gson gson = new Gson();
+    html.script().$type("text/javascript").
+        __(" var scTableData = " + gson.toJson(subClusterDetailMap) + "; ")
+        .__();
+    html.script(root_url("static/federation/federation.js"));
+  }
+
+  /**
+   * Initialize the Html page.
+   *
+   * @param html html object
+   */
+  private void initHtmlPageFederation(Block html, boolean isEnabled) {
+    List<Map<String, String>> lists = new ArrayList<>();
+
+    // Table header
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#rms").$class("cell-border").$style("width:100%").thead().tr()
+        .th(".id", "SubCluster")
+        .th(".state", "State")
+        .th(".lastStartTime", "LastStartTime")
+        .th(".lastHeartBeat", "LastHeartBeat")
+        .th(".resources", "Resources")
+        .th(".nodes", "Nodes")
+        .__().__().tbody();
+
+    try {
+
+      // Sort the SubClusters
+      List<SubClusterInfo> subclusters = getSubClusterInfoList();
+
+      for (SubClusterInfo subcluster : subclusters) {
+
+        Map<String, String> subclusterMap = new HashMap<>();
+
+        // Prepare subCluster
+        SubClusterId subClusterId = subcluster.getSubClusterId();
+        String subClusterIdText = subClusterId.getId();
+
+        // Prepare WebAppAddress
+        String webAppAddress = subcluster.getRMWebServiceAddress();
+        String herfWebAppAddress = "";
+        if (webAppAddress != null && !webAppAddress.isEmpty()) {
+          herfWebAppAddress =
+              WebAppUtils.getHttpSchemePrefix(this.router.getConfig()) + webAppAddress;
+        }
+
+        // Prepare Capability
+        String capability = subcluster.getCapability();
+        ClusterMetricsInfo subClusterInfo = getClusterMetricsInfo(capability);
+
+        // Prepare LastStartTime & LastHeartBeat
+        Date lastStartTime = new Date(subcluster.getLastStartTime());
+        Date lastHeartBeat = new Date(subcluster.getLastHeartBeat());
+
+        // Prepare Resource
+        long totalMB = subClusterInfo.getTotalMB();
+        String totalMBDesc = StringUtils.byteDesc(totalMB * BYTES_IN_MB);
+        long totalVirtualCores = subClusterInfo.getTotalVirtualCores();
+        String resources = String.format("<memory:%s, vCores:%s>", totalMBDesc, totalVirtualCores);
+
+        // Prepare Node
+        long totalNodes = subClusterInfo.getTotalNodes();
+        long activeNodes = subClusterInfo.getActiveNodes();
+        String nodes = String.format("<totalNodes:%s, activeNodes:%s>", totalNodes, activeNodes);
+
+        // Prepare HTML Table
+        String stateStyle = "color:#dc3545;font-weight:bolder";
+        SubClusterState state = subcluster.getState();
+        if (SubClusterState.SC_RUNNING == state) {
+          stateStyle = "color:#28a745;font-weight:bolder";
+        }
+
+        tbody.tr().$id(subClusterIdText)
+            .td().$class("details-control").a(herfWebAppAddress, subClusterIdText).__()
+            .td().$style(stateStyle).__(state.name()).__()
+            .td().__(lastStartTime).__()
+            .td().__(lastHeartBeat).__()
+            .td(resources)
+            .td(nodes)
+            .__();
+
+        // Formatted memory information
+        long allocatedMB = subClusterInfo.getAllocatedMB();
+        String allocatedMBDesc = StringUtils.byteDesc(allocatedMB * BYTES_IN_MB);
+        long availableMB = subClusterInfo.getAvailableMB();
+        String availableMBDesc = StringUtils.byteDesc(availableMB * BYTES_IN_MB);
+        long pendingMB = subClusterInfo.getPendingMB();
+        String pendingMBDesc = StringUtils.byteDesc(pendingMB * BYTES_IN_MB);
+        long reservedMB = subClusterInfo.getReservedMB();
+        String reservedMBDesc = StringUtils.byteDesc(reservedMB * BYTES_IN_MB);
+
+        subclusterMap.put("totalmemory", totalMBDesc);
+        subclusterMap.put("allocatedmemory", allocatedMBDesc);
+        subclusterMap.put("availablememory", availableMBDesc);
+        subclusterMap.put("pendingmemory", pendingMBDesc);
+        subclusterMap.put("reservedmemory", reservedMBDesc);
+        subclusterMap.put("subcluster", subClusterId.getId());
+        subclusterMap.put("capability", capability);
+        lists.add(subclusterMap);
+      }
+    } catch (Exception e) {
+      LOG.error("Cannot render Router Federation.", e);
+    }
+
+    // Init FederationBlockTableJs
+    initFederationSubClusterDetailTableJs(html, lists);
+
+    // Tips
+    tbody.__().__().div().p().$style("color:red")
+        .__("*The application counts are local per subcluster").__().__();
   }
 }

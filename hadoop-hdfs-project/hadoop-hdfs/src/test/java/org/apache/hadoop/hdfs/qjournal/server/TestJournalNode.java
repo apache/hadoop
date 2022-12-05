@@ -142,6 +142,10 @@ public class TestJournalNode {
           "qjournal://journalnode0:9900;journalnode1:9901/" + journalId);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY +".ns1" +".nn2",
           "qjournal://journalnode0:9902;journalnode1:9903/" + journalId);
+    } else if (testName.getMethodName().equals("testConfAbnormalHandlerNumber")) {
+      conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY, -1);
+    } else if (testName.getMethodName().equals("testConfNormalHandlerNumber")) {
+      conf.setInt(DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY, 10);
     }
     jn = new JournalNode();
     jn.setConf(conf);
@@ -672,4 +676,26 @@ public class TestJournalNode {
     }
   }
 
+  @Test
+  public void testConfNormalHandlerNumber() {
+    int confHandlerNumber = jn.getConf().getInt(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+    assertTrue(confHandlerNumber > 0);
+    int handlerCount = jn.getRpcServer().getHandlerCount();
+    assertEquals(confHandlerNumber, handlerCount);
+    assertEquals(10, handlerCount);
+  }
+
+  @Test
+  public void testConfAbnormalHandlerNumber() {
+    int confHandlerCount = jn.getConf().getInt(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT);
+    assertTrue(confHandlerCount <= 0);
+    int handlerCount = jn.getRpcServer().getHandlerCount();
+    assertEquals(
+        DFSConfigKeys.DFS_JOURNALNODE_HANDLER_COUNT_DEFAULT,
+        handlerCount);
+  }
 }

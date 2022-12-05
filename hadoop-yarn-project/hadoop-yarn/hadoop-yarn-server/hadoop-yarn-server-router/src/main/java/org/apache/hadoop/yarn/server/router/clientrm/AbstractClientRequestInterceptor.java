@@ -18,18 +18,17 @@
 
 package org.apache.hadoop.yarn.server.router.clientrm;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Implements the {@link ClientRequestInterceptor} interface and provides common
  * functionality which can can be used and/or extended by other concrete
- * intercepter classes.
+ * interceptor classes.
  *
  */
 public abstract class AbstractClientRequestInterceptor
@@ -43,6 +42,8 @@ public abstract class AbstractClientRequestInterceptor
 
   @SuppressWarnings("checkstyle:visibilitymodifier")
   protected UserGroupInformation user = null;
+
+  private RouterDelegationTokenSecretManager tokenSecretManager = null;
 
   /**
    * Sets the {@link ClientRequestInterceptor} in the chain.
@@ -77,7 +78,7 @@ public abstract class AbstractClientRequestInterceptor
    */
   @Override
   public void init(String userName) {
-    setupUser(userName);
+    this.user = RouterServerUtil.setupUser(userName);
     if (this.nextInterceptor != null) {
       this.nextInterceptor.init(userName);
     }
@@ -101,27 +102,13 @@ public abstract class AbstractClientRequestInterceptor
     return this.nextInterceptor;
   }
 
-  private void setupUser(String userName) {
-
-    try {
-      // Do not create a proxy user if user name matches the user name on
-      // current UGI
-      if (userName.equalsIgnoreCase(
-          UserGroupInformation.getCurrentUser().getUserName())) {
-        user = UserGroupInformation.getCurrentUser();
-      } else {
-        user = UserGroupInformation.createProxyUser(userName,
-            UserGroupInformation.getCurrentUser());
-      }
-    } catch (IOException e) {
-      String message = "Error while creating Router ClientRM Service for user:";
-      if (user != null) {
-        message += ", user: " + user;
-      }
-
-      LOG.info(message);
-      throw new YarnRuntimeException(message, e);
-    }
+  @Override
+  public RouterDelegationTokenSecretManager getTokenSecretManager() {
+    return tokenSecretManager;
   }
 
+  @Override
+  public void setTokenSecretManager(RouterDelegationTokenSecretManager tokenSecretManager) {
+    this.tokenSecretManager = tokenSecretManager;
+  }
 }

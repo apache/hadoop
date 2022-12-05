@@ -59,7 +59,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 
 /**
@@ -123,7 +123,7 @@ public class EditLogTailer {
 
   /**
    * The timeout in milliseconds of calling rollEdits RPC to Active NN.
-   * @see HDFS-4176.
+   * See HDFS-4176.
    */
   private final long rollEditsTimeoutMs;
 
@@ -262,9 +262,7 @@ public class EditLogTailer {
     nnCount = nns.size();
     // setup the iterator to endlessly loop the nns
     this.nnLookup = Iterators.cycle(nns);
-
-    LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
-        " sleepTime=" + sleepTimeMs);
+    LOG.debug("logRollPeriodMs={} sleepTime={}.", logRollPeriodMs, sleepTimeMs);
   }
 
   public void start() {
@@ -328,38 +326,39 @@ public class EditLogTailer {
   
   @VisibleForTesting
   public long doTailEdits() throws IOException, InterruptedException {
+    Collection<EditLogInputStream> streams;
+    FSImage image = namesystem.getFSImage();
+
+    long lastTxnId = image.getLastAppliedTxId();
+    LOG.debug("lastTxnId: {}", lastTxnId);
+    long startTime = timer.monotonicNow();
+    try {
+      streams = editLog.selectInputStreams(lastTxnId + 1, 0,
+          null, inProgressOk, true);
+    } catch (IOException ioe) {
+      // This is acceptable. If we try to tail edits in the middle of an edits
+      // log roll, i.e. the last one has been finalized but the new inprogress
+      // edits file hasn't been started yet.
+      LOG.warn("Edits tailer failed to find any streams. Will try again " +
+          "later.", ioe);
+      return 0;
+    } finally {
+      NameNode.getNameNodeMetrics().addEditLogFetchTime(
+          timer.monotonicNow() - startTime);
+    }
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
     // deadlock.
     namesystem.writeLockInterruptibly();
     try {
-      FSImage image = namesystem.getFSImage();
-
-      long lastTxnId = image.getLastAppliedTxId();
-      
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("lastTxnId: " + lastTxnId);
-      }
-      Collection<EditLogInputStream> streams;
-      long startTime = timer.monotonicNow();
-      try {
-        streams = editLog.selectInputStreams(lastTxnId + 1, 0,
-            null, inProgressOk, true);
-      } catch (IOException ioe) {
-        // This is acceptable. If we try to tail edits in the middle of an edits
-        // log roll, i.e. the last one has been finalized but the new inprogress
-        // edits file hasn't been started yet.
-        LOG.warn("Edits tailer failed to find any streams. Will try again " +
-            "later.", ioe);
+      long currentLastTxnId = image.getLastAppliedTxId();
+      if (lastTxnId != currentLastTxnId) {
+        LOG.warn("The currentLastTxnId({}) is different from preLastTxtId({})",
+            currentLastTxnId, lastTxnId);
         return 0;
-      } finally {
-        NameNode.getNameNodeMetrics().addEditLogFetchTime(
-            timer.monotonicNow() - startTime);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("edit streams to load from: " + streams.size());
-      }
+      LOG.debug("edit streams to load from: {}.", streams.size());
       
       // Once we have streams to load, errors encountered are legitimate cause
       // for concern, so we don't catch them here. Simple errors reading from
@@ -372,10 +371,7 @@ public class EditLogTailer {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
       } finally {
-        if (editsLoaded > 0 || LOG.isDebugEnabled()) {
-          LOG.debug(String.format("Loaded %d edits starting from txid %d ",
-              editsLoaded, lastTxnId));
-        }
+        LOG.debug("Loaded {} edits starting from txid {}.", editsLoaded, lastTxnId);
         NameNode.getNameNodeMetrics().addNumEditLogLoaded(editsLoaded);
       }
 
@@ -385,7 +381,7 @@ public class EditLogTailer {
       lastLoadedTxnId = image.getLastAppliedTxId();
       return editsLoaded;
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock("doTailEdits");
     }
   }
 
@@ -413,6 +409,8 @@ public class EditLogTailer {
     return new MultipleNameNodeProxy<Void>() {
       @Override
       protected Void doWork() throws IOException {
+        LOG.info("Triggering log rolling to the remote NameNode, " +
+            "active NameNode = {}", currentNN.getIpcAddress());
         cachedActiveProxy.rollEditLog();
         return null;
       }
@@ -424,7 +422,6 @@ public class EditLogTailer {
    */
   @VisibleForTesting
   void triggerActiveLogRoll() {
-    LOG.info("Triggering log roll on remote NameNode");
     Future<Void> future = null;
     try {
       future = rollEditsRpcExecutor.submit(getNameNodeProxy());

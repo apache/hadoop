@@ -105,7 +105,9 @@ public class QuotaUsage {
   // Make it protected for the deprecated ContentSummary constructor.
   protected QuotaUsage() { }
 
-  /** Build the instance based on the builder. */
+  /** Build the instance based on the builder.
+   * @param builder bulider.
+   */
   protected QuotaUsage(Builder builder) {
     this.fileAndDirectoryCount = builder.fileAndDirectoryCount;
     this.quota = builder.quota;
@@ -127,37 +129,67 @@ public class QuotaUsage {
     this.spaceQuota = spaceQuota;
   }
 
-  /** Return the directory count. */
+  /**
+   * Return the directory count.
+   *
+   * @return file and directory count.
+   */
   public long getFileAndDirectoryCount() {
     return fileAndDirectoryCount;
   }
 
-  /** Return the directory quota. */
+  /**
+   * Return the directory quota.
+   *
+   * @return quota.
+   */
   public long getQuota() {
     return quota;
   }
 
-  /** Return (disk) space consumed. */
+  /**
+   * Return (disk) space consumed.
+   *
+   * @return space consumed.
+   */
   public long getSpaceConsumed() {
     return spaceConsumed;
   }
 
-  /** Return (disk) space quota. */
+  /**
+   * Return (disk) space quota.
+   *
+   * @return space quota.
+   */
   public long getSpaceQuota() {
     return spaceQuota;
   }
 
-  /** Return storage type quota. */
+  /**
+   * Return storage type quota.
+   *
+   * @param type storage type.
+   * @return type quota.
+   */
   public long getTypeQuota(StorageType type) {
     return (typeQuota != null) ? typeQuota[type.ordinal()] : -1L;
   }
 
-  /** Return storage type consumed. */
+  /**
+   * Return storage type consumed.
+   *
+   * @param type storage type.
+   * @return type consumed.
+   */
   public long getTypeConsumed(StorageType type) {
     return (typeConsumed != null) ? typeConsumed[type.ordinal()] : 0L;
   }
 
-  /** Return true if any storage type quota has been set. */
+  /**
+   * Return true if any storage type quota has been set.
+   *
+   * @return if any storage type quota has been set true, not false.
+   * */
   public boolean isTypeQuotaSet() {
     if (typeQuota != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
@@ -169,7 +201,12 @@ public class QuotaUsage {
     return false;
   }
 
-  /** Return true if any storage type consumption information is available. */
+  /**
+   * Return true if any storage type consumption information is available.
+   *
+   * @return if any storage type consumption information
+   * is available, not false.
+   */
   public boolean isTypeConsumedAvailable() {
     if (typeConsumed != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
@@ -271,12 +308,15 @@ public class QuotaUsage {
     return toString(hOption, false, null);
   }
 
-  /** Return the string representation of the object in the output format.
+  /**
+   * Return the string representation of the object in the output format.
    * if hOption is false file sizes are returned in bytes
    * if hOption is true file sizes are returned in human readable
    *
    * @param hOption a flag indicating if human readable output if to be used
-   * @return the string representation of the object
+   * @param tOption type option.
+   * @param types storage types.
+   * @return the string representation of the object.
    */
   public String toString(boolean hOption,
       boolean tOption, List<StorageType> types) {
@@ -328,7 +368,7 @@ public class QuotaUsage {
   /**
    * return the header of with the StorageTypes.
    *
-   * @param storageTypes
+   * @param storageTypes storage types.
    * @return storage header string
    */
   public static String getStorageTypeHeader(List<StorageType> storageTypes) {

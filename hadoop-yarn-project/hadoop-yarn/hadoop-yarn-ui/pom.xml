@@ -38,6 +38,34 @@
 
   <build>
     <plugins>
+      <!-- Pkck the appropriate ember build script to use in src/package.json based on the OS -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.8</version>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <exportAntProperties>true</exportAntProperties>
+              <target>
+                <!-- Set the Maven property emberBuildScript to build:mvn:windows if this is
+                 running on Windows. Set it to build:mvn otherwise. -->
+                <condition property="emberBuildScript" value="build:mvn:windows" else="build:mvn">
+                  <and>
+                    <os family="windows"/>
+                  </and>
+                </condition>
+                <echo>Ember build script to use = ${emberBuildScript}</echo>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Apache RAT -->
       <plugin>
         <groupId>org.apache.rat</groupId>
@@ -184,8 +212,8 @@
                   <goal>install-node-and-yarn</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v12.22.1</nodeVersion>
-                  <yarnVersion>v1.22.5</yarnVersion>
+                  <nodeVersion>${nodejs.version}</nodeVersion>
+                  <yarnVersion>${yarnpkg.version}</yarnVersion>
                 </configuration>
               </execution>
               <execution>
@@ -229,7 +257,7 @@
                   <arguments>
                     <argument>${packageManagerScript}</argument>
                     <argument>run</argument>
-                    <argument>build:mvn</argument>
+                    <argument>${emberBuildScript}</argument>
                   </arguments>
                 </configuration>
               </execution>

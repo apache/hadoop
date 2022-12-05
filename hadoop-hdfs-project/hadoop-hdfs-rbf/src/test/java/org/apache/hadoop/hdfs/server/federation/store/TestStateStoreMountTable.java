@@ -227,7 +227,6 @@ public class TestStateStoreMountTable extends TestStateStoreBase {
   /**
    * Fetch all mount table records beneath a root path.
    *
-   * @param store FederationMountTableStore instance to commit the data.
    * @param mount The root search path, enter "/" to return all mount table
    *          records.
    *

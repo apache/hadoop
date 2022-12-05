@@ -435,7 +435,8 @@ public class KDiag extends Configured implements Tool, Closeable {
    * This is a recurrent problem
    * (that is: it keeps creeping back with JVM updates);
    * a fast failure is the best tactic.
-   * @throws NoSuchAlgorithmException
+   * @throws NoSuchAlgorithmException when a particular cryptographic algorithm is
+   *                          requested but is not available in the environment.
    */
 
   protected void validateKeyLength() throws NoSuchAlgorithmException {
@@ -1046,7 +1047,7 @@ public class KDiag extends Configured implements Tool, Closeable {
    * @param conf configuration
    * @param argv argument list
    * @return an exception
-   * @throws Exception
+   * @throws Exception Exception.
    */
   public static int exec(Configuration conf, String... argv) throws Exception {
     try(KDiag kdiag = new KDiag()) {

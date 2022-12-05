@@ -325,4 +325,6 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return Map of envs related to application scheduling preferences.
    */
   Map<String, String> getApplicationSchedulingEnvs();
+
+  String getRealUser();
 }

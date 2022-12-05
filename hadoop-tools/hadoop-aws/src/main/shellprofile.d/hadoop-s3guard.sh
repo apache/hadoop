@@ -18,7 +18,7 @@
 if ! declare -f hadoop_subcommand_s3guard >/dev/null 2>/dev/null; then
 
   if [[ "${HADOOP_SHELL_EXECNAME}" = hadoop ]]; then
-    hadoop_add_subcommand "s3guard" client "manage metadata on S3"
+    hadoop_add_subcommand "s3guard" client "S3 Commands"
   fi
 
   # this can't be indented otherwise shelldocs won't get it

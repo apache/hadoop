@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -476,7 +476,7 @@ public class WebApps {
         LOG.info("Web app " + name + " started at "
             + httpServer.getConnectorAddress(0).getPort());
       } catch (IOException e) {
-        throw new WebAppException("Error starting http server", e);
+        throw new WebAppException("Error starting http server", e, webApp);
       }
       return webApp;
     }

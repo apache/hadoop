@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugi
 
 import java.io.Serializable;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /** A class that represents an FPGA card. */
 public class FpgaDevice implements Serializable {

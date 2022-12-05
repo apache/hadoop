@@ -91,6 +91,11 @@ public final class AuditConstants {
   public static final String PARAM_PROCESS = "ps";
 
   /**
+   * Task Attempt ID query header: {@value}.
+   */
+  public static final String PARAM_TASK_ATTEMPT_ID = "ta";
+
+  /**
    * Thread 0: the thread which created a span {@value}.
    */
   public static final String PARAM_THREAD0 = "t0";

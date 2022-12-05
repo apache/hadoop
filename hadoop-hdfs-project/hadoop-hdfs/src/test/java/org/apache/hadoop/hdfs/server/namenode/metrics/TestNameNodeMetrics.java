@@ -48,6 +48,9 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
@@ -661,6 +664,8 @@ public class TestNameNodeMetrics {
     // verify ExcessBlocks metric is decremented and
     // excessReplicateMap is cleared after deleting a file
     fs.delete(file, true);
+    BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
+        cluster.getNamesystem().getBlockManager());
     rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", 0L, rb);
     assertEquals(0L, bm.getExcessBlocksCount());
@@ -1125,5 +1130,15 @@ public class TestNameNodeMetrics {
       }
     }
 
+  }
+
+  @Test
+  public void testNNRPCMetricIntegrity() {
+    RpcDetailedMetrics metrics =
+        ((NameNodeRpcServer) cluster.getNameNode()
+            .getRpcServer()).getClientRpcServer().getRpcDetailedMetrics();
+    MetricsRecordBuilder rb = getMetrics(metrics.name());
+    // CommitBlockSynchronizationNumOps should exist.
+    assertCounter("CommitBlockSynchronizationNumOps", 0L, rb);
   }
 }

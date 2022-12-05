@@ -50,7 +50,7 @@ public class ReadaheadPool {
   private static ReadaheadPool instance;
 
   /**
-   * Return the singleton instance for the current process.
+   * @return Return the singleton instance for the current process.
    */
   public static ReadaheadPool getInstance() {
     synchronized (ReadaheadPool.class) {

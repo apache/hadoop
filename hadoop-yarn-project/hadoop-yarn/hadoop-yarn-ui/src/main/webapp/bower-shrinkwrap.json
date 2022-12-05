@@ -9,7 +9,8 @@
     "2.2.0": "49e042ca89922ed96b27488c2a98add280ae7123"
   },
   "https://github.com/components/jqueryui.git": {
-    "1.11.4": "c34f8dbf3ba57b3784b93f26119f436c0e8288e1"
+    "1.11.4": "c34f8dbf3ba57b3784b93f26119f436c0e8288e1",
+    "1.12.1": "44ecf3794cc56b65954cc19737234a3119d036cc"
   },
   "https://github.com/dockyard/ember-qunit-notifications.git": {
     "0.1.0": "a83277aa7a1c0545c66e6d133caebb9a620e71ad"
@@ -33,7 +34,8 @@
     "4.0.0": "80eb44bec78568b152dc5547269c164cb7b5363c"
   },
   "https://github.com/jquery/jquery-dist.git": {
-    "2.1.4": "7751e69b615c6eca6f783a81e292a55725af6b85"
+    "2.1.4": "7751e69b615c6eca6f783a81e292a55725af6b85",
+    "3.6.0": "e786e3d9707ffd9b0dd330ca135b66344dcef85a"
   },
   "https://github.com/jquery/qunit.git": {
     "1.19.0": "467e7e34652ad7d5883ce9c568461cf8c5e172a8"
@@ -61,6 +63,7 @@
     "3.3.0": "ac909550c9544325632542bbea97531cc60bc628"
   },
   "https://github.com/twbs/bootstrap.git": {
-    "3.3.6": "81df608a40bf0629a1dc08e584849bb1e43e0b7a"
+    "3.3.6": "81df608a40bf0629a1dc08e584849bb1e43e0b7a",
+    "3.4.1": "3.4.1"
   }
 }

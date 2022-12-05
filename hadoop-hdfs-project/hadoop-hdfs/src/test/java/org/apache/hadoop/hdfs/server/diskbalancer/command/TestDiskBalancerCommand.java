@@ -158,7 +158,7 @@ public class TestDiskBalancerCommand {
    * Tests running multiple commands under on setup. This mainly covers
    * {@link org.apache.hadoop.hdfs.server.diskbalancer.command.Command#close}
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testRunMultipleCommandsUnderOneSetup() throws Exception {
 
     final int numDatanodes = 1;

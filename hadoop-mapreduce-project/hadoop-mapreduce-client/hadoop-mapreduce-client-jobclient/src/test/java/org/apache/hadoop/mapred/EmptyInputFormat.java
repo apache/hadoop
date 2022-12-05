@@ -19,8 +19,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileSystem;
-
 /**
   * InputFormat which simulates the absence of input data
   * by returning zero split.

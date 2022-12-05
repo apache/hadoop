@@ -40,6 +40,7 @@ public final class DiskValidatorFactory {
   /**
    * Returns a {@link DiskValidator} instance corresponding to the passed clazz.
    * @param clazz a class extends {@link DiskValidator}
+   * @return disk validator.
    */
   public static DiskValidator
       getInstance(Class<? extends DiskValidator> clazz) {
@@ -66,6 +67,7 @@ public final class DiskValidatorFactory {
    * or "read-write" for {@link ReadWriteDiskValidator}.
    * @param diskValidator canonical class name, for example, "basic"
    * @throws DiskErrorException if the class cannot be located
+   * @return disk validator.
    */
   @SuppressWarnings("unchecked")
   public static DiskValidator getInstance(String diskValidator)

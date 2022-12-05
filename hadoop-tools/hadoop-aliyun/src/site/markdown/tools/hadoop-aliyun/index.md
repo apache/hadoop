@@ -244,6 +244,14 @@ please raise your issues with them.
     </property>
 
     <property>
+      <name>fs.oss.list.version</name>
+      <value>2</value>
+      <description>Select which version of the OSS SDK's List Objects API to use.
+        Currently support 2(default) and 1(older API).
+      </description>
+    </property>
+
+    <property>
       <name>fs.oss.buffer.dir</name>
       <description>Comma separated list of directories to buffer OSS data before uploading to Aliyun OSS</description>
     </property>

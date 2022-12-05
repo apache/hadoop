@@ -112,6 +112,7 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
@@ -853,11 +854,15 @@ public class PBHelper {
 
     List<SlowPeerReportProto> slowPeerInfoProtos =
         new ArrayList<>(slowPeers.getSlowPeers().size());
-    for (Map.Entry<String, Double> entry :
-        slowPeers.getSlowPeers().entrySet()) {
-      slowPeerInfoProtos.add(SlowPeerReportProto.newBuilder()
+    for (Map.Entry<String, OutlierMetrics> entry : slowPeers.getSlowPeers().entrySet()) {
+      OutlierMetrics outlierMetrics = entry.getValue();
+      slowPeerInfoProtos.add(
+          SlowPeerReportProto.newBuilder()
               .setDataNodeId(entry.getKey())
-              .setAggregateLatency(entry.getValue())
+              .setAggregateLatency(outlierMetrics.getActualLatency())
+              .setMedian(outlierMetrics.getMedian())
+              .setMad(outlierMetrics.getMad())
+              .setUpperLimitLatency(outlierMetrics.getUpperLimitLatency())
               .build());
     }
     return slowPeerInfoProtos;
@@ -871,15 +876,19 @@ public class PBHelper {
       return SlowPeerReports.EMPTY_REPORT;
     }
 
-    Map<String, Double> slowPeersMap = new HashMap<>(slowPeerProtos.size());
+    Map<String, OutlierMetrics> slowPeersMap = new HashMap<>(slowPeerProtos.size());
     for (SlowPeerReportProto proto : slowPeerProtos) {
       if (!proto.hasDataNodeId()) {
         // The DataNodeId should be reported.
         continue;
       }
-      slowPeersMap.put(
-          proto.getDataNodeId(),
-          proto.hasAggregateLatency() ? proto.getAggregateLatency() : 0.0);
+      Double aggregateLatency = proto.hasAggregateLatency() ? proto.getAggregateLatency() : 0.0;
+      Double medianLatency = proto.hasMedian() ? proto.getMedian() : 0.0;
+      Double madLatency = proto.hasMad() ? proto.getMad() : 0.0;
+      Double upperLimitLatency = proto.hasUpperLimitLatency() ? proto.getUpperLimitLatency() : 0.0;
+      OutlierMetrics outlierMetrics =
+          new OutlierMetrics(medianLatency, madLatency, upperLimitLatency, aggregateLatency);
+      slowPeersMap.put(proto.getDataNodeId(), outlierMetrics);
     }
     return SlowPeerReports.create(slowPeersMap);
   }
@@ -1040,11 +1049,17 @@ public class PBHelper {
 
     byte[] liveBlkIndices = blockEcReconstructionInfoProto.getLiveBlockIndices()
         .toByteArray();
+    byte[] excludeReconstructedIndices =
+        blockEcReconstructionInfoProto.hasExcludeReconstructedIndices() ?
+            blockEcReconstructionInfoProto.getExcludeReconstructedIndices()
+                .toByteArray() : new byte[0];
     ErasureCodingPolicy ecPolicy =
         PBHelperClient.convertErasureCodingPolicy(
             blockEcReconstructionInfoProto.getEcPolicy());
-    return new BlockECReconstructionInfo(block, sourceDnInfos, targetDnInfos,
-        targetStorageUuids, convertStorageTypes, liveBlkIndices, ecPolicy);
+    return new BlockECReconstructionInfo(
+        block, sourceDnInfos, targetDnInfos,
+        targetStorageUuids, convertStorageTypes, liveBlkIndices,
+        excludeReconstructedIndices, ecPolicy);
   }
 
   public static BlockECReconstructionInfoProto convertBlockECRecoveryInfo(
@@ -1069,6 +1084,10 @@ public class PBHelper {
 
     byte[] liveBlockIndices = blockEcRecoveryInfo.getLiveBlockIndices();
     builder.setLiveBlockIndices(PBHelperClient.getByteString(liveBlockIndices));
+
+    byte[] excludeReconstructedIndices = blockEcRecoveryInfo.getExcludeReconstructedIndices();
+    builder.setExcludeReconstructedIndices(
+        PBHelperClient.getByteString(excludeReconstructedIndices));
 
     builder.setEcPolicy(PBHelperClient.convertErasureCodingPolicy(
         blockEcRecoveryInfo.getErasureCodingPolicy()));

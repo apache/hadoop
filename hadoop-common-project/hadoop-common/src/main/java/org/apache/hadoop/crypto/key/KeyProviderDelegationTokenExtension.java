@@ -48,14 +48,14 @@ public class KeyProviderDelegationTokenExtension extends
      * Renews the given token.
      * @param token The token to be renewed.
      * @return The token's lifetime after renewal, or 0 if it can't be renewed.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     long renewDelegationToken(final Token<?> token) throws IOException;
 
     /**
      * Cancels the given token.
      * @param token The token to be cancelled.
-     * @throws IOException
+     * @throws IOException raised on errors performing I/O.
      */
     Void cancelDelegationToken(final Token<?> token) throws IOException;
 

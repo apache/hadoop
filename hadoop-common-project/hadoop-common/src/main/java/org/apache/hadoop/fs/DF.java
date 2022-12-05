@@ -65,7 +65,10 @@ public class DF extends Shell {
     return dirPath;
   }
 
-  /** @return a string indicating which filesystem volume we're checking. */
+  /**
+   * @return a string indicating which filesystem volume we're checking.
+   * @throws IOException raised on errors performing I/O.
+   */
   public String getFilesystem() throws IOException {
     if (Shell.WINDOWS) {
       this.filesystem = dirFile.getCanonicalPath().substring(0, 2);
@@ -100,7 +103,10 @@ public class DF extends Shell {
     return (int) (used * 100.0 / cap);
   }
 
-  /** @return the filesystem mount point for the indicated volume */
+  /**
+   * @return the filesystem mount point for the indicated volume.
+   * @throws IOException raised on errors performing I/O.
+   */
   public String getMount() throws IOException {
     // Abort early if specified path does not exist
     if (!dirFile.exists()) {

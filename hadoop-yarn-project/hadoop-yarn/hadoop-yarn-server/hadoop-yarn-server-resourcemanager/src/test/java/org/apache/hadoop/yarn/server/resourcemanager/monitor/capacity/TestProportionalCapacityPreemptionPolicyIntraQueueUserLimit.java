@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import java.io.IOException;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
+import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
@@ -84,7 +85,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -139,7 +140,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -196,7 +197,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,50,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -252,7 +253,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 30 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(2,1,n1,,100,false,0,user1);" + // app1 a
             "a\t" // app2 in a
@@ -309,7 +310,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 90 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,30,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -370,7 +371,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 90 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,30,false,20,user1);" + // app1 a
             "a\t" // app2 in a
@@ -439,7 +440,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 80 60 0])"; // b
 
     String appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(3,1,n1,,30,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -490,7 +491,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-b(=[40 100 35 20 0])"; // b
 
     String appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(3,1,n1,,20,false,30,user1);" + // app1 a
             "a\t" // app2 in a
@@ -556,7 +557,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,60,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -795,7 +796,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,20,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -855,7 +856,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 20 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,20,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -879,7 +880,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
     // After first round, 3 containers were preempted from app1 and resource
     // distribution will be like below.
     appsConfig =
-        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,3,n1,,17,false,10,user1);" + // app1 a
             "a\t" // app2 in a
@@ -914,7 +915,7 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueueUserLimit
             "-a(=[100 100 100 1 0])"; // a
 
     String appsConfig =
-    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending)
+    // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" // app1 in a
             + "(1,1,n1,,65,false,0,user1);" +
             "a\t" // app2 in a

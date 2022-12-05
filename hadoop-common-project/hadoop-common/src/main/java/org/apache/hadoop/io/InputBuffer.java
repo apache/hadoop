@@ -75,20 +75,35 @@ public class InputBuffer extends FilterInputStream {
     this.buffer = buffer;
   }
 
-  /** Resets the data that the buffer reads. */
+  /**
+   * Resets the data that the buffer reads.
+   * @param input input.
+   * @param length length.
+   */
   public void reset(byte[] input, int length) {
     buffer.reset(input, 0, length);
   }
 
-  /** Resets the data that the buffer reads. */
+  /**
+   * Resets the data that the buffer reads.
+   * @param input input.
+   * @param start start.
+   * @param length length.
+   */
   public void reset(byte[] input, int start, int length) {
     buffer.reset(input, start, length);
   }
 
-  /** Returns the current position in the input. */
+  /**
+   * Returns the current position in the input.
+   * @return the current position in the input.
+   */
   public int getPosition() { return buffer.getPosition(); }
 
-  /** Returns the length of the input. */
+  /**
+   * Returns the length of the input.
+   * @return length of the input.
+   */
   public int getLength() { return buffer.getLength(); }
 
 }

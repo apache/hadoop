@@ -359,7 +359,7 @@ public class MountTableResolver
   public static String getTrashRoot() throws IOException {
     // Gets the Trash directory for the current user.
     return FileSystem.USER_HOME_PREFIX + "/" +
-        RouterRpcServer.getRemoteUser().getUserName() + "/" +
+        RouterRpcServer.getRemoteUser().getShortUserName() + "/" +
         FileSystem.TRASH_PREFIX;
   }
 
@@ -398,7 +398,9 @@ public class MountTableResolver
     try {
       // Our cache depends on the store, update it first
       MountTableStore mountTable = this.getMountTableStore();
-      mountTable.loadCache(force);
+      if (!mountTable.loadCache(force)) {
+        return false;
+      }
 
       GetMountTableEntriesRequest request =
           GetMountTableEntriesRequest.newInstance("/");

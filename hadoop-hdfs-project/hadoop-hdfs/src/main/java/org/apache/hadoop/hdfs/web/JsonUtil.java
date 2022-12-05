@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -335,6 +336,17 @@ public class JsonUtil {
       return null;
     }
 
+    final Map<String, Object> m = toJsonMap(locatedblocks);
+    return toJsonString(LocatedBlocks.class, m);
+  }
+
+  /** Convert LocatedBlocks to a Map. */
+  public static Map<String, Object> toJsonMap(final LocatedBlocks locatedblocks)
+      throws IOException {
+    if (locatedblocks == null) {
+      return null;
+    }
+
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("fileLength", locatedblocks.getFileLength());
     m.put("isUnderConstruction", locatedblocks.isUnderConstruction());
@@ -342,7 +354,7 @@ public class JsonUtil {
     m.put("locatedBlocks", toJsonArray(locatedblocks.getLocatedBlocks()));
     m.put("lastLocatedBlock", toJsonMap(locatedblocks.getLastLocatedBlock()));
     m.put("isLastBlockComplete", locatedblocks.isLastBlockComplete());
-    return toJsonString(LocatedBlocks.class, m);
+    return m;
   }
 
   /** Convert a ContentSummary to a Json string. */
@@ -577,6 +589,58 @@ public class JsonUtil {
     return m;
   }
 
+  public static String toJsonString(SnapshotDiffReportListing diffReport) {
+    return toJsonString(SnapshotDiffReportListing.class.getSimpleName(),
+        toJsonMap(diffReport));
+  }
+
+  private static Object toJsonMap(SnapshotDiffReportListing diffReport) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("lastPath", DFSUtilClient.bytes2String(diffReport.getLastPath()));
+    m.put("lastIndex", diffReport.getLastIndex());
+    m.put("isFromEarlier", diffReport.getIsFromEarlier());
+
+    Object[] modifyList = new Object[diffReport.getModifyList().size()];
+    for (int i = 0; i < diffReport.getModifyList().size(); i++) {
+      modifyList[i] = toJsonMap(diffReport.getModifyList().get(i));
+    }
+    m.put("modifyList", modifyList);
+
+    Object[] createList = new Object[diffReport.getCreateList().size()];
+    for (int i = 0; i < diffReport.getCreateList().size(); i++) {
+      createList[i] = toJsonMap(diffReport.getCreateList().get(i));
+    }
+    m.put("createList", createList);
+
+    Object[] deleteList = new Object[diffReport.getDeleteList().size()];
+    for (int i = 0; i < diffReport.getDeleteList().size(); i++) {
+      deleteList[i] = toJsonMap(diffReport.getDeleteList().get(i));
+    }
+    m.put("deleteList", deleteList);
+
+    return m;
+  }
+
+  private static Object toJsonMap(
+      SnapshotDiffReportListing.DiffReportListingEntry diffReportEntry) {
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("dirId", diffReportEntry.getDirId());
+    m.put("fileId", diffReportEntry.getFileId());
+
+    if (diffReportEntry.getSourcePath() != null) {
+      m.put("sourcePath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getSourcePath()));
+    }
+
+    if (diffReportEntry.getTargetPath() != null) {
+      m.put("targetPath",
+          DFSUtilClient.byteArray2String(diffReportEntry.getTargetPath()));
+    }
+
+    m.put("isReference", diffReportEntry.isReference());
+    return m;
+  }
+
   public static String toJsonString(
       SnapshottableDirectoryStatus[] snapshottableDirectoryList) {
     if (snapshottableDirectoryList == null) {
@@ -624,7 +688,8 @@ public class JsonUtil {
     return m;
   }
 
-  private static Map<String, Object> toJsonMap(
+  @VisibleForTesting
+  static Map<String, Object> toJsonMap(
       final BlockLocation blockLocation) throws IOException {
     if (blockLocation == null) {
       return null;
@@ -644,15 +709,20 @@ public class JsonUtil {
 
   public static String toJsonString(BlockLocation[] locations)
       throws IOException {
+    return toJsonString("BlockLocations", JsonUtil.toJsonMap(locations));
+  }
+
+  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
+      throws IOException {
     if (locations == null) {
       return null;
     }
     final Map<String, Object> m = new HashMap<>();
     Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
+    for (int i = 0; i < locations.length; i++) {
       blockLocations[i] = toJsonMap(locations[i]);
     }
     m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return toJsonString("BlockLocations", m);
+    return m;
   }
 }

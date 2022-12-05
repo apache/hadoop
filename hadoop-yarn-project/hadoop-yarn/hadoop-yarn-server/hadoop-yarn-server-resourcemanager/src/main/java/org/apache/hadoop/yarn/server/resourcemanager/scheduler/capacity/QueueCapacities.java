@@ -312,7 +312,7 @@ public class QueueCapacities {
         _set(label, CapacityType.MAX_CAP, 0);
         _set(label, CapacityType.ABS_CAP, 0);
         _set(label, CapacityType.ABS_MAX_CAP, 0);
-        _set(label, CapacityType.WEIGHT, 0);
+        _set(label, CapacityType.WEIGHT, -1);
       }
     } finally {
       writeLock.unlock();
@@ -333,15 +333,6 @@ public class QueueCapacities {
     readLock.lock();
     try {
       return this.capacitiesMap.toString();
-    } finally {
-      readLock.unlock();
-    }
-  }
-  
-  public Set<String> getNodePartitionsSet() {
-    readLock.lock();
-    try {
-      return capacitiesMap.keySet();
     } finally {
       readLock.unlock();
     }

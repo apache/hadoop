@@ -54,11 +54,13 @@ typedef enum {
     JC_FS_PERMISSION,
     JC_READ_STATISTICS,
     JC_HDFS_DATA_INPUT_STREAM,
+    JC_FUTURE_DATA_IS_BUILDER,
     JC_DOMAIN_SOCKET,
     JC_URI,
     JC_BYTE_BUFFER,
     JC_ENUM_SET,
     JC_EXCEPTION_UTILS,
+    JC_CFUTURE,
     // A special marker enum that counts the number of cached jclasses
     NUM_CACHED_CLASSES
 } CachedJavaClass;
@@ -95,6 +97,8 @@ const char *getClassName(CachedJavaClass cachedJavaClass);
 #define HADOOP_FSPERM   "org/apache/hadoop/fs/permission/FsPermission"
 #define HADOOP_RSTAT    "org/apache/hadoop/hdfs/ReadStatistics"
 #define HADOOP_HDISTRM  "org/apache/hadoop/hdfs/client/HdfsDataInputStream"
+#define HADOOP_FDISB    "org/apache/hadoop/fs/FutureDataInputStreamBuilder"
+#define HADOOP_FS_BLDR  "org/apache/hadoop/fs/FSBuilder"
 #define HADOOP_RO       "org/apache/hadoop/fs/ReadOption"
 #define HADOOP_DS       "org/apache/hadoop/net/unix/DomainSocket"
 
@@ -104,6 +108,9 @@ const char *getClassName(CachedJavaClass cachedJavaClass);
 #define JAVA_BYTEBUFFER "java/nio/ByteBuffer"
 #define JAVA_STRING     "java/lang/String"
 #define JAVA_ENUMSET    "java/util/EnumSet"
+#define JAVA_CFUTURE    "java/util/concurrent/CompletableFuture"
+#define JAVA_TIMEUNIT   "java/util/concurrent/TimeUnit"
+#define JAVA_OBJECT     "java/lang/Object"
 
 /* Some frequently used third-party class names */
 

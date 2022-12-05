@@ -19,13 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,13 +35,6 @@ import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.extractStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
@@ -61,23 +50,10 @@ import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_
  * but whereas that tests failure paths, this looks at the performance
  * of successful invocations.
  */
-@RunWith(Parameterized.class)
 public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestLocatedFileStatusFetcher.class);
-
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"raw", false},
-        {"nonauth", true}
-    });
-  }
 
   /** Filter to select everything. */
   private static final PathFilter EVERYTHING = t -> true;
@@ -115,10 +91,6 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
    */
   private static final int EXPECTED_LIST_COUNT = 4;
 
-  private final String name;
-
-  private final boolean s3guard;
-
   private Path basePath;
 
   private Path emptyDir;
@@ -137,40 +109,13 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
 
   private Configuration listConfig;
 
-  public ITestLocatedFileStatusFetcher(final String name,
-      final boolean s3guard) {
-    this.name = name;
-    this.s3guard = s3guard;
-  }
-
-  @Override
-  public Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
-
-    removeBaseAndBucketOverrides(bucketName, conf,
-        METADATASTORE_AUTHORITATIVE,
-        AUTHORITATIVE_PATH);
-    removeBucketOverrides(bucketName, conf,
-        S3_METADATA_STORE_IMPL);
-    if (!s3guard) {
-      removeBaseAndBucketOverrides(bucketName, conf,
-          S3_METADATA_STORE_IMPL);
-    }
-    conf.setBoolean(METADATASTORE_AUTHORITATIVE, false);
-    disableFilesystemCaching(conf);
-    return conf;
-  }
   @Override
   public void setup() throws Exception {
     super.setup();
     S3AFileSystem fs
         = getFileSystem();
-    // avoiding the parameterization to steer clear of accidentally creating
-    // patterns; a timestamp is used to ensure tombstones from previous runs
-    // do not interfere
-    basePath = path("ITestLocatedFileStatusFetcher-" + name
-        + "-" + System.currentTimeMillis() / 1000);
+
+    basePath = methodPath();
 
     // define the paths and create them.
     describe("Creating test directories and files");
@@ -196,7 +141,6 @@ public class ITestLocatedFileStatusFetcher extends AbstractS3ATestBase {
     createFile(fs, subdir2File2, true, HELLO);
     listConfig = new Configuration(getConfiguration());
   }
-
 
   /**
    * Assert that the fetcher stats logs the expected number of calls.

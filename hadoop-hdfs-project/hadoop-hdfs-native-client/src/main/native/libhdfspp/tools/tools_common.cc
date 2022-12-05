@@ -85,7 +85,6 @@ namespace hdfs {
   static char input_buffer[BUF_SIZE];
 
   void readFile(std::shared_ptr<hdfs::FileSystem> fs, std::string path, off_t offset, std::FILE* dst_file, bool to_delete) {
-    ssize_t total_bytes_read = 0;
     size_t last_bytes_read = 0;
 
     hdfs::FileHandle *file_raw = nullptr;
@@ -103,7 +102,6 @@ namespace hdfs {
       if(status.ok()) {
         //Writing file chunks to stdout
         fwrite(input_buffer, last_bytes_read, 1, dst_file);
-        total_bytes_read += last_bytes_read;
         offset += last_bytes_read;
       } else {
         if(status.is_invalid_offset()){

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -337,7 +337,7 @@ public class PBImageCorruptionDetector extends PBImageTextWriter {
         if (parentId != -1) {
           entryBuilder.setParentId(parentId);
         }
-        printIfNotEmpty(entryBuilder.build());
+        printIfNotEmpty(serialOutStream(), entryBuilder.build());
       }
     }
   }

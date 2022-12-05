@@ -666,11 +666,11 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   }
 
   @Override
-  public synchronized void recoverContainer(SchedulerNode node,
+  public synchronized boolean recoverContainer(SchedulerNode node,
       RMContainer rmContainer) {
     writeLock.lock();
     try {
-      super.recoverContainer(node, rmContainer);
+      final boolean recovered = super.recoverContainer(node, rmContainer);
 
       if (!rmContainer.getState().equals(RMContainerState.COMPLETED)) {
         getQueue().incUsedResource(rmContainer.getContainer().getResource());
@@ -685,6 +685,8 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
         getQueue().addAMResourceUsage(resource);
         setAmRunning(true);
       }
+
+      return recovered;
     } finally {
       writeLock.unlock();
     }

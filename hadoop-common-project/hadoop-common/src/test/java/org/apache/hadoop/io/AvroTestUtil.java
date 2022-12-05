@@ -41,7 +41,7 @@ public class AvroTestUtil {
 
     // check that schema matches expected
     Schema s = ReflectData.get().getSchema(type);
-    assertEquals(Schema.parse(schema), s);
+    assertEquals(new Schema.Parser().parse(schema), s);
 
     // check that value is serialized correctly
     ReflectDatumWriter<Object> writer = new ReflectDatumWriter<Object>(s);

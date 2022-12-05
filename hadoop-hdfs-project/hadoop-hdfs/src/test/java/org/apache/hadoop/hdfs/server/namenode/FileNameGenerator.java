@@ -77,6 +77,10 @@ public class FileNameGenerator {
     return fn;
   }
 
+  public long getFileCount() {
+    return fileCount;
+  }
+
   private synchronized void reset() {
     Arrays.fill(pathIndecies, -1);
     fileCount = 0L;

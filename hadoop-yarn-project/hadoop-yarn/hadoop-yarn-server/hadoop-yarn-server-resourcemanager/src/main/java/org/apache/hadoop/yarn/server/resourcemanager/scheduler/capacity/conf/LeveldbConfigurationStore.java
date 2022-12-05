@@ -204,8 +204,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
   @Override
   public void confirmMutation(LogMutation pendingMutation,
       boolean isValid) {
-    WriteBatch updateBatch = db.createWriteBatch();
     if (isValid) {
+      WriteBatch updateBatch = db.createWriteBatch();
       for (Map.Entry<String, String> changes :
           pendingMutation.getUpdates().entrySet()) {
         if (changes.getValue() == null || changes.getValue().isEmpty()) {
@@ -215,8 +215,8 @@ public class LeveldbConfigurationStore extends YarnConfigurationStore {
         }
       }
       increaseConfigVersion();
+      db.write(updateBatch);
     }
-    db.write(updateBatch);
   }
 
   private byte[] serLogMutations(LinkedList<LogMutation> mutations) throws

@@ -33,7 +33,7 @@ public class BlockGrouper {
 
   /**
    * Set EC schema.
-   * @param schema
+   * @param schema schema.
    */
   public void setSchema(ECSchema schema) {
     this.schema = schema;
@@ -41,7 +41,7 @@ public class BlockGrouper {
 
   /**
    * Get EC schema.
-   * @return
+   * @return ECSchema.
    */
   protected ECSchema getSchema() {
     return schema;
@@ -67,7 +67,7 @@ public class BlockGrouper {
    * Calculating and organizing BlockGroup, to be called by ECManager
    * @param dataBlocks Data blocks to compute parity blocks against
    * @param parityBlocks To be computed parity blocks
-   * @return
+   * @return ECBlockGroup.
    */
   public ECBlockGroup makeBlockGroup(ECBlock[] dataBlocks,
                                      ECBlock[] parityBlocks) {

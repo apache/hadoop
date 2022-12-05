@@ -28,7 +28,7 @@ import com.amazonaws.services.s3.model.SelectObjectContentEvent;
 import com.amazonaws.services.s3.model.SelectObjectContentEventVisitor;
 import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.SelectRecordsInputStream;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.fs.s3a.S3AInputStream.validateReadahead;
@@ -337,7 +337,7 @@ public class SelectInputStream extends FSInputStream implements
 
   /**
    * Build an exception to raise when an operation is not supported here.
-   * @param action action which is unsupported.
+   * @param action action which is Unsupported.
    * @return an exception to throw.
    */
   protected PathIOException unsupported(final String action) {

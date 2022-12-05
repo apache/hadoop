@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
+import java.io.IOException;
+
+import org.junit.Before;
+import org.junit.Test;
+
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -26,10 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.io.IOException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -210,7 +211,7 @@ public class TestProportionalCapacityPreemptionPolicyInterQueueWithDRF
             "-b(=[20480:200 61440:600 0:0 20480:20 0]);" + // a
             "-c(=[20480:200 61440:600 0:0 0:0 0])"; // c
     String appsConfig =
-        //queueName\t(priority,resource,host,expression,#repeat,reserved)
+        // queueName\t(priority,resource,host,expression,#repeat,reserved,pending,user)
         "a\t" + "(1,1024:1,n1,,60,false,0:0,user1);" + // app1 in a
         "b\t" + "(1,0:0,n1,,0,false,20480:20,user2);"; // app2 in b
 

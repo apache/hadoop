@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.counters;
 
-import static org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 import java.io.DataInput;
 import java.io.DataOutput;

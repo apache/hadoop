@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.impl.LeaseRenewer;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -956,6 +957,44 @@ public class TestQuota {
     dfs.delete(file, false);
     dfs.setQuotaByStorageType(quotaDir20, StorageType.DEFAULT,
         6 * fileSpace);
+  }
+
+  @Test
+  public void testRenameInodeWithStorageType() throws IOException {
+    final int size = 64;
+    final short repl = 1;
+    final Path foo = new Path("/foo");
+    final Path bs1 = new Path(foo, "bs1");
+    final Path wow = new Path(bs1, "wow");
+    final Path bs2 = new Path(foo, "bs2");
+    final Path wow2 = new Path(bs2, "wow2");
+    final Path wow3 = new Path(bs2, "wow3");
+
+    dfs.mkdirs(bs1, FsPermission.getDirDefault());
+    dfs.mkdirs(bs2, FsPermission.getDirDefault());
+    dfs.setQuota(bs1, 1000, 434217728);
+    dfs.setQuota(bs2, 1000, 434217728);
+    // file wow3 without storage policy
+    DFSTestUtil.createFile(dfs, wow3, size, repl, 0);
+
+    dfs.setStoragePolicy(bs2, HdfsConstants.ONESSD_STORAGE_POLICY_NAME);
+
+    DFSTestUtil.createFile(dfs, wow, size, repl, 0);
+    DFSTestUtil.createFile(dfs, wow2, size, repl, 0);
+    assertTrue("Without storage policy, typeConsumed should be 0.",
+        dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD) == 0);
+    assertTrue("With storage policy, typeConsumed should not be 0.",
+        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) != 0);
+    // wow3 without storage policy , rename will not change typeConsumed
+    dfs.rename(wow3, bs1);
+    assertTrue("Rename src without storagePolicy, dst typeConsumed should not be changed.",
+        dfs.getQuotaUsage(bs2).getTypeConsumed(StorageType.SSD) == 0);
+
+    long srcTypeQuota = dfs.getQuotaUsage(bs2).getTypeQuota(StorageType.SSD);
+    dfs.rename(bs2, bs1);
+    long dstTypeQuota = dfs.getQuotaUsage(bs1).getTypeConsumed(StorageType.SSD);
+    assertTrue("Rename with storage policy, typeConsumed should not be 0.",
+        dstTypeQuota != srcTypeQuota);
   }
 
   private static void checkContentSummary(final ContentSummary expected,

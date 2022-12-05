@@ -18,7 +18,7 @@
 
 /**
  * These .proto interfaces are private and stable.
- * Please see http://wiki.apache.org/hadoop/Compatibility
+ * Please see https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/Compatibility.html
  * for what changes are allowed for a *stable* .proto interface.
  */
 
@@ -223,6 +223,7 @@ message HeartbeatResponseProto {
   optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 4;
   optional uint64 fullBlockReportLeaseId = 5 [ default = 0 ];
+  optional bool isSlownode = 6 [ default = false ];
 }
 
 /**
@@ -407,6 +408,9 @@ message CommitBlockSynchronizationResponseProto {
 message SlowPeerReportProto {
   optional string dataNodeId = 1;
   optional double aggregateLatency = 2;
+  optional double median = 3;
+  optional double mad = 4;
+  optional double upperLimitLatency = 5;
 }
 
 /**

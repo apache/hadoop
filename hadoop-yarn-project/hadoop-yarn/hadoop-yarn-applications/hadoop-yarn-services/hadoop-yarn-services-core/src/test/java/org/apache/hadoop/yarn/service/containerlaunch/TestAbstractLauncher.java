@@ -42,7 +42,6 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
     .DEFAULT_CONTAINER_RETRY_MAX;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;

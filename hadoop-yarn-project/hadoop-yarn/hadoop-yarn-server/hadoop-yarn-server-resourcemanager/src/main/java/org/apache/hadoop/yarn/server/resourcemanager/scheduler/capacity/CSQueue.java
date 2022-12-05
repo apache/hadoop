@@ -89,6 +89,19 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    */
   public String getQueuePath();
 
+  /**
+   * Gets the queue path object.
+   * @return the object of the queue
+   */
+  QueuePath getQueuePathObject();
+
+  /**
+   * Checks whether the queue is a dynamic queue (created dynamically in the fashion of auto queue
+   * creation v2).
+   * @return true, if it is a dynamic queue, false otherwise
+   */
+  boolean isDynamicQueue();
+
   public PrivilegedEntity getPrivilegedEntity();
 
   Resource getMaximumAllocation();
@@ -418,6 +431,14 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * @return effective queue capacity
    */
   Resource getEffectiveCapacity(String label);
+
+  /**
+   * Get configured capacity resource vector parsed from the capacity config
+   * of the queue.
+   * @param label node label (partition)
+   * @return capacity resource vector
+   */
+  QueueCapacityVector getConfiguredCapacityVector(String label);
 
   /**
    * Get effective capacity of queue. If min/max resource is configured,

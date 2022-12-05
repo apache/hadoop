@@ -99,7 +99,7 @@ public final class DtFileOperations {
    *  @param format a string equal to FORMAT_PB or FORMAT_JAVA.
    *  @param creds the Credentials object to be written out.
    *  @param conf a Configuration object passed along.
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public static void doFormattedWrite(
       File f, String format, Credentials creds, Configuration conf)
@@ -118,7 +118,7 @@ public final class DtFileOperations {
    *  @param alias print only tokens matching alias (null matches all).
    *  @param conf Configuration object passed along.
    *  @param out print to this stream.
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public static void printTokenFile(
       File tokenFile, Text alias, Configuration conf, PrintStream out)
@@ -170,7 +170,7 @@ public final class DtFileOperations {
    *  @param url pass this URL to fetcher after stripping any http/s prefix.
    *  @param renewer pass this renewer to the fetcher.
    *  @param conf Configuration object passed along.
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public static void getTokenFile(File tokenFile, String fileFormat,
       Text alias, Text service, String url, String renewer, Configuration conf)
@@ -225,7 +225,7 @@ public final class DtFileOperations {
    *  @param alias overwrite service field of fetched token with this text.
    *  @param service only apply alias to tokens matching this service text.
    *  @param conf Configuration object passed along.
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public static void aliasTokenFile(File tokenFile, String fileFormat,
       Text alias, Text service, Configuration conf) throws Exception {
@@ -246,7 +246,7 @@ public final class DtFileOperations {
    *  @param tokenFiles list of local File objects.  Last file holds the output.
    *  @param fileFormat a string equal to FORMAT_PB or FORMAT_JAVA, for output
    *  @param conf Configuration object passed along.
-   *  @throws IOException
+   *  @throws IOException raised on errors performing I/O.
    */
   public static void appendTokenFiles(
       ArrayList<File> tokenFiles, String fileFormat, Configuration conf)
@@ -269,8 +269,8 @@ public final class DtFileOperations {
    *  @param fileFormat a string equal to FORMAT_PB or FORMAT_JAVA, for output
    *  @param alias remove only tokens matching alias; null matches all.
    *  @param conf Configuration object passed along.
-   *  @throws IOException
-   *  @throws InterruptedException
+   *  @throws IOException raised on errors performing I/O.
+   *  @throws InterruptedException if the thread is interrupted.
    */
   public static void removeTokenFromFile(boolean cancel,
       File tokenFile, String fileFormat, Text alias, Configuration conf)
@@ -295,8 +295,8 @@ public final class DtFileOperations {
    *  @param fileFormat a string equal to FORMAT_PB or FORMAT_JAVA, for output
    *  @param alias renew only tokens matching alias; null matches all.
    *  @param conf Configuration object passed along.
-   *  @throws IOException
-   *  @throws InterruptedException
+   *  @throws IOException raised on errors performing I/O.
+   *  @throws InterruptedException if the thread is interrupted.
    */
   public static void renewTokenFile(
       File tokenFile, String fileFormat, Text alias, Configuration conf)

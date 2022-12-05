@@ -39,6 +39,7 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.Enumeration;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -72,7 +73,6 @@ import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.util.functional.CommonCallableSupplier.submit;
@@ -344,13 +344,13 @@ public abstract class GenericTestUtils {
   public static void assertGlobEquals(File dir, String pattern,
       String ... expectedMatches) throws IOException {
 
-    Set<String> found = Sets.newTreeSet();
+    Set<String> found = new TreeSet<>();
     for (File f : FileUtil.listFiles(dir)) {
       if (f.getName().matches(pattern)) {
         found.add(f.getName());
       }
     }
-    Set<String> expectedSet = Sets.newTreeSet(
+    Set<String> expectedSet = new TreeSet<>(
         Arrays.asList(expectedMatches));
     Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
         Joiner.on(",").join(expectedSet),

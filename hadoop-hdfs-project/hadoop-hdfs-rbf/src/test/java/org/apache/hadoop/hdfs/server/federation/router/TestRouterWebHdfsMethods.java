@@ -23,9 +23,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterConte
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -144,5 +148,25 @@ public class TestRouterWebHdfsMethods {
         .getNsFromDataNodeNetworkLocation("/row0"));
     assertEquals("", RouterWebHdfsMethods
         .getNsFromDataNodeNetworkLocation("whatever-rack-info1"));
+  }
+
+  @Test
+  public void testWebHdfsCreateWithInvalidPath() throws Exception {
+    // A path name include duplicated slashes.
+    String path = "//tmp//file";
+    assertResponse(path);
+  }
+
+  private void assertResponse(String path) throws IOException {
+    URL url = new URL(getUri(path));
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    // Assert response code.
+    assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, conn.getResponseCode());
+    // Assert exception.
+    Map<?, ?> response = WebHdfsFileSystem.jsonParse(conn, true);
+    assertEquals("InvalidPathException",
+        ((LinkedHashMap) response.get("RemoteException")).get("exception"));
+    conn.disconnect();
   }
 }

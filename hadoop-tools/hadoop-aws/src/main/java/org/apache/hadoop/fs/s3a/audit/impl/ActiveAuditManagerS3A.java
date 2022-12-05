@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.HandlerContextAware;
@@ -33,16 +34,17 @@ import com.amazonaws.handlers.HandlerAfterAttemptContext;
 import com.amazonaws.handlers.HandlerBeforeAttemptContext;
 import com.amazonaws.handlers.RequestHandler2;
 import com.amazonaws.http.HttpResponse;
-import com.amazonaws.services.s3.transfer.Transfer;
 import com.amazonaws.services.s3.transfer.internal.TransferStateChangeListener;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.impl.WeakReferenceThreadMap;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.audit.AWSAuditEventCallbacks;
@@ -88,6 +90,11 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HAN
  * then the IOStatistics counter for {@code AUDIT_FAILURE}
  * is incremented.
  *
+ * Uses the WeakReferenceThreadMap to store spans for threads.
+ * Provided a calling class retains a reference to the span,
+ * the active span will be retained.
+ *
+ *
  */
 @InterfaceAudience.Private
 public final class ActiveAuditManagerS3A
@@ -112,6 +119,14 @@ public final class ActiveAuditManagerS3A
       = "Span attached to request is not a wrapped span";
 
   /**
+   * Arbitrary threshold for triggering pruning on deactivation.
+   * High enough it doesn't happen very often, low enough
+   * that it will happen regularly on a busy system.
+   * Value: {@value}.
+   */
+  static final int PRUNE_THRESHOLD = 10_000;
+
+  /**
    * Audit service.
    */
   private OperationAuditor auditor;
@@ -128,11 +143,26 @@ public final class ActiveAuditManagerS3A
   private WrappingAuditSpan unbondedSpan;
 
   /**
+   * How many spans have to be deactivated before a prune is triggered?
+   * Fixed as a constant for now unless/until some pressing need
+   * for it to be made configurable ever surfaces.
+   */
+  private final int pruneThreshold = PRUNE_THRESHOLD;
+
+  /**
+   * Count down to next pruning.
+   */
+  private final AtomicInteger deactivationsBeforePrune = new AtomicInteger();
+
+  /**
    * Thread local span. This defaults to being
    * the unbonded span.
    */
-  private final ThreadLocal<WrappingAuditSpan> activeSpan =
-      ThreadLocal.withInitial(() -> getUnbondedSpan());
+
+  private final WeakReferenceThreadMap<WrappingAuditSpan> activeSpanMap =
+      new WeakReferenceThreadMap<>(
+          (k) -> getUnbondedSpan(),
+          this::noteSpanReferenceLost);
 
   /**
    * Destination for recording statistics, especially duration/count of
@@ -147,6 +177,7 @@ public final class ActiveAuditManagerS3A
   public ActiveAuditManagerS3A(final IOStatisticsStore iostatistics) {
     super("ActiveAuditManagerS3A");
     this.ioStatisticsStore = iostatistics;
+    this.deactivationsBeforePrune.set(pruneThreshold);
   }
 
   @Override
@@ -176,6 +207,13 @@ public final class ActiveAuditManagerS3A
     setUnbondedSpan(new WrappingAuditSpan(
         auditor.getUnbondedSpan(), false));
     LOG.debug("Started audit service {}", auditor);
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    // clear all references.
+    activeSpanMap.clear();
+    super.serviceStop();
   }
 
   @Override
@@ -225,7 +263,7 @@ public final class ActiveAuditManagerS3A
    * @return the active WrappingAuditSpan
    */
   private WrappingAuditSpan activeSpan() {
-    return activeSpan.get();
+    return activeSpanMap.getForCurrentThread();
   }
 
   /**
@@ -247,11 +285,64 @@ public final class ActiveAuditManagerS3A
    */
   private WrappingAuditSpan switchToActiveSpan(WrappingAuditSpan span) {
     if (span != null && span.isValidSpan()) {
-      activeSpan.set(span);
+      activeSpanMap.setForCurrentThread(span);
     } else {
-      activeSpan.set(unbondedSpan);
+      activeSpanMap.removeForCurrentThread();
     }
     return activeSpan();
+  }
+
+  /**
+   * Span reference lost from GC operations.
+   * This is only called when an attempt is made to retrieve on
+   * the active thread or when a prune operation is cleaning up.
+   *
+   * @param threadId thread ID.
+   */
+  private void noteSpanReferenceLost(long threadId) {
+    auditor.noteSpanReferenceLost(threadId);
+  }
+
+  /**
+   * Prune all null weak references, calling the referenceLost
+   * callback for each one.
+   *
+   * non-atomic and non-blocking.
+   * @return the number of entries pruned.
+   */
+  @VisibleForTesting
+  int prune() {
+    return activeSpanMap.prune();
+  }
+
+  /**
+   * remove the span from the reference map, shrinking the map in the process.
+   * if/when a new span is activated in the thread, a new entry will be created.
+   * and if queried for a span, the unbounded span will be automatically
+   * added to the map for this thread ID.
+   *
+   */
+  @VisibleForTesting
+  boolean removeActiveSpanFromMap() {
+    // remove from the map
+    activeSpanMap.removeForCurrentThread();
+    if (deactivationsBeforePrune.decrementAndGet() == 0) {
+      // trigger a prune
+      activeSpanMap.prune();
+      deactivationsBeforePrune.set(pruneThreshold);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get the map of threads to active spans; allows
+   * for testing of weak reference resolution after GC.
+   * @return the span map
+   */
+  @VisibleForTesting
+  WeakReferenceThreadMap<WrappingAuditSpan> getActiveSpanMap() {
+    return activeSpanMap;
   }
 
   /**
@@ -331,13 +422,7 @@ public final class ActiveAuditManagerS3A
   @Override
   public TransferStateChangeListener createStateChangeListener() {
     final WrappingAuditSpan span = activeSpan();
-    return new TransferStateChangeListener() {
-      @Override
-      public void transferStateChanged(final Transfer transfer,
-          final Transfer.TransferState state) {
-        switchToActiveSpan(span);
-      }
-    };
+    return (transfer, state) -> switchToActiveSpan(span);
   }
 
   @Override
@@ -641,16 +726,21 @@ public final class ActiveAuditManagerS3A
      */
     @Override
     public void deactivate() {
-      // no-op for invalid spans,
-      // so as to prevent the unbounded span from being closed
-      // and everything getting very confused.
-      if (!isValid || !isActive()) {
+
+      // span is inactive; ignore
+      if (!isActive()) {
         return;
       }
-      // deactivate the span
-      span.deactivate();
-      // and go to the unbounded one.
-      switchToActiveSpan(getUnbondedSpan());
+      // skipped for invalid spans,
+      // so as to prevent the unbounded span from being closed
+      // and everything getting very confused.
+      if (isValid) {
+        // deactivate the span
+        span.deactivate();
+      }
+      // remove the span from the reference map,
+      // sporadically triggering a prune operation.
+      removeActiveSpanFromMap();
     }
 
     /**

@@ -200,7 +200,7 @@ public class RouterQuotaUpdateService extends PeriodicService {
    * During this time, the quota usage cache will also be updated by
    * quota manager:
    * 1. Stale paths (entries) will be removed.
-   * 2. Existing entries will be override and updated.
+   * 2. Existing entries will be overridden and updated.
    * @return List of mount tables which quota was set.
    * @throws IOException
    */

@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
 /**
  * Implements the RequestInterceptor interface and provides common functionality
- * which can can be used and/or extended by other concrete intercepter classes.
+ * which can can be used and/or extended by other concrete interceptor classes.
  *
  */
 public abstract class AbstractRequestInterceptor implements

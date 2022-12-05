@@ -82,6 +82,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 ####
 # Install packages
 ####
+RUN pkg-resolver/install-cmake.sh debian:10
 RUN pkg-resolver/install-spotbugs.sh debian:10
 RUN pkg-resolver/install-boost.sh debian:10
 RUN pkg-resolver/install-protobuf.sh debian:10

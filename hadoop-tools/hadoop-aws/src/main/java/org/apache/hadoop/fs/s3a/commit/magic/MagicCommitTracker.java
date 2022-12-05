@@ -26,20 +26,26 @@ import java.util.Map;
 
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
+import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
+import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
+import org.apache.hadoop.util.Preconditions;
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_MARKER_PUT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 
 /**
  * Put tracker for Magic commits.
@@ -57,6 +63,7 @@ public class MagicCommitTracker extends PutTracker {
   private final WriteOperationHelper writer;
   private final String bucket;
   private static final byte[] EMPTY = new byte[0];
+  private final PutTrackerStatistics trackerStatistics;
 
   /**
    * Magic commit tracker.
@@ -66,19 +73,22 @@ public class MagicCommitTracker extends PutTracker {
    * @param destKey key for the destination
    * @param pendingsetKey key of the pendingset file
    * @param writer writer instance to use for operations; includes audit span
+   * @param trackerStatistics tracker statistics
    */
   public MagicCommitTracker(Path path,
       String bucket,
       String originalDestKey,
       String destKey,
       String pendingsetKey,
-      WriteOperationHelper writer) {
+      WriteOperationHelper writer,
+      PutTrackerStatistics trackerStatistics) {
     super(destKey);
     this.bucket = bucket;
     this.path = path;
     this.originalDestKey = originalDestKey;
     this.pendingPartKey = pendingsetKey;
     this.writer = writer;
+    this.trackerStatistics = requireNonNull(trackerStatistics);
     LOG.info("File {} is written as magic file to path {}",
         path, destKey);
   }
@@ -126,6 +136,19 @@ public class MagicCommitTracker extends PutTracker {
     Preconditions.checkArgument(!parts.isEmpty(),
         "No uploaded parts to save");
 
+    // put a 0-byte file with the name of the original under-magic path
+    // Add the final file length as a header
+    // this is done before the task commit, so its duration can be
+    // included in the statistics
+    Map<String, String> headers = new HashMap<>();
+    headers.put(X_HEADER_MAGIC_MARKER, Long.toString(bytesWritten));
+    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
+        originalDestKey,
+        new ByteArrayInputStream(EMPTY),
+        0,
+        new PutObjectOptions(true, null, headers));
+    upload(originalDestPut);
+
     // build the commit summary
     SinglePendingCommit commitData = new SinglePendingCommit();
     commitData.touch(System.currentTimeMillis());
@@ -138,7 +161,8 @@ public class MagicCommitTracker extends PutTracker {
     commitData.bindCommitData(parts);
     commitData.setIOStatistics(
         new IOStatisticsSnapshot(iostatistics));
-    byte[] bytes = commitData.toBytes();
+
+    byte[] bytes = commitData.toBytes(SinglePendingCommit.serializer());
     LOG.info("Uncommitted data pending to file {};"
             + " commit metadata for {} parts in {}. size: {} byte(s)",
         path.toUri(), parts.size(), pendingPartKey, bytesWritten);
@@ -148,19 +172,20 @@ public class MagicCommitTracker extends PutTracker {
         pendingPartKey,
         new ByteArrayInputStream(bytes),
         bytes.length, null);
-    writer.uploadObject(put);
-
-    // Add the final file length as a header
-    Map<String, String> headers = new HashMap<>();
-    headers.put(X_HEADER_MAGIC_MARKER, Long.toString(bytesWritten));
-    // now put a 0-byte file with the name of the original under-magic path
-    PutObjectRequest originalDestPut = writer.createPutObjectRequest(
-        originalDestKey,
-        new ByteArrayInputStream(EMPTY),
-        0,
-        headers);
-    writer.uploadObject(originalDestPut);
+    upload(put);
     return false;
+
+  }
+  /**
+   * PUT an object.
+   * @param request the request
+   * @throws IOException on problems
+   */
+  @Retries.RetryTranslated
+  private void upload(PutObjectRequest request) throws IOException {
+    trackDurationOfInvocation(trackerStatistics,
+        COMMITTER_MAGIC_MARKER_PUT.getSymbol(), () ->
+            writer.uploadObject(request, PutObjectOptions.keepingDirs()));
   }
 
   @Override

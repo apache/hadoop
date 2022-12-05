@@ -56,9 +56,9 @@ public class GlobExpander {
    * {a,b}/{c/\d}        - {a,b}/c/d
    * </pre>
    * 
-   * @param filePattern
+   * @param filePattern file pattern.
    * @return expanded file patterns
-   * @throws IOException
+   * @throws IOException raised on errors performing I/O.
    */
   public static List<String> expand(String filePattern) throws IOException {
     List<String> fullyExpanded = new ArrayList<String>();

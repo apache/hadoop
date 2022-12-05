@@ -72,6 +72,7 @@ public class RefreshRegistry {
   /**
    * Remove the registered object for a given identity.
    * @param identifier the resource to unregister
+   * @param handler input handler.
    * @return the true if removed
    */
   public synchronized boolean unregister(String identifier, RefreshHandler handler) {

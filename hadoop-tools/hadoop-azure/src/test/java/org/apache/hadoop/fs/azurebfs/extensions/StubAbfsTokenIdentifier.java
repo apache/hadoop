@@ -29,7 +29,7 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;

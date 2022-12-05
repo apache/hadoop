@@ -77,7 +77,7 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -582,12 +582,12 @@ public class FSImage implements Closeable {
 
     if (checkpointDirs == null || checkpointDirs.isEmpty()) {
       throw new IOException("Cannot import image from a checkpoint. "
-                            + "\"dfs.namenode.checkpoint.dir\" is not set." );
+                            + "\"dfs.namenode.checkpoint.dir\" is not set.");
     }
     
     if (checkpointEditsDirs == null || checkpointEditsDirs.isEmpty()) {
       throw new IOException("Cannot import image from a checkpoint. "
-                            + "\"dfs.namenode.checkpoint.dir\" is not set." );
+                            + "\"dfs.namenode.checkpoint.edits.dir\" is not set.");
     }
 
     FSImage realImage = target.getFSImage();
@@ -649,7 +649,7 @@ public class FSImage implements Closeable {
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
     target.clear();
-    LOG.debug("Reloading namespace from " + file);
+    LOG.debug("Reloading namespace from {}.", file);
     loadFSImage(file, target, null, false);
   }
 
@@ -728,7 +728,7 @@ public class FSImage implements Closeable {
     }
  
     for (EditLogInputStream l : editStreams) {
-      LOG.debug("Planning to load edit log stream: " + l);
+      LOG.debug("Planning to load edit log stream: {}.", l);
     }
     if (!editStreams.iterator().hasNext()) {
       LOG.info("No edit log streams selected.");
@@ -892,8 +892,10 @@ public class FSImage implements Closeable {
       FSNamesystem target, long maxTxnsToRead,
       StartupOption startOpt, MetaRecoveryContext recovery)
       throws IOException {
-    LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
-    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("About to load edits:\n  {}.", Joiner.on("\n  ").join(editStreams));
+    }
+
     long prevLastAppliedTxId = lastAppliedTxId;
     long remainingReadTxns = maxTxnsToRead;
     try {    
@@ -1348,10 +1350,10 @@ public class FSImage implements Closeable {
     final File fromFile = NNStorage.getStorageFile(sd, fromNnf, txid);
     final File toFile = NNStorage.getStorageFile(sd, toNnf, txid);
     // renameTo fails on Windows if the destination file already exists.
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("renaming  " + fromFile.getAbsolutePath() 
-                + " to " + toFile.getAbsolutePath());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("renaming  {} to {}", fromFile.getAbsoluteFile(), toFile.getAbsolutePath());
     }
+
     if (!fromFile.renameTo(toFile)) {
       if (!toFile.delete() || !fromFile.renameTo(toFile)) {
         throw new IOException("renaming  " + fromFile.getAbsolutePath() + " to "  + 

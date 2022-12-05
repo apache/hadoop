@@ -49,7 +49,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.deployService;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
@@ -162,11 +161,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     conf.setInt(YarnConfiguration.RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
         10_000);
 
-    // turn off DDB for the job resource bucket
     String host = jobResource.getHost();
-    conf.set(
-        String.format("fs.s3a.bucket.%s.metadatastore.impl", host),
-        S3GUARD_METASTORE_NULL);
     // and fix to the main endpoint if the caller has moved
     conf.set(
         String.format("fs.s3a.bucket.%s.endpoint", host), "");

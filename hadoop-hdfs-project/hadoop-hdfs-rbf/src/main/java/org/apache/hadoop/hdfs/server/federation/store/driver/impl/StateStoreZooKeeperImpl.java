@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
  * |--- MEMBERSHIP
  * |--- REBALANCER
  * |--- ROUTERS
+ * |--- DISABLE_NAMESERVICE
  */
 public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 

@@ -95,9 +95,11 @@ public class OperationDuration {
 
   /**
    * Get the duration in milliseconds.
-   * <p></p>
+   *
+   * <p>
    * This will be 0 until a call
    * to {@link #finished()} has been made.
+   * </p>
    * @return the currently recorded duration.
    */
   public long value() {

@@ -454,6 +454,68 @@ int main(int argc, char **argv) {
         hdfsCloseFile(lfs, localFile);
     }
 
+
+    {
+        // HDFS Open File Builder tests
+
+        exists = hdfsExists(fs, readPath);
+
+        if (exists) {
+            fprintf(stderr, "Failed to validate existence of %s\n", readPath);
+            shutdown_and_exit(cl, -1);
+        }
+
+        hdfsOpenFileBuilder *builder;
+        builder = hdfsOpenFileBuilderAlloc(fs, readPath);
+        hdfsOpenFileBuilderOpt(builder, "hello", "world");
+
+        hdfsOpenFileFuture *future;
+        future = hdfsOpenFileBuilderBuild(builder);
+
+        readFile = hdfsOpenFileFutureGet(future);
+        if (!hdfsOpenFileFutureCancel(future, 0)) {
+            fprintf(stderr, "Cancel on a completed Future should return false");
+            shutdown_and_exit(cl, -1);
+        }
+        hdfsOpenFileFutureFree(future);
+
+        memset(buffer, 0, sizeof(buffer));
+        num_read_bytes = hdfsRead(fs, readFile, (void *) buffer,
+                                  sizeof(buffer));
+        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
+            fprintf(stderr,
+                    "Failed to read. Expected %s but got %s (%d bytes)\n",
+                    fileContents, buffer, num_read_bytes);
+            shutdown_and_exit(cl, -1);
+        }
+        hdfsCloseFile(fs, readFile);
+
+        builder = hdfsOpenFileBuilderAlloc(fs, readPath);
+        hdfsOpenFileBuilderOpt(builder, "hello", "world");
+
+        future = hdfsOpenFileBuilderBuild(builder);
+
+        readFile = hdfsOpenFileFutureGetWithTimeout(future, 1, jDays);
+        if (!hdfsOpenFileFutureCancel(future, 0)) {
+            fprintf(stderr, "Cancel on a completed Future should return "
+                            "false");
+            shutdown_and_exit(cl, -1);
+        }
+        hdfsOpenFileFutureFree(future);
+
+        memset(buffer, 0, sizeof(buffer));
+        num_read_bytes = hdfsRead(fs, readFile, (void*)buffer,
+                                  sizeof(buffer));
+        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
+            fprintf(stderr, "Failed to read. Expected %s but got "
+                            "%s (%d bytes)\n", fileContents, buffer,
+                            num_read_bytes);
+            shutdown_and_exit(cl, -1);
+        }
+        memset(buffer, 0, strlen(fileContents + 1));
+        hdfsCloseFile(fs, readFile);
+    }
+
     totalResult = 0;
     result = 0;
     {

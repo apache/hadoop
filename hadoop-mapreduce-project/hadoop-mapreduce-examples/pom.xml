@@ -70,34 +70,40 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-       <groupId>org.apache.hadoop</groupId>
-       <artifactId>hadoop-hdfs</artifactId>
-       <scope>test</scope>
-       <type>test-jar</type>
-     </dependency>
-     <dependency>
-       <groupId>org.apache.hadoop</groupId>
-       <artifactId>hadoop-yarn-server-tests</artifactId>
-       <scope>test</scope>
-       <type>test-jar</type>
-     </dependency>
-     <dependency>
-       <groupId>org.apache.hadoop</groupId>
-       <artifactId>hadoop-mapreduce-client-app</artifactId>
-       <scope>provided</scope>
-     </dependency>
-     <dependency>
-       <groupId>org.apache.hadoop</groupId>
-       <artifactId>hadoop-mapreduce-client-app</artifactId>
-       <type>test-jar</type>
-       <scope>test</scope>
-     </dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+      <exclusions>
+        <exclusion>
+          <groupId>org.ow2.asm</groupId>
+          <artifactId>asm-commons</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-tests</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-app</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-app</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.sun.jersey.jersey-test-framework</groupId>
       <artifactId>jersey-test-framework-grizzly2</artifactId>
       <scope>test</scope>
     </dependency>
-     <dependency>
+    <dependency>
        <groupId>org.apache.hadoop</groupId>
        <artifactId>hadoop-mapreduce-client-hs</artifactId>
        <scope>test</scope>
@@ -106,12 +112,13 @@
        <groupId>org.hsqldb</groupId>
        <artifactId>hsqldb</artifactId>
        <scope>provided</scope>
+       <classifier>jdk8</classifier>
      </dependency>
      <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-guava</artifactId>
       <scope>provided</scope>
-     </dependency>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -119,6 +126,21 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -155,38 +177,6 @@
           </excludes>
         </configuration>
       </plugin>
-       <plugin>
-           <groupId>org.apache.maven.plugins</groupId>
-           <artifactId>maven-enforcer-plugin</artifactId>
-           <dependencies>
-               <dependency>
-                   <groupId>de.skuzzle.enforcer</groupId>
-                   <artifactId>restrict-imports-enforcer-rule</artifactId>
-                   <version>${restrict-imports.enforcer.version}</version>
-               </dependency>
-           </dependencies>
-           <executions>
-               <execution>
-                   <id>banned-illegal-imports</id>
-                   <phase>process-sources</phase>
-                   <goals>
-                       <goal>enforce</goal>
-                   </goals>
-                   <configuration>
-                       <rules>
-                           <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
-                               <includeTestCode>true</includeTestCode>
-                               <reason>Use hadoop-common provided VisibleForTesting rather than the one provided by Guava</reason>
-                               <bannedImports>
-                                   <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
-                                   <bannedImport>com.google.common.annotations.VisibleForTesting</bannedImport>
-                               </bannedImports>
-                           </restrictImports>
-                       </rules>
-                   </configuration>
-               </execution>
-           </executions>
-       </plugin>
    </plugins>
    </build>
 </project>

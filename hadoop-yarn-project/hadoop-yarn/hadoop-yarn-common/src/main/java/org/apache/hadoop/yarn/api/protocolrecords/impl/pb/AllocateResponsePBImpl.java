@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.CollectorInfo;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.EnhancedHeadroom;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
@@ -43,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.UpdatedContainer;
 import org.apache.hadoop.yarn.api.records.impl.pb.CollectorInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.EnhancedHeadroomPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NMTokenPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.PreemptionMessagePBImpl;
@@ -89,6 +91,7 @@ public class AllocateResponsePBImpl extends AllocateResponse {
   private Token amrmToken = null;
   private Priority appPriority = null;
   private CollectorInfo collectorInfo = null;
+  private EnhancedHeadroom enhancedHeadroom = null;
 
   public AllocateResponsePBImpl() {
     builder = AllocateResponseProto.newBuilder();
@@ -189,6 +192,9 @@ public class AllocateResponsePBImpl extends AllocateResponse {
       Iterable<ContainerProto> iterable =
           getContainerProtoIterable(this.containersFromPreviousAttempts);
       builder.addAllContainersFromPreviousAttempts(iterable);
+    }
+    if (this.enhancedHeadroom != null) {
+      builder.setEnhancedHeadroom(convertToProtoFormat(this.enhancedHeadroom));
     }
   }
 
@@ -422,6 +428,28 @@ public class AllocateResponsePBImpl extends AllocateResponse {
     this.amrmToken = amRMToken;
   }
 
+  @Override
+  public synchronized EnhancedHeadroom getEnhancedHeadroom() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (enhancedHeadroom != null) {
+      return enhancedHeadroom;
+    }
+    if (!p.hasEnhancedHeadroom()) {
+      return null;
+    }
+    this.enhancedHeadroom = convertFromProtoFormat(p.getEnhancedHeadroom());
+    return enhancedHeadroom;
+  }
+
+  @Override
+  public synchronized void setEnhancedHeadroom(
+      EnhancedHeadroom enhancedHeadroom) {
+    maybeInitBuilder();
+    if (enhancedHeadroom == null) {
+      builder.clearEnhancedHeadroom();
+    }
+    this.enhancedHeadroom = enhancedHeadroom;
+  }
 
   @Override
   public synchronized CollectorInfo getCollectorInfo() {
@@ -932,5 +960,15 @@ public class AllocateResponsePBImpl extends AllocateResponse {
 
   private PriorityProto convertToProtoFormat(Priority t) {
     return ((PriorityPBImpl)t).getProto();
+  }
+
+  private EnhancedHeadroomPBImpl convertFromProtoFormat(
+      YarnServiceProtos.EnhancedHeadroomProto p) {
+    return new EnhancedHeadroomPBImpl(p);
+  }
+
+  private YarnServiceProtos.EnhancedHeadroomProto convertToProtoFormat(
+      EnhancedHeadroom t) {
+    return ((EnhancedHeadroomPBImpl) t).getProto();
   }
 }

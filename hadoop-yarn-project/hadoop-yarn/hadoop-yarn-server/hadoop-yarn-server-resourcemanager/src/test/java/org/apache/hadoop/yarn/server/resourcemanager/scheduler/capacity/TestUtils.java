@@ -447,7 +447,14 @@ public class TestUtils {
   public static void applyResourceCommitRequest(Resource clusterResource,
       CSAssignment csAssignment,
       final Map<NodeId, FiCaSchedulerNode> nodes,
-      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps)
+      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps) throws IOException {
+    applyResourceCommitRequest(clusterResource, csAssignment, nodes, apps, null);
+  }
+
+  public static void applyResourceCommitRequest(Resource clusterResource,
+      CSAssignment csAssignment,
+      final Map<NodeId, FiCaSchedulerNode> nodes,
+      final Map<ApplicationAttemptId, FiCaSchedulerApp> apps, CapacitySchedulerConfiguration csConf)
       throws IOException {
     CapacityScheduler cs = new CapacityScheduler() {
       @Override
@@ -461,7 +468,7 @@ public class TestUtils {
         return apps.get(applicationAttemptId);
       }
     };
-
+    cs.setAsyncSchedulingConf(new CapacityScheduler.AsyncSchedulingConfiguration(csConf, cs));
     cs.setResourceCalculator(new DefaultResourceCalculator());
 
     cs.submitResourceCommitRequest(clusterResource,

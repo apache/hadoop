@@ -47,12 +47,12 @@ public final class ExecutorHelper {
       try {
         ((Future<?>) r).get();
       } catch (ExecutionException ee) {
-        LOG.warn(
-            "Execution exception when running task in " + Thread.currentThread()
+        LOG.debug(
+            "Execution exception when running task in {}", Thread.currentThread()
                 .getName());
         t = ee.getCause();
       } catch (InterruptedException ie) {
-        LOG.warn("Thread (" + Thread.currentThread() + ") interrupted: ", ie);
+        LOG.debug("Thread ( {} ) interrupted: ", Thread.currentThread(), ie);
         Thread.currentThread().interrupt();
       } catch (Throwable throwable) {
         t = throwable;
@@ -60,8 +60,8 @@ public final class ExecutorHelper {
     }
 
     if (t != null) {
-      LOG.warn("Caught exception in thread " + Thread
-          .currentThread().getName() + ": ", t);
+      LOG.warn("Caught exception in thread {}  + : ", Thread
+              .currentThread().getName(), t);
     }
   }
 

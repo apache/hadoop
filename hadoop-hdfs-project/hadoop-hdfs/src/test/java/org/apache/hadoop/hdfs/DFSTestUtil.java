@@ -72,7 +72,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import java.util.function.Supplier;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;

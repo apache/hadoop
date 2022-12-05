@@ -22,7 +22,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -86,7 +86,7 @@ public abstract class BlockInfo extends Block
 
   public BlockInfo(Block blk, short size) {
     super(blk);
-    this.triplets = new Object[3*size];
+    this.triplets = new Object[3 * size];
     this.bcId = INVALID_INODE_ID;
     this.replication = isStriped() ? 0 : size;
   }
@@ -126,34 +126,34 @@ public abstract class BlockInfo extends Block
 
   DatanodeStorageInfo getStorageInfo(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
-    return (DatanodeStorageInfo)triplets[index*3];
+    assert index >= 0 && index * 3 < triplets.length : "Index is out of bound";
+    return (DatanodeStorageInfo)triplets[index * 3];
   }
 
   BlockInfo getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+1];
+    assert index >= 0 && index * 3 + 1 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo)triplets[index * 3 + 1];
     assert info == null ||
         info.getClass().getName().startsWith(BlockInfo.class.getName()) :
-        "BlockInfo is expected at " + index*3;
+        "BlockInfo is expected at " + (index * 3 + 1);
     return info;
   }
 
   BlockInfo getNext(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo)triplets[index*3+2];
+    assert index >= 0 && index * 3 + 2 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo)triplets[index * 3 + 2];
     assert info == null || info.getClass().getName().startsWith(
         BlockInfo.class.getName()) :
-        "BlockInfo is expected at " + index*3;
+        "BlockInfo is expected at " + (index * 3 + 2);
     return info;
   }
 
   void setStorageInfo(int index, DatanodeStorageInfo storage) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
-    triplets[index*3] = storage;
+    assert index >= 0 && index * 3 < triplets.length : "Index is out of bound";
+    triplets[index * 3] = storage;
   }
 
   /**
@@ -166,9 +166,9 @@ public abstract class BlockInfo extends Block
    */
   BlockInfo setPrevious(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo) triplets[index*3+1];
-    triplets[index*3+1] = to;
+    assert index >= 0 && index * 3 + 1 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo) triplets[index * 3 + 1];
+    triplets[index * 3 + 1] = to;
     return info;
   }
 
@@ -182,9 +182,9 @@ public abstract class BlockInfo extends Block
    */
   BlockInfo setNext(int index, BlockInfo to) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    BlockInfo info = (BlockInfo) triplets[index*3+2];
-    triplets[index*3+2] = to;
+    assert index >= 0 && index * 3 + 2 < triplets.length : "Index is out of bound";
+    BlockInfo info = (BlockInfo) triplets[index * 3 + 2];
+    triplets[index * 3 + 2] = to;
     return info;
   }
 

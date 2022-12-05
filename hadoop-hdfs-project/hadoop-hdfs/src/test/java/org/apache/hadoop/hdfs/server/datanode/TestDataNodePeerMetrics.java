@@ -122,10 +122,16 @@ public class TestDataNodePeerMetrics {
     GenericTestUtils.waitFor(
         () -> rollingAverages.getStats(numSamples).size() > 0, 500, 5000);
     assertEquals(3, rollingAverages.getStats(numSamples).size());
+    String json = peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
+    for (String peerAddr : peerAddrList) {
+      assertThat(json, containsString(peerAddr));
+    }
     /* wait for stale report to be removed */
     GenericTestUtils.waitFor(
         () -> rollingAverages.getStats(numSamples).isEmpty(), 500, 10000);
     assertEquals(0, rollingAverages.getStats(numSamples).size());
+    json = peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
+    assertEquals("{}", json);
 
     /* dn can report peer metrics normally when it added back to cluster */
     for (String peerAddr : peerAddrList) {
@@ -138,6 +144,10 @@ public class TestDataNodePeerMetrics {
     GenericTestUtils.waitFor(
         () -> rollingAverages.getStats(numSamples).size() > 0, 500, 10000);
     assertEquals(3, rollingAverages.getStats(numSamples).size());
+    json = peerMetrics.dumpSendPacketDownstreamAvgInfoAsJson();
+    for (String peerAddr : peerAddrList) {
+      assertThat(json, containsString(peerAddr));
+    }
   }
 
   /**

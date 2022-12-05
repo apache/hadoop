@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSystem;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerDynamicEditException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,17 +42,15 @@ public class PlanQueue extends AbstractManagedParentQueue {
   private int maxAppsPerUserForReservation;
   private float userLimit;
   private float userLimitFactor;
-  protected CapacitySchedulerContext schedulerContext;
   private boolean showReservationsAsQueues;
 
-  public PlanQueue(CapacitySchedulerContext cs, String queueName,
+  public PlanQueue(CapacitySchedulerQueueContext queueContext, String queueName,
       CSQueue parent, CSQueue old) throws IOException {
-    super(cs, queueName, parent, old);
+    super(queueContext, queueName, parent, old);
     updateAbsoluteCapacities();
 
-    this.schedulerContext = cs;
     // Set the reservation queue attributes for the Plan
-    CapacitySchedulerConfiguration conf = cs.getConfiguration();
+    CapacitySchedulerConfiguration conf = queueContext.getConfiguration();
     String queuePath = super.getQueuePath();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);
@@ -106,7 +106,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
       }
 
       // Set new configs
-      setupQueueConfigs(clusterResource, csContext.getConfiguration());
+      setupQueueConfigs(clusterResource);
 
       updateQuotas(newlyParsedParentQueue.userLimit,
           newlyParsedParentQueue.userLimitFactor,
@@ -123,6 +123,23 @@ public class PlanQueue extends AbstractManagedParentQueue {
     } finally {
       writeLock.unlock();
     }
+  }
+
+  public ReservationQueue initializeDefaultInternalQueue() throws IOException {
+    //initializing the "internal" default queue, for SLS compatibility
+    String defReservationId =
+        getQueueName() + ReservationConstants.DEFAULT_QUEUE_SUFFIX;
+
+    ReservationQueue resQueue = new ReservationQueue(queueContext,
+        defReservationId, this);
+    try {
+      resQueue.initializeEntitlements();
+    } catch (SchedulerDynamicEditException e) {
+      throw new IllegalStateException(e);
+    }
+    childQueues.add(resQueue);
+
+    return resQueue;
   }
 
   private void updateQuotas(float newUserLimit, float newUserLimitFactor,

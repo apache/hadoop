@@ -709,11 +709,11 @@ public class SFTPFileSystem extends FileSystem {
 
   @Override
   public void close() throws IOException {
-    if (closed.getAndSet(true)) {
-      return;
-    }
     try {
       super.close();
+      if (closed.getAndSet(true)) {
+        return;
+      }
     } finally {
       if (connectionPool != null) {
         connectionPool.shutdown();

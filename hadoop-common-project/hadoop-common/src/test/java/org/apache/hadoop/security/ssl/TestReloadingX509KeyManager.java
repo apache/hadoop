@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security.ssl;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.BeforeClass;
@@ -32,6 +31,7 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Timer;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import static org.apache.hadoop.security.ssl.KeyStoreTestUtil.*;
 import static org.junit.Assert.assertEquals;

@@ -134,6 +134,41 @@
   </property>
 
   <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the corePoolSize of this thread pool,
+      the meaning of corePoolSize is the number of threads to keep in the pool.
+      the default value is 1.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.core-pool-size</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the maximumPoolSize of this thread pool,
+      the meaning of maximumPoolSize is the maximum number of threads to allow in the pool.
+      the default value is 5.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>
+      Resource manager dispatcher has a thread pool that prints EventQueue,
+      configure the keepAliveTime of this thread pool,
+      The meaning of keepAliveTime is as follows
+      when the number of threads is greater than the core,
+      this is the maximum time that excess idle threads will wait for new tasks before terminating.
+      the default value is 10s.
+    </description>
+    <name>yarn.dispatcher.print-thread-pool.keep-alive-time</name>
+    <value>10s</value>
+  </property>
+
+  <property>
     <description>The expiry interval for application master reporting.</description>
     <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
@@ -1009,6 +1044,33 @@
   </property>
 
   <property>
+    <description>
+      This setting enables/disables timeline server v1 publisher to publish timeline events in batch.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.enable-batch</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The size of timeline server v1 publisher sending events in one request.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.batch-size</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      When enable batch publishing in timeline server v1, we must avoid that the
+      publisher waits for a batch to be filled up and hold events in buffer for long
+      time. So we add another thread which send event's in the buffer periodically.
+      This config sets the interval of the cyclical sending thread.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.interval-seconds</name>
+    <value>60</value>
+  </property>
+
+  <property>
     <description>Number of diagnostics/failure messages can be saved in RM for
     log aggregation. It also defines the number of diagnostics/failure
     messages can be shown in log aggregation web ui.</description>
@@ -1048,6 +1110,18 @@
     </description>
     <name>yarn.resourcemanager.delegation.token.renew-interval</name>
     <value>86400000</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration is used for
+      how often the tokens are scanned for expired tokens in milliseconds.
+      the background thread(delegation token remover thread)
+      will delete expired tokens after the configured time.
+      the default value is 1h.
+    </description>
+    <name>yarn.resourcemanager.delegation.token.remove-scan-interval</name>
+    <value>1h</value>
   </property>
 
   <property>
@@ -1265,8 +1339,27 @@
   </property>
 
   <property>
-    <description>Max number of OPPORTUNISTIC containers to queue at the
-      nodemanager.</description>
+    <description>
+      At the NM, the policy to determine whether to queue an
+      OPPORTUNISTIC container or not.
+      If set to BY_QUEUE_LEN, uses the queue capacity, as set by
+      yarn.nodemanager.opportunistic-containers-max-queue-length
+      to limit how many containers to accept/queue.
+      If set to BY_RESOURCES, limits the number of containers
+      accepted based on the resource capacity of the node.
+    </description>
+    <name>yarn.nodemanager.opportunistic-containers-queue-policy</name>
+    <value>BY_QUEUE_LEN</value>
+  </property>
+
+  <property>
+    <description>
+      Max number of OPPORTUNISTIC containers to queue at the
+      nodemanager (NM). If the value is 0 or negative,
+      NMs do not allow any OPPORTUNISTIC containers.
+      If the value is positive, the NM caps the number of OPPORTUNISTIC
+      containers that can be queued at the NM.
+    </description>
     <name>yarn.nodemanager.opportunistic-containers-max-queue-length</name>
     <value>0</value>
   </property>
@@ -1500,6 +1593,15 @@
     </description>
     <name>yarn.log-aggregation-status.time-out.ms</name>
     <value>600000</value>
+  </property>
+
+  <property>
+    <description>Whether to clean up nodemanager logs when log aggregation is enabled. Setting to
+      false disables the cleanup nodemanager logging, and it causes disk full in the long run. Users
+      can set to false for test-only purpose.
+    </description>
+    <name>yarn.log-aggregation.enable-local-cleanup</name>
+    <value>true</value>
   </property>
 
   <property>
@@ -3385,13 +3487,42 @@
   <property>
     <description>
     When "yarn.node-labels.configuration-type" is configured with
-    "delegated-centralized", then periodically node labels are retrieved
-    from the node labels provider. This configuration is to define the
-    interval. If -1 is configured then node labels are retrieved from
-    provider only once for each node after it registers. Defaults to 30 mins.
+    "delegated-centralized", then node labels of all nodes
+    are updated by periodically retrieving node labels from the
+    provider. If -1 is configured then node labels are retrieved
+    from provider only once for each node after it registers.
+    Defaults to 30 mins.
     </description>
     <name>yarn.resourcemanager.node-labels.provider.fetch-interval-ms</name>
     <value>1800000</value>
+  </property>
+
+  <property>
+    <description>
+    When "yarn.node-labels.configuration-type" is configured with
+    "delegated-centralized", then node labels of newly registered
+    nodes are updated by periodically retrieving node labels from
+    the provider. Defaults to 30 secs.
+    </description>
+    <name>yarn.resourcemanager.node-labels.provider.update-newly-registered-nodes-interval-ms</name>
+    <value>30000</value>
+  </property>
+
+  <property>
+    <description>
+      Overwrites default-node-label-expression only for the ApplicationMaster
+      container. It is disabled by default.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.default-node-label-expression</name>
+  </property>
+
+  <property>
+    <description>
+      Flag to indicate whether the AM can be allocated to non-exclusive nodes or not.
+      Default is false.
+    </description>
+    <name>yarn.resourcemanager.node-labels.am.allow-non-exclusive-allocation</name>
+    <value>false</value>
   </property>
 
   <!-- Distributed Node Attributes Configuration -->
@@ -3551,6 +3682,16 @@
   </property>
   <property>
     <description>
+      Initial delay for federation state-store heartbeat service. Value is followed by a unit
+      specifier: ns, us, ms, s, m, h, d for nanoseconds, microseconds, milliseconds, seconds,
+      minutes, hours, days respectively. Values should provide units,
+      but seconds are assumed
+    </description>
+    <name>yarn.federation.state-store.heartbeat.initial-delay</name>
+    <value>30s</value>
+  </property>
+  <property>
+    <description>
       Machine list file to be loaded by the FederationSubCluster Resolver
     </description>
     <name>yarn.federation.machine-list</name>
@@ -3584,6 +3725,26 @@
     <description>The registry base directory for federation.</description>
     <name>yarn.federation.registry.base-dir</name>
     <value>yarnfederation/</value>
+  </property>
+
+  <property>
+    <description>
+      The number of retries to clear the app in the FederationStateStore,
+      the default value is 1, that is, after the app fails to clean up, it will retry the cleanup again.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-count</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>
+      Clear the sleep time of App retry in FederationStateStore.
+      When the app fails to clean up,
+      it will sleep for a period of time and then try to clean up.
+      The default value is 1s.
+    </description>
+    <name>yarn.federation.state-store.clean-up-retry-sleep-time</name>
+    <value>1s</value>
   </property>
 
   <!-- Other Configuration -->
@@ -4800,4 +4961,128 @@
     <name>yarn.resourcemanager.enable-node-untracked-without-include-path</name>
     <value>false</value>
   </property>
+
+  <property>
+    <name>yarn.scheduler.app-placement-allocator.class</name>
+    <value></value>
+    <description>
+      In the absence of APPLICATION_PLACEMENT_TYPE_CLASS from the RM
+      application scheduling environments, the value of this config
+      is used to determine the default implementation of AppPlacementAllocator.
+      If APPLICATION_PLACEMENT_TYPE_CLASS is absent from the application
+      scheduling env and this config also has no value present, then
+      default implementation LocalityAppPlacementAllocator is used.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.keytab.file</name>
+    <value></value>
+    <description>
+       The keytab file used by router to login as its
+       service principal. The principal name is configured with
+       dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal</name>
+    <value></value>
+    <description>
+      The Router service principal. This is typically set to
+      router/_HOST@REALM.TLD. Each Router will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both Router setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-enabled</name>
+    <value>false</value>
+    <description>
+      This configuration is used to enable the cache of AppsInfo.
+      If it is set to true, the cache is enabled.
+      If it is set to false, the cache is not enabled.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.webapp.appsinfo-cached-count</name>
+    <value>100</value>
+    <description>
+      When yarn.router.appsinfo-enabled is set to true,
+      the number of cached appsInfo.
+      Default is 100
+    </description>
+  </property>
+  
+  <property>
+    <name>yarn.router.webapp.cross-origin.enabled</name>
+    <value>false</value>
+    <description>
+      Flag to enable cross-origin (CORS) support for Yarn Router.
+      For Yarn Router, also add
+      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
+      configuration hadoop.http.filter.initializers in core-site.xml.
+    </description>
+  </property>
+  
+  <property>
+    <name>yarn.federation.state-store.max-applications</name>
+    <value>1000</value>
+    <description>
+      Yarn federation state-store supports querying the maximum number of apps.
+      Default is 1000.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.minimum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configurable is used to set the corePoolSize(minimumPoolSize)
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.maximum-pool-size</name>
+    <value>5</value>
+    <description>
+      This configuration is used to set the default value of maximumPoolSize
+      of the thread pool of the interceptor.
+      Default is 5.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
+    <value>0s</value>
+    <description>
+      This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+      Default is 0s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.submit.interval.time</name>
+    <value>10ms</value>
+    <description>
+      The interval Time between calling different subCluster requests.
+      Default is 10ms.
+    </description>
+  </property>
+
 </configuration>

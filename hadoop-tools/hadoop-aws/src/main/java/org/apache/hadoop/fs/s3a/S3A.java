@@ -33,10 +33,10 @@ import java.net.URISyntaxException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class S3A extends DelegateToFileSystem{
+public class S3A extends DelegateToFileSystem {
 
   public S3A(URI theUri, Configuration conf)
-          throws IOException, URISyntaxException {
+      throws IOException, URISyntaxException {
     super(theUri, new S3AFileSystem(), conf, "s3a", false);
   }
 
@@ -53,5 +53,14 @@ public class S3A extends DelegateToFileSystem{
     sb.append("; fsImpl=").append(fsImpl);
     sb.append('}');
     return sb.toString();
+  }
+
+  /**
+   * Close the file system; the FileContext API doesn't have an explicit close.
+   */
+  @Override
+  protected void finalize() throws Throwable {
+    fsImpl.close();
+    super.finalize();
   }
 }

@@ -23,14 +23,12 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.SdkClientException;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.junit.Assert;
 import org.junit.Before;
@@ -261,14 +259,6 @@ public class TestInvoker extends Assert {
         ex, retries, false);
   }
 
-  @Test
-  public void testRetryThrottledDDB() throws Throwable {
-    assertRetryAction("Expected retry on connection timeout",
-        RETRY_POLICY, RetryPolicy.RetryAction.RETRY,
-        new ProvisionedThroughputExceededException("IOPs"), 1, false);
-  }
-
-
   protected AmazonServiceException newThrottledException() {
     return serviceException(
         AWSServiceThrottledException.STATUS_CODE, "throttled");
@@ -444,33 +434,6 @@ public class TestInvoker extends Assert {
     int d = 0;
     assertOptionalUnset("quietly",
         quietlyEval("", "", () -> 3 / d));
-  }
-
-  @Test
-  public void testDynamoDBThrottleConversion() throws Throwable {
-    ProvisionedThroughputExceededException exceededException =
-        new ProvisionedThroughputExceededException("iops");
-    AWSServiceThrottledException ddb = verifyTranslated(
-        AWSServiceThrottledException.class, exceededException);
-    assertTrue(isThrottleException(exceededException));
-    assertTrue(isThrottleException(ddb));
-    assertRetryAction("Expected throttling retry",
-        RETRY_POLICY,
-        RetryPolicy.RetryAction.RETRY,
-        ddb, SAFE_RETRY_COUNT, false);
-    // and briefly attempt an operation
-    CatchCallback catcher = new CatchCallback();
-    AtomicBoolean invoked = new AtomicBoolean(false);
-    invoker.retry("test", null, false, catcher,
-        () -> {
-          if (!invoked.getAndSet(true)) {
-            throw exceededException;
-          }
-        });
-    // to verify that the ex was translated by the time it
-    // got to the callback
-    verifyExceptionClass(AWSServiceThrottledException.class,
-        catcher.lastException);
   }
 
   /**

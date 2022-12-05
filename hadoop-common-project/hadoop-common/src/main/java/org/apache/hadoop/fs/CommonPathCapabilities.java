@@ -146,4 +146,22 @@ public final class CommonPathCapabilities {
    */
   public static final String ABORTABLE_STREAM =
       "fs.capability.outputstream.abortable";
+
+  /**
+   * Does this FS support etags?
+   * That is: will FileStatus entries from listing/getFileStatus
+   * probes support EtagSource and return real values.
+   */
+  public static final String ETAGS_AVAILABLE =
+      "fs.capability.etags.available";
+
+  /**
+   * Are etags guaranteed to be preserved across rename() operations..
+   * FileSystems MUST NOT declare support for this feature
+   * unless this holds.
+   */
+  public static final String ETAGS_PRESERVED_IN_RENAME =
+      "fs.capability.etags.preserved.in.rename";
+
+
 }

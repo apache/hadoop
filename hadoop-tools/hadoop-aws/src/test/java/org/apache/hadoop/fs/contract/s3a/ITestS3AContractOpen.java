@@ -18,28 +18,26 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.FileNotFoundException;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractOpenTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * S3A contract tests opening files.
  */
 public class ITestS3AContractOpen extends AbstractContractOpenTest {
-
-  /**
-   * Create a configuration, possibly patching in S3Guard options.
-   * @return a configuration
-   */
-  @Override
-  protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
-    // patch in S3Guard options
-    maybeEnableS3Guard(conf);
-    return conf;
-  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
@@ -54,4 +52,59 @@ public class ITestS3AContractOpen extends AbstractContractOpenTest {
   protected boolean areZeroByteFilesEncrypted() {
     return true;
   }
+
+  @Test
+  public void testOpenFileApplyReadBadName() throws Throwable {
+    describe("use the apply sequence to read a whole file");
+    Path path = methodPath();
+    FileSystem fs = getFileSystem();
+    touch(fs, path);
+    FileStatus st = fs.getFileStatus(path);
+    // The final element of the path is different, so
+    // openFile must fail
+    FileStatus st2 = new FileStatus(
+        0, false,
+        st.getReplication(),
+        st.getBlockSize(),
+        st.getModificationTime(),
+        st.getAccessTime(),
+        st.getPermission(),
+        st.getOwner(),
+        st.getGroup(),
+        new Path("gopher:///localhost/something.txt"));
+    intercept(IllegalArgumentException.class, () ->
+        fs.openFile(path)
+            .withFileStatus(st2)
+            .build());
+  }
+
+  /**
+   * Pass in a directory reference and expect the openFile call
+   * to fail.
+   */
+  @Test
+  public void testOpenFileDirectory() throws Throwable {
+    describe("Change the status to a directory");
+    Path path = methodPath();
+    FileSystem fs = getFileSystem();
+    int len = 4096;
+    createFile(fs, path, true,
+        dataset(len, 0x40, 0x80));
+    FileStatus st = fs.getFileStatus(path);
+    FileStatus st2 = new FileStatus(
+        len, true,
+        st.getReplication(),
+        st.getBlockSize(),
+        st.getModificationTime(),
+        st.getAccessTime(),
+        st.getPermission(),
+        st.getOwner(),
+        st.getGroup(),
+        path);
+    intercept(FileNotFoundException.class, () ->
+        fs.openFile(path)
+            .withFileStatus(st2)
+            .build());
+  }
+
 }

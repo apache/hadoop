@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -184,7 +184,7 @@ public abstract class RamDiskReplicaTracker {
    * {@link org.apache.hadoop.hdfs.DFSConfigKeys#DFS_DATANODE_RAM_DISK_REPLICA_TRACKER_KEY}.
    *
    * @param conf the configuration to be used
-   * @param dataset the FsDataset object.
+   * @param fsDataset the FsDataset object.
    * @return an instance of RamDiskReplicaTracker
    */
   static RamDiskReplicaTracker getInstance(final Configuration conf,

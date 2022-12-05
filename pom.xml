@@ -95,13 +95,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
     <!-- maven plugin versions -->
     <maven-deploy-plugin.version>2.8.1</maven-deploy-plugin.version>
-    <maven-site-plugin.version>3.6</maven-site-plugin.version>
+    <maven-site-plugin.version>3.11.0</maven-site-plugin.version>
     <maven-stylus-skin.version>1.5</maven-stylus-skin.version>
     <maven-antrun-plugin.version>1.7</maven-antrun-plugin.version>
     <maven-assembly-plugin.version>2.4</maven-assembly-plugin.version>
     <maven-dependency-plugin.version>3.0.2</maven-dependency-plugin.version>
-    <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
-    <restrict-imports.enforcer.version>1.1.0</restrict-imports.enforcer.version>
+    <maven-enforcer-plugin.version>3.0.0</maven-enforcer-plugin.version>
+    <restrict-imports.enforcer.version>2.0.0</restrict-imports.enforcer.version>
     <maven-javadoc-plugin.version>3.0.1</maven-javadoc-plugin.version>
     <maven-gpg-plugin.version>1.5</maven-gpg-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
@@ -113,9 +113,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
     <checkstyle.version>8.29</checkstyle.version>
-    <dependency-check-maven.version>1.4.3</dependency-check-maven.version>
+    <dependency-check-maven.version>7.1.1</dependency-check-maven.version>
     <spotbugs.version>4.2.2</spotbugs.version>
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
+    <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
+    <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
 
     <shell-executable>bash</shell-executable>
 
@@ -177,27 +179,104 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               </goals>
               <configuration>
                 <rules>
-                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <restrictImports>
                     <includeTestCode>true</includeTestCode>
                     <reason>Use hadoop-thirdparty shaded instead of curator shaded</reason>
                     <bannedImports>
                       <bannedImport>org.apache.curator.shaded.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
-                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <restrictImports>
                     <includeTestCode>true</includeTestCode>
                     <reason>Use hadoop-common provided Sets rather than Guava provided Sets</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Sets</bannedImport>
-                      <bannedImport>com.google.common.collect.Sets</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Sets.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
-                  <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
+                  <restrictImports>
                     <includeTestCode>true</includeTestCode>
                     <reason>Use hadoop-common provided Lists rather than Guava provided Lists</reason>
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists</bannedImport>
-                      <bannedImport>com.google.common.collect.Lists</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.Lists.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-annotation provided VisibleForTesting rather than the one provided by Guava</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternatives to Guava common classes</reason>
+                    <bannedImports>
+                      <bannedImport>com.google.common.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided BaseEncoding</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Optional</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Optional</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Optional.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Function</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Function</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Function.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Predicate</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Predicate</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Predicate.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided Supplier</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Supplier</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Supplier.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use alternative to Guava provided ImmutableListMultimap</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableListMultimap.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use hadoop-common provided Preconditions rather than Guava provided</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Preconditions.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use Fasterxml Jackson 2 dependency in place of org.codehaus Jackson 1</reason>
+                    <bannedImports>
+                      <bannedImport>org.codehaus.jackson.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                 </rules>
@@ -234,11 +313,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
               <groupId>org.apache.maven.wagon</groupId>
               <artifactId>wagon-ssh</artifactId>
               <version>${wagon-ssh.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>org.apache.maven.doxia</groupId>
-              <artifactId>doxia-module-markdown</artifactId>
-              <version>1.8</version>
             </dependency>
           </dependencies>
         </plugin>
@@ -400,6 +474,16 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             </dependency>
           </dependencies>
         </plugin>
+        <plugin>
+          <groupId>org.jsonschema2pojo</groupId>
+          <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+          <version>${jsonschema2pojo-maven-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -466,6 +550,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>licenses-binary/**</exclude>
             <exclude>dev-support/docker/pkg-resolver/packages.json</exclude>
             <exclude>dev-support/docker/pkg-resolver/platforms.json</exclude>
+            <exclude>**/target/**</exclude>
          </excludes>
        </configuration>
       </plugin>

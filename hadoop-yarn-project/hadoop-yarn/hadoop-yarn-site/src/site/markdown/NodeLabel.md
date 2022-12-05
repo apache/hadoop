@@ -85,7 +85,8 @@ Notes:
 ###Add/modify node-to-labels mapping to YARN
 
 * Configuring nodes to labels mapping in **Centralized** NodeLabel setup
-    * Executing ```yarn rmadmin -replaceLabelsOnNode “node1[:port]=label1 node2=label2” [-failOnUnknownNodes]```. Added label1 to node1, label2 to node2. If user don’t specify port, it adds the label to all ```NodeManagers``` running on the node. If option ```-failOnUnknownNodes``` is set, this command will fail if specified nodes are unknown.
+    * Executing ```yarn rmadmin -replaceLabelsOnNode "node1[:port]=label1 node2=label2" [-failOnUnknownNodes]``` adds label1 to node1, label2 to node2. If user doesn’t specify port, it adds the label to all ```NodeManagers``` running on the node. If option ```-failOnUnknownNodes``` is set, this command will fail if specified nodes are unknown.
+    * To remove mapping from a node, use `-replaceLabelsOnNode` but do not specify any labels. For example, ```yarn rmadmin -replaceLabelsOnNode "node1"``` removes label1 from node1.
 
 * Configuring nodes to labels mapping in **Distributed** NodeLabel setup
 
@@ -168,6 +169,14 @@ Applications can use following Java APIs to specify node label to request
 * `ApplicationSubmissionContext.setNodeLabelExpression(..)` to set node label expression for all containers of the application.
 * `ResourceRequest.setNodeLabelExpression(..)` to set node label expression for individual resource requests. This can overwrite node label expression set in ApplicationSubmissionContext
 * Specify `setAMContainerResourceRequest.setNodeLabelExpression` in `ApplicationSubmissionContext` to indicate expected node label for application master container.
+
+__Default AM node-label Configuration__
+
+Property  | Value
+----- | ------
+yarn.resourcemanager.node-labels.am.default-node-label-expression | Overwrites default-node-label-expression only for the ApplicationMaster container. It is disabled by default.
+
+
 
 Monitoring
 ----------

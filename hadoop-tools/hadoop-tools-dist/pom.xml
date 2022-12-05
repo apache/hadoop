@@ -38,6 +38,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-streaming</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -84,12 +90,6 @@
       <artifactId>hadoop-pipes</artifactId>
       <scope>compile</scope>
       <type>pom</type>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-openstack</artifactId>
-      <scope>compile</scope>
       <version>${project.version}</version>
     </dependency>
     <dependency>

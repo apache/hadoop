@@ -53,7 +53,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Lists;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
 
@@ -192,7 +192,7 @@ public class EncryptionZoneManager {
     try {
       iip = dir.resolvePath(pc, zone, DirOp.READ);
     } finally {
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("pauseForTestingAfterNthCheckpoint");
     }
     reencryptionHandler
         .pauseForTestingAfterNthCheckpoint(iip.getLastINode().getId(), count);
@@ -224,7 +224,7 @@ public class EncryptionZoneManager {
       return getReencryptionStatus().getZoneStatus(inode.getId());
     } finally {
       dir.readUnlock();
-      dir.getFSNamesystem().readUnlock();
+      dir.getFSNamesystem().readUnlock("getZoneStatus");
     }
   }
 
@@ -285,7 +285,7 @@ public class EncryptionZoneManager {
     try {
       reencryptionHandler.stopThreads();
     } finally {
-      dir.getFSNamesystem().writeUnlock();
+      dir.getFSNamesystem().writeUnlock("stopReencryptThread");
     }
     if (reencryptHandlerExecutor != null) {
       reencryptHandlerExecutor.shutdownNow();

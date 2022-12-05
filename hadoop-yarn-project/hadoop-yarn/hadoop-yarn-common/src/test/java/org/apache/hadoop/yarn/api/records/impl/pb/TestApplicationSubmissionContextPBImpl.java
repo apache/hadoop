@@ -18,57 +18,66 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 public class TestApplicationSubmissionContextPBImpl {
-  @Parameter
   @SuppressWarnings("checkstyle:visibilitymodifier")
   public ApplicationSubmissionContextPBImpl impl;
 
-  @Test
-  public void testAppTagsLowerCaseConversionDefault() {
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertEquals(s, s.toLowerCase()));
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionDefault(
+      ApplicationSubmissionContextPBImpl applicationSubmissionContextPB) {
+    initTestApplicationSubmissionContextPBImpl(applicationSubmissionContextPB);
+    applicationSubmissionContextPB.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationSubmissionContextPB.getApplicationTags()
+        .forEach(s -> assertEquals(s, s.toLowerCase()));
   }
 
-  @Test
-  public void testAppTagsLowerCaseConversionDisabled() {
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionDisabled(
+      ApplicationSubmissionContextPBImpl applicationSubmissionContextPB) {
+    initTestApplicationSubmissionContextPBImpl(applicationSubmissionContextPB);
     ApplicationSubmissionContextPBImpl.setForceLowerCaseTags(false);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertNotEquals(s, s.toLowerCase()));
+    applicationSubmissionContextPB.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationSubmissionContextPB.getApplicationTags()
+        .forEach(s -> assertNotEquals(s, s.toLowerCase()));
   }
 
-  @Test
-  public void testAppTagsLowerCaseConversionEnabled() {
+  @MethodSource("data")
+  @ParameterizedTest
+  void testAppTagsLowerCaseConversionEnabled(
+      ApplicationSubmissionContextPBImpl applicationSubmissionContextPB) {
+    initTestApplicationSubmissionContextPBImpl(applicationSubmissionContextPB);
     ApplicationSubmissionContextPBImpl.setForceLowerCaseTags(true);
-    impl.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
-    impl.getApplicationTags().forEach(s ->
-        assertEquals(s, s.toLowerCase()));
+    applicationSubmissionContextPB.setApplicationTags(Sets.newHashSet("ABcd", "efgH"));
+    applicationSubmissionContextPB.getApplicationTags()
+        .forEach(s -> assertEquals(s, s.toLowerCase()));
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     List<Object[]> list = new ArrayList<>();
-    list.add(new Object[] {new ApplicationSubmissionContextPBImpl()});
-    list.add(new Object[] {new ApplicationSubmissionContextPBImpl(
+    list.add(new Object[]{new ApplicationSubmissionContextPBImpl()});
+    list.add(new Object[]{new ApplicationSubmissionContextPBImpl(
         ApplicationSubmissionContextProto.newBuilder().build())});
 
     return list;
+  }
+
+  public void initTestApplicationSubmissionContextPBImpl(
+      ApplicationSubmissionContextPBImpl applicationSubmissionContextPB) {
+    this.impl = applicationSubmissionContextPB;
   }
 }

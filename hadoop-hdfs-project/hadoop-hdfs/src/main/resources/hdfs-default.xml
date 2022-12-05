@@ -566,6 +566,17 @@
 </property>
 
 <property>
+   <name>dfs.namenode.ip-proxy-users</name>
+   <value></value>
+   <description>A comma separated list of user names that are allowed by the
+     NameNode to specify a different client IP address in the caller context.
+     This is used by Router-Based Federation (RBF) to provide the actual client's
+     IP address to the NameNode, which is critical to preserve data locality when
+     using RBF. If you are using RBF, add the user that runs the routers.
+   </description>
+</property>
+
+<property>
   <name>dfs.namenode.acls.enabled</name>
   <value>true</value>
   <description>
@@ -1640,7 +1651,7 @@
   <name>dfs.block.scanner.volume.bytes.per.second</name>
   <value>1048576</value>
   <description>
-        If this is 0, the DataNode's block scanner will be disabled.  If this
+        If this is configured less than or equal to zero, the DataNode's block scanner will be disabled.  If this
         is positive, this is the number of bytes per second that the DataNode's
         block scanner will try to scan from each volume.
   </description>
@@ -2484,6 +2495,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.max.slowdisks.to.exclude</name>
+  <value>0</value>
+  <description>
+    The number of slow disks that needs to be excluded. By default, this parameter is set to 0,
+    which disables excluding slow disk when choosing volume.
+  </description>
+</property>
+
+<property>
   <name>hadoop.user.group.metrics.percentiles.intervals</name>
   <value></value>
   <description>
@@ -2983,6 +3003,16 @@
 </property>
 
 <property>
+  <name>dfs.datanode.fsdatasetasyncdisk.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume used to process async disk
+    operations on the datanode. These threads consume I/O and CPU at the
+    same time. This will affect normal data node operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.cachereport.intervalMsec</name>
   <value>10000</value>
   <description>
@@ -3348,6 +3378,25 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.client.refresh.read-block-locations.register-automatically</name>
+    <value>true</value>
+    <description>
+      Whether to auto-register all DFSInputStreams for background LocatedBlock refreshes.
+      If false, user must manually register using DFSClient#addLocatedBlocksRefresh(DFSInputStream)
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.refresh.read-block-locations.threads</name>
+    <value>5</value>
+    <description>
+      Number of threads to use for refreshing LocatedBlocks of registered
+      DFSInputStreams. If a DFSClient opens many DFSInputStreams, increasing
+      this may help refresh them all in a timely manner.
+    </description>
+  </property>
+
 <property>
   <name>dfs.namenode.lease-recheck-interval-ms</name>
   <value>2000</value>
@@ -3413,30 +3462,6 @@
     mode, which will help to prevent writer threads from being starved, but can
     lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
     for more information on fair/non-fair locks.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.lock.read.write.enabled</name>
-  <value>true</value>
-  <description>If this is true, the FsDataset lock will be a read write lock. If
-    it is false, all locks will be a write lock.
-    Enabling this should give better datanode throughput, as many read only
-    functions can run concurrently under the read lock, when they would
-    previously have required the exclusive write lock. As the feature is
-    experimental, this switch can be used to disable the shared read lock, and
-    cause all lock acquisitions to use the exclusive write lock.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.lock-reporting-threshold-ms</name>
-  <value>300</value>
-  <description>When thread waits to obtain a lock, or a thread holds a lock for
-    more than the threshold, a log message will be written. Note that
-    dfs.lock.suppress.warning.interval ensures a single log message is
-    emitted per interval for waiting threads and a single message for holding
-    threads to avoid excessive logging.
   </description>
 </property>
 
@@ -3700,7 +3725,7 @@
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
-    This will prevent safe mode namenodes to become active while other standby
+    This will prevent safe mode namenodes to become active or observer while other standby
     namenodes might be ready to serve requests when it is set to true.
   </description>
 </property>
@@ -4082,6 +4107,14 @@
   </description>
 </property>
 <property>
+  <name>dfs.namenode.get-blocks.check.operation</name>
+  <value>true</value>
+  <description>
+    Set false to disable checkOperation and getBlocks for Balancer
+    will route to Standby NameNode for HA mode setup.
+  </description>
+</property>
+<property>
   <name>dfs.balancer.dispatcherThreads</name>
   <value>200</value>
   <description>
@@ -4220,14 +4253,18 @@
   <value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault</value>
   <description>
     Class representing block placement policy for non-striped files.
-    There are four block placement policies currently being supported:
+    There are six block placement policies currently being supported:
     BlockPlacementPolicyDefault, BlockPlacementPolicyWithNodeGroup,
-    BlockPlacementPolicyRackFaultTolerant and BlockPlacementPolicyWithUpgradeDomain.
+    BlockPlacementPolicyRackFaultTolerant, BlockPlacementPolicyWithUpgradeDomain,
+    AvailableSpaceBlockPlacementPolicy and AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
     BlockPlacementPolicyDefault chooses the desired number of targets
     for placing block replicas in a default way. BlockPlacementPolicyWithNodeGroup
     places block replicas on environment with node-group layer. BlockPlacementPolicyRackFaultTolerant
     places the replicas to more racks.
     BlockPlacementPolicyWithUpgradeDomain places block replicas that honors upgrade domain policy.
+    AvailableSpaceBlockPlacementPolicy places block replicas based on space balanced policy.
+    AvailableSpaceRackFaultTolerantBlockPlacementPolicy places block replicas based on
+    space balanced rack fault tolerant policy.
     The details of placing replicas are documented in the javadoc of the corresponding policy classes.
     The default policy is BlockPlacementPolicyDefault, and the corresponding class is
     org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault.
@@ -4667,6 +4704,24 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.datanode.ec.reconstruct.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for reading.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.ec.reconstruct.write.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that the EC reconstruction can utilize for writing.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
 <property>
   <name>dfs.datanode.fsdataset.factory</name>
   <value></value>
@@ -4890,13 +4945,29 @@
 
 <property>
   <name>dfs.journalnode.edit-cache-size.bytes</name>
-  <value>1048576</value>
+  <value></value>
   <description>
     The size, in bytes, of the in-memory cache of edits to keep on the
     JournalNode. This cache is used to serve edits for tailing via the RPC-based
     mechanism, and is only enabled when dfs.ha.tail-edits.in-progress is true.
     Transactions range in size but are around 200 bytes on average, so the
     default of 1MB can store around 5000 transactions.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.edit-cache-size.fraction</name>
+  <value>0.5f</value>
+  <description>
+    This ratio refers to the proportion of the maximum memory of the JVM.
+    Used to calculate the size of the edits cache that is kept in the JournalNode's memory.
+    This config is an alternative to the dfs.journalnode.edit-cache-size.bytes.
+    And it is used to serve edits for tailing via the RPC-based mechanism, and is only
+    enabled when dfs.ha.tail-edits.in-progress is true. Transactions range in size but
+    are around 200 bytes on average, so the default of 1MB can store around 5000 transactions.
+    So we can configure a reasonable value based on the maximum memory. The recommended value
+    is less than 0.9. If we set dfs.journalnode.edit-cache-size.bytes, this parameter will
+    not take effect.
   </description>
 </property>
 
@@ -5057,6 +5128,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.audit.log.with.remote.port</name>
+  <value>false</value>
+  <description>
+    If true, adds a port of RPC call to callerContext for all audit log events.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.available-space-block-placement-policy.balanced-space-preference-fraction</name>
   <value>0.6</value>
   <description>
@@ -5066,6 +5145,18 @@
     placing blocks on Datanodes with less disk space used.
   </description>
 </property>
+
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance</name>
+    <value>5</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+      this value will be set as 5 by default, Increases tolerance of
+      placing blocks on Datanodes with similar disk space used.
+    </description>
+  </property>
 
 <property>
   <name>
@@ -5092,7 +5183,17 @@
     high load increases as the value reaches near 0.
   </description>
 </property>
-
+<property>
+  <name>dfs.namenode.available-space-rack-fault-tolerant-block-placement-policy.balanced-space-tolerance</name>
+  <value>5</value>
+  <description>
+    Only used when the dfs.block.replicator.classname is set to
+    org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceRackFaultTolerantBlockPlacementPolicy.
+    Special value between 0 and 20, inclusive. if the value is set beyond the scope,
+    this value will be set as 5 by default, Increases tolerance of
+    placing blocks on Datanodes with similar disk space used.
+  </description>
+</property>
 <property>
   <name>dfs.namenode.backup.dnrpc-address</name>
   <value></value>
@@ -5261,6 +5362,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.remove.dead.datanode.batchnum</name>
+  <value>10</value>
+  <description>
+    Maximum number of datanodes removed by HeartbeatManager per scan.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.snapshot.capture.openfiles</name>
   <value>false</value>
   <description>
@@ -5421,6 +5530,14 @@
 </property>
 
 <property>
+  <name>dfs.storage.policy.satisfier.move.task.retry.max.attempts</name>
+  <value>3</value>
+  <description>
+    Max retries for moving task to satisfy the block storage policy.
+  </description>
+</property>
+
+<property>
   <name>dfs.storage.policy.satisfier.datanode.cache.refresh.interval.ms</name>
   <value>300000</value>
   <description>
@@ -5478,6 +5595,14 @@
   <description>
     If true, allows ECN (explicit congestion notification) from the
     Datanode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.slownode</name>
+  <value>false</value>
+  <description>
+    If true, allows slownode information to be replied to Client via PipelineAck.
   </description>
 </property>
 
@@ -6024,12 +6149,21 @@
   </property>
 
   <property>
-    <name>dfs.namenode.block.deletion.increment</name>
-    <value>1000</value>
+    <name>dfs.namenode.block.deletion.lock.threshold.ms</name>
+    <value>50</value>
     <description>
-      The number of block deletion increment.
-      This setting will control the block increment deletion rate to
-      ensure that other waiters on the lock can get in.
+      The limit of single time lock holding duration for the block asynchronous
+      deletion thread.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.block.deletion.unlock.interval.ms</name>
+    <value>10</value>
+    <description>
+      The sleep interval for yield lock.
+      When the single time lock holding duration of the block asynchronous deletion
+      thread exceeds limit, sleeping to yield lock.
     </description>
   </property>
 
@@ -6120,6 +6254,15 @@
       Permissions for the directories on on the local filesystem where
       the DFS journal node stores the edits. The permissions can either be
       octal or symbolic.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.journalnode.handler.count</name>
+    <value>5</value>
+    <description>
+      The number of JournalNode RPC server threads that listen to
+      requests from clients.
     </description>
   </property>
 
@@ -6268,6 +6411,58 @@
     <description>
       Nameservice resolver implementation used by datanode.
       Effective with dfs.nameservices.resolution-enabled on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.client.mark.slownode.as.badnode.threshold</name>
+    <value>10</value>
+    <description>
+      The threshold to mark a slownode as a badnode. If we get PipelineAck from
+      a slownode continuously for ${dfs.client.treat.slownode.as.badnode.threshold}
+      times, we should mark it as a badnode.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.lockmanager.trace</name>
+    <value>false</value>
+    <description>
+      If this is true, after shut down datanode lock Manager will print all leak
+      thread that not release by lock Manager. Only used for test or trace dead lock
+      problem. In produce default set false, because it's have little performance loss.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.fsck.connect.timeout</name>
+    <value>60000ms</value>
+    <description>
+      The amount of time the fsck client will wait to connect to the namenode
+      before timing out.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.fsck.read.timeout</name>
+    <value>60000ms</value>
+    <description>
+      The amount of time the fsck client will wait to read from the namenode
+      before timing out. If the namenode does not report progress more
+      frequently than this time, the client will give up waiting.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.output.stream.uniq.default.key</name>
+    <value>DEFAULT</value>
+    <description>
+      The default prefix key to construct the uniqKey for one DFSOutputStream.
+      If the namespace is DEFAULT, it's best to change this conf to other value.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.rbf.observer.read.enable</name>
+    <value>false</value>
+    <description>
+      Enables observer reads for clients. This should only be enabled when clients are using routers.
     </description>
   </property>
 </configuration>

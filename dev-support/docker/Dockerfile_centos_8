@@ -31,6 +31,13 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
     && chmod a+r pkg-resolver/*.json
 
 ######
+# Centos 8 has reached its EOL and the packages
+# are no longer available on mirror.centos.org site.
+# Please see https://www.centos.org/centos-linux-eol/
+######
+RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:8
+
+######
 # Install packages from yum
 ######
 # hadolint ignore=DL3008,SC2046

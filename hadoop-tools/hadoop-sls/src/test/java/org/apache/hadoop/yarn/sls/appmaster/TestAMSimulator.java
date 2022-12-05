@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.sls.appmaster;
 import com.codahale.metrics.MetricRegistry;
 import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.tools.rumen.datatypes.UserName;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -33,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.sls.AMDefinitionRumen;
+import org.apache.hadoop.yarn.sls.TaskContainerDefinition;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
@@ -57,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(Parameterized.class)
@@ -157,9 +161,20 @@ public class TestAMSimulator {
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();
     HashMap<ApplicationId, AMSimulator> map = new HashMap<>();
-    app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
-        appId, 0, SLSConfiguration.getAMContainerResource(conf), null, null,
-        map);
+
+    UserName mockUser = mock(UserName.class);
+    when(mockUser.getValue()).thenReturn("user1");
+    AMDefinitionRumen amDef =
+        AMDefinitionRumen.Builder.create()
+        .withUser(mockUser)
+        .withQueue(queue)
+        .withJobId(appId)
+        .withJobStartTime(0)
+        .withJobFinishTime(1000000L)
+        .withAmResource(SLSConfiguration.getAMContainerResource(conf))
+        .withTaskContainers(containers)
+        .build();
+    app.init(amDef, rm, null, true, 0, 1000, map);
     app.firstStep();
 
     verifySchedulerMetrics(appId);
@@ -184,9 +199,21 @@ public class TestAMSimulator {
       String queue = "default";
       List<ContainerSimulator> containers = new ArrayList<>();
       HashMap<ApplicationId, AMSimulator> map = new HashMap<>();
-      app.init(1000, containers, rm, null, 0, 1000000L, "user1", queue, true,
-          appId, 0, SLSConfiguration.getAMContainerResource(conf), "label1",
-          null, map);
+
+      UserName mockUser = mock(UserName.class);
+      when(mockUser.getValue()).thenReturn("user1");
+      AMDefinitionRumen amDef =
+          AMDefinitionRumen.Builder.create()
+              .withUser(mockUser)
+              .withQueue(queue)
+              .withJobId(appId)
+              .withJobStartTime(0)
+              .withJobFinishTime(1000000L)
+              .withAmResource(SLSConfiguration.getAMContainerResource(conf))
+              .withTaskContainers(containers)
+              .withLabelExpression("label1")
+              .build();
+      app.init(amDef, rm, null, true, 0, 1000, map);
       app.firstStep();
 
       verifySchedulerMetrics(appId);
@@ -201,7 +228,7 @@ public class TestAMSimulator {
   }
 
   @Test
-  public void testPackageRequests() {
+  public void testPackageRequests() throws YarnException {
     MockAMSimulator app = new MockAMSimulator();
     List<ContainerSimulator> containerSimulators = new ArrayList<>();
     Resource resource = Resources.createResource(1024);
@@ -209,12 +236,25 @@ public class TestAMSimulator {
     ExecutionType execType = ExecutionType.GUARANTEED;
     String type = "map";
 
-    ContainerSimulator s1 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType);
-    ContainerSimulator s2 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType);
-    ContainerSimulator s3 = new ContainerSimulator(resource, 100,
-        "/default-rack/h2", priority, type, execType);
+    TaskContainerDefinition.Builder builder =
+        TaskContainerDefinition.Builder.create()
+        .withResource(resource)
+        .withDuration(100)
+        .withPriority(1)
+        .withType(type)
+        .withExecutionType(execType)
+        .withAllocationId(-1)
+        .withRequestDelay(0);
+
+    ContainerSimulator s1 = ContainerSimulator
+        .createFromTaskContainerDefinition(
+            builder.withHostname("/default-rack/h1").build());
+    ContainerSimulator s2 = ContainerSimulator
+        .createFromTaskContainerDefinition(
+            builder.withHostname("/default-rack/h1").build());
+    ContainerSimulator s3 = ContainerSimulator
+        .createFromTaskContainerDefinition(
+            builder.withHostname("/default-rack/h2").build());
 
     containerSimulators.add(s1);
     containerSimulators.add(s2);
@@ -250,12 +290,15 @@ public class TestAMSimulator {
     Assert.assertEquals(2, nodeRequestCount);
 
     containerSimulators.clear();
-    s1 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType, 1, 0);
-    s2 = new ContainerSimulator(resource, 100,
-        "/default-rack/h1", priority, type, execType, 2, 0);
-    s3 = new ContainerSimulator(resource, 100,
-        "/default-rack/h2", priority, type, execType, 1, 0);
+    s1 = ContainerSimulator.createFromTaskContainerDefinition(
+        createDefaultTaskContainerDefMock(resource, priority, execType, type,
+            "/default-rack/h1", 1));
+    s2 = ContainerSimulator.createFromTaskContainerDefinition(
+        createDefaultTaskContainerDefMock(resource, priority, execType, type,
+            "/default-rack/h1", 2));
+    s3 = ContainerSimulator.createFromTaskContainerDefinition(
+        createDefaultTaskContainerDefMock(resource, priority, execType, type,
+            "/default-rack/h2", 1));
 
     containerSimulators.add(s1);
     containerSimulators.add(s2);
@@ -316,6 +359,20 @@ public class TestAMSimulator {
     app.lastStep();
     Assert.assertFalse(nm.getNode().getRunningApps().contains(app.appId));
     Assert.assertTrue(nm.getNode().getRunningApps().isEmpty());
+  }
+  private TaskContainerDefinition createDefaultTaskContainerDefMock(
+      Resource resource, int priority, ExecutionType execType, String type,
+      String hostname, long allocationId) {
+    TaskContainerDefinition taskContainerDef =
+        mock(TaskContainerDefinition.class);
+    when(taskContainerDef.getResource()).thenReturn(resource);
+    when(taskContainerDef.getDuration()).thenReturn(100L);
+    when(taskContainerDef.getPriority()).thenReturn(priority);
+    when(taskContainerDef.getType()).thenReturn(type);
+    when(taskContainerDef.getExecutionType()).thenReturn(execType);
+    when(taskContainerDef.getHostname()).thenReturn(hostname);
+    when(taskContainerDef.getAllocationId()).thenReturn(allocationId);
+    return taskContainerDef;
   }
 
   @After

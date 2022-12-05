@@ -24,7 +24,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.curator.ZKCuratorManager;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -63,8 +67,23 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyCo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterIdPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterInfoPBImpl;
 import org.apache.hadoop.yarn.server.federation.store.records.impl.pb.SubClusterPolicyConfigurationPBImpl;
@@ -72,12 +91,18 @@ import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicatio
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
+import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.records.Version;
+import org.apache.hadoop.yarn.api.records.ReservationId;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.apache.zookeeper.data.ACL;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
+
+import static org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils.filterHomeSubCluster;
 
 /**
  * ZooKeeper implementation of {@link FederationStateStore}.
@@ -91,8 +116,11 @@ import org.apache.hadoop.thirdparty.protobuf.InvalidProtocolBufferException;
  * |     |----- APP1
  * |     |----- APP2
  * |--- POLICY
- *       |----- QUEUE1
- *       |----- QUEUE1
+ * |     |----- QUEUE1
+ * |     |----- QUEUE1
+ * |--- RESERVATION
+ * |     |----- RESERVATION1
+ * |     |----- RESERVATION2
  */
 public class ZookeeperFederationStateStore implements FederationStateStore {
 
@@ -102,6 +130,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private final static String ROOT_ZNODE_NAME_MEMBERSHIP = "memberships";
   private final static String ROOT_ZNODE_NAME_APPLICATION = "applications";
   private final static String ROOT_ZNODE_NAME_POLICY = "policies";
+  private final static String ROOT_ZNODE_NAME_RESERVATION = "reservation";
 
   /** Interface to Zookeeper. */
   private ZKCuratorManager zkManager;
@@ -112,10 +141,22 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private String appsZNode;
   private String membershipZNode;
   private String policiesZNode;
+  private String reservationsZNode;
+  private int maxAppsInStateStore;
+
+  private volatile Clock clock = SystemClock.getInstance();
+
+  @VisibleForTesting
+  private ZKFederationStateStoreOpDurations opDurations =
+      ZKFederationStateStoreOpDurations.getInstance();
 
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("Initializing ZooKeeper connection");
+
+    maxAppsInStateStore = conf.getInt(
+       YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS,
+       YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS);
 
     baseZNode = conf.get(
         YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
@@ -131,6 +172,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     membershipZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_MEMBERSHIP);
     appsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_APPLICATION);
     policiesZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_POLICY);
+    reservationsZNode = getNodePath(baseZNode, ROOT_ZNODE_NAME_RESERVATION);
 
     // Create base znode for each entity
     try {
@@ -138,11 +180,11 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       zkManager.createRootDirRecursively(membershipZNode, zkAcl);
       zkManager.createRootDirRecursively(appsZNode, zkAcl);
       zkManager.createRootDirRecursively(policiesZNode, zkAcl);
+      zkManager.createRootDirRecursively(reservationsZNode, zkAcl);
     } catch (Exception e) {
       String errMsg = "Cannot create base directories: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
   }
 
   @Override
@@ -156,6 +198,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public AddApplicationHomeSubClusterResponse addApplicationHomeSubCluster(
       AddApplicationHomeSubClusterRequest request) throws YarnException {
 
+    long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster app = request.getApplicationHomeSubCluster();
     ApplicationId appId = app.getApplicationId();
@@ -176,7 +219,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot check app home subcluster for " + appId;
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
+    long end = clock.getTime();
+    opDurations.addAppHomeSubClusterDuration(start, end);
     return AddApplicationHomeSubClusterResponse
         .newInstance(homeSubCluster);
   }
@@ -187,6 +231,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
           UpdateApplicationHomeSubClusterRequest request)
               throws YarnException {
 
+    long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationHomeSubCluster app = request.getApplicationHomeSubCluster();
     ApplicationId appId = app.getApplicationId();
@@ -198,6 +243,9 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     SubClusterId newSubClusterId =
         request.getApplicationHomeSubCluster().getHomeSubCluster();
     putApp(appId, newSubClusterId, true);
+
+    long end = clock.getTime();
+    opDurations.addUpdateAppHomeSubClusterDuration(start, end);
     return UpdateApplicationHomeSubClusterResponse.newInstance();
   }
 
@@ -205,6 +253,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   public GetApplicationHomeSubClusterResponse getApplicationHomeSubCluster(
       GetApplicationHomeSubClusterRequest request) throws YarnException {
 
+    long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     SubClusterId homeSubCluster = getApp(appId);
@@ -212,29 +261,52 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Application " + appId + " does not exist";
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-    return GetApplicationHomeSubClusterResponse.newInstance(
-        ApplicationHomeSubCluster.newInstance(appId, homeSubCluster));
+    long end = clock.getTime();
+    opDurations.addGetAppHomeSubClusterDuration(start, end);
+    return GetApplicationHomeSubClusterResponse.newInstance(appId, homeSubCluster);
   }
 
   @Override
   public GetApplicationsHomeSubClusterResponse getApplicationsHomeSubCluster(
       GetApplicationsHomeSubClusterRequest request) throws YarnException {
-    List<ApplicationHomeSubCluster> result = new ArrayList<>();
+
+    if (request == null) {
+      throw new YarnException("Missing getApplicationsHomeSubCluster request");
+    }
 
     try {
-      for (String child : zkManager.getChildren(appsZNode)) {
-        ApplicationId appId = ApplicationId.fromString(child);
-        SubClusterId homeSubCluster = getApp(appId);
-        ApplicationHomeSubCluster app =
-            ApplicationHomeSubCluster.newInstance(appId, homeSubCluster);
-        result.add(app);
-      }
+      long start = clock.getTime();
+      SubClusterId requestSC = request.getSubClusterId();
+      List<String> children = zkManager.getChildren(appsZNode);
+      List<ApplicationHomeSubCluster> result = children.stream()
+          .map(child -> generateAppHomeSC(child))
+          .sorted(Comparator.comparing(ApplicationHomeSubCluster::getCreateTime).reversed())
+          .filter(appHomeSC -> filterHomeSubCluster(requestSC, appHomeSC.getHomeSubCluster()))
+          .limit(maxAppsInStateStore)
+          .collect(Collectors.toList());
+      long end = clock.getTime();
+      opDurations.addGetAppsHomeSubClusterDuration(start, end);
+      LOG.info("filterSubClusterId = {}, appCount = {}.", requestSC, result.size());
+      return GetApplicationsHomeSubClusterResponse.newInstance(result);
     } catch (Exception e) {
       String errMsg = "Cannot get apps: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
 
-    return GetApplicationsHomeSubClusterResponse.newInstance(result);
+    throw new YarnException("Cannot get app by request");
+  }
+
+  private ApplicationHomeSubCluster generateAppHomeSC(String appId) {
+    try {
+      ApplicationId applicationId = ApplicationId.fromString(appId);
+      SubClusterId homeSubCluster = getApp(applicationId);
+      ApplicationHomeSubCluster app =
+          ApplicationHomeSubCluster.newInstance(applicationId, homeSubCluster);
+      return app;
+    } catch (Exception ex) {
+      LOG.error("get homeSubCluster by appId = {}.", appId);
+    }
+    return null;
   }
 
   @Override
@@ -242,7 +314,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       deleteApplicationHomeSubCluster(
           DeleteApplicationHomeSubClusterRequest request)
               throws YarnException {
-
+    long start = clock.getTime();
     FederationApplicationHomeSubClusterStoreInputValidator.validate(request);
     ApplicationId appId = request.getApplicationId();
     String appZNode = getNodePath(appsZNode, appId.toString());
@@ -265,13 +337,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot delete app: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
-
+    long end = clock.getTime();
+    opDurations.addDeleteAppHomeSubClusterDuration(start, end);
     return DeleteApplicationHomeSubClusterResponse.newInstance();
   }
 
   @Override
   public SubClusterRegisterResponse registerSubCluster(
       SubClusterRegisterRequest request) throws YarnException {
+    long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterInfo subClusterInfo = request.getSubClusterInfo();
     SubClusterId subclusterId = subClusterInfo.getSubClusterId();
@@ -286,12 +360,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot register subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+    long end = clock.getTime();
+    opDurations.addRegisterSubClusterDuration(start, end);
     return SubClusterRegisterResponse.newInstance();
   }
 
   @Override
   public SubClusterDeregisterResponse deregisterSubCluster(
       SubClusterDeregisterRequest request) throws YarnException {
+    long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     SubClusterState state = request.getState();
@@ -305,14 +382,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       subClusterInfo.setState(state);
       putSubclusterInfo(subClusterId, subClusterInfo, true);
     }
-
+    long end = clock.getTime();
+    opDurations.addDeregisterSubClusterDuration(start, end);
     return SubClusterDeregisterResponse.newInstance();
   }
 
   @Override
   public SubClusterHeartbeatResponse subClusterHeartbeat(
       SubClusterHeartbeatRequest request) throws YarnException {
-
+    long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
 
@@ -329,14 +407,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     subClusterInfo.setCapability(request.getCapability());
 
     putSubclusterInfo(subClusterId, subClusterInfo, true);
-
+    long end = clock.getTime();
+    opDurations.addSubClusterHeartbeatDuration(start, end);
     return SubClusterHeartbeatResponse.newInstance();
   }
 
   @Override
   public GetSubClusterInfoResponse getSubCluster(
       GetSubClusterInfoRequest request) throws YarnException {
-
+    long start = clock.getTime();
     FederationMembershipStateStoreInputValidator.validate(request);
     SubClusterId subClusterId = request.getSubClusterId();
     SubClusterInfo subClusterInfo = null;
@@ -350,12 +429,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subcluster: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+    long end = clock.getTime();
+    opDurations.addGetSubClusterDuration(start, end);
     return GetSubClusterInfoResponse.newInstance(subClusterInfo);
   }
 
   @Override
   public GetSubClustersInfoResponse getSubClusters(
       GetSubClustersInfoRequest request) throws YarnException {
+    long start = clock.getTime();
     List<SubClusterInfo> result = new ArrayList<>();
 
     try {
@@ -371,6 +453,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get subclusters: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+    long end = clock.getTime();
+    opDurations.addGetSubClustersDuration(start, end);
     return GetSubClustersInfoResponse.newInstance(result);
   }
 
@@ -378,7 +462,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public GetSubClusterPolicyConfigurationResponse getPolicyConfiguration(
       GetSubClusterPolicyConfigurationRequest request) throws YarnException {
-
+    long start = clock.getTime();
     FederationPolicyStoreInputValidator.validate(request);
     String queue = request.getQueue();
     SubClusterPolicyConfiguration policy = null;
@@ -393,6 +477,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       LOG.warn("Policy for queue: {} does not exist.", queue);
       return null;
     }
+    long end = clock.getTime();
+    opDurations.addGetPolicyConfigurationDuration(start, end);
     return GetSubClusterPolicyConfigurationResponse
         .newInstance(policy);
   }
@@ -400,7 +486,7 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   @Override
   public SetSubClusterPolicyConfigurationResponse setPolicyConfiguration(
       SetSubClusterPolicyConfigurationRequest request) throws YarnException {
-
+    long start = clock.getTime();
     FederationPolicyStoreInputValidator.validate(request);
     SubClusterPolicyConfiguration policy =
         request.getPolicyConfiguration();
@@ -411,12 +497,15 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot set policy: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+    long end = clock.getTime();
+    opDurations.addSetPolicyConfigurationDuration(start, end);
     return SetSubClusterPolicyConfigurationResponse.newInstance();
   }
 
   @Override
   public GetSubClusterPoliciesConfigurationsResponse getPoliciesConfigurations(
       GetSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    long start = clock.getTime();
     List<SubClusterPolicyConfiguration> result = new ArrayList<>();
 
     try {
@@ -432,6 +521,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
       String errMsg = "Cannot get policies: " + e.getMessage();
       FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
     }
+    long end = clock.getTime();
+    opDurations.addGetPoliciesConfigurationsDuration(start, end);
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
   }
 
@@ -636,5 +727,204 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
   private static long getCurrentTime() {
     Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     return cal.getTimeInMillis();
+  }
+
+  private void putReservation(final ReservationId reservationId,
+      final SubClusterId subClusterId, boolean update) throws YarnException {
+    String reservationZNode = getNodePath(reservationsZNode, reservationId.toString());
+    SubClusterIdProto proto = ((SubClusterIdPBImpl)subClusterId).getProto();
+    byte[] data = proto.toByteArray();
+    put(reservationZNode, data, update);
+  }
+
+  private SubClusterId getReservation(final ReservationId reservationId)
+      throws YarnException {
+    String reservationIdZNode = getNodePath(reservationsZNode, reservationId.toString());
+    SubClusterId subClusterId = null;
+    byte[] data = get(reservationIdZNode);
+    if (data != null) {
+      try {
+        subClusterId = new SubClusterIdPBImpl(SubClusterIdProto.parseFrom(data));
+      } catch (InvalidProtocolBufferException e) {
+        String errMsg = "Cannot parse reservation at " + reservationId;
+        FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+      }
+    }
+    return subClusterId;
+  }
+
+  @VisibleForTesting
+  public ZKFederationStateStoreOpDurations getOpDurations() {
+    return opDurations;
+  }
+
+  @Override
+  public AddReservationHomeSubClusterResponse addReservationHomeSubCluster(
+      AddReservationHomeSubClusterRequest request) throws YarnException {
+
+    long start = clock.getTime();
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
+    ReservationId reservationId = reservationHomeSubCluster.getReservationId();
+
+    // Try to write the subcluster
+    SubClusterId homeSubCluster = reservationHomeSubCluster.getHomeSubCluster();
+    try {
+      putReservation(reservationId, homeSubCluster, false);
+    } catch (Exception e) {
+      String errMsg = "Cannot add reservation home subcluster for " + reservationId;
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    // Check for the actual subcluster
+    try {
+      homeSubCluster = getReservation(reservationId);
+    } catch (Exception e) {
+      String errMsg = "Cannot check app home subcluster for " + reservationId;
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+    long end = clock.getTime();
+    opDurations.addReservationHomeSubClusterDuration(start, end);
+    return AddReservationHomeSubClusterResponse.newInstance(homeSubCluster);
+  }
+
+  @Override
+  public GetReservationHomeSubClusterResponse getReservationHomeSubCluster(
+      GetReservationHomeSubClusterRequest request) throws YarnException {
+
+    long start = clock.getTime();
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationId();
+    SubClusterId homeSubCluster = getReservation(reservationId);
+
+    if (homeSubCluster == null) {
+      String errMsg = "Reservation " + reservationId + " does not exist";
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    ReservationHomeSubCluster reservationHomeSubCluster =
+        ReservationHomeSubCluster.newInstance(reservationId, homeSubCluster);
+    long end = clock.getTime();
+    opDurations.addGetReservationHomeSubClusterDuration(start, end);
+    return GetReservationHomeSubClusterResponse.newInstance(reservationHomeSubCluster);
+  }
+
+  @Override
+  public GetReservationsHomeSubClusterResponse getReservationsHomeSubCluster(
+      GetReservationsHomeSubClusterRequest request) throws YarnException {
+    long start = clock.getTime();
+    List<ReservationHomeSubCluster> result = new ArrayList<>();
+
+    try {
+      for (String child : zkManager.getChildren(reservationsZNode)) {
+        ReservationId reservationId = ReservationId.parseReservationId(child);
+        SubClusterId homeSubCluster = getReservation(reservationId);
+        ReservationHomeSubCluster app =
+            ReservationHomeSubCluster.newInstance(reservationId, homeSubCluster);
+        result.add(app);
+      }
+    } catch (Exception e) {
+      String errMsg = "Cannot get apps: " + e.getMessage();
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+    long end = clock.getTime();
+    opDurations.addGetReservationsHomeSubClusterDuration(start, end);
+    return GetReservationsHomeSubClusterResponse.newInstance(result);
+  }
+
+  @Override
+  public DeleteReservationHomeSubClusterResponse deleteReservationHomeSubCluster(
+      DeleteReservationHomeSubClusterRequest request) throws YarnException {
+    long start = clock.getTime();
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationId reservationId = request.getReservationId();
+    String reservationZNode = getNodePath(reservationsZNode, reservationId.toString());
+
+    boolean exists = false;
+    try {
+      exists = zkManager.exists(reservationZNode);
+    } catch (Exception e) {
+      String errMsg = "Cannot check reservation: " + e.getMessage();
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    if (!exists) {
+      String errMsg = "Reservation " + reservationId + " does not exist";
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    try {
+      zkManager.delete(reservationZNode);
+    } catch (Exception e) {
+      String errMsg = "Cannot delete reservation: " + e.getMessage();
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+    long end = clock.getTime();
+    opDurations.addDeleteReservationHomeSubClusterDuration(start, end);
+    return DeleteReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public UpdateReservationHomeSubClusterResponse updateReservationHomeSubCluster(
+      UpdateReservationHomeSubClusterRequest request) throws YarnException {
+
+    long start = clock.getTime();
+    FederationReservationHomeSubClusterStoreInputValidator.validate(request);
+    ReservationHomeSubCluster reservationHomeSubCluster = request.getReservationHomeSubCluster();
+    ReservationId reservationId = reservationHomeSubCluster.getReservationId();
+    SubClusterId homeSubCluster = getReservation(reservationId);
+
+    if (homeSubCluster == null) {
+      String errMsg = "Reservation " + reservationId + " does not exist";
+      FederationStateStoreUtils.logAndThrowStoreException(LOG, errMsg);
+    }
+
+    SubClusterId newSubClusterId = reservationHomeSubCluster.getHomeSubCluster();
+    putReservation(reservationId, newSubClusterId, true);
+    long end = clock.getTime();
+    opDurations.addUpdateReservationHomeSubClusterDuration(start, end);
+    return UpdateReservationHomeSubClusterResponse.newInstance();
+  }
+
+  @Override
+  public RouterMasterKeyResponse storeNewMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse removeStoredMasterKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterMasterKeyResponse getMasterKeyByDelegationKey(RouterMasterKeyRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse storeNewToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse updateStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse removeStoredToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
+  public RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
+      throws YarnException, IOException {
+    throw new NotImplementedException("Code is not implemented");
   }
 }

@@ -349,7 +349,7 @@ public abstract class AbstractContractDistCpTest
             Collections.singletonList(srcDir), destDir)
             .withDeleteMissing(true)
             .withSyncFolder(true)
-            .withCRC(true)
+            .withSkipCRC(true)
             .withDirectWrite(shouldUseDirectWrite())
             .withOverwrite(false)));
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeTrue;
 
@@ -26,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
@@ -38,11 +40,15 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Preconditions;
 
 /**
  * Tests MiniDFS cluster setup/teardown and isolation.
@@ -51,6 +57,8 @@ import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
  * the new cluster.
  */
 public class TestMiniDFSCluster {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestMiniDFSCluster.class);
 
   private static final String CLUSTER_1 = "cluster1";
   private static final String CLUSTER_2 = "cluster2";
@@ -309,6 +317,98 @@ public class TestMiniDFSCluster {
             DFSUtil.addKeySuffixes(
             DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1")));
       }
+
+      // Shutdown namenodes individually.
+      cluster.shutdownNameNode(0);
+      cluster.shutdownNameNode(1);
+
+      // Restart namenodes individually with wait active, both should be successful.
+      cluster.restartNameNode(0);
+      cluster.restartNameNode(1);
     }
   }
+
+  // There is a possibility that this test might fail if any other concurrently running
+  // test could bind same port as one of the ports returned by NetUtils.getFreeSocketPorts(6)
+  // before datanodes are started.
+  @Test
+  public void testStartStopWithPorts() throws Exception {
+    Configuration conf = new Configuration();
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of http ports (1) should match num of DataNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniDFSCluster.Builder(conf).numDataNodes(3).setDnHttpPorts(8481).build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of ipc ports (2) should match num of DataNodes (1)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniDFSCluster.Builder(conf).setDnIpcPorts(8481, 8482).build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of ipc ports (1) should match num of DataNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniDFSCluster.Builder(conf).numDataNodes(3).setDnHttpPorts(800, 9000, 10000)
+              .setDnIpcPorts(8481).build();
+        });
+
+    LambdaTestUtils.intercept(
+        IllegalArgumentException.class,
+        "Num of http ports (4) should match num of DataNodes (3)",
+        "MiniJournalCluster port validation failed",
+        () -> {
+          new MiniDFSCluster.Builder(conf).setDnHttpPorts(800, 9000, 1000, 2000)
+              .setDnIpcPorts(8481, 8482, 8483).numDataNodes(3).build();
+        });
+
+    final Set<Integer> httpAndIpcPorts = NetUtils.getFreeSocketPorts(6);
+    LOG.info("Free socket ports: {}", httpAndIpcPorts);
+
+    assertThat(httpAndIpcPorts).doesNotContain(0);
+
+    final int[] httpPorts = new int[3];
+    final int[] ipcPorts = new int[3];
+    int httpPortIdx = 0;
+    int ipcPortIdx = 0;
+    for (Integer httpAndIpcPort : httpAndIpcPorts) {
+      if (httpPortIdx < 3) {
+        httpPorts[httpPortIdx++] = httpAndIpcPort;
+      } else {
+        ipcPorts[ipcPortIdx++] = httpAndIpcPort;
+      }
+    }
+
+    LOG.info("Http ports selected: {}", httpPorts);
+    LOG.info("Ipc ports selected: {}", ipcPorts);
+
+    try (MiniDFSCluster miniDfsCluster = new MiniDFSCluster.Builder(conf)
+        .setDnHttpPorts(httpPorts)
+        .setDnIpcPorts(ipcPorts)
+        .numDataNodes(3).build()) {
+      miniDfsCluster.waitActive();
+
+      assertEquals(httpPorts[0],
+          miniDfsCluster.getDataNode(ipcPorts[0]).getInfoPort());
+      assertEquals(httpPorts[1],
+          miniDfsCluster.getDataNode(ipcPorts[1]).getInfoPort());
+      assertEquals(httpPorts[2],
+          miniDfsCluster.getDataNode(ipcPorts[2]).getInfoPort());
+
+      assertEquals(ipcPorts[0],
+          miniDfsCluster.getDataNode(ipcPorts[0]).getIpcPort());
+      assertEquals(ipcPorts[1],
+          miniDfsCluster.getDataNode(ipcPorts[1]).getIpcPort());
+      assertEquals(ipcPorts[2],
+          miniDfsCluster.getDataNode(ipcPorts[2]).getIpcPort());
+    }
+  }
+
 }
