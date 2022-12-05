@@ -713,7 +713,8 @@ public class AbfsConfiguration{
 
   public boolean isExpectHeaderEnabled() {
     return this.isExpectHeaderEnabled;
-    
+  }
+  
   public boolean accountThrottlingEnabled() {
     return accountThrottlingEnabled;
   }
