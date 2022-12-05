@@ -1453,7 +1453,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
    * @return RouterStoreToken.
    * @throws IOException io exception occurs.
    */
-  private RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier) throws IOException {
+  private RouterStoreToken getStoreTokenFromZK(YARNDelegationTokenIdentifier identifier)
+      throws IOException {
     // get the Token storage path
     String nodePath = getStoreTokenZNodePathByIdentifier(identifier);
     return getStoreTokenFromZK(nodePath);
