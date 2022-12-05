@@ -1015,7 +1015,7 @@ public class BlockManager implements BlockStatsMXBean {
     return minReplicationToBeInMaintenance;
   }
 
-  private short getMinMaintenanceStorageNum(BlockInfo block) {
+  short getMinMaintenanceStorageNum(BlockInfo block) {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
