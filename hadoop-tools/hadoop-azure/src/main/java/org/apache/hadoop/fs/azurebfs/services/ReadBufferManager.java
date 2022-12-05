@@ -641,4 +641,9 @@ final class ReadBufferManager {
     freeList.clear();
     completedReadList.add(buf);
   }
+
+  @VisibleForTesting
+  int getNumBuffers() {
+    return NUM_BUFFERS;
+  }
 }

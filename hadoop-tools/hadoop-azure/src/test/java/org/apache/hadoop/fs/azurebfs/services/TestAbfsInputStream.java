@@ -506,10 +506,13 @@ public class TestAbfsInputStream extends
   public void testStreamPurgeDuringReadAheadCallExecuting() throws Exception {
     AbfsClient client = getMockAbfsClient();
     AbfsRestOperation successOp = getMockRestOp();
+    final Long serverCommunicationMockLatency = 3_000L;
+    final Long readBufferTransferToInProgressProbableTime = 1_000L;
+    final Integer readBufferQueuedCount = 3;
 
     Mockito.doAnswer(invocationOnMock -> {
           //sleeping thread to mock the network latency from client to backend.
-          Thread.sleep(3_000L);
+          Thread.sleep(serverCommunicationMockLatency);
           return successOp;
         })
         .when(client)
@@ -524,15 +527,18 @@ public class TestAbfsInputStream extends
     final ReadBufferManager readBufferManager
         = ReadBufferManager.getBufferManager();
 
+    final int readBufferTotal = readBufferManager.getNumBuffers();
+
     //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
-    Thread.sleep(1_000L);
+    Thread.sleep(readBufferTransferToInProgressProbableTime);
 
     Assertions.assertThat(readBufferManager.getInProgressCopiedList())
-        .describedAs("InProgressList should have 3 elements")
-        .hasSize(3);
+        .describedAs("InProgressList should have " + readBufferQueuedCount + " elements")
+        .hasSize(readBufferQueuedCount);
+    final int freeListBufferCount = readBufferTotal - readBufferQueuedCount;
     Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 13 elements")
-        .hasSize(13);
+        .describedAs("FreeList should have " + freeListBufferCount + "elements")
+        .hasSize(freeListBufferCount);
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
         .hasSize(0);
@@ -540,14 +546,14 @@ public class TestAbfsInputStream extends
     inputStream.close();
 
     Assertions.assertThat(readBufferManager.getInProgressCopiedList())
-        .describedAs("InProgressList should have 3 elements")
-        .hasSize(3);
+        .describedAs("InProgressList should have " + readBufferQueuedCount + " elements")
+        .hasSize(readBufferQueuedCount);
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
         .hasSize(0);
     Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have 13 elements")
-        .hasSize(13);
+        .describedAs("FreeList should have " + freeListBufferCount + " elements")
+        .hasSize(freeListBufferCount);
   }
 
   /**
