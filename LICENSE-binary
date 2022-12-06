@@ -326,7 +326,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:2.8.1
+org.apache.kafka:kafka-clients:2.8.2
 org.apache.kerby:kerb-admin:1.0.1
 org.apache.kerby:kerb-client:1.0.1
 org.apache.kerby:kerb-common:1.0.1
