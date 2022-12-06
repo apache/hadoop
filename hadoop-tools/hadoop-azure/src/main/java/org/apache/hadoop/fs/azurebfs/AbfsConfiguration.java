@@ -118,10 +118,10 @@ public class AbfsConfiguration{
   private boolean optimizeFooterRead;
 
   @BooleanConfigurationValidatorAnnotation(
-          ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
-          DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
+      ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
+      DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
   private boolean isExpectHeaderEnabled;
-  
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED)
   private boolean accountThrottlingEnabled;
@@ -714,7 +714,7 @@ public class AbfsConfiguration{
   public boolean isExpectHeaderEnabled() {
     return this.isExpectHeaderEnabled;
   }
-  
+
   public boolean accountThrottlingEnabled() {
     return accountThrottlingEnabled;
   }

@@ -314,18 +314,29 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     if (this.isTraceEnabled) {
       startTime = System.nanoTime();
     }
-    OutputStream outputStream;
+    OutputStream outputStream = null;
     try {
       try {
         outputStream = this.connection.getOutputStream();
       } catch (IOException e) {
-        // If getOutputStream fails with an exception due to 100-continue
-        // enabled, we return back without throwing an exception.
-        return;
+        // If getOutputStream fails with an exception and 100-continue
+        // is enabled, we return back without throwing an exception
+        // because processResponse will give the correct status code
+        // based on which the retry logic will come into place.
+        String expectHeader = this.connection.getRequestProperty("Expect");
+        if (expectHeader != null && expectHeader.equals("100-continue")) {
+          return;
+        } else {
+          throw e;
+        }
       }
       // This will normally throw an IOException.
       outputStream.write(buffer, offset, length);
     } finally {
+      // Closing the opened output stream
+      if (outputStream != null) {
+        outputStream.close();
+      }
       // update bytes sent for successful as well as failed attempts via the
       // accompanying statusCode.
       this.bytesSent = length;
