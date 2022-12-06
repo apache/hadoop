@@ -263,7 +263,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
   }
 
   /**
-   * Register this instance as a metrics source.
+   * Register this instance as a metrics source via a weak reference.
    * @param name s3a:// URI for the associated FileSystem instance
    */
   private void registerAsMetricsSource(URI name) {
@@ -277,7 +277,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     String msName = METRICS_SOURCE_BASENAME + number;
     String metricsSourceName = msName + "-" + name.getHost();
     metricsSourceReference = new WeakRefMetricsSource(metricsSourceName, this);
-    metricsSystem.register(metricsSourceName, "", this);
+    metricsSystem.register(metricsSourceName, "", metricsSourceReference);
   }
 
   /**

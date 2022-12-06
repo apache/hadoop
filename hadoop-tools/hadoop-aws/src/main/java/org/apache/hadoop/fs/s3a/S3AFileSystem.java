@@ -461,8 +461,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (LOG.isTraceEnabled()) {
         // log a full trace for deep diagnostics of where an object is created,
         // for tracking down memory leak issues.
-        LOG.trace("Filesystem for {} creation stack",
-            name, new RuntimeException(super.toString()));
+        LOG.trace("Filesystem for {} created; fs.s3a.impl.disable.cache = {}",
+            name, originalConf.getBoolean("fs.s3a.impl.disable.cache", false),
+            new RuntimeException(super.toString()));
       }
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
