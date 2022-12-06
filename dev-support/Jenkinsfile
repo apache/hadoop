@@ -264,8 +264,9 @@ pipeline {
             steps {
                 withCredentials(getGithubCreds()) {
                        bat 'dir F:\\jenkins\\tools'
-                       bat 'dir F:\\jenkins\\tools\\docker\\resources\\bin'
-                       bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\docker.exe --version'
+                       bat 'dir F:\\jenkins\\tools\\docker'
+                       bat 'where docker.exe'
+                       
 
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins"'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools"'
