@@ -63,6 +63,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -2961,17 +2962,15 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
   }
 
   private void pollingAssert(Supplier<Boolean> supplier, String message)
-      throws InterruptedException {
-    pollingAssert(supplier, true, message);
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(supplier,
+        100, 10_000, message);
   }
 
   private <T> void pollingAssert(Supplier<T> supplier, T expected, String message)
-      throws InterruptedException {
-    long timeOut = System.currentTimeMillis() + 10_000;
-    while (System.currentTimeMillis() < timeOut && !Objects.equals(expected, supplier.get())) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(message, expected, supplier.get());
+      throws InterruptedException, TimeoutException {
+    GenericTestUtils.waitFor(() -> Objects.equals(supplier.get(), expected),
+        100, 10_000, message);
   }
 
   /**
