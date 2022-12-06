@@ -266,20 +266,12 @@ pipeline {
                        bat 'dir F:\\jenkins\\tools'
                        bat 'dir F:\\jenkins\\tools\\docker'
                        bat 'where docker.exe'
-                       
+                       bat 'docker --version'
 
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins"'
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools"'
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker"'
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources"'
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin"'
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "/f/jenkins/tools/docker/resources/bin/docker.exe --version"'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
-//                       bat 'F:\\jenkins\\tools\\docker\\resources\\dockerd.exe'
-
                        bat '''
-                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "ls /f/jenkins/tools/docker/resources/bin/docker.exe"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "which docker"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
                        '''
