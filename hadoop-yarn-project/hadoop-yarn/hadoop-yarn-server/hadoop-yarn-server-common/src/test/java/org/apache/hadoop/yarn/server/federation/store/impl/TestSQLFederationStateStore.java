@@ -18,21 +18,17 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
-import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.*;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -591,5 +587,15 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   @Test(expected = NotImplementedException.class)
   public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
     super.testGetTokenByRouterStoreToken();
+  }
+
+  @Override
+  protected void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException {
+  }
+
+  @Override
+  protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException {
   }
 }

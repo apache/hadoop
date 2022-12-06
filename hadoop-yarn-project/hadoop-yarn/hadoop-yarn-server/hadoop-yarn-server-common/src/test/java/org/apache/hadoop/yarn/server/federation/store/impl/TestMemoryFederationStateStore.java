@@ -18,14 +18,20 @@
 package org.apache.hadoop.yarn.server.federation.store.impl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+
+import java.io.IOException;
 
 /**
  * Unit tests for MemoryFederationStateStore.
  */
-public class TestMemoryFederationStateStore
-    extends FederationStateStoreBaseTest {
+public class TestMemoryFederationStateStore extends FederationStateStoreBaseTest {
 
   @Override
   protected FederationStateStore createStateStore() {
@@ -33,5 +39,15 @@ public class TestMemoryFederationStateStore
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     super.setConf(conf);
     return new MemoryFederationStateStore();
+  }
+
+  @Override
+  protected void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException {
+  }
+
+  @Override
+  protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException {
   }
 }

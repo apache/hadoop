@@ -205,252 +205,37 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
 
   @Test
   public void testStoreNewMasterKey() throws Exception {
-
-    // Manually create a DelegationKey,
-    // and call the interface storeNewMasterKey to write the data to zk.
-    DelegationKey key = new DelegationKey(1234, Time.now() + 60 * 60, "keyBytes".getBytes());
-    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
-        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    FederationStateStore stateStore = this.getStateStore();
-
-    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
-
-    // Compare the data returned by the storeNewMasterKey
-    // interface with the data queried by zk, and ensure that the data is consistent.
-    RouterMasterKeyRequest routerMasterKeyRequest =
-        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
-    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
-    assertNotNull(response);
-    RouterMasterKey respRouterMasterKey = response.getRouterMasterKey();
-    assertNotNull(respRouterMasterKey);
-
-    // Get Data From zk.
-    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + key.getKeyId();
-    String nodePath = ZNODE_MASTER_KEY_PREFIX + nodeName;
-    RouterMasterKey zkRouterMasterKey = getRouterMasterKeyFromZK(nodePath);
-
-    assertNotNull(zkRouterMasterKey);
-    assertEquals(paramRouterMasterKey, respRouterMasterKey);
-    assertEquals(paramRouterMasterKey, zkRouterMasterKey);
-    assertEquals(zkRouterMasterKey, respRouterMasterKey);
+    super.testStoreNewMasterKey();
   }
 
   @Test
   public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
-
-    // Manually create a DelegationKey,
-    // and call the interface storeNewMasterKey to write the data to zk.
-    DelegationKey key = new DelegationKey(5678, Time.now() + 60 * 60, "keyBytes".getBytes());
-    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
-        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    FederationStateStore stateStore = this.getStateStore();
-
-    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
-
-    // Call the getMasterKeyByDelegationKey interface of stateStore to get the MasterKey data.
-    RouterMasterKeyRequest routerMasterKeyRequest =
-        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
-    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
-    assertNotNull(response);
-
-    // Get Data From zk.
-    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + key.getKeyId();
-    String nodePath = ZNODE_MASTER_KEY_PREFIX + nodeName;
-    RouterMasterKey zkRouterMasterKey = getRouterMasterKeyFromZK(nodePath);
-
-    // Call the getMasterKeyByDelegationKey interface to get the returned result.
-    // The zk data should be consistent with the returned data.
-    RouterMasterKeyResponse response1 =
-        stateStore.getMasterKeyByDelegationKey(routerMasterKeyRequest);
-    assertNotNull(response1);
-    RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
-    assertEquals(paramRouterMasterKey, respRouterMasterKey);
-    assertEquals(paramRouterMasterKey, zkRouterMasterKey);
-    assertEquals(zkRouterMasterKey, respRouterMasterKey);
+    super.testGetMasterKeyByDelegationKey();
   }
 
   @Test
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
-
-    // Manually create a DelegationKey,
-    // and call the interface storeNewMasterKey to write the data to zk.
-    DelegationKey key = new DelegationKey(2345, Time.now() + 60 * 60, "keyBytes".getBytes());
-    RouterMasterKey paramRouterMasterKey = RouterMasterKey.newInstance(key.getKeyId(),
-        ByteBuffer.wrap(key.getEncodedKey()), key.getExpiryDate());
-    FederationStateStore stateStore = this.getStateStore();
-
-    assertTrue(stateStore instanceof ZookeeperFederationStateStore);
-
-    // We need to ensure that the returned result is not empty.
-    RouterMasterKeyRequest routerMasterKeyRequest =
-        RouterMasterKeyRequest.newInstance(paramRouterMasterKey);
-    RouterMasterKeyResponse response = stateStore.storeNewMasterKey(routerMasterKeyRequest);
-    assertNotNull(response);
-
-    // We will check if delegationToken exists in zk.
-    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + key.getKeyId();
-    String nodePath = ZNODE_MASTER_KEY_PREFIX + nodeName;
-    assertTrue(isExists(nodePath));
-
-    // Call removeStoredMasterKey to remove the MasterKey data in zk.
-    RouterMasterKeyResponse response1 = stateStore.removeStoredMasterKey(routerMasterKeyRequest);
-    assertNotNull(response1);
-    RouterMasterKey respRouterMasterKey = response1.getRouterMasterKey();
-    assertNotNull(respRouterMasterKey);
-    assertEquals(paramRouterMasterKey, respRouterMasterKey);
-
-    // We have removed the RouterMasterKey data from zk,
-    // the path should be empty at this point.
-    assertFalse(isExists(nodePath));
+    super.testRemoveStoredMasterKey();
   }
 
   @Test
   public void testStoreNewToken() throws YarnException, IOException {
-
-    // We manually generate the DelegationToken,
-    // and then call the StoreNewToken method to store the Token in zk.
-    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
-        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
-    FederationStateStore stateStore = this.getStateStore();
-    int seqNum = stateStore.incrementDelegationTokenSeqNum();
-    identifier.setSequenceNumber(seqNum);
-    Long renewDate = Time.now();
-
-    // Store new rm-token
-    RouterStoreToken paramStoreToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(paramStoreToken);
-    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
-    assertNotNull(routerRMTokenResponse);
-    RouterStoreToken respStoreToken = routerRMTokenResponse.getRouterStoreToken();
-    assertNotNull(respStoreToken);
-
-    // Get delegationToken Path
-    String nodeName = ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber();
-    String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
-
-    // Check if the path exists, we expect the result to exist.
-    assertTrue(isExists(nodePath));
-
-    // Check whether the token (paramStoreToken)
-    // We generated is consistent with the data stored in zk.
-    // We expect data to be consistent.
-    RouterStoreToken zkRouterStoreToken = getStoreTokenFromZK(nodePath);
-    assertNotNull(zkRouterStoreToken);
-    assertEquals(paramStoreToken, zkRouterStoreToken);
-    assertEquals(respStoreToken, zkRouterStoreToken);
+    super.testStoreNewToken();
   }
 
   @Test
   public void testUpdateStoredToken() throws YarnException, IOException {
-
-    // We manually generate the DelegationToken,
-    // and then call the StoreNewToken method to store the Token in zk.
-    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
-        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
-    FederationStateStore stateStore = this.getStateStore();
-    int seqNum = stateStore.incrementDelegationTokenSeqNum();
-    identifier.setSequenceNumber(seqNum);
-    Long renewDate = Time.now();
-
-    // Store new rm-token()
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
-    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
-    Assert.assertNotNull(routerRMTokenResponse);
-
-    // We are ready to update some data renewDate2 & sequenceNumber2
-    Long renewDate2 = Time.now();
-    int sequenceNumber2 = stateStore.incrementDelegationTokenSeqNum();
-    identifier.setSequenceNumber(sequenceNumber2);
-
-    // Update rm-token
-    RouterStoreToken paramStoreToken = RouterStoreToken.newInstance(identifier, renewDate2);
-    RouterRMTokenRequest updateTokenRequest = RouterRMTokenRequest.newInstance(paramStoreToken);
-    RouterRMTokenResponse updateTokenResponse = stateStore.updateStoredToken(updateTokenRequest);
-    Assert.assertNotNull(updateTokenResponse);
-    RouterStoreToken updateTokenResp = updateTokenResponse.getRouterStoreToken();
-
-    // Get delegationToken Path
-    String nodeName = ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber();
-    String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
-
-    // Check if the path exists, we expect the result to exist.
-    assertTrue(isExists(nodePath));
-
-    // Check whether the token (paramStoreToken)
-    // We generated is consistent with the data stored in zk.
-    // We expect data to be consistent.
-    RouterStoreToken zkRouterStoreToken = getStoreTokenFromZK(nodePath);
-    assertNotNull(zkRouterStoreToken);
-    assertEquals(paramStoreToken, zkRouterStoreToken);
-    assertEquals(updateTokenResp, zkRouterStoreToken);
+    super.testUpdateStoredToken();
   }
 
   @Test
   public void testRemoveStoredToken() throws YarnException, IOException {
-
-    // We manually generate the DelegationToken,
-    // and then call the StoreNewToken method to store the Token in zk.
-    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
-        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
-    FederationStateStore stateStore = this.getStateStore();
-    int seqNum = stateStore.incrementDelegationTokenSeqNum();
-    identifier.setSequenceNumber(seqNum);
-    Long renewDate = Time.now();
-
-    // Store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
-    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
-    Assert.assertNotNull(routerRMTokenResponse);
-
-    // Get delegationToken Path
-    String nodeName = ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber();
-    String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
-
-    // Check if the path exists, we expect the result to exist.
-    assertTrue(isExists(nodePath));
-
-    // Remove stored-token
-    stateStore.removeStoredToken(request);
-
-    // After the data is deleted, the path should not exist in zk
-    assertFalse(isExists(nodePath));
+    super.testRemoveStoredToken();
   }
 
   @Test
   public void testGetTokenByRouterStoreToken() throws YarnException, IOException {
-
-    // We manually generate the DelegationToken,
-    // and then call the StoreNewToken method to store the Token in zk.
-    RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier(
-        new Text("owner2"), new Text("renewer2"), new Text("realuser2"));
-    FederationStateStore stateStore = this.getStateStore();
-    int seqNum = stateStore.incrementDelegationTokenSeqNum();
-    identifier.setSequenceNumber(seqNum);
-    Long renewDate = Time.now();
-
-    // Store new rm-token
-    RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, renewDate);
-    RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
-    RouterRMTokenResponse routerRMTokenResponse = stateStore.storeNewToken(request);
-    Assert.assertNotNull(routerRMTokenResponse);
-    RouterStoreToken getTokenResp = routerRMTokenResponse.getRouterStoreToken();
-
-    // Call getTokenByRouterStoreToken And Get Result
-    RouterRMTokenResponse routerGetRMTokenResponse = stateStore.getTokenByRouterStoreToken(request);
-    Assert.assertNotNull(routerGetRMTokenResponse);
-
-    // Get delegationToken Path
-    String nodeName = ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber();
-    String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
-
-    // Check whether the token (paramStoreToken)
-    // We generated is consistent with the data stored in zk.
-    // We expect data to be consistent.
-    RouterStoreToken zkRouterStoreToken = getStoreTokenFromZK(nodePath);
-    assertNotNull(zkRouterStoreToken);
-    assertEquals(getTokenResp, zkRouterStoreToken);
+    super.testGetTokenByRouterStoreToken();
   }
 
   private RouterStoreToken getStoreTokenFromZK(String nodePath)
@@ -491,5 +276,44 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     } catch (Exception e) {
       throw new YarnException(e);
     }
+  }
+
+  protected void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException {
+    // Check for MasterKey stored in ZK
+    RouterMasterKeyRequest routerMasterKeyRequest =
+        RouterMasterKeyRequest.newInstance(routerMasterKey);
+
+    // Get Data From zk.
+    String nodeName = ROUTER_RM_DELEGATION_KEY_PREFIX + delegationKey.getKeyId();
+    String nodePath = ZNODE_MASTER_KEY_PREFIX + nodeName;
+    RouterMasterKey zkRouterMasterKey = getRouterMasterKeyFromZK(nodePath);
+
+    // Call the getMasterKeyByDelegationKey interface to get the returned result.
+    // The zk data should be consistent with the returned data.
+    RouterMasterKeyResponse response = getStateStore().
+        getMasterKeyByDelegationKey(routerMasterKeyRequest);
+    assertNotNull(response);
+    RouterMasterKey respRouterMasterKey = response.getRouterMasterKey();
+    assertEquals(routerMasterKey, respRouterMasterKey);
+    assertEquals(routerMasterKey, zkRouterMasterKey);
+    assertEquals(zkRouterMasterKey, respRouterMasterKey);
+  }
+
+  protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException {
+    // Get delegationToken Path
+    String nodeName = ROUTER_RM_DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber();
+    String nodePath = getNodePath(ZNODE_DT_PREFIX, nodeName);
+
+    // Check if the path exists, we expect the result to exist.
+    assertTrue(isExists(nodePath));
+
+    // Check whether the token (paramStoreToken)
+    // We generated is consistent with the data stored in zk.
+    // We expect data to be consistent.
+    RouterStoreToken zkRouterStoreToken = getStoreTokenFromZK(nodePath);
+    assertNotNull(zkRouterStoreToken);
+    assertEquals(token, zkRouterStoreToken);
   }
 }
