@@ -883,8 +883,8 @@ public class DataNode extends ReconfigurableBase
         diskMetrics.setLowThresholdMs(threshold);
       } else if (property.equals(DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY)) {
         checkNotNull(diskMetrics, "DataNode disk stats may be disabled.");
-        int maxSlowDisksToExclude = (newVal == null ? DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT :
-                Integer.parseInt(newVal));
+        int maxSlowDisksToExclude = (newVal == null ?
+            DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT : Integer.parseInt(newVal));
         result = Integer.toString(maxSlowDisksToExclude);
         diskMetrics.setMaxSlowDisksToExclude(maxSlowDisksToExclude);
       }
