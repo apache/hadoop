@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.util;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -33,15 +39,32 @@ public class PlatformName {
    * per the java-vm.
    */
   public static final String PLATFORM_NAME =
-      (System.getProperty("os.name").startsWith("Windows")
-      ? System.getenv("os") : System.getProperty("os.name"))
-      + "-" + System.getProperty("os.arch")
-      + "-" + System.getProperty("sun.arch.data.model");
+      (System.getProperty("os.name").startsWith("Windows") ?
+      System.getenv("os") : System.getProperty("os.name"))
+      + "-" + System.getProperty("os.arch") + "-"
+      + System.getProperty("sun.arch.data.model");
 
   /**
    * The java vendor name used in this platform.
    */
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
+
+  /**
+   * A concurrently accessible hashmap that saves re-computation of vendor checks.
+   */
+  private static final Map<String, Boolean> SYSTEM_CLASS_AVAILABILITY = new ConcurrentHashMap<>();
+
+  /*
+   * Define a system class accessor that is open to changes in underlying implementations
+   * of the system class loader modules.
+   */
+  private static final SystemClassAccessor SYSTEM_CLASS_ACCESSOR = new SystemClassAccessor();
+
+  private static final class SystemClassAccessor extends ClassLoader {
+    public Class<?> getSystemClass(String className) throws ClassNotFoundException {
+      return findSystemClass(className);
+    }
+  }
 
   /**
    * A public static variable to indicate the current java vendor is
@@ -52,15 +75,35 @@ public class PlatformName {
    * The class used is present in any supported IBM JTE Runtimes.
    */
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM") &&
-    hasClass("com.ibm.security.auth.module.JAASLoginModule");
+      isSystemClassAvailable("com.ibm.security.auth.module.JAASLoginModule");
 
-  private static boolean hasClass(String className) {
-    try {
-      Thread.currentThread().getContextClassLoader().loadClass(className);
-      return true;
-    } catch(ClassNotFoundException ignored) {
-      return false;
-    }
+  /**
+   * In rare cases where different behaviour is performed based on the JVM vendor
+   * this method should be used to test for a unique JVM class provided by the
+   * vendor rather than using the vendor method. For example if on JVM provides a
+   * different Kerberos login module testing for that login module being loadable
+   * before configuring to use it is preferable to using the vendor data.
+   *
+   * @param className the name of a class in the JVM to test for
+   * @return true if the class is available, false otherwise.
+   */
+  private static boolean isSystemClassAvailable(String className) {
+    return SYSTEM_CLASS_AVAILABILITY.computeIfAbsent(className,
+        (k) -> AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+          @Override
+          public Boolean run() {
+            try {
+              // Using ClassLoader.findSystemClass() instead of
+              // Class.forName(className, false, null) because Class.forName with a null
+              // ClassLoader only looks at the boot ClassLoader with Java 9 and above
+              // which doesn't look at all the modules available to the findSystemClass.
+              SYSTEM_CLASS_ACCESSOR.getSystemClass(className);
+              return true;
+            } catch (Exception ignored) {
+              return false;
+            }
+          }
+        }));
   }
 
   public static void main(String[] args) {
