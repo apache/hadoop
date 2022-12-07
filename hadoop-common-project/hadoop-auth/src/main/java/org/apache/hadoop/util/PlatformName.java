@@ -21,9 +21,6 @@ package org.apache.hadoop.util;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -50,16 +47,9 @@ public class PlatformName {
   public static final String JAVA_VENDOR_NAME = System.getProperty("java.vendor");
 
   /**
-   * A concurrently accessible hashmap that saves re-computation of vendor checks.
-   */
-  private static final Map<String, Boolean> SYSTEM_CLASS_AVAILABILITY = new ConcurrentHashMap<>();
-
-  /*
    * Define a system class accessor that is open to changes in underlying implementations
    * of the system class loader modules.
    */
-  private static final SystemClassAccessor SYSTEM_CLASS_ACCESSOR = new SystemClassAccessor();
-
   private static final class SystemClassAccessor extends ClassLoader {
     public Class<?> getSystemClass(String className) throws ClassNotFoundException {
       return findSystemClass(className);
@@ -88,22 +78,18 @@ public class PlatformName {
    * @return true if the class is available, false otherwise.
    */
   private static boolean isSystemClassAvailable(String className) {
-    return SYSTEM_CLASS_AVAILABILITY.computeIfAbsent(className,
-        (k) -> AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-          @Override
-          public Boolean run() {
-            try {
-              // Using ClassLoader.findSystemClass() instead of
-              // Class.forName(className, false, null) because Class.forName with a null
-              // ClassLoader only looks at the boot ClassLoader with Java 9 and above
-              // which doesn't look at all the modules available to the findSystemClass.
-              SYSTEM_CLASS_ACCESSOR.getSystemClass(className);
-              return true;
-            } catch (Exception ignored) {
-              return false;
-            }
-          }
-        }));
+    return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+      try {
+        // Using ClassLoader.findSystemClass() instead of
+        // Class.forName(className, false, null) because Class.forName with a null
+        // ClassLoader only looks at the boot ClassLoader with Java 9 and above
+        // which doesn't look at all the modules available to the findSystemClass.
+        new SystemClassAccessor().getSystemClass(className);
+        return true;
+      } catch (Exception ignored) {
+        return false;
+      }
+    });
   }
 
   public static void main(String[] args) {
