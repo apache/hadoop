@@ -28,7 +28,15 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.metrics.FederationStateStoreClientMetrics;
-import org.apache.hadoop.yarn.server.federation.store.records.*;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.AddReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -592,10 +600,14 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   @Override
   protected void checkRouterMasterKey(DelegationKey delegationKey,
       RouterMasterKey routerMasterKey) throws YarnException, IOException {
+    // TODO: This part of the code will be completed in YARN-11349 and
+    // will be used to verify whether the RouterMasterKey stored in the DB is as expected.
   }
 
   @Override
   protected void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
       RouterStoreToken token) throws YarnException, IOException {
+    // TODO: This part of the code will be completed in YARN-11349 and
+    // will be used to verify whether the RouterStoreToken stored in the DB is as expected.
   }
 }

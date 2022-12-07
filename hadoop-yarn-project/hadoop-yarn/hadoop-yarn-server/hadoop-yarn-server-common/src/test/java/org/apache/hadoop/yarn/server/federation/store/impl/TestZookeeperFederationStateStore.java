@@ -203,41 +203,6 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
     MetricsRecords.assertMetric(record, "UpdateReservationHomeSubClusterNumOps",  expectOps);
   }
 
-  @Test
-  public void testStoreNewMasterKey() throws Exception {
-    super.testStoreNewMasterKey();
-  }
-
-  @Test
-  public void testGetMasterKeyByDelegationKey() throws YarnException, IOException {
-    super.testGetMasterKeyByDelegationKey();
-  }
-
-  @Test
-  public void testRemoveStoredMasterKey() throws YarnException, IOException {
-    super.testRemoveStoredMasterKey();
-  }
-
-  @Test
-  public void testStoreNewToken() throws YarnException, IOException {
-    super.testStoreNewToken();
-  }
-
-  @Test
-  public void testUpdateStoredToken() throws YarnException, IOException {
-    super.testUpdateStoredToken();
-  }
-
-  @Test
-  public void testRemoveStoredToken() throws YarnException, IOException {
-    super.testRemoveStoredToken();
-  }
-
-  @Test
-  public void testGetTokenByRouterStoreToken() throws YarnException, IOException {
-    super.testGetTokenByRouterStoreToken();
-  }
-
   private RouterStoreToken getStoreTokenFromZK(String nodePath)
       throws YarnException {
     try {
