@@ -15,226 +15,99 @@
 Apache Hadoop ${project.version}
 ================================
 
-Apache Hadoop ${project.version} incorporates a number of significant
-enhancements over the previous major release line (hadoop-2.x).
+Apache Hadoop ${project.version} is an update to the Hadoop 3.3.x release branch.
 
-This release is generally available (GA), meaning that it represents a point of
-API stability and quality that we consider production-ready.
-
-Overview
-========
+Overview of Changes
+===================
 
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
-Minimum required Java version increased from Java 7 to Java 8
-------------------
-
-All Hadoop JARs are now compiled targeting a runtime version of Java 8.
-Users still using Java 7 or below must upgrade to Java 8.
-
-Support for erasure coding in HDFS
-------------------
-
-Erasure coding is a method for durably storing data with significant space
-savings compared to replication. Standard encodings like Reed-Solomon (10,4)
-have a 1.4x space overhead, compared to the 3x overhead of standard HDFS
-replication.
-
-Since erasure coding imposes additional overhead during reconstruction
-and performs mostly remote reads, it has traditionally been used for
-storing colder, less frequently accessed data. Users should consider
-the network and CPU overheads of erasure coding when deploying this
-feature.
-
-More details are available in the
-[HDFS Erasure Coding](./hadoop-project-dist/hadoop-hdfs/HDFSErasureCoding.html)
-documentation.
-
-YARN Timeline Service v.2
--------------------
-
-We are introducing an early preview (alpha 2) of a major revision of YARN
-Timeline Service: v.2. YARN Timeline Service v.2 addresses two major
-challenges: improving scalability and reliability of Timeline Service, and
-enhancing usability by introducing flows and aggregation.
-
-YARN Timeline Service v.2 alpha 2 is provided so that users and developers
-can test it and provide feedback and suggestions for making it a ready
-replacement for Timeline Service v.1.x. It should be used only in a test
-capacity.
-
-More details are available in the
-[YARN Timeline Service v.2](./hadoop-yarn/hadoop-yarn-site/TimelineServiceV2.html)
-documentation.
-
-Shell script rewrite
--------------------
-
-The Hadoop shell scripts have been rewritten to fix many long-standing
-bugs and include some new features.  While an eye has been kept towards
-compatibility, some changes may break existing installations.
-
-Incompatible changes are documented in the release notes, with related
-discussion on [HADOOP-9902](https://issues.apache.org/jira/browse/HADOOP-9902).
-
-More details are available in the
-[Unix Shell Guide](./hadoop-project-dist/hadoop-common/UnixShellGuide.html)
-documentation. Power users will also be pleased by the
-[Unix Shell API](./hadoop-project-dist/hadoop-common/UnixShellAPI.html)
-documentation, which describes much of the new functionality, particularly
-related to extensibility.
-
-Shaded client jars
-------------------
-
-The `hadoop-client` Maven artifact available in 2.x releases pulls
-Hadoop's transitive dependencies onto a Hadoop application's classpath.
-This can be problematic if the versions of these transitive dependencies
-conflict with the versions used by the application.
-
-[HADOOP-11804](https://issues.apache.org/jira/browse/HADOOP-11804) adds
-new `hadoop-client-api` and `hadoop-client-runtime` artifacts that
-shade Hadoop's dependencies into a single jar. This avoids leaking
-Hadoop's dependencies onto the application's classpath.
-
-Support for Opportunistic Containers and Distributed Scheduling.
---------------------
-
-A notion of `ExecutionType` has been introduced, whereby Applications can
-now request for containers with an execution type of `Opportunistic`.
-Containers of this type can be dispatched for execution at an NM even if
-there are no resources available at the moment of scheduling. In such a
-case, these containers will be queued at the NM, waiting for resources to
-be available for it to start. Opportunistic containers are of lower priority
-than the default `Guaranteed` containers and are therefore preempted,
-if needed, to make room for Guaranteed containers. This should
-improve cluster utilization.
-
-Opportunistic containers are by default allocated by the central RM, but
-support has also been added to allow opportunistic containers to be
-allocated by a distributed scheduler which is implemented as an
-AMRMProtocol interceptor.
-
-Please see [documentation](./hadoop-yarn/hadoop-yarn-site/OpportunisticContainers.html)
-for more details.
-
-MapReduce task-level native optimization
---------------------
-
-MapReduce has added support for a native implementation of the map output
-collector. For shuffle-intensive jobs, this can lead to a performance
-improvement of 30% or more.
-
-See the release notes for
-[MAPREDUCE-2841](https://issues.apache.org/jira/browse/MAPREDUCE-2841)
-for more detail.
-
-Support for more than 2 NameNodes.
---------------------
-
-The initial implementation of HDFS NameNode high-availability provided
-for a single active NameNode and a single Standby NameNode. By replicating
-edits to a quorum of three JournalNodes, this architecture is able to
-tolerate the failure of any one node in the system.
-
-However, some deployments require higher degrees of fault-tolerance.
-This is enabled by this new feature, which allows users to run multiple
-standby NameNodes. For instance, by configuring three NameNodes and
-five JournalNodes, the cluster is able to tolerate the failure of two
-nodes rather than just one.
-
-The [HDFS high-availability documentation](./hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html)
-has been updated with instructions on how to configure more than two
-NameNodes.
-
-Default ports of multiple services have been changed.
-------------------------
-
-Previously, the default ports of multiple Hadoop services were in the
-Linux ephemeral port range (32768-61000). This meant that at startup,
-services would sometimes fail to bind to the port due to a conflict
-with another application.
-
-These conflicting ports have been moved out of the ephemeral range,
-affecting the NameNode, Secondary NameNode, DataNode, and KMS. Our
-documentation has been updated appropriately, but see the release
-notes for [HDFS-9427](https://issues.apache.org/jira/browse/HDFS-9427) and
-[HADOOP-12811](https://issues.apache.org/jira/browse/HADOOP-12811)
-for a list of port changes.
-
-Support for Microsoft Azure Data Lake and Aliyun Object Storage System filesystem connectors
----------------------
-
-Hadoop now supports integration with Microsoft Azure Data Lake and
-Aliyun Object Storage System as alternative Hadoop-compatible filesystems.
-
-Intra-datanode balancer
--------------------
-
-A single DataNode manages multiple disks. During normal write operation,
-disks will be filled up evenly. However, adding or replacing disks can
-lead to significant skew within a DataNode. This situation is not handled
-by the existing HDFS balancer, which concerns itself with inter-, not intra-,
-DN skew.
-
-This situation is handled by the new intra-DataNode balancing
-functionality, which is invoked via the `hdfs diskbalancer` CLI.
-See the disk balancer section in the
-[HDFS Commands Guide](./hadoop-project-dist/hadoop-hdfs/HDFSCommands.html)
-for more information.
-
-Reworked daemon and task heap management
----------------------
-
-A series of changes have been made to heap management for Hadoop daemons
-as well as MapReduce tasks.
-
-[HADOOP-10950](https://issues.apache.org/jira/browse/HADOOP-10950) introduces
-new methods for configuring daemon heap sizes.
-Notably, auto-tuning is now possible based on the memory size of the host,
-and the `HADOOP_HEAPSIZE` variable has been deprecated.
-See the full release notes of HADOOP-10950 for more detail.
-
-[MAPREDUCE-5785](https://issues.apache.org/jira/browse/MAPREDUCE-5785)
-simplifies the configuration of map and reduce task
-heap sizes, so the desired heap size no longer needs to be specified
-in both the task configuration and as a Java option.
-Existing configs that already specify both are not affected by this change.
-See the full release notes of MAPREDUCE-5785 for more details.
-
-HDFS Router-Based Federation
----------------------
-HDFS Router-Based Federation adds a RPC routing layer that provides a federated
-view of multiple HDFS namespaces. This is similar to the existing
-[ViewFs](./hadoop-project-dist/hadoop-hdfs/ViewFs.html)) and
-[HDFS Federation](./hadoop-project-dist/hadoop-hdfs/Federation.html)
-functionality, except the mount table is managed on the server-side by the
-routing layer rather than on the client. This simplifies access to a federated
-cluster for existing HDFS clients.
-
-See [HDFS-10467](https://issues.apache.org/jira/browse/HDFS-10467) and the
-HDFS Router-based Federation
-[documentation](./hadoop-project-dist/hadoop-hdfs-rbf/HDFSRouterFederation.html) for
-more details.
-
-API-based configuration of Capacity Scheduler queue configuration
-----------------------
-
-The OrgQueue extension to the capacity scheduler provides a programmatic way to
-change configurations by providing a REST API that users can call to modify
-queue configurations. This enables automation of queue configuration management
-by administrators in the queue's `administer_queue` ACL.
-
-See [YARN-5734](https://issues.apache.org/jira/browse/YARN-5734) and the
-[Capacity Scheduler documentation](./hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html) for more information.
-
-YARN Resource Types
+Vectored IO API
 ---------------
 
-The YARN resource model has been generalized to support user-defined countable resource types beyond CPU and memory. For instance, the cluster administrator could define resources like GPUs, software licenses, or locally-attached storage. YARN tasks can then be scheduled based on the availability of these resources.
+The `PositionedReadable` interface has now added an operation for
+Vectored (also known as Scatter/Gather IO):
 
-See [YARN-3926](https://issues.apache.org/jira/browse/YARN-3926) and the [YARN resource model documentation](./hadoop-yarn/hadoop-yarn-site/ResourceModel.html) for more information.
+```java
+void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)
+```
+
+All the requested ranges will be retrieved into the supplied byte buffers -possibly asynchronously,
+possibly in parallel, with results potentially coming in out-of-order.
+
+1. The default implementation uses a series of `readFully()` calls, so delivers
+   equivalent performance.
+2. The local filesystem uses java native IO calls for higher performance reads than `readFully()`
+3. The S3A filesystem issues parallel HTTP GET requests in different threads.
+
+Benchmarking of (modified) ORC and Parquet clients through `file://` and `s3a://`
+show tangible improvements in query times.
+
+Further Reading: [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
+
+Manifest Committer for Azure ABFS and google GCS performance
+------------------------------------------------------------
+
+A new "intermediate manifest committer" uses a manifest file
+to commit the work of successful task attempts, rather than
+renaming directories.
+Job commit is matter of reading all the manifests, creating the
+destination directories (parallelized) and renaming the files,
+again in parallel.
+
+This is fast and correct on Azure Storage and Google GCS,
+and should be used there instead of the classic v1/v2 file
+output committers.
+
+It is also safe to use on HDFS, where it should be faster
+than the v1 committer. It is however optimized for
+cloud storage where list and rename operations are significantly
+slower; the benefits may be less.
+
+More details are available in the
+[manifest committer](./hadoop-mapreduce-client/hadoop-mapreduce-client-core/manifest_committer.html).
+documentation.
+
+Transitive CVE fixes
+--------------------
+
+A lot of dependencies have been upgraded to address recent CVEs.
+Many of the CVEs were not actually exploitable through the Hadoop
+so much of this work is just due diligence.
+However applications which have all the library is on a class path may
+be vulnerable, and the ugprades should also reduce the number of false
+positives security scanners report.
+
+We have not been able to upgrade every single dependency to the latest
+version there is. Some of those changes are just going to be incompatible.
+If you have concerns about the state of a specific library, consult the apache JIRA
+issue tracker to see what discussions have taken place about the library in question.
+
+As an open source project, contributions in this area are always welcome,
+especially in testing the active branches, testing applications downstream of
+those branches and of whether updated dependencies trigger regressions.
+
+HDFS: Router Based Federation
+-----------------------------
+
+A lot of effort has been invested into stabilizing/improving the HDFS Router Based Federation feature.
+
+1. HDFS-13522, HDFS-16767 & Related Jiras: Allow Observer Reads in HDFS Router Based Federation.
+2. HDFS-13248: RBF supports Client Locality
+
+
+HDFS: Dynamic Datanode Reconfiguration
+--------------------------------------
+
+HDFS-16400, HDFS-16399, HDFS-16396, HDFS-16397, HDFS-16413, HDFS-16457.
+
+A number of Datanode configuration options can be changed without having to restart
+the datanode. This makes it possible to tune deployment configurations without
+cluster-wide Datanode Restarts.
+
+See [DataNode.java](https://github.com/apache/hadoop/blob/branch-3.3.5/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java#L346-L361)
+for the list of dynamically reconfigurable attributes.
 
 Getting Started
 ===============
