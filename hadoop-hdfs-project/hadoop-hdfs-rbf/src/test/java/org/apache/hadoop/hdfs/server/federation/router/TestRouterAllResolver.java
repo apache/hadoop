@@ -199,14 +199,14 @@ public class TestRouterAllResolver {
     Path testTruncateFilePath = new Path(testTruncateFile);
     routerFs.truncate(testTruncateFilePath, 10);
     TestFileTruncate.checkBlockRecovery(testTruncateFilePath,
-      (DistributedFileSystem) routerFs);
+        (DistributedFileSystem) routerFs);
     assertEquals("Truncate file  fails", 10,
-      routerFs.getFileStatus(testTruncateFilePath).getLen());
+        routerFs.getFileStatus(testTruncateFilePath).getLen());
 
     // Test setReplication
-    assertTrue(routerFs.setReplication(testTruncateFilePath,(short) 2));
+    assertTrue(routerFs.setReplication(testTruncateFilePath,(short)2));
     assertEquals("SetReplication file fails", 2,
-      routerFs.getFileStatus(testTruncateFilePath).getReplication());
+        routerFs.getFileStatus(testTruncateFilePath).getReplication());
 
     // Removing a directory should remove it from every subcluster
     routerFs.delete(new Path(path + "/dir2/dir22/dir220"), true);
