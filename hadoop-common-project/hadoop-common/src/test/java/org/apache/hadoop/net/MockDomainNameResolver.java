@@ -95,4 +95,9 @@ public class MockDomainNameResolver implements DomainNameResolver {
   public void setAddressMap(Map<String, InetAddress[]> addresses) {
     this.addrs = addresses;
   }
+
+  @VisibleForTesting
+  public void setPtrMap(Map<InetAddress, String> ptrMap) {
+    this.ptrMap = ptrMap;
+  }
 }
