@@ -59,7 +59,6 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -89,7 +88,8 @@ public class AbfsClient implements Closeable {
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2019-12-12";
+  // private final String xMsVersion = "2019-12-12";
+  private final String xMsVersion = "2021-10-04";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -253,7 +253,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
     // appending SAS Token to query
     appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
@@ -280,7 +279,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
     // appending SAS token to query
     appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
@@ -325,7 +323,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
     // appending SAS token to query
     appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
@@ -345,7 +342,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
     // appending SAS token to query
     appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
@@ -1105,6 +1101,7 @@ public class AbfsClient implements Closeable {
   }
 
   private String chooseSASToken(String operation, String path) throws IOException {
+    // chooses the SAS token provider class if it is configured, otherwise reads the configured fixed token
     if (sasTokenProvider == null) {
       return abfsConfiguration.get(ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN);
     } else {
@@ -1144,7 +1141,6 @@ public class AbfsClient implements Closeable {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
           sasToken = chooseSASToken(operation, path);
-          // sasToken = sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
           if ((sasToken == null) || sasToken.isEmpty()) {
             throw new UnsupportedOperationException("SASToken received is empty or null");
           }
@@ -1178,7 +1174,7 @@ public class AbfsClient implements Closeable {
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Unexpected error.", ex);
       throw new InvalidUriException(path);
-    }
+     }
 
     final StringBuilder sb = new StringBuilder();
     sb.append(base);
