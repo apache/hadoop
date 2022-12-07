@@ -43,6 +43,9 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+
 /**
  * Represents an HTTP operation.
  */
@@ -323,8 +326,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
         // is enabled, we return back without throwing an exception
         // because processResponse will give the correct status code
         // based on which the retry logic will come into place.
-        String expectHeader = this.connection.getRequestProperty("Expect");
-        if (expectHeader != null && expectHeader.equals("100-continue")) {
+        String expectHeader = this.connection.getRequestProperty(EXPECT);
+        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
           return;
         } else {
           throw e;
