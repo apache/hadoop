@@ -23,10 +23,15 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
+import java.util.Base64;
 import java.util.Locale;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -70,7 +75,7 @@ public abstract class SASGenerator {
    * Called by subclasses to initialize the cryptographic SHA-256 HMAC provider.
    * @param key - a 256-bit secret key
    */
-  protected SASGenerator(byte[] key) {
+  protected  SASGenerator(byte[] key) {
     this.key = key;
     initializeMac();
   }
@@ -85,10 +90,21 @@ public abstract class SASGenerator {
     }
   }
 
+  protected String getCanonicalAccountName(String accountName) throws InvalidConfigurationValueException {
+    // returns the account name without the endpoint
+    int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+    if (dotIndex <= 0) {
+      throw new InvalidConfigurationValueException("Account Name is not fully qualified");
+    }
+    String truncAccountName = accountName.substring(0, dotIndex);
+    return truncAccountName;
+  }
+
   protected String computeHmac256(final String stringToSign) {
     byte[] utf8Bytes;
     try {
       utf8Bytes = stringToSign.getBytes(StandardCharsets.UTF_8.toString());
+      // utf8Bytes = stringToSign.getBytes("UTF-8");
     } catch (final UnsupportedEncodingException e) {
       throw new IllegalArgumentException(e);
     }
@@ -96,6 +112,6 @@ public abstract class SASGenerator {
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
     }
-    return Base64.encode(hmac);
+    return  org.apache.hadoop.fs.azurebfs.utils.Base64.encode(hmac);
   }
 }
