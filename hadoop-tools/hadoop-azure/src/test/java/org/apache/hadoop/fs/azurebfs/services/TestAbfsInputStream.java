@@ -520,40 +520,46 @@ public class TestAbfsInputStream extends
             any(Integer.class), any(Integer.class), any(String.class),
             any(String.class), any(TracingContext.class));
 
-    AbfsInputStream inputStream = getAbfsInputStream(client,
-        "testSuccessfulReadAhead.txt");
-    queueReadAheads(inputStream);
-
     final ReadBufferManager readBufferManager
         = ReadBufferManager.getBufferManager();
 
     final int readBufferTotal = readBufferManager.getNumBuffers();
+    final int expectedFreeListBufferCount = readBufferTotal
+        - readBufferQueuedCount;
 
-    //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
-    Thread.sleep(readBufferTransferToInProgressProbableTime);
+    try (AbfsInputStream inputStream = getAbfsInputStream(client,
+        "testSuccessfulReadAhead.txt")) {
+      // As this is try-with-resources block, the close() method of the created
+      // abfsInputStream object shall be called on the end of the block.
+      queueReadAheads(inputStream);
+
+      //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
+      Thread.sleep(readBufferTransferToInProgressProbableTime);
+
+      Assertions.assertThat(readBufferManager.getInProgressCopiedList())
+          .describedAs(String.format("InProgressList should have %d elements",
+              readBufferQueuedCount))
+          .hasSize(readBufferQueuedCount);
+      Assertions.assertThat(readBufferManager.getFreeListCopy())
+          .describedAs(String.format("FreeList should have %d elements",
+              expectedFreeListBufferCount))
+          .hasSize(expectedFreeListBufferCount);
+      Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
+          .describedAs("CompletedList should have 0 elements")
+          .hasSize(0);
+    }
 
     Assertions.assertThat(readBufferManager.getInProgressCopiedList())
-        .describedAs("InProgressList should have " + readBufferQueuedCount + " elements")
+        .describedAs(String.format("InProgressList should have %d elements",
+            readBufferQueuedCount))
         .hasSize(readBufferQueuedCount);
-    final int freeListBufferCount = readBufferTotal - readBufferQueuedCount;
     Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have " + freeListBufferCount + "elements")
-        .hasSize(freeListBufferCount);
+        .describedAs(String.format("FreeList should have %d elements",
+            expectedFreeListBufferCount))
+        .hasSize(expectedFreeListBufferCount);
     Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
         .describedAs("CompletedList should have 0 elements")
         .hasSize(0);
-
-    inputStream.close();
-
-    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
-        .describedAs("InProgressList should have " + readBufferQueuedCount + " elements")
-        .hasSize(readBufferQueuedCount);
-    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
-        .describedAs("CompletedList should have 0 elements")
-        .hasSize(0);
-    Assertions.assertThat(readBufferManager.getFreeListCopy())
-        .describedAs("FreeList should have " + freeListBufferCount + " elements")
-        .hasSize(freeListBufferCount);
   }
 
   /**
