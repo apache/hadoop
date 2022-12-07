@@ -35,6 +35,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean tolerateOobAppends;
 
+  private boolean isReadAheadEnabled = true;
+
   private boolean alwaysReadBufferSize;
 
   private int readAheadBlockSize;
