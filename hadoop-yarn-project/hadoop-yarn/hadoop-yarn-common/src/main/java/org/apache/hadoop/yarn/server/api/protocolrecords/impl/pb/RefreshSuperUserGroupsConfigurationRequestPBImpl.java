@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshSuperUserGroupsConfigurationRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 
@@ -27,18 +28,20 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class RefreshSuperUserGroupsConfigurationRequestPBImpl 
-extends RefreshSuperUserGroupsConfigurationRequest {
+public class RefreshSuperUserGroupsConfigurationRequestPBImpl
+    extends RefreshSuperUserGroupsConfigurationRequest {
 
-  RefreshSuperUserGroupsConfigurationRequestProto proto = RefreshSuperUserGroupsConfigurationRequestProto.getDefaultInstance();
-  RefreshSuperUserGroupsConfigurationRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private RefreshSuperUserGroupsConfigurationRequestProto proto =
+      RefreshSuperUserGroupsConfigurationRequestProto.getDefaultInstance();
+  private RefreshSuperUserGroupsConfigurationRequestProto.Builder builder = null;
+  private boolean viaProto = false;
   
   public RefreshSuperUserGroupsConfigurationRequestPBImpl() {
     builder = RefreshSuperUserGroupsConfigurationRequestProto.newBuilder();
   }
 
-  public RefreshSuperUserGroupsConfigurationRequestPBImpl(RefreshSuperUserGroupsConfigurationRequestProto proto) {
+  public RefreshSuperUserGroupsConfigurationRequestPBImpl(
+      RefreshSuperUserGroupsConfigurationRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -56,8 +59,9 @@ extends RefreshSuperUserGroupsConfigurationRequest {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -67,5 +71,28 @@ extends RefreshSuperUserGroupsConfigurationRequest {
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  private synchronized void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = RefreshSuperUserGroupsConfigurationRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public String getSubClusterId() {
+    RefreshSuperUserGroupsConfigurationRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 }

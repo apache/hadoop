@@ -252,6 +252,14 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     throw new YarnException("Unable to refreshNodes.");
   }
 
+  /**
+   *
+   * @param request
+   * @return
+   * @throws StandbyException
+   * @throws YarnException
+   * @throws IOException
+   */
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
