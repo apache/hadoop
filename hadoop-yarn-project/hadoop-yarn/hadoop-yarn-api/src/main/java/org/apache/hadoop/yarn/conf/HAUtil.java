@@ -19,11 +19,22 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -39,7 +50,28 @@ public class HAUtil {
   public static final String BAD_CONFIG_MESSAGE_PREFIX =
     "Invalid configuration! ";
 
+  private final static List<String> RM_ADDRESS_CONFIG_KEYS = Arrays.asList(
+      YarnConfiguration.RM_ADDRESS,
+      YarnConfiguration.RM_SCHEDULER_ADDRESS,
+      YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+      YarnConfiguration.RM_ADMIN_ADDRESS,
+      YarnConfiguration.RM_WEBAPP_ADDRESS,
+      YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
+  );
+
+  private static DomainNameResolver dnr;
+  private static Collection<String> originalRMIDs = null;
+
   private HAUtil() { /* Hidden constructor */ }
+
+  public static DomainNameResolver getDnr() {
+    return dnr;
+  }
+
+  public static void setDnrByConfiguration(Configuration conf) {
+    HAUtil.dnr = DomainNameResolverFactory.newInstance(
+        conf, YarnConfiguration.RESOLVE_RM_ADDRESS_KEY);
+  }
 
   private static void throwBadConfigurationException(String msg) {
     throw new YarnRuntimeException(BAD_CONFIG_MESSAGE_PREFIX + msg);
@@ -118,6 +150,12 @@ public class HAUtil {
    * Then set the RM-ids.
    */
   private static void verifyAndSetRMHAIdsList(Configuration conf) {
+    boolean resolveNeeded = conf.getBoolean(
+        YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_KEY,
+        YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_DEFAULT);
+    if (resolveNeeded) {
+      getRMHAId(conf);
+    }
     Collection<String> ids =
       conf.getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS);
     if (ids.size() < 2) {
@@ -228,6 +266,16 @@ public class HAUtil {
   }
 
   /**
+   * Instead of returning RM_HA_IDS in current configurations, it
+   * would return the originally preset one in case of DNS resolving
+   * @param conf Configuration.
+   * @return RM Ids from original xml file
+   */
+  public static Collection<String> getOriginalRMHAIds(Configuration conf) {
+    return originalRMIDs == null ? getRMHAIds(conf) : originalRMIDs;
+  }
+
+  /**
    * @param conf Configuration. Please use verifyAndSetRMHAId to check.
    * @return RM Id on success
    */
@@ -235,19 +283,10 @@ public class HAUtil {
     int found = 0;
     String currentRMId = conf.getTrimmed(YarnConfiguration.RM_HA_ID);
     if(currentRMId == null) {
-      for(String rmId : getRMHAIds(conf)) {
-        String key = addSuffix(YarnConfiguration.RM_ADDRESS, rmId);
-        String addr = conf.get(key);
-        if (addr == null) {
-          continue;
-        }
-        InetSocketAddress s;
-        try {
-          s = NetUtils.createSocketAddr(addr);
-        } catch (Exception e) {
-          LOG.warn("Exception in creating socket address " + addr, e);
-          continue;
-        }
+      Map<String, InetSocketAddress> idAddressPairs = getResolvedRMIdPairs(conf);
+      for (Map.Entry<String, InetSocketAddress> entry : idAddressPairs.entrySet()) {
+        String rmId = entry.getKey();
+        InetSocketAddress s = entry.getValue();
         if (!s.isUnresolved() && NetUtils.isLocalAddress(s.getAddress())) {
           currentRMId = rmId.trim();
           found++;
@@ -260,6 +299,179 @@ public class HAUtil {
       throw new HadoopIllegalArgumentException(msg);
     }
     return currentRMId;
+  }
+
+  /**
+   * This function resolves all RMIds with their address. For multi-A DNS records,
+   * it will resolve all of them, and generate a new Id for each of them.
+   *
+   * @param conf Configuration
+   * @return Map key as RMId, value as its address
+   */
+  public static Map<String, InetSocketAddress> getResolvedRMIdPairs(
+      Configuration conf) {
+    boolean resolveNeeded = conf.getBoolean(
+        YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_KEY,
+        YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_DEFAULT);
+    boolean requireFQDN = conf.getBoolean(
+        YarnConfiguration.RESOLVE_RM_ADDRESS_TO_FQDN,
+        YarnConfiguration.RESOLVE_RM_ADDRESS_TO_FQDN_DEFAULT);
+    // In case client using DIFFERENT addresses for each service address
+    // need to categorize them first
+    Map<List<String>, List<String>> addressesConfigKeysMap = new HashMap<>();
+    Collection<String> rmIds = getOriginalRMHAIds(conf);
+    for (String configKey : RM_ADDRESS_CONFIG_KEYS) {
+      List<String> addresses = new ArrayList<>();
+      for (String rmId : rmIds) {
+        String keyToRead = addSuffix(configKey, rmId);
+        InetSocketAddress address = getInetSocketAddressFromString(
+            conf.get(keyToRead));
+        if (address != null) {
+          addresses.add(address.getHostName());
+        }
+      }
+      Collections.sort(addresses);
+      List<String> configKeysOfTheseAddresses = addressesConfigKeysMap.get(addresses);
+      if (configKeysOfTheseAddresses == null) {
+        configKeysOfTheseAddresses = new ArrayList<>();
+        addressesConfigKeysMap.put(addresses, configKeysOfTheseAddresses);
+      }
+      configKeysOfTheseAddresses.add(configKey);
+    }
+    // We need to resolve and override by group (categorized by their input host)
+    // But since the function is called from "getRMHAId",
+    // this function would only return value which is corresponded to YarnConfiguration.RM_ADDRESS
+    Map<String, InetSocketAddress> ret = null;
+    for (List<String> configKeys : addressesConfigKeysMap.values()) {
+      Map<String, InetSocketAddress> res = getResolvedIdPairs(conf, resolveNeeded, requireFQDN, getOriginalRMHAIds(conf),
+          configKeys.get(0), YarnConfiguration.RM_HA_IDS, configKeys);
+      if (configKeys.contains(YarnConfiguration.RM_ADDRESS)) {
+        ret = res;
+      }
+    }
+    return ret;
+  }
+
+  private static Map<String, InetSocketAddress> getResolvedIdPairs(
+      Configuration conf, boolean resolveNeeded, boolean requireFQDN, Collection<String> ids,
+      String configKey, String configKeyToReplace, List<String> listOfConfigKeysToReplace) {
+    Map<String, InetSocketAddress> idAddressPairs = new HashMap<>();
+    Map<String, String> generatedIdToOriginalId = new HashMap<>();
+    for (String id : ids) {
+      String key = addSuffix(configKey, id);
+      String addr = conf.get(key); // string with port
+      InetSocketAddress address = getInetSocketAddressFromString(addr);
+      if (address == null) {
+        continue;
+      }
+      if (resolveNeeded) {
+        if (dnr == null) {
+          setDnrByConfiguration(conf);
+        }
+        // If the address needs to be resolved, get all of the IP addresses
+        // from this address and pass them into the map
+        LOG.info("Multi-A domain name " + addr +
+            " will be resolved by " + dnr.getClass().getName());
+        int port = address.getPort();
+        String[] resolvedHostNames;
+        try {
+          resolvedHostNames = dnr.getAllResolvedHostnameByDomainName(
+              address.getHostName(), requireFQDN);
+        } catch (UnknownHostException e) {
+          LOG.warn("Exception in resolving socket address "
+              + address.getHostName(), e);
+          continue;
+        }
+        LOG.info("Resolved addresses for " + addr +
+            " is " + Arrays.toString(resolvedHostNames));
+        if (resolvedHostNames == null || resolvedHostNames.length < 1) {
+          LOG.warn("Cannot resolve from address " + address.getHostName());
+        } else {
+          // If multiple address resolved, corresponding id needs to be created
+          for (int i = 0; i < resolvedHostNames.length; i++) {
+            String generatedRMId = id + "_resolved_" + (i + 1);
+            idAddressPairs.put(generatedRMId,
+                new InetSocketAddress(resolvedHostNames[i], port));
+            generatedIdToOriginalId.put(generatedRMId, id);
+          }
+        }
+        overrideIdsInConfiguration(
+            idAddressPairs, generatedIdToOriginalId, configKeyToReplace,
+            listOfConfigKeysToReplace, conf);
+      } else {
+        idAddressPairs.put(id, address);
+      }
+    }
+    return idAddressPairs;
+  }
+
+  /**
+   * This function override all RMIds and their addresses by the input Map.
+   *
+   * @param idAddressPairs          key as Id, value as its address
+   * @param generatedIdToOriginalId key as generated rmId from multi-A,
+   *                                value as its original input Id
+   * @param configKeyToReplace      key to replace
+   * @param listOfConfigKeysToReplace list of keys to replace/add
+   * @param conf                    Configuration
+   */
+  synchronized static void overrideIdsInConfiguration(
+      Map<String, InetSocketAddress> idAddressPairs,
+      Map<String, String> generatedIdToOriginalId,
+      String configKeyToReplace, List<String> listOfConfigKeysToReplace,
+      Configuration conf) {
+    Collection<String> currentIds = getRMHAIds(conf);
+    Set<String> resolvedIds = new HashSet<>(idAddressPairs.keySet());
+    // override rm-ids
+    if (originalRMIDs == null) {
+      originalRMIDs = currentIds;
+    }
+    // if it is already resolved, we need to form a superset
+    resolvedIds.addAll((currentIds));
+    resolvedIds.removeAll(generatedIdToOriginalId.values());
+    conf.setStrings(configKeyToReplace,
+        resolvedIds.toArray(new String[0]));
+    // override/add address configuration entries for each rm-id
+    for (Map.Entry<String, InetSocketAddress> entry : idAddressPairs.entrySet()) {
+      String rmId = entry.getKey();
+      String addr = entry.getValue().getHostName();
+      String originalRMId = generatedIdToOriginalId.get(rmId);
+      if (originalRMId != null) {
+        // for each required configKeys, get its port and then set it back
+        for (String configKey : listOfConfigKeysToReplace) {
+          String keyToRead = addSuffix(configKey, originalRMId);
+          InetSocketAddress originalAddress = getInetSocketAddressFromString(
+              conf.get(keyToRead));
+          if (originalAddress == null) {
+            LOG.warn("Missing configuration for key " + keyToRead);
+            continue;
+          }
+          int port = originalAddress.getPort();
+          String keyToWrite = addSuffix(configKey, rmId);
+          conf.setSocketAddr(keyToWrite, new InetSocketAddress(addr, port));
+        }
+      }
+    }
+  }
+
+  /**
+   * Helper function to create InetsocketAddress from string address.
+   *
+   * @param addr string format of address accepted by NetUtils.createSocketAddr
+   * @return InetSocketAddress of input, would return null upon any kinds of invalid inout
+   */
+  public static InetSocketAddress getInetSocketAddressFromString(String addr) {
+    if (addr == null) {
+      return null;
+    }
+    InetSocketAddress address;
+    try {
+      address = NetUtils.createSocketAddr(addr);
+    } catch (Exception e) {
+      LOG.warn("Exception in creating socket address " + addr, e);
+      return null;
+    }
+    return address;
   }
 
   @VisibleForTesting

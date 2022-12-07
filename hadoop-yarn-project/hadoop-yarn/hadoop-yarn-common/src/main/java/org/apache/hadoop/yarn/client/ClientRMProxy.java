@@ -148,7 +148,13 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
       // Build a list of service addresses to form the service name
       ArrayList<String> services = new ArrayList<String>();
       YarnConfiguration yarnConf = new YarnConfiguration(conf);
-      for (String rmId : HAUtil.getRMHAIds(conf)) {
+      boolean resolveNeeded = yarnConf.getBoolean(
+          YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_KEY,
+          YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_DEFAULT);
+      if (resolveNeeded) {
+        HAUtil.getResolvedRMIdPairs(yarnConf);
+      }
+      for (String rmId : HAUtil.getRMHAIds(yarnConf)) {
         // Set RM_ID to get the corresponding RM_ADDRESS
         yarnConf.set(YarnConfiguration.RM_HA_ID, rmId);
         services.add(SecurityUtil.buildTokenService(

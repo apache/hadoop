@@ -895,6 +895,15 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
+  /** YARN DNS resolving related configs */
+  public static final String  RESOLVE_RM_ADDRESS_NEEDED_KEY = RM_HA_PREFIX + "resolve-needed";
+  public static final boolean RESOLVE_RM_ADDRESS_NEEDED_DEFAULT = false;
+  public static final String RESOLVE_RM_ADDRESS_KEY = RM_HA_PREFIX + "resolver.impl";
+  public static final String  RESOLVE_RM_ADDRESS_TO_FQDN = RM_HA_PREFIX + "resolver.useFQDN";
+  public static final boolean RESOLVE_RM_ADDRESS_TO_FQDN_DEFAULT = true;
+  public static final String RM_ID_REFRESH_INTERVAL = RM_HA_PREFIX + "refresh-period-ms";
+  public static final long RM_ID_REFRESH_INTERVAL_DEFAULT = -1;
+
   /** Store the related configuration files in File System */
   public static final String FS_BASED_RM_CONF_STORE = RM_PREFIX
       + "configuration.file-system-based-store";

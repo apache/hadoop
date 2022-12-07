@@ -669,6 +669,15 @@
   </property>
 
   <property>
+    <description>
+      Determines what class to use to resolve resourcemanager address to specific machine
+      address(es).
+    </description>
+    <name>yarn.resourcemanager.ha.resolver.impl</name>
+    <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+  </property>
+
+  <property>
     <description>Enable automatic failover.
       By default, it is enabled only when HA is enabled</description>
     <name>yarn.resourcemanager.ha.automatic-failover.enabled</name>
