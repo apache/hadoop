@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.security.AccessControlException;
 

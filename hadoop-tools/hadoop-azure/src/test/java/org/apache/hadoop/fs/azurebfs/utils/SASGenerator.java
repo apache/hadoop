@@ -94,12 +94,13 @@ public abstract class SASGenerator {
       // case when accountname starts with a ".": endpoint is present, accountName is null
       throw new InvalidConfigurationValueException("Account Name is not fully qualified");
     }
-    if (dotIndex > 0)
+    if (dotIndex > 0) {
       // case when endpoint is present with accountName
       return accountName.substring(0, dotIndex);
-    else
+    } else {
       // case when accountName is already canonicalized
       return accountName;
+    }
   }
 
   protected String computeHmac256(final String stringToSign) {
