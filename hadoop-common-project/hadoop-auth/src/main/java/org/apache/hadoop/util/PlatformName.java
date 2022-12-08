@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
-import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -59,18 +58,6 @@ public class PlatformName {
   }
 
   /**
-   * A List of platform and arch agnostic IBM Java Technology edition security modules.
-   */
-  private static final List<String> IBM_TECHNOLOGY_EDITION_SECURITY_MODULES = Arrays.asList(
-      "com.ibm.security.auth.module.JAASLoginModule",
-      "com.ibm.security.auth.module.Win64LoginModule",
-      "com.ibm.security.auth.module.NTLoginModule",
-      "com.ibm.security.auth.module.AIX64LoginModule",
-      "com.ibm.security.auth.module.LinuxLoginModule",
-      "com.ibm.security.auth.module.Krb5LoginModule"
-  );
-
-  /**
    * A public static variable to indicate the current java vendor is
    * IBM and the type is Java Technology Edition which provides its
    * own implementations of many security packages and Cipher suites.
@@ -79,8 +66,18 @@ public class PlatformName {
    * The class used is present in any supported IBM JTE Runtimes.
    */
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM") &&
-      IBM_TECHNOLOGY_EDITION_SECURITY_MODULES
-          .stream().anyMatch((module) -> isSystemClassAvailable(module));
+      hasIbmTechnologyEditionModules();
+
+  private static boolean hasIbmTechnologyEditionModules() {
+    return Arrays.asList(
+        "com.ibm.security.auth.module.JAASLoginModule",
+        "com.ibm.security.auth.module.Win64LoginModule",
+        "com.ibm.security.auth.module.NTLoginModule",
+        "com.ibm.security.auth.module.AIX64LoginModule",
+        "com.ibm.security.auth.module.LinuxLoginModule",
+        "com.ibm.security.auth.module.Krb5LoginModule"
+    ).stream().anyMatch((module) -> isSystemClassAvailable(module));
+  }
 
   /**
    * In rare cases where different behaviour is performed based on the JVM vendor
