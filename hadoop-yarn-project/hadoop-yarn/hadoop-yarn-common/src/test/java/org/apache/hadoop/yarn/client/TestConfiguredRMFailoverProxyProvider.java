@@ -43,7 +43,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 
 public class TestConfiguredRMFailoverProxyProvider {
-  private Configuration conf;
   private final static List<String> HOST_LIST = Arrays.asList(
       "host01",
       "host02",
@@ -62,28 +61,16 @@ public class TestConfiguredRMFailoverProxyProvider {
   private final static String MULTI_A_RM_SCHEDULER_ADDRESS = "rmscheduler.com";
   private final static long REFRESH_TIME_INTERVAL = 1000; // unit ms
 
-  ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProvider;
-
-  @Before
-  public void testInit() {
-    conf = new Configuration();
-    conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
-    RMProxy rm1Mock = mock(RMProxy.class);
-    doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
-    proxyProvider = new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
-    proxyProvider.init(conf, rm1Mock, ApplicationClientProtocol.class);
-  }
-
   public Configuration getDNSConfig() {
     Configuration dnsConf = new Configuration();
     dnsConf.set(YarnConfiguration.RESOLVE_RM_ADDRESS_KEY, MockDomainNameResolver.class.getName());
     dnsConf.set(YarnConfiguration.RM_HA_IDS, MULTI_A_RM_ID);
-    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, MULTI_A_RM_ID), MULTI_A_RM_ADDRESS +
-        ":" + YarnConfiguration.DEFAULT_RM_PORT);
-    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, MULTI_A_RM_ID), MULTI_A_RM_ADDRESS +
-        ":" + YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
-    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_SCHEDULER_ADDRESS, MULTI_A_RM_ID), MULTI_A_RM_SCHEDULER_ADDRESS +
-        ":" + YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
+    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, MULTI_A_RM_ID),
+        MULTI_A_RM_ADDRESS + ":" + YarnConfiguration.DEFAULT_RM_PORT);
+    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, MULTI_A_RM_ID),
+        MULTI_A_RM_ADDRESS + ":" + YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
+    dnsConf.set(HAUtil.addSuffix(YarnConfiguration.RM_SCHEDULER_ADDRESS, MULTI_A_RM_ID),
+        MULTI_A_RM_SCHEDULER_ADDRESS + ":" + YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
     dnsConf.setBoolean(YarnConfiguration.RESOLVE_RM_ADDRESS_NEEDED_KEY, true);
     dnsConf.setBoolean(YarnConfiguration.RESOLVE_RM_ADDRESS_TO_FQDN, true);
     return dnsConf;
@@ -121,39 +108,44 @@ public class TestConfiguredRMFailoverProxyProvider {
     ((MockDomainNameResolver)HAUtil.getDnr()).setPtrMap(ptrMap);
   }
 
-  @Test(expected = IllegalStateException.class)
-  public void testInitWithNoInstances() {
-    Configuration conf = new Configuration();;
+  @SuppressWarnings("unchecked") // mock generics
+  private void initProxyProvider(
+      Configuration conf,
+      ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProvider) {
     RMProxy rm1Mock = mock(RMProxy.class);
     doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
-    ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithNoInstances = new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
-    proxyProviderWithNoInstances.init(conf, rm1Mock, ApplicationClientProtocol.class);
+    proxyProvider.init(conf, rm1Mock, ApplicationClientProtocol.class);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testInitWithNoInstances() {
+    Configuration conf = new Configuration();
+    ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithNoInstances =
+        new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
+    initProxyProvider(conf, proxyProviderWithNoInstances);
   }
 
   @Test
   public void testGetProxy() {
-    FailoverProxyProvider.ProxyInfo<ApplicationClientProtocol> proxy = proxyProvider.getProxy();
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2,rm3,rm4");
-    RMProxy rm1Mock = mock(RMProxy.class);
-    doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
-    ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithNoInstances = new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
-    proxyProviderWithNoInstances.init(conf, rm1Mock, ApplicationClientProtocol.class);
-    assertEquals(proxyProviderWithNoInstances.rmServiceIds[0], "rm1");
-    FailoverProxyProvider.ProxyInfo<ApplicationClientProtocol> current = proxyProviderWithNoInstances.getProxy();
+    ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProvider =
+        new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
+    initProxyProvider(conf, proxyProvider);
+    assertEquals(proxyProvider.rmServiceIds[0], "rm1");
+    FailoverProxyProvider.ProxyInfo<ApplicationClientProtocol> current =
+        proxyProvider.getProxy();
     assertEquals(current.proxyInfo, "rm1");
   }
 
   @Test
   public void testInitWithMultiARecordRM() throws UnknownHostException {
     Configuration conf = getDNSConfig();
-    RMProxy rm1Mock = mock(RMProxy.class);
-    doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
     ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithmultiA =
         new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
     HAUtil.setDnrByConfiguration(conf);
     overrideDNSMapping(1);
-    proxyProviderWithmultiA.init(conf, rm1Mock, ApplicationClientProtocol.class);
+    initProxyProvider(conf, proxyProviderWithmultiA);
     assertEquals(HOST_LIST.size() - 1, proxyProviderWithmultiA.rmServiceIds.length);
     for (String rmId : proxyProviderWithmultiA.rmServiceIds) {
       assertTrue(rmId.startsWith("rm_resolved_"));
@@ -163,19 +155,19 @@ public class TestConfiguredRMFailoverProxyProvider {
   @Test
   public void testResolveDifferentMultiARecordRM() throws UnknownHostException {
     Configuration conf = getDNSConfig();
-    RMProxy rm1Mock = mock(RMProxy.class);
-    doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
     ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithmultiA =
         new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
     HAUtil.setDnrByConfiguration(conf);
     overrideDNSMapping(1);
-    proxyProviderWithmultiA.init(conf, rm1Mock, ApplicationClientProtocol.class);
+    initProxyProvider(conf, proxyProviderWithmultiA);
     List<String> rmAddresses = getRMAddresses(proxyProviderWithmultiA.conf,
         proxyProviderWithmultiA.rmServiceIds,
         YarnConfiguration.RM_ADDRESS);
-    List<String> rmAdminAddresses = getRMAddresses(proxyProviderWithmultiA.conf, proxyProviderWithmultiA.rmServiceIds,
+    List<String> rmAdminAddresses = getRMAddresses(proxyProviderWithmultiA.conf,
+        proxyProviderWithmultiA.rmServiceIds,
         YarnConfiguration.RM_ADMIN_ADDRESS);
-    List<String> rmSchedulerAddresses = getRMAddresses(proxyProviderWithmultiA.conf, proxyProviderWithmultiA.rmServiceIds,
+    List<String> rmSchedulerAddresses = getRMAddresses(proxyProviderWithmultiA.conf,
+        proxyProviderWithmultiA.rmServiceIds,
         YarnConfiguration.RM_SCHEDULER_ADDRESS);
     assertEquals(HOST_LIST.size() - 1, rmAddresses.size());
     assertEquals(HOST_LIST.size() - 1, rmAdminAddresses.size());
@@ -187,18 +179,17 @@ public class TestConfiguredRMFailoverProxyProvider {
   public void testRefreshWithMultiARecordRM() throws UnknownHostException, InterruptedException {
     Configuration conf = getDNSConfig();
     conf.setLong(YarnConfiguration.RM_ID_REFRESH_INTERVAL, REFRESH_TIME_INTERVAL);
-    RMProxy rm1Mock = mock(RMProxy.class);
-    doNothing().when(rm1Mock).checkAllowedProtocols(ApplicationClientProtocol.class);
     ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol> proxyProviderWithmultiA =
         new ConfiguredRMFailoverProxyProvider<ApplicationClientProtocol>();
     HAUtil.setDnrByConfiguration(conf);
     overrideDNSMapping(0);
-    proxyProviderWithmultiA.init(conf, rm1Mock, ApplicationClientProtocol.class);
+    initProxyProvider(conf, proxyProviderWithmultiA);
     InetSocketAddress oldActiveRMAddress =
         conf.getSocketAddr(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, HAUtil.getRMHAId(conf)),
             YarnConfiguration.DEFAULT_RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_PORT);
-    List<String> oldRMAddresses = getRMAddresses(conf, proxyProviderWithmultiA.rmServiceIds, YarnConfiguration.RM_ADDRESS);
+    List<String> oldRMAddresses = getRMAddresses(
+        conf, proxyProviderWithmultiA.rmServiceIds, YarnConfiguration.RM_ADDRESS);
     for (String address : oldRMAddresses) {
       assertTrue(!address.equals(HOST_LIST.get(0)));
     }
@@ -209,7 +200,8 @@ public class TestConfiguredRMFailoverProxyProvider {
         conf.getSocketAddr(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, HAUtil.getRMHAId(conf)),
             YarnConfiguration.DEFAULT_RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_PORT);
-    List<String> newRMAddresses = getRMAddresses(conf, proxyProviderWithmultiA.rmServiceIds, YarnConfiguration.RM_ADDRESS);
+    List<String> newRMAddresses = getRMAddresses(
+        conf, proxyProviderWithmultiA.rmServiceIds, YarnConfiguration.RM_ADDRESS);
     assertEquals(HOST_LIST.size() - 1, newRMAddresses.size());
     // active RM should remain same, even without failover
     assertEquals(oldActiveRMAddress, newActiveRMAddress);
