@@ -267,7 +267,7 @@ public class HAUtil {
 
   /**
    * Instead of returning RM_HA_IDS in current configurations, it
-   * would return the originally preset one in case of DNS resolving
+   * would return the originally preset one in case of DNS resolving.
    * @param conf Configuration.
    * @return RM Ids from original xml file
    */
@@ -343,7 +343,8 @@ public class HAUtil {
     // this function would only return value which is corresponded to YarnConfiguration.RM_ADDRESS
     Map<String, InetSocketAddress> ret = null;
     for (List<String> configKeys : addressesConfigKeysMap.values()) {
-      Map<String, InetSocketAddress> res = getResolvedIdPairs(conf, resolveNeeded, requireFQDN, getOriginalRMHAIds(conf),
+      Map<String, InetSocketAddress> res = getResolvedIdPairs(
+          conf, resolveNeeded, requireFQDN, getOriginalRMHAIds(conf),
           configKeys.get(0), YarnConfiguration.RM_HA_IDS, configKeys);
       if (configKeys.contains(YarnConfiguration.RM_ADDRESS)) {
         ret = res;
