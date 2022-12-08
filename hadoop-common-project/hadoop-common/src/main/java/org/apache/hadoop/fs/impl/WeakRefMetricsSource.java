@@ -78,6 +78,14 @@ public class WeakRefMetricsSource implements MetricsSource {
     return name;
   }
 
+  /**
+   * Get the source, will be null if the reference has been GC'd
+   * @return the source reference
+   */
+  public MetricsSource getSource() {
+    return sourceWeakReference.get();
+  }
+
   @Override
   public String toString() {
     return "WeakRefMetricsSource{" +

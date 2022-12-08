@@ -699,6 +699,17 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
     registry.snapshot(collector.addRecord(registry.info().name()), true);
   }
 
+  /**
+   * if registered with the metrics, return the
+   * name of the source.
+   * @return the name of the metrics, or null if this instance is not bonded.
+   */
+  public String getMetricSourceName() {
+    return metricsSourceReference != null
+        ? metricsSourceReference.getName()
+        : null;
+  }
+
   public void close() {
     if (metricsSourceReference != null) {
       // get the name

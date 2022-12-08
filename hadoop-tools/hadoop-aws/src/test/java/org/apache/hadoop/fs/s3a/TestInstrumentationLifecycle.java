@@ -20,8 +20,11 @@ package org.apache.hadoop.fs.s3a;
 
 import java.net.URI;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.impl.WeakRefMetricsSource;
+import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
@@ -29,6 +32,11 @@ import static org.apache.hadoop.fs.s3a.S3AInstrumentation.getMetricsSystem;
 import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_CREATED;
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Test the {@link S3AInstrumentation} lifecycle,  in particular how
+ * it binds to hadoop metrics through a {@link WeakRefMetricsSource}
+ * and that it will deregister itself in {@link S3AInstrumentation#close()}.
+ */
 public class TestInstrumentationLifecycle extends AbstractHadoopTestBase {
 
   @Test
@@ -46,6 +54,16 @@ public class TestInstrumentationLifecycle extends AbstractHadoopTestBase {
         .isNotNull();
 
     MetricsSystem activeMetrics = getMetricsSystem();
+    final String metricSourceName = instrumentation.getMetricSourceName();
+    final MetricsSource source = activeMetrics.getSource(metricSourceName);
+    // verify the source is registered through a weak ref, and that the
+    // reference maps to the instance.
+    Assertions.assertThat(source)
+        .describedAs("metric source %s", metricSourceName)
+        .isNotNull()
+        .isInstanceOf(WeakRefMetricsSource.class)
+        .extracting(m -> ((WeakRefMetricsSource) m).getSource())
+        .isSameAs(instrumentation);
 
     // this will close the metrics system
     instrumentation.close();
