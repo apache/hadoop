@@ -93,11 +93,16 @@ public abstract class SASGenerator {
   protected String getCanonicalAccountName(String accountName) throws InvalidConfigurationValueException {
     // returns the account name without the endpoint
     int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
-    if (dotIndex <= 0) {
+    if (dotIndex == 0) {
+      // case when accountname starts with a ".": endpoint is present, accountName is null
       throw new InvalidConfigurationValueException("Account Name is not fully qualified");
     }
-    String truncAccountName = accountName.substring(0, dotIndex);
-    return truncAccountName;
+    if (dotIndex > 0)
+      // case when endpoint is present with accountName
+      return accountName.substring(0, dotIndex);
+    else
+      // case when accountName is already canonicalized
+      return accountName;
   }
 
   protected String computeHmac256(final String stringToSign) {
