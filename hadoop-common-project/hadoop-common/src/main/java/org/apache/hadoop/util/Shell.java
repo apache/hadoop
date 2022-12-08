@@ -60,7 +60,7 @@ public abstract class Shell {
    * {@value}
    */
   private static final String WINDOWS_PROBLEMS =
-      "https://wiki.apache.org/hadoop/WindowsProblems";
+      "https://cwiki.apache.org/confluence/display/HADOOP2/WindowsProblems";
 
   /**
    * Name of the windows utils binary: {@value}.

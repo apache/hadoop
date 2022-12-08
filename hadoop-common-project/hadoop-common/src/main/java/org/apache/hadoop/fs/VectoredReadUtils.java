@@ -30,12 +30,15 @@ import java.util.function.IntFunction;
 
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
+import org.apache.hadoop.util.functional.Function4RaisingIOE;
 
 /**
  * Utility class which implements helper methods used
  * in vectored IO implementation.
  */
 public final class VectoredReadUtils {
+
+  private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
 
   /**
    * Validate a single range.
@@ -114,7 +117,12 @@ public final class VectoredReadUtils {
                                                           FileRange range,
                                                           ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      buffer.put(readInDirectBuffer(stream, range));
+      readInDirectBuffer(range.getLength(),
+          buffer,
+          (position, buffer1, offset, length) -> {
+            stream.readFully(position, buffer1, offset, length);
+            return null;
+          });
       buffer.flip();
     } else {
       stream.readFully(range.getOffset(), buffer.array(),
@@ -122,13 +130,34 @@ public final class VectoredReadUtils {
     }
   }
 
-  private static byte[] readInDirectBuffer(PositionedReadable stream,
-                                           FileRange range) throws IOException {
-    // if we need to read data from a direct buffer and the stream doesn't
-    // support it, we allocate a byte array to use.
-    byte[] tmp = new byte[range.getLength()];
-    stream.readFully(range.getOffset(), tmp, 0, tmp.length);
-    return tmp;
+  /**
+   * Read bytes from stream into a byte buffer using an
+   * intermediate byte array.
+   * @param length number of bytes to read.
+   * @param buffer buffer to fill.
+   * @param operation operation to use for reading data.
+   * @throws IOException any IOE.
+   */
+  public static void readInDirectBuffer(int length,
+                                        ByteBuffer buffer,
+                                        Function4RaisingIOE<Integer, byte[], Integer,
+                                                Integer, Void> operation) throws IOException {
+    if (length == 0) {
+      return;
+    }
+    int readBytes = 0;
+    int position = 0;
+    int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
+    byte[] tmp = new byte[tmpBufferMaxSize];
+    while (readBytes < length) {
+      int currentLength = (readBytes + tmpBufferMaxSize) < length ?
+              tmpBufferMaxSize
+              : (length - readBytes);
+      operation.apply(position, tmp, 0, currentLength);
+      buffer.put(tmp, 0, currentLength);
+      position = position + currentLength;
+      readBytes = readBytes + currentLength;
+    }
   }
 
   /**
@@ -210,6 +239,7 @@ public final class VectoredReadUtils {
       if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
         throw new UnsupportedOperationException("Overlapping ranges are not supported");
       }
+      prev = sortedRanges[i];
     }
     return Arrays.asList(sortedRanges);
   }
@@ -277,9 +307,16 @@ public final class VectoredReadUtils {
                                    FileRange request) {
     int offsetChange = (int) (request.getOffset() - readOffset);
     int requestLength = request.getLength();
+    // Create a new buffer that is backed by the original contents
+    // The buffer will have position 0 and the same limit as the original one
     readData = readData.slice();
+    // Change the offset and the limit of the buffer as the reader wants to see
+    // only relevant data
     readData.position(offsetChange);
     readData.limit(offsetChange + requestLength);
+    // Create a new buffer after the limit change so that only that portion of the data is
+    // returned to the reader.
+    readData = readData.slice();
     return readData;
   }
 

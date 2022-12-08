@@ -479,4 +479,17 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         "r--r-----",
         fileStatus.getPermission().toString());
   }
+
+  @Test
+  public void testSASQuesMarkPrefix() throws Exception {
+    AbfsConfiguration testConfig = this.getConfiguration();
+    // the SAS Token Provider is changed
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, "org.apache.hadoop.fs.azurebfs.extensions.MockWithPrefixSASTokenProvider");
+
+    AzureBlobFileSystem testFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
+    Path testFile = new Path("/testSASPrefixQuesMark");
+
+    // the creation of this filesystem should work correctly even when a SAS Token is generated with a ? prefix
+    testFs.create(testFile).close();
+  }
 }

@@ -25,3 +25,5 @@ DROP TABLE applicationsHomeSubCluster;
 DROP TABLE membership;
 
 DROP TABLE policies;
+
+DROP TABLE reservationsHomeSubCluster;

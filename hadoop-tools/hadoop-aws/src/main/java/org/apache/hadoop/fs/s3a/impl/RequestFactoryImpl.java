@@ -408,6 +408,9 @@ public class RequestFactoryImpl implements RequestFactory {
         inputStream, metadata);
     setOptionalPutRequestParameters(putObjectRequest);
     putObjectRequest.setCannedAcl(cannedACL);
+    if (storageClass != null) {
+      putObjectRequest.setStorageClass(storageClass);
+    }
     return prepareRequest(putObjectRequest);
   }
 
@@ -416,19 +419,22 @@ public class RequestFactoryImpl implements RequestFactory {
     String key = directory.endsWith("/")
         ? directory
         : (directory + "/");
-    // an input stream which is laways empty
-    final InputStream im = new InputStream() {
+    // an input stream which is always empty
+    final InputStream inputStream = new InputStream() {
       @Override
       public int read() throws IOException {
         return -1;
       }
     };
     // preparation happens in here
-    final ObjectMetadata md = createObjectMetadata(0L, true);
-    md.setContentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
-    PutObjectRequest putObjectRequest =
-        newPutObjectRequest(key, md, null, im);
-    return putObjectRequest;
+    final ObjectMetadata metadata = createObjectMetadata(0L, true);
+    metadata.setContentType(HeaderProcessing.CONTENT_TYPE_X_DIRECTORY);
+
+    PutObjectRequest putObjectRequest = new PutObjectRequest(getBucket(), key,
+        inputStream, metadata);
+    setOptionalPutRequestParameters(putObjectRequest);
+    putObjectRequest.setCannedAcl(cannedACL);
+    return prepareRequest(putObjectRequest);
   }
 
   @Override

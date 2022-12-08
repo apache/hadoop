@@ -37,7 +37,7 @@
     <!--Whether to proceed to next module if any test failures exist-->
     <maven.test.failure.ignore>true</maven.test.failure.ignore>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-    <jetty.version>9.4.44.v20210927</jetty.version>
+    <jetty.version>9.4.48.v20220622</jetty.version>
     <test.exclude>_</test.exclude>
     <test.exclude.pattern>_</test.exclude.pattern>
 
@@ -50,7 +50,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>2.8.1</kafka.version>
+    <kafka.version>2.8.2</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -69,11 +69,8 @@
     <jersey.version>1.19.4</jersey.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.13.2</jackson2.version>
-    <jackson2.databind.version>2.13.2.2</jackson2.databind.version>
-
-    <!-- javax ws rs api version -->
-    <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
+    <jackson2.version>2.12.7</jackson2.version>
+    <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -120,31 +117,31 @@
     <commons-codec.version>1.15</commons-codec.version>
     <commons-collections.version>3.2.2</commons-collections.version>
     <commons-compress.version>1.21</commons-compress.version>
-    <commons-csv.version>1.0</commons-csv.version>
-    <commons-io.version>2.8.0</commons-io.version>
+    <commons-csv.version>1.9.0</commons-csv.version>
+    <commons-io.version>2.11.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-logging.version>1.1.3</commons-logging.version>
     <commons-logging-api.version>1.1</commons-logging-api.version>
-    <commons-math3.version>3.1.1</commons-math3.version>
-    <commons-net.version>3.6</commons-net.version>
-    <commons-text.version>1.4</commons-text.version>
+    <commons-math3.version>3.6.1</commons-math3.version>
+    <commons-net.version>3.8.0</commons-net.version>
+    <commons-text.version>1.10.0</commons-text.version>
 
-    <kerby.version>1.0.1</kerby.version>
+    <kerby.version>2.0.2</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.3.1</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
     <mssql.version>6.2.1.jre7</mssql.version>
-    <okhttp.version>2.7.5</okhttp.version>
-    <okhttp3.version>4.9.3</okhttp3.version>
-    <kotlin-stdlib.verion>1.4.10</kotlin-stdlib.verion>
-    <kotlin-stdlib-common.version>1.4.10</kotlin-stdlib-common.version>
+    <okhttp3.version>4.10.0</okhttp3.version>
+    <okio.version>3.2.0</okio.version>
+    <kotlin-stdlib.verion>1.6.20</kotlin-stdlib.verion>
+    <kotlin-stdlib-common.version>1.6.20</kotlin-stdlib-common.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <jna.version>5.2.0</jna.version>
     <grizzly.version>2.2.21</grizzly.version>
     <gson.version>2.9.0</gson.version>
     <metrics.version>3.2.4</metrics.version>
     <netty3.version>3.10.6.Final</netty3.version>
-    <netty4.version>4.1.68.Final</netty4.version>
+    <netty4.version>4.1.77.Final</netty4.version>
     <snappy-java.version>1.1.8.2</snappy-java.version>
     <lz4-java.version>1.7.1</lz4-java.version>
 
@@ -177,7 +174,7 @@
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
-    <maven-shade-plugin.version>3.2.1</maven-shade-plugin.version>
+    <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
     <maven-war-plugin.version>3.1.0</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
@@ -187,8 +184,8 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.132</aws-java-sdk.version>
-    <hsqldb.version>2.3.4</hsqldb.version>
+    <aws-java-sdk.version>1.12.316</aws-java-sdk.version>
+    <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
     <jasmine-maven-plugin.version>2.1</jasmine-maven-plugin.version>
     <phantomjs-maven-plugin.version>0.7</phantomjs-maven-plugin.version>
@@ -200,7 +197,7 @@
     <declared.hadoop.version>${hadoop.version}</declared.hadoop.version>
 
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
-    <snakeyaml.version>1.26</snakeyaml.version>
+    <snakeyaml.version>1.33</snakeyaml.version>
     <hbase.one.version>1.7.1</hbase.one.version>
     <hbase.two.version>2.2.4</hbase.two.version>
     <junit.version>4.13.2</junit.version>
@@ -213,7 +210,7 @@
     <solr.version>8.8.2</solr.version>
     <openssl-wildfly.version>1.0.7.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
-    <woodstox.version>5.3.0</woodstox.version>
+    <woodstox.version>5.4.0</woodstox.version>
     <json-smart.version>2.4.7</json-smart.version>
     <nimbus-jose-jwt.version>9.8.1</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
@@ -237,7 +234,16 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib-common</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio-jvm</artifactId>
+          </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.okio</groupId>
+        <artifactId>okio-jvm</artifactId>
+        <version>${okio.version}</version>
       </dependency>
       <dependency>
         <groupId>org.jetbrains.kotlin</groupId>
@@ -258,8 +264,18 @@
       <dependency>
         <groupId>com.squareup.okhttp3</groupId>
         <artifactId>mockwebserver</artifactId>
-        <version>4.9.3</version>
+        <version>${okhttp3.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio-jvm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>jdiff</groupId>
@@ -363,6 +379,11 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs-native-client</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdfs-rbf</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
@@ -392,6 +413,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-nativetask</artifactId>
         <version>${hadoop.version}</version>
       </dependency>
       <dependency>
@@ -681,6 +707,7 @@
         <version>${hadoop.version}</version>
       </dependency>
 
+      <!-- This is empty; retained only for downstream app build compatibility. -->
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-openstack</artifactId>
@@ -800,11 +827,6 @@
         <groupId>javax.ws.rs</groupId>
         <artifactId>jsr311-api</artifactId>
         <version>1.1.1</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.ws.rs</groupId>
-        <artifactId>javax.ws.rs-api</artifactId>
-        <version>${javax.ws.rs-api.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
@@ -992,6 +1014,66 @@
       </dependency>
 
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-socks</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler-proxy</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-resolver</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-handler</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-buffer</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-common</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-unix-common</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-transport-native-epoll</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec</artifactId>
+        <version>${netty4.version}</version>
+      </dependency>
+
+      <dependency>
         <groupId>commons-io</groupId>
         <artifactId>commons-io</artifactId>
         <version>${commons-io.version}</version>
@@ -1154,7 +1236,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.1.1</version>
+        <version>2.8.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.commons</groupId>
@@ -1417,6 +1499,7 @@
         <groupId>org.hsqldb</groupId>
         <artifactId>hsqldb</artifactId>
         <version>${hsqldb.version}</version>
+        <classifier>jdk8</classifier>
       </dependency>
       <dependency>
         <groupId>io.dropwizard.metrics</groupId>
@@ -1446,7 +1529,7 @@
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
-        <version>1.1</version>
+        <version>1.5.1</version>
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>
@@ -1730,6 +1813,12 @@
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-simplekdc</artifactId>
           <version>${kerby.version}</version>
+          <exclusions>
+            <exclusion>
+                <groupId>org.jboss.xnio</groupId>
+                <artifactId>xnio-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.kerby</groupId>

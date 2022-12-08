@@ -25,6 +25,7 @@ package hadoop.yarn;
 
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
+import "yarn_security_token.proto";
 
 message SubClusterIdProto {
   optional string id = 1;
@@ -96,6 +97,7 @@ message GetSubClustersInfoResponseProto {
 message ApplicationHomeSubClusterProto {
   optional ApplicationIdProto application_id = 1;
   optional SubClusterIdProto home_sub_cluster = 2;
+  optional int64 create_time = 3;
 }
 
 message AddApplicationHomeSubClusterRequestProto {
@@ -122,7 +124,7 @@ message GetApplicationHomeSubClusterResponseProto {
 }
 
 message GetApplicationsHomeSubClusterRequestProto {
-
+  optional SubClusterIdProto sub_cluster_id = 1;
 }
 
 message GetApplicationsHomeSubClusterResponseProto {
@@ -136,6 +138,56 @@ message DeleteApplicationHomeSubClusterRequestProto {
 
 message DeleteApplicationHomeSubClusterResponseProto {
 }
+
+
+// ---- reservations ----
+
+message ReservationHomeSubClusterProto {
+  optional ReservationIdProto reservation_id = 1;
+  optional SubClusterIdProto home_sub_cluster = 2;
+}
+
+message AddReservationHomeSubClusterRequestProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message AddReservationHomeSubClusterResponseProto {
+  optional SubClusterIdProto home_sub_cluster = 1;
+}
+
+message UpdateReservationHomeSubClusterRequestProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message UpdateReservationHomeSubClusterResponseProto {
+}
+
+message GetReservationHomeSubClusterRequestProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
+message GetReservationHomeSubClusterResponseProto {
+  optional ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+message GetReservationsHomeSubClusterRequestProto {
+
+}
+
+message GetReservationsHomeSubClusterResponseProto {
+  repeated ReservationHomeSubClusterProto app_subcluster_map = 1;
+}
+
+
+message DeleteReservationHomeSubClusterRequestProto {
+  optional ReservationIdProto reservation_id = 1;
+}
+
+message DeleteReservationHomeSubClusterResponseProto {
+}
+
+
+//----- configurations ---
 
 message SubClusterPolicyConfigurationProto {
   optional string queue = 1;
@@ -163,4 +215,31 @@ message GetSubClusterPoliciesConfigurationsRequestProto {
 
 message GetSubClusterPoliciesConfigurationsResponseProto {
   repeated SubClusterPolicyConfigurationProto policies_configurations = 1;
- }
+}
+
+message RouterMasterKeyProto {
+  optional int32 key_id = 1;
+  optional bytes key_bytes = 2;
+  optional uint64 expiry_date = 3;
+}
+
+message RouterMasterKeyRequestProto {
+  optional RouterMasterKeyProto router_master_key = 1;
+}
+
+message RouterMasterKeyResponseProto {
+  optional RouterMasterKeyProto router_master_key = 1;
+}
+
+message RouterStoreTokenProto {
+  optional YARNDelegationTokenIdentifierProto token_identifier = 1;
+  optional int64 renew_date = 2;
+}
+
+message RouterRMTokenRequestProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}
+
+message RouterRMTokenResponseProto {
+  optional RouterStoreTokenProto router_store_token = 1;
+}

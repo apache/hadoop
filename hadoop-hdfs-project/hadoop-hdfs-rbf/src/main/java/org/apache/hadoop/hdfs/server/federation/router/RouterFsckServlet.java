@@ -25,20 +25,19 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.DfsServlet;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class is used in Namesystem's web server to do fsck on namenode.
  */
 @InterfaceAudience.Private
-public class RouterFsckServlet extends HttpServlet {
+public class RouterFsckServlet extends DfsServlet {
   /** for java.io.Serializable. */
   private static final long serialVersionUID = 1L;
 
@@ -67,15 +66,4 @@ public class RouterFsckServlet extends HttpServlet {
     }
   }
 
-  /**
-   * Copy from {@link org.apache.hadoop.hdfs.server.namenode.DfsServlet}.
-   * @param request Http request from the user
-   * @param conf configuration
-   * @return ugi of the requested user
-   * @throws IOException failed to get ugi
-   */
-  protected UserGroupInformation getUGI(HttpServletRequest request,
-      Configuration conf) throws IOException {
-    return JspHelper.getUGI(getServletContext(), request, conf);
-  }
 }

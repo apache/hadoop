@@ -72,7 +72,7 @@ public class MutableRatesWithAggregation extends MutableMetric {
       return;
     }
     protocolCache.add(protocol);
-    for (Method method : protocol.getDeclaredMethods()) {
+    for (Method method : protocol.getMethods()) {
       String name = method.getName();
       LOG.debug(name);
       addMetricIfNotExists(name);

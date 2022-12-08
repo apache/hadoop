@@ -48,6 +48,9 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 
 import org.slf4j.Logger;
@@ -1127,5 +1130,15 @@ public class TestNameNodeMetrics {
       }
     }
 
+  }
+
+  @Test
+  public void testNNRPCMetricIntegrity() {
+    RpcDetailedMetrics metrics =
+        ((NameNodeRpcServer) cluster.getNameNode()
+            .getRpcServer()).getClientRpcServer().getRpcDetailedMetrics();
+    MetricsRecordBuilder rb = getMetrics(metrics.name());
+    // CommitBlockSynchronizationNumOps should exist.
+    assertCounter("CommitBlockSynchronizationNumOps", 0L, rb);
   }
 }

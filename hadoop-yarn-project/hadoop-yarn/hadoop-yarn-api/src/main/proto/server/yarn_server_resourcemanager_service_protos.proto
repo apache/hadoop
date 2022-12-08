@@ -32,6 +32,7 @@ package hadoop.yarn;
 import "yarn_protos.proto";
 
 message RefreshQueuesRequestProto {
+  optional string sub_cluster_id = 1;
 }
 message RefreshQueuesResponseProto {
 }
@@ -39,6 +40,7 @@ message RefreshQueuesResponseProto {
 message RefreshNodesRequestProto {
   optional DecommissionTypeProto decommissionType = 1 [default = NORMAL];
   optional int32 decommissionTimeout = 2;
+  optional string sub_cluster_id = 3;
 }
 message RefreshNodesResponseProto {
 }

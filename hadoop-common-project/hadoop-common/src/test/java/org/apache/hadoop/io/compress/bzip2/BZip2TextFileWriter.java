@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.io.compress.bzip2;
 
-import static org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream.MIN_BLOCKSIZE;
-import static org.apache.hadoop.util.Preconditions.checkArgument;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -29,6 +26,9 @@ import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.BZip2Codec;
+
+import static org.apache.hadoop.io.compress.bzip2.CBZip2OutputStream.MIN_BLOCKSIZE;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * A writer that simplifies creating BZip2 compressed text data for testing

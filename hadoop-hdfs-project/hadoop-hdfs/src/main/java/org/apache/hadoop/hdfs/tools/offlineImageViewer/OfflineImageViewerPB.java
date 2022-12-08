@@ -80,6 +80,9 @@ public class OfflineImageViewerPB {
       + "    delimiter. The default delimiter is \\t, though this may be\n"
       + "    changed via the -delimiter argument.\n"
       + "    -sp print storage policy, used by delimiter only.\n"
+      + "    -ec print erasure coding policy, used by delimiter only.\n"
+      + "    -m  defines multiThread to process sub-sections, \n"
+      + "    used by delimiter only.\n"
       + "  * DetectCorruption: Detect potential corruption of the image by\n"
       + "    selectively loading parts of it and actively searching for\n"
       + "    inconsistencies. Outputs a summary of the found corruptions\n"
@@ -100,8 +103,24 @@ public class OfflineImageViewerPB {
       + "                       against image file. (XML|FileDistribution|\n"
       + "                       ReverseXML|Web|Delimited|DetectCorruption)\n"
       + "                       The default is Web.\n"
+      + "-addr <arg>            Specify the address(host:port) to listen.\n"
+      + "                       (localhost:5978 by default). This option is\n"
+      + "                       used with Web processor.\n"
+      + "-maxSize <arg>         Specify the range [0, maxSize] of file sizes\n"
+      + "                       to be analyzed in bytes (128GB by default).\n"
+      + "                       This option is used with FileDistribution processor.\n"
+      + "-step <arg>            Specify the granularity of the distribution in bytes\n"
+      + "                       (2MB by default). This option is used\n"
+      + "                       with FileDistribution processor.\n"
+      + "-format                Format the output result in a human-readable fashion rather\n"
+      + "                       than a number of bytes. (false by default).\n"
+      + "                       This option is used with FileDistribution processor.\n"
       + "-delimiter <arg>       Delimiting string to use with Delimited or \n"
       + "                       DetectCorruption processor. \n"
+      + "-sp                    Whether to print storage policy (default is false). \n"
+      + "                       Is used by Delimited processor only. \n"
+      + "-ec                    Whether to print erasure coding policy (default is false). \n"
+      + "                       Is used by Delimited processor only. \n"
       + "-t,--temp <arg>        Use temporary dir to cache intermediate\n"
       + "                       result to generate DetectCorruption or\n"
       + "                       Delimited outputs. If not set, the processor\n"
@@ -132,6 +151,7 @@ public class OfflineImageViewerPB {
     options.addOption("addr", true, "");
     options.addOption("delimiter", true, "");
     options.addOption("sp", false, "");
+    options.addOption("ec", false, "");
     options.addOption("t", "temp", true, "");
     options.addOption("m", "multiThread", true, "");
 
@@ -228,9 +248,11 @@ public class OfflineImageViewerPB {
         break;
       case "DELIMITED":
         boolean printStoragePolicy = cmd.hasOption("sp");
+        boolean printECPolicy = cmd.hasOption("ec");
         try (PBImageDelimitedTextWriter writer =
             new PBImageDelimitedTextWriter(out, delimiter,
-                tempPath, printStoragePolicy, threads, outputFile)) {
+                tempPath, printStoragePolicy, printECPolicy, threads,
+                outputFile, conf)) {
           writer.visit(inputFile);
         }
         break;

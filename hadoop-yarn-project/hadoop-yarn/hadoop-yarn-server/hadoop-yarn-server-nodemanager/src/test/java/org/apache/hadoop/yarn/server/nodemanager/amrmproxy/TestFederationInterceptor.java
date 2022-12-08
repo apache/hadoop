@@ -26,16 +26,19 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.registry.client.impl.FSRegistryOperationsService;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -57,10 +60,12 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.UpdateContainerError;
 import org.apache.hadoop.yarn.api.records.UpdatedContainer;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationMasterNotRegisteredException;
 import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.MockResourceManagerFacade;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
@@ -69,11 +74,13 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterRegisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMMemoryStateStoreService;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
+import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -84,7 +91,7 @@ import org.slf4j.LoggerFactory;
  * Extends the TestAMRMProxyService and overrides methods in order to use the
  * AMRMProxyService's pipeline test cases for testing the FederationInterceptor
  * class. The tests for AMRMProxyService has been written cleverly so that it
- * can be reused to validate different request intercepter chains.
+ * can be reused to validate different request interceptor chains.
  */
 public class TestFederationInterceptor extends BaseAMRMProxyTest {
   private static final Logger LOG =
@@ -148,8 +155,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     String mockPassThroughInterceptorClass =
         PassThroughRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
-    // chain is the federation intercepter that calls the mock resource manager.
+    // Create a request interceptor pipeline for testing. The last one in the
+    // chain is the federation interceptor that calls the mock resource manager.
     // The others in the chain will simply forward it to the next one in the
     // chain
     conf.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
@@ -255,7 +262,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
     // The release request will be split and handled by the corresponding UAM.
     // The release containers returned by the mock resource managers will be
-    // aggregated and returned back to us and we can check if total request size
+    // aggregated and returned back to us, and we can check if total request size
     // and returned size are the same
     List<ContainerId> containersForReleasedContainerIds =
         new ArrayList<ContainerId>();
@@ -361,10 +368,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         return null;
       }
@@ -421,10 +428,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
         return null;
       }
     });
@@ -513,6 +520,16 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     testRecover(null);
   }
 
+  @Test
+  public void testRecoverBadSCWithAMRMProxyHA() throws Exception {
+    testRecoverWithBadSubCluster(registry);
+  }
+
+  @Test
+  public void testRecoverBadSCWithoutAMRMProxyHA() throws Exception {
+    testRecoverWithBadSubCluster(null);
+  }
+
   protected void testRecover(final RegistryOperations registryObj)
       throws Exception {
     UserGroupInformation ugi =
@@ -569,7 +586,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
             interceptor.getSecondaryRMs();
 
-        // Create a new intercepter instance and recover
+        // Create a new interceptor instance and recover
         interceptor = new TestableFederationInterceptor(homeRM, secondaries);
         interceptor.init(new AMRMProxyApplicationContextImpl(nmContext,
             getConf(), attemptId, "test-user", null, null, null, registryObj));
@@ -604,10 +621,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         // After the application succeeds, the registry/NMSS entry should be
         // cleaned up
@@ -845,7 +862,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
             interceptor.getSecondaryRMs();
 
-        // Increase the attemptId and create a new intercepter instance for it
+        // Increase the attemptId and create a new interceptor instance for it
         attemptId = ApplicationAttemptId.newInstance(
             attemptId.getApplicationId(), attemptId.getAttemptId() + 1);
 
@@ -884,10 +901,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         finishReq.setTrackingUrl("");
         finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
 
-        FinishApplicationMasterResponse finshResponse =
+        FinishApplicationMasterResponse finishResponse =
             interceptor.finishApplicationMaster(finishReq);
-        Assert.assertNotNull(finshResponse);
-        Assert.assertEquals(true, finshResponse.getIsUnregistered());
+        Assert.assertNotNull(finishResponse);
+        Assert.assertEquals(true, finishResponse.getIsUnregistered());
 
         // After the application succeeds, the registry entry should be deleted
         if (interceptor.getRegistryClient() != null) {
@@ -968,5 +985,451 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     contract.setContainers(preemptionContainers);
     preemptionMessage.setContract(contract);
     return preemptionMessage;
+  }
+
+  @Test
+  public void testSameContainerFromDiffRM() throws IOException, InterruptedException {
+
+    UserGroupInformation ugi =
+        interceptor.getUGIWithToken(interceptor.getAttemptId());
+
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+
+      // Register the application
+      RegisterApplicationMasterRequest registerReq =
+          Records.newRecord(RegisterApplicationMasterRequest.class);
+      registerReq.setHost(Integer.toString(testAppId));
+      registerReq.setRpcPort(0);
+      registerReq.setTrackingUrl("");
+
+      RegisterApplicationMasterResponse registerResponse =
+          interceptor.registerApplicationMaster(registerReq);
+      Assert.assertNotNull(registerResponse);
+      lastResponseId = 0;
+
+      Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+      // Allocate the first batch of containers, with sc1 active
+      SubClusterId subClusterId1 = SubClusterId.newInstance("SC-1");
+      registerSubCluster(subClusterId1);
+
+      int numberOfContainers = 3;
+      List<Container> containers =
+          getContainersAndAssert(numberOfContainers, numberOfContainers);
+      Assert.assertNotNull(containers);
+      Assert.assertEquals(3, containers.size());
+
+      // with sc2 active
+      SubClusterId subClusterId2 = SubClusterId.newInstance("SC-2");
+      registerSubCluster(subClusterId2);
+
+      // 1.Container has been registered to SubCluster1, try to register the same Container
+      // to SubCluster2.
+      // Because SubCluster1 is in normal state at this time,
+      // So the SubCluster corresponding to Container should be SubCluster1
+      interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId2);
+      Map<ContainerId, SubClusterId> cIdToSCMap = interceptor.getContainerIdToSubClusterIdMap();
+      for (SubClusterId subClusterId : cIdToSCMap.values()) {
+        Assert.assertNotNull(subClusterId);
+        Assert.assertEquals(subClusterId1, subClusterId);
+      }
+
+      // 2.Deregister SubCluster1, Register the same Containers to SubCluster2
+      // So the SubCluster corresponding to Container should be SubCluster2
+      deRegisterSubCluster(subClusterId1);
+      interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId2);
+      Map<ContainerId, SubClusterId> cIdToSCMap2 = interceptor.getContainerIdToSubClusterIdMap();
+      for (SubClusterId subClusterId : cIdToSCMap2.values()) {
+        Assert.assertNotNull(subClusterId);
+        Assert.assertEquals(subClusterId2, subClusterId);
+      }
+
+      // 3.Deregister subClusterId2, Register the same Containers to SubCluster1
+      // Because both SubCluster1 and SubCluster2 are abnormal at this time,
+      // an exception will be thrown when registering the first Container.
+      deRegisterSubCluster(subClusterId2);
+      Container container1 = containers.get(0);
+      Assert.assertNotNull(container1);
+      String errMsg =
+          " Can't use any subCluster because an exception occurred" +
+          " ContainerId: " + container1.getId() +
+          " ApplicationId: " + interceptor.getAttemptId() +
+          " From RM: " + subClusterId1 + ". " +
+          " Previous Container was From subCluster: " + subClusterId2;
+
+      LambdaTestUtils.intercept(YarnRuntimeException.class, errMsg,
+          () -> interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId1));
+
+      // 4. register SubCluster1, re-register the Container,
+      // and try to finish application
+      registerSubCluster(subClusterId1);
+      interceptor.cacheAllocatedContainersForSubClusterId(containers, subClusterId1);
+      releaseContainersAndAssert(containers);
+
+      // Finish the application
+      FinishApplicationMasterRequest finishReq =
+          Records.newRecord(FinishApplicationMasterRequest.class);
+      finishReq.setDiagnostics("");
+      finishReq.setTrackingUrl("");
+      finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+      FinishApplicationMasterResponse finishResponse =
+          interceptor.finishApplicationMaster(finishReq);
+      Assert.assertNotNull(finishResponse);
+      Assert.assertTrue(finishResponse.getIsUnregistered());
+
+      return null;
+    });
+  }
+
+  @Test
+  public void testBatchFinishApplicationMaster() throws IOException, InterruptedException {
+
+    final RegisterApplicationMasterRequest registerReq =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
+    registerReq.setHost(Integer.toString(testAppId));
+    registerReq.setRpcPort(testAppId);
+    registerReq.setTrackingUrl("");
+
+    UserGroupInformation ugi = interceptor.getUGIWithToken(interceptor.getAttemptId());
+
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+
+      // Register the application
+      RegisterApplicationMasterRequest registerReq1 =
+          Records.newRecord(RegisterApplicationMasterRequest.class);
+      registerReq1.setHost(Integer.toString(testAppId));
+      registerReq1.setRpcPort(0);
+      registerReq1.setTrackingUrl("");
+
+      // Register ApplicationMaster
+      RegisterApplicationMasterResponse registerResponse =
+          interceptor.registerApplicationMaster(registerReq1);
+      Assert.assertNotNull(registerResponse);
+      lastResponseId = 0;
+
+      Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+      // Allocate the first batch of containers, with sc1 and sc2 active
+      registerSubCluster(SubClusterId.newInstance("SC-1"));
+      registerSubCluster(SubClusterId.newInstance("SC-2"));
+
+      int numberOfContainers = 3;
+      List<Container> containers =
+          getContainersAndAssert(numberOfContainers, numberOfContainers * 2);
+      Assert.assertEquals(2, interceptor.getUnmanagedAMPoolSize());
+      Assert.assertEquals(numberOfContainers * 2, containers.size());
+
+      // Finish the application
+      FinishApplicationMasterRequest finishReq =
+          Records.newRecord(FinishApplicationMasterRequest.class);
+      finishReq.setDiagnostics("");
+      finishReq.setTrackingUrl("");
+      finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+      FinishApplicationMasterResponse finishResp = interceptor.finishApplicationMaster(finishReq);
+      Assert.assertNotNull(finishResp);
+      Assert.assertTrue(finishResp.getIsUnregistered());
+
+      return null;
+    });
+  }
+
+  @Test
+  public void testRemoveAppFromRegistryApplicationSuccess()
+      throws IOException, InterruptedException {
+
+    final RegisterApplicationMasterRequest registerReq =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
+    registerReq.setHost(Integer.toString(testAppId));
+    registerReq.setRpcPort(testAppId);
+    registerReq.setTrackingUrl("");
+
+    UserGroupInformation ugi = interceptor.getUGIWithToken(interceptor.getAttemptId());
+
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+
+      // Register the application
+      RegisterApplicationMasterRequest registerReq1 =
+          Records.newRecord(RegisterApplicationMasterRequest.class);
+      registerReq1.setHost(Integer.toString(testAppId));
+      registerReq1.setRpcPort(0);
+      registerReq1.setTrackingUrl("");
+
+      // Register ApplicationMaster
+      RegisterApplicationMasterResponse registerResponse =
+          interceptor.registerApplicationMaster(registerReq1);
+      Assert.assertNotNull(registerResponse);
+      lastResponseId = 0;
+
+      Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+      // Allocate the first batch of containers, with sc1 active
+      registerSubCluster(SubClusterId.newInstance("SC-1"));
+
+      int numberOfContainers = 3;
+      List<Container> containers =
+          getContainersAndAssert(numberOfContainers, numberOfContainers);
+      Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+      Assert.assertEquals(numberOfContainers, containers.size());
+
+      // Finish the application
+      FinishApplicationMasterRequest finishReq =
+          Records.newRecord(FinishApplicationMasterRequest.class);
+      finishReq.setDiagnostics("");
+      finishReq.setTrackingUrl("");
+      finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+      FinishApplicationMasterResponse finishResp = interceptor.finishApplicationMaster(finishReq);
+      Assert.assertNotNull(finishResp);
+      Assert.assertTrue(finishResp.getIsUnregistered());
+
+      FederationRegistryClient client = interceptor.getRegistryClient();
+      List<String> applications = client.getAllApplications();
+      Assert.assertNotNull(finishResp);
+      Assert.assertEquals(0, applications.size());
+      return null;
+    });
+  }
+
+  @Test
+  public void testRemoveAppFromRegistryApplicationFailed()
+      throws IOException, InterruptedException {
+
+    final RegisterApplicationMasterRequest registerReq =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
+
+    registerReq.setHost(Integer.toString(testAppId));
+    registerReq.setRpcPort(testAppId);
+    registerReq.setTrackingUrl("");
+
+    UserGroupInformation ugi = interceptor.getUGIWithToken(interceptor.getAttemptId());
+
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+
+      // Register the application
+      RegisterApplicationMasterRequest registerReq1 =
+          Records.newRecord(RegisterApplicationMasterRequest.class);
+      registerReq1.setHost(Integer.toString(testAppId));
+      registerReq1.setRpcPort(0);
+      registerReq1.setTrackingUrl("");
+
+      // Register ApplicationMaster
+      RegisterApplicationMasterResponse registerResponse =
+          interceptor.registerApplicationMaster(registerReq1);
+      Assert.assertNotNull(registerResponse);
+      lastResponseId = 0;
+
+      Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+      // Allocate the first batch of containers, with sc1 active
+      registerSubCluster(SubClusterId.newInstance("SC-1"));
+
+      int numberOfContainers = 3;
+      List<Container> containers =
+          getContainersAndAssert(numberOfContainers, numberOfContainers);
+      Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+      Assert.assertEquals(numberOfContainers, containers.size());
+
+      // Finish the application
+      FinishApplicationMasterRequest finishReq =
+          Records.newRecord(FinishApplicationMasterRequest.class);
+      finishReq.setDiagnostics("");
+      finishReq.setTrackingUrl("");
+      finishReq.setFinalApplicationStatus(FinalApplicationStatus.FAILED);
+
+      // Check Registry Applications
+      // At this time, the Application should not be cleaned up because the state is not SUCCESS.
+      FederationRegistryClient client = interceptor.getRegistryClient();
+      List<String> applications = client.getAllApplications();
+      Assert.assertNotNull(applications);
+      Assert.assertEquals(1, applications.size());
+
+      // interceptor cleanupRegistry
+      ApplicationId applicationId = interceptor.getAttemptId().getApplicationId();
+      client.removeAppFromRegistry(applicationId);
+      applications = client.getAllApplications();
+      Assert.assertNotNull(applications);
+      Assert.assertEquals(0, applications.size());
+
+      return null;
+    });
+  }
+
+  public void testRecoverWithBadSubCluster(final RegistryOperations registryObj)
+      throws IOException, InterruptedException {
+
+    UserGroupInformation ugi =
+        interceptor.getUGIWithToken(interceptor.getAttemptId());
+
+    // Prepare a list of subclusters
+    List<SubClusterId> subClusterIds = new ArrayList<>();
+    SubClusterId sc1 = SubClusterId.newInstance("SC-1");
+    SubClusterId sc2 = SubClusterId.newInstance("SC-2");
+    SubClusterId homeSC = SubClusterId.newInstance(HOME_SC_ID);
+    subClusterIds.add(sc1);
+    subClusterIds.add(sc2);
+    subClusterIds.add(homeSC);
+
+    // Prepare AMRMProxy Context
+    AMRMProxyApplicationContext appContext = new AMRMProxyApplicationContextImpl(nmContext,
+        getConf(), attemptId, "test-user", null, null, null, registryObj);
+
+    // Prepare RegisterApplicationMasterRequest
+    RegisterApplicationMasterRequest registerReq =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
+    registerReq.setHost(Integer.toString(testAppId));
+    registerReq.setRpcPort(testAppId);
+    registerReq.setTrackingUrl("");
+
+    ugi.doAs((PrivilegedExceptionAction<Object>) () -> {
+
+      // Step1. Prepare subClusters SC-1, SC-2, HomeSC and Interceptor
+      initSubClusterAndInterceptor(subClusterIds, registryObj);
+
+      // Step2. Register Application And Assign Containers
+      List<Container> containers = registerApplicationAndAssignContainers(registerReq);
+
+      // Step3. Offline SC-1 cluster
+      offlineSubClusterSC1(sc1);
+
+      // Step4. Recover ApplicationMaster
+      recoverApplicationMaster(appContext);
+
+      // Step5. We recovered ApplicationMaster.
+      // SC-1 was offline, SC-2 was recovered at this time, UnmanagedAMPool.size=1 and only SC-2
+      UnmanagedAMPoolManager unmanagedAMPoolManager = interceptor.getUnmanagedAMPool();
+      Set<String> allUAMIds = unmanagedAMPoolManager.getAllUAMIds();
+      Assert.assertNotNull(allUAMIds);
+      Assert.assertEquals(1, allUAMIds.size());
+      Assert.assertTrue(allUAMIds.contains(sc2.getId()));
+
+      // Step6. The first allocate call expects a fail-over exception and re-register.
+      AllocateRequest allocateRequest = Records.newRecord(AllocateRequest.class);
+      allocateRequest.setResponseId(0);
+      LambdaTestUtils.intercept(ApplicationMasterNotRegisteredException.class,
+          "AMRMProxy just restarted and recovered for " + this.attemptId +
+          ". AM should re-register and full re-send pending requests.",
+          () -> interceptor.allocate(allocateRequest));
+      interceptor.registerApplicationMaster(registerReq);
+
+      // Step7. release Containers
+      releaseContainers(containers, sc1);
+
+      // Step8. finish application
+      finishApplication();
+
+      return null;
+    });
+  }
+
+  private void initSubClusterAndInterceptor(List<SubClusterId> subClusterIds,
+      RegistryOperations registryObj) throws YarnException {
+    // Prepare subClusters SC-1, SC-2, HomeSC
+    for (SubClusterId subClusterId : subClusterIds) {
+      registerSubCluster(subClusterId);
+    }
+
+    // Prepare Interceptor
+    interceptor = new TestableFederationInterceptor();
+    AMRMProxyApplicationContext appContext = new AMRMProxyApplicationContextImpl(nmContext,
+        getConf(), attemptId, "test-user", null, null, null, registryObj);
+    interceptor.init(appContext);
+    interceptor.cleanupRegistry();
+  }
+
+  private List<Container> registerApplicationAndAssignContainers(
+      RegisterApplicationMasterRequest registerReq) throws Exception {
+
+    // Register HomeSC
+    RegisterApplicationMasterResponse registerResponse =
+        interceptor.registerApplicationMaster(registerReq);
+    Assert.assertNotNull(registerResponse);
+
+    // We only registered HomeSC, so UnmanagedAMPoolSize should be empty
+    Assert.assertEquals(0, interceptor.getUnmanagedAMPoolSize());
+
+    // We assign 3 Containers to each cluster
+    int numberOfContainers = 3;
+    List<Container> containers =
+        getContainersAndAssert(numberOfContainers, numberOfContainers * 3);
+
+    // At this point, UnmanagedAMPoolSize should be equal to 2 and should contain SC-1, SC-2
+    Assert.assertEquals(2, interceptor.getUnmanagedAMPoolSize());
+    UnmanagedAMPoolManager unmanagedAMPoolManager = interceptor.getUnmanagedAMPool();
+    Set<String> allUAMIds = unmanagedAMPoolManager.getAllUAMIds();
+    Assert.assertNotNull(allUAMIds);
+    Assert.assertEquals(2, allUAMIds.size());
+    Assert.assertTrue(allUAMIds.contains("SC-1"));
+    Assert.assertTrue(allUAMIds.contains("SC-2"));
+
+    // Make sure all async hb threads are done
+    interceptor.drainAllAsyncQueue(true);
+
+    return containers;
+  }
+
+  private void offlineSubClusterSC1(SubClusterId subClusterId) throws YarnException {
+
+    ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
+        interceptor.getSecondaryRMs();
+
+    // SC-1 out of service
+    deRegisterSubCluster(subClusterId);
+    secondaries.get(subClusterId.getId()).setRunningMode(false);
+  }
+
+  private void recoverApplicationMaster(AMRMProxyApplicationContext appContext)
+      throws IOException {
+    // Prepare for Federation Interceptor restart and recover
+    Map<String, byte[]> recoveredDataMap =
+        recoverDataMapForAppAttempt(nmStateStore, attemptId);
+
+    // Preserve the mock RM instances
+    MockResourceManagerFacade homeRM = interceptor.getHomeRM();
+
+    // Create a new interceptor instance and recover
+    interceptor = new TestableFederationInterceptor(homeRM,
+        interceptor.getSecondaryRMs());
+    interceptor.init(appContext);
+    interceptor.recover(recoveredDataMap);
+  }
+
+  private void releaseContainers(List<Container> containers, SubClusterId subClusterId)
+      throws Exception {
+
+    ConcurrentHashMap<String, MockResourceManagerFacade> secondaries =
+        interceptor.getSecondaryRMs();
+    lastResponseId = 0;
+
+    // Get the Container list of SC-1
+    MockResourceManagerFacade sc1Facade = secondaries.get("SC-1");
+    HashMap<ApplicationId, List<ContainerId>> appContainerMap =
+        sc1Facade.getApplicationContainerIdMap();
+    Assert.assertNotNull(appContainerMap);
+    ApplicationId applicationId = attemptId.getApplicationId();
+    Assert.assertNotNull(applicationId);
+    List<ContainerId> sc1ContainerList = appContainerMap.get(applicationId);
+
+    // Release all containers,
+    // Because SC-1 is offline, it is necessary to clean up the Containers allocated by SC-1
+    containers = containers.stream()
+        .filter(container -> !sc1ContainerList.contains(container.getId()))
+        .collect(Collectors.toList());
+    releaseContainersAndAssert(containers);
+  }
+
+  private void finishApplication() throws IOException, YarnException {
+    // Finish the application
+    FinishApplicationMasterRequest finishReq =
+        Records.newRecord(FinishApplicationMasterRequest.class);
+    finishReq.setDiagnostics("");
+    finishReq.setTrackingUrl("");
+    finishReq.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+
+    FinishApplicationMasterResponse finishResponse =
+        interceptor.finishApplicationMaster(finishReq);
+    Assert.assertNotNull(finishResponse);
+    Assert.assertTrue(finishResponse.getIsUnregistered());
   }
 }

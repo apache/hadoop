@@ -77,6 +77,16 @@ public class ProtobufRpcEngine implements RpcEngine {
     return ASYNC_RETURN_MESSAGE.get();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+      ConnectionId connId, Configuration conf, SocketFactory factory,
+      AlignmentContext alignmentContext) throws IOException {
+    final Invoker invoker = new Invoker(protocol, connId, conf, factory, alignmentContext);
+    return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
+        protocol.getClassLoader(), new Class[] {protocol}, invoker), false);
+  }
+
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int rpcTimeout) throws IOException {
@@ -116,7 +126,7 @@ public class ProtobufRpcEngine implements RpcEngine {
     return new ProtocolProxy<ProtocolMetaInfoPB>(protocol,
         (ProtocolMetaInfoPB) Proxy.newProxyInstance(protocol.getClassLoader(),
             new Class[] { protocol }, new Invoker(protocol, connId, conf,
-                factory)), false);
+                factory, null)), false);
   }
 
   protected static class Invoker implements RpcInvocationHandler {
@@ -137,9 +147,8 @@ public class ProtobufRpcEngine implements RpcEngine {
         throws IOException {
       this(protocol, Client.ConnectionId.getConnectionId(
           addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
-          conf, factory);
+          conf, factory, alignmentContext);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
-      this.alignmentContext = alignmentContext;
     }
     
     /**
@@ -148,14 +157,16 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param connId input connId.
      * @param conf input Configuration.
      * @param factory input factory.
+     * @param alignmentContext Alignment context
      */
     protected Invoker(Class<?> protocol, Client.ConnectionId connId,
-        Configuration conf, SocketFactory factory) {
+        Configuration conf, SocketFactory factory, AlignmentContext alignmentContext) {
       this.remoteId = connId;
       this.client = CLIENTS.getClient(conf, factory, RpcWritable.Buffer.class);
       this.protocolName = RPC.getProtocolName(protocol);
       this.clientProtocolVersion = RPC
           .getProtocolVersion(protocol);
+      this.alignmentContext = alignmentContext;
     }
 
     private RequestHeaderProto constructRpcRequestHeader(Method method) {

@@ -30,6 +30,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
@@ -43,13 +46,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.PartitionInfo;
 import org.apache.hadoop.yarn.server.uam.UnmanagedApplicationManager;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.ForbiddenException;
@@ -83,7 +94,7 @@ public final class RouterWebServiceUtil {
   /**
    * Creates and performs a REST call to a specific WebService.
    *
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param hsr the servlet request
    * @param returnType the return type of the REST call
    * @param <T> Type of return object.
@@ -170,7 +181,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Performs an invocation of a REST call on a remote RMWebService.
-   * @param webApp the address of the remote webap
+   * @param webApp the address of the remote webapp
    * @param path  to add to the webapp address
    * @param method the HTTP method of the REST call
    * @param additionalPath the servlet request path
@@ -280,7 +291,7 @@ public final class RouterWebServiceUtil {
 
   /**
    * Merges a list of AppInfo grouping by ApplicationId. Our current policy is
-   * to merge the application reports from the reacheable SubClusters. Via
+   * to merge the application reports from the reachable SubClusters. Via
    * configuration parameter, we decide whether to return applications for which
    * the primary AM is missing or to omit them.
    *
@@ -293,8 +304,8 @@ public final class RouterWebServiceUtil {
       boolean returnPartialResult) {
     AppsInfo allApps = new AppsInfo();
 
-    Map<String, AppInfo> federationAM = new HashMap<String, AppInfo>();
-    Map<String, AppInfo> federationUAMSum = new HashMap<String, AppInfo>();
+    Map<String, AppInfo> federationAM = new HashMap<>();
+    Map<String, AppInfo> federationUAMSum = new HashMap<>();
     for (AppInfo a : appsInfo) {
       // Check if this AppInfo is an AM
       if (a.getAMHostHttpAddress() != null) {
@@ -332,7 +343,7 @@ public final class RouterWebServiceUtil {
       }
     }
 
-    allApps.addAll(new ArrayList<AppInfo>(federationAM.values()));
+    allApps.addAll(new ArrayList<>(federationAM.values()));
     return allApps;
   }
 
@@ -419,7 +430,7 @@ public final class RouterWebServiceUtil {
         nodesMap.put(node.getNodeId(), node);
       }
     }
-    nodesInfo.addAll(new ArrayList<NodeInfo>(nodesMap.values()));
+    nodesInfo.addAll(new ArrayList<>(nodesMap.values()));
     return nodesInfo;
   }
 
@@ -494,7 +505,7 @@ public final class RouterWebServiceUtil {
   protected static <T> String getMediaTypeFromHttpServletRequest(
       HttpServletRequest request, final Class<T> returnType) {
     if (request == null) {
-      // By default we return XML for REST call without HttpServletRequest
+      // By default, we return XML for REST call without HttpServletRequest
       return MediaType.APPLICATION_XML;
     }
     // TODO
@@ -503,10 +514,104 @@ public final class RouterWebServiceUtil {
     }
     String header = request.getHeader(HttpHeaders.ACCEPT);
     if (header == null || header.equals("*")) {
-      // By default we return JSON
+      // By default, we return JSON
       return MediaType.APPLICATION_JSON;
     }
     return header;
   }
 
+  public static NodeToLabelsInfo mergeNodeToLabels(
+      Map<SubClusterInfo, NodeToLabelsInfo> nodeToLabelsInfoMap) {
+
+    HashMap<String, NodeLabelsInfo> nodeToLabels = new HashMap<>();
+    Collection<NodeToLabelsInfo> nodeToLabelsInfos = nodeToLabelsInfoMap.values();
+
+    nodeToLabelsInfos.stream().forEach(nodeToLabelsInfo -> {
+      for (Map.Entry<String, NodeLabelsInfo> item : nodeToLabelsInfo.getNodeToLabels().entrySet()) {
+        String key = item.getKey();
+        NodeLabelsInfo itemValue = item.getValue();
+        NodeLabelsInfo nodeToLabelsValue = nodeToLabels.getOrDefault(item.getKey(), null);
+        Set<NodeLabel> hashSet = new HashSet<>();
+        if (itemValue != null) {
+          hashSet.addAll(itemValue.getNodeLabels());
+        }
+        if (nodeToLabelsValue != null) {
+          hashSet.addAll(nodeToLabelsValue.getNodeLabels());
+        }
+        nodeToLabels.put(key, new NodeLabelsInfo(hashSet));
+      }
+    });
+
+    return new NodeToLabelsInfo(nodeToLabels);
+  }
+
+  public static ApplicationStatisticsInfo mergeApplicationStatisticsInfo(
+      Collection<ApplicationStatisticsInfo> appStatistics) {
+    ApplicationStatisticsInfo result = new ApplicationStatisticsInfo();
+    Map<String, StatisticsItemInfo> statisticsItemMap = new HashMap<>();
+
+    appStatistics.stream().forEach(appStatistic -> {
+      List<StatisticsItemInfo> statisticsItemInfos = appStatistic.getStatItems();
+      for (StatisticsItemInfo statisticsItemInfo : statisticsItemInfos) {
+
+        String statisticsItemKey =
+            statisticsItemInfo.getType() + "_" + statisticsItemInfo.getState().toString();
+
+        StatisticsItemInfo statisticsItemValue;
+        if (statisticsItemMap.containsKey(statisticsItemKey)) {
+          statisticsItemValue = statisticsItemMap.get(statisticsItemKey);
+          long statisticsItemValueCount = statisticsItemValue.getCount();
+          long statisticsItemInfoCount = statisticsItemInfo.getCount();
+          long newCount = statisticsItemValueCount + statisticsItemInfoCount;
+          statisticsItemValue.setCount(newCount);
+        } else {
+          statisticsItemValue = new StatisticsItemInfo(statisticsItemInfo);
+        }
+
+        statisticsItemMap.put(statisticsItemKey, statisticsItemValue);
+      }
+    });
+
+    if (!statisticsItemMap.isEmpty()) {
+      result.getStatItems().addAll(statisticsItemMap.values());
+    }
+
+    return result;
+  }
+
+  public static NodeLabelsInfo mergeNodeLabelsInfo(Map<SubClusterInfo, NodeLabelsInfo> paramMap) {
+    Map<String, NodeLabelInfo> resultMap = new HashMap<>();
+    paramMap.values().stream()
+        .flatMap(nodeLabelsInfo -> nodeLabelsInfo.getNodeLabelsInfo().stream())
+        .forEach(nodeLabelInfo -> {
+          String keyLabelName = nodeLabelInfo.getName();
+          if (resultMap.containsKey(keyLabelName)) {
+            NodeLabelInfo mapNodeLabelInfo = resultMap.get(keyLabelName);
+            mapNodeLabelInfo = mergeNodeLabelInfo(mapNodeLabelInfo, nodeLabelInfo);
+            resultMap.put(keyLabelName, mapNodeLabelInfo);
+          } else {
+            resultMap.put(keyLabelName, nodeLabelInfo);
+          }
+        });
+    NodeLabelsInfo nodeLabelsInfo = new NodeLabelsInfo();
+    nodeLabelsInfo.getNodeLabelsInfo().addAll(resultMap.values());
+    return nodeLabelsInfo;
+  }
+
+  private static NodeLabelInfo mergeNodeLabelInfo(NodeLabelInfo left, NodeLabelInfo right) {
+    NodeLabelInfo resultNodeLabelInfo = new NodeLabelInfo();
+    resultNodeLabelInfo.setName(left.getName());
+
+    int newActiveNMs = left.getActiveNMs() + right.getActiveNMs();
+    resultNodeLabelInfo.setActiveNMs(newActiveNMs);
+
+    boolean newExclusivity = left.getExclusivity() && right.getExclusivity();
+    resultNodeLabelInfo.setExclusivity(newExclusivity);
+
+    PartitionInfo leftPartition = left.getPartitionInfo();
+    PartitionInfo rightPartition = right.getPartitionInfo();
+    PartitionInfo newPartitionInfo = PartitionInfo.addTo(leftPartition, rightPartition);
+    resultNodeLabelInfo.setPartitionInfo(newPartitionInfo);
+    return resultNodeLabelInfo;
+  }
 }

@@ -842,9 +842,7 @@ public class DatanodeManager {
     decrementVersionCount(nodeInfo.getSoftwareVersion());
     blockManager.getBlockReportLeaseManager().unregister(nodeInfo);
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("remove datanode " + nodeInfo);
-    }
+    LOG.debug("remove datanode {}.", nodeInfo);
     blockManager.checkSafeMode();
   }
 
@@ -906,8 +904,8 @@ public class DatanodeManager {
     resolveUpgradeDomain(node);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug(getClass().getSimpleName() + ".addDatanode: "
-          + "node " + node + " is added to datanodeMap.");
+      LOG.debug("{}.addDatanode: node {} is added to datanodeMap.",
+          getClass().getSimpleName(), node);
     }
   }
 
@@ -918,9 +916,8 @@ public class DatanodeManager {
       host2DatanodeMap.remove(datanodeMap.remove(key));
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug(getClass().getSimpleName() + ".wipeDatanode("
-          + node + "): storage " + key 
-          + " is removed from datanodeMap.");
+      LOG.debug("{}.wipeDatanode({}): storage {} is removed from datanodeMap.",
+          getClass().getSimpleName(), node, key);
     }
   }
 
@@ -1189,10 +1186,7 @@ public class DatanodeManager {
           // The same datanode has been just restarted to serve the same data 
           // storage. We do not need to remove old data blocks, the delta will
           // be calculated on the next block report from the datanode
-          if(NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("BLOCK* registerDatanode: "
-                + "node restarted.");
-          }
+          NameNode.stateChangeLog.debug("BLOCK* registerDatanode: node restarted.");
         } else {
           // nodeS is found
           /* The registering datanode is a replacement node for the existing 
@@ -1333,8 +1327,8 @@ public class DatanodeManager {
     // Update the file names and refresh internal includes and excludes list.
     if (conf == null) {
       conf = new HdfsConfiguration();
-      this.hostConfigManager.setConf(conf);
     }
+    this.hostConfigManager.setConf(conf);
     this.hostConfigManager.refresh();
   }
   
@@ -1535,9 +1529,11 @@ public class DatanodeManager {
             "now be replicated cross-rack";
         LOG.info(message);
       } else {
-        message += "Not checking for mis-replicated blocks because this NN is " +
-            "not yet processing repl queues.";
-        LOG.debug(message);
+        if (LOG.isDebugEnabled()) {
+          message += "Not checking for mis-replicated blocks because this NN "
+              + "is not yet processing repl queues.";
+          LOG.debug(message);
+        }
       }
       hasClusterEverBeenMultiRack = true;
       if (blockManager.isPopulatingReplQueues()) {
@@ -1659,11 +1655,9 @@ public class DatanodeManager {
     }
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("getDatanodeListForReport with " +
-          "includedNodes = " + hostConfigManager.getIncludes() +
-          ", excludedNodes = " + hostConfigManager.getExcludes() +
-          ", foundNodes = " + foundNodes +
-          ", nodes = " + nodes);
+      LOG.debug("getDatanodeListForReport with includedNodes = {}, excludedNodes = {}"
+              + ", foundNodes = {}, nodes = {}.", hostConfigManager.getIncludes(),
+          hostConfigManager.getExcludes(), foundNodes, nodes);
     }
     return nodes;
   }
@@ -1831,30 +1825,41 @@ public class DatanodeManager {
     // Allocate _approximately_ maxTransfers pending tasks to DataNode.
     // NN chooses pending tasks based on the ratio between the lengths of
     // replication and erasure-coded block queues.
-    int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
-    int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
-    int totalBlocks = totalReplicateBlocks + totalECBlocks;
+    int replicationBlocks = nodeinfo.getNumberOfReplicateBlocks();
+    int ecBlocksToBeReplicated = nodeinfo.getNumberOfECBlocksToBeReplicated();
+    int ecBlocksToBeErasureCoded = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = replicationBlocks + ecBlocksToBeReplicated + ecBlocksToBeErasureCoded;
     if (totalBlocks > 0) {
-      int maxTransfers;
+      int maxTransfers = blockManager.getMaxReplicationStreams() - xmitsInProgress;
+      int maxECReplicatedTransfers;
       if (nodeinfo.isDecommissionInProgress()) {
-        maxTransfers = blockManager.getReplicationStreamsHardLimit()
+        maxECReplicatedTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
       } else {
-        maxTransfers = blockManager.getMaxReplicationStreams()
-            - xmitsInProgress;
+        maxECReplicatedTransfers = maxTransfers;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
-      int numECTasks = (int) Math.ceil(
-          (double) (totalECBlocks * maxTransfers) / totalBlocks);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Pending replication tasks: " + numReplicationTasks
-            + " erasure-coded tasks: " + numECTasks);
-      }
+          (double) (replicationBlocks * maxTransfers) / totalBlocks);
+      int numEcReplicatedTasks = (int) Math.ceil(
+              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
+      int numECReconstructedTasks = (int) Math.ceil(
+          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
+      LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
+                      "ec reconstruction tasks: {}.",
+          numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
       // check pending replication tasks
-      List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
+      List<BlockTargetPair> pendingReplicationList = nodeinfo.getReplicationCommand(
           numReplicationTasks);
-      if (pendingList != null && !pendingList.isEmpty()) {
+      List<BlockTargetPair> pendingECReplicatedList = nodeinfo.getECReplicatedCommand(
+              numEcReplicatedTasks);
+      List<BlockTargetPair> pendingList = new ArrayList<BlockTargetPair>();
+      if(pendingReplicationList != null && !pendingReplicationList.isEmpty()) {
+        pendingList.addAll(pendingReplicationList);
+      }
+      if(pendingECReplicatedList != null && !pendingECReplicatedList.isEmpty()) {
+        pendingList.addAll(pendingECReplicatedList);
+      }
+      if (!pendingList.isEmpty()) {
         // If the block is deleted, the block size will become
         // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
         // need
@@ -1876,7 +1881,7 @@ public class DatanodeManager {
       }
       // check pending erasure coding tasks
       List<BlockECReconstructionInfo> pendingECList = nodeinfo
-          .getErasureCodeCommand(numECTasks);
+          .getErasureCodeCommand(numECReconstructedTasks);
       if (pendingECList != null && !pendingECList.isEmpty()) {
         cmds.add(new BlockECReconstructionCommand(
             DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));
@@ -1906,9 +1911,7 @@ public class DatanodeManager {
     if (slowPeerTracker.isSlowPeerTrackerEnabled()) {
       final Map<String, OutlierMetrics> slowPeersMap = slowPeers.getSlowPeers();
       if (!slowPeersMap.isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("DataNode " + nodeReg + " reported slow peers: " + slowPeersMap);
-        }
+        LOG.debug("DataNode {} reported slow peers: {}.", nodeReg, slowPeersMap);
         for (Map.Entry<String, OutlierMetrics> slowNodeEntry : slowPeersMap.entrySet()) {
           slowPeerTracker.addReport(slowNodeEntry.getKey(), nodeReg.getIpcAddr(false),
               slowNodeEntry.getValue());
@@ -1918,10 +1921,7 @@ public class DatanodeManager {
 
     if (slowDiskTracker != null) {
       if (!slowDisks.getSlowDisks().isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("DataNode " + nodeReg + " reported slow disks: " +
-              slowDisks.getSlowDisks());
-        }
+        LOG.debug("DataNode {} reported slow disks: {}.", nodeReg, slowDisks.getSlowDisks());
         slowDiskTracker.addSlowDiskReport(nodeReg.getIpcAddr(false), slowDisks);
       }
       slowDiskTracker.checkAndUpdateReportIfNecessary();
@@ -1950,9 +1950,7 @@ public class DatanodeManager {
       StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Received handleLifeline from nodeReg = " + nodeReg);
-    }
+    LOG.debug("Received handleLifeline from nodeReg = {}.", nodeReg);
     DatanodeDescriptor nodeinfo = getDatanode(nodeReg);
     if (nodeinfo == null || !nodeinfo.isRegistered()) {
       // This can happen if the lifeline message comes when DataNode is either

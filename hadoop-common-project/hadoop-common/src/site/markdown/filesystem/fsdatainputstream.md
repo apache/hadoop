@@ -454,6 +454,13 @@ Also, clients are encouraged to use `WeakReferencedElasticByteBufferPool` for
 allocating buffers such that even direct buffers are garbage collected when
 they are no longer referenced.
 
+The position returned by `getPos()` after `readVectored()` is undefined.
+
+If a file is changed while the `readVectored()` operation is in progress, the output is
+undefined. Some ranges may have old data, some may have new, and some may have both.
+
+While a `readVectored()` operation is in progress, normal read api calls may block.
+
 Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
 lead to memory fragmentation explained in HADOOP-18296.
 

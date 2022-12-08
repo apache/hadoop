@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 /**
  * This class mocks the RESTRequestInterceptor.
@@ -182,6 +183,11 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
     return new NodeToLabelsInfo();
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    return new NodeLabelsInfo();
   }
 
   @Override
@@ -371,6 +377,18 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   @Override
   public Response signalToContainer(String containerId, String command,
       HttpServletRequest req) {
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException {
+    return Response.status(Status.OK).build();
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
     return Response.status(Status.OK).build();
   }
 }

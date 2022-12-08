@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.federation.store.records;
 
 import java.util.List;
+import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -36,7 +37,7 @@ public abstract class GetSubClustersInfoResponse {
   @Public
   @Unstable
   public static GetSubClustersInfoResponse newInstance(
-      List<SubClusterInfo> subClusters) {
+      Collection<SubClusterInfo> subClusters) {
     GetSubClustersInfoResponse subClusterInfos =
         Records.newRecord(GetSubClustersInfoResponse.class);
     subClusterInfos.setSubClusters(subClusters);
@@ -61,6 +62,5 @@ public abstract class GetSubClustersInfoResponse {
    */
   @Private
   @Unstable
-  public abstract void setSubClusters(List<SubClusterInfo> subClusters);
-
+  public abstract void setSubClusters(Collection<SubClusterInfo> subClusters);
 }

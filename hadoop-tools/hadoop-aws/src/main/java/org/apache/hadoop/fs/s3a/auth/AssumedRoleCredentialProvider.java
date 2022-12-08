@@ -60,9 +60,13 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.buildAWSProviderList;
  * unless overridden, creating a session name from the current user.
  *
  * Classname is used in configuration files; do not move.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class AssumedRoleCredentialProvider implements AWSCredentialsProvider,
     Closeable {
 

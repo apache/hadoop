@@ -134,7 +134,7 @@ public abstract class BaseAMRMProxyTest {
     String mockPassThroughInterceptorClass =
         PassThroughRequestInterceptor.class.getName();
 
-    // Create a request intercepter pipeline for testing. The last one in the
+    // Create a request interceptor pipeline for testing. The last one in the
     // chain will call the mock resource manager. The others in the chain will
     // simply forward it to the next one in the chain
     config.set(YarnConfiguration.AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE,
@@ -191,7 +191,7 @@ public abstract class BaseAMRMProxyTest {
     return new NMContext(null, null, null, null, stateStore, false, this.conf);
   }
 
-  // A utility method for intercepter recover unit test
+  // A utility method for interceptor recover unit test
   protected Map<String, byte[]> recoverDataMapForAppAttempt(
       NMStateStoreService nmStateStore, ApplicationAttemptId attemptId)
       throws IOException {
@@ -341,7 +341,7 @@ public abstract class BaseAMRMProxyTest {
                   Assert.assertEquals(Integer.toString(index), response
                       .getResponse().getQueue());
 
-                  LOG.info("Sucessfully registered application master with test context: "
+                  LOG.info("Successfully registered application master with test context: "
                       + testContext);
                 } catch (Throwable ex) {
                   response = null;
@@ -424,7 +424,7 @@ public abstract class BaseAMRMProxyTest {
                           testContext);
                   Assert.assertNotNull(response.getResponse());
 
-                  LOG.info("Sucessfully finished application master with test contexts: "
+                  LOG.info("Successfully finished application master with test contexts: "
                       + testContext);
                 } catch (Throwable ex) {
                   response = null;
