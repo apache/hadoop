@@ -33,7 +33,9 @@ public class AccountSASGenerator extends SASGenerator {
      * https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas
      * @param accountKey: the storage account key
      */
-    public AccountSASGenerator(byte[] accountKey) { super(accountKey); }
+    public AccountSASGenerator(byte[] accountKey) {
+        super(accountKey);
+    }
 
     public String getAccountSAS(String accountName) throws AzureBlobFileSystemException {
         // retaining only the account name

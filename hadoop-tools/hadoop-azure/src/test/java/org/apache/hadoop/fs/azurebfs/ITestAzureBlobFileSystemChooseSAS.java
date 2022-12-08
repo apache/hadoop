@@ -69,7 +69,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
         AbfsConfiguration testAbfsConfig = getConfiguration();
 
         // configuring a SASTokenProvider class: this provides a user delegation SAS
-        // user delegation SAS Provider is set to easily distinguish between results of filesystem level and blob level operations to ensure correct SAS is chosen,
+        // user delegation SAS Provider is set
+        // This easily distinguishes between results of filesystem level and blob level operations to ensure correct SAS is chosen,
         // when both a provider class and fixed token is configured.
         testAbfsConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, "org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider");
 
