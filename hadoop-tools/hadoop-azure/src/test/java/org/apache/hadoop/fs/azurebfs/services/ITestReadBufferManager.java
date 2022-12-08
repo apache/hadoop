@@ -77,14 +77,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         }
 
         ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
-        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
-        Assertions.assertThat(bufferManager.getFreeListCopy())
-                .describedAs("After closing all streams free list contents should match with " + freeList)
-                .hasSize(numBuffers)
-                .containsExactlyInAnyOrderElementsOf(freeList);
-
     }
 
     private void assertListEmpty(String listName, List<ReadBuffer> list) {
@@ -116,22 +109,18 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         try {
             iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
             iStream2.read();
-            // After closing stream1, none of the buffers associated with stream1 should be present.
-            assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream1);
-            assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream1);
+            // After closing stream1, no queued buffers of stream1 should be present
+            // assertions can't be made about the state of the other lists as it is
+            // too prone to race conditions.
             assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
         } finally {
             // closing the stream later.
             IOUtils.closeStream(iStream2);
         }
-        // After closing stream2, none of the buffers associated with stream2 should be present.
-        assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream2);
-        assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream2);
+        // After closing stream2, no queued buffers of stream2 should be present.
         assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
-        // After closing both the streams, all lists should be empty.
-        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
-        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
+        // After closing both the streams, read queue should be empty.
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
 
     }
