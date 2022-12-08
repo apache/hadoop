@@ -1024,8 +1024,8 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         nodeCreatePath);
 
     // Write master key data to zk.
-    try(ByteArrayOutputStream os = new ByteArrayOutputStream();
-        DataOutputStream fsOut = new DataOutputStream(os)) {
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream();
+         DataOutputStream fsOut = new DataOutputStream(os)) {
       delegationKey.write(fsOut);
       put(nodeCreatePath, os.toByteArray(), false);
     }
