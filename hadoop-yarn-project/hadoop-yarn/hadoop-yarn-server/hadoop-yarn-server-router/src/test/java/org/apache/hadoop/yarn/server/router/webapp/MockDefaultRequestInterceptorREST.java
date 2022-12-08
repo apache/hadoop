@@ -954,7 +954,7 @@ public class MockDefaultRequestInterceptorREST
       HttpServletRequest hsr) throws AuthorizationException, IOException, InterruptedException {
 
     if (resContext == null || resContext.getReservationId() == null ||
-            resContext.getReservationDefinition() == null) {
+        resContext.getReservationDefinition() == null) {
       return Response.status(Status.BAD_REQUEST).build();
     }
 
@@ -1061,8 +1061,8 @@ public class MockDefaultRequestInterceptorREST
   }
 
   @VisibleForTesting
-  public void setMockRM(MockRM mockRM) {
-    this.mockRM = mockRM;
+  public void setMockRM(MockRM mockResourceManager) {
+    this.mockRM = mockResourceManager;
   }
 
   @Override
