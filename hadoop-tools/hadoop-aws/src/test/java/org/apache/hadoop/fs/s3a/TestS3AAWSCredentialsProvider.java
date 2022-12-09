@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
@@ -482,17 +483,8 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
-  private static final AWSCredentials EXPECTED_CREDENTIALS = new AWSCredentials() {
-    @Override
-    public String getAWSAccessKeyId() {
-      return "expectedAccessKey";
-    }
-
-    @Override
-    public String getAWSSecretKey() {
-      return "expectedSecret";
-    }
-  };
+  private static final AwsCredentials EXPECTED_CREDENTIALS =
+      AwsBasicCredentials.create("expectedAccessKey", "expectedSecret");
 
   /**
    * Credential provider that takes a long time.
@@ -504,7 +496,7 @@ public class TestS3AAWSCredentialsProvider {
     }
 
     @Override
-    protected AWSCredentials createCredentials(Configuration config) throws IOException {
+    protected AwsCredentials createCredentials(Configuration config) throws IOException {
       // yield to other callers to induce race condition
       Thread.yield();
       return EXPECTED_CREDENTIALS;
@@ -578,7 +570,7 @@ public class TestS3AAWSCredentialsProvider {
     }
 
     @Override
-    protected AWSCredentials createCredentials(Configuration config) throws IOException {
+    protected AwsCredentials createCredentials(Configuration config) throws IOException {
       throw new IOException("expected error");
     }
   }
