@@ -72,6 +72,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
@@ -353,6 +355,7 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
               DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY,
               DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY,
+              DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY,
               FS_DU_INTERVAL_KEY,
               FS_GETSPACEUSED_JITTER_KEY,
               FS_GETSPACEUSED_CLASSNAME));
@@ -699,6 +702,7 @@ public class DataNode extends ReconfigurableBase
     case DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY:
     case DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_KEY:
     case DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY:
+    case DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY:
       return reconfSlowDiskParameters(property, newVal);
     case FS_DU_INTERVAL_KEY:
     case FS_GETSPACEUSED_JITTER_KEY:
@@ -877,6 +881,12 @@ public class DataNode extends ReconfigurableBase
             Long.parseLong(newVal));
         result = Long.toString(threshold);
         diskMetrics.setLowThresholdMs(threshold);
+      } else if (property.equals(DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY)) {
+        checkNotNull(diskMetrics, "DataNode disk stats may be disabled.");
+        int maxSlowDisksToExclude = (newVal == null ?
+            DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT : Integer.parseInt(newVal));
+        result = Integer.toString(maxSlowDisksToExclude);
+        diskMetrics.setMaxSlowDisksToExclude(maxSlowDisksToExclude);
       }
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
       return result;
