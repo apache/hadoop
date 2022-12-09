@@ -26,14 +26,21 @@ Purpose
 
 This document describes how to set up and configure a single-node Hadoop installation so that you can quickly perform simple operations using Hadoop MapReduce and the Hadoop Distributed File System (HDFS).
 
+
+*Important*: all production Hadoop clusters use Kerberos to authenticate callers
+and secure access to HDFS data as well as restriction access to computation
+services (YARN etc.). 
+
+These instructions do not cover integration with any Kerberos services,
+-everyone bringing up a production cluster should include connecting to their
+organisation's Kerberos infrastructure as a key part of the deployment.
+
 Prerequisites
 -------------
 
 $H3 Supported Platforms
 
 * GNU/Linux is supported as a development and production platform. Hadoop has been demonstrated on GNU/Linux clusters with 2000 nodes.
-
-* Windows is also a supported platform but the followings steps are for Linux only. To set up Hadoop on Windows, see [wiki page](http://wiki.apache.org/hadoop/Hadoop2OnWindows).
 
 $H3 Required Software
 
