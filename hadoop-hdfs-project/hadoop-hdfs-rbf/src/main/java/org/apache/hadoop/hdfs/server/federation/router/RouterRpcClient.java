@@ -849,6 +849,26 @@ public class RouterRpcClient {
   }
 
   /**
+   * Try to get the remote location whose bpId is same with the input bpId from the input locations.
+   * @param locations the input RemoteLocations.
+   * @param bpId the input bpId.
+   * @return the remote location whose bpId is same with the input.
+   * @throws IOException
+   */
+  private RemoteLocation getLocationWithBPID(List<RemoteLocation> locations, String bpId)
+      throws IOException {
+    String nsId = getNameserviceForBlockPoolId(bpId);
+    for (RemoteLocation l : locations) {
+      if (l.getNameserviceId().equals(nsId)) {
+        return l;
+      }
+    }
+
+    LOG.debug("Can't find remote location for the {} from {}", bpId, locations);
+    return new RemoteLocation(nsId, "/", "/");
+  }
+
+  /**
    * Invokes a ClientProtocol method. Determines the target nameservice via a
    * provided block.
    *
@@ -857,13 +877,15 @@ public class RouterRpcClient {
    *
    * @param block Block used to determine appropriate nameservice.
    * @param method The remote method and parameters to invoke.
+   * @param locations The remote locations will be used.
+   * @param clazz – Class for the return type.
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
-  public Object invokeSingle(final ExtendedBlock block, RemoteMethod method)
-      throws IOException {
-    String bpId = block.getBlockPoolId();
-    return invokeSingleBlockPool(bpId, method);
+  public <T> T invokeSingle(final ExtendedBlock block, RemoteMethod method,
+      final List<RemoteLocation> locations, Class<T> clazz) throws IOException {
+    RemoteLocation location = getLocationWithBPID(locations, block.getBlockPoolId());
+    return invokeSingle(location, method, clazz);
   }
 
   /**
