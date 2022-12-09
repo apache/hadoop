@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hdfs.server.mover.MoverMetrics;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -161,6 +162,7 @@ public class NameNodeConnector implements Closeable {
   private final Path idPath;
   private OutputStream out;
   private final List<Path> targetPaths;
+  private final MoverMetrics moverMetrics;
   private final AtomicLong bytesMoved = new AtomicLong();
   private final AtomicLong blocksMoved = new AtomicLong();
   private final AtomicLong blocksFailed = new AtomicLong();
@@ -177,6 +179,7 @@ public class NameNodeConnector implements Closeable {
     this.idPath = idPath;
     this.targetPaths = targetPaths == null || targetPaths.isEmpty() ? Arrays
         .asList(new Path("/")) : targetPaths;
+    this.moverMetrics = MoverMetrics.create(this);
     this.maxNotChangedIterations = maxNotChangedIterations;
     int getBlocksMaxQps = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
@@ -250,6 +253,10 @@ public class NameNodeConnector implements Closeable {
 
   public URI getNameNodeUri() {
     return nameNodeUri;
+  }
+
+  public MoverMetrics getMoverMetrics() {
+    return moverMetrics;
   }
 
   /** @return blocks with locations. */

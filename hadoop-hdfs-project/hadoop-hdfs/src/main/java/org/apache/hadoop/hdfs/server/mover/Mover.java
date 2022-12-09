@@ -160,7 +160,7 @@ public class Mover {
         BlockStoragePolicySuite.ID_BIT_LENGTH];
     this.excludedPinnedBlocks = excludedPinnedBlocks;
     this.nnc = nnc;
-    this.metrics = MoverMetrics.create(this);
+    this.metrics = nnc.getMoverMetrics();
   }
 
   void init() throws IOException {
@@ -200,10 +200,6 @@ public class Mover {
     } finally {
       dispatcher.shutdownNow();
     }
-  }
-
-  public NameNodeConnector getNnc() {
-    return nnc;
   }
 
   DBlock newDBlock(LocatedBlock lb, List<MLocation> locations,
