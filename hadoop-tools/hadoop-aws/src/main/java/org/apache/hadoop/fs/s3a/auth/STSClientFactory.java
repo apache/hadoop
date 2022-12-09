@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.s3a.Retries;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 
 /**
@@ -127,7 +128,7 @@ public class STSClientFactory {
     Preconditions.checkArgument(credentials != null, "No credentials");
 
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
-        AWSClientConfig.createClientConfigBuilder(conf);
+        AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS);
 
     final ApacheHttpClient.Builder httpClientBuilder =
         AWSClientConfig.createHttpClientBuilder(conf);
@@ -143,7 +144,6 @@ public class STSClientFactory {
         .overrideConfiguration(clientOverrideConfigBuilder.build())
         .credentialsProvider(credentials);
 
-    // TODO: SIGNERS NOT ADDED YET.
     boolean destIsStandardEndpoint = STS_STANDARD.equals(stsEndpoint);
     if (isNotEmpty(stsEndpoint) && !destIsStandardEndpoint) {
       Preconditions.checkArgument(isNotEmpty(stsRegion),

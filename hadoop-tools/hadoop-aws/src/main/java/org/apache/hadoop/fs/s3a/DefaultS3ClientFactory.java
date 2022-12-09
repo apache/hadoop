@@ -74,6 +74,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CENTRAL_REGION;
@@ -138,7 +139,7 @@ public class DefaultS3ClientFactory extends Configured
     final ClientConfiguration awsConf = S3AUtils
         .createAwsConf(conf,
             bucket,
-            Constants.AWS_SERVICE_IDENTIFIER_S3);
+            AWS_SERVICE_IDENTIFIER_S3);
     // add any headers
     parameters.getHeaders().forEach((h, v) ->
         awsConf.addHeader(h, v));
@@ -237,7 +238,8 @@ public class DefaultS3ClientFactory extends Configured
    * @param <ClientT> S3 client type
    */
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> BuilderT configureClientBuilder(
-      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf, String bucket) {
+      BuilderT builder, S3ClientCreationParameters parameters, Configuration conf, String bucket)
+      throws IOException {
 
     URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
     Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket, parameters.getCredentialSet());
@@ -263,12 +265,13 @@ public class DefaultS3ClientFactory extends Configured
    * Create an override configuration for an S3 client.
    * @param parameters parameter object
    * @param conf configuration object
+   * @throws IOException any IOE raised, or translated exception
    * @return the override configuration
    */
   protected ClientOverrideConfiguration createClientOverrideConfiguration(
-      S3ClientCreationParameters parameters, Configuration conf) {
+      S3ClientCreationParameters parameters, Configuration conf) throws IOException {
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
-        AWSClientConfig.createClientConfigBuilder(conf);
+        AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3);
 
     // add any headers
     parameters.getHeaders().forEach((h, v) -> clientOverrideConfigBuilder.putHeader(h, v));

@@ -35,9 +35,12 @@ import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.auth.SignerFactory;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.client.utils.URIBuilder;
 
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAX_ERROR_RETRIES;
@@ -55,6 +58,9 @@ import static org.apache.hadoop.fs.s3a.Constants.PROXY_USERNAME;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_WORKSTATION;
 import static org.apache.hadoop.fs.s3a.Constants.REQUEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
+import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
 
@@ -69,7 +75,8 @@ public final class AWSClientConfig {
   private AWSClientConfig() {
   }
 
-  public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf) {
+  public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf,
+      String awsServiceIdentifier) throws IOException {
     ClientOverrideConfiguration.Builder overrideConfigBuilder =
         ClientOverrideConfiguration.builder();
 
@@ -77,12 +84,14 @@ public final class AWSClientConfig {
 
     initUserAgent(conf, overrideConfigBuilder);
 
-    // TODO: Look at signers. See issue https://github.com/aws/aws-sdk-java-v2/issues/1024
-    //    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
-    //    if (!signerOverride.isEmpty()) {
-    //      LOG.debug("Signer override = {}", signerOverride);
-    //      overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER)
-    //    }
+    String signer = conf.getTrimmed(SIGNING_ALGORITHM, "");
+    if (!signer.isEmpty()) {
+      LOG.debug("Signer override = {}", signer);
+      overrideConfigBuilder.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
+          SignerFactory.createSigner(signer));
+    }
+
+    initSigner(conf, overrideConfigBuilder, awsServiceIdentifier);
 
     return overrideConfigBuilder;
   }
@@ -315,6 +324,30 @@ public final class AWSClientConfig {
     }
     LOG.debug("Using User-Agent: {}", userAgent);
     clientConfig.putAdvancedOption(SdkAdvancedClientOption.USER_AGENT_PREFIX, userAgent);
+  }
+
+  private static void initSigner(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier)
+      throws IOException {
+    String configKey = null;
+    switch (awsServiceIdentifier) {
+    case AWS_SERVICE_IDENTIFIER_S3:
+      configKey = SIGNING_ALGORITHM_S3;
+      break;
+    case AWS_SERVICE_IDENTIFIER_STS:
+      configKey = SIGNING_ALGORITHM_STS;
+      break;
+    default:
+      // Nothing to do. The original signer override is already setup
+    }
+    if (configKey != null) {
+      String signerOverride = conf.getTrimmed(configKey, "");
+      if (!signerOverride.isEmpty()) {
+        LOG.debug("Signer override for {}} = {}", awsServiceIdentifier, signerOverride);
+        clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
+            SignerFactory.createSigner(signerOverride));
+      }
+    }
   }
 
   /**

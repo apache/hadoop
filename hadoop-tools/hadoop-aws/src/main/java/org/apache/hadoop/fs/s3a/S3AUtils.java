@@ -1187,7 +1187,7 @@ public final class S3AUtils {
    * @param args constructor argument types
    * @return constructor or null
    */
-  private static Constructor<?> getConstructor(Class<?> cl, Class<?>... args) {
+  public static Constructor<?> getConstructor(Class<?> cl, Class<?>... args) {
     try {
       Constructor cons = cl.getDeclaredConstructor(args);
       return Modifier.isPublic(cons.getModifiers()) ? cons : null;
@@ -1206,7 +1206,7 @@ public final class S3AUtils {
    * @param methodName method name
    * @return method or null
    */
-  private static Method getFactoryMethod(Class<?> cl, Class<?> returnType,
+  public static Method getFactoryMethod(Class<?> cl, Class<?> returnType,
       String methodName) {
     try {
       Method m = cl.getDeclaredMethod(methodName);
