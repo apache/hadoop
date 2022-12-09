@@ -56,6 +56,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
     public void testPurgeBufferManagerForParallelStreams() throws Exception {
         describe("Testing purging of buffers from ReadBufferManager for "
                 + "parallel input streams");
+        final long checkExecutionWaitTime = 1_000L;
         final int numBuffers = 16;
         final LinkedList<Integer> freeList = new LinkedList<>();
         for (int i=0; i < numBuffers; i++) {
@@ -81,7 +82,6 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
                         }
                     }
                     executionCompletion[iteration] = true;
-
                     return null;
                 });
             }
@@ -90,7 +90,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         }
 
         while(!checkIfAllExecutionCompleted(executionCompletion)) {
-          Thread.sleep(1_000L);
+          Thread.sleep(checkExecutionWaitTime);
         }
 
         assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBuffers);
@@ -130,6 +130,8 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         final String fileName = methodName.getMethodName();
         byte[] fileContent = getRandomBytesArray(ONE_MB);
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+        Set<ReadBuffer> inProgressBufferSet = new HashSet<>();
+        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
 
         AbfsInputStream iStream1 =  null;
         // stream1 will be closed right away.
@@ -139,29 +141,26 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
             iStream1.read();
         } finally {
             IOUtils.closeStream(iStream1);
+            inProgressBufferSet.addAll(bufferManager.getInProgressCopiedList());
         }
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
         AbfsInputStream iStream2 = null;
         try {
             iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
             iStream2.read();
             // After closing stream1, none of the buffers associated with stream1 should be present.
-            assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream1);
-            assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream1);
             assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
         } finally {
             // closing the stream later.
             IOUtils.closeStream(iStream2);
+            inProgressBufferSet.addAll(bufferManager.getInProgressCopiedList());
         }
         // After closing stream2, none of the buffers associated with stream2 should be present.
-        assertListDoesnotContainBuffersForIstream(bufferManager.getInProgressCopiedList(), iStream2);
-        assertListDoesnotContainBuffersForIstream(bufferManager.getCompletedReadListCopy(), iStream2);
         assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
         // After closing both the streams, all lists should be empty.
-        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
-        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+
+        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBufferSet);
 
     }
 
