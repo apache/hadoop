@@ -1636,6 +1636,11 @@ public class AzureBlobFileSystem extends FileSystem
           new TracingContext(clientCorrelationId, fileSystemId,
               FSOperationType.HAS_PATH_CAPABILITY, tracingHeaderFormat,
               listener));
+
+      // probe for presence of HADOOP-18546 fix.
+    case "HADOOP-18546":
+      return true;
+
     default:
       return super.hasPathCapability(p, capability);
     }

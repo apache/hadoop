@@ -828,8 +828,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder(super.toString());
+    sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
+    sb.append("[HADOOP-18546]")
+        .append(", ");
     if (streamStatistics != null) {
-      sb.append("AbfsInputStream@(").append(this.hashCode()).append("){");
       sb.append(streamStatistics.toString());
       sb.append("}");
     }
