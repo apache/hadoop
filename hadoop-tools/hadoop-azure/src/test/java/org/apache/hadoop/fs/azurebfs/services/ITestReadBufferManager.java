@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -74,9 +75,13 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
             }
         } finally {
             executorService.shutdown();
+            // wait for all tasks to finish
+            executorService.awaitTermination(1, TimeUnit.MINUTES);
         }
 
         ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        // verify there is no work in progress or the readahead queue.
+        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
     }
 
