@@ -62,7 +62,7 @@ public class PlatformName {
    * IBM and the type is Java Technology Edition which provides its
    * own implementations of many security packages and Cipher suites.
    * Note that these are not provided in Semeru runtimes:
-   * See https://developer.ibm.com/languages/java/semeru-runtimes/
+   * See https://developer.ibm.com/languages/java/semeru-runtimes for details.
    */
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM") &&
       hasIbmTechnologyEditionModules();
