@@ -19,9 +19,12 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,15 +63,25 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         }
         ExecutorService executorService = Executors.newFixedThreadPool(4);
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
+        final Set<ReadBuffer> inProgressBuffers = new HashSet<>();
+        final ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        final Boolean[] executionCompletion = new Boolean[4];
+        Arrays.fill(executionCompletion, false);
         try {
             for (int i = 0; i < 4; i++) {
                 final String fileName = methodName.getMethodName() + i;
+                final int iteration = i;
                 executorService.submit((Callable<Void>) () -> {
                     byte[] fileContent = getRandomBytesArray(ONE_MB);
                     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
                     try (FSDataInputStream iStream = fs.open(testFilePath)) {
                         iStream.read();
+                        for(ReadBuffer buffer : bufferManager.getInProgressCopiedList()) {
+                          inProgressBuffers.add(buffer);
+                        }
                     }
+                    executionCompletion[iteration] = true;
+
                     return null;
                 });
             }
@@ -76,16 +89,32 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
             executorService.shutdown();
         }
 
-        ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        assertListEmpty("CompletedList", bufferManager.getCompletedReadListCopy());
-        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
-        Assertions.assertThat(bufferManager.getFreeListCopy())
-                .describedAs("After closing all streams free list contents should match with " + freeList)
-                .hasSize(numBuffers)
-                .containsExactlyInAnyOrderElementsOf(freeList);
+        while(!checkIfAllExecutionCompleted(executionCompletion)) {
+          Thread.sleep(1_000L);
+        }
 
+        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBuffers);
+        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
     }
+
+  private void assertCompletedListContainsSubSetOfCertainSet(final List<ReadBuffer> completedList,
+      Set<ReadBuffer> bufferSet) {
+    for (ReadBuffer buffer : completedList) {
+      Assertions.assertThat(bufferSet)
+          .describedAs(
+              "CompletedList contains a buffer which is not part of bufferSet.")
+          .contains(buffer);
+    }
+  }
+
+  private Boolean checkIfAllExecutionCompleted(Boolean[] completionFlagArray) {
+    for (Boolean completionFlag : completionFlagArray) {
+      if (!completionFlag) {
+        return false;
+      }
+    }
+    return true;
+  }
 
     private void assertListEmpty(String listName, List<ReadBuffer> list) {
         Assertions.assertThat(list)
