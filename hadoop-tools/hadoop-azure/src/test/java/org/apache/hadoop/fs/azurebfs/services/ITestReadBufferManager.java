@@ -65,6 +65,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         ExecutorService executorService = Executors.newFixedThreadPool(4);
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
         final Set<ReadBuffer> inProgressBuffers = new HashSet<>();
+        final Set<AbfsInputStream> streamsInTest = new HashSet<>();
         final ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
         final Boolean[] executionCompletion = new Boolean[4];
         Arrays.fill(executionCompletion, false);
@@ -76,10 +77,9 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
                     byte[] fileContent = getRandomBytesArray(ONE_MB);
                     Path testFilePath = createFileWithContent(fs, fileName, fileContent);
                     try (FSDataInputStream iStream = fs.open(testFilePath)) {
+                        streamsInTest.add((AbfsInputStream) iStream.getWrappedStream());
                         iStream.read();
-                        for(ReadBuffer buffer : bufferManager.getInProgressCopiedList()) {
-                          inProgressBuffers.add(buffer);
-                        }
+                        inProgressBuffers.addAll(bufferManager.getInProgressCopiedList());
                     }
                     executionCompletion[iteration] = true;
                     return null;
@@ -93,13 +93,18 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
           Thread.sleep(checkExecutionWaitTime);
         }
 
-        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBuffers);
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBuffers, streamsInTest);
+        for(AbfsInputStream stream : streamsInTest) {
+          assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), stream);
+        }
     }
 
   private void assertCompletedListContainsSubSetOfCertainSet(final List<ReadBuffer> completedList,
-      Set<ReadBuffer> bufferSet) {
+      Set<ReadBuffer> bufferSet, final Set<AbfsInputStream> streamsInTest) {
     for (ReadBuffer buffer : completedList) {
+      if(!streamsInTest.contains(buffer.getStream())) {
+        return;
+      }
       Assertions.assertThat(bufferSet)
           .describedAs(
               "CompletedList contains a buffer which is not part of bufferSet.")
@@ -132,11 +137,13 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
         Set<ReadBuffer> inProgressBufferSet = new HashSet<>();
         ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
+        final Set<AbfsInputStream> streamsInTest = new HashSet<>();
 
         AbfsInputStream iStream1 =  null;
         // stream1 will be closed right away.
         try {
             iStream1 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+            streamsInTest.add(iStream1);
             // Just reading one byte will trigger all read ahead calls.
             iStream1.read();
         } finally {
@@ -146,6 +153,7 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         AbfsInputStream iStream2 = null;
         try {
             iStream2 = (AbfsInputStream) fs.open(testFilePath).getWrappedStream();
+            streamsInTest.add(iStream2);
             iStream2.read();
             // After closing stream1, none of the buffers associated with stream1 should be present.
             assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream1);
@@ -157,10 +165,8 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         // After closing stream2, none of the buffers associated with stream2 should be present.
         assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
-        // After closing both the streams, all lists should be empty.
-        assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
-
-        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBufferSet);
+        assertCompletedListContainsSubSetOfCertainSet(bufferManager.getCompletedReadListCopy(), inProgressBufferSet,
+            streamsInTest);
 
     }
 
