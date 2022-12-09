@@ -44,8 +44,22 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 
 public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
+
+  /**
+   * Time before the JUnit test times out for eventually() clauses
+   * to fail. This copes with slow network connections and debugging
+   * sessions, yet still allows for tests to fail with meaningful
+   * messages.
+   */
+  public static final int TIMEOUT_OFFSET = 5 * 60_000;
+
+  /**
+   * Interval between eventually preobes.
+   */
+  public static final int PROBE_INTERVAL_MILLIS = 1_000;
 
     public ITestReadBufferManager() throws Exception {
     }
@@ -61,6 +75,11 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         }
         ExecutorService executorService = Executors.newFixedThreadPool(4);
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
+        // verify that the fs has the capability to validate the fix
+        Assertions.assertThat(fs.hasPathCapability(new Path("/"), "HADOOP-18546"))
+            .describedAs("path capability \"HADOOP-18546\" in %s", fs)
+            .isTrue();
+
         try {
             for (int i = 0; i < 4; i++) {
                 final String fileName = methodName.getMethodName() + i;
@@ -80,9 +99,11 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         }
 
         ReadBufferManager bufferManager = ReadBufferManager.getBufferManager();
-        // verify there is no work in progress or the readahead queue.
-        assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList());
+        // readahead queue is empty
         assertListEmpty("ReadAheadQueue", bufferManager.getReadAheadQueueCopy());
+        // verify the in progress list eventually empties out.
+        eventually(getTestTimeoutMillis() - TIMEOUT_OFFSET, PROBE_INTERVAL_MILLIS, () ->
+            assertListEmpty("InProgressList", bufferManager.getInProgressCopiedList()));
     }
 
     private void assertListEmpty(String listName, List<ReadBuffer> list) {

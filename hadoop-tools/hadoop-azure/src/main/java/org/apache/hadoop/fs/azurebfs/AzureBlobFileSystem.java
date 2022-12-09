@@ -1638,7 +1638,7 @@ public class AzureBlobFileSystem extends FileSystem
               listener));
 
       // probe for presence of HADOOP-18546 fix.
-    case "HADOOP-18546":
+    case "hadoop-18546":
       return true;
 
     default:
