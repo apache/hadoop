@@ -17,6 +17,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.DYNAMIC_MAX_ASSIGN;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CAPACITY_PERCENTAGE;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSConfigToCSConfigRuleHandler.MAX_CHILD_CAPACITY;
@@ -183,6 +184,20 @@ public class TestFSConfigToCSConfigConverter {
 
     assertNull("root.users.joe maximum-am-resource-percent should be null",
         conf.get(PREFIX + "root.users.joe maximum-am-resource-percent"));
+  }
+
+  @Test
+  public void testDefaultUserLimitFactor() throws Exception {
+    converter.convert(config);
+
+    Configuration conf = converter.getCapacitySchedulerConfig();
+    String userLimitFactor =
+            conf.get(PREFIX + USER_LIMIT_FACTOR);
+
+    assertEquals("Default user limit factor", "-1.0", userLimitFactor);
+
+    assertNull("root.users.joe user-limit-factor should be null",
+            conf.get(PREFIX + "root.users.joe user-limit-factor"));
   }
 
   @Test

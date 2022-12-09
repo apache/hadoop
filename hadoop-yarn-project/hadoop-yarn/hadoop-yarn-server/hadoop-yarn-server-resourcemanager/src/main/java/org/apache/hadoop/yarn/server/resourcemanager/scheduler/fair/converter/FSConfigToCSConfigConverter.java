@@ -20,6 +20,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSQueueConverter.QUEUE_MAX_AM_SHARE_DISABLED;
 
 import java.io.ByteArrayOutputStream;
@@ -295,6 +296,7 @@ public class FSConfigToCSConfigConverter {
     emitDefaultUserMaxParallelApplications();
     emitUserMaxParallelApplications();
     emitDefaultMaxAMShare();
+    emitDefaultUserLimitFactor();
     emitDisablePreemptionForObserveOnlyMode();
 
     FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
@@ -412,6 +414,14 @@ public class FSConfigToCSConfigConverter {
           queueMaxAMShareDefault);
     }
   }
+
+  private void emitDefaultUserLimitFactor() {
+    capacitySchedulerConfig.setFloat(
+            CapacitySchedulerConfiguration.
+                    PREFIX + USER_LIMIT_FACTOR,
+            -1.0f);
+  }
+
   private void emitDisablePreemptionForObserveOnlyMode() {
     if (preemptionMode == FSConfigToCSConfigConverterParams
             .PreemptionMode.OBSERVE_ONLY) {
