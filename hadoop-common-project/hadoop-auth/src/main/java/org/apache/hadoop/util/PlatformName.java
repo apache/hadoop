@@ -63,7 +63,6 @@ public class PlatformName {
    * own implementations of many security packages and Cipher suites.
    * Note that these are not provided in Semeru runtimes:
    * See https://developer.ibm.com/languages/java/semeru-runtimes/
-   * The class used is present in any supported IBM JTE Runtimes.
    */
   public static final boolean IBM_JAVA = JAVA_VENDOR_NAME.contains("IBM") &&
       hasIbmTechnologyEditionModules();
