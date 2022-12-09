@@ -91,31 +91,31 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
             executorService.shutdown();
         }
 
-      /*
-       * Since, the read from inputStream is happening in parallel thread, the
-       * test has to wait for the execution to get over. If we don't wait, test
-       * main thread will go on to do assertion where the stream execution may or
-       * may not happen.
-       */
-      while (!checkIfAllExecutionCompleted(executionCompletion)) {
-        Thread.sleep(checkExecutionWaitTime);
-      }
+        /*
+        * Since, the read from inputStream is happening in parallel thread, the
+        * test has to wait for the execution to get over. If we don't wait, test
+        * main thread will go on to do assertion where the stream execution may or
+        * may not happen.
+        */
+        while (!checkIfAllExecutionCompleted(executionCompletion)) {
+          Thread.sleep(checkExecutionWaitTime);
+        }
 
-      /*
-       * The close() method of AbfsInputStream would lead to purge of completedList.
-       * Because the readBufferWorkers are running in parallel thread, due to race condition,
-       * after close and before assert, it can happen that processing of inProgress buffer
-       * can get completed and hence we cannot assert on completedList to be empty.
-       * That is why completedList are checked to not have a buffer other than the
-       * buffers in inProgressQueue just before the closure of AbfsInputStream object.
-       */
-      assertCompletedListContainsSubSetOfCertainSet(
-          bufferManager.getCompletedReadListCopy(), inProgressBuffers,
-          streamsInTest);
-      for (AbfsInputStream stream : streamsInTest) {
-        assertListDoesnotContainBuffersForIstream(
-            bufferManager.getReadAheadQueueCopy(), stream);
-      }
+        /*
+        * The close() method of AbfsInputStream would lead to purge of completedList.
+        * Because the readBufferWorkers are running in parallel thread, due to race condition,
+        * after close and before assert, it can happen that processing of inProgress buffer
+        * can get completed and hence we cannot assert on completedList to be empty.
+        * That is why completedList are checked to not have a buffer other than the
+        * buffers in inProgressQueue just before the closure of AbfsInputStream object.
+        */
+        assertCompletedListContainsSubSetOfCertainSet(
+            bufferManager.getCompletedReadListCopy(), inProgressBuffers,
+            streamsInTest);
+        for (AbfsInputStream stream : streamsInTest) {
+          assertListDoesnotContainBuffersForIstream(
+              bufferManager.getReadAheadQueueCopy(), stream);
+        }
     }
 
   private void assertCompletedListContainsSubSetOfCertainSet(final List<ReadBuffer> completedList,
@@ -184,17 +184,17 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         //  After closing stream2, no queued buffers of stream2 should be present.
         assertListDoesnotContainBuffersForIstream(bufferManager.getReadAheadQueueCopy(), iStream2);
 
-      /*
-       * The close() method of AbfsInputStream would lead to purge of completedList.
-       * Because the readBufferWorkers are running in parallel thread, due to race condition,
-       * after close and before assert, it can happen that processing of inProgress buffer
-       * can get completed and hence we cannot assert on completedList to be empty.
-       * That is why completedList are checked to not have a buffer other than the
-       * buffers in inProgressQueue just before the closure of AbfsInputStream object.
-       */
-      assertCompletedListContainsSubSetOfCertainSet(
-          bufferManager.getCompletedReadListCopy(), inProgressBufferSet,
-          streamsInTest);
+        /*
+        * The close() method of AbfsInputStream would lead to purge of completedList.
+        * Because the readBufferWorkers are running in parallel thread, due to race condition,
+        * after close and before assert, it can happen that processing of inProgress buffer
+        * can get completed and hence we cannot assert on completedList to be empty.
+        * That is why completedList are checked to not have a buffer other than the
+        * buffers in inProgressQueue just before the closure of AbfsInputStream object.
+        */
+        assertCompletedListContainsSubSetOfCertainSet(
+            bufferManager.getCompletedReadListCopy(), inProgressBufferSet,
+            streamsInTest);
     }
 
 
