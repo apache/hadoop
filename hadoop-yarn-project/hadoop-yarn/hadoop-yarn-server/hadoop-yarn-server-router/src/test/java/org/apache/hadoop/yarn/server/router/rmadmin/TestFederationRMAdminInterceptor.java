@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -31,7 +34,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -77,7 +79,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     subClusters = new ArrayList<>();
     try {
       for (int i = 0; i < NUM_SUBCLUSTER; i++) {
-        SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+        SubClusterId sc = SubClusterId.newInstance("SC-" + i);
         stateStoreUtil.registerSubCluster(sc);
         subClusters.add(sc);
       }
@@ -114,8 +116,70 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
   }
 
   @Test
-  public void testRefreshQueues() throws IOException, YarnException {
+  public void testRefreshQueues() throws Exception {
+    // We will test 2 cases:
+    // case 1, request is null.
+    // case 2, normal request.
+    // If the request is null, a Missing RefreshQueues request exception will be thrown.
+
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class, "Missing RefreshQueues request.",
+        () -> interceptor.refreshQueues(null));
+
+    // normal request.
     RefreshQueuesRequest request = RefreshQueuesRequest.newInstance();
     interceptor.refreshQueues(request);
+  }
+
+  @Test
+  public void testSC1RefreshQueues() throws Exception {
+    // We will test 2 cases:
+    // case 1, test the existing subCluster (SC-1).
+    // case 2, test the non-exist subCluster.
+
+    String existSubCluster = "SC-1";
+    RefreshQueuesRequest request = RefreshQueuesRequest.newInstance(existSubCluster);
+    interceptor.refreshQueues(request);
+
+    String notExistsSubCluster = "SC-NON";
+    RefreshQueuesRequest request1 = RefreshQueuesRequest.newInstance(notExistsSubCluster);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.refreshQueues(request1));
+  }
+
+  @Test
+  public void testRefreshNodes() throws Exception {
+    // We will test 2 cases:
+    // case 1, request is null.
+    // case 2, normal request.
+    // If the request is null, a Missing RefreshNodes request exception will be thrown.
+
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing RefreshNodes request.", () -> interceptor.refreshNodes(null));
+
+    // normal request.
+    RefreshNodesRequest request = RefreshNodesRequest.newInstance(DecommissionType.NORMAL);
+    interceptor.refreshNodes(request);
+  }
+
+  @Test
+  public void testSC1RefreshNodes() throws Exception {
+
+    // We will test 2 cases:
+    // case 1, test the existing subCluster (SC-1).
+    // case 2, test the non-exist subCluster.
+
+    RefreshNodesRequest request =
+        RefreshNodesRequest.newInstance(DecommissionType.NORMAL, 10, "SC-1");
+    interceptor.refreshNodes(request);
+
+    String notExistsSubCluster = "SC-NON";
+    RefreshNodesRequest request1 = RefreshNodesRequest.newInstance(
+        DecommissionType.NORMAL, 10, notExistsSubCluster);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.refreshNodes(request1));
   }
 }
