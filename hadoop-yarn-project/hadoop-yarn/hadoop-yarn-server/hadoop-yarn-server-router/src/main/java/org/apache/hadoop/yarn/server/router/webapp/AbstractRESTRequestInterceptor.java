@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 
 import java.io.IOException;
 
@@ -34,6 +35,7 @@ public abstract class AbstractRESTRequestInterceptor
   private Configuration conf;
   private RESTRequestInterceptor nextInterceptor;
   private UserGroupInformation user = null;
+  private RouterClientRMService routerClientRMService = null;
 
   /**
    * Sets the {@link RESTRequestInterceptor} in the chain.
@@ -122,5 +124,15 @@ public abstract class AbstractRESTRequestInterceptor
 
   public UserGroupInformation getUser() {
     return user;
+  }
+
+  @Override
+  public RouterClientRMService getRouterClientRMService() {
+    return routerClientRMService;
+  }
+
+  @Override
+  public void setRouterClientRMService(RouterClientRMService routerClientRMService) {
+    this.routerClientRMService = routerClientRMService;
   }
 }
