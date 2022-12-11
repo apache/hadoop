@@ -1125,7 +1125,7 @@ public class Dispatcher {
     return nnc.getBytesMoved().get();
   }
 
-  long getBblocksMoved() {
+  long getBlocksMoved() {
     return nnc.getBlocksMoved().get();
   }
 
@@ -1232,7 +1232,7 @@ public class Dispatcher {
    */
   private long dispatchBlockMoves() throws InterruptedException {
     final long bytesLastMoved = getBytesMoved();
-    final long blocksLastMoved = getBblocksMoved();
+    final long blocksLastMoved = getBlocksMoved();
     final Future<?>[] futures = new Future<?>[sources.size()];
 
     int concurrentThreads = Math.min(sources.size(),
@@ -1282,7 +1282,7 @@ public class Dispatcher {
     waitForMoveCompletion(targets);
     LOG.info("Total bytes (blocks) moved in this iteration {} ({})",
         StringUtils.byteDesc(getBytesMoved() - bytesLastMoved),
-        (getBblocksMoved() - blocksLastMoved));
+        (getBlocksMoved() - blocksLastMoved));
 
     return getBytesMoved() - bytesLastMoved;
   }
