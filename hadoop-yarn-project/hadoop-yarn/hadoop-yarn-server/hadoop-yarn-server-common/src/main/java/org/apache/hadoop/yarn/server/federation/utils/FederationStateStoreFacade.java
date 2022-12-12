@@ -880,7 +880,7 @@ public final class FederationStateStoreFacade {
   /**
    * Set SeqNum from stateStore.
    *
-   * @return delegationTokenSequenceNumber.
+   * @param seqNum delegationTokenSequenceNumber.
    */
   public void setDelegationTokenSeqNum(int seqNum) {
     stateStore.setDelegationTokenSeqNum(seqNum);
