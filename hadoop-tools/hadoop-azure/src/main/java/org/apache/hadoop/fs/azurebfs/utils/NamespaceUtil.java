@@ -38,5 +38,4 @@ public class NamespaceUtil {
     }
     return isNamespaceEnabled;
   }
-
 }

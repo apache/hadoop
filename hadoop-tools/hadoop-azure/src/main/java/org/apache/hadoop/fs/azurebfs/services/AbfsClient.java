@@ -1284,11 +1284,10 @@ public class AbfsClient implements Closeable {
 
   private synchronized Boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    if(isNamespaceEnabled != null) {
-      return isNamespaceEnabled;
+    if (isNamespaceEnabled == null) {
+      isNamespaceEnabled = NamespaceUtil.isNamespaceEnabled(this,
+          tracingContext);
     }
-
-    isNamespaceEnabled = NamespaceUtil.isNamespaceEnabled(this, tracingContext);
     return isNamespaceEnabled;
   }
 
