@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -244,7 +245,7 @@ public class TestAbfsInputStream extends
         tracingContext);
     verify(mockClient, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
-        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), any(EncryptionAdapter.class));
+        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), nullable(EncryptionAdapter.class));
 
     Mockito.reset(mockClient); //clears invocation count for next test case
   }
