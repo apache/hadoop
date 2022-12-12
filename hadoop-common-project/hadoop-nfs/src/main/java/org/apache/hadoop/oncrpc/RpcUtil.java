@@ -129,15 +129,17 @@ public final class RpcUtil {
       RpcInfo info = null;
       try {
         RpcCall callHeader = RpcCall.read(in);
-        ByteBuf dataBuffer = Unpooled.wrappedBuffer(in.buffer()
-            .slice());
+        ByteBuf dataBuffer = buf.slice(b.position(), b.remaining());
 
         info = new RpcInfo(callHeader, dataBuffer, ctx, ctx.channel(),
             remoteAddress);
       } catch (Exception exc) {
         LOG.info("Malformed RPC request from " + remoteAddress);
       } finally {
-        buf.release();
+        // only release buffer if it is not passed to downstream handler
+        if (info == null) {
+          buf.release();
+        }
       }
 
       if (info != null) {
