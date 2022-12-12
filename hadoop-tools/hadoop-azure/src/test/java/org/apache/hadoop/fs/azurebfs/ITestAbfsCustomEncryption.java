@@ -401,6 +401,16 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     }
   }
 
+  /**
+   * Creates a file in the server with values for the following keys:
+   * <ol>
+   *   <li>x-ms-encryption-key: for ENCRYPTION_CONTEXT, GLOBAL</li>
+   *   <li>x-ms-encryption-key-sha256: for ENCRYPTION_CONTEXT, GLOBAL</li>
+   *   <li>x-ms-encryption-context: for ENCRYPTION_CONTEXT</li>
+   * </ol>
+   * Returns in case of ENCRYPTION_CONTEXT the encryptionProvider object which
+   * was used to create the x-ms-encryption-context value used for creating the file.
+   * */
   private EncryptionContextProvider createEncryptedFile(Path testPath) throws Exception {
     AzureBlobFileSystem fs;
     if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {
@@ -431,7 +441,8 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   }
 
   @Override
-  protected void finalize() throws Throwable {
+  public void teardown() throws Exception {
+    super.teardown();
     for(AzureBlobFileSystem azureBlobFileSystem : fileSystemsOpenedInTest) {
       azureBlobFileSystem.close();
     }
