@@ -25,6 +25,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -36,6 +39,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Extends the FederationRMAdminInterceptor and overrides methods to provide a
@@ -128,7 +133,8 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
 
     // normal request.
     RefreshQueuesRequest request = RefreshQueuesRequest.newInstance();
-    interceptor.refreshQueues(request);
+    RefreshQueuesResponse response = interceptor.refreshQueues(request);
+    assertNotNull(response);
   }
 
   @Test
@@ -181,5 +187,42 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class,
         "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.refreshNodes(request1));
+  }
+
+  @Test
+  public void testRefreshSuperUserGroupsConfiguration() throws Exception {
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing RefreshSuperUserGroupsConfiguration request.",
+         () -> interceptor.refreshSuperUserGroupsConfiguration(null));
+
+    // normal request.
+    // There is no return information defined in RefreshSuperUserGroupsConfigurationResponse,
+    // as long as it is not empty, it means that the command is successfully executed.
+    RefreshSuperUserGroupsConfigurationRequest request =
+        RefreshSuperUserGroupsConfigurationRequest.newInstance();
+    RefreshSuperUserGroupsConfigurationResponse response =
+        interceptor.refreshSuperUserGroupsConfiguration(request);
+    assertNotNull(response);
+  }
+
+  @Test
+  public void testSC1RefreshSuperUserGroupsConfiguration() throws Exception {
+
+    // case 1, test the existing subCluster (SC-1).
+    String existSubCluster = "SC-1";
+    RefreshSuperUserGroupsConfigurationRequest request =
+        RefreshSuperUserGroupsConfigurationRequest.newInstance(existSubCluster);
+    RefreshSuperUserGroupsConfigurationResponse response =
+        interceptor.refreshSuperUserGroupsConfiguration(request);
+    assertNotNull(response);
+
+    // case 2, test the non-exist subCluster.
+    String notExistsSubCluster = "SC-NON";
+    RefreshSuperUserGroupsConfigurationRequest request1 =
+        RefreshSuperUserGroupsConfigurationRequest.newInstance(notExistsSubCluster);
+    LambdaTestUtils.intercept(YarnException.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.refreshSuperUserGroupsConfiguration(request1));
   }
 }

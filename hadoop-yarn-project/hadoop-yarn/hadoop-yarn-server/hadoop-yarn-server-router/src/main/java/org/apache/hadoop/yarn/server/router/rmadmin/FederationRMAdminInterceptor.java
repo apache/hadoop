@@ -255,11 +255,19 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   /**
    * Refresh SuperUserGroupsConfiguration requests.
    *
-   * The Router supports refreshing all SubCluster SuperUserGroupsConfiguration at once,
+   * The Router supports refreshing all subCluster SuperUserGroupsConfiguration at once,
    * and also supports refreshing SuperUserGroupsConfiguration by SubCluster.
    *
-   * @param request
-   * @return
+   * @param request RefreshSuperUserGroupsConfigurationRequest,
+   * If subClusterId is not empty, it means that we want to
+   * refresh the superuser groups configuration of the specified subClusterId.
+   * If subClusterId is empty, it means we want to
+   * refresh all subCluster superuser groups configuration.
+   *
+   * @return RefreshSuperUserGroupsConfigurationResponse,
+   * There is no specific information in the response, as long as it is not empty,
+   * it means that the request is successful.
+   *
    * @throws StandbyException exception thrown by non-active server.
    * @throws YarnException indicates exceptions from yarn servers.
    * @throws IOException io error occurs.
@@ -302,11 +310,61 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     throw new YarnException("Unable to refreshSuperUserGroupsConfiguration.");
   }
 
+  /**
+   * Refresh UserToGroupsMappings requests.
+   *
+   * The Router supports refreshing all subCluster UserToGroupsMappings at once,
+   * and also supports refreshing UserToGroupsMappings by subCluster.
+   *
+   * @param request RefreshUserToGroupsMappingsRequest,
+   * If subClusterId is not empty, it means that we want to
+   * refresh the user groups mapping of the specified subClusterId.
+   * If subClusterId is empty, it means we want to
+   * refresh all subCluster user groups mapping.
+   *
+   * @return RefreshUserToGroupsMappingsResponse,
+   * There is no specific information in the response, as long as it is not empty,
+   * it means that the request is successful.
+   *
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request)
-      throws StandbyException, YarnException, IOException {
-    throw new NotImplementedException();
+      RefreshUserToGroupsMappingsRequest request) throws StandbyException, YarnException,
+      IOException {
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshUserToGroupsMappings request.", null);
+    }
+
+    // call refreshUserToGroupsMappings of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshUserToGroupsMappingsRequest.class}, new Object[] {request});
+
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshUserToGroupsMappingsResponse> refreshUserToGroupsMappingsResps =
+          remoteMethod.invokeConcurrent(this, RefreshUserToGroupsMappingsResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(refreshUserToGroupsMappingsResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshUserToGroupsMappingsRetrieved(stopTime - startTime);
+        return RefreshUserToGroupsMappingsResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshUserToGroupsMappings due to exception.");
+    }
+
+    routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
+    throw new YarnException("Unable to refreshUserToGroupsMappings.");
   }
 
   @Override

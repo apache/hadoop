@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 
@@ -27,12 +28,12 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class RefreshUserToGroupsMappingsRequestPBImpl 
-extends RefreshUserToGroupsMappingsRequest {
+public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroupsMappingsRequest {
 
-  RefreshUserToGroupsMappingsRequestProto proto = RefreshUserToGroupsMappingsRequestProto.getDefaultInstance();
-  RefreshUserToGroupsMappingsRequestProto.Builder builder = null;
-  boolean viaProto = false;
+  private RefreshUserToGroupsMappingsRequestProto proto =
+      RefreshUserToGroupsMappingsRequestProto.getDefaultInstance();
+  private RefreshUserToGroupsMappingsRequestProto.Builder builder = null;
+  private boolean viaProto = false;
   
   public RefreshUserToGroupsMappingsRequestPBImpl() {
     builder = RefreshUserToGroupsMappingsRequestProto.newBuilder();
@@ -56,8 +57,9 @@ extends RefreshUserToGroupsMappingsRequest {
 
   @Override
   public boolean equals(Object other) {
-    if (other == null)
+    if (other == null) {
       return false;
+    }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       return this.getProto().equals(this.getClass().cast(other).getProto());
     }
@@ -67,5 +69,28 @@ extends RefreshUserToGroupsMappingsRequest {
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  private synchronized void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = RefreshUserToGroupsMappingsRequestProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public String getSubClusterId() {
+    RefreshUserToGroupsMappingsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+  }
+
+  @Override
+  public void setSubClusterId(String subClusterId) {
+    maybeInitBuilder();
+    if (subClusterId == null) {
+      builder.clearSubClusterId();
+      return;
+    }
+    builder.setSubClusterId(subClusterId);
   }
 }
