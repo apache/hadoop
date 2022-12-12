@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
@@ -463,6 +464,14 @@ public class RequestFactoryImpl implements RequestFactory {
     });
 
     return prepareRequest(headObjectRequestBuilder);
+  }
+
+  @Override
+  public HeadBucketRequest.Builder newHeadBucketRequestBuilder(String bucket) {
+
+    HeadBucketRequest.Builder headBucketRequestBuilder = HeadBucketRequest.builder().bucket(bucket);
+
+    return prepareRequest(headBucketRequestBuilder);
   }
 
   @Override
