@@ -28,6 +28,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
@@ -194,7 +196,7 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     // null request.
     LambdaTestUtils.intercept(YarnException.class,
         "Missing RefreshSuperUserGroupsConfiguration request.",
-         () -> interceptor.refreshSuperUserGroupsConfiguration(null));
+        () -> interceptor.refreshSuperUserGroupsConfiguration(null));
 
     // normal request.
     // There is no return information defined in RefreshSuperUserGroupsConfigurationResponse,
@@ -221,8 +223,40 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     String notExistsSubCluster = "SC-NON";
     RefreshSuperUserGroupsConfigurationRequest request1 =
         RefreshSuperUserGroupsConfigurationRequest.newInstance(notExistsSubCluster);
-    LambdaTestUtils.intercept(YarnException.class,
+    LambdaTestUtils.intercept(Exception.class,
         "subClusterId = SC-NON is not an active subCluster.",
         () -> interceptor.refreshSuperUserGroupsConfiguration(request1));
+  }
+
+  @Test
+  public void testRefreshUserToGroupsMappings() throws Exception {
+    // null request.
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing RefreshUserToGroupsMappings request.",
+        () -> interceptor.refreshUserToGroupsMappings(null));
+
+    // normal request.
+    RefreshUserToGroupsMappingsRequest request = RefreshUserToGroupsMappingsRequest.newInstance();
+    RefreshUserToGroupsMappingsResponse response = interceptor.refreshUserToGroupsMappings(request);
+    assertNotNull(response);
+  }
+
+  @Test
+  public void testSC1RefreshUserToGroupsMappings() throws Exception {
+    // case 1, test the existing subCluster (SC-1).
+    String existSubCluster = "SC-1";
+    RefreshUserToGroupsMappingsRequest request =
+        RefreshUserToGroupsMappingsRequest.newInstance(existSubCluster);
+    RefreshUserToGroupsMappingsResponse response =
+        interceptor.refreshUserToGroupsMappings(request);
+    assertNotNull(response);
+
+    // case 2, test the non-exist subCluster.
+    String notExistsSubCluster = "SC-NON";
+    RefreshUserToGroupsMappingsRequest request1 =
+        RefreshUserToGroupsMappingsRequest.newInstance(notExistsSubCluster);
+    LambdaTestUtils.intercept(Exception.class,
+        "subClusterId = SC-NON is not an active subCluster.",
+        () -> interceptor.refreshUserToGroupsMappings(request1));
   }
 }
