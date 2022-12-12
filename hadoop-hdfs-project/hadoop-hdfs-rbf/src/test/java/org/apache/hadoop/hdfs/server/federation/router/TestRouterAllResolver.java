@@ -204,7 +204,7 @@ public class TestRouterAllResolver {
         routerFs.getFileStatus(testTruncateFilePath).getLen());
 
     // Test setReplication
-    assertTrue(routerFs.setReplication(testTruncateFilePath,(short)2));
+    assertTrue(routerFs.setReplication(testTruncateFilePath, (short)2));
     assertEquals("SetReplication file fails", 2,
         routerFs.getFileStatus(testTruncateFilePath).getReplication());
 
