@@ -39,6 +39,7 @@ public abstract class RefreshSuperUserGroupsConfigurationRequest {
   public static RefreshSuperUserGroupsConfigurationRequest newInstance(String subClusterId) {
     RefreshSuperUserGroupsConfigurationRequest request =
         Records.newRecord(RefreshSuperUserGroupsConfigurationRequest.class);
+    request.setSubClusterId(subClusterId);
     return request;
   }
 

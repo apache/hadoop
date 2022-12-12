@@ -253,18 +253,53 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
   }
 
   /**
+   * Refresh SuperUserGroupsConfiguration requests.
+   *
+   * The Router supports refreshing all SubCluster SuperUserGroupsConfiguration at once,
+   * and also supports refreshing SuperUserGroupsConfiguration by SubCluster.
    *
    * @param request
    * @return
-   * @throws StandbyException
-   * @throws YarnException
-   * @throws IOException
+   * @throws StandbyException exception thrown by non-active server.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
    */
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
       throws StandbyException, YarnException, IOException {
-    throw new NotImplementedException();
+
+    // parameter verification.
+    if (request == null) {
+      routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing RefreshSuperUserGroupsConfiguration request.",
+          null);
+    }
+
+    // call refreshSuperUserGroupsConfiguration of activeSubClusters.
+    try {
+      long startTime = clock.getTime();
+      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
+          new Class[] {RefreshSuperUserGroupsConfigurationRequest.class}, new Object[] {request});
+
+      String subClusterId = request.getSubClusterId();
+      Collection<RefreshSuperUserGroupsConfigurationResponse> refreshSuperUserGroupsConfResps =
+          remoteMethod.invokeConcurrent(this, RefreshSuperUserGroupsConfigurationResponse.class,
+          subClusterId);
+
+      if (CollectionUtils.isNotEmpty(refreshSuperUserGroupsConfResps)) {
+        long stopTime = clock.getTime();
+        routerMetrics.succeededRefreshSuperUserGroupsConfRetrieved(stopTime - startTime);
+        return RefreshSuperUserGroupsConfigurationResponse.newInstance();
+      }
+    } catch (YarnException e) {
+      routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshSuperUserGroupsConfiguration due to exception.");
+    }
+
+    routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
+    throw new YarnException("Unable to refreshSuperUserGroupsConfiguration.");
   }
 
   @Override
