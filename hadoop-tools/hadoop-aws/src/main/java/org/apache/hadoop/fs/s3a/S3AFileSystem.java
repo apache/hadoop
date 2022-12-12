@@ -63,6 +63,7 @@ import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
@@ -2657,6 +2658,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Request bucket metadata
+   * @return the metadata
+   * @throws UnknownStoreException the bucket is absent
+   * @throws IOException  any other problem talking to S3
+   */
+  @Retries.RetryRaw
+  protected HeadBucketResponse getBucketMetadata() throws IOException {
+    final HeadBucketResponse response = trackDurationAndSpan(STORE_EXISTS_PROBE, bucket, null,
+        () -> invoker.retry("getBucketMetadata()", bucket, true, () -> {
+          try {
+            return s3Client.headBucket(
+                getRequestFactory().newHeadBucketRequestBuilder(bucket).build());
+          } catch (NoSuchBucketException e) {
+            throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
+          }
+        }));
+    return response;
+  }
+
+  /**
    * Initiate a {@code listObjects} operation, incrementing metrics
    * in the process.
    *
@@ -4785,6 +4806,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throws IOException {
       return once("getObjectMetadata", key, () ->
           S3AFileSystem.this.getObjectMetadata(key));
+    }
+
+    @Override
+    public HeadBucketResponse getBucketMetadata()
+        throws IOException {
+      return once("getBucketMetadata", bucket, () ->
+          S3AFileSystem.this.getBucketMetadata());
     }
   }
   /**

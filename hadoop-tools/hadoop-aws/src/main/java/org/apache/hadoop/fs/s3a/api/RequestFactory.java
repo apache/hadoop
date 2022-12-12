@@ -29,6 +29,7 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
@@ -172,11 +173,18 @@ public interface RequestFactory {
       List<CompletedPart> partETags);
 
   /**
-   * Create a HEAD request builder.
+   * Create a HEAD object request builder.
    * @param key key, may have trailing /
    * @return the request builder.
    */
   HeadObjectRequest.Builder newHeadObjectRequestBuilder(String key);
+
+  /**
+   * Create a HEAD bucket request builder.
+   * @param bucket bucket to get metadata for
+   * @return the request builder.
+   */
+  HeadBucketRequest.Builder newHeadBucketRequestBuilder(String bucket);
 
 
   /**
