@@ -32,8 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 
 @XmlRootElement
-@XmlSeeAlso({ CapacitySchedulerInfo.class, FairSchedulerInfo.class,
-  FifoSchedulerInfo.class })
+@XmlSeeAlso({ CapacitySchedulerInfo.class, FairSchedulerInfo.class, FifoSchedulerInfo.class })
 public class SchedulerInfo {
   protected String schedulerName;
   protected ResourceInfo minAllocResource;
