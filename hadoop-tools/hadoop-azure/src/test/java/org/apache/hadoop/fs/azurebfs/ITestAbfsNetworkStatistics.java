@@ -66,6 +66,12 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
     long expectedRequestsSent = metricMap.get(SEND_REQUESTS.getStatName());
     long expectedBytesSent = 0;
 
+    if(fs.getAbfsClient().getIsNamespaceEnabled() == null) {
+      //AbfsClient would initialise isNamespaceEnabled field for which it would
+      //make call getAclStatus.
+      expectedConnectionsMade++;
+    }
+
     // --------------------------------------------------------------------
      // Operation: Creating AbfsOutputStream
     try (AbfsOutputStream out = createAbfsOutputStreamWithFlushEnabled(fs,

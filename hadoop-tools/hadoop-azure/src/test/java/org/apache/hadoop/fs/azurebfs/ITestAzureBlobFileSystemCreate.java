@@ -261,6 +261,13 @@ public class ITestAzureBlobFileSystemCreate extends
     long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
         .get(CONNECTIONS_MADE.getStatName());
 
+    int aclCall = 0;
+    if(fs.getAbfsClient().getIsNamespaceEnabled() == null) {
+      //AbfsClient would initialise isNamespaceEnabled field for which it would
+      //make call getAclStatus.
+      aclCall = 1;
+    }
+
     int createRequestCount = 0;
     final Path nonOverwriteFile = new Path("/NonOverwriteTest_FileName_"
         + UUID.randomUUID().toString());
@@ -274,7 +281,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
-        totalConnectionMadeBeforeTest + createRequestCount,
+        totalConnectionMadeBeforeTest + createRequestCount + aclCall,
         fs.getInstrumentationMap());
 
     // Case 2: Not Overwrite - File pre-exists
@@ -290,7 +297,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
-        totalConnectionMadeBeforeTest + createRequestCount,
+        totalConnectionMadeBeforeTest + createRequestCount + aclCall,
         fs.getInstrumentationMap());
 
     final Path overwriteFilePath = new Path("/OverwriteTest_FileName_"
@@ -305,7 +312,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
-        totalConnectionMadeBeforeTest + createRequestCount,
+        totalConnectionMadeBeforeTest + createRequestCount + aclCall,
         fs.getInstrumentationMap());
 
     // Case 4: Overwrite - File pre-exists
@@ -327,7 +334,7 @@ public class ITestAzureBlobFileSystemCreate extends
 
     assertAbfsStatistics(
         CONNECTIONS_MADE,
-        totalConnectionMadeBeforeTest + createRequestCount,
+        totalConnectionMadeBeforeTest + createRequestCount + aclCall,
         fs.getInstrumentationMap());
   }
 
