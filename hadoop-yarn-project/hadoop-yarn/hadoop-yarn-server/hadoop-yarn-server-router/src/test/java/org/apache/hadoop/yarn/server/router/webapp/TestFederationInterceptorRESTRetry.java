@@ -534,8 +534,8 @@ public class TestFederationInterceptorRESTRetry
     interceptor.setAllowPartialResult(true);
     setupCluster(Arrays.asList(bad2));
 
-    LambdaTestUtils.intercept(YarnRuntimeException.class,
-        "None of the subClusters returned results!", () -> interceptor.getNodes(null));
+    NodesInfo nodesInfo = interceptor.getNodes(null);
+    Assert.assertNotNull(nodesInfo);
 
     // We need to set allowPartialResult=false
     interceptor.setAllowPartialResult(false);
@@ -550,8 +550,8 @@ public class TestFederationInterceptorRESTRetry
     interceptor.setAllowPartialResult(true);
     setupCluster(Arrays.asList(bad1, bad2));
 
-    LambdaTestUtils.intercept(YarnRuntimeException.class,
-        "None of the subClusters returned results!", () -> interceptor.getNodes(null));
+    NodesInfo nodesInfo = interceptor.getNodes(null);
+    Assert.assertNotNull(nodesInfo);
 
     // We need to set allowPartialResult=false
     interceptor.setAllowPartialResult(false);

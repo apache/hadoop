@@ -2128,11 +2128,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
-
-    if (MapUtils.isEmpty(results)) {
-      throw new YarnException("None of the subClusters returned results!");
-    }
-
+    
     return results;
   }
 

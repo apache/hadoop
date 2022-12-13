@@ -5087,15 +5087,15 @@
 
   <property>
     <name>yarn.router.interceptor.allow-partial-result.enable</name>
-    <value>true</value>
+    <value>false</value>
     <description>
       This configuration represents whether to allow the interceptor to
       return partial SubCluster results.
-      If true, we will ignore the exception of some subClusters during the calling process,
+      If true, we will ignore the exception to some subClusters during the calling process,
       and return result.
       If false, if an exception occurs in a subCluster during the calling process,
       an exception will be thrown directly.
-      Default is true.
+      Default is false.
     </description>
   </property>
 
