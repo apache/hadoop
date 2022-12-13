@@ -187,7 +187,10 @@ public class LogServlet extends Configured {
    * Returns the user qualified path name of the remote log directory for
    * each pre-configured log aggregation file controller.
    *
+   * @param user remoteUser.
+   * @param applicationId applicationId.
    * @return {@link Response} object containing remote log dir path names
+   * @throws IOException if there are I/O errors.
    */
   public Response getRemoteLogDirPath(String user, String applicationId)
       throws IOException {
