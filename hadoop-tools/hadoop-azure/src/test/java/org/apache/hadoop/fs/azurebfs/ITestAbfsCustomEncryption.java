@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -230,7 +231,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       Path testPath, EncryptionContextProvider ecp)
       throws Exception {
     AbfsClient client = fs.getAbfsClient();
-    client.setEncryptionContextProvider(ecp);
+    AbfsClientUtils.setEncryptionContextProvider(client, ecp);
     if (isExceptionCase) {
       LambdaTestUtils.intercept(IOException.class, () -> {
         switch (operation) {
