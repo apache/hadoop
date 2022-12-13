@@ -371,22 +371,19 @@ public class HAUtil {
         }
         // If the address needs to be resolved, get all of the IP addresses
         // from this address and pass them into the map
-        LOG.info("Multi-A domain name " + addr +
-            " will be resolved by " + dnr.getClass().getName());
+        LOG.info("Multi-A domain name {} will be resolved by {}" + addr, dnr.getClass().getName());
         int port = address.getPort();
         String[] resolvedHostNames;
         try {
           resolvedHostNames = dnr.getAllResolvedHostnameByDomainName(
               address.getHostName(), requireFQDN);
         } catch (UnknownHostException e) {
-          LOG.warn("Exception in resolving socket address "
-              + address.getHostName(), e);
+          LOG.warn("Exception in resolving socket address {}", address.getHostName(), e);
           continue;
         }
-        LOG.info("Resolved addresses for " + addr +
-            " is " + Arrays.toString(resolvedHostNames));
+        LOG.info("Resolved addresses for {} is {}", addr, Arrays.toString(resolvedHostNames));
         if (resolvedHostNames == null || resolvedHostNames.length < 1) {
-          LOG.warn("Cannot resolve from address " + address.getHostName());
+          LOG.warn("Cannot resolve from address {}", address.getHostName());
         } else {
           // If multiple address resolved, corresponding id needs to be created
           for (int i = 0; i < resolvedHostNames.length; i++) {
@@ -444,7 +441,7 @@ public class HAUtil {
           InetSocketAddress originalAddress = getInetSocketAddressFromString(
               conf.get(keyToRead));
           if (originalAddress == null) {
-            LOG.warn("Missing configuration for key " + keyToRead);
+            LOG.warn("Missing configuration for key {}", keyToRead);
             continue;
           }
           int port = originalAddress.getPort();
@@ -469,7 +466,7 @@ public class HAUtil {
     try {
       address = NetUtils.createSocketAddr(addr);
     } catch (Exception e) {
-      LOG.warn("Exception in creating socket address " + addr, e);
+      LOG.warn("Exception in creating socket address {}", addr, e);
       return null;
     }
     return address;
