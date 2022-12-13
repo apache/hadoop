@@ -37,11 +37,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
-
 
 /**
  * Class to define admin method, params and arguments.
@@ -61,11 +61,15 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
   }
 
   public <R> Collection<R> invokeConcurrent(FederationRMAdminInterceptor interceptor,
-      Class<R> clazz) throws YarnException {
+      Class<R> clazz, String subClusterId) throws YarnException {
     this.rmAdminInterceptor = interceptor;
     this.federationFacade = FederationStateStoreFacade.getInstance();
     this.configuration = interceptor.getConf();
-    return invokeConcurrent(clazz);
+    if (StringUtils.isNotBlank(subClusterId)) {
+      return invoke(clazz, subClusterId);
+    } else {
+      return invokeConcurrent(clazz);
+    }
   }
 
   @Override
@@ -107,7 +111,10 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
           Pair<SubClusterId, Object> pair = future.get();
           subClusterId = pair.getKey();
           Object result = pair.getValue();
-          results.put(subClusterId, clazz.cast(result));
+          if (result != null) {
+            R rResult = clazz.cast(result);
+            results.put(subClusterId, rResult);
+          }
         } catch (InterruptedException | ExecutionException e) {
           Throwable cause = e.getCause();
           LOG.error("Cannot execute {} on {}: {}", methodName, subClusterId, cause.getMessage());
@@ -128,5 +135,52 @@ public class RMAdminProtocolMethod extends FederationMethodWrapper {
 
     // return result
     return results.values();
+  }
+
+  /**
+   * Call the method in the protocol according to the subClusterId.
+   *
+   * @param clazz return type
+   * @param subClusterId subCluster Id
+   * @param <R> Generic R
+   * @return response collection.
+   * @throws YarnException yarn exception.
+   */
+  protected <R> Collection<R> invoke(Class<R> clazz, String subClusterId) throws YarnException {
+
+    // Get the method name to call
+    String methodName = Thread.currentThread().getStackTrace()[3].getMethodName();
+    this.setMethodName(methodName);
+
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfoMap =
+        federationFacade.getSubClusters(true);
+
+    // According to subCluster of string type, convert to SubClusterId type
+    SubClusterId subClusterIdKey = SubClusterId.newInstance(subClusterId);
+
+    // If the provided subCluster is not Active or does not exist,
+    // an exception will be returned directly.
+    if (!subClusterInfoMap.containsKey(subClusterIdKey)) {
+      throw new YarnException("subClusterId = " + subClusterId + " is not an active subCluster.");
+    }
+
+    // Call the method in the protocol and convert it according to clazz.
+    try {
+      ResourceManagerAdministrationProtocol protocol =
+          rmAdminInterceptor.getAdminRMProxyForSubCluster(subClusterIdKey);
+      Class<?>[] types = this.getTypes();
+      Object[] params = this.getParams();
+      Method method = ResourceManagerAdministrationProtocol.class.getMethod(methodName, types);
+      Object result = method.invoke(protocol, params);
+      if (result != null) {
+        return Collections.singletonList(clazz.cast(result));
+      }
+    } catch (Exception e) {
+      throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+          subClusterId, e);
+    }
+    throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+        subClusterId);
   }
 }
