@@ -101,6 +101,7 @@ public class TestRouterState {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_METRICS_ENABLE, false);
     service.init(conf);
     MockStateStoreDriver driver = (MockStateStoreDriver) service.getDriver();
+    driver.clearAll();
     // Add two records for block1
     driver.put(MembershipState.newInstance("routerId", "ns1",
         "ns1-ha1", "cluster1", "block1", "rpc1",

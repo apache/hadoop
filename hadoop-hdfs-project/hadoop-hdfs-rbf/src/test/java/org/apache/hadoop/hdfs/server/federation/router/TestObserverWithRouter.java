@@ -27,13 +27,18 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ClientGSIContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -42,6 +47,8 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeConte
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,11 +129,17 @@ public class TestObserverWithRouter {
 
     cluster.waitActiveNamespaces();
     routerContext  = cluster.getRandomRouter();
-    fileSystem = routerContext.getFileSystemWithObserverReadsEnabled();
+  }
+
+  private static Configuration getConfToEnableObserverReads() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(HdfsClientConfigKeys.DFS_RBF_OBSERVER_READ_ENABLE, true);
+    return conf;
   }
 
   @Test
   public void testObserverRead() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     internalTestObserverRead();
   }
 
@@ -137,7 +150,6 @@ public class TestObserverWithRouter {
    */
   @Test
   public void testReadWithoutObserverClientConfigurations() throws Exception {
-    fileSystem.close();
     fileSystem = routerContext.getFileSystem();
     assertThrows(AssertionError.class, this::internalTestObserverRead);
   }
@@ -173,6 +185,7 @@ public class TestObserverWithRouter {
     Configuration confOverrides = new Configuration(false);
     confOverrides.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 0);
     startUpCluster(2, confOverrides);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     List<? extends FederationNamenodeContext> namenodes = routerContext
         .getRouter().getNamenodeResolver()
         .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
@@ -202,6 +215,7 @@ public class TestObserverWithRouter {
     Configuration confOverrides = new Configuration(false);
     confOverrides.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns0");
     startUpCluster(2, confOverrides);
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
 
     Path path = new Path("/testFile");
     fileSystem.create(path).close();
@@ -219,6 +233,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testReadWhenObserverIsDown() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -246,6 +261,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testMultipleObserver() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
@@ -384,6 +400,7 @@ public class TestObserverWithRouter {
 
   @Test
   public void testUnavailableObserverNN() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     stopObserver(2);
 
     Path path = new Path("/testFile");
@@ -417,10 +434,9 @@ public class TestObserverWithRouter {
     assertTrue("There must be unavailable namenodes", hasUnavailable);
   }
 
-
-
   @Test
   public void testRouterMsync() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
     Path path = new Path("/testFile");
 
     // Send Create call to active
@@ -438,5 +454,95 @@ public class TestObserverWithRouter {
     // 2 msync calls should be sent. One to each active namenode in the two namespaces.
     assertEquals("Four calls should be sent to active", 4,
         rpcCountForActive);
+  }
+
+  @Test
+  public void testSingleRead() throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads());
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+    Path path = new Path("/");
+
+    long rpcCountForActive;
+    long rpcCountForObserver;
+
+    // Send read request
+    fileSystem.listFiles(path, false);
+    fileSystem.close();
+
+    rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // getListingCall sent to active.
+    assertEquals("Only one call should be sent to active", 1, rpcCountForActive);
+
+    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    // getList call should be sent to observer
+    assertEquals("No calls should be sent to observer", 0, rpcCountForObserver);
+  }
+
+  @Test
+  public void testSingleReadUsingObserverReadProxyProvider() throws Exception {
+    fileSystem = routerContext.getFileSystemWithObserverReadProxyProvider();
+    List<? extends FederationNamenodeContext> namenodes = routerContext
+        .getRouter().getNamenodeResolver()
+        .getNamenodesForNameserviceId(cluster.getNameservices().get(0), true);
+    assertEquals("First namenode should be observer", namenodes.get(0).getState(),
+        FederationNamenodeServiceState.OBSERVER);
+    Path path = new Path("/");
+
+    long rpcCountForActive;
+    long rpcCountForObserver;
+
+    // Send read request
+    fileSystem.listFiles(path, false);
+    fileSystem.close();
+
+    rpcCountForActive = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getActiveProxyOps();
+    // Two msync calls to the active namenodes.
+    assertEquals("Two calls should be sent to active", 2, rpcCountForActive);
+
+    rpcCountForObserver = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    // getList call should be sent to observer
+    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testClientReceiveResponseState() {
+    ClientGSIContext clientGSIContext = new ClientGSIContext();
+
+    Map<String, Long> mockMapping = new HashMap<>();
+    mockMapping.put("ns0", 10L);
+    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
+    mockMapping.forEach(builder::putNamespaceStateIds);
+    RpcHeaderProtos.RpcResponseHeaderProto header = RpcHeaderProtos.RpcResponseHeaderProto
+        .newBuilder()
+        .setCallId(1)
+        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .setRouterFederatedState(builder.build().toByteString())
+        .build();
+    clientGSIContext.receiveResponseState(header);
+
+    Map<String, Long> mockLowerMapping = new HashMap<>();
+    mockLowerMapping.put("ns0", 8L);
+    builder = RouterFederatedStateProto.newBuilder();
+    mockLowerMapping.forEach(builder::putNamespaceStateIds);
+    header = RpcHeaderProtos.RpcResponseHeaderProto.newBuilder()
+        .setRouterFederatedState(builder.build().toByteString())
+        .setCallId(2)
+        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .build();
+    clientGSIContext.receiveResponseState(header);
+
+    Map<String, Long> latestFederateState = ClientGSIContext.getRouterFederatedStateMap(
+        clientGSIContext.getRouterFederatedState());
+    Assertions.assertEquals(1, latestFederateState.size());
+    Assertions.assertEquals(10L, latestFederateState.get("ns0"));
   }
 }
