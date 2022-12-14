@@ -19,7 +19,6 @@ package org.apache.hadoop.log;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.hadoop.util.Timer;
@@ -263,16 +262,15 @@ public class LogThrottlingHelper {
     if (primaryRecorderName.equals(recorderName) &&
         currentTimeMs - minLogPeriodMs >= lastLogTimestampMs) {
       lastLogTimestampMs = currentTimeMs;
-      for (Iterator<LoggingAction> it = currentLogs.values().iterator(); it
-          .hasNext();) {
-        LoggingAction log = it.next();
+      currentLogs.replaceAll((key, log) -> {
+        LoggingAction newLog = log;
         if (log.hasLogged()) {
-          // Make sure the dependent recorders will be triggered the next time
-          it.remove();
-        } else {
-          log.setShouldLog();
+          // create a fresh log since the old one has already been logged
+          newLog = new LoggingAction(log.getValueCount());
         }
-      }
+        newLog.setShouldLog();
+        return newLog;
+      });
     }
     if (currentLog.shouldLog()) {
       currentLog.setHasLogged();
@@ -363,6 +361,10 @@ public class LogThrottlingHelper {
 
     private void setHasLogged() {
       hasLogged = true;
+    }
+
+    private int getValueCount() {
+      return stats.length;
     }
 
     private void recordValues(double... values) {
