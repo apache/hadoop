@@ -42,7 +42,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -2128,7 +2127,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     });
-    
+
     return results;
   }
 
