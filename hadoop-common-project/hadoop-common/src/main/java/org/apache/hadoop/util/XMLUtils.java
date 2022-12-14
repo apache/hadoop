@@ -138,8 +138,8 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     TransformerFactory trfactory = TransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    quietSet(trfactory::setAttribute, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    quietSet(trfactory::setAttribute, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
@@ -156,23 +156,18 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    quietSet(trfactory::setAttribute, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    quietSet(trfactory::setAttribute, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
-  private static boolean quietSet(SecurityProperty property, String name, Object value) {
+  private static boolean quietSet(TransformerFactory transformerFactory, String name, Object value) {
     try {
-      property.accept(name, value);
+      transformerFactory.setAttribute(name, value);
       return true;
     } catch (Exception|Error e) {
       // ok to ignore
     }
     return false;
-  }
-
-  @FunctionalInterface
-  private interface SecurityProperty {
-    void accept(String name, Object value) throws SAXException;
   }
 }
