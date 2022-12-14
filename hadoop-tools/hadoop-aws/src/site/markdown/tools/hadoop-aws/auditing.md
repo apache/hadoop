@@ -232,6 +232,7 @@ If any of the field values were `null`, the field is omitted.
 | `p2` | Path 2 of operation | `s3a://alice-london/path2` |
 | `pr` | Principal | `alice` |
 | `ps` | Unique process UUID | `235865a0-d399-4696-9978-64568db1b51c` |
+| `rg` | GET request range | `100-200` |
 | `ta` | Task Attempt ID (S3A committer) | |
 | `t0` | Thread 0: thread span was created in | `100` |
 | `t1` | Thread 1: thread this operation was executed in | `200` |
