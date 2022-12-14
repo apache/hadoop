@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProtoOrBuilder;
@@ -60,10 +61,15 @@ public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroup
     if (other == null) {
       return false;
     }
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
+
+    if (!(other instanceof RefreshUserToGroupsMappingsRequest)) {
+      return false;
     }
-    return false;
+
+    RefreshUserToGroupsMappingsRequestPBImpl otherImpl = this.getClass().cast(other);
+    return new EqualsBuilder()
+        .append(this.getProto(), otherImpl.getProto())
+        .isEquals();
   }
 
   @Override

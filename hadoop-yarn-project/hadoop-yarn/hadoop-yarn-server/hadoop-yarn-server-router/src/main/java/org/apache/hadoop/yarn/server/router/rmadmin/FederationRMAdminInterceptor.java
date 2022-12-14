@@ -192,11 +192,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     } catch (YarnException e) {
       routerMetrics.incrRefreshQueuesFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshQueue due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRefreshQueuesFailedRetrieved();
-    throw new YarnException("Unable to refreshQueue due to exception.");
+    throw new YarnException("Unable to refreshQueue.");
   }
 
   /**
@@ -245,7 +246,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     } catch (YarnException e) {
       routerMetrics.incrRefreshNodesFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshNodes due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRefreshNodesFailedRetrieved();
@@ -302,11 +304,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     } catch (YarnException e) {
       routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshSuperUserGroupsConfiguration due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRefreshSuperUserGroupsConfigurationFailedRetrieved();
-    throw new YarnException("Unable to refreshSuperUserGroupsConfiguration due to exception.");
+    throw new YarnException("Unable to refreshSuperUserGroupsConfiguration.");
   }
 
   /**
@@ -358,11 +361,12 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       }
     } catch (YarnException e) {
       routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
-      throw e;
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to refreshUserToGroupsMappings due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrRefreshUserToGroupsMappingsFailedRetrieved();
-    throw new YarnException("Unable to refreshUserToGroupsMappings due to exception.");
+    throw new YarnException("Unable to refreshUserToGroupsMappings.");
   }
 
   @Override
