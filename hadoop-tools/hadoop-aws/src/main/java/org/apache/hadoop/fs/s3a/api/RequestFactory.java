@@ -74,7 +74,7 @@ public interface RequestFactory {
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  ObjectCannedACL getCannedACL();
+  String getCannedACL();
 
   /**
    * Get the encryption algorithm of this endpoint.

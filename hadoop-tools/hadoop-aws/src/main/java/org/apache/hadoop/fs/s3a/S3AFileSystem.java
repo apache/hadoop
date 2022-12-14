@@ -332,7 +332,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private static final Logger PROGRESS =
       LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
-  private ObjectCannedACL cannedACL;
+  private String cannedACL;
 
   /**
    * This must never be null; until initialized it just declares that there
@@ -1168,7 +1168,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void initCannedAcls(Configuration conf) {
     String cannedACLName = conf.get(CANNED_ACL, DEFAULT_CANNED_ACL);
     if (!cannedACLName.isEmpty()) {
-      cannedACL = ObjectCannedACL.valueOf(AWSCannedACL.valueOf(cannedACLName).toString());
+      cannedACL = AWSCannedACL.valueOf(cannedACLName).toString();
     } else {
       cannedACL = null;
     }
@@ -1404,7 +1404,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Get the canned ACL of this FS.
    * @return an ACL, if any
    */
-  ObjectCannedACL getCannedACL() {
+  String getCannedACL() {
     return cannedACL;
   }
 

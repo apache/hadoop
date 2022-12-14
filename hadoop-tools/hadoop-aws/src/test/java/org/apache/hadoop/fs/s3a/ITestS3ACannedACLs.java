@@ -57,8 +57,6 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
         CANNED_ACL);
-    // TODO: Check why we need this ACL? V2 does not have a LOG_DELIVERY_WRITE ACL which causes
-    //  this test to fail.
     conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     // needed because of direct calls made
     conf.setBoolean(S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS, false);
@@ -105,8 +103,6 @@ public class ITestS3ACannedACLs extends AbstractS3ATestBase {
     for (Grant grant : grants) {
       LOG.info("{}", grant.toString());
     }
-    // TODO: Review whether this test is required in v2.
-    //   Reproduces v1's GroupGrantee.LogDelivery
     Grant loggingGrant = Grant.builder()
         .grantee(Grantee.builder()
             .type(Type.GROUP)

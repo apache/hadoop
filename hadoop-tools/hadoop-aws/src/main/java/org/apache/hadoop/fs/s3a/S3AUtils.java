@@ -228,16 +228,12 @@ public final class S3AUtils {
       case SC_301_MOVED_PERMANENTLY:
       case SC_307_TEMPORARY_REDIRECT:
         if (s3Exception != null) {
-          // TODO: Can we get the endpoint in v2?
-          // Maybe not: https://github.com/aws/aws-sdk-java-v2/issues/3048
-//          if (s3Exception.getAdditionalDetails() != null &&
-//              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
-//            message = String.format("Received permanent redirect response to "
-//                + "endpoint %s.  This likely indicates that the S3 endpoint "
-//                + "configured in %s does not match the AWS region containing "
-//                + "the bucket.",
-//                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
-//          }
+            message = String.format("Received permanent redirect response to "
+                + "region %s.  This likely indicates that the S3 region "
+                + "configured in %s does not match the AWS region containing "
+                + "the bucket.",
+                s3Exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER),
+                AWS_REGION);
           ioe = new AWSRedirectException(message, s3Exception);
         } else {
           ioe = new AWSRedirectException(message, ase);

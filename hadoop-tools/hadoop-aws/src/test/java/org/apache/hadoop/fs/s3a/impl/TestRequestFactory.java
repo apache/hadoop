@@ -80,7 +80,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
    */
   @Test
   public void testRequestFactoryWithCannedACL() throws Throwable {
-    ObjectCannedACL acl = ObjectCannedACL.BUCKET_OWNER_FULL_CONTROL;
+    String acl = "bucket-owner-full-control";
     RequestFactory factory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .withCannedACL(acl)
@@ -91,17 +91,20 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
 
     Assertions.assertThat(factory.newPutObjectRequestBuilder(path, null, 128, false)
             .build()
-            .acl())
+            .acl()
+            .toString())
         .describedAs("ACL of PUT")
         .isEqualTo(acl);
     Assertions.assertThat(factory.newCopyObjectRequestBuilder(path, path2, md)
             .build()
-            .acl())
+            .acl()
+            .toString())
         .describedAs("ACL of COPY")
         .isEqualTo(acl);
     Assertions.assertThat(factory.newMultipartUploadRequestBuilder(path, null)
             .build()
-            .acl())
+            .acl()
+            .toString())
         .describedAs("ACL of MPU")
         .isEqualTo(acl);
   }

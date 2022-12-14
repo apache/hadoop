@@ -176,8 +176,7 @@ public class ITestSessionDelegationInFileystem extends AbstractDelegationIT {
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
     // turn on ACLs so as to verify role DT permissions include
     // write access.
-   // TODO: Why do we need this? Can we get rid of ACLs?
-   // conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
     return conf;
   }
 

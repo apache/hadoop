@@ -100,7 +100,7 @@ public class RequestFactoryImpl implements RequestFactory {
   /**
    * ACL For new objects.
    */
-  private final ObjectCannedACL cannedACL;
+  private final String cannedACL;
 
   /**
    * Max number of multipart entries allowed in a large
@@ -156,7 +156,7 @@ public class RequestFactoryImpl implements RequestFactory {
    * @return an ACL, if any
    */
   @Override
-  public ObjectCannedACL getCannedACL() {
+  public String getCannedACL() {
     return cannedACL;
   }
 
@@ -613,7 +613,7 @@ public class RequestFactoryImpl implements RequestFactory {
     /**
      * ACL For new objects.
      */
-    private ObjectCannedACL cannedACL = null;
+    private String cannedACL = null;
 
     /** Content Encoding. */
     private String contentEncoding;
@@ -691,7 +691,7 @@ public class RequestFactoryImpl implements RequestFactory {
      * @return the builder
      */
     public RequestFactoryBuilder withCannedACL(
-        final ObjectCannedACL value) {
+        final String value) {
       cannedACL = value;
       return this;
     }

@@ -22,13 +22,14 @@ package org.apache.hadoop.fs.s3a.impl;
  * Enum to map AWS SDK V1 Acl values to SDK V2.
  */
 public enum AWSCannedACL {
-  Private("PRIVATE"),
-  PublicRead("PUBLIC_READ"),
-  PublicReadWrite("PUBLIC_READ_WRITE"),
-  AuthenticatedRead("AUTHENTICATED_READ"),
-  AwsExecRead("AWS_EXEC_READ"),
-  BucketOwnerRead("BUCKET_OWNER_READ"),
-  BucketOwnerFullControl("BUCKET_OWNER_FULL_CONTROL");
+  Private("private"),
+  PublicRead("public-read"),
+  PublicReadWrite("public-read-write"),
+  AuthenticatedRead("authenticated-read"),
+  AwsExecRead("aws-exec-read"),
+  BucketOwnerRead("bucket-owner-read"),
+  BucketOwnerFullControl("bucket-owner-full-control"),
+  LogDeliveryWrite("log-delivery-write");
 
   private final String value;
 
