@@ -277,10 +277,10 @@ public class HeaderProcessing extends AbstractStoreOperation {
       final Statistic statistic) throws IOException {
     StoreContext context = getStoreContext();
     String objectKey = context.pathToKey(path);
-    HeadObjectResponse md;
     String symbol = statistic.getSymbol();
     S3AStatisticsContext instrumentation = context.getInstrumentation();
     Map<String, byte[]> headers = new TreeMap<>();
+    HeadObjectResponse md;
 
     // Attempting to get metadata for the root, so use head bucket.
     if (objectKey.isEmpty()) {
