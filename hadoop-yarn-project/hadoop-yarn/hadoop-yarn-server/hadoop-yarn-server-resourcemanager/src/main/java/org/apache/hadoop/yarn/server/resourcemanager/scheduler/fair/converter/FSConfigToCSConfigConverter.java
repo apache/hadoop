@@ -418,7 +418,7 @@ public class FSConfigToCSConfigConverter {
   private void emitDefaultUserLimitFactor() {
     capacitySchedulerConfig.setFloat(
             CapacitySchedulerConfiguration.
-                    PREFIX + USER_LIMIT_FACTOR,
+                    PREFIX + "root.default." + USER_LIMIT_FACTOR,
             -1.0f);
   }
 
