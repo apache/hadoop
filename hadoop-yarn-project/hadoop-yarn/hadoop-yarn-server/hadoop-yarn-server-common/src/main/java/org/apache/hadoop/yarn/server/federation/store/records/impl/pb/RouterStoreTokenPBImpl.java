@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.Router
 import org.apache.hadoop.yarn.federation.proto.YarnServerFederationProtos.RouterStoreTokenProtoOrBuilder;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 
@@ -167,5 +168,13 @@ public class RouterStoreTokenPBImpl extends RouterStoreToken {
   private YARNDelegationTokenIdentifierProto convertToProtoFormat(
       YARNDelegationTokenIdentifier delegationTokenIdentifier) {
     return delegationTokenIdentifier.getProto();
+  }
+
+  public byte[] toByteArray() throws IOException {
+    return builder.build().toByteArray();
+  }
+
+  public void readFields(DataInput in) throws IOException {
+    builder.mergeFrom((DataInputStream) in);
   }
 }
