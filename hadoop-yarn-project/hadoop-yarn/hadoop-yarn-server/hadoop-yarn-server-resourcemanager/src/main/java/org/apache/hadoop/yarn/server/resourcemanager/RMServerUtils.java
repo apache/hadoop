@@ -453,6 +453,17 @@ public class RMServerUtils {
     }
   }
 
+  public static YarnApplicationAttemptState convertRmAppAttemptStateToYarnApplicationAttemptState(
+      RMAppAttemptState currentState,
+      RMAppAttemptState previousState
+  ) {
+    return createApplicationAttemptState(
+        currentState == RMAppAttemptState.FINAL_SAVING
+        ? previousState
+        : currentState
+    );
+  }
+
   public static YarnApplicationAttemptState createApplicationAttemptState(
       RMAppAttemptState rmAppAttemptState) {
     switch (rmAppAttemptState) {
