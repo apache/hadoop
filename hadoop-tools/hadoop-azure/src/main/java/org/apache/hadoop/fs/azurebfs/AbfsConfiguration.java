@@ -917,7 +917,7 @@ public class AbfsConfiguration{
               String.format("The value for both \"%s\" and \"%s\" cannot be invalid.", FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
 
       if (sasTokenProviderImplementation != null) {
-        LOG.trace("Using SASTokenProvider class instead of config although both are available for use");
+        LOG.trace("Using SASTokenProvider class because it is given precedence when it is set");
         SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(sasTokenProviderImplementation, rawConfig);
         Preconditions.checkArgument(sasTokenProvider != null, String.format("Failed to initialize %s", sasTokenProviderImplementation));
 
