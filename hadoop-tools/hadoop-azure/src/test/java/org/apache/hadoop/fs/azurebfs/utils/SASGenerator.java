@@ -29,6 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -115,6 +116,6 @@ public abstract class SASGenerator {
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
     }
-    return  org.apache.hadoop.fs.azurebfs.utils.Base64.encode(hmac);
+    return Base64.encode(hmac);
   }
 }
