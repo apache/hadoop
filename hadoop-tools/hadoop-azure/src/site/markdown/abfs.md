@@ -768,11 +768,13 @@ transfer, Flush() also attempting to persist buffered data will lead to
 performance issues.
 
 ### <a name="100continueconfigoptions"></a> Hundred Continue Options
+
 `fs.azure.account.expect.header.enabled`: This configuration parameter is used
 to specify whether you wish to send a expect 100 continue header with each
 append request or not. It is configured to true by default.
 
 ### <a name="accountlevelthrottlingoptions"></a> Account level throttling Options
+
 `fs.azure.account.operation.idle.timeout`: This value specifies the time after which the timer for the analyzer (read or
 write) should be paused until no new request is made again. The default value for the same is 60 seconds.
 

@@ -400,6 +400,26 @@ public final class TestAbfsClient {
         requestHeaders);
   }
 
+  public static AbfsRestOperation getRestOp1(AbfsRestOperationType type,
+      AbfsClient client,
+      String method,
+      URL url,
+      List<AbfsHttpHeader> requestHeaders,
+      byte[] buffer,
+      int bufferOffset,
+      int bufferLength,
+      String sasToken) {
+    return new AbfsRestOperation(type,
+        client,
+        method,
+        url,
+        requestHeaders,
+    buffer,
+    bufferOffset,
+    bufferLength,
+    sasToken);
+  }
+
   public static AccessTokenProvider getAccessTokenProvider(AbfsClient client) {
     return client.getTokenProvider();
   }

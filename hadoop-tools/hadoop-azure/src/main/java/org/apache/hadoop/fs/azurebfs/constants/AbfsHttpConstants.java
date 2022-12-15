@@ -103,7 +103,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_SCOPE = "default:";
   public static final String PERMISSION_FORMAT = "%04d";
   public static final String SUPER_USER = "$superuser";
-  //The HTTP 100 Continue informational status response code indicates that everything so far
+  // The HTTP 100 Continue informational status response code indicates that everything so far
   // is OK and that the client should continue with the request or ignore it if it is already finished.
   public static final String HUNDRED_CONTINUE = "100-continue";
 

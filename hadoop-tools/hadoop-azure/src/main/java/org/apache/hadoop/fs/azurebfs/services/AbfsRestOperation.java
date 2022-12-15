@@ -237,6 +237,11 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
+  AbfsHttpOperation getHttpOperation(final URL url, final String method,
+      final List<AbfsHttpHeader> requestHeaders) throws IOException {
+    return new AbfsHttpOperation(url, method, requestHeaders);
+  }
+
   /**
    * Executes a single HTTP operation to complete the REST operation.  If it
    * fails, there may be a retry.  The retryCount is incremented with each
@@ -248,7 +253,7 @@ public class AbfsRestOperation {
 
     try {
       // initialize the HTTP request and open the connection
-      httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
+      httpOperation = getHttpOperation(url, method, requestHeaders);
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation);
 

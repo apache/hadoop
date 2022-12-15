@@ -28,6 +28,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -111,6 +112,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   protected  HttpURLConnection getConnection() {
     return connection;
+  }
+
+  void setConnection(final HttpURLConnection connection) {
+    this.connection = connection;
   }
 
   public String getMethod() {
@@ -454,7 +459,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  private HttpURLConnection openConnection() throws IOException {
+  HttpURLConnection openConnection() throws IOException {
     if (!isTraceEnabled) {
       return (HttpURLConnection) url.openConnection();
     }
