@@ -58,9 +58,6 @@ public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroup
 
   @Override
   public boolean equals(Object other) {
-    if (other == null) {
-      return false;
-    }
 
     if (!(other instanceof RefreshUserToGroupsMappingsRequest)) {
       return false;
@@ -87,7 +84,11 @@ public class RefreshUserToGroupsMappingsRequestPBImpl extends RefreshUserToGroup
   @Override
   public String getSubClusterId() {
     RefreshUserToGroupsMappingsRequestProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+    boolean hasSubClusterId = p.hasSubClusterId();
+    if (hasSubClusterId) {
+      return p.getSubClusterId();
+    }
+    return null;
   }
 
   @Override

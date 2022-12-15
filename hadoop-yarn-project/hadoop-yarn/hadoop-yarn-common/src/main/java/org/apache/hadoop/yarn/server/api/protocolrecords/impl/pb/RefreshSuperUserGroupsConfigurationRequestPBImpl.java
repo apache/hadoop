@@ -60,9 +60,6 @@ public class RefreshSuperUserGroupsConfigurationRequestPBImpl
 
   @Override
   public boolean equals(Object other) {
-    if (other == null) {
-      return false;
-    }
 
     if (!(other instanceof RefreshSuperUserGroupsConfigurationRequest)) {
       return false;
@@ -89,7 +86,11 @@ public class RefreshSuperUserGroupsConfigurationRequestPBImpl
   @Override
   public String getSubClusterId() {
     RefreshSuperUserGroupsConfigurationRequestProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
+    boolean hasSubClusterId = p.hasSubClusterId();
+    if (hasSubClusterId) {
+      return p.getSubClusterId();
+    }
+    return null;
   }
 
   @Override
