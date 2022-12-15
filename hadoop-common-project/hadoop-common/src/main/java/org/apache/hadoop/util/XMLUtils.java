@@ -166,7 +166,8 @@ public class XMLUtils {
     return trfactory;
   }
 
-  private static boolean bestEffortSet(TransformerFactory transformerFactory, String name, Object value) {
+  private static boolean bestEffortSet(TransformerFactory transformerFactory,
+                                       String name, Object value) {
     try {
       transformerFactory.setAttribute(name, value);
       return true;
