@@ -101,6 +101,7 @@ final class ReadBufferManager {
 
   // hide instance constructor
   private ReadBufferManager() {
+    LOGGER.trace("Creating readbuffer manager with HADOOP-18546 patch");
   }
 
 
