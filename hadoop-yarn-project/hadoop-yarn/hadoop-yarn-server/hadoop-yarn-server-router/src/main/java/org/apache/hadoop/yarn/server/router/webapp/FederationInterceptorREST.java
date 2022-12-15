@@ -2407,7 +2407,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   public Map<SubClusterId, DefaultRequestInterceptorREST> getInterceptors() {
     return interceptors;
   }
-  
+
   public void setAllowPartialResult(boolean allowPartialResult) {
     this.allowPartialResult = allowPartialResult;
   }
