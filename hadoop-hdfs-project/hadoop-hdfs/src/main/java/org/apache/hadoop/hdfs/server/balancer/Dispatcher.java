@@ -164,7 +164,7 @@ public class Dispatcher {
       }
     }
 
-    /** Allocate a single lot of items */
+    /** Allocate a single lot of items. */
     int allocate() {
       return allocate(lotSize);
     }
