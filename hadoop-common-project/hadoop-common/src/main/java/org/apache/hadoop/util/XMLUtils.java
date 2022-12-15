@@ -29,6 +29,8 @@ import javax.xml.transform.stream.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.*;
@@ -40,6 +42,9 @@ import java.io.*;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class XMLUtils {
+
+  private static final Logger LOG =
+          LoggerFactory.getLogger(XMLUtils.class);
 
   public static final String DISALLOW_DOCTYPE_DECL =
       "http://apache.org/xml/features/disallow-doctype-decl";
@@ -138,8 +143,8 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     TransformerFactory trfactory = TransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
@@ -156,17 +161,17 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    quietSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
-  private static boolean quietSet(TransformerFactory transformerFactory, String name, Object value) {
+  private static boolean bestEffortSet(TransformerFactory transformerFactory, String name, Object value) {
     try {
       transformerFactory.setAttribute(name, value);
       return true;
-    } catch (Exception|Error e) {
-      // ok to ignore
+    } catch (Throwable t) {
+      LOG.debug("Issue setting TransformerFactory attribute {}: {}", name, t.toString());
     }
     return false;
   }
