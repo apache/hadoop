@@ -117,6 +117,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DATA_BLOCKS_BUFFER_DEFAULT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.logIOStatisticsAtLevel;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
@@ -157,6 +158,17 @@ public class AzureBlobFileSystem extends FileSystem
   public void initialize(URI uri, Configuration configuration)
       throws IOException {
     uri = ensureAuthority(uri, configuration);
+    /*
+      If the clientCorrelationId is set, disable the cache so that
+      a new instance is created and hence incorrect correlation is not
+      recorded
+     */
+    String correlationId = configuration.get(FS_AZURE_CLIENT_CORRELATIONID);
+    if(correlationId != null && !correlationId.equals("")) {
+      String scheme = uri.getScheme();
+      String disableCacheName = String.format("fs.%s.impl.disable.cache", scheme);
+      configuration.setBoolean(disableCacheName, true);
+    }
     super.initialize(uri, configuration);
     setConf(configuration);
 
