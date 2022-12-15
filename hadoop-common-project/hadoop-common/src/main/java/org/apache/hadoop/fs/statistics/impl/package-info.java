@@ -23,9 +23,9 @@
  * place over minor point releases.
  */
 
-@InterfaceAudience.LimitedPrivate("Filesystems")
-@InterfaceStability.Unstable
+@LimitedPrivate("Filesystems")
+@Unstable
 package org.apache.hadoop.fs.statistics.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

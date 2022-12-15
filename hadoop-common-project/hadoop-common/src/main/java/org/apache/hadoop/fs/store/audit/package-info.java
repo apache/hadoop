@@ -21,9 +21,10 @@
  * use within the hadoop-* modules only. No stability guarantees.
  * The public/evolving API is in {@code org.apache.hadoop.fs.audit}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+
+@Private
+@Unstable
 package org.apache.hadoop.fs.store.audit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

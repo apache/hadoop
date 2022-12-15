@@ -19,9 +19,10 @@
 /**
  * Builtin metrics sinks
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+
+@Public
+@Evolving
 package org.apache.hadoop.metrics2.sink;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

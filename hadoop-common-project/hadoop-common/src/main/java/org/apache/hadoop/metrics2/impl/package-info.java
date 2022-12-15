@@ -19,9 +19,10 @@
 /**
  * A metrics system implementation
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
+
+@Private
+@Evolving
 package org.apache.hadoop.metrics2.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

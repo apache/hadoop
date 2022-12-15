@@ -41,9 +41,9 @@
  * are highly unstable.
  */
 
-@InterfaceAudience.LimitedPrivate("Filesystems")
-@InterfaceStability.Unstable
+@LimitedPrivate("Filesystems")
+@Unstable
 package org.apache.hadoop.fs.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

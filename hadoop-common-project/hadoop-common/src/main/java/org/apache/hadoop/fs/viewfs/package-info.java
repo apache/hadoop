@@ -18,9 +18,10 @@
 /**
  * ViewFileSystem and ViewFileSystemOverloadScheme classes.
  */
-@InterfaceAudience.LimitedPrivate({"MapReduce", "HBase", "Hive" })
-@InterfaceStability.Stable
+
+@LimitedPrivate({"MapReduce", "HBase", "Hive"})
+@Stable
 package org.apache.hadoop.fs.viewfs;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Stable;

@@ -20,9 +20,10 @@
  * This package is for classes to be shared across object stores; for internal
  * use within the hadoop-* modules only. No stability guarantees.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+
+@Private
+@Unstable
 package org.apache.hadoop.fs.store;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

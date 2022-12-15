@@ -19,8 +19,10 @@
 /**
  * Tools to help define network clients and servers.
  */
-@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
-@InterfaceStability.Evolving
+@LimitedPrivate({"HBase", "HDFS", "MapReduce"})
+@Evolving
 package org.apache.hadoop.ipc;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

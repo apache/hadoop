@@ -19,11 +19,11 @@
 /**
  * Public classes for adding information to any auditing information
  * picked up by filesystem clients.
- *
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
+
+@Public
+@Unstable
 package org.apache.hadoop.fs.audit;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

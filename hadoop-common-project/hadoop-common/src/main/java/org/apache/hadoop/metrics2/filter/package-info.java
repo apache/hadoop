@@ -19,9 +19,10 @@
 /**
  * Builtin metrics filters (to be used in metrics config files)
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+
+@Public
+@Evolving
 package org.apache.hadoop.metrics2.filter;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

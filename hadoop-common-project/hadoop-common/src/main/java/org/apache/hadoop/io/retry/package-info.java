@@ -20,12 +20,12 @@
  * A mechanism for selectively retrying methods that throw exceptions under
  * certain circumstances.
  * Typical usage is
- *  UnreliableImplementation unreliableImpl = new UnreliableImplementation();
- *  UnreliableInterface unreliable = (UnreliableInterface)
- *  RetryProxy.create(UnreliableInterface.class, unreliableImpl,
- *  RetryPolicies.retryUpToMaximumCountWithFixedSleep(4, 10,
- *      TimeUnit.SECONDS));
- *  unreliable.call();
+ * UnreliableImplementation unreliableImpl = new UnreliableImplementation();
+ * UnreliableInterface unreliable = (UnreliableInterface)
+ * RetryProxy.create(UnreliableInterface.class, unreliableImpl,
+ * RetryPolicies.retryUpToMaximumCountWithFixedSleep(4, 10,
+ * TimeUnit.SECONDS));
+ * unreliable.call();
  *
  * This will retry any method called on <code>unreliable</code> four times -
  * in this case the <code>call()</code> method - sleeping 10 seconds between
@@ -37,8 +37,10 @@
  * {@link org.apache.hadoop.io.retry.RetryProxy#create(Class, Object, Map)
  * per-method basis}.
  */
-@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
-@InterfaceStability.Evolving
+
+@LimitedPrivate({"HBase", "HDFS", "MapReduce"})
+@Evolving
 package org.apache.hadoop.io.retry;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

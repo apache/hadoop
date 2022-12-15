@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Public
+
+@Public
 package org.apache.hadoop.service;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 

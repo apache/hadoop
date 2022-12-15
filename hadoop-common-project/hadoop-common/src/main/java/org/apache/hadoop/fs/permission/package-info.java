@@ -18,8 +18,10 @@
 /**
  * This package provides support for HDFS permission and ACL.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+
+@Private
+@Unstable
 package org.apache.hadoop.fs.permission;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

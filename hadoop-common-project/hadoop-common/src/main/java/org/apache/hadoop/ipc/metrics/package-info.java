@@ -19,8 +19,10 @@
 /**
  * RPC related metrics.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
+
+@Private
+@Evolving
 package org.apache.hadoop.ipc.metrics;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;

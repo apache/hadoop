@@ -18,6 +18,8 @@
 /**
  * Network-related classes.
  */
-@InterfaceAudience.Public
+
+@Public
 package org.apache.hadoop.net;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+import org.apache.hadoop.classification.InterfaceAudience.Public;

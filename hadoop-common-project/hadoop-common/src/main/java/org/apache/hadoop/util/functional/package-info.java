@@ -33,9 +33,10 @@
  * of wrapped iterators can supply statistics of the inner iterators, and
  * encourage close() to be called after use.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
+
+@Public
+@Unstable
 package org.apache.hadoop.util.functional;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
