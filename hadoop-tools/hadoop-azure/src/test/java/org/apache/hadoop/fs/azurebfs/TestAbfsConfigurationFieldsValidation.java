@@ -197,13 +197,13 @@ public class TestAbfsConfigurationFieldsValidation {
   public void testSSLSocketFactoryConfiguration()
       throws InvalidConfigurationValueException, IllegalAccessException, IOException {
     Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
-            .describedAs("By default SSL Channel Mode should be Default")
-            .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default);
+            .describedAs("By default SSL Channel Mode should be Default_JSSE")
+            .isEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
     Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
-            .describedAs("By default SSL Channel Mode should be Default")
-            .isNotEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);
+            .describedAs("By default SSL Channel Mode should be Default_JSSE")
+            .isNotEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.Default);
     Assertions.assertThat(abfsConfiguration.getPreferredSSLFactoryOption())
-            .describedAs("By default SSL Channel Mode should be Default")
+            .describedAs("By default SSL Channel Mode should be Default_JSSE")
             .isNotEqualTo(DelegatingSSLSocketFactory.SSLChannelMode.OpenSSL);
     Configuration configuration = new Configuration();
     configuration.setEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE);

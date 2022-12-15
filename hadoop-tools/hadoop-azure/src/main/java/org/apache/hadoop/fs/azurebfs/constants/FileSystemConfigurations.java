@@ -115,8 +115,9 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_ANALYSIS_PERIOD_MS = 10_000;
 
+  // Setting the default ssl channel mode to JSSE. refer CDPD-45959.
   public static final DelegatingSSLSocketFactory.SSLChannelMode DEFAULT_FS_AZURE_SSL_CHANNEL_MODE
-      = DelegatingSSLSocketFactory.SSLChannelMode.Default;
+      = DelegatingSSLSocketFactory.SSLChannelMode.Default_JSSE;
 
   public static final boolean DEFAULT_ENABLE_DELEGATION_TOKEN = false;
   public static final boolean DEFAULT_ENABLE_HTTPS = true;

@@ -2372,6 +2372,14 @@ The switch to turn S3A auditing on or off.
 </property>
 
 <property>
+  <name>fs.azure.ssl.channel.mode</name>
+  <value>Default_JSSE</value>
+  <description>Setting default SSL channel mode to JSSE.
+    Refer CDPD-45959
+  </description>
+</property>
+
+<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed
