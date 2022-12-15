@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_READ_AHEAD_QUEUE_DEPTH;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 
 public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
@@ -76,8 +77,8 @@ public class ITestReadBufferManager extends AbstractAbfsIntegrationTest {
         ExecutorService executorService = Executors.newFixedThreadPool(4);
         AzureBlobFileSystem fs = getABFSWithReadAheadConfig();
         // verify that the fs has the capability to validate the fix
-        Assertions.assertThat(fs.hasPathCapability(new Path("/"), "HADOOP-18546"))
-            .describedAs("path capability \"HADOOP-18546\" in %s", fs)
+        Assertions.assertThat(fs.hasPathCapability(new Path("/"), CAPABILITY_SAFE_READAHEAD))
+            .describedAs("path capability %s in %s", CAPABILITY_SAFE_READAHEAD, fs)
             .isTrue();
 
         try {
