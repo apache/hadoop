@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.router.clientrm.PassThroughClientRequestInterceptor;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
@@ -81,10 +83,16 @@ public class TestFederationInterceptorRESTRetry
   @Override
   public void setUp() {
     super.setUpConfig();
+
+    Configuration conf = this.getConf();
+
+    // Compatible with historical test cases, we set router.allow-partial-result.enable=false.
+    conf.setBoolean(YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED, false);
+
     interceptor = new TestableFederationInterceptorREST();
 
     stateStore = new MemoryFederationStateStore();
-    stateStore.init(this.getConf());
+    stateStore.init(conf);
     FederationStateStoreFacade.getInstance().reinitialize(stateStore,
         getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
@@ -515,5 +523,59 @@ public class TestFederationInterceptorRESTRetry
     Assert.assertEquals(0, response.getRebootedNodes());
     Assert.assertEquals(0, response.getActiveNodes());
     Assert.assertEquals(0, response.getShutdownNodes());
+  }
+
+  @Test
+  public void testGetNodesOneBadSCAllowPartial() throws Exception {
+    // We set allowPartialResult to true.
+    // In this test case, we set up a subCluster,
+    // and the subCluster status is bad, we can't get the response,
+    // an exception should be thrown at this time.
+    interceptor.setAllowPartialResult(true);
+    setupCluster(Arrays.asList(bad2));
+
+    NodesInfo nodesInfo = interceptor.getNodes(null);
+    Assert.assertNotNull(nodesInfo);
+
+    // We need to set allowPartialResult=false
+    interceptor.setAllowPartialResult(false);
+  }
+
+  @Test
+  public void testGetNodesTwoBadSCsAllowPartial() throws Exception {
+    // We set allowPartialResult to true.
+    // In this test case, we set up 2 subClusters,
+    // and the status of these 2 subClusters is bad. When we call the interface,
+    // an exception should be returned.
+    interceptor.setAllowPartialResult(true);
+    setupCluster(Arrays.asList(bad1, bad2));
+
+    NodesInfo nodesInfo = interceptor.getNodes(null);
+    Assert.assertNotNull(nodesInfo);
+
+    // We need to set allowPartialResult=false
+    interceptor.setAllowPartialResult(false);
+  }
+
+  @Test
+  public void testGetNodesOneBadOneGoodAllowPartial() throws Exception {
+
+    // allowPartialResult = true,
+    // We tolerate exceptions and return normal results
+    interceptor.setAllowPartialResult(true);
+    setupCluster(Arrays.asList(good, bad2));
+
+    NodesInfo response = interceptor.getNodes(null);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(1, response.getNodes().size());
+    // Check if the only node came from Good SubCluster
+    Assert.assertEquals(good.getId(),
+        Long.toString(response.getNodes().get(0).getLastHealthUpdate()));
+
+    // allowPartialResult = false,
+    // We do not tolerate exceptions and will throw exceptions directly
+    interceptor.setAllowPartialResult(false);
+
+    setupCluster(Arrays.asList(good, bad2));
   }
 }

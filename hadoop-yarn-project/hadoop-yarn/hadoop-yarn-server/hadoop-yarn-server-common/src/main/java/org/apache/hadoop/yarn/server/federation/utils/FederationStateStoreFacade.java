@@ -504,7 +504,7 @@ public final class FederationStateStoreFacade {
    * @param defaultValue the default implementation for fallback
    * @param type the class for which a retry proxy is required
    * @param retryPolicy the policy for retrying method call failures
-   * @param <T> The type of the instance
+   * @param <T> The type of the instance.
    * @return a retry proxy for the specified interface
    */
   public static <T> Object createRetryInstance(Configuration conf,
@@ -857,6 +857,51 @@ public final class FederationStateStoreFacade {
     RouterStoreToken storeToken = RouterStoreToken.newInstance(identifier, 0L);
     RouterRMTokenRequest request = RouterRMTokenRequest.newInstance(storeToken);
     return stateStore.getTokenByRouterStoreToken(request);
+  }
+
+  /**
+   * stateStore provides DelegationTokenSeqNum increase.
+   *
+   * @return delegationTokenSequenceNumber.
+   */
+  public int incrementDelegationTokenSeqNum() {
+    return stateStore.incrementDelegationTokenSeqNum();
+  }
+
+  /**
+   * Get SeqNum from stateStore.
+   *
+   * @return delegationTokenSequenceNumber.
+   */
+  public int getDelegationTokenSeqNum() {
+    return stateStore.getDelegationTokenSeqNum();
+  }
+
+  /**
+   * Set SeqNum from stateStore.
+   *
+   * @param seqNum delegationTokenSequenceNumber.
+   */
+  public void setDelegationTokenSeqNum(int seqNum) {
+    stateStore.setDelegationTokenSeqNum(seqNum);
+  }
+
+  /**
+   * Get CurrentKeyId from stateStore.
+   *
+   * @return currentKeyId.
+   */
+  public int getCurrentKeyId() {
+    return stateStore.getCurrentKeyId();
+  }
+
+  /**
+   * stateStore provides CurrentKeyId increase.
+   *
+   * @return currentKeyId.
+   */
+  public int incrementCurrentKeyId() {
+    return stateStore.incrementCurrentKeyId();
   }
 
   /**
