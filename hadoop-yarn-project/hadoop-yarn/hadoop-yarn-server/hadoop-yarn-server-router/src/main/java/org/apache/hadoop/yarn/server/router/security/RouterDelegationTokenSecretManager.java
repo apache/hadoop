@@ -261,4 +261,29 @@ public class RouterDelegationTokenSecretManager
     }
     return info.getRenewDate();
   }
+  
+  @Override
+  protected synchronized int incrementDelegationTokenSeqNum() {
+    return federationFacade.incrementDelegationTokenSeqNum();
+  }
+
+  @Override
+  protected synchronized int getDelegationTokenSeqNum() {
+    return federationFacade.getDelegationTokenSeqNum();
+  }
+
+  @Override
+  protected synchronized void setDelegationTokenSeqNum(int seqNum) {
+    federationFacade.setDelegationTokenSeqNum(seqNum);
+  }
+
+  @Override
+  protected synchronized int getCurrentKeyId() {
+    return federationFacade.getCurrentKeyId();
+  }
+
+  @Override
+  protected synchronized int incrementCurrentKeyId() {
+    return federationFacade.incrementCurrentKeyId();
+  }
 }
