@@ -4294,6 +4294,11 @@ public class YarnConfiguration extends Configuration {
       ROUTER_PREFIX + "webapp.cross-origin.enabled";
   public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
 
+  /** Router Interceptor Allow Partial Result Enable. **/
+  public static final String ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED =
+      ROUTER_PREFIX + "interceptor.allow-partial-result.enable";
+  public static final boolean DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED = false;
+
   ////////////////////////////////
   // CSI Volume configs
   ////////////////////////////////
