@@ -146,7 +146,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private static final String TEST_RENEWER = "test-renewer";
 
   @Override
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, YarnException {
     super.setUpConfig();
     interceptor = new TestableFederationInterceptorREST();
 
@@ -161,15 +161,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     subClusters = new ArrayList<>();
 
-    try {
-      for (int i = 0; i < NUM_SUBCLUSTER; i++) {
-        SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
-        stateStoreUtil.registerSubCluster(sc);
-        subClusters.add(sc);
-      }
-    } catch (YarnException e) {
-      LOG.error(e.getMessage());
-      Assert.fail();
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+      stateStoreUtil.registerSubCluster(sc);
+      subClusters.add(sc);
     }
 
     RouterClientRMService routerClientRMService = new RouterClientRMService();

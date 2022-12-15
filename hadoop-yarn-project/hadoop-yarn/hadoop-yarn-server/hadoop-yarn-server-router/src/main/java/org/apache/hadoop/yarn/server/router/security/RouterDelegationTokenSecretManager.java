@@ -261,7 +261,7 @@ public class RouterDelegationTokenSecretManager
     }
     return info.getRenewDate();
   }
-  
+
   @Override
   protected synchronized int incrementDelegationTokenSeqNum() {
     return federationFacade.incrementDelegationTokenSeqNum();

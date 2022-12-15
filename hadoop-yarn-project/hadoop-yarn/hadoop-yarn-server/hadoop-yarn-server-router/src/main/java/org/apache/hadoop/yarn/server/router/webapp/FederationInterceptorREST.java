@@ -1632,25 +1632,55 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         return this.getRouterClientRMService().getDelegationToken(createReq);
       });
 
+    DelegationToken respToken = getDelegationToken(renewer, resp);
+    return Response.status(Status.OK).entity(respToken).build();
+  }
+
+  /**
+   * Get DelegationToken.
+   *
+   * @param renewer renewer.
+   * @param resp GetDelegationTokenResponse.
+   * @return DelegationToken.
+   * @throws IOException if there are I/O errors.
+   */
+  private DelegationToken getDelegationToken(String renewer, GetDelegationTokenResponse resp)
+      throws IOException {
+    // Step1. Parse token from GetDelegationTokenResponse.
+    Token<RMDelegationTokenIdentifier> tk = getToken(resp);
+    String tokenKind = tk.getKind().toString();
+    RMDelegationTokenIdentifier tokenIdentifier = tk.decodeIdentifier();
+    String owner = tokenIdentifier.getOwner().toString();
+    long maxDate = tokenIdentifier.getMaxDate();
+
+    // Step2. Call the interface to get the expiration time of Token.
+    RouterClientRMService clientRMService = this.getRouterClientRMService();
+    RouterDelegationTokenSecretManager tokenSecretManager =
+        clientRMService.getRouterDTSecretManager();
+    long currentExpiration = tokenSecretManager.getRenewDate(tokenIdentifier);
+
+    // Step3. Generate Delegation token.
+    DelegationToken delegationToken = new DelegationToken(tk.encodeToUrlString(),
+        renewer, owner, tokenKind, currentExpiration, maxDate);
+
+    return delegationToken;
+  }
+
+  /**
+   * GetToken.
+   * We convert RMDelegationToken in GetDelegationTokenResponse to Token.
+   *
+   * @param resp GetDelegationTokenResponse.
+   * @return Token.
+   */
+  private static Token<RMDelegationTokenIdentifier> getToken(GetDelegationTokenResponse resp) {
     org.apache.hadoop.yarn.api.records.Token token = resp.getRMDelegationToken();
     byte[] identifier = token.getIdentifier().array();
     byte[] password = token.getPassword().array();
     Text kind = new Text(token.getKind());
     Text service = new Text(token.getService());
     Token<RMDelegationTokenIdentifier> tk = new Token<>(identifier, password, kind, service);
-
-    RMDelegationTokenIdentifier tokenIdentifier = tk.decodeIdentifier();
-    RouterClientRMService clientRMService = this.getRouterClientRMService();
-    RouterDelegationTokenSecretManager tokenSecretManager =
-        clientRMService.getRouterDTSecretManager();
-    long currentExpiration = tokenSecretManager.getRenewDate(tokenIdentifier);
-
-    String owner = tokenIdentifier.getOwner().toString();
-    String tokenKind = tk.getKind().toString();
-    long maxDate = tokenIdentifier.getMaxDate();
-    DelegationToken respToken = new DelegationToken(tk.encodeToUrlString(),
-        renewer, owner, tokenKind, currentExpiration, maxDate);
-    return Response.status(Status.OK).entity(respToken).build();
+    return tk;
   }
 
   /**
@@ -1675,12 +1705,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // get Caller UserGroupInformation
       Configuration conf = federationFacade.getConf();
       UserGroupInformation callerUGI = getKerberosUserGroupInformation(conf, hsr);
-
-      // renew Delegation Token
-      DelegationToken requestToken = new DelegationToken();
-      String token = extractToken(hsr).encodeToUrlString();
-      requestToken.setToken(token);
-      return renewDelegationToken(requestToken, callerUGI);
+      return renewDelegationToken(hsr, callerUGI);
     } catch (YarnException e) {
       LOG.error("Renew delegation token request failed.", e);
       return Response.status(Status.FORBIDDEN).entity(e.getMessage()).build();
@@ -1690,14 +1715,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   /**
    * Renew DelegationToken.
    *
-   * @param tokenData DelegationToken.
+   * @param hsr HttpServletRequest.
    * @param callerUGI UserGroupInformation.
    * @return Response
    * @throws IOException if there are I/O errors.
    * @throws InterruptedException if any thread has interrupted.
    */
-  private Response renewDelegationToken(DelegationToken tokenData, UserGroupInformation callerUGI)
+  private Response renewDelegationToken(HttpServletRequest hsr, UserGroupInformation callerUGI)
       throws IOException, InterruptedException {
+
+    // renew Delegation Token
+    DelegationToken tokenData = new DelegationToken();
+    String encodeToken = extractToken(hsr).encodeToUrlString();
+    tokenData.setToken(encodeToken);
+
     // Parse token data
     Token<RMDelegationTokenIdentifier> token = extractToken(tokenData.getToken());
     org.apache.hadoop.yarn.api.records.Token dToken =
