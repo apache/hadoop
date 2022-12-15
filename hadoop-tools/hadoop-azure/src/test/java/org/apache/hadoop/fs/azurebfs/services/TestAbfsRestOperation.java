@@ -16,14 +16,22 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
@@ -44,10 +52,11 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.setBoolean(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, true);
+    //configuration.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey.name());
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
 
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
-        "dummy.dfs.core.windows.net");
+        configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME));
 
     AbfsConfiguration abfsConfig
         = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
@@ -65,26 +74,31 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     // Mock instance of AbfsRestOperation
 
     final String TEST_PATH = "/testfile";
-
     Path testPath = path(TEST_PATH);
     fs.create(testPath);
-    String newString = testPath.toString().substring(testPath.toString().lastIndexOf("/"),
-        testPath.toString().length());
+    String newString = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
 
     final List<AbfsHttpHeader> requestHeaders = TestAbfsClient.getTestRequestHeaders(testClient);
-//    if (appendRequestParameters.isExpectHeaderEnabled()) {
-//      requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
-//    }
+    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE, HTTP_METHOD_PATCH));
+    if (appendRequestParameters.isExpectHeaderEnabled()) {
+      requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
+    }
+
+      final AbfsUriQueryBuilder abfsUriQueryBuilder = testClient.createDefaultUriQueryBuilder();
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(appendRequestParameters.getPosition()));
+      URL url =  testClient.createRequestUrl(newString, abfsUriQueryBuilder.toString());
+
     AbfsRestOperation op = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.Append,
         testClient,
         HTTP_METHOD_PUT,
-        TestAbfsClient.getTestUrl(testClient, newString),
+        url,
         requestHeaders, buffer,
         appendRequestParameters.getoffset(),
         appendRequestParameters.getLength(), null));
 
-    HttpURLConnection urlConnection = Mockito.spy((HttpURLConnection) TestAbfsClient.getTestUrl(testClient, newString).openConnection());
+    HttpURLConnection urlConnection = Mockito.spy((HttpURLConnection) url.openConnection());
     final int CONNECT_TIMEOUT = 30 * 1000;
     final int READ_TIMEOUT = 30 * 1000;
 
@@ -95,16 +109,14 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     for (AbfsHttpHeader header : requestHeaders) {
       urlConnection.setRequestProperty(header.getName(), header.getValue());
     }
-    AbfsHttpOperation abfsHttpOperation = new AbfsHttpOperation(TestAbfsClient.getTestUrl(testClient, newString), HTTP_METHOD_PUT,
+    AbfsHttpOperation abfsHttpOperation = new AbfsHttpOperation(url, HTTP_METHOD_PUT,
         requestHeaders);
     abfsHttpOperation.setConnection(urlConnection);
-    //Mockito.doThrow(new IOException()).when(urlConnection).getOutputStream();
+    Mockito.doThrow(new IOException()).when(urlConnection).getOutputStream();
     Mockito.doReturn(abfsHttpOperation).when(op).getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
     TracingContext tracingContext = new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null);
     op.execute(tracingContext);
   }
-
-  private class HttpsURLConnection {}
 }
