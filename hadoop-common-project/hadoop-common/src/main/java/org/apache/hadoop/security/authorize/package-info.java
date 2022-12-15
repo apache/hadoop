@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-@Public
-@Evolving
+@org.apache.hadoop.classification.InterfaceAudience.Public
+@org.apache.hadoop.classification.InterfaceStability.Evolving
 package org.apache.hadoop.security.authorize;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Evolving;
