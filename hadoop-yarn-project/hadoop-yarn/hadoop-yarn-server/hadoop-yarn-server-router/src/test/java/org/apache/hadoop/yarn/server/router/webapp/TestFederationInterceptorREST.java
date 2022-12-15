@@ -749,6 +749,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertTrue(nodeLabelsName.contains("y"));
 
     // null request
+    interceptor.setAllowPartialResult(false);
     NodeLabelsInfo nodeLabelsInfo2 = interceptor.getLabelsOnNode(null, "node2");
     Assert.assertNotNull(nodeLabelsInfo2);
     Assert.assertEquals(0, nodeLabelsInfo2.getNodeLabelsName().size());
@@ -1183,6 +1184,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   @Test
   public void testCheckUserAccessToQueue() throws Exception {
 
+    interceptor.setAllowPartialResult(false);
+
     // Case 1: Only queue admin user can access other user's information
     HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
     String errorMsg1 = "User=non-admin doesn't haven access to queue=queue " +
@@ -1212,6 +1215,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
     checkUserAccessToQueueFailed("queue", "yarn", QueueACL.ADMINISTER_QUEUE, "admin");
     checkUserAccessToQueueSuccess("queue", "yarn", QueueACL.SUBMIT_APPLICATIONS, "admin");
+
+    interceptor.setAllowPartialResult(true);
   }
 
   private void checkUserAccessToQueueSuccess(String queue, String userName,
