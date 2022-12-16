@@ -143,8 +143,8 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     TransformerFactory trfactory = TransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
@@ -161,13 +161,23 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    bestEffortSet(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
     return trfactory;
   }
 
-  private static boolean bestEffortSet(TransformerFactory transformerFactory,
-                                       String name, Object value) {
+  /**
+   * Set an attribute value on a {@link TransformerFactory}. If the TransformerFactory
+   * does not support the attribute, the method just returns <code>false</code> and
+   * logs the issue at debug level.
+   *
+   * @param transformerFactory to update
+   * @param name of the attribute to set
+   * @param value to set on the attribute
+   * @return whether the attribute was successfully set
+   */
+  static boolean bestEffortSetAttribute(TransformerFactory transformerFactory,
+                                        String name, Object value) {
     try {
       transformerFactory.setAttribute(name, value);
       return true;
