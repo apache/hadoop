@@ -1017,12 +1017,26 @@ public class DelegationTokenRenewer extends AbstractService {
                     "Exhausted max retry attempts {} in token renewer "
                         + "thread for {}",
                     tokenRenewerThreadRetryMaxAttempts, evt.getApplicationId());
+                continue;
               }
             }
           } catch (Exception e) {
             LOG.info("Problem in submitting renew tasks in token renewer "
                 + "thread.", e);
+            continue;
           }
+
+          // For normally finished DT renew event, it should be removed from futures.
+          futures.remove(evt);
+        }
+
+        // If the cluster is idle for some time, futures map is empty or no event handler found which may still cause high CPU utilization
+        // Therefore a short nap should be added here.
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ex) {
+          // No big deal, just ignore this exception here and try the next round
+          LOG.warn("DelegationTokenRenewerePoolTracker idle sleep is interrupted.");
         }
       }
     }
