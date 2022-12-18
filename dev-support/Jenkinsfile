@@ -271,7 +271,9 @@ pipeline {
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
                        bat '''
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "export DOCKER_BUILDKIT=0"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "which docker"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "docker --version"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/jenkins.sh"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/jenkins.sh run_ci"
