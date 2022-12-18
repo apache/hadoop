@@ -25,15 +25,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class TestTeraSort extends HadoopTestCase {
   private static final Logger LOG = LoggerFactory.getLogger(TestTeraSort.class);
@@ -43,12 +42,7 @@ public class TestTeraSort extends HadoopTestCase {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
 
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     getFileSystem().delete(TEST_DIR, true);
     super.tearDown();
@@ -91,7 +85,7 @@ public class TestTeraSort extends HadoopTestCase {
   }
 
   @Test
-  void testTeraSort() throws Exception {
+  public void testTeraSort() throws Exception {
     // Run TeraGen to generate input for 'terasort'
     runTeraGen(createJobConf(), SORT_INPUT_PATH);
 
@@ -116,11 +110,11 @@ public class TestTeraSort extends HadoopTestCase {
 
     // Run tera-validator to check if sort worked correctly
     runTeraValidator(createJobConf(), SORT_OUTPUT_PATH,
-        TERA_OUTPUT_PATH);
+      TERA_OUTPUT_PATH);
   }
 
   @Test
-  void testTeraSortWithLessThanTwoArgs() throws Exception {
+  public void testTeraSortWithLessThanTwoArgs() throws Exception {
     String[] args = new String[1];
     assertThat(new TeraSort().run(args)).isEqualTo(2);
   }

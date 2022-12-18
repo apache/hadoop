@@ -19,9 +19,8 @@ package org.apache.hadoop.examples.pi.math;
 
 import java.math.BigInteger;
 import java.util.Random;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Test;
+import org.junit.Assert;
 
 public class TestLongLong {
 
@@ -40,12 +39,12 @@ public class TestLongLong {
         "\na = %x\nb = %x\nll= " + ll + "\nbi= " + bi.toString(16) + "\n", a,
         b);
     //System.out.println(s);
-    assertEquals(bi, ll.toBigInteger(), s);
+    Assert.assertEquals(s, bi, ll.toBigInteger());
   }
 
   @Test
-  void testMultiplication() {
-    for (int i = 0; i < 100; i++) {
+  public void testMultiplication() {
+    for(int i = 0; i < 100; i++) {
       final long a = nextPositiveLong();
       final long b = nextPositiveLong();
       verifyMultiplication(a, b);
@@ -55,8 +54,8 @@ public class TestLongLong {
   }
 
   @Test
-  void testRightShift() {
-    for (int i = 0; i < 1000; i++) {
+  public void testRightShift() {
+    for(int i = 0; i < 1000; i++) {
       final long a = nextPositiveLong();
       final long b = nextPositiveLong();
       verifyRightShift(a, b);
@@ -70,12 +69,12 @@ public class TestLongLong {
     final String s = String.format(
         "\na = %x\nb = %x\nll= " + ll + "\nbi= " + bi.toString(16) + "\n", a,
         b);
-    assertEquals(bi, ll.toBigInteger(), s);
+    Assert.assertEquals(s, bi, ll.toBigInteger());
 
     for (int i = 0; i < LongLong.SIZE >> 1; i++) {
       final long result = ll.shiftRight(i) & MASK;
       final long expected = bi.shiftRight(i).longValue() & MASK;
-      assertEquals(expected, result, s);
+      Assert.assertEquals(s, expected, result);
     }
   }
 }

@@ -21,9 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -34,19 +33,14 @@ import org.apache.hadoop.mapred.HadoopTestCase;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class TestAggregateWordCount extends HadoopTestCase {
   public TestAggregateWordCount() throws IOException {
     super(LOCAL_MR, LOCAL_FS, 1, 1);
   }
 
-  @BeforeEach
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     FileSystem fs = getFileSystem();
     if (fs != null) {
@@ -64,7 +58,7 @@ public class TestAggregateWordCount extends HadoopTestCase {
   private static final Path OUTPUT_PATH = new Path(TEST_DIR, "outPath");
 
   @Test
-  void testAggregateTestCount()
+  public void testAggregateTestCount()
       throws IOException, ClassNotFoundException, InterruptedException {
 
     ExitUtil.disableSystemExit();
@@ -76,7 +70,7 @@ public class TestAggregateWordCount extends HadoopTestCase {
     FileUtil.write(fs, file2, "Hello Hadoop");
 
     String[] args =
-        new String[]{INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
+        new String[] {INPUT_PATH.toString(), OUTPUT_PATH.toString(), "1",
             "textinputformat"};
 
     // Run AggregateWordCount Job.

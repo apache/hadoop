@@ -28,9 +28,8 @@ import org.apache.hadoop.examples.pi.Container;
 import org.apache.hadoop.examples.pi.Util;
 import org.apache.hadoop.examples.pi.Util.Timer;
 import org.apache.hadoop.examples.pi.math.TestModular.Montgomery2;
-import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.Test;
+import org.junit.Assert;
 
 public class TestSummation {
   static final Random RANDOM = new Random();
@@ -59,12 +58,12 @@ public class TestSummation {
 
     final List<Summation> combined = Util.combine(a);
 //    Util.out.println("combined=" + combined);
-    assertEquals(1, combined.size());
-    assertEquals(sigma, combined.get(0));
+    Assert.assertEquals(1, combined.size());
+    Assert.assertEquals(sigma, combined.get(0));
   }
 
   @Test
-  void testSubtract() {
+  public void testSubtract() {
     final Summation sigma = newSummation(3, 10000, 20);
     final int size = 10;
     final List<Summation> parts = Arrays.asList(sigma.partition(size));
@@ -73,10 +72,10 @@ public class TestSummation {
     runTestSubtract(sigma, new ArrayList<Summation>());
     runTestSubtract(sigma, parts);
 
-    for (int n = 1; n < size; n++) {
-      for (int j = 0; j < 10; j++) {
+    for(int n = 1; n < size; n++) {
+      for(int j = 0; j < 10; j++) {
         final List<Summation> diff = new ArrayList<Summation>(parts);
-        for (int i = 0; i < n; i++)
+        for(int i = 0; i < n; i++)
           diff.remove(RANDOM.nextInt(diff.size()));
 ///        Collections.sort(diff);
         runTestSubtract(sigma, diff);
@@ -133,16 +132,16 @@ public class TestSummation {
     t.tick("sigma=" + sigma);
     final double value = sigma.compute();
     t.tick("compute=" + value);
-    assertEquals(value, sigma.compute_modular(), DOUBLE_DELTA);
+    Assert.assertEquals(value, sigma.compute_modular(), DOUBLE_DELTA);
     t.tick("compute_modular");
-    assertEquals(value, sigma.compute_montgomery(), DOUBLE_DELTA);
+    Assert.assertEquals(value, sigma.compute_montgomery(), DOUBLE_DELTA);
     t.tick("compute_montgomery");
-    assertEquals(value, sigma.compute_montgomery2(), DOUBLE_DELTA);
+    Assert.assertEquals(value, sigma.compute_montgomery2(), DOUBLE_DELTA);
     t.tick("compute_montgomery2");
 
-    assertEquals(value, sigma.compute_modBigInteger(), DOUBLE_DELTA);
+    Assert.assertEquals(value, sigma.compute_modBigInteger(), DOUBLE_DELTA);
     t.tick("compute_modBigInteger");
-    assertEquals(value, sigma.compute_modPow(), DOUBLE_DELTA);
+    Assert.assertEquals(value, sigma.compute_modPow(), DOUBLE_DELTA);
     t.tick("compute_modPow");
   }
 
