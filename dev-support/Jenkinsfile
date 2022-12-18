@@ -271,6 +271,8 @@ pipeline {
 
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
+                       bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
+
                        bat '''
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "export DOCKER_BUILDKIT=0"
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "which docker"
