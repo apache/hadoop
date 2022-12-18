@@ -37,8 +37,8 @@ public final class InternalConstants {
    * {@code "fs.capability.etags.available"}.
    * <ol>
    *   <li>{@value}: store is safe</li>
-   *   <li>!etags: store is safe</li>
-   *   <li>etags && !{@value}: store is <i>UNSAFE</i></li>
+   *   <li>no etags: store is safe</li>
+   *   <li>etags and not {@value}: store is <i>UNSAFE</i></li>
    * </ol>
    */
   public static final String CAPABILITY_SAFE_READAHEAD =
