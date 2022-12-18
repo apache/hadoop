@@ -70,8 +70,8 @@ pipeline {
                 dir("${WORKSPACE}/${YETUS}") {
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: "${env.YETUS_VERSION}"]],
-                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                        branches: [[name: "debug-docker"]],
+                        userRemoteConfigs: [[ url: 'https://github.com/GauthamBanasandra/yetus.git']]]
                     )
                 }
             }
