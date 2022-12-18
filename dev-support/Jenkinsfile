@@ -272,8 +272,9 @@ pipeline {
 
                        bat '''
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "which docker"
-                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
-                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh run_ci"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/src/jenkins.sh"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/src/jenkins.sh"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/src/jenkins.sh run_ci"
                        '''
 
 
@@ -344,8 +345,8 @@ pipeline {
                 cleanup() {
                     script {
                         bat '''
-                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
-                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh cleanup_ci_proc"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/src/jenkins.sh"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/src/jenkins.sh cleanup_ci_proc"
                         '''
                     }
                 }
