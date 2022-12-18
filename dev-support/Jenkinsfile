@@ -259,6 +259,7 @@ pipeline {
                 PATCHDIR = "${WORKSPACE}/out"
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
                 IS_OPTIONAL = 0
+                DOCKER_BUILDKIT = 0
             }
 
             steps {

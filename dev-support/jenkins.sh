@@ -200,6 +200,7 @@ function run_ci() {
   YETUS_ARGS+=("--github-use-emoji-vote")
   YETUS_ARGS+=("--debug")
 
+  echo "DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
   set -x
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
