@@ -349,8 +349,7 @@ public class DatanodeAdminManager {
         }
       }
     }
-    if (isMaintenance
-      && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
+    if (isMaintenance && numLive >= blockManager.getMinMaintenanceStorageNum(block)) {
       return true;
     }
     return false;
