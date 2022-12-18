@@ -198,6 +198,7 @@ function run_ci() {
   # write Yetus report as GitHub comment (YETUS-1102)
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
+  YETUS_ARGS+=("--debug")
 
   set -x
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
