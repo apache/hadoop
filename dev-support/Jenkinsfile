@@ -266,8 +266,10 @@ pipeline {
                 withCredentials(getGithubCreds()) {                       
                        bat 'docker --version'
                        bat 'docker image ls'
+                       bat 'docker container ls'
+                       bat 'docker system info'
                        bat 'cd'
-                       bat 'dir'
+                       bat 'dir .\\src'
 
 //                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
