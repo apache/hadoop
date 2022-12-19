@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
@@ -27,6 +45,9 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_OK;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
@@ -43,29 +64,45 @@ import static org.mockito.Mockito.mock;
 @RunWith(Parameterized.class)
 public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
+  // Specifies whether getOutputStream() or write() throws IOException.
   public enum error {OUTPUTSTREAM, WRITE};
 
+  public static final int HTTP_EXPECTATION_FAILED = 417;
+  public static final int REDUCED_RETRY_COUNT = 2;
+  public static final int REDUCED_BACKOFF_INTERVAL = 100;
+  public static final int BUFFER_LENGTH = 5;
+  public static final int BUFFER_OFFSET = 0;
+
+  // Specifies whether the expect header is enabled or not.
   @Parameterized.Parameter
   public boolean expectHeaderEnabled;
 
+  // Gives the http response code.
   @Parameterized.Parameter(1)
   public int responseCode;
 
+  // Gives the http response message.
   @Parameterized.Parameter(2)
   public String responseMessage;
 
+  // Gives the errorType based on the enum.
   @Parameterized.Parameter(3)
   public error errorType;
 
+  /*
+    HTTP_OK = 200,
+    HTTP_UNAVAILABLE = 503,
+    HTTP_NOT_FOUND = 404,
+    HTTP_EXPECTATION_FAILED = 417.
+   */
   @Parameterized.Parameters(name = "expect={0}-code={1}-error={3}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {true, 200, "OK", error.WRITE},
-        {false, 200, "OK", error.WRITE},
-        {true, 503, "ServerBusy", error.OUTPUTSTREAM},
-        {false, 503, "ServerBusy", error.OUTPUTSTREAM},
-        {true, 404, "Resource Not Found", error.OUTPUTSTREAM},
-        {true, 417, "Expectation Failed", error.OUTPUTSTREAM}
+        {true, HTTP_OK, "OK", error.WRITE},
+        {false, HTTP_OK, "OK", error.WRITE},
+        {true, HTTP_UNAVAILABLE, "ServerBusy", error.OUTPUTSTREAM},
+        {true, HTTP_NOT_FOUND, "Resource Not Found", error.OUTPUTSTREAM},
+        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", error.OUTPUTSTREAM}
     });
   }
 
@@ -73,14 +110,26 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     super();
   }
 
+  /**
+   * Test helper method to get random bytes array.
+   * @param length The length of byte buffer
+   * @return byte buffer
+   */
   private byte[] getRandomBytesArray(int length) {
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
   }
 
-  private AbfsRestOperation getRestOperation() throws Exception{
+  /**
+   * Gives the AbfsRestOperation.
+   * @return abfsRestOperation.
+   * @throws Exception
+   */
+  private AbfsRestOperation getRestOperation() throws Exception {
+    // Get the filesystem.
     final AzureBlobFileSystem fs = getFileSystem();
+
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
@@ -88,31 +137,48 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         configuration.get(FS_AZURE_ABFS_ACCOUNT_NAME));
 
+    // Update the configuration with reduced retry count and reduced backoff interval.
     AbfsConfiguration abfsConfig
         = TestAbfsConfigurationFieldsValidation.updateRetryConfigs(
         abfsConfiguration,
-        2, 100);
+        REDUCED_RETRY_COUNT, REDUCED_BACKOFF_INTERVAL);
 
+    // Gets the client.
     AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
         abfsClient,
         abfsConfig);
-    AppendRequestParameters appendRequestParameters = new AppendRequestParameters(
-        0, 0, 5, AppendRequestParameters.Mode.APPEND_MODE, false, null, expectHeaderEnabled);
+
+    // Expect header is enabled or not based on the parameter.
+    AppendRequestParameters appendRequestParameters
+        = new AppendRequestParameters(
+        BUFFER_OFFSET, BUFFER_OFFSET, BUFFER_LENGTH,
+        AppendRequestParameters.Mode.APPEND_MODE, false, null,
+        expectHeaderEnabled);
+
     byte[] buffer = getRandomBytesArray(5);
 
+    // Create a test container to upload the data.
     final String TEST_PATH = "/testfile";
     Path testPath = path(TEST_PATH);
     fs.create(testPath);
-    String newString = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
+    String finalTestPath = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
+
+    // Creates a list of request headers.
     final List<AbfsHttpHeader> requestHeaders = TestAbfsClient.getTestRequestHeaders(testClient);
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE, HTTP_METHOD_PATCH));
     if (appendRequestParameters.isExpectHeaderEnabled()) {
       requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
     }
+
+    // Updates the query parameters.
     final AbfsUriQueryBuilder abfsUriQueryBuilder = testClient.createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(appendRequestParameters.getPosition()));
-    URL url =  testClient.createRequestUrl(newString, abfsUriQueryBuilder.toString());
+
+    // Creates the url for the specified path.
+    URL url =  testClient.createRequestUrl(finalTestPath, abfsUriQueryBuilder.toString());
+
+    // Create a mock of the AbfsRestOperation to set the urlConnection in the corresponding httpOperation.
     AbfsRestOperation op = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.Append,
         testClient,
@@ -123,8 +189,11 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null));
 
     AbfsHttpOperation abfsHttpOperation = new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders);
+
+    // Create a mock of UrlConnection class.
     HttpURLConnection urlConnection = mock(HttpURLConnection.class);
 
+    // Sets the expect request property if expect header is enabled.
     if (expectHeaderEnabled) {
       Mockito.doReturn(HUNDRED_CONTINUE)
           .when(urlConnection)
@@ -137,6 +206,10 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
     switch (errorType) {
     case OUTPUTSTREAM:
+      // If the getOutputStream() throws IOException and Expect Header is
+      // enabled, it returns back to processResponse and hence we have
+      // mocked the response code and the response message to check different
+      // behaviour based on response code.
       Mockito.doReturn(responseCode).when(urlConnection).getResponseCode();
       Mockito.doReturn(responseMessage)
           .when(urlConnection)
@@ -146,6 +219,8 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
           .getOutputStream();
       break;
     case WRITE:
+      // If write() throws IOException and Expect Header is
+      // enabled or not, it should throw back the exception.
       OutputStream outputStream = Mockito.spy(new OutputStream() {
         @Override
         public void write(final int i) throws IOException {
@@ -160,46 +235,59 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     default:
       break;
     }
+
+    // Sets the urlConnection for the httpOperation.
     abfsHttpOperation.setConnection(urlConnection);
+
+    // Sets the httpOperation for the rest operation.
     Mockito.doReturn(abfsHttpOperation)
         .when(op)
         .getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
     return op;
   }
 
+  /**
+   * Test the functionalities based on whether getOutputStream() or write()
+   * throws exception and what is the corresponding response code.
+   * @throws Exception
+   */
   @Test
   public void testExpectHundredContinue() throws Exception {
+    // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
     switch (errorType) {
     case WRITE:
+      // If write() throws IOException and Expect Header is
+      // enabled or not, it should throw back the exception
+      // which is caught and exponential retry logic comes into place.
       intercept(IOException.class,
           () -> op.execute(tracingContext));
+
+      // Assert that the request is retried based on reduced retry count configured.
       Assertions.assertThat(tracingContext.getRetryCount())
           .describedAs("The retry count is incorrect")
           .isEqualTo(2);
       break;
     case OUTPUTSTREAM:
       switch (responseCode) {
-        case 503:
-          intercept(IOException.class,
-              () -> op.execute(tracingContext));
-          Assertions.assertThat(tracingContext.getRetryCount())
-              .describedAs("The retry count is incorrect")
-              .isEqualTo(2);
-          break;
-      case 404:
-        intercept(AzureBlobFileSystemException.class,
+      case HTTP_UNAVAILABLE:
+        // In the case of 503 i.e. throttled case, we should retry.
+        intercept(IOException.class,
             () -> op.execute(tracingContext));
+        // Assert that the request is retried based on reduced retry count configured.
         Assertions.assertThat(tracingContext.getRetryCount())
             .describedAs("The retry count is incorrect")
-            .isEqualTo(0);
+            .isEqualTo(2);
         break;
+      case 404:
       case 417:
+        // In the case of 4xx error. i.e. user error, retry should not happen.
         intercept(AzureBlobFileSystemException.class,
             () -> op.execute(tracingContext));
+        // Assert that the request is not retried.
         Assertions.assertThat(tracingContext.getRetryCount())
             .describedAs("The retry count is incorrect")
             .isEqualTo(0);

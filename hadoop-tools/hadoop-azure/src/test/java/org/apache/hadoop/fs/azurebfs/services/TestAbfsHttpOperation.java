@@ -115,13 +115,4 @@ public class TestAbfsHttpOperation {
                 + "be: " + expectedMaskedEncodedUrl)
         .isEqualTo(expectedMaskedEncodedUrl);
   }
-
-  public static void setHttpURLConnection(HttpURLConnection connection, AbfsHttpOperation abfsHttpOperation) throws
-      IOException {
-    Mockito.doReturn(connection).when(abfsHttpOperation).openConnection();
-  }
-
-  public static void setHttpOperation(AbfsHttpOperation abfsHttpOperation, AbfsRestOperation abfsRestOperation) throws IOException {
-    Mockito.doReturn(abfsHttpOperation).when(abfsRestOperation).getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
-  }
 }
