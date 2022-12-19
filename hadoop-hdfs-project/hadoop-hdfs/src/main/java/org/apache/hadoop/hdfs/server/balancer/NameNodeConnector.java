@@ -179,7 +179,6 @@ public class NameNodeConnector implements Closeable {
     this.idPath = idPath;
     this.targetPaths = targetPaths == null || targetPaths.isEmpty() ? Arrays
         .asList(new Path("/")) : targetPaths;
-    this.moverMetrics = MoverMetrics.create(this);
     this.maxNotChangedIterations = maxNotChangedIterations;
     int getBlocksMaxQps = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_GETBLOCKS_MAX_QPS_KEY,
@@ -203,6 +202,8 @@ public class NameNodeConnector implements Closeable {
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();
+
+    this.moverMetrics = MoverMetrics.create(this);
 
     final FsServerDefaults defaults = fs.getServerDefaults(new Path("/"));
     this.keyManager = new KeyManager(blockpoolID, namenode,
