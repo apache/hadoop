@@ -66,7 +66,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
-
 /**
  * Test the app master web service Rest API for getting tasks, a specific task,
  * and task counters.
