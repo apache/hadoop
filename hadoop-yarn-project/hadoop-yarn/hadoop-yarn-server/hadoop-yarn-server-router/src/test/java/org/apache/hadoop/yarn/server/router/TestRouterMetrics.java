@@ -514,9 +514,24 @@ public class TestRouterMetrics {
       metrics.incrGetAppTimeoutsFailedRetrieved();
     }
 
-    public void getCheckUserAccessToQueueRetrieved() {
-      LOG.info("Mocked: failed checkUserAccessToQueueRetrieved call");
+    public void getRMNodeLabelsFailed() {
+      LOG.info("Mocked: failed getRMNodeLabelsFailed call");
+      metrics.incrGetRMNodeLabelsFailedRetrieved();
+    }
+
+    public void getCheckUserAccessToQueueFailed() {
+      LOG.info("Mocked: failed checkUserAccessToQueue call");
       metrics.incrCheckUserAccessToQueueFailedRetrieved();
+    }
+
+    public void getDelegationTokenFailed() {
+      LOG.info("Mocked: failed getDelegationToken call");
+      metrics.incrGetDelegationTokenFailedRetrieved();
+    }
+
+    public void getRenewDelegationTokenFailed() {
+      LOG.info("Mocked: failed renewDelegationToken call");
+      metrics.incrRenewDelegationTokenFailedRetrieved();
     }
   }
 
@@ -729,9 +744,24 @@ public class TestRouterMetrics {
       metrics.succeededGetAppTimeoutsRetrieved(duration);
     }
 
+    public void getRMNodeLabelsRetrieved(long duration) {
+      LOG.info("Mocked: successful getRMNodeLabels call with duration {}", duration);
+      metrics.succeededGetRMNodeLabelsRetrieved(duration);
+    }
+
     public void getCheckUserAccessToQueueRetrieved(long duration) {
       LOG.info("Mocked: successful CheckUserAccessToQueue call with duration {}", duration);
       metrics.succeededCheckUserAccessToQueueRetrieved(duration);
+    }
+
+    public void getGetDelegationTokenRetrieved(long duration) {
+      LOG.info("Mocked: successful GetDelegationToken call with duration {}", duration);
+      metrics.succeededGetDelegationTokenRetrieved(duration);
+    }
+
+    public void getRenewDelegationTokenRetrieved(long duration) {
+      LOG.info("Mocked: successful RenewDelegationToken call with duration {}", duration);
+      metrics.succeededRenewDelegationTokenRetrieved(duration);
     }
   }
 
@@ -1477,16 +1507,39 @@ public class TestRouterMetrics {
   }
 
   @Test
-  public void testCheckUserAccessToQueueRetrievedRetrieved() {
-    long totalGoodBefore = metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved();
+  public void testGetRMNodeLabelsRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetRMNodeLabelsRetrieved();
+    goodSubCluster.getRMNodeLabelsRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetRMNodeLabelsRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRMNodeLabelsRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetRMNodeLabelsRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetRMNodeLabelsRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetRMNodeLabelsRetrievedFailed() {
+    long totalBadBefore = metrics.getRMNodeLabelsFailedRetrieved();
+    badSubCluster.getRMNodeLabelsFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getRMNodeLabelsFailedRetrieved());
+  }
+
+  @Test
+  public void testCheckUserAccessToQueueRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededCheckUserAccessToQueueRetrieved();
     goodSubCluster.getCheckUserAccessToQueueRetrieved(150);
     Assert.assertEquals(totalGoodBefore + 1,
-        metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved());
+        metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
     Assert.assertEquals(150,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
     goodSubCluster.getCheckUserAccessToQueueRetrieved(300);
     Assert.assertEquals(totalGoodBefore + 2,
-        metrics.getNumSucceededCheckUserAccessToQueueRetrievedRetrieved());
+        metrics.getNumSucceededCheckUserAccessToQueueRetrieved());
     Assert.assertEquals(225,
         metrics.getLatencySucceededCheckUserAccessToQueueRetrieved(), ASSERT_DOUBLE_DELTA);
   }
@@ -1494,8 +1547,54 @@ public class TestRouterMetrics {
   @Test
   public void testCheckUserAccessToQueueRetrievedFailed() {
     long totalBadBefore = metrics.getCheckUserAccessToQueueFailedRetrieved();
-    badSubCluster.getCheckUserAccessToQueueRetrieved();
+    badSubCluster.getCheckUserAccessToQueueFailed();
     Assert.assertEquals(totalBadBefore + 1,
         metrics.getCheckUserAccessToQueueFailedRetrieved());
+  }
+
+  @Test
+  public void testGetDelegationTokenRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededGetDelegationTokenRetrieved();
+    goodSubCluster.getGetDelegationTokenRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededGetDelegationTokenRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededGetDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getGetDelegationTokenRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededGetDelegationTokenRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededGetDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testGetDelegationTokenRetrievedFailed() {
+    long totalBadBefore = metrics.getDelegationTokenFailedRetrieved();
+    badSubCluster.getDelegationTokenFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getDelegationTokenFailedRetrieved());
+  }
+
+  @Test
+  public void testRenewDelegationTokenRetrieved() {
+    long totalGoodBefore = metrics.getNumSucceededRenewDelegationTokenRetrieved();
+    goodSubCluster.getRenewDelegationTokenRetrieved(150);
+    Assert.assertEquals(totalGoodBefore + 1,
+        metrics.getNumSucceededRenewDelegationTokenRetrieved());
+    Assert.assertEquals(150,
+        metrics.getLatencySucceededRenewDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
+    goodSubCluster.getRenewDelegationTokenRetrieved(300);
+    Assert.assertEquals(totalGoodBefore + 2,
+        metrics.getNumSucceededRenewDelegationTokenRetrieved());
+    Assert.assertEquals(225,
+        metrics.getLatencySucceededRenewDelegationTokenRetrieved(), ASSERT_DOUBLE_DELTA);
+  }
+
+  @Test
+  public void testRenewDelegationTokenRetrievedFailed() {
+    long totalBadBefore = metrics.getRenewDelegationTokenFailedRetrieved();
+    badSubCluster.getRenewDelegationTokenFailed();
+    Assert.assertEquals(totalBadBefore + 1,
+        metrics.getRenewDelegationTokenFailedRetrieved());
   }
 }

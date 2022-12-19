@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
 /**
  * Implements the {@link RMAdminRequestInterceptor} interface and provides
@@ -30,6 +32,9 @@ public abstract class AbstractRMAdminRequestInterceptor
     implements RMAdminRequestInterceptor {
   private Configuration conf;
   private RMAdminRequestInterceptor nextInterceptor;
+
+  @SuppressWarnings("checkstyle:visibilitymodifier")
+  protected UserGroupInformation user = null;
 
   /**
    * Sets the {@link RMAdminRequestInterceptor} in the chain.
@@ -63,9 +68,10 @@ public abstract class AbstractRMAdminRequestInterceptor
    * Initializes the {@link RMAdminRequestInterceptor}.
    */
   @Override
-  public void init(String user) {
+  public void init(String userName) {
+    this.user = RouterServerUtil.setupUser(userName);
     if (this.nextInterceptor != null) {
-      this.nextInterceptor.init(user);
+      this.nextInterceptor.init(userName);
     }
   }
 
