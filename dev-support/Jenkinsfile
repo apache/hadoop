@@ -265,24 +265,18 @@ pipeline {
             steps {
                 withCredentials(getGithubCreds()) {                       
                        bat 'docker --version'
-                       bat 'docker image ls'
-                       bat 'docker container ls'
-                       bat 'docker system info'
-                       bat 'cd'
-                       bat 'dir .\\src'
 
-//                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
+                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
-//                        bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
+                       bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
+                       bat 'docker run --rm -v %WORKSPACE%\\src:C:\\src yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "C:\\src" "C:\\hadoop" "&&" "dir" "C:\\hadoop"'
 
-//                       bat '''
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "export DOCKER_BUILDKIT=0"
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "which docker"
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "docker --version"
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/jenkins.sh"
-//                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/jenkins.sh run_ci"
-//                       '''
+                       bat '''
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
+                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/jenkins.sh"
+                       '''
+
+//                       bat  'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/jenkins.sh run_ci"'
 
 
 //                     sh '''#!/usr/bin/env bash
