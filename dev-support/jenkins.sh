@@ -183,7 +183,7 @@ function run_ci() {
 #  YETUS_ARGS+=("--docker")
 #  YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
   YETUS_ARGS+=("--mvn-custom-repos")
-  YETUS_ARGS+=("--mvn-custom-repos-dir=/f/yetus/m2")
+  YETUS_ARGS+=("--mvn-custom-repos-dir=${MAVEN_REPO_DIR}")
 
   # effectively treat dev-suport as a custom maven module
   YETUS_ARGS+=("--skip-dirs=dev-support")
@@ -191,9 +191,7 @@ function run_ci() {
   # help keep the ASF boxes clean
   YETUS_ARGS+=("--sentinel")
 
-  # test with Java 8 and 11
-  YETUS_ARGS+=("--java-home=/f/jenkins/tools/java/latest18")
-  YETUS_ARGS+=("--multijdktests=compile")
+#  YETUS_ARGS+=("--multijdktests=compile")
 
   # custom javadoc goals
   YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
