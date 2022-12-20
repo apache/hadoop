@@ -57,6 +57,12 @@ public class ExponentialRetryPolicy {
   private static final double MAX_RANDOM_RATIO = 1.2;
 
   /**
+   * All status codes less than http 100 signify error
+   * and should qualify for retry.
+   */
+  private static final int HTTP_CONTINUE = 100;
+
+  /**
    *  Holds the random number generator used to calculate randomized backoff intervals
    */
   private final Random randRef = new Random();
@@ -126,7 +132,7 @@ public class ExponentialRetryPolicy {
    */
   public boolean shouldRetry(final int retryCount, final int statusCode) {
     return retryCount < this.retryCount
-        && (statusCode == -1
+        && (statusCode < HTTP_CONTINUE
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
             && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED

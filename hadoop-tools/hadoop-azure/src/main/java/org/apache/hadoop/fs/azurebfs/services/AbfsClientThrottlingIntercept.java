@@ -62,7 +62,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   // Hide default constructor
   private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
-    //Account name is kept as empty as same instance is shared across all accounts
+    //Account name is kept as empty as same instance is shared across all accounts.
     this.accountName = "";
     this.readThrottler = setAnalyzer("read", abfsConfiguration);
     this.writeThrottler = setAnalyzer("write", abfsConfiguration);

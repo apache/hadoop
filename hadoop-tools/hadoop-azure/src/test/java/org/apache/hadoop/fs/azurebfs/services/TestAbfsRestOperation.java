@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
+import org.apache.http.client.methods.HttpGet;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -61,6 +62,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 
 @RunWith(Parameterized.class)
 public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
@@ -68,11 +71,12 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   // Specifies whether getOutputStream() or write() throws IOException.
   public enum error {OUTPUTSTREAM, WRITE};
 
-  public static final int HTTP_EXPECTATION_FAILED = 417;
-  public static final int REDUCED_RETRY_COUNT = 2;
-  public static final int REDUCED_BACKOFF_INTERVAL = 100;
-  public static final int BUFFER_LENGTH = 5;
-  public static final int BUFFER_OFFSET = 0;
+  private static final int HTTP_EXPECTATION_FAILED = 417;
+  private static final int HTTP_ERROR = 0;
+  private static final int REDUCED_RETRY_COUNT = 2;
+  private static final int REDUCED_BACKOFF_INTERVAL = 100;
+  private static final int BUFFER_LENGTH = 5;
+  private static final int BUFFER_OFFSET = 0;
 
   // Specifies whether the expect header is enabled or not.
   @Parameterized.Parameter
@@ -90,11 +94,15 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   @Parameterized.Parameter(3)
   public error errorType;
 
+  // The intercept.
+  AbfsThrottlingIntercept intercept;
+
   /*
     HTTP_OK = 200,
     HTTP_UNAVAILABLE = 503,
     HTTP_NOT_FOUND = 404,
-    HTTP_EXPECTATION_FAILED = 417.
+    HTTP_EXPECTATION_FAILED = 417,
+    HTTP_ERROR = 0.
    */
   @Parameterized.Parameters(name = "expect={0}-code={1}-error={3}")
   public static Iterable<Object[]> params() {
@@ -103,7 +111,8 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         {false, HTTP_OK, "OK", error.WRITE},
         {true, HTTP_UNAVAILABLE, "ServerBusy", error.OUTPUTSTREAM},
         {true, HTTP_NOT_FOUND, "Resource Not Found", error.OUTPUTSTREAM},
-        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", error.OUTPUTSTREAM}
+        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", error.OUTPUTSTREAM},
+        {true, HTTP_ERROR, "Error", error.OUTPUTSTREAM}
     });
   }
 
@@ -143,10 +152,15 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         abfsConfiguration,
         REDUCED_RETRY_COUNT, REDUCED_BACKOFF_INTERVAL);
 
+    intercept = Mockito.mock(AbfsThrottlingIntercept.class);
+    Mockito.doNothing().when(intercept).updateMetrics(Mockito.any(), Mockito.any());
+
     // Gets the client.
-    AbfsClient testClient = TestAbfsClient.createTestClientFromCurrentContext(
+    AbfsClient testClient = Mockito.spy(TestAbfsClient.createTestClientFromCurrentContext(
         abfsClient,
-        abfsConfig);
+        abfsConfig));
+
+    Mockito.doReturn(intercept).when(testClient).getIntercept();
 
     // Expect header is enabled or not based on the parameter.
     AppendRequestParameters appendRequestParameters
@@ -294,6 +308,30 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .isEqualTo(0);
         Assertions.assertThat(httpOperation.getExpectedBytesToBeSent())
             .isEqualTo(BUFFER_LENGTH);
+
+        // Verifies that update Metrics call is made for throttle case and for the first without retry +
+        // for the retried cases as well.
+        Mockito.verify(intercept, times(REDUCED_RETRY_COUNT + 1))
+            .updateMetrics(Mockito.any(), Mockito.any());
+        break;
+      case HTTP_ERROR:
+        // In the case of 0 i.e. error case, we should retry.
+        intercept(IOException.class,
+            () -> op.execute(tracingContext));
+
+        // Assert that the request is retried based on reduced retry count configured.
+        Assertions.assertThat(tracingContext.getRetryCount())
+            .describedAs("The retry count is incorrect")
+            .isEqualTo(REDUCED_RETRY_COUNT);
+
+        // Assert that metrics will be updated correctly.
+        Assertions.assertThat(httpOperation.getBytesSent())
+            .isEqualTo(0);
+
+        // Verifies that update Metrics call is made for error case and for the first without retry +
+        // for the retried cases as well.
+        Mockito.verify(intercept, times(REDUCED_RETRY_COUNT + 1))
+            .updateMetrics(Mockito.any(), Mockito.any());
         break;
       case HTTP_NOT_FOUND:
       case HTTP_EXPECTATION_FAILED:
@@ -305,6 +343,10 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         Assertions.assertThat(tracingContext.getRetryCount())
             .describedAs("The retry count is incorrect")
             .isEqualTo(0);
+
+        // Verifies that update Metrics call is not made for user error case.
+        Mockito.verify(intercept, never())
+            .updateMetrics(Mockito.any(), Mockito.any());
         break;
       default:
         break;

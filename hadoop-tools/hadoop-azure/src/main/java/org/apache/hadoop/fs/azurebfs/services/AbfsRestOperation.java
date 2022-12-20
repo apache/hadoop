@@ -229,7 +229,8 @@ public class AbfsRestOperation {
       }
     }
 
-    if (result.getStatusCode() >= HttpURLConnection.HTTP_BAD_REQUEST) {
+    int status = result.getStatusCode();
+    if (status < HttpURLConnection.HTTP_OK || status >= HttpURLConnection.HTTP_BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
