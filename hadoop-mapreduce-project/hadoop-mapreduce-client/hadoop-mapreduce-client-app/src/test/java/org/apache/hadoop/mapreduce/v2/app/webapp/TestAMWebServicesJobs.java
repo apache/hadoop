@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
-import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -50,7 +49,6 @@ import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
-import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -262,7 +260,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -290,7 +288,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -314,7 +312,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -338,7 +336,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       String msg = response.getEntity(String.class);
@@ -378,7 +376,7 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
+      WebServicesTestUtils.assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
       assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
