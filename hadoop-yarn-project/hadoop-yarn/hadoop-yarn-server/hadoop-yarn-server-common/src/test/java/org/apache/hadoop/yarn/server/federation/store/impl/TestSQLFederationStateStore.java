@@ -143,8 +143,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     }
   }
 
-  private ReservationHomeSC addReservationHomeSubCluster(
-      SQLFederationStateStore sqlFederationStateStore, String procedure,
+  private ReservationHomeSC addReservationHomeSubCluster(String procedure,
       String reservationId, String subHomeClusterId) throws SQLException, YarnException {
     // procedure call parameter preparation
     CallableStatement cstmt = sqlFederationStateStore.getCallableStatement(procedure);
@@ -166,8 +165,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     return new ReservationHomeSC(reservationId, dbStoredHomeSubCluster, dbRowCount);
   }
 
-  private ReservationHomeSC getReservationHomeSubCluster(
-      SQLFederationStateStore sqlFederationStateStore, String procedure,
+  private ReservationHomeSC getReservationHomeSubCluster(String procedure,
       String reservationId) throws SQLException, YarnException {
 
     // procedure call parameter preparation
@@ -188,8 +186,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     return new ReservationHomeSC(reservationId, dBSubClusterHomeId, 0);
   }
 
-  private List<ReservationHomeSC> getReservationsHomeSubCluster(
-      SQLFederationStateStore sqlFederationStateStore, String procedure)
+  private List<ReservationHomeSC> getReservationsHomeSubCluster(String procedure)
       throws SQLException, IOException, YarnException {
 
     List<ReservationHomeSC> results = new ArrayList<>();
@@ -215,8 +212,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     return results;
   }
 
-  private ReservationHomeSC updateReservationHomeSubCluster(
-      SQLFederationStateStore sqlFederationStateStore, String procedure,
+  private ReservationHomeSC updateReservationHomeSubCluster(String procedure,
       String reservationId, String subHomeClusterId)
       throws SQLException, IOException {
 
@@ -240,8 +236,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     return new ReservationHomeSC(reservationId, subHomeClusterId, rowCount);
   }
 
-  private ReservationHomeSC deleteReservationHomeSubCluster(
-      SQLFederationStateStore sqlFederationStateStore, String procedure,
+  private ReservationHomeSC deleteReservationHomeSubCluster(String procedure,
       String reservationId) throws SQLException {
     // procedure call parameter preparation
     CallableStatement cstmt = sqlFederationStateStore.getCallableStatement(procedure);
@@ -280,7 +275,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId = "SC-1";
-    ReservationHomeSC resultHC = addReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId.toString(), subHomeClusterId);
 
     // validation results
@@ -308,11 +303,11 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId = "SC-1";
-    addReservationHomeSubCluster(sqlFederationStateStore,
+    addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId.toString(), subHomeClusterId);
 
     // Call getReservationHomeSubCluster to get the result
-    ReservationHomeSC resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = getReservationHomeSubCluster(
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId.toString());
 
     assertNotNull(resultHC);
@@ -341,17 +336,17 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // add 1st record
     ReservationId reservationId1 = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId1 = "SC-1";
-    addReservationHomeSubCluster(sqlFederationStateStore,
+    addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER,  reservationId1.toString(),  subHomeClusterId1);
 
     // add 2nd record
     ReservationId reservationId2 = ReservationId.newInstance(Time.now(), 2);
     String subHomeClusterId2 = "SC-2";
-    addReservationHomeSubCluster(sqlFederationStateStore,
+    addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER,  reservationId2.toString(),  subHomeClusterId2);
 
     List<ReservationHomeSC> reservationHomeSubClusters = getReservationsHomeSubCluster(
-        sqlFederationStateStore, CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER);
+        CALL_SP_GET_RESERVATIONS_HOME_SUBCLUSTER);
 
     assertNotNull(reservationHomeSubClusters);
     assertEquals(2, reservationHomeSubClusters.size());
@@ -390,11 +385,11 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId = "SC-1";
-    addReservationHomeSubCluster(sqlFederationStateStore,
+    addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId.toString(), subHomeClusterId);
 
     // verify that the subHomeClusterId corresponding to reservationId is SC-1
-    ReservationHomeSC resultHC = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = getReservationHomeSubCluster(
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId.toString());
     assertNotNull(resultHC);
     assertEquals(subHomeClusterId, resultHC.subHomeClusterId);
@@ -402,14 +397,14 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // prepare to update parameters
     String newSubHomeClusterId = "SC-2";
     ReservationHomeSC reservationHomeSubCluster =
-        updateReservationHomeSubCluster(sqlFederationStateStore,
+        updateReservationHomeSubCluster(
         CALL_SP_UPDATE_RESERVATION_HOME_SUBCLUSTER, reservationId.toString(), newSubHomeClusterId);
 
     assertNotNull(reservationHomeSubCluster);
     assertEquals(1, reservationHomeSubCluster.dbUpdateCount);
 
     // verify that the subHomeClusterId corresponding to reservationId is SC-2
-    ReservationHomeSC resultHC2 = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC2 = getReservationHomeSubCluster(
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId.toString());
     assertNotNull(resultHC2);
     assertEquals(newSubHomeClusterId, resultHC2.subHomeClusterId);
@@ -437,18 +432,18 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
     String subHomeClusterId = "SC-1";
-    addReservationHomeSubCluster(sqlFederationStateStore,
+    addReservationHomeSubCluster(
         CALL_SP_ADD_RESERVATION_HOME_SUBCLUSTER, reservationId.toString(), subHomeClusterId);
 
     // call the delete method of the reservation
-    ReservationHomeSC resultHC = deleteReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC = deleteReservationHomeSubCluster(
         CALL_SP_DELETE_RESERVATION_HOME_SUBCLUSTER, reservationId.toString());
 
     assertNotNull(resultHC);
     assertEquals(1, resultHC.dbUpdateCount);
 
     // call getReservationHomeSubCluster to get the result
-    ReservationHomeSC resultHC1 = getReservationHomeSubCluster(sqlFederationStateStore,
+    ReservationHomeSC resultHC1 = getReservationHomeSubCluster(
         CALL_SP_GET_RESERVATION_HOME_SUBCLUSTER, reservationId.toString());
     assertNotNull(resultHC1);
     assertEquals(null, resultHC1.subHomeClusterId);

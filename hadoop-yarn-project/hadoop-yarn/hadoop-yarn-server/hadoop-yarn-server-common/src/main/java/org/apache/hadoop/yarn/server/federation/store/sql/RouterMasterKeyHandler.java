@@ -40,7 +40,7 @@ public class RouterMasterKeyHandler implements ResultSetHandler<RouterMasterKey>
   public RouterMasterKey handle(Object... params) throws SQLException {
     RouterMasterKey routerMasterKey = Records.newRecord(RouterMasterKey.class);
     for (Object param : params) {
-      if (param != null && param instanceof FederationSQLOutParameter) {
+      if (param instanceof FederationSQLOutParameter) {
         FederationSQLOutParameter parameter = (FederationSQLOutParameter) param;
         String paramName = parameter.getParamName();
         Object parmaValue = parameter.getValue();

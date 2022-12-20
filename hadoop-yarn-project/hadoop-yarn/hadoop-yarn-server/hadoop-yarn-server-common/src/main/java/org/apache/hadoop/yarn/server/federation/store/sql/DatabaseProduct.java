@@ -113,7 +113,8 @@ public final class DatabaseProduct {
       }
       break;
     case SQLSERVER:
-      if ((ex.getErrorCode() == 2627 || ex.getErrorCode() == 2601) && "23000".equals(ex.getSQLState())) {
+      if ((ex.getErrorCode() == 2627 || ex.getErrorCode() == 2601)
+          && "23000".equals(ex.getSQLState())) {
         return true;
       }
       break;

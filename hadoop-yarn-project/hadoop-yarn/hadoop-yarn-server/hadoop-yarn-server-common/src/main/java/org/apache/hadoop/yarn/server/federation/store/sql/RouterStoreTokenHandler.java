@@ -42,7 +42,7 @@ public class RouterStoreTokenHandler implements ResultSetHandler<RouterStoreToke
   public RouterStoreToken handle(Object... params) throws SQLException {
     RouterStoreToken storeToken = Records.newRecord(RouterStoreToken.class);
     for (Object param : params) {
-      if (param != null && param instanceof FederationSQLOutParameter) {
+      if (param instanceof FederationSQLOutParameter) {
         FederationSQLOutParameter parameter = (FederationSQLOutParameter) param;
         String paramName = parameter.getParamName();
         Object parmaValue = parameter.getValue();

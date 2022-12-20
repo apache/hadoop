@@ -196,9 +196,16 @@ public class FederationQueryRunner {
   }
 
   /**
+   * We query or update the SequenceTable.
    *
-   * @param connection
-   * @param sequenceName
+   * @param connection database conn.
+   * @param sequenceName sequenceName, We currently have 2 sequences,
+   * YARN_ROUTER_SEQUENCE_NUM and YARN_ROUTER_CURRENT_KEY_ID.
+   * @param isUpdate true, means we will update the SequenceTable,
+   * false, we query the SequenceTable.
+   *
+   * @return SequenceValue.
+   * @throws SQLException An exception occurred when calling a stored procedure.
    */
   public int selectOrUpdateSequenceTable(Connection connection, String sequenceName,
       boolean isUpdate) throws SQLException {
@@ -234,7 +241,7 @@ public class FederationQueryRunner {
             if (isDuplicateKeyError(dbType, e)) {
               continue;
             }
-            LOG.error("Unable to insert into SEQUENCE_TABLE for {}.", e);
+            LOG.error("Unable to insert into SEQUENCE_TABLE for {}.", sequenceName, e);
             throw e;
           } finally {
             close(statement);
@@ -257,7 +264,7 @@ public class FederationQueryRunner {
       committed = true;
       return maxSequenceValue;
     } catch (Exception e) {
-      throw new SQLException("Unable to selectOrUpdateSequenceTable due to: " + e.getMessage());
+      throw new SQLException("Unable to selectOrUpdateSequenceTable due to: " + e.getMessage(), e);
     } finally {
       if (!committed) {
         rollbackDBConn(connection);

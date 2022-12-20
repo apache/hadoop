@@ -38,7 +38,7 @@ public class RowCountHandler implements ResultSetHandler<Integer> {
   public Integer handle(Object... params) throws SQLException {
     Integer result = 0;
     for (Object param : params) {
-      if (param != null && param instanceof FederationSQLOutParameter) {
+      if (param instanceof FederationSQLOutParameter) {
         FederationSQLOutParameter parameter = (FederationSQLOutParameter) param;
         String paramName = parameter.getParamName();
         Object parmaValue = parameter.getValue();

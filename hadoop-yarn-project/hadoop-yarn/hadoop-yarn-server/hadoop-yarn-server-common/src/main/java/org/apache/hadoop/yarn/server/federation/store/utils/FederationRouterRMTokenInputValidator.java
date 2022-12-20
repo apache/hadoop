@@ -19,10 +19,10 @@ package org.apache.hadoop.yarn.server.federation.store.utils;
 
 import org.apache.hadoop.yarn.security.client.YARNDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
-import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
