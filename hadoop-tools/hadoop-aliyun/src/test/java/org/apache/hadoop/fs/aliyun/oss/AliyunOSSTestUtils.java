@@ -21,16 +21,10 @@ package org.apache.hadoop.fs.aliyun.oss;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.Path;
 import org.junit.internal.AssumptionViolatedException;
 
-import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
-import java.security.DigestOutputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 /**
  * Utility class for Aliyun OSS Tests.
