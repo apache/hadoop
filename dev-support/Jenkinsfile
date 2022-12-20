@@ -266,6 +266,7 @@ pipeline {
                 withCredentials(getGithubCreds()) {                       
                        bat 'docker --version'
 
+                       bat 'if exist %WORKSPACE%\\out del /s /q %WORKSPACE%\\out'
                        bat 'mkdir %WORKSPACE%\\out'
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
