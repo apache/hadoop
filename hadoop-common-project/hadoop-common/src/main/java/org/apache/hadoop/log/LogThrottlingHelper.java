@@ -314,6 +314,13 @@ public class LogThrottlingHelper {
     }
   }
 
+  @VisibleForTesting
+  public void reset() {
+    primaryRecorderName = null;
+    currentLogs.clear();
+    lastLogTimestampMs = Long.MIN_VALUE;
+  }
+
   /**
    * A standard log action which keeps track of all of the values which have
    * been logged. This is also used for internal bookkeeping via its private
