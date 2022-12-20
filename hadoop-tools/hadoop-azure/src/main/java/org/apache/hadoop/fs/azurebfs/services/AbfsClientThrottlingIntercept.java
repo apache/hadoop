@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
  * throughput by minimizing errors.  The errors occur when the account ingress
@@ -115,6 +117,18 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
   }
 
   /**
+   * Updates the metrics for the case when getOutputStream() caught an IOException
+   * and response code signifies throttling.
+   * @param isThrottledOperation returns true if status code is HTTP_UNAVAILABLE
+   * @param abfsHttpOperation Used for status code and data transferred.
+   * @return
+   */
+  private boolean updateBytesTransferred(boolean isThrottledOperation,
+      AbfsHttpOperation abfsHttpOperation) {
+    return isThrottledOperation && abfsHttpOperation.getExpectedBytesSent() > 0;
+  }
+
+  /**
    * Updates the metrics for successful and failed read and write operations.
    * @param operationType Only applicable for read and write operations.
    * @param abfsHttpOperation Used for status code and data transferred.
@@ -134,9 +148,16 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
     boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
         || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
+    boolean isThrottledOperation = (status == HTTP_UNAVAILABLE);
+
     switch (operationType) {
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
+        if (contentLength == 0) {
+          if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
+            contentLength = abfsHttpOperation.getExpectedBytesSent();
+          }
+        }
         if (contentLength > 0) {
           writeThrottler.addBytesTransferred(contentLength,
               isFailedOperation);

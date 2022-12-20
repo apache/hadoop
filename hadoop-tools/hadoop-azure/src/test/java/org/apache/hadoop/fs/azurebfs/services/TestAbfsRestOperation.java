@@ -35,6 +35,7 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
@@ -255,6 +256,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   public void testExpectHundredContinue() throws Exception {
     // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
+    AbfsHttpOperation httpOperation = op.getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
@@ -265,11 +267,14 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // which is caught and exponential retry logic comes into place.
       intercept(IOException.class,
           () -> op.execute(tracingContext));
-
       // Assert that the request is retried based on reduced retry count configured.
       Assertions.assertThat(tracingContext.getRetryCount())
           .describedAs("The retry count is incorrect")
-          .isEqualTo(2);
+          .isEqualTo(REDUCED_RETRY_COUNT);
+      Assertions.assertThat(httpOperation.getBytesSent())
+          .isEqualTo(5);
+      Assertions.assertThat(httpOperation.getExpectedBytesSent())
+          .isEqualTo(0);
       break;
     case OUTPUTSTREAM:
       switch (responseCode) {
@@ -280,10 +285,15 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         // Assert that the request is retried based on reduced retry count configured.
         Assertions.assertThat(tracingContext.getRetryCount())
             .describedAs("The retry count is incorrect")
-            .isEqualTo(2);
+            .isEqualTo(REDUCED_RETRY_COUNT);
+        // Assert that metrics will be updated correctly
+        Assertions.assertThat(httpOperation.getBytesSent())
+            .isEqualTo(0);
+        Assertions.assertThat(httpOperation.getExpectedBytesSent())
+            .isEqualTo(5);
         break;
-      case 404:
-      case 417:
+      case HTTP_NOT_FOUND:
+      case HTTP_EXPECTATION_FAILED:
         // In the case of 4xx error. i.e. user error, retry should not happen.
         intercept(AzureBlobFileSystemException.class,
             () -> op.execute(tracingContext));
@@ -301,5 +311,3 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     }
   }
 }
-
-

@@ -28,7 +28,6 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -77,6 +76,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   // metrics
   private int bytesSent;
+  private int expectedBytesSent;
   private long bytesReceived;
 
   // optional trace enabled metrics
@@ -161,6 +161,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public int getBytesSent() {
     return bytesSent;
+  }
+
+  public int getExpectedBytesSent() {
+    return expectedBytesSent;
   }
 
   public long getBytesReceived() {
@@ -327,10 +331,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       try {
         outputStream = this.connection.getOutputStream();
       } catch (IOException e) {
-        // If getOutputStream fails with an exception and 100-continue
-        // is enabled, we return back without throwing an exception
-        // because processResponse will give the correct status code
-        // based on which the retry logic will come into place.
+        // If getOutputStream fails with an exception and expect header
+        // is enabled, we return back without throwing an exception to
+        // the caller. The caller is responsible for setting the correct status code.
+        // If expect header is not enabled, we throw back the exception.
+        this.expectedBytesSent = length;
         String expectHeader = this.connection.getRequestProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
           return;
@@ -338,16 +343,19 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
           throw e;
         }
       }
-      // This will normally throw an IOException.
+      // update bytes sent for successful as well as failed attempts via the
+      // accompanying statusCode.
+      this.bytesSent = length;
+
+      // If this fails with or without expect header enabled,
+      // it throws an IOException.
       outputStream.write(buffer, offset, length);
     } finally {
       // Closing the opened output stream
       if (outputStream != null) {
         outputStream.close();
       }
-      // update bytes sent for successful as well as failed attempts via the
-      // accompanying statusCode.
-      this.bytesSent = length;
+
       if (this.isTraceEnabled) {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }
@@ -459,7 +467,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    *
    * @throws IOException if an error occurs.
    */
-  HttpURLConnection openConnection() throws IOException {
+  private HttpURLConnection openConnection() throws IOException {
     if (!isTraceEnabled) {
       return (HttpURLConnection) url.openConnection();
     }
