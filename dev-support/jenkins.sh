@@ -23,6 +23,8 @@
 # Hadoop builds across the supported platforms whenever there's a change
 # in any of the C/C++ files, C/C++ build files or platform changes.
 
+set -x
+
 ## @description  Check if the given extension is related to C/C++
 ## @param        seeking
 ## @return       0 if yes
@@ -200,7 +202,6 @@ function run_ci() {
   YETUS_ARGS+=("--github-use-emoji-vote")
   YETUS_ARGS+=("--debug")
 
-  set -x
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
 
