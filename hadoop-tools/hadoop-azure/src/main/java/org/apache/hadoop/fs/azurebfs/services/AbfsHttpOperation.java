@@ -23,11 +23,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -76,7 +78,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
 
   // metrics
   private int bytesSent;
-  private int expectedBytesSent;
+  private int expectedBytesToBeSent;
   private long bytesReceived;
 
   // optional trace enabled metrics
@@ -163,8 +165,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return bytesSent;
   }
 
-  public int getExpectedBytesSent() {
-    return expectedBytesSent;
+  public int getExpectedBytesToBeSent() {
+    return expectedBytesToBeSent;
   }
 
   public long getBytesReceived() {
@@ -327,19 +329,30 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       startTime = System.nanoTime();
     }
     OutputStream outputStream = null;
+    // Updates the expected bytes to be sent based on length.
+    this.expectedBytesToBeSent = length;
     try {
       try {
+        /* Without expect header enabled, if getOutputStream() throws
+           an exception, it gets caught by the restOperation. But with
+           expect header enabled we return back without throwing an exception
+           for the correct response code processing.
+         */
         outputStream = this.connection.getOutputStream();
       } catch (IOException e) {
-        // If getOutputStream fails with an exception and expect header
-        // is enabled, we return back without throwing an exception to
-        // the caller. The caller is responsible for setting the correct status code.
-        // If expect header is not enabled, we throw back the exception.
-        this.expectedBytesSent = length;
+        /* If getOutputStream fails with an exception and expect header
+           is enabled, we return back without throwing an exception to
+           the caller. The caller is responsible for setting the correct status code.
+           If expect header is not enabled, we throw back the exception.
+         */
         String expectHeader = this.connection.getRequestProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
+          LOG.debug("Getting output stream failed with expect header enabled, returning back "
+                  + ExceptionUtils.getStackTrace(e));
           return;
         } else {
+          LOG.debug("Getting output stream failed without expect header enabled, throwing exception "
+                  + ExceptionUtils.getStackTrace(e));
           throw e;
         }
       }
@@ -355,7 +368,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       if (outputStream != null) {
         outputStream.close();
       }
-
       if (this.isTraceEnabled) {
         this.sendRequestTimeMs = elapsedTimeMs(startTime);
       }

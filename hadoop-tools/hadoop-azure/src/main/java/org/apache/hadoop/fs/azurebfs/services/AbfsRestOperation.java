@@ -326,11 +326,12 @@ public class AbfsRestOperation {
       return false;
     } finally {
       int status = httpOperation.getStatusCode();
-      // If httpStatusCode lies in the range of 400 to 500, it signifies user error.
-      boolean userError = (status >= HttpURLConnection.HTTP_BAD_REQUEST
-          && status < HttpURLConnection.HTTP_INTERNAL_ERROR);
-      // We should not update the metrics for user error cases.
-      if (!userError) {
+      // If the socket is terminated prior to receiving a response, the HTTP
+      // status may be 0 or -1.  A status less than 300 (2xx range) or greater than or equal
+      // to 500 (5xx range) should contribute to metrics updation.
+      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
+              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
+      if (updateMetricsResponseCode) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }

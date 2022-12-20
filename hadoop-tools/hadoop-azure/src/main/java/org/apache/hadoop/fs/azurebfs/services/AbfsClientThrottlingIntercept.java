@@ -125,7 +125,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    */
   private boolean updateBytesTransferred(boolean isThrottledOperation,
       AbfsHttpOperation abfsHttpOperation) {
-    return isThrottledOperation && abfsHttpOperation.getExpectedBytesSent() > 0;
+    return isThrottledOperation && abfsHttpOperation.getExpectedBytesToBeSent() > 0;
   }
 
   /**
@@ -148,14 +148,20 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
     boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
         || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
 
+    // If status code is 503, it considered a throttled operation.
     boolean isThrottledOperation = (status == HTTP_UNAVAILABLE);
 
     switch (operationType) {
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
         if (contentLength == 0) {
+          /*
+            Signifies the case where we could not update the bytesSent due to
+            throttling but there were some expectedBytesToBeSent.
+           */
           if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
-            contentLength = abfsHttpOperation.getExpectedBytesSent();
+            LOG.debug("Updating metrics due to throttling");
+            contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
           }
         }
         if (contentLength > 0) {
