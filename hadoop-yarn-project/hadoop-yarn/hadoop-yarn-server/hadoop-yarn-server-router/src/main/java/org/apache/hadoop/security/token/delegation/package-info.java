@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +16,5 @@
  * limitations under the License.
  */
 
--- Script to drop all the tables from the Federation StateStore in MySQL
-
-USE FederationStateStore
-
-DROP TABLE applicationsHomeSubCluster;
-
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
+/** Router security token delegation. **/
+package org.apache.hadoop.security.token.delegation;

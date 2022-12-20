@@ -16,22 +16,15 @@
  * limitations under the License.
  */
 
--- Script to drop all the tables from the Federation StateStore in MySQL
+package org.apache.hadoop.yarn.server.federation.store.sql;
 
-USE FederationStateStore
+import java.sql.SQLException;
 
-DROP TABLE applicationsHomeSubCluster;
-
-DROP TABLE membership;
-
-DROP TABLE policies;
-
-DROP TABLE reservationsHomeSubCluster;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
-
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
+/**
+ * Result Set Handler.
+ *
+ * @param <T> Generic T.
+ */
+public interface ResultSetHandler<T> {
+  T handle(Object... params) throws SQLException;
+}
