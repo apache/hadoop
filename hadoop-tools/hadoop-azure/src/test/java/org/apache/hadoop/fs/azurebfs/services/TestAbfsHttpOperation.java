@@ -18,16 +18,13 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 
@@ -115,4 +112,5 @@ public class TestAbfsHttpOperation {
                 + "be: " + expectedMaskedEncodedUrl)
         .isEqualTo(expectedMaskedEncodedUrl);
   }
+
 }

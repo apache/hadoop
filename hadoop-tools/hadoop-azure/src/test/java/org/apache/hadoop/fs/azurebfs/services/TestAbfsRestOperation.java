@@ -35,7 +35,6 @@ import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.Abfs;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
@@ -45,7 +44,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
-import org.apache.http.client.methods.HttpGet;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
@@ -73,6 +71,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
   private static final int HTTP_EXPECTATION_FAILED = 417;
   private static final int HTTP_ERROR = 0;
+  private static final int ZERO = 0;
   private static final int REDUCED_RETRY_COUNT = 2;
   private static final int REDUCED_BACKOFF_INTERVAL = 100;
   private static final int BUFFER_LENGTH = 5;
@@ -305,7 +304,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
         // Assert that metrics will be updated correctly.
         Assertions.assertThat(httpOperation.getBytesSent())
-            .isEqualTo(0);
+            .isEqualTo(ZERO);
         Assertions.assertThat(httpOperation.getExpectedBytesToBeSent())
             .isEqualTo(BUFFER_LENGTH);
 
@@ -315,7 +314,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .updateMetrics(Mockito.any(), Mockito.any());
         break;
       case HTTP_ERROR:
-        // In the case of 0 i.e. error case, we should retry.
+        // In the case of http status code 0 i.e. error case, we should retry.
         intercept(IOException.class,
             () -> op.execute(tracingContext));
 
@@ -326,7 +325,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
         // Assert that metrics will be updated correctly.
         Assertions.assertThat(httpOperation.getBytesSent())
-            .isEqualTo(0);
+            .isEqualTo(ZERO);
 
         // Verifies that update Metrics call is made for error case and for the first without retry +
         // for the retried cases as well.
@@ -342,7 +341,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         // Assert that the request is not retried.
         Assertions.assertThat(tracingContext.getRetryCount())
             .describedAs("The retry count is incorrect")
-            .isEqualTo(0);
+            .isEqualTo(ZERO);
 
         // Verifies that update Metrics call is not made for user error case.
         Mockito.verify(intercept, never())
