@@ -2206,7 +2206,25 @@ public abstract class Server {
           AUDITLOG.warn(AUTH_FAILED_FOR + this.toString() + ":"
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
-          throw tce;
+          if (!UserGroupInformation.getLoginUser().isLoginSuccess()) {
+            LOG.info("Initiating re-login from IPC Server");
+            if (UserGroupInformation.isLoginKeytabBased()) {
+              UserGroupInformation.getLoginUser().reloginFromKeytab();
+            } else if (UserGroupInformation.isLoginTicketBased()) {
+              UserGroupInformation.getLoginUser().reloginFromTicketCache();
+            }
+            try {
+              // try processing message again
+              saslResponse = processSaslMessage(saslMessage);
+              AUDITLOG.info("Retry " + AUTH_SUCCESSFUL_FOR + this.toString()
+                  + ":" + attemptingUser + " after failure");
+            } catch (IOException exp) {
+              tce = (IOException) getTrueCause(e);
+              throw tce;
+            }
+          } else {
+            throw tce;
+          }
         }
         
         if (saslServer != null && saslServer.isComplete()) {

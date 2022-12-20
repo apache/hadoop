@@ -529,6 +529,13 @@ public class UserGroupInformation {
     user.setLogin(login);
   }
 
+  /** This method is only helpful for HadoopLoginContext*/
+  public boolean isLoginSuccess() {
+    LoginContext login = user.getLogin();
+    return (login instanceof HadoopLoginContext)
+        ? ((HadoopLoginContext) login).isLoginSuccess() : true;
+  }
+
   /**
    * Set the last login time for logged in user
    * @param loginTime the number of milliseconds since the beginning of time
@@ -2081,6 +2088,10 @@ public class UserGroupInformation {
       super(appName, subject, null, conf);
       this.appName = appName;
       this.conf = conf;
+    }
+
+    public boolean isLoginSuccess() {
+      return isLoggedIn.get();
     }
 
     String getAppName() {
