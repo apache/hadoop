@@ -156,7 +156,7 @@ function run_ci() {
   # changing these to higher values may cause problems
   # with other jobs on systemd-enabled machines
   YETUS_ARGS+=("--proclimit=5500")
-  YETUS_ARGS+=("--dockermemlimit=22g")
+#  YETUS_ARGS+=("--dockermemlimit=22g")
 
   # -1 spotbugs issues that show up prior to the patch being applied
   YETUS_ARGS+=("--spotbugs-strict-precheck")
@@ -177,8 +177,8 @@ function run_ci() {
 
   # run in docker mode and specifically point to our
   # Dockerfile since we don't want to use the auto-pulled version.
-  YETUS_ARGS+=("--docker")
-  YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
+#  YETUS_ARGS+=("--docker")
+#  YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
   YETUS_ARGS+=("--mvn-custom-repos")
   YETUS_ARGS+=("--mvn-custom-repos-dir=/f/yetus/m2")
 
@@ -200,7 +200,6 @@ function run_ci() {
   YETUS_ARGS+=("--github-use-emoji-vote")
   YETUS_ARGS+=("--debug")
 
-  echo "DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
   set -x
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
