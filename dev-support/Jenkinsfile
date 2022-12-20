@@ -270,7 +270,7 @@ pipeline {
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
 
                        bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
-                       bat 'docker run --rm -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v %PATCHDIR%:C:\\out -e SOURCEDIR=C:\\hadoop -e PATCHDIR=C:\\out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"${SOURCEDIR}/dev-support/jenkins.sh" "run_ci"\''
+                       bat 'docker run --rm -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v %PATCHDIR%:C:\\out -e SOURCEDIR=C:\\hadoop -e PATCHDIR=C:\\out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-x" "-c" \'"${SOURCEDIR}/dev-support/jenkins.sh" "run_ci"\''
 
                        bat '''
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
