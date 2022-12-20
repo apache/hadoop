@@ -77,5 +77,7 @@ RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
 
+RUN git config --global core.longpaths true
+
 # Define the entry point for the docker container.
 ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe"]
