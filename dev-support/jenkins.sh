@@ -134,6 +134,7 @@ function run_ci() {
     exit 0
   fi
 
+  YETUS_ARGS+=("--empty-patch")
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
   # where the source is located
