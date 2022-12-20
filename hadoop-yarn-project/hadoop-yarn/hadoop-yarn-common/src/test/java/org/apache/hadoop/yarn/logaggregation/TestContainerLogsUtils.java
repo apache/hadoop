@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileCo
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * This class contains several utility functions for log aggregation tests.
  */
@@ -73,12 +75,12 @@ public final class TestContainerLogsUtils {
     if (fs.exists(rootLogDirPath)) {
       fs.delete(rootLogDirPath, true);
     }
-    fs.mkdirs(rootLogDirPath);
+    assertThat(fs.mkdirs(rootLogDirPath)).isTrue();
     Path appLogsDir = new Path(rootLogDirPath, appId.toString());
     if (fs.exists(appLogsDir)) {
       fs.delete(appLogsDir, true);
     }
-    fs.mkdirs(appLogsDir);
+    assertThat(fs.mkdirs(appLogsDir)).isTrue();
     createContainerLogInLocalDir(appLogsDir, containerToContent, fs, fileName);
     // upload container logs to remote log dir
 
@@ -92,7 +94,7 @@ public final class TestContainerLogsUtils {
     if (fs.exists(path) && deleteRemoteLogDir) {
       fs.delete(path, true);
     }
-    fs.mkdirs(path);
+    assertThat(fs.mkdirs(path)).isTrue();
     uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId, appId,
         containerToContent.keySet(), path);
   }
@@ -108,7 +110,7 @@ public final class TestContainerLogsUtils {
       if (fs.exists(containerLogsDir)) {
         fs.delete(containerLogsDir, true);
       }
-      fs.mkdirs(containerLogsDir);
+      assertThat(fs.mkdirs(containerLogsDir)).isTrue();
       Writer writer =
           new FileWriter(new File(containerLogsDir.toString(), fileName));
       writer.write(content);
