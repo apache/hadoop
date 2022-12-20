@@ -53,6 +53,17 @@ public abstract class RefreshNodesRequest {
     return request;
   }
 
+  @Private
+  @Unstable
+  public static RefreshNodesRequest newInstance(
+      DecommissionType decommissionType, Integer timeout, String subClusterId) {
+    RefreshNodesRequest request = Records.newRecord(RefreshNodesRequest.class);
+    request.setDecommissionType(decommissionType);
+    request.setDecommissionTimeout(timeout);
+    request.setSubClusterId(subClusterId);
+    return request;
+  }
+
   /**
    * Set the DecommissionType.
    * 
@@ -80,4 +91,18 @@ public abstract class RefreshNodesRequest {
    * @return decommissionTimeout
    */
   public abstract Integer getDecommissionTimeout();
+
+  /**
+   * Get the subClusterId.
+   *
+   * @return subClusterId.
+   */
+  public abstract String getSubClusterId();
+
+  /**
+   * Set the subClusterId.
+   *
+   * @param subClusterId subCluster Id.
+   */
+  public abstract void setSubClusterId(String subClusterId);
 }

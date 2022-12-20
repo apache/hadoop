@@ -138,7 +138,6 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.statistics.IOStatistics;
-import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -459,6 +458,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AuditSpan span = null;
     try {
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
+      if (LOG.isTraceEnabled()) {
+        // log a full trace for deep diagnostics of where an object is created,
+        // for tracking down memory leak issues.
+        LOG.trace("Filesystem for {} created; fs.s3a.impl.disable.cache = {}",
+            name, originalConf.getBoolean("fs.s3a.impl.disable.cache", false),
+            new RuntimeException(super.toString()));
+      }
       // clone the configuration into one with propagated bucket options
       Configuration conf = propagateBucketOptions(originalConf, bucket);
       // HADOOP-17894. remove references to s3a stores in JCEKS credentials.
@@ -3999,22 +4005,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
     isClosed = true;
     LOG.debug("Filesystem {} is closed", uri);
-    if (getConf() != null) {
-      String iostatisticsLoggingLevel =
-          getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
-              IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
-      logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
-    }
     try {
       super.close();
     } finally {
       stopAllServices();
-    }
-    // Log IOStatistics at debug.
-    if (LOG.isDebugEnabled()) {
-      // robust extract and convert to string
-      LOG.debug("Statistics for {}: {}", uri,
-          IOStatisticsLogging.ioStatisticsToPrettyString(getIOStatistics()));
+      // log IO statistics, including of any file deletion during
+      // superclass close
+      if (getConf() != null) {
+        String iostatisticsLoggingLevel =
+            getConf().getTrimmed(IOSTATISTICS_LOGGING_LEVEL,
+                IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
+        logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
+      }
     }
   }
 

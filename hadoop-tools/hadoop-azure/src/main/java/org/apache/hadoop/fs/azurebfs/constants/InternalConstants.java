@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,10 +16,31 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.fs.azurebfs.constants;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
- * Package org.apache.hadoop.server.util.timeline contains utility classes used
- * by ATSv1 and ATSv2 on the server side.
+ * Constants which are used internally and which don't fit into the other
+ * classes.
+ * For use within the {@code hadoop-azure} module only.
  */
-@Private
-package org.apache.hadoop.yarn.server.util.timeline;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+@InterfaceAudience.Private
+public final class InternalConstants {
+
+  private InternalConstants() {
+  }
+
+  /**
+   * Does this version of the store have safe readahead?
+   * Possible combinations of this and the probe
+   * {@code "fs.capability.etags.available"}.
+   * <ol>
+   *   <li>{@value}: store is safe</li>
+   *   <li>no etags: store is safe</li>
+   *   <li>etags and not {@value}: store is <i>UNSAFE</i></li>
+   * </ol>
+   */
+  public static final String CAPABILITY_SAFE_READAHEAD =
+      "fs.azure.capability.readahead.safe";
+}
