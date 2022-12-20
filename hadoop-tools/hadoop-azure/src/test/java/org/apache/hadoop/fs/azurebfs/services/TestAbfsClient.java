@@ -86,6 +86,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
+  private static final String TEST_PATH = "/testfile";
   public static final int REDUCED_RETRY_COUNT = 2;
   public static final int REDUCED_BACKOFF_INTERVAL = 100;
   public static final int BUFFER_LENGTH = 5;
@@ -481,7 +482,6 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
     byte[] buffer = getRandomBytesArray(BUFFER_LENGTH);
 
     // Create a test container to upload the data.
-    final String TEST_PATH = "/testfile";
     Path testPath = path(TEST_PATH);
     fs.create(testPath);
     String finalTestPath = testPath.toString()
@@ -538,7 +538,7 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
         .when(urlConnection)
         .getResponseMessage();
 
-    // Make the getOuputStream throw IOException to see it returns from the sendRequest correctly.
+    // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
     Mockito.doThrow(new ProtocolException("Server rejected Operation"))
         .when(urlConnection)
         .getOutputStream();
@@ -550,15 +550,12 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
         .getHttpOperation(Mockito.any(), Mockito.any(), Mockito.any());
 
     // Mock the restOperation for the client.
-    Mockito.doReturn(op).when(testClient).getAbfsRestOperationForAppend(
-        Mockito.nullable(AbfsRestOperationType.class),
-        Mockito.nullable(String.class),
-        Mockito.nullable(URL.class),
-        Mockito.nullable(List.class),
-        Mockito.nullable(byte[].class),
-        Mockito.nullable(int.class),
-        Mockito.nullable(int.class),
-        Mockito.nullable(String.class));
+    Mockito.doReturn(op)
+        .when(testClient)
+        .getAbfsRestOperationForAppend(Mockito.any(),
+            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+            Mockito.nullable(int.class), Mockito.nullable(int.class),
+            Mockito.any());
 
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,

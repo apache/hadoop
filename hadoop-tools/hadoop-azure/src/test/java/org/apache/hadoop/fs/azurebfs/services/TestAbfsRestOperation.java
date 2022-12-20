@@ -67,7 +67,7 @@ import static org.mockito.Mockito.times;
 public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
   // Specifies whether getOutputStream() or write() throws IOException.
-  public enum error {OUTPUTSTREAM, WRITE};
+  public enum ErrorType {OUTPUTSTREAM, WRITE};
 
   private static final int HTTP_EXPECTATION_FAILED = 417;
   private static final int HTTP_ERROR = 0;
@@ -76,6 +76,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   private static final int REDUCED_BACKOFF_INTERVAL = 100;
   private static final int BUFFER_LENGTH = 5;
   private static final int BUFFER_OFFSET = 0;
+  private final String TEST_PATH = "/testfile";
 
   // Specifies whether the expect header is enabled or not.
   @Parameterized.Parameter
@@ -91,10 +92,10 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
 
   // Gives the errorType based on the enum.
   @Parameterized.Parameter(3)
-  public error errorType;
+  public ErrorType errorType;
 
   // The intercept.
-  AbfsThrottlingIntercept intercept;
+  private AbfsThrottlingIntercept intercept;
 
   /*
     HTTP_OK = 200,
@@ -103,15 +104,15 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     HTTP_EXPECTATION_FAILED = 417,
     HTTP_ERROR = 0.
    */
-  @Parameterized.Parameters(name = "expect={0}-code={1}-error={3}")
+  @Parameterized.Parameters(name = "expect={0}-code={1}-ErrorType={3}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {true, HTTP_OK, "OK", error.WRITE},
-        {false, HTTP_OK, "OK", error.WRITE},
-        {true, HTTP_UNAVAILABLE, "ServerBusy", error.OUTPUTSTREAM},
-        {true, HTTP_NOT_FOUND, "Resource Not Found", error.OUTPUTSTREAM},
-        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", error.OUTPUTSTREAM},
-        {true, HTTP_ERROR, "Error", error.OUTPUTSTREAM}
+        {true, HTTP_OK, "OK", ErrorType.WRITE},
+        {false, HTTP_OK, "OK", ErrorType.WRITE},
+        {true, HTTP_UNAVAILABLE, "ServerBusy", ErrorType.OUTPUTSTREAM},
+        {true, HTTP_NOT_FOUND, "Resource Not Found", ErrorType.OUTPUTSTREAM},
+        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", ErrorType.OUTPUTSTREAM},
+        {true, HTTP_ERROR, "Error", ErrorType.OUTPUTSTREAM}
     });
   }
 
@@ -171,7 +172,6 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     byte[] buffer = getRandomBytesArray(5);
 
     // Create a test container to upload the data.
-    final String TEST_PATH = "/testfile";
     Path testPath = path(TEST_PATH);
     fs.create(testPath);
     String finalTestPath = testPath.toString().substring(testPath.toString().lastIndexOf("/"));
@@ -314,7 +314,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .updateMetrics(Mockito.any(), Mockito.any());
         break;
       case HTTP_ERROR:
-        // In the case of http status code 0 i.e. error case, we should retry.
+        // In the case of http status code 0 i.e. ErrorType case, we should retry.
         intercept(IOException.class,
             () -> op.execute(tracingContext));
 
@@ -327,14 +327,14 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         Assertions.assertThat(httpOperation.getBytesSent())
             .isEqualTo(ZERO);
 
-        // Verifies that update Metrics call is made for error case and for the first without retry +
+        // Verifies that update Metrics call is made for ErrorType case and for the first without retry +
         // for the retried cases as well.
         Mockito.verify(intercept, times(REDUCED_RETRY_COUNT + 1))
             .updateMetrics(Mockito.any(), Mockito.any());
         break;
       case HTTP_NOT_FOUND:
       case HTTP_EXPECTATION_FAILED:
-        // In the case of 4xx error. i.e. user error, retry should not happen.
+        // In the case of 4xx ErrorType. i.e. user ErrorType, retry should not happen.
         intercept(AzureBlobFileSystemException.class,
             () -> op.execute(tracingContext));
 
@@ -343,7 +343,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .describedAs("The retry count is incorrect")
             .isEqualTo(ZERO);
 
-        // Verifies that update Metrics call is not made for user error case.
+        // Verifies that update Metrics call is not made for user ErrorType case.
         Mockito.verify(intercept, never())
             .updateMetrics(Mockito.any(), Mockito.any());
         break;
