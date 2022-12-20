@@ -32,3 +32,15 @@ GO
 
 DROP TABLE [reservationsHomeSubCluster];
 GO
+
+DROP TABLE [masterKeys];
+GO
+
+DROP TABLE [delegationTokens];
+GO
+
+DROP TABLE [masterKeys];
+GO
+
+DROP TABLE [delegationTokens];
+GO

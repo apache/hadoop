@@ -75,6 +75,26 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
            + " homeSubCluster varchar(256) NOT NULL,"
            + " CONSTRAINT pk_reservationId PRIMARY KEY (reservationId))";
 
+  private static final String TABLE_MASTERKEYS =
+      " CREATE TABLE masterKeys ("
+          + " keyId bigint NOT NULL,"
+          + " masterKey varchar(1024) NOT NULL,"
+          + " CONSTRAINT pk_keyId PRIMARY KEY (keyId))";
+
+  private static final String TABLE_DELEGATIONTOKENS =
+      " CREATE TABLE delegationTokens ("
+          + " sequenceNum bigint NOT NULL,"
+          + " tokenIdent varchar(1024) NOT NULL,"
+          + " token varchar(1024) NOT NULL,"
+          + " renewDate bigint NOT NULL,"
+          + " CONSTRAINT pk_sequenceNum PRIMARY KEY (sequenceNum))";
+
+  private static final String TABLE_SEQUENCETABLE =
+      " CREATE TABLE sequenceTable ("
+          + " sequenceName varchar(255) NOT NULL,"
+          + " nextVal bigint NOT NULL,"
+          + " CONSTRAINT pk_sequenceName PRIMARY KEY (sequenceName))";
+
   private static final String SP_REGISTERSUBCLUSTER =
       "CREATE PROCEDURE sp_registerSubCluster("
           + " IN subClusterId_IN varchar(256),"
@@ -318,6 +338,99 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
           + " WHERE reservationId = reservationId_IN;"
           + " SET rowCount_OUT = 2; END";
 
+  protected static final String SP_DROP_ADDMASTERKEY = "DROP PROCEDURE sp_addMasterKey";
+
+  protected static final String SP_ADDMASTERKEY =
+      "CREATE PROCEDURE sp_addMasterKey("
+          + " IN keyId_IN int, IN masterKey_IN varchar(1024),"
+          + " OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " INSERT INTO masterKeys(keyId, masterKey)"
+          + " (SELECT keyId_IN, masterKey_IN"
+          + " FROM masterKeys "
+          + " WHERE keyId = keyId_IN "
+          + " HAVING COUNT(*) = 0);"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
+          + " END";
+
+  protected static final String SP_DROP_GETMASTERKEY = "DROP PROCEDURE sp_getMasterKey";
+
+  protected static final String SP_GETMASTERKEY =
+      "CREATE PROCEDURE sp_getMasterKey("
+          + " IN keyId_IN int,"
+          + " OUT masterKey_OUT varchar(1024))"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " SELECT masterKey INTO masterKey_OUT "
+          + " FROM masterKeys "
+          + " WHERE keyId = keyId_IN; "
+          + " END ";
+
+  protected static final String SP_DROP_DELETEMASTERKEY = "DROP PROCEDURE sp_deleteMasterKey";
+
+  protected static final String SP_DELETEMASTERKEY =
+      "CREATE PROCEDURE sp_deleteMasterKey("
+          + " IN keyId_IN int, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM masterKeys WHERE keyId = keyId_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; END";
+
+  protected static final String SP_DROP_ADD_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_addDelegationToken";
+
+  protected static final String SP_ADD_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_addDelegationToken("
+          + " IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),"
+          + " IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " INSERT INTO delegationTokens(sequenceNum, tokenIdent, token, renewDate)"
+          + " (SELECT sequenceNum_IN, tokenIdent_IN, token_IN, renewDate_IN"
+          + " FROM delegationTokens"
+          + " WHERE sequenceNum = sequenceNum_IN"
+          + " HAVING COUNT(*) = 0);"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT;"
+          + " END";
+
+  protected static final String SP_DROP_GET_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_getDelegationToken";
+
+  protected static final String SP_GET_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_getDelegationToken("
+          + " IN sequenceNum_IN bigint, OUT tokenIdent_OUT varchar(1024), "
+          + " OUT token_OUT varchar(1024), OUT renewDate_OUT bigint)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC "
+          + " SELECT tokenIdent, token, renewDate INTO "
+          + " tokenIdent_OUT, token_OUT, renewDate_OUT"
+          + " FROM delegationTokens"
+          + " WHERE sequenceNum = sequenceNum_IN; "
+          + " END ";
+
+  protected static final String SP_DROP_UPDATE_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_updateDelegationToken";
+
+  protected static final String SP_UPDATE_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_updateDelegationToken("
+          + " IN sequenceNum_IN bigint, IN tokenIdent_IN varchar(1024),"
+          + " IN token_IN varchar(1024), IN renewDate_IN bigint, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " UPDATE delegationTokens"
+          + " SET tokenIdent = tokenIdent_IN,"
+          + " token = token_IN, renewDate = renewDate_IN"
+          + " WHERE sequenceNum = sequenceNum_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
+          + " END ";
+
+  protected static final String SP_DROP_DELETE_DELEGATIONTOKEN =
+      "DROP PROCEDURE sp_deleteDelegationToken";
+
+  protected static final String SP_DELETE_DELEGATIONTOKEN =
+      "CREATE PROCEDURE sp_deleteDelegationToken("
+          + " IN sequenceNum_IN bigint, OUT rowCount_OUT int)"
+          + " MODIFIES SQL DATA BEGIN ATOMIC"
+          + " DELETE FROM delegationTokens"
+          + " WHERE sequenceNum = sequenceNum_IN;"
+          + " GET DIAGNOSTICS rowCount_OUT = ROW_COUNT; "
+          + " END ";
+
   private List<String> tables = new ArrayList<>();
 
   @Override
@@ -333,6 +446,9 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(TABLE_MEMBERSHIP).execute();
       conn.prepareStatement(TABLE_POLICIES).execute();
       conn.prepareStatement(TABLE_RESERVATIONSHOMESUBCLUSTER).execute();
+      conn.prepareStatement(TABLE_MASTERKEYS).execute();
+      conn.prepareStatement(TABLE_DELEGATIONTOKENS).execute();
+      conn.prepareStatement(TABLE_SEQUENCETABLE).execute();
 
       conn.prepareStatement(SP_REGISTERSUBCLUSTER).execute();
       conn.prepareStatement(SP_DEREGISTERSUBCLUSTER).execute();
@@ -355,6 +471,15 @@ public class HSQLDBFederationStateStore extends SQLFederationStateStore {
       conn.prepareStatement(SP_GETRESERVATIONSHOMESUBCLUSTER).execute();
       conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER).execute();
       conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
+
+      conn.prepareStatement(SP_ADDMASTERKEY).execute();
+      conn.prepareStatement(SP_GETMASTERKEY).execute();
+      conn.prepareStatement(SP_DELETEMASTERKEY).execute();
+
+      conn.prepareStatement(SP_ADD_DELEGATIONTOKEN).execute();
+      conn.prepareStatement(SP_GET_DELEGATIONTOKEN).execute();
+      conn.prepareStatement(SP_UPDATE_DELEGATIONTOKEN).execute();
+      conn.prepareStatement(SP_DELETE_DELEGATIONTOKEN).execute();
 
       LOG.info("Database Init: Complete");
     } catch (Exception e) {
