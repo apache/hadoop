@@ -263,7 +263,7 @@ public class FederationQueryRunner {
       connection.commit();
       committed = true;
       return maxSequenceValue;
-    } catch (Exception e) {
+    } catch(SQLException e){
       throw new SQLException("Unable to selectOrUpdateSequenceTable due to: " + e.getMessage(), e);
     } finally {
       if (!committed) {

@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.federation.store.sql.FederationQueryRunner;
 import org.apache.hadoop.yarn.server.federation.store.sql.RouterMasterKeyHandler;
 import org.apache.hadoop.yarn.server.federation.store.sql.RouterStoreTokenHandler;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationStateStoreUtils;
-import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -267,10 +266,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testCheckAddReservationHomeSubCluster() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
@@ -295,10 +290,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testCheckGetReservationHomeSubCluster() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
@@ -328,10 +319,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testCheckGetReservationsHomeSubCluster() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     // add 1st record
     ReservationId reservationId1 = ReservationId.newInstance(Time.now(), 1);
@@ -377,10 +364,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testCheckUpdateReservationHomeSubCluster() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
@@ -424,10 +407,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testCheckDeleteReservationHomeSubCluster() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     // procedure call parameter preparation
     ReservationId reservationId = ReservationId.newInstance(Time.now(), 1);
@@ -459,10 +438,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testAddReservationHomeSubClusterAbnormalSituation() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
@@ -483,7 +458,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         "please check the records of the database.", subClusterId, reservationId);
 
     LambdaTestUtils.intercept(YarnException.class, errorMsg,
-        () -> stateStore.addReservationHomeSubCluster(request));
+        () -> sqlFederationStateStore.addReservationHomeSubCluster(request));
   }
 
   /**
@@ -496,10 +471,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testUpdateReservationHomeSubClusterAbnormalSituation() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
@@ -513,7 +484,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
     AddReservationHomeSubClusterRequest addRequest =
         AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
-    stateStore.addReservationHomeSubCluster(addRequest);
+    sqlFederationStateStore.addReservationHomeSubCluster(addRequest);
 
     SubClusterId subClusterId2 = SubClusterId.newInstance("SC2");
     ReservationHomeSubCluster reservationHomeSubCluster2 =
@@ -529,7 +500,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         subClusterId2, reservationId);
 
     LambdaTestUtils.intercept(YarnException.class, errorMsg,
-        () -> stateStore.updateReservationHomeSubCluster(updateRequest));
+        () -> sqlFederationStateStore.updateReservationHomeSubCluster(updateRequest));
   }
 
   /**
@@ -542,10 +513,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
    */
   @Test
   public void testDeleteReservationHomeSubClusterAbnormalSituation() throws Exception {
-    FederationStateStore stateStore = getStateStore();
-    Assert.assertTrue(stateStore instanceof SQLFederationStateStore);
-
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
     Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_DELETERESERVATIONHOMESUBCLUSTER).execute();
@@ -559,7 +526,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         ReservationHomeSubCluster.newInstance(reservationId, subClusterId1);
     AddReservationHomeSubClusterRequest addRequest =
         AddReservationHomeSubClusterRequest.newInstance(reservationHomeSubCluster);
-    stateStore.addReservationHomeSubCluster(addRequest);
+    sqlFederationStateStore.addReservationHomeSubCluster(addRequest);
 
     DeleteReservationHomeSubClusterRequest delRequest =
         DeleteReservationHomeSubClusterRequest.newInstance(reservationId);
@@ -572,7 +539,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
         reservationId);
 
     LambdaTestUtils.intercept(YarnException.class, errorMsg,
-        () -> stateStore.deleteReservationHomeSubCluster(delRequest));
+        () -> sqlFederationStateStore.deleteReservationHomeSubCluster(delRequest));
   }
 
   @Override
