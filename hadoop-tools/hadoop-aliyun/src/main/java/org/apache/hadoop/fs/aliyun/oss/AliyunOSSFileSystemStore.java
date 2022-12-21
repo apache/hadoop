@@ -72,6 +72,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
@@ -203,31 +204,29 @@ public class AliyunOSSFileSystemStore {
 
     int retry = 10;
     int tries = 0;
-    List<String> deleteFailed = keysToDelete;
-    while(CollectionUtils.isNotEmpty(deleteFailed)) {
+    while (CollectionUtils.isNotEmpty(keysToDelete)) {
       DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucketName);
-      deleteRequest.setKeys(deleteFailed);
+      deleteRequest.setKeys(keysToDelete);
       // There are two modes to do batch delete:
-      // 1. detail mode: DeleteObjectsResult.getDeletedObjects returns objects
-      // which were deleted successfully.
-      // 2. simple mode: DeleteObjectsResult.getDeletedObjects returns objects
-      // which were deleted unsuccessfully.
-      // Here, we choose the simple mode to do batch delete.
-      deleteRequest.setQuiet(true);
+      // 1. verbose mode: A list of all deleted objects is returned.
+      // 2. quiet mode: No message body is returned.
+      // Here, we choose the verbose mode to do batch delete.
+      deleteRequest.setQuiet(false);
       DeleteObjectsResult result = ossClient.deleteObjects(deleteRequest);
       statistics.incrementWriteOps(1);
-      deleteFailed = result.getDeletedObjects();
+      final List<String> deletedObjects = result.getDeletedObjects();
+      keysToDelete = keysToDelete.stream().filter(item -> !deletedObjects.contains(item))
+          .collect(Collectors.toList());
       tries++;
       if (tries == retry) {
         break;
       }
     }
 
-    if (tries == retry && CollectionUtils.isNotEmpty(deleteFailed)) {
+    if (tries == retry && CollectionUtils.isNotEmpty(keysToDelete)) {
       // Most of time, it is impossible to try 10 times, expect the
       // Aliyun OSS service problems.
-      throw new IOException("Failed to delete Aliyun OSS objects for " +
-          tries + " times.");
+      throw new IOException("Failed to delete Aliyun OSS objects for " + tries + " times.");
     }
   }
 
