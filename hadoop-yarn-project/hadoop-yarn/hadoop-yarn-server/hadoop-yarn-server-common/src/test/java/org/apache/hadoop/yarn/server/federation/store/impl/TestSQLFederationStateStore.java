@@ -591,8 +591,6 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
   @Test
   public void testCheckHSQLDB() throws SQLException {
-    FederationStateStore stateStore = getStateStore();
-    SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
     Connection conn =  sqlFederationStateStore.getConn();
     DbType dbType = DatabaseProduct.getDbType(conn);
     assertEquals(DbType.HSQLDB, dbType);
