@@ -17,18 +17,24 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.metrics;
 
+import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.metrics2.lib.Interns.info;
 
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
@@ -80,14 +86,54 @@ public class NodeManagerMetrics {
 
   // CHECKSTYLE:ON:VisibilityModifier
 
+  // Log aggregation metrics
+  @Metric("# of log aggregation threads currently in use")
+  MutableGaugeInt logAggrThreadsUsed;
+  @Metric("# of applications currently waiting for aggregation threads")
+  MutableGaugeInt appsWaitingForLogAggregation;
+  @Metric("Number of applications with successful log aggregation")
+  MutableCounterLong numSuccessfulAppLogAggregations;
+  @Metric("Number of applications with failed log aggregation")
+  MutableCounterLong numFailedAppLogAggregations;
+  @Metric("Number of containers whose log were uploaded successfully")
+  MutableCounterLong numSuccessfulContainerLogUploads;
+  @Metric("Number of containers whose log were uploaded unsuccessfully")
+  MutableCounterLong numFailedContainerLogUploads;
+  @Metric("Time spent waiting for a log aggregation thread after application finished (ms)")
+  MutableRate logAggregationThreadWaitTimeMs;
+  @Metric("Time spent doing log aggregation i.e. time holding log aggr thread (ms)")
+  MutableRate logAggregationThreadHoldTimeMs;
+  @Metric("Time taken uploading logs to HDFS during log aggregation (ms)")
+  MutableRate HDFSUploadDurationMs;
+
+  //Provide quantile counters for all latencies
+  private MutableQuantiles waitTimeLatency;
+  private MutableQuantiles logAggrLatency;
+  private MutableQuantiles HDFSUploadLatency;
+
   private JvmMetrics jvmMetrics = null;
 
   private long allocatedMB;
   private long availableMB;
   private long allocatedOpportunisticMB;
 
+  private static MetricsRegistry registry;
+
+  private static final String METRIC_NAME = "LogAggregationMetrics";
+  private static final MetricsInfo RECORD_INFO =
+      info(METRIC_NAME, "Log Aggregation");
+
   public NodeManagerMetrics(JvmMetrics jvmMetrics) {
     this.jvmMetrics = jvmMetrics;
+    registry = new MetricsRegistry(RECORD_INFO);
+    registry.tag(RECORD_INFO, "LogAggregation");
+    waitTimeLatency = registry.newQuantiles("waitTimeLatency",
+        "latency of waiting for log aggr thread", "ops", "latency", 10);
+    logAggrLatency = registry.newQuantiles("logAggrLatency",
+        "latency of log aggregation", "ops", "latency", 10);
+    HDFSUploadLatency =
+        registry.newQuantiles("HDFSUploadLatency",
+            "latency of log upload to HDFS", "ops", "latency", 10);
   }
 
   public static NodeManagerMetrics create() {
@@ -240,6 +286,50 @@ public class NodeManagerMetrics {
     this.privateBytesDeleted.set(privateBytesDeleted);
   }
 
+  public void appReadyForLogAggregation(){
+    appsWaitingForLogAggregation.incr();
+  }
+
+  public void addLogAggregationThreadWaitTime(long waitTime) {
+    this.logAggregationThreadWaitTimeMs.add(waitTime);
+    this.waitTimeLatency.add(waitTime);
+  }
+
+  public void appStartedLogAggr(){
+    appsWaitingForLogAggregation.decr();
+    logAggrThreadsUsed.incr();
+  }
+
+  public void successfulContainerLogUpload() {
+    this.numSuccessfulContainerLogUploads.incr();
+  }
+
+  public void failedContainerLogUpload() {
+    this.numFailedContainerLogUploads.incr();
+  }
+
+  public void addLogUploadDuration(long duration) {
+    this.HDFSUploadDurationMs.add(duration);
+    this.HDFSUploadLatency.add(duration);
+  }
+
+  public void reportLogAggregationStatus(boolean succeeded){
+    if(succeeded) {
+      this.numSuccessfulAppLogAggregations.incr();
+    } else {
+      this.numFailedAppLogAggregations.incr();
+    }
+  }
+
+  public void appLogAggregationFinished(){
+    logAggrThreadsUsed.decr();
+  }
+
+  public void addLogAggregationThreadHoldTime(long holdTime) {
+    this.logAggregationThreadHoldTimeMs.add(holdTime);
+    this.logAggrLatency.add(holdTime);
+  }
+
   public int getRunningContainers() {
     return containersRunning.value();
   }
@@ -315,5 +405,50 @@ public class NodeManagerMetrics {
 
   public long getPrivateBytesDeleted() {
     return this.privateBytesDeleted.value();
+  }
+
+  public long getLogAggrThreadsUsed(){
+    return this.logAggrThreadsUsed.value();
+  }
+
+  public long getAppsWaitingForLogAggregation(){
+    return this.appsWaitingForLogAggregation.value();
+  }
+
+  public long getNumSuccessfulAppLogAggregations(){
+    return this.numSuccessfulAppLogAggregations.value();
+  }
+
+  public long getNumFailedAppLogAggregations(){
+    return this.numFailedAppLogAggregations.value();
+  }
+
+  public long getNumSuccessfulContainerLogUploads(){
+    return this.numSuccessfulContainerLogUploads.value();
+  }
+
+  public long getNumFailedContainerLogUploads(){
+    return this.numFailedContainerLogUploads.value();
+  }
+
+  public long getNumLogAggregationThreadWaitApps() {
+    return this.logAggregationThreadWaitTimeMs.lastStat().numSamples();
+  }
+
+  public long getNumLogAggregatingApps() {
+    return this.logAggregationThreadHoldTimeMs.lastStat().numSamples();
+  }
+
+  public double getLogAggregationThreadWaitTimeMs() {
+    return this.logAggregationThreadWaitTimeMs.lastStat().mean();
+  }
+
+  public double getLogAggregationThreadHoldTimeMs() {
+    return this.logAggregationThreadHoldTimeMs.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getHDFSTotalUploadDurationMs() {
+    return this.HDFSUploadDurationMs.lastStat().total();
   }
 }

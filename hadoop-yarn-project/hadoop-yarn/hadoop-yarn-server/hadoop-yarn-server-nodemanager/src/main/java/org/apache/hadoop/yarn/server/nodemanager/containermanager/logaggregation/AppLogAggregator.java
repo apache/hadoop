@@ -29,4 +29,7 @@ public interface AppLogAggregator extends Runnable {
   void finishLogAggregation();
 
   void disableLogAggregation();
+
+  boolean isLogAggregationInRolling();
+
 }

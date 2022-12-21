@@ -129,6 +129,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -162,7 +163,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   
   DrainDispatcher dispatcher;
   EventHandler<ApplicationEvent> appEventHandler;
-
+  NodeManagerMetrics metrics; 
   private NodeId nodeId = NodeId.newInstance("0.0.0.0", 5555);
 
   @Override
@@ -174,6 +175,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     appEventHandler = mock(EventHandler.class);
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     UserGroupInformation.setConfiguration(conf);
+    metrics = mock(NodeManagerMetrics.class);
   }
 
   @Override
@@ -282,7 +284,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler));
+                                  super.dirsHandler, this.metrics));
     verifyLocalFileDeletion(logAggregationService);
   }
 
@@ -302,7 +304,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     when(dirsHandler.getLogDirsForRead()).thenReturn(logDirs);
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-            dirsHandler));
+            dirsHandler, metrics));
     verifyLocalFileDeletion(logAggregationService);
   }
 
@@ -317,7 +319,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         this.remoteRootLogDir.getAbsolutePath());
 
     LogAggregationService logAggregationService = new LogAggregationService(
-        dispatcher, this.context, this.delSrvc, super.dirsHandler);
+        dispatcher, this.context, this.delSrvc, super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -353,7 +355,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler);
+                                  super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -404,7 +406,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler);
+                                  super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -563,7 +565,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         .verifyAndCreateRemoteLogDir();
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-            super.dirsHandler) {
+            super.dirsHandler, metrics) {
         @Override
         public LogAggregationFileController getLogAggregationFileController(
             Configuration conf) {
@@ -629,7 +631,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler));
+                                  super.dirsHandler, metrics));
     logAggregationService.init(this.conf);
     logAggregationService.start();
     boolean existsBefore = aNewFile.exists();
@@ -659,7 +661,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, aNewFile.getName());
 
     LogAggregationService logAggregationService = new LogAggregationService(
-        dispatcher, this.context, this.delSrvc, super.dirsHandler);
+        dispatcher, this.context, this.delSrvc, super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -710,7 +712,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         };
     spyFileFormat.initialize(conf, "TFile");
     LogAggregationService aggSvc = new LogAggregationService(dispatcher,
-        this.context, this.delSrvc, super.dirsHandler) {
+        this.context, this.delSrvc, super.dirsHandler, this.metrics) {
       @Override
       public LogAggregationFileController getLogAggregationFileController(
           Configuration conf) {
@@ -767,7 +769,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler));
+                                  super.dirsHandler, this.metrics));
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -829,7 +831,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             any(UserGroupInformation.class));
     LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, spyDelSrvc,
-            super.dirsHandler){
+            super.dirsHandler, this.metrics){
         @Override
         public LogAggregationFileController getLogAggregationFileController(
             Configuration conf) {
@@ -1162,7 +1164,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     when(dirSvc.getLogDirs()).thenThrow(new RuntimeException());
 
     LogAggregationService logAggregationService =
-      new LogAggregationService(dispatcher, this.context, delSrvc, dirSvc);
+      new LogAggregationService(dispatcher, this.context, delSrvc, dirSvc, this.metrics);
 
     logAggregationService.init(this.conf);
     logAggregationService.start();
@@ -1261,7 +1263,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     when(dirSvc.getLogDirs()).thenThrow(new RuntimeException());
 
     LogAggregationService logAggregationService =
-         new LogAggregationService(dispatcher, this.context, delSrvc, dirSvc);
+         new LogAggregationService(dispatcher, this.context, delSrvc, dirSvc, this.metrics);
 
     logAggregationService.init(this.conf);
     logAggregationService.start();
@@ -1292,7 +1294,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, delSrvc,
-                                  mockedDirSvc);
+                                  mockedDirSvc, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -1305,7 +1307,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application1, this.user, null, this.acls, contextWithAllContainers));
 
     logAggregationService.stop();
-    assertEquals(0, logAggregationService.getNumAggregators());
+    assertEquals(1, logAggregationService.getNumAggregators());
     logAggregationService.close();
   }
 
@@ -1318,7 +1320,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, delSrvc,
-                                  mockedDirSvc);
+                                  mockedDirSvc, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -1448,7 +1450,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         spy(new LogAggregationService(dispatcher, this.context, mockDelService,
-          mockDirsHandler));
+          this.dirsHandler, this.metrics));
     AbstractFileSystem spylfs =
         spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
     FileContext lfs = FileContext.getFileContext(spylfs, conf);
@@ -1511,7 +1513,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-          super.dirsHandler);
+          super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -1699,7 +1701,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, context, this.delSrvc,
-          super.dirsHandler);
+          super.dirsHandler, this.metrics);
 
     logAggregationService.init(this.conf);
     logAggregationService.start();
@@ -2145,7 +2147,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         new ConcurrentHashMap<ContainerId, Container>();
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-            super.dirsHandler);
+            super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
     LogAggregationContext logAggContext = null;
@@ -2291,7 +2293,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, context, this.delSrvc,
-          super.dirsHandler);
+          super.dirsHandler, this.metrics);
 
     logAggregationService.init(this.conf);
     logAggregationService.start();
@@ -2420,7 +2422,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     @SuppressWarnings("resource")
     LogAggregationService logAggregationService =
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-          super.dirsHandler);
+          super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
     logAggregationService.handle(new LogHandlerAppStartedEvent(application1,
@@ -2461,11 +2463,15 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test (timeout = 20000)
   public void testSkipUnnecessaryNNOperationsForShortJob() throws Exception {
+    this.conf.setLong(
+        YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
+        3600);
     LogAggregationContext logAggregationContext =
         Records.newRecord(LogAggregationContext.class);
     logAggregationContext.setLogAggregationPolicyClassName(
         FailedOrKilledContainerLogAggregationPolicy.class.getName());
-    verifySkipUnnecessaryNNOperations(logAggregationContext, 0, 2, 0);
+    logAggregationContext.setRolledLogsIncludePattern("*");
+    verifySkipUnnecessaryNNOperations(logAggregationContext, 0, 4, 0);
   }
 
   @Test (timeout = 20000)
@@ -2487,7 +2493,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       int expectedLogAggregationTimes, int expectedAggregationReportNum,
       int expectedCleanupOldLogsTimes) throws Exception {
     LogAggregationService logAggregationService = new LogAggregationService(
-        dispatcher, this.context, this.delSrvc, super.dirsHandler);
+        dispatcher, this.context, this.delSrvc, super.dirsHandler, this.metrics);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 

@@ -29,9 +29,11 @@ import org.junit.Test;
 public class TestNodeManagerMetrics {
   static final int GiB = 1024; // MiB
 
-  @Test public void testNames() {
+  private static NodeManagerMetrics metrics = NodeManagerMetrics.create();
+
+  @Test
+  public void testNonLogAggregationMetrics() {
     DefaultMetricsSystem.initialize("NodeManager");
-    NodeManagerMetrics metrics = NodeManagerMetrics.create();
     Resource total = Records.newRecord(Resource.class);
     total.setMemorySize(8*GiB);
     total.setVirtualCores(16);
@@ -108,6 +110,38 @@ public class TestNodeManagerMetrics {
     assertGauge("AllocatedContainers", allocatedContainers, rb);
     assertGauge("AvailableGB", availableGB, rb);
     assertGauge("AvailableVCores",availableVCores, rb);
+  }
 
+  @Test
+  public void testLogAggregationMetrics() {
+    metrics.appReadyForLogAggregation();
+    metrics.addLogAggregationThreadWaitTime(5);
+    metrics.appStartedLogAggr();
+
+    metrics.successfulContainerLogUpload();
+    metrics.addLogUploadDuration(3);
+    metrics.successfulContainerLogUpload();
+    metrics.addLogUploadDuration(13);
+    metrics.failedContainerLogUpload();
+
+    metrics.reportLogAggregationStatus(false);
+    metrics.appLogAggregationFinished();
+    metrics.addLogAggregationThreadHoldTime(18);
+
+    metrics.appReadyForLogAggregation();
+    metrics.appReadyForLogAggregation();
+    metrics.appStartedLogAggr();
+
+    Assert.assertEquals(1, metrics.getLogAggrThreadsUsed());
+    Assert.assertEquals(1, metrics.getAppsWaitingForLogAggregation());
+    Assert.assertEquals(0L, metrics.getNumSuccessfulAppLogAggregations());
+    Assert.assertEquals(1L, metrics.getNumFailedAppLogAggregations());
+    Assert.assertEquals(2L, metrics.getNumSuccessfulContainerLogUploads());
+    Assert.assertEquals(1L, metrics.getNumFailedContainerLogUploads());
+    Assert.assertEquals(1, metrics.getNumLogAggregationThreadWaitApps());
+    Assert.assertEquals(5, metrics.getLogAggregationThreadWaitTimeMs(), 0);
+    Assert.assertEquals(1, metrics.getNumLogAggregatingApps());
+    Assert.assertEquals(18, metrics.getLogAggregationThreadHoldTimeMs(), 0);
+    Assert.assertEquals(16, metrics.getHDFSTotalUploadDurationMs(), 0);
   }
 }

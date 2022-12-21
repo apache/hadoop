@@ -67,6 +67,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 
@@ -117,6 +118,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   private final LogAggregationFileController logAggregationFileController;
 
+  private long appFinishedTime;
 
   /**
    * The value recovered from state store to determine the age of application
@@ -125,16 +127,18 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
    */
   private final long recoveredLogInitedTime;
 
+  protected final NodeManagerMetrics metrics;
+
   public AppLogAggregatorImpl(Dispatcher dispatcher,
       DeletionService deletionService, Configuration conf,
       ApplicationId appId, UserGroupInformation userUgi, NodeId nodeId,
       LocalDirsHandlerService dirsHandler, Path remoteNodeLogFileForApp,
       Map<ApplicationAccessType, String> appAcls,
       LogAggregationContext logAggregationContext, Context context,
-      FileContext lfs, long rollingMonitorInterval) {
+      FileContext lfs, long rollingMonitorInterval, NodeManagerMetrics metrics) {
     this(dispatcher, deletionService, conf, appId, userUgi, nodeId,
         dirsHandler, remoteNodeLogFileForApp, appAcls,
-        logAggregationContext, context, lfs, rollingMonitorInterval, -1, null);
+        logAggregationContext, context, lfs, rollingMonitorInterval, -1, null, metrics);
   }
 
   public AppLogAggregatorImpl(Dispatcher dispatcher,
@@ -144,11 +148,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       Map<ApplicationAccessType, String> appAcls,
       LogAggregationContext logAggregationContext, Context context,
       FileContext lfs, long rollingMonitorInterval,
-      long recoveredLogInitedTime) {
+      long recoveredLogInitedTime,  NodeManagerMetrics metrics) {
     this(dispatcher, deletionService, conf, appId, userUgi, nodeId,
         dirsHandler, remoteNodeLogFileForApp, appAcls,
         logAggregationContext, context, lfs, rollingMonitorInterval,
-        recoveredLogInitedTime, null);
+        recoveredLogInitedTime, null, metrics);
   }
 
   public AppLogAggregatorImpl(Dispatcher dispatcher,
@@ -159,7 +163,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       LogAggregationContext logAggregationContext, Context context,
       FileContext lfs, long rollingMonitorInterval,
       long recoveredLogInitedTime,
-      LogAggregationFileController logAggregationFileController) {
+      LogAggregationFileController logAggregationFileController,
+      NodeManagerMetrics metrics) {
     this.dispatcher = dispatcher;
     this.conf = conf;
     this.delService = deletionService;
@@ -175,6 +180,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.nodeId = nodeId;
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
+    this.metrics = metrics;
     if (logAggregationFileController == null) {
       // by default, use T-File Controller
       this.logAggregationFileController = new LogAggregationTFileController();
@@ -202,6 +208,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             logAggregationInRolling,
             rollingMonitorInterval,
             this.appId, this.appAcls, this.nodeId, this.userUgi);
+  }
+
+  @Override
+  public boolean isLogAggregationInRolling(){
+    return this.logControllerContext.isLogAggregationInRolling();
   }
 
   private ContainerLogAggregationPolicy getLogAggPolicy(Configuration conf) {
@@ -394,6 +405,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           renameTemporaryLogFileFailed || !logAggregationSucceedInThisCycle
               ? LogAggregationStatus.FAILED
               : LogAggregationStatus.SUCCEEDED;
+
+      this.metrics.reportLogAggregationStatus(finalLogAggregationStatus == LogAggregationStatus.SUCCEEDED);
+
       sendLogAggregationReportInternal(finalLogAggregationStatus, "");
     }
   }
@@ -413,6 +427,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public void run() {
     try {
       doAppLogAggregation();
+
     } catch (Exception e) {
       // do post clean up of log directories on any exception
       LOG.error("Error occurred while aggregating the log for the application "
@@ -426,6 +441,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                 ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
       }
       this.appAggregationFinished.set(true);
+      LOG.info("Releasing thread for " + applicationId);
     }
   }
 
@@ -455,6 +471,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       return;
     }
 
+    LOG.info("Starting log upload for " +this.applicationId);
     // App is finished, upload the container logs.
     uploadLogsForContainers(true);
 
@@ -514,6 +531,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   public synchronized void finishLogAggregation() {
     LOG.info("Application just finished : " + this.applicationId);
     this.appFinishing.set(true);
+    this.appFinishedTime = System.currentTimeMillis();
     this.notifyAll();
   }
 
@@ -579,9 +597,12 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             containerFinished);
       try {
         logAggregationFileController.write(logKey, logValue);
+        metrics.successfulContainerLogUpload();
       } catch (Exception e) {
         LOG.error("Couldn't upload logs for " + containerId
             + ". Skipping this container.", e);
+        metrics.failedContainerLogUpload();
+
         return new HashSet<Path>();
       }
       this.uploadedFileMeta.addAll(logValue
@@ -597,6 +618,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           });
 
       this.uploadedFileMeta = Sets.newHashSet(mask);
+      long logUploadTime = System.currentTimeMillis() - startTime;
+      LOG.info("Container " + containerId
+        + " log aggregation is completed in " + logUploadTime + "ms");
+      metrics.addLogUploadDuration(logUploadTime);
 
       // need to return files uploaded or older-than-retention clean up.
       return Sets.union(logValue.getCurrentUpLoadedFilesPath(),
