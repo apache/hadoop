@@ -76,7 +76,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   private static final int REDUCED_BACKOFF_INTERVAL = 100;
   private static final int BUFFER_LENGTH = 5;
   private static final int BUFFER_OFFSET = 0;
-  private final String TEST_PATH = "/testfile";
+  private static final String TEST_PATH = "/testfile";
 
   // Specifies whether the expect header is enabled or not.
   @Parameterized.Parameter

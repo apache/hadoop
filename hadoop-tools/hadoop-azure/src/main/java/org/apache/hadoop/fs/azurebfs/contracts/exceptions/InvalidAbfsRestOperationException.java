@@ -45,7 +45,7 @@ public class InvalidAbfsRestOperationException extends AbfsRestOperationExceptio
   }
 
   /**
-   * Adds the retry count along with the exception
+   * Adds the retry count along with the exception.
    * @param innerException The inner exception which is originally caught.
    * @param retryCount The retry count when the exception was thrown.
    */
