@@ -153,18 +153,10 @@ public class StartupProgress {
   public Counter getCounter(Phase phase, Step step) {
     if (!isComplete(phase)) {
       final StepTracking tracking = lazyInitStep(phase, step);
-      return new Counter() {
-        @Override
-        public void increment() {
-          tracking.count.incrementAndGet();
-        }
-      };
+      return () -> tracking.count.incrementAndGet();
     } else {
-      return new Counter() {
-        @Override
-        public void increment() {
-          // no-op, because startup has completed
-        }
+      return () -> {
+        // no-op, because startup has completed
       };
     }
   }

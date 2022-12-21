@@ -22,7 +22,6 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -269,17 +268,11 @@ public class StandbyCheckpointer {
       boolean shouldUpload = receiverEntry.isPrimary() ||
           secsSinceLastUpload >= checkpointConf.getQuietPeriod();
       if (shouldUpload) {
-        Future<TransferFsImage.TransferResult> upload =
-            executor.submit(new Callable<TransferFsImage.TransferResult>() {
-              @Override
-              public TransferFsImage.TransferResult call()
-                  throws IOException, InterruptedException {
-                CheckpointFaultInjector.getInstance().duringUploadInProgess();
-                return TransferFsImage.uploadImageFromStorage(activeNNAddress,
-                    conf, namesystem.getFSImage().getStorage(), imageType, txid,
-                    canceler);
-              }
-            });
+        Future<TransferFsImage.TransferResult> upload = executor.submit(() -> {
+          CheckpointFaultInjector.getInstance().duringUploadInProgess();
+          return TransferFsImage.uploadImageFromStorage(activeNNAddress, conf,
+              namesystem.getFSImage().getStorage(), imageType, txid, canceler);
+        });
         uploads.put(addressString, upload);
       }
     }
@@ -397,14 +390,10 @@ public class StandbyCheckpointer {
     public void run() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
-      SecurityUtil.doAsLoginUserOrFatal(
-          new PrivilegedAction<Object>() {
-          @Override
-          public Object run() {
-            doWork();
-            return null;
-          }
-        });
+      SecurityUtil.doAsLoginUserOrFatal(() -> {
+        doWork();
+        return null;
+      });
     }
 
     /**

@@ -35,17 +35,17 @@ public abstract class DirectoryDiffListFactory {
     DirectoryDiffListFactory.maxLevels = maxSkipLevels;
 
     if (maxLevels > 0) {
-      constructor = c -> new DiffListBySkipList(c);
+      constructor = DiffListBySkipList::new;
       log.info("SkipList is enabled with skipInterval=" + skipInterval
           + ", maxLevels=" + maxLevels);
     } else {
-      constructor = c -> new DiffListByArrayList<>(c);
+      constructor = DiffListByArrayList::new;
       log.info("SkipList is disabled");
     }
   }
 
-  private static volatile IntFunction<DiffList<DirectoryDiff>> constructor
-      = c -> new DiffListByArrayList<>(c);
+  private static volatile IntFunction<DiffList<DirectoryDiff>> constructor =
+      DiffListByArrayList::new;
 
   private static volatile int skipInterval;
   private static volatile int maxLevels;

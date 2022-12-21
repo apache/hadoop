@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.web.resources;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -644,20 +643,15 @@ public class NamenodeWebHdfsMethods {
         createFlagParam, noredirect, policyName, ecpolicy,
         namespaceQuota, storagespaceQuota, storageType);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException, URISyntaxException {
-          return put(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, destination, owner, group,
-              permission, unmaskedPermission, overwrite, bufferSize,
-              replication, blockSize, modificationTime, accessTime,
-              renameOptions, createParent, delegationTokenArgument,
-              aclPermission, xattrName, xattrValue, xattrSetFlag,
-              snapshotName, oldSnapshotName, excludeDatanodes,
-              createFlagParam, noredirect, policyName, ecpolicy,
-              namespaceQuota, storagespaceQuota, storageType);
-      }
-    });
+    return doAs(ugi, () -> put(ugi, delegation, username, doAsUser,
+        path.getAbsolutePath(), op, destination, owner, group,
+        permission, unmaskedPermission, overwrite, bufferSize,
+        replication, blockSize, modificationTime, accessTime,
+        renameOptions, createParent, delegationTokenArgument,
+        aclPermission, xattrName, xattrValue, xattrSetFlag,
+        snapshotName, oldSnapshotName, excludeDatanodes,
+        createFlagParam, noredirect, policyName, ecpolicy,
+        namespaceQuota, storagespaceQuota, storageType));
   }
 
   protected Response put(
@@ -950,14 +944,9 @@ public class NamenodeWebHdfsMethods {
     init(ugi, delegation, username, doAsUser, path, op, concatSrcs, bufferSize,
         excludeDatanodes, newLength);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException, URISyntaxException {
-          return post(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, concatSrcs, bufferSize,
-              excludeDatanodes, newLength, noredirect);
-      }
-    });
+    return doAs(ugi, () -> post(ugi, delegation, username, doAsUser,
+        path.getAbsolutePath(), op, concatSrcs, bufferSize,
+        excludeDatanodes, newLength, noredirect));
   }
 
   protected Response post(
@@ -1127,16 +1116,11 @@ public class NamenodeWebHdfsMethods {
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
         snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException, URISyntaxException {
-        return get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
-            op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
-            excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
-            snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirect, startAfter);
-      }
-    });
+    return doAs(ugi, () -> get(ugi, delegation, username, doAsUser, path.getAbsolutePath(),
+        op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
+        excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
+        snapshotDiffStartPath, snapshotDiffIndex,
+        tokenKind, tokenService, noredirect, startAfter));
   }
 
   private static String encodeFeInfo(FileEncryptionInfo feInfo) {
@@ -1479,46 +1463,39 @@ public class NamenodeWebHdfsMethods {
     // must save ugi because the streaming object will be executed outside
     // the remote user's ugi
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    return new StreamingOutput() {
-      @Override
-      public void write(final OutputStream outstream) throws IOException {
-        final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-            outstream, Charsets.UTF_8));
-        out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
-            + FileStatus.class.getSimpleName() + "\":[");
+    return outstream -> {
+      final PrintWriter out = new PrintWriter(new OutputStreamWriter(outstream, Charsets.UTF_8));
+      out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
+          + FileStatus.class.getSimpleName() + "\":[");
 
-        try {
-          // restore remote user's ugi
-          ugi.doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws IOException {
-              long n = 0;
-              for (DirectoryListing dirList = firstDirList; ;
-                   dirList = getDirectoryListing(cp, p, dirList.getLastName())
-              ) {
-                // send each segment of the directory listing
-                for (HdfsFileStatus s : dirList.getPartialListing()) {
-                  if (n++ > 0) {
-                    out.println(',');
-                  }
-                  out.print(JsonUtil.toJsonString(s, false));
-                }
-                // stop if last segment
-                if (!dirList.hasMore()) {
-                  break;
-                }
+      try {
+        // restore remote user's ugi
+        ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+          long n = 0;
+          for (DirectoryListing dirList = firstDirList; ;
+               dirList = getDirectoryListing(cp, p, dirList.getLastName())
+          ) {
+            // send each segment of the directory listing
+            for (HdfsFileStatus s : dirList.getPartialListing()) {
+              if (n++ > 0) {
+                out.println(',');
               }
-              return null;
+              out.print(JsonUtil.toJsonString(s, false));
             }
-          });
-        } catch (InterruptedException e) {
-          throw new IOException(e);
-        }
-        
-        out.println();
-        out.println("]}}");
-        out.flush();
+            // stop if last segment
+            if (!dirList.hasMore()) {
+              break;
+            }
+          }
+          return null;
+        });
+      } catch (InterruptedException e) {
+        throw new IOException(e);
       }
+
+      out.println();
+      out.println("]}}");
+      out.flush();
     };
   }
 
@@ -1568,13 +1545,8 @@ public class NamenodeWebHdfsMethods {
 
     init(ugi, delegation, username, doAsUser, path, op, recursive, snapshotName);
 
-    return doAs(ugi, new PrivilegedExceptionAction<Response>() {
-      @Override
-      public Response run() throws IOException {
-          return delete(ugi, delegation, username, doAsUser,
-              path.getAbsolutePath(), op, recursive, snapshotName);
-      }
-    });
+    return doAs(ugi, () -> delete(ugi, delegation, username, doAsUser,
+        path.getAbsolutePath(), op, recursive, snapshotName));
   }
 
   protected Response delete(

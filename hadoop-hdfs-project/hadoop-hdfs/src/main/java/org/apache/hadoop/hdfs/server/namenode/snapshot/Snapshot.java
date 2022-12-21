@@ -111,15 +111,8 @@ public class Snapshot implements Comparable<byte[]> {
    * Compare snapshot with IDs, where null indicates the current status thus
    * is greater than any non-null ID.
    */
-  public static final Comparator<Integer> ID_INTEGER_COMPARATOR
-      = new Comparator<Integer>() {
-    @Override
-    public int compare(Integer left, Integer right) {
-      // Snapshot.CURRENT_STATE_ID means the current state, thus should be the 
-      // largest
-      return left - right;
-    }
-  };
+  public static final Comparator<Integer> ID_INTEGER_COMPARATOR =
+      Comparator.comparingInt(left -> left);
 
   /**
    * Find the latest snapshot that 1) covers the given inode (which means the
