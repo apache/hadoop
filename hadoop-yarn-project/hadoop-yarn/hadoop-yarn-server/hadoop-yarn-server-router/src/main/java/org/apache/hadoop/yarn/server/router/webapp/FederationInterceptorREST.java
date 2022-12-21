@@ -47,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
@@ -67,8 +68,10 @@ import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -106,6 +109,7 @@ import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.ClientMethod;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationSchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
@@ -1120,9 +1124,72 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * This method retrieves the current scheduler status, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER}.
+   *
+   * For the federation mode, the SchedulerType information of the cluster
+   * cannot be integrated and displayed, and the specific cluster information needs to be marked.
+   *
+   * @return the current scheduler status
+   */
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    throw new NotImplementedException("Code is not implemented");
+
+    try {
+      LOG.info("xxxx>>>>getSchedulerInfo");
+      long startTime = Time.now();
+
+      // Initialize subcluster information
+      String scAmRMAddress = "5.6.7.8:5";
+      String scClientRMAddress = "5.6.7.8:6";
+      String scRmAdminAddress = "5.6.7.8:7";
+      String scWebAppAddress = "127.0.0.1:8080";
+
+      // Initialize subcluster sc1
+      SubClusterInfo sc1 =
+              SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
+                      scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
+                      SubClusterState.SC_RUNNING, Time.now(), "");
+      sc1.setLastHeartBeat(Time.now());
+
+      // Initialize subcluster sc2
+      SubClusterInfo sc2 =
+              SubClusterInfo.newInstance(SubClusterId.newInstance("SC-2"),
+                      scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
+                      SubClusterState.SC_RUNNING, Time.now(), "");
+      sc2.setLastHeartBeat(Time.now());
+
+
+      // Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = Maps.newHashMap();
+      subClustersActive.put(SubClusterId.newInstance("SC-1"), sc1);
+      subClustersActive.put(SubClusterId.newInstance("SC-2"), sc2);
+
+      LOG.info("xxxx>>>>subClustersActive.size={}", subClustersActive.size());
+      Class[] argsClasses = new Class[]{};
+      Object[] args = new Object[]{};
+      ClientMethod remoteMethod = new ClientMethod("getSchedulerInfo", argsClasses, args);
+      Map<SubClusterInfo, SchedulerTypeInfo> subClusterInfoMap =
+          invokeConcurrent(subClustersActive.values(), remoteMethod, SchedulerTypeInfo.class);
+      FederationSchedulerTypeInfo federationSchedulerTypeInfo = new FederationSchedulerTypeInfo();
+      subClusterInfoMap.forEach((subClusterInfo, schedulerTypeInfo) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        schedulerTypeInfo.setSubClusterId(subClusterId.getId());
+        federationSchedulerTypeInfo.getList().add(schedulerTypeInfo);
+      });
+      long stopTime = Time.now();
+      return federationSchedulerTypeInfo;
+    } catch (NotFoundException e) {
+      // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
+    } catch (YarnException | IOException e) {
+      // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException("getSchedulerInfo error.", e);
+    }
+
+    // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+    throw new RuntimeException("getSchedulerInfo error.");
   }
 
   @Override

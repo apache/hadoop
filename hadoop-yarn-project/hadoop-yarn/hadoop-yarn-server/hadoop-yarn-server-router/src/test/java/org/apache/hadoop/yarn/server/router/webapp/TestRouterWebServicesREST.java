@@ -201,7 +201,7 @@ public class TestRouterWebServicesREST {
           }
           return false;
         }
-      }, 1000, 20 * 1000);
+      }, 1000, 20 * 10000);
     } catch (Exception e) {
       fail("Web app not running");
     }
@@ -846,7 +846,7 @@ public class TestRouterWebServicesREST {
    * This test validates the correctness of
    * {@link RMWebServiceProtocol#getAppQueue(HttpServletRequest, String)} inside Router.
    */
-  @Test(timeout = 2000)
+  @Test
   public void testAppQueueXML() throws Exception {
 
     String appId = submitApplication();
