@@ -140,6 +140,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   private boolean returnPartialReport;
   private boolean appInfosCacheEnabled;
   private int appInfosCacheCount;
+  private boolean allowPartialResult;
   private long submitIntervalTime;
 
   private Map<SubClusterId, DefaultRequestInterceptorREST> interceptors;
@@ -193,6 +194,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           YarnConfiguration.DEFAULT_ROUTER_APPSINFO_CACHED_COUNT);
       appInfosCaches = new LRUCacheHashMap<>(appInfosCacheCount, true);
     }
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
 
     submitIntervalTime = conf.getTimeDuration(
         YarnConfiguration.ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME,
@@ -975,10 +980,13 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       });
     } catch (NotFoundException e) {
       LOG.error("get all active sub cluster(s) error.", e);
+      throw e;
     } catch (YarnException e) {
       LOG.error("getNodes by states = {} error.", states, e);
+      throw new YarnRuntimeException(e);
     } catch (IOException e) {
       LOG.error("getNodes by states = {} error with io error.", states, e);
+      throw new YarnRuntimeException(e);
     }
 
     // Delete duplicate from all the node reports got from all the available
@@ -2070,9 +2078,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     Map<SubClusterInfo, R> results = new HashMap<>();
 
-    // Send the requests in parallel
-    CompletionService<Pair<R, Exception>> compSvc =
-        new ExecutorCompletionService<>(this.threadpool);
+    // If there is a sub-cluster access error,
+    // we should choose whether to throw exception information according to user configuration.
+    // Send the requests in parallel.
+    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2105,9 +2114,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         if (response != null) {
           results.put(clusterId, response);
         }
-
-        Exception exception = pair.getRight();
-        if (exception != null) {
+        Exception exception = pair.getValue();
+        // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
+        // an exception will be thrown directly.
+        if (!allowPartialResult && exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
@@ -2177,5 +2187,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   public LRUCacheHashMap<RouterAppInfoCacheKey, AppsInfo> getAppInfosCaches() {
     return appInfosCaches;
+  }
+
+  @VisibleForTesting
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }
