@@ -23,11 +23,29 @@ Overview of Changes
 Users are encouraged to read the full set of release notes.
 This page provides an overview of the major changes.
 
+Azure ABFS: Critical Stream Prefetch Fix
+---------------------------------------------
+
+The abfs has a critical bug fix
+[HADOOP-18546](https://issues.apache.org/jira/browse/HADOOP-18546).
+*ABFS. Disable purging list of in-progress reads in abfs stream close().*
+
+All users of the abfs connector in hadoop releases 3.3.2+ MUST either upgrade
+or disable prefetching by setting `fs.azure.readaheadqueue.depth` to `0`
+
+Consult the parent JIRA [HADOOP-18521](https://issues.apache.org/jira/browse/HADOOP-18521)
+*ABFS ReadBufferManager buffer sharing across concurrent HTTP requests*
+for root cause analysis, details on what is affected, and mitigations.
+
+
 Vectored IO API
 ---------------
 
+[HADOOP-18103](https://issues.apache.org/jira/browse/HADOOP-18103).
+*High performance vectored read API in Hadoop*
+
 The `PositionedReadable` interface has now added an operation for
-Vectored (also known as Scatter/Gather IO):
+Vectored IO (also known as Scatter/Gather IO):
 
 ```java
 void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)
@@ -38,25 +56,25 @@ possibly in parallel, with results potentially coming in out-of-order.
 
 1. The default implementation uses a series of `readFully()` calls, so delivers
    equivalent performance.
-2. The local filesystem uses java native IO calls for higher performance reads than `readFully()`
+2. The local filesystem uses java native IO calls for higher performance reads than `readFully()`.
 3. The S3A filesystem issues parallel HTTP GET requests in different threads.
 
-Benchmarking of (modified) ORC and Parquet clients through `file://` and `s3a://`
-show tangible improvements in query times.
+Benchmarking of enhanced Apache ORC and Apache Parquet clients through `file://` and `s3a://`
+show significant improvements in query performance.
 
 Further Reading: [FsDataInputStream](./hadoop-project-dist/hadoop-common/filesystem/fsdatainputstream.html).
 
-Manifest Committer for Azure ABFS and google GCS performance
-------------------------------------------------------------
+Mapreduce: Manifest Committer for Azure ABFS and google GCS
+----------------------------------------------------------
 
-A new "intermediate manifest committer" uses a manifest file
+The new _Intermediate Manifest Committer_ uses a manifest file
 to commit the work of successful task attempts, rather than
 renaming directories.
 Job commit is matter of reading all the manifests, creating the
 destination directories (parallelized) and renaming the files,
 again in parallel.
 
-This is fast and correct on Azure Storage and Google GCS,
+This is both fast and correct on Azure Storage and Google GCS,
 and should be used there instead of the classic v1/v2 file
 output committers.
 
@@ -69,24 +87,6 @@ More details are available in the
 [manifest committer](./hadoop-mapreduce-client/hadoop-mapreduce-client-core/manifest_committer.html).
 documentation.
 
-Transitive CVE fixes
---------------------
-
-A lot of dependencies have been upgraded to address recent CVEs.
-Many of the CVEs were not actually exploitable through the Hadoop
-so much of this work is just due diligence.
-However applications which have all the library is on a class path may
-be vulnerable, and the ugprades should also reduce the number of false
-positives security scanners report.
-
-We have not been able to upgrade every single dependency to the latest
-version there is. Some of those changes are just going to be incompatible.
-If you have concerns about the state of a specific library, consult the apache JIRA
-issue tracker to see what discussions have taken place about the library in question.
-
-As an open source project, contributions in this area are always welcome,
-especially in testing the active branches, testing applications downstream of
-those branches and of whether updated dependencies trigger regressions.
 
 HDFS: Router Based Federation
 -----------------------------
@@ -95,7 +95,6 @@ A lot of effort has been invested into stabilizing/improving the HDFS Router Bas
 
 1. HDFS-13522, HDFS-16767 & Related Jiras: Allow Observer Reads in HDFS Router Based Federation.
 2. HDFS-13248: RBF supports Client Locality
-
 
 HDFS: Dynamic Datanode Reconfiguration
 --------------------------------------
@@ -109,6 +108,29 @@ cluster-wide Datanode Restarts.
 See [DataNode.java](https://github.com/apache/hadoop/blob/branch-3.3.5/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java#L346-L361)
 for the list of dynamically reconfigurable attributes.
 
+
+Transitive CVE fixes
+--------------------
+
+A lot of dependencies have been upgraded to address recent CVEs.
+Many of the CVEs were not actually exploitable through the Hadoop
+so much of this work is just due diligence.
+However applications which have all the library is on a class path may
+be vulnerable, and the ugprades should also reduce the number of false
+positives security scanners report.
+
+We have not been able to upgrade every single dependency to the latest
+version there is. Some of those changes are just going to be incompatible.
+If you have concerns about the state of a specific library, consult the pache JIRA
+issue tracker to see whether a JIRA has been filed, discussions have taken place about
+the library in question, and whether or not there is already a fix in the pipeline.
+*Please don't file new JIRAs about dependency-X.Y.Z having a CVE without
+searching for any existing issue first*
+
+As an open source project, contributions in this area are always welcome,
+especially in testing the active branches, testing applications downstream of
+those branches and of whether updated dependencies trigger regressions.
+
 Getting Started
 ===============
 
@@ -119,3 +141,4 @@ which shows you how to set up a single-node Hadoop installation.
 Then move on to the
 [Cluster Setup](./hadoop-project-dist/hadoop-common/ClusterSetup.html)
 to learn how to set up a multi-node Hadoop installation.
+
