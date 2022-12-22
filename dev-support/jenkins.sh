@@ -116,12 +116,6 @@ function check_ci_run() {
 function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
-  # this must be clean for every run
-  if [[ -d "${PATCHDIR}" ]]; then
-    rm -rf "${PATCHDIR:?}"
-  fi
-  mkdir -p "${PATCHDIR}"
-
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
   # otherwise exit, because we don't want Hadoop to do a
@@ -134,7 +128,7 @@ function run_ci() {
     exit 0
   fi
 
-  YETUS_ARGS+=("--empty-patch")
+#  YETUS_ARGS+=("--empty-patch")
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
   # where the source is located
