@@ -124,7 +124,9 @@ public class ExponentialRetryPolicy {
 
   /**
    * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy.
+   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
+   * But an invalid status code might be set due to network or timeout kind of issues.
+   * Such invalid status code also qualify for retry.
    *
    * @param retryCount The current retry attempt count.
    * @param statusCode The status code of the response, or -1 for socket error.

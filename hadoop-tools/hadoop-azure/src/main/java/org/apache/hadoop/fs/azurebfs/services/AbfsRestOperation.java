@@ -61,6 +61,9 @@ public class AbfsRestOperation {
   // Used only by AbfsInputStream/AbfsOutputStream to reuse SAS tokens.
   private final String sasToken;
 
+  // All status codes less than http 100 signify error.
+  private static final int HTTP_CONTINUE = 100;
+
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
   // For uploads, this is the request entity body.  For downloads,
@@ -230,7 +233,13 @@ public class AbfsRestOperation {
     }
 
     int status = result.getStatusCode();
-    if (status < HttpURLConnection.HTTP_OK) {
+    /*
+      If even after exhausting all retries, the http status code has an
+      invalid value it qualifies for InvalidAbfsRestOperationException.
+      All http status code less than 1xx range are considered as invalid
+      status codes.
+     */
+    if (status < HTTP_CONTINUE) {
       throw new InvalidAbfsRestOperationException(null, retryCount);
     }
 
@@ -330,9 +339,14 @@ public class AbfsRestOperation {
       return false;
     } finally {
       int status = httpOperation.getStatusCode();
-      // If the socket is terminated prior to receiving a response, the HTTP
-      // status may be 0 or -1.  A status less than 300 (2xx range) or greater than or equal
-      // to 500 (5xx range) should contribute to metrics updation.
+      /*
+        A status less than 300 (2xx range) or greater than or equal
+        to 500 (5xx range) should contribute to throttling metrics updation.
+        Less than 200 or greater than or equal to 500 show failed operations. 2xx
+        range contributes to successful operations. 3xx range is for redirects
+        and 4xx range is for user errors. These should not be a part of
+        throttling backoff computation.
+       */
       boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
               || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
       if (updateMetricsResponseCode) {

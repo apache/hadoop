@@ -346,12 +346,10 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
          */
         String expectHeader = this.connection.getRequestProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
-          LOG.debug("Getting output stream failed with expect header enabled, returning back "
-                  + ExceptionUtils.getStackTrace(e));
+          LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
           return;
         } else {
-          LOG.debug("Getting output stream failed without expect header enabled, throwing exception "
-                  + ExceptionUtils.getStackTrace(e));
+          LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
           throw e;
         }
       }
