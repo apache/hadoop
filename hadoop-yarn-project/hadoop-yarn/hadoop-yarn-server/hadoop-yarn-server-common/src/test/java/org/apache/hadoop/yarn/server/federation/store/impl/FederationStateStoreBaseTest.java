@@ -97,6 +97,12 @@ public abstract class FederationStateStoreBaseTest {
 
   protected abstract FederationStateStore createStateStore();
 
+  protected abstract void checkRouterMasterKey(DelegationKey delegationKey,
+      RouterMasterKey routerMasterKey) throws YarnException, IOException;
+
+  protected abstract void checkRouterStoreToken(RMDelegationTokenIdentifier identifier,
+      RouterStoreToken token) throws YarnException, IOException;
+
   private Configuration conf;
 
   @Before
@@ -869,6 +875,8 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertEquals(routerMasterKey.getKeyId(), routerMasterKeyResp.getKeyId());
     Assert.assertEquals(routerMasterKey.getKeyBytes(), routerMasterKeyResp.getKeyBytes());
     Assert.assertEquals(routerMasterKey.getExpiryDate(), routerMasterKeyResp.getExpiryDate());
+
+    checkRouterMasterKey(key, routerMasterKey);
   }
 
   @Test
@@ -942,6 +950,9 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertNotNull(storeTokenResp);
     Assert.assertEquals(storeToken.getRenewDate(), storeTokenResp.getRenewDate());
     Assert.assertEquals(storeToken.getTokenIdentifier(), storeTokenResp.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, storeToken);
+    checkRouterStoreToken(identifier, storeTokenResp);
   }
 
   @Test
@@ -974,6 +985,8 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertNotNull(updateTokenResp);
     Assert.assertEquals(updateToken.getRenewDate(), updateTokenResp.getRenewDate());
     Assert.assertEquals(updateToken.getTokenIdentifier(), updateTokenResp.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, updateTokenResp);
   }
 
   @Test
@@ -1022,5 +1035,7 @@ public abstract class FederationStateStoreBaseTest {
     Assert.assertNotNull(getStoreTokenResp);
     Assert.assertEquals(getStoreTokenResp.getRenewDate(), storeToken.getRenewDate());
     Assert.assertEquals(getStoreTokenResp.getTokenIdentifier(), storeToken.getTokenIdentifier());
+
+    checkRouterStoreToken(identifier, getStoreTokenResp);
   }
 }

@@ -808,6 +808,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     resources.put(userjar, lpaths);
     Path nmp = new Path(testDir);
 
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
     Assert.assertTrue(userSetEnv.containsKey("MALLOC_ARENA_MAX"));
@@ -864,6 +865,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     ContainerLaunch launch = new ContainerLaunch(distContext, conf,
         dispatcher, exec, null, container, dirsHandler, containerManager);
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
 
@@ -876,6 +878,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setEnvironment(userSetEnv);
     when(container.getLaunchContext()).thenReturn(containerLaunchContext);
 
+    launch.addConfigsToEnv(userSetEnv);
     launch.sanitizeEnv(userSetEnv, pwd, appDirs, userLocalDirs, containerLogs,
         resources, nmp, nmEnvTrack);
 
