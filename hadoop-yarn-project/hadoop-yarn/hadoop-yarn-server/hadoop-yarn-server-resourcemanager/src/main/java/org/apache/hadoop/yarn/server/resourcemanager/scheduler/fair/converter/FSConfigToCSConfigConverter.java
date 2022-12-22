@@ -16,6 +16,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_JSON;
@@ -30,6 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -292,11 +295,11 @@ public class FSConfigToCSConfigConverter {
 
   private void convertCapacitySchedulerXml(FairScheduler fs) {
     FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
+    Collection<FSLeafQueue> fsLeafQueue = fs.getQueueManager().getLeafQueues();
     emitDefaultQueueMaxParallelApplications();
     emitDefaultUserMaxParallelApplications();
     emitUserMaxParallelApplications();
     emitDefaultMaxAMShare();
-    emitDefaultUserLimitFactor();
     emitDisablePreemptionForObserveOnlyMode();
 
     FSQueueConverter queueConverter = FSQueueConverterBuilder.create()
@@ -312,6 +315,7 @@ public class FSConfigToCSConfigConverter {
         .withPercentages(usePercentages)
         .build();
 
+    emitDefaultUserLimitFactor(fsLeafQueue);
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
   }
@@ -415,11 +419,17 @@ public class FSConfigToCSConfigConverter {
     }
   }
 
-  private void emitDefaultUserLimitFactor() {
-    capacitySchedulerConfig.setFloat(
-            CapacitySchedulerConfiguration.
-                    PREFIX + "root.default." + USER_LIMIT_FACTOR,
-            -1.0f);
+  private void emitDefaultUserLimitFactor(Collection<FSLeafQueue> fsLeafQueue) {
+    fsLeafQueue
+        .forEach((leafQueue) -> {
+          if (!capacitySchedulerConfig.
+                isAutoQueueCreationV2Enabled(leafQueue.getName())) {
+            capacitySchedulerConfig.setFloat(
+                    CapacitySchedulerConfiguration.
+                            PREFIX + leafQueue.getName() + DOT + USER_LIMIT_FACTOR,
+                    -1.0f);
+          }
+        });
   }
 
   private void emitDisablePreemptionForObserveOnlyMode() {

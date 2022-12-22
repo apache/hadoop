@@ -183,7 +183,7 @@ public class TestFSConfigToCSConfigConverter {
         conf.get(PREFIX + "root.admins.alice.maximum-am-resource-percent"));
 
     assertNull("root.users.joe maximum-am-resource-percent should be null",
-        conf.get(PREFIX + "root.users.joe maximum-am-resource-percent"));
+        conf.get(PREFIX + "root.users.joe.maximum-am-resource-percent"));
   }
 
   @Test
@@ -196,8 +196,11 @@ public class TestFSConfigToCSConfigConverter {
 
     assertEquals("Default user limit factor", "-1.0", userLimitFactor);
 
-    assertNull("root.users.joe user-limit-factor should be null",
-            conf.get(PREFIX + "root.users.joe user-limit-factor"));
+    assertEquals("root.users.joe user-limit-factor", "-1.0",
+            conf.get(PREFIX + "root.users.joe.user-limit-factor"));
+
+    assertEquals("root.admins.bob user-limit-factor", "-1.0",
+            conf.get(PREFIX + "root.admins.bob.user-limit-factor"));
   }
 
   @Test
