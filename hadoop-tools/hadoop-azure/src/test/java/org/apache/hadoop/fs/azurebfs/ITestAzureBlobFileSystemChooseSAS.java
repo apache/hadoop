@@ -113,10 +113,15 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
 
         // attempting an operation using the selected SAS Token
         // as an account SAS is configured, both filesystem level operations (on root) and blob level operations should succeed
-        newTestFs.getFileStatus(new Path("/"));
-        Path testPath = new Path("/testCorrectSASToken");
-        newTestFs.create(testPath).close();
-        newTestFs.delete(new Path("/"), true);
+        try {
+            newTestFs.getFileStatus(new Path("/"));
+            Path testPath = new Path("/testCorrectSASToken");
+            newTestFs.create(testPath).close();
+            newTestFs.delete(new Path("/"), true);
+        } catch (Exception e) {
+            fail("Exception has been thrown: "+e.getMessage());
+        }
+
     }
 
     /**
@@ -124,13 +129,16 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
      * whether the code errors out at the initialization stage itself
      * @throws IOException
      */
-    @Test(expected = TokenAccessProviderException.class)
-    public void testBothProviderFixedTokenUnset() throws IOException {
+    @Test
+    public void testBothProviderFixedTokenUnset() throws Exception {
         AbfsConfiguration testAbfsConfig = getConfiguration();
 
         testAbfsConfig.unset(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
         testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);
 
-        AzureBlobFileSystem newTestFs = (AzureBlobFileSystem) FileSystem.newInstance(testAbfsConfig.getRawConfiguration());
+        intercept(TokenAccessProviderException.class,
+                () -> {
+                    AzureBlobFileSystem newTestFs = (AzureBlobFileSystem) FileSystem.newInstance(testAbfsConfig.getRawConfiguration());
+                });
     }
 }

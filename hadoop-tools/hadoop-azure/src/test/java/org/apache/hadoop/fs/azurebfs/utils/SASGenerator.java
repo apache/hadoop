@@ -108,7 +108,6 @@ public abstract class SASGenerator {
     byte[] utf8Bytes;
     try {
       utf8Bytes = stringToSign.getBytes(StandardCharsets.UTF_8.toString());
-      // utf8Bytes = stringToSign.getBytes("UTF-8");
     } catch (final UnsupportedEncodingException e) {
       throw new IllegalArgumentException(e);
     }
