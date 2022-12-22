@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * General xml utilities.
@@ -58,6 +59,11 @@ public class XMLUtils {
       "http://apache.org/xml/features/dom/create-entity-ref-nodes";
   public static final String VALIDATION =
       "http://xml.org/sax/features/validation";
+
+  private static final AtomicBoolean CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD =
+          new AtomicBoolean(true);
+  private static final AtomicBoolean CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET =
+          new AtomicBoolean(true);
 
   /**
    * Transform input xml given a stylesheet.
@@ -143,8 +149,7 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     TransformerFactory trfactory = TransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    setOptionalSecureTransformerAttributes(trfactory);
     return trfactory;
   }
 
@@ -161,9 +166,29 @@ public class XMLUtils {
           throws TransformerConfigurationException {
     SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
     trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    setOptionalSecureTransformerAttributes(trfactory);
     return trfactory;
+  }
+
+  /**
+   * These attributes are recommended for maximum security but some JAXP transformers do
+   * not support them. If at any stage, we fail to set these attributes, then we won't try again
+   * for subsequent transformers.
+   *
+   * @param transformerFactory to update
+   */
+  private static void setOptionalSecureTransformerAttributes(
+          TransformerFactory transformerFactory) {
+    if (CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD.get()) {
+      if (!bestEffortSetAttribute(transformerFactory, XMLConstants.ACCESS_EXTERNAL_DTD, "")) {
+        CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD.set(false);
+      }
+    }
+    if (CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET.get()) {
+      if (!bestEffortSetAttribute(transformerFactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "")) {
+        CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET.set(false);
+      }
+    }
   }
 
   /**
