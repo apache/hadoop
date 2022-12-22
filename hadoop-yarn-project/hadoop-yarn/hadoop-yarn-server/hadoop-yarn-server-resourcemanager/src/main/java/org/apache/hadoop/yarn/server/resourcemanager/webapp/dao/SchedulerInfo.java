@@ -32,13 +32,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 
 @XmlRootElement
-@XmlSeeAlso({ CapacitySchedulerInfo.class, FairSchedulerInfo.class, FifoSchedulerInfo.class })
+@XmlSeeAlso({ CapacitySchedulerInfo.class, FairSchedulerInfo.class,
+  FifoSchedulerInfo.class })
 public class SchedulerInfo {
-  private String schedulerName;
-  private ResourceInfo minAllocResource;
-  private ResourceInfo maxAllocResource;
-  private EnumSet<SchedulerResourceTypes> schedulingResourceTypes;
-  private int maximumClusterPriority;
+  protected String schedulerName;
+  protected ResourceInfo minAllocResource;
+  protected ResourceInfo maxAllocResource;
+  protected EnumSet<SchedulerResourceTypes> schedulingResourceTypes;
+  protected int maximumClusterPriority;
 
   // JAXB needs this
   public SchedulerInfo() {

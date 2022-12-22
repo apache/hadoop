@@ -47,7 +47,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
@@ -68,7 +67,6 @@ import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.retry.FederationActionRetry;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
-import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -1135,38 +1133,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    */
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-
     try {
-      LOG.info("xxxx>>>>getSchedulerInfo");
       long startTime = Time.now();
-
-      // Initialize subcluster information
-      String scAmRMAddress = "5.6.7.8:5";
-      String scClientRMAddress = "5.6.7.8:6";
-      String scRmAdminAddress = "5.6.7.8:7";
-      String scWebAppAddress = "127.0.0.1:8080";
-
-      // Initialize subcluster sc1
-      SubClusterInfo sc1 =
-              SubClusterInfo.newInstance(SubClusterId.newInstance("SC-1"),
-                      scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
-                      SubClusterState.SC_RUNNING, Time.now(), "");
-      sc1.setLastHeartBeat(Time.now());
-
-      // Initialize subcluster sc2
-      SubClusterInfo sc2 =
-              SubClusterInfo.newInstance(SubClusterId.newInstance("SC-2"),
-                      scAmRMAddress, scClientRMAddress, scRmAdminAddress, scWebAppAddress,
-                      SubClusterState.SC_RUNNING, Time.now(), "");
-      sc2.setLastHeartBeat(Time.now());
-
-
-      // Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
-      Map<SubClusterId, SubClusterInfo> subClustersActive = Maps.newHashMap();
-      subClustersActive.put(SubClusterId.newInstance("SC-1"), sc1);
-      subClustersActive.put(SubClusterId.newInstance("SC-2"), sc2);
-
-      LOG.info("xxxx>>>>subClustersActive.size={}", subClustersActive.size());
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       Class[] argsClasses = new Class[]{};
       Object[] args = new Object[]{};
       ClientMethod remoteMethod = new ClientMethod("getSchedulerInfo", argsClasses, args);
@@ -1179,16 +1148,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         federationSchedulerTypeInfo.getList().add(schedulerTypeInfo);
       });
       long stopTime = Time.now();
+      routerMetrics.succeededGetSchedulerInfoRetrieved(stopTime - startTime);
       return federationSchedulerTypeInfo;
     } catch (NotFoundException e) {
-      // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("Get all active sub cluster(s) error.", e);
     } catch (YarnException | IOException e) {
-      // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+      routerMetrics.incrGetSchedulerInfoFailedRetrieved();
       RouterServerUtil.logAndThrowRunTimeException("getSchedulerInfo error.", e);
     }
-
-    // routerMetrics.incrCheckUserAccessToQueueFailedRetrieved();
+    routerMetrics.incrGetSchedulerInfoFailedRetrieved();
     throw new RuntimeException("getSchedulerInfo error.");
   }
 

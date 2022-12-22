@@ -135,6 +135,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
   @Metric("# of renewDelegationToken failed to be retrieved")
   private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
+  @Metric("# of getSchedulerInfo failed to be retrieved")
+  private MutableGaugeInt numGetSchedulerInfoFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -232,6 +234,9 @@ public final class RouterMetrics {
   @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
   private MutableRate totalSucceededCancelDelegationTokenRetrieved;
 
+  @Metric("Total number of successful Retrieved GetSchedulerInfo and latency(ms)")
+  private MutableRate totalSucceededGetSchedulerInfoRetrieved;
+
   /**
    * Provide quantile counters for all latencies.
    */
@@ -282,6 +287,7 @@ public final class RouterMetrics {
   private MutableQuantiles getDelegationTokenLatency;
   private MutableQuantiles renewDelegationTokenLatency;
   private MutableQuantiles cancelDelegationTokenLatency;
+  private MutableQuantiles getSchedulerInfoRetrievedLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -456,6 +462,8 @@ public final class RouterMetrics {
     cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
         "latency of cancel delegation token timeouts", "ops", "latency", 10);
 
+    getSchedulerInfoRetrievedLatency = registry.newQuantiles("getSchedulerInfoRetrievedLatency",
+        "latency of get scheduler info timeouts", "ops", "latency", 10);
   }
 
   public static RouterMetrics getMetrics() {
@@ -713,6 +721,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -948,6 +961,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public double getLatencySucceededGetSchedulerInfoRetrieved() {
+    return totalSucceededGetSchedulerInfoRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
   public int getAppsFailedCreated() {
     return numAppsFailedCreated.value();
   }
@@ -1155,6 +1173,10 @@ public final class RouterMetrics {
 
   public int getCancelDelegationTokenFailedRetrieved() {
     return numCancelDelegationTokenFailedRetrieved.value();
+  }
+
+  public int getSchedulerInfoFailedRetrieved() {
+    return numGetSchedulerInfoFailedRetrieved.value();
   }
 
   public void succeededAppsCreated(long duration) {
@@ -1392,6 +1414,11 @@ public final class RouterMetrics {
     cancelDelegationTokenLatency.add(duration);
   }
 
+  public void succeededGetSchedulerInfoRetrieved(long duration) {
+    totalSucceededGetSchedulerInfoRetrieved.add(duration);
+    getSchedulerInfoRetrievedLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1578,5 +1605,9 @@ public final class RouterMetrics {
 
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrGetSchedulerInfoFailedRetrieved() {
+    numGetSchedulerInfoFailedRetrieved.incr();
   }
 }
