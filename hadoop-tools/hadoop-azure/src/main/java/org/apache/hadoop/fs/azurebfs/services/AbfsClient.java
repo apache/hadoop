@@ -251,7 +251,7 @@ public class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       EncryptionAdapter encryptionAdapter, TracingContext tracingContext)
       throws IOException {
-    if(!getIsNamespaceEnabled(tracingContext)) {
+    if (!getIsNamespaceEnabled(tracingContext)) {
       return;
     }
     String encodedKey, encodedKeySHA256;
@@ -281,7 +281,8 @@ public class AbfsClient implements Closeable {
     }
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, encodedKeySHA256));
+    requestHeaders.add(
+        new AbfsHttpHeader(X_MS_ENCRYPTION_KEY_SHA256, encodedKeySHA256));
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_ALGORITHM,
         SERVER_SIDE_ENCRYPTION_ALGORITHM));
   }

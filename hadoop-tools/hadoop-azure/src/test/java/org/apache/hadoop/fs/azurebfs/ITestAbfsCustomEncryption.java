@@ -108,9 +108,17 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   @Parameterized.Parameter(5)
   public boolean isExceptionCase;
 
+  /**
+   * Boolean value to indicate that the server response would have header related
+   * to CPK and the test would need to assert its value.
+   * */
   @Parameterized.Parameter(6)
   public boolean isCpkResponseHdrExpected;
 
+  /**
+   * Boolean value to indicate that the server response would have fields related
+   * to CPK and the test would need to assert its value.
+   * */
   @Parameterized.Parameter(7)
   public Boolean isCpkResponseKeyExpected = false;
 

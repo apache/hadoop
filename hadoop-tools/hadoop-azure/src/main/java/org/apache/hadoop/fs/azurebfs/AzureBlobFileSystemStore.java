@@ -54,11 +54,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -466,7 +466,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .getPathStatus(relativePath, true, tracingContext, encryptionAdapter);
       perfInfo.registerResult(op.getResult());
-      if(encryptionAdapter != null) {
+      if (encryptionAdapter != null) {
         encryptionAdapter.destroy();
       }
 
@@ -480,9 +480,29 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
+  /**
+   * Creates an object of {@link org.apache.hadoop.fs.azurebfs.security.EncryptionAdapter}
+   * from a file path. It calls {@link  org.apache.hadoop.fs.azurebfs.services.AbfsClient
+   * #getPathStatus(String, boolean, TracingContext, EncryptionAdapter)} method to get
+   * contextValue (x-ms-encryption-context) from the server. The contextValue is passed
+   * to the constructor of EncryptionAdapter to create the required object of
+   * EncryptionAdapter.
+   * @param path Path of the file for which the object of EncryptionAdapter is required.
+   * @return <ul>
+   *   <li>
+   *     null: if encryptionType is not of type
+   *     {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
+   *   </li>
+   *   <li>
+   *     new object of EncryptionAdapter containing required encryptionKeys for the give file:
+   *     if encryptionType is of type {@link org.apache.hadoop.fs.azurebfs.utils.EncryptionType#ENCRYPTION_CONTEXT}.
+   *   </li>
+   *
+   * </ul>
+   * */
   private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext) throws IOException {
-    if(client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
+    if (client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT) {
       return null;
     }
     final String responseHeaderEncryptionContext = client.getPathStatus(path,
@@ -585,7 +605,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       }
 
       EncryptionAdapter encryptionAdapter = null;
-      if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+      if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
         encryptionAdapter = new EncryptionAdapter(
             client.getEncryptionContextProvider(), getRelativePath(path));
       }
