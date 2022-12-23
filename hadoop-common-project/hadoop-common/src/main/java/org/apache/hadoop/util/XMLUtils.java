@@ -179,16 +179,10 @@ public class XMLUtils {
    */
   private static void setOptionalSecureTransformerAttributes(
           TransformerFactory transformerFactory) {
-    if (CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD.get()) {
-      if (!bestEffortSetAttribute(transformerFactory, XMLConstants.ACCESS_EXTERNAL_DTD, "")) {
-        CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD.set(false);
-      }
-    }
-    if (CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET.get()) {
-      if (!bestEffortSetAttribute(transformerFactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "")) {
-        CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET.set(false);
-      }
-    }
+    bestEffortSetAttribute(transformerFactory, CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_DTD,
+            XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(transformerFactory, CAN_SET_TRANSFORMER_ACCESS_EXTERNAL_STYLESHEET,
+            XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
   }
 
   /**
@@ -197,18 +191,19 @@ public class XMLUtils {
    * logs the issue at debug level.
    *
    * @param transformerFactory to update
+   * @param flag that indicates whether to do the update and the flag can be set to false if an update fails
    * @param name of the attribute to set
    * @param value to set on the attribute
-   * @return whether the attribute was successfully set
    */
-  static boolean bestEffortSetAttribute(TransformerFactory transformerFactory,
-                                        String name, Object value) {
-    try {
-      transformerFactory.setAttribute(name, value);
-      return true;
-    } catch (Throwable t) {
-      LOG.debug("Issue setting TransformerFactory attribute {}: {}", name, t.toString());
+  static void bestEffortSetAttribute(TransformerFactory transformerFactory, AtomicBoolean flag,
+                                     String name, Object value) {
+    if (flag.get()) {
+      try {
+        transformerFactory.setAttribute(name, value);
+      } catch (Throwable t) {
+        flag.set(false);
+        LOG.debug("Issue setting TransformerFactory attribute {}: {}", name, t.toString());
+      }
     }
-    return false;
   }
 }
