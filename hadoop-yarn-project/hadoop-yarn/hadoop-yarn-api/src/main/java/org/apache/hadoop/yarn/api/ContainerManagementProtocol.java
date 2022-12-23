@@ -102,8 +102,8 @@ public interface ContainerManagementProtocol {
    * @return response including conatinerIds of all successfully launched
    *         containers, a containerId-to-exception map for failed requests and
    *         a allServicesMetaData map.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Public
   @Stable
@@ -138,8 +138,8 @@ public interface ContainerManagementProtocol {
    * @return response which includes a list of containerIds of successfully
    *         stopped containers, a containerId-to-exception map for failed
    *         requests.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Public
   @Stable
@@ -174,8 +174,8 @@ public interface ContainerManagementProtocol {
    *         successfully queried containers and a containerId-to-exception map
    *         for failed requests.
    * 
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Public
   @Stable
@@ -195,8 +195,8 @@ public interface ContainerManagementProtocol {
    *         whose resource has been successfully increased and a
    *         containerId-to-exception map for failed requests.
    *
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Public
   @Unstable

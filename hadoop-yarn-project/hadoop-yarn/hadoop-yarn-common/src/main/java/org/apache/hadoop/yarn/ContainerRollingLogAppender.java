@@ -54,8 +54,6 @@ public class ContainerRollingLogAppender extends RollingFileAppender
 
   /**
    * Getter/Setter methods for log4j.
-   *
-   * @return containerLogDir.
    */
 
   public String getContainerLogDir() {

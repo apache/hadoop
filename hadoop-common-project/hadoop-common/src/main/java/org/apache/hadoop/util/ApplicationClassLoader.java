@@ -108,7 +108,7 @@ public class ApplicationClassLoader extends URLClassLoader {
       throws MalformedURLException {
     List<URL> urls = new ArrayList<URL>();
     for (String element : classpath.split(File.pathSeparator)) {
-      if (element.endsWith(File.separator + "*")) {
+      if (element.endsWith("/*")) {
         List<Path> jars = FileUtil.getJarsInDirectory(element);
         if (!jars.isEmpty()) {
           for (Path jar: jars) {

@@ -66,8 +66,6 @@ public abstract class KillApplicationResponse {
 
   /**
    * Set the flag which indicates that the process of killing application is completed or not.
-   * @param isKillCompleted true if the process of killing application has completed,
-   *     false otherwise.
    */
   @Private
   @Unstable

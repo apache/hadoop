@@ -56,7 +56,7 @@ public final class YarnServerSecurityUtils {
    * current application.
    *
    * @return the AMRMTokenIdentifier instance for the current user
-   * @throws YarnException exceptions from yarn servers.
+   * @throws YarnException
    */
   public static AMRMTokenIdentifier authorizeRequest() throws YarnException {
 
@@ -137,9 +137,9 @@ public final class YarnServerSecurityUtils {
    * Parses the container launch context and returns a Credential instance that
    * contains all the tokens from the launch context.
    *
-   * @param launchContext ContainerLaunchContext.
+   * @param launchContext
    * @return the credential instance
-   * @throws IOException if there are I/O errors.
+   * @throws IOException
    */
   public static Credentials parseCredentials(
       ContainerLaunchContext launchContext) throws IOException {

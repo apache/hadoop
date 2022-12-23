@@ -53,10 +53,10 @@ public final class CsiConfigUtils {
    * Resolve the CSI adaptor address for a CSI driver from configuration.
    * Expected configuration property name is
    * yarn.nodemanager.csi-driver-adaptor.${driverName}.address.
-   * @param driverName driver name.
-   * @param conf configuration.
+   * @param driverName
+   * @param conf
    * @return adaptor service address
-   * @throws YarnException exceptions from yarn servers.
+   * @throws YarnException
    */
   public static InetSocketAddress getCsiAdaptorAddressForDriver(
       String driverName, Configuration conf) throws YarnException {

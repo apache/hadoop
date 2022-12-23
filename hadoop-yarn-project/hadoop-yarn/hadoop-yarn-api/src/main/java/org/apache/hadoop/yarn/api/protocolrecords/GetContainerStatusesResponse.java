@@ -65,7 +65,6 @@ public abstract class GetContainerStatusesResponse {
 
   /**
    * Set the <code>ContainerStatus</code>es of the requested containers.
-   * @param statuses <code>ContainerStatus</code>es of the requested containers.
    */
   @Private
   @Unstable
@@ -73,7 +72,7 @@ public abstract class GetContainerStatusesResponse {
 
   /**
    * Get the containerId-to-exception map in which the exception indicates error
-   * from per container for failed requests.
+   * from per container for failed requests
    * @return map of containerId-to-exception
    */
   @Public
@@ -82,9 +81,7 @@ public abstract class GetContainerStatusesResponse {
 
   /**
    * Set the containerId-to-exception map in which the exception indicates error
-   * from per container for failed requests.
-   *
-   * @param failedContainers containerId-to-exception map.
+   * from per container for failed requests
    */
   @Private
   @Unstable

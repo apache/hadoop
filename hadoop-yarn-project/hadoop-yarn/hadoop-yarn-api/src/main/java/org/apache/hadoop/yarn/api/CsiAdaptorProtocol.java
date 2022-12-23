@@ -39,8 +39,8 @@ public interface CsiAdaptorProtocol {
    * the name of the driver and its version.
    * @param request get plugin info request.
    * @return response that contains driver name and its version.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   GetPluginInfoResponse getPluginInfo(GetPluginInfoRequest request)
       throws YarnException, IOException;
@@ -51,8 +51,8 @@ public interface CsiAdaptorProtocol {
    * or not, with a detailed message.
    * @param request validate volume capability request.
    * @return validation response.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   ValidateVolumeCapabilitiesResponse validateVolumeCapacity(
       ValidateVolumeCapabilitiesRequest request) throws YarnException,
@@ -63,8 +63,8 @@ public interface CsiAdaptorProtocol {
    * to the local file system and become visible for clients.
    * @param request publish volume request.
    * @return publish volume response.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   NodePublishVolumeResponse nodePublishVolume(
       NodePublishVolumeRequest request) throws YarnException, IOException;
@@ -75,8 +75,8 @@ public interface CsiAdaptorProtocol {
    * volume from given node.
    * @param request un-publish volume request.
    * @return un-publish volume response.
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   NodeUnpublishVolumeResponse nodeUnpublishVolume(
       NodeUnpublishVolumeRequest request) throws YarnException, IOException;

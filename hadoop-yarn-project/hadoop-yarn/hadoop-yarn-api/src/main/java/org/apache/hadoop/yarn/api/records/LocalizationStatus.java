@@ -59,7 +59,7 @@ public abstract class LocalizationStatus {
 
   /**
    * Sets the resource key.
-   * @param resourceKey resource key.
+   * @param resourceKey
    */
   @InterfaceAudience.Private
   public abstract void setResourceKey(String resourceKey);

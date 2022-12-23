@@ -56,7 +56,6 @@ public abstract class SignalContainerRequest {
 
   /**
    * Set the <code>ContainerId</code> of the container to signal.
-   * @param containerId containerId.
    */
   @Public
   @Unstable
@@ -72,7 +71,6 @@ public abstract class SignalContainerRequest {
 
   /**
    * Set the <code>SignalContainerCommand</code> of the signal request.
-   * @param command signal container command.
    */
   @Public
   @Unstable

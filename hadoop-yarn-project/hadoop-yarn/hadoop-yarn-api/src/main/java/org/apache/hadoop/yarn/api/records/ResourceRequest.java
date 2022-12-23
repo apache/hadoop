@@ -437,17 +437,17 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
 
   /**
    * <p>For a request at a network hierarchy level, set whether locality can be relaxed
-   * to that level and beyond.</p>
+   * to that level and beyond.<p>
    * 
    * <p>If the flag is off on a rack-level <code>ResourceRequest</code>,
    * containers at that request's priority will not be assigned to nodes on that
    * request's rack unless requests specifically for those nodes have also been
-   * submitted.</p>
+   * submitted.<p>
    * 
    * <p>If the flag is off on an {@link ResourceRequest#ANY}-level
    * <code>ResourceRequest</code>, containers at that request's priority will
    * only be assigned on racks for which specific requests have also been
-   * submitted.</p>
+   * submitted.<p>
    * 
    * <p>For example, to request a container strictly on a specific node, the
    * corresponding rack-level and any-level requests should have locality

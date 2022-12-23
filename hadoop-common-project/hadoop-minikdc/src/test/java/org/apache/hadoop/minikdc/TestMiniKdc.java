@@ -38,35 +38,8 @@ import java.util.HashMap;
 import java.util.Arrays;
 
 public class TestMiniKdc extends KerberosSecurityTestcase {
-  private static final boolean IBM_JAVA = shouldUseIbmPackages();
-  // duplicated to avoid cycles in the build
-  private static boolean shouldUseIbmPackages() {
-    final List<String> ibmTechnologyEditionSecurityModules = Arrays.asList(
-        "com.ibm.security.auth.module.JAASLoginModule",
-        "com.ibm.security.auth.module.Win64LoginModule",
-        "com.ibm.security.auth.module.NTLoginModule",
-        "com.ibm.security.auth.module.AIX64LoginModule",
-        "com.ibm.security.auth.module.LinuxLoginModule",
-        "com.ibm.security.auth.module.Krb5LoginModule"
-    );
-
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      return ibmTechnologyEditionSecurityModules
-          .stream().anyMatch((module) -> isSystemClassAvailable(module));
-    }
-
-    return false;
-  }
-
-  private static boolean isSystemClassAvailable(String className) {
-    try {
-      Class.forName(className);
-      return true;
-    } catch (Exception ignored) {
-      return false;
-    }
-  }
-
+  private static final boolean IBM_JAVA = System.getProperty("java.vendor")
+      .contains("IBM");
   @Test
   public void testMiniKdcStart() {
     MiniKdc kdc = getKdc();
@@ -144,9 +117,9 @@ public class TestMiniKdc extends KerberosSecurityTestcase {
       options.put("debug", "true");
 
       return new AppConfigurationEntry[]{
-          new AppConfigurationEntry(getKrb5LoginModuleName(),
-                AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                options)};
+              new AppConfigurationEntry(getKrb5LoginModuleName(),
+                      AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                      options)};
     }
   }
 

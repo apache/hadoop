@@ -180,9 +180,6 @@ public class TestFederationInterceptorRESTRetry
   @Test
   public void testGetNewApplicationTwoBadSCs()
       throws YarnException, IOException, InterruptedException {
-
-    LOG.info("Test getNewApplication with two bad SCs.");
-
     setupCluster(Arrays.asList(bad1, bad2));
 
     Response response = interceptor.createNewApplication(null);
@@ -198,21 +195,17 @@ public class TestFederationInterceptorRESTRetry
   @Test
   public void testGetNewApplicationOneBadOneGood()
       throws YarnException, IOException, InterruptedException {
-
-    LOG.info("Test getNewApplication with one bad, one good SC.");
-
+    System.out.println("Test getNewApplication with one bad, one good SC");
     setupCluster(Arrays.asList(good, bad2));
     Response response = interceptor.createNewApplication(null);
-    Assert.assertNotNull(response);
+
     Assert.assertEquals(OK, response.getStatus());
 
     NewApplication newApp = (NewApplication) response.getEntity();
-    Assert.assertNotNull(newApp);
-
     ApplicationId appId = ApplicationId.fromString(newApp.getApplicationId());
-    Assert.assertNotNull(appId);
 
-    Assert.assertEquals(Integer.parseInt(good.getId()), appId.getClusterTimestamp());
+    Assert.assertEquals(Integer.parseInt(good.getId()),
+        appId.getClusterTimestamp());
   }
 
   /**
@@ -222,8 +215,6 @@ public class TestFederationInterceptorRESTRetry
   @Test
   public void testSubmitApplicationOneBadSC()
       throws YarnException, IOException, InterruptedException {
-
-    LOG.info("Test submitApplication with one bad SC.");
 
     setupCluster(Arrays.asList(bad2));
 

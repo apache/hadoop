@@ -41,28 +41,21 @@ public class LeveldbIterator implements Iterator<Map.Entry<byte[], byte[]>>,
   private DBIterator iter;
 
   /**
-   * Create an iterator for the specified database.
-   *
-   * @param db database.
+   * Create an iterator for the specified database
    */
   public LeveldbIterator(DB db) {
     iter = db.iterator();
   }
 
   /**
-   * Create an iterator for the specified database.
-   *
-   * @param db db.
-   * @param options ReadOptions.
+   * Create an iterator for the specified database
    */
   public LeveldbIterator(DB db, ReadOptions options) {
     iter = db.iterator(options);
   }
 
   /**
-   * Create an iterator using the specified underlying DBIterator.
-   *
-   * @param iter DB Iterator.
+   * Create an iterator using the specified underlying DBIterator
    */
   public LeveldbIterator(DBIterator iter) {
     this.iter = iter;
@@ -71,9 +64,6 @@ public class LeveldbIterator implements Iterator<Map.Entry<byte[], byte[]>>,
   /**
    * Repositions the iterator so the key of the next BlockElement
    * returned greater than or equal to the specified targetKey.
-   *
-   * @param key key of the next BlockElement.
-   * @throws DBException db Exception.
    */
   public void seek(byte[] key) throws DBException {
     try {
@@ -126,9 +116,6 @@ public class LeveldbIterator implements Iterator<Map.Entry<byte[], byte[]>>,
 
   /**
    * Returns the next element in the iteration.
-   *
-   * @return the next element in the iteration.
-   * @throws DBException DB Exception.
    */
   @Override
   public Map.Entry<byte[], byte[]> next() throws DBException {
@@ -144,9 +131,6 @@ public class LeveldbIterator implements Iterator<Map.Entry<byte[], byte[]>>,
   /**
    * Returns the next element in the iteration, without advancing the
    * iteration.
-   *
-   * @return the next element in the iteration.
-   * @throws DBException db Exception.
    */
   public Map.Entry<byte[], byte[]> peekNext() throws DBException {
     try {

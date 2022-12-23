@@ -221,27 +221,6 @@ public class TestJournaledEditsCache {
     cache.retrieveEdits(-1, 10, new ArrayList<>());
   }
 
-  @Test
-  public void testCacheSizeConfigs() {
-    // Assert the default configs.
-    Configuration config = new Configuration();
-    cache = new JournaledEditsCache(config);
-    assertEquals((int) (Runtime.getRuntime().maxMemory() * 0.5f), cache.getCapacity());
-
-    // Set dfs.journalnode.edit-cache-size.bytes.
-    Configuration config1 = new Configuration();
-    config1.setInt(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY, 1);
-    config1.setFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.1f);
-    cache = new JournaledEditsCache(config1);
-    assertEquals(1, cache.getCapacity());
-
-    // Don't set dfs.journalnode.edit-cache-size.bytes.
-    Configuration config2 = new Configuration();
-    config2.setFloat(DFSConfigKeys.DFS_JOURNALNODE_EDIT_CACHE_SIZE_FRACTION_KEY, 0.1f);
-    cache = new JournaledEditsCache(config2);
-    assertEquals((int) (Runtime.getRuntime().maxMemory() * 0.1f), cache.getCapacity());
-  }
-
   private void storeEdits(int startTxn, int endTxn) throws Exception {
     cache.storeEdits(createTxnData(startTxn, endTxn - startTxn + 1), startTxn,
         endTxn, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);

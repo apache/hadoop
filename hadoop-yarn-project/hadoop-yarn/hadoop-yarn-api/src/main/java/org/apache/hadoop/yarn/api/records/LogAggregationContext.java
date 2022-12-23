@@ -157,7 +157,7 @@ public abstract class LogAggregationContext {
    * Set include pattern. This includePattern only takes affect
    * on logs that exist at the time of application finish.
    *
-   * @param includePattern include pattern.
+   * @param includePattern
    */
   @Public
   @Unstable
@@ -177,7 +177,7 @@ public abstract class LogAggregationContext {
    * Set exclude pattern. This excludePattern only takes affect
    * on logs that exist at the time of application finish.
    *
-   * @param excludePattern exclude pattern.
+   * @param excludePattern
    */
   @Public
   @Unstable
@@ -195,9 +195,7 @@ public abstract class LogAggregationContext {
   /**
    * Set include pattern in a rolling fashion.
    * 
-   * @param rolledLogsIncludePattern It uses Java Regex to filter the log files
-   * which match the defined include pattern and those log files
-   * will be aggregated in a rolling fashion.
+   * @param rolledLogsIncludePattern
    */
   @Public
   @Unstable
@@ -216,7 +214,7 @@ public abstract class LogAggregationContext {
   /**
    * Set exclude pattern for in a rolling fashion.
    * 
-   * @param rolledLogsExcludePattern rolled logs exclude pattern.
+   * @param rolledLogsExcludePattern
    */
   @Public
   @Unstable
@@ -235,7 +233,7 @@ public abstract class LogAggregationContext {
   /**
    * Set the log aggregation policy class.
    *
-   * @param className log aggregation policy class name.
+   * @param className
    */
   @Public
   @Unstable
@@ -257,7 +255,7 @@ public abstract class LogAggregationContext {
    * It is up to the log aggregation policy class to decide how to parse
    * the parameters string.
    *
-   * @param parameters log aggregation policy parameters.
+   * @param parameters
    */
   @Public
   @Unstable

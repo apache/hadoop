@@ -35,7 +35,7 @@ public interface NodeAttributeStore extends Closeable {
    * Replace labels on node.
    *
    * @param nodeToAttribute node to attribute list.
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   void replaceNodeAttributes(List<NodeToAttributes> nodeToAttribute)
       throws IOException;
@@ -44,7 +44,7 @@ public interface NodeAttributeStore extends Closeable {
    * Add attribute to node.
    *
    * @param nodeToAttribute node to attribute list.
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   void addNodeAttributes(List<NodeToAttributes> nodeToAttribute)
       throws IOException;
@@ -53,7 +53,7 @@ public interface NodeAttributeStore extends Closeable {
    * Remove attribute from node.
    *
    * @param nodeToAttribute node to attribute list.
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   void removeNodeAttributes(List<NodeToAttributes> nodeToAttribute)
       throws IOException;
@@ -62,16 +62,16 @@ public interface NodeAttributeStore extends Closeable {
    * Initialize based on configuration and NodeAttributesManager.
    *
    * @param configuration configuration instance.
-   * @param mgr node attribute manager instance.
-   * @throws Exception exception occurs.
+   * @param mgr nodeattributemanager instance.
+   * @throws Exception
    */
   void init(Configuration configuration, NodeAttributesManager mgr)
       throws Exception;
 
   /**
-   * Recover store on resource manager startup.
-   * @throws IOException io error occur.
-   * @throws YarnException exceptions from yarn servers.
+   * Recover store on resourcemanager startup.
+   * @throws IOException
+   * @throws YarnException
    */
   void recover() throws IOException, YarnException;
 }

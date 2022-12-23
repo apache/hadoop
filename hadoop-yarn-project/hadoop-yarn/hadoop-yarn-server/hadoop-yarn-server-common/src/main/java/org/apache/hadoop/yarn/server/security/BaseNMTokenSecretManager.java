@@ -111,11 +111,6 @@ public class BaseNMTokenSecretManager extends
   
   /**
    * Helper function for creating NMTokens.
-   *
-   * @param applicationAttemptId application AttemptId.
-   * @param nodeId node Id.
-   * @param applicationSubmitter application Submitter.
-   * @return NMToken.
    */
   public Token createNMToken(ApplicationAttemptId applicationAttemptId,
       NodeId nodeId, String applicationSubmitter) {

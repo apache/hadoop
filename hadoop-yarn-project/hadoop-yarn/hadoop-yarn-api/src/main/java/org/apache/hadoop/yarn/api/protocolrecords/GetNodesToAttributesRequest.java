@@ -48,7 +48,7 @@ public abstract class GetNodesToAttributesRequest {
   /**
    * Set hostnames for which mapping is required.
    *
-   * @param hostnames Set of hostnames.
+   * @param hostnames
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving

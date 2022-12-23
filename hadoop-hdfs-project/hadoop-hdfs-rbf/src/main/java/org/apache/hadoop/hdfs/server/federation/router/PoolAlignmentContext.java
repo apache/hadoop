@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.LongAccumulator;
-
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 
@@ -100,10 +98,5 @@ public class PoolAlignmentContext implements AlignmentContext {
 
   public void advanceClientStateId(Long clientStateId) {
     poolLocalStateId.accumulate(clientStateId);
-  }
-
-  @VisibleForTesting
-  public long getPoolLocalStateId() {
-    return this.poolLocalStateId.get();
   }
 }

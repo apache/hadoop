@@ -85,8 +85,7 @@ public abstract class StateStoreFileBaseImpl
    * @param path Path of the record to write.
    * @return Writer for the record.
    */
-  @VisibleForTesting
-  public abstract <T extends BaseRecord> BufferedWriter getWriter(
+  protected abstract <T extends BaseRecord> BufferedWriter getWriter(
       String path);
 
   /**
@@ -349,18 +348,25 @@ public abstract class StateStoreFileBaseImpl
     for (Entry<String, T> entry : toWrite.entrySet()) {
       String recordPath = entry.getKey();
       String recordPathTemp = recordPath + "." + now() + TMP_MARK;
-      boolean recordWrittenSuccessfully = true;
-      try (BufferedWriter writer = getWriter(recordPathTemp)) {
+      BufferedWriter writer = getWriter(recordPathTemp);
+      try {
         T record = entry.getValue();
         String line = serializeString(record);
         writer.write(line);
       } catch (IOException e) {
         LOG.error("Cannot write {}", recordPathTemp, e);
-        recordWrittenSuccessfully = false;
         success = false;
+      } finally {
+        if (writer != null) {
+          try {
+            writer.close();
+          } catch (IOException e) {
+            LOG.error("Cannot close the writer for {}", recordPathTemp, e);
+          }
+        }
       }
       // Commit
-      if (recordWrittenSuccessfully && !rename(recordPathTemp, recordPath)) {
+      if (!rename(recordPathTemp, recordPath)) {
         LOG.error("Failed committing record into {}", recordPath);
         success = false;
       }

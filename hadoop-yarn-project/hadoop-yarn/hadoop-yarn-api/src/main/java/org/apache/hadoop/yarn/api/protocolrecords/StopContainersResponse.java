@@ -65,7 +65,6 @@ public abstract class StopContainersResponse {
 
   /**
    * Set the list of containerIds of successfully stopped containers.
-   * @param succeededRequests the list of containerIds of successfully stopped containers.
    */
   @Private
   @Unstable
@@ -74,8 +73,8 @@ public abstract class StopContainersResponse {
 
   /**
    * Get the containerId-to-exception map in which the exception indicates error
-   * from per container for failed requests.
-   * @return map of containerId-to-exception.
+   * from per container for failed requests
+   * @return map of containerId-to-exception
    */
   @Public
   @Stable
@@ -83,8 +82,7 @@ public abstract class StopContainersResponse {
 
   /**
    * Set the containerId-to-exception map in which the exception indicates error
-   * from per container for failed requests.
-   * @param failedRequests map of containerId-to-exception.
+   * from per container for failed requests
    */
   @Private
   @Unstable

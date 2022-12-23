@@ -164,7 +164,7 @@ class ErasureCodingWork extends BlockReconstructionWork {
         stripedBlk.getDataBlockNum(), blockIndex);
     final Block targetBlk = new Block(stripedBlk.getBlockId() + blockIndex,
         internBlkLen, stripedBlk.getGenerationStamp());
-    source.addECBlockToBeReplicated(targetBlk,
+    source.addBlockToBeReplicated(targetBlk,
         new DatanodeStorageInfo[] {target});
     LOG.debug("Add replication task from source {} to "
         + "target {} for EC block {}", source, target, targetBlk);

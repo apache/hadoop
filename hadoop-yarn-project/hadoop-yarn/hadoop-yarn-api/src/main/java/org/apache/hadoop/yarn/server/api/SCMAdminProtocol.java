@@ -42,8 +42,8 @@ public interface SCMAdminProtocol {
    * @param request request <code>SharedCacheManager</code> to run a cleaner task
    * @return <code>SharedCacheManager</code> returns an empty response
    *         on success and throws an exception on rejecting the request
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   @Public
   @Unstable

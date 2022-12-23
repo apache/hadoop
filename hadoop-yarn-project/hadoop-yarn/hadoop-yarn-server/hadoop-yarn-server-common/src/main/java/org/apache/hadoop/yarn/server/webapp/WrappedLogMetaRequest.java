@@ -155,7 +155,6 @@ public class WrappedLogMetaRequest {
    *
    * @return list of {@link ContainerLogMeta} objects that belong
    *         to the application, attempt or container
-   * @throws IOException if there are I/O errors.
    */
   public List<ContainerLogMeta> getContainerLogMetas() throws IOException {
     ApplicationId applicationId = ApplicationId.fromString(getAppId());

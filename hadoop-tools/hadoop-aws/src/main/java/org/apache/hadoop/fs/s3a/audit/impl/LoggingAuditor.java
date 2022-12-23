@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,6 @@ import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.s3a.audit.AWSRequestAnalyzer;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -111,14 +109,6 @@ public class LoggingAuditor
    * Attributes to filter.
    */
   private Collection<String> filters;
-
-  /**
-   * Log for warning of problems getting the range of GetObjectRequest
-   * will only log of a problem once per process instance.
-   * This is to avoid logs being flooded with errors.
-   */
-  private static final LogExactlyOnce WARN_INCORRECT_RANGE =
-      new LogExactlyOnce(LOG);
 
   /**
    * Create the auditor.
@@ -240,26 +230,6 @@ public class LoggingAuditor
 
     private final HttpReferrerAuditHeader referrer;
 
-    /**
-     * Attach Range of data for GetObject Request.
-     * @param request given get object request
-     */
-    private void attachRangeFromRequest(AmazonWebServiceRequest request) {
-      if (request instanceof GetObjectRequest) {
-        long[] rangeValue = ((GetObjectRequest) request).getRange();
-        if (rangeValue == null || rangeValue.length == 0) {
-          return;
-        }
-        if (rangeValue.length != 2) {
-          WARN_INCORRECT_RANGE.warn("Expected range to contain 0 or 2 elements."
-              + " Got {} elements. Ignoring.", rangeValue.length);
-          return;
-        }
-        String combinedRangeValue = String.format("%d-%d", rangeValue[0], rangeValue[1]);
-        referrer.set(AuditConstants.PARAM_RANGE, combinedRangeValue);
-      }
-    }
-
     private final String description;
 
     private LoggingAuditSpan(
@@ -344,8 +314,6 @@ public class LoggingAuditor
     @Override
     public <T extends AmazonWebServiceRequest> T beforeExecution(
         final T request) {
-      // attach range for GetObject requests
-      attachRangeFromRequest(request);
       // build the referrer header
       final String header = referrer.buildHttpReferrer();
       // update the outer class's field.

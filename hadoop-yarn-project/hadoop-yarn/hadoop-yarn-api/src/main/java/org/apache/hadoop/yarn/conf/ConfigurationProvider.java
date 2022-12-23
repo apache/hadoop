@@ -44,12 +44,12 @@ public abstract class ConfigurationProvider {
   }
 
   /**
-   * Opens an InputStream at the indicated file.
-   * @param bootstrapConf Configuration.
-   * @param name The configuration file name.
+   * Opens an InputStream at the indicated file
+   * @param bootstrapConf Configuration
+   * @param name The configuration file name
    * @return configuration
-   * @throws YarnException exceptions from yarn servers.
-   * @throws IOException io error occur.
+   * @throws YarnException
+   * @throws IOException
    */
   public abstract InputStream getConfigurationInputStream(
       Configuration bootstrapConf, String name) throws YarnException,
@@ -57,15 +57,12 @@ public abstract class ConfigurationProvider {
 
   /**
    * Derived classes initialize themselves using this method.
-   * @param bootstrapConf bootstrap configuration.
-   * @throws Exception exception occur.
    */
   public abstract void initInternal(Configuration bootstrapConf)
       throws Exception;
 
   /**
    * Derived classes close themselves using this method.
-   * @throws Exception exception occur.
    */
   public abstract void closeInternal() throws Exception;
 }

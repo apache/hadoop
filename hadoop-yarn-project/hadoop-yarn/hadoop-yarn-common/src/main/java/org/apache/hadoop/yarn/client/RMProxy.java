@@ -70,8 +70,6 @@ public class RMProxy<T> {
 
   /**
    * Verify the passed protocol is supported.
-   *
-   * @param protocol protocol.
    */
   @Private
   public void checkAllowedProtocols(Class<?> protocol) {}
@@ -79,11 +77,6 @@ public class RMProxy<T> {
   /**
    * Get the ResourceManager address from the provided Configuration for the
    * given protocol.
-   *
-   * @param conf configuration.
-   * @param protocol protocol.
-   * @return inet socket address.
-   * @throws IOException io error occur.
    */
   @Private
   public InetSocketAddress getRMAddress(
@@ -98,13 +91,6 @@ public class RMProxy<T> {
    * this is a direct connection to the ResourceManager address. When HA is
    * enabled, the proxy handles the failover between the ResourceManagers as
    * well.
-   *
-   * @param configuration configuration.
-   * @param protocol protocol.
-   * @param instance RMProxy instance.
-   * @param <T> Generic T.
-   * @return RMProxy.
-   * @throws IOException io error occur.
    */
   @Private
   protected static <T> T createRMProxy(final Configuration configuration,
@@ -122,15 +108,6 @@ public class RMProxy<T> {
    * this is a direct connection to the ResourceManager address. When HA is
    * enabled, the proxy handles the failover between the ResourceManagers as
    * well.
-   *
-   * @param configuration configuration.
-   * @param protocol protocol.
-   * @param instance RMProxy instance.
-   * @param retryTime retry Time.
-   * @param retryInterval retry Interval.
-   * @param <T> Generic T.
-   * @return RMProxy.
-   * @throws IOException io error occur.
    */
   @Private
   protected static <T> T createRMProxy(final Configuration configuration,
@@ -159,13 +136,6 @@ public class RMProxy<T> {
   /**
    * Get a proxy to the RM at the specified address. To be used to create a
    * RetryProxy.
-   *
-   * @param conf configuration.
-   * @param protocol protocol.
-   * @param rmAddress rmAddress.
-   * @param <T> Generic T.
-   * @return RM proxy.
-   * @throws IOException io error occur.
    */
   @Private
   public <T> T getProxy(final Configuration conf,
@@ -225,11 +195,7 @@ public class RMProxy<T> {
   }
 
   /**
-   * Fetch retry policy from Configuration.
-   *
-   * @param conf configuration.
-   * @param isHAEnabled is HA enabled.
-   * @return RetryPolicy.
+   * Fetch retry policy from Configuration
    */
   @Private
   @VisibleForTesting
@@ -252,12 +218,6 @@ public class RMProxy<T> {
   /**
    * Fetch retry policy from Configuration and create the
    * retry policy with specified retryTime and retry interval.
-   *
-   * @param conf configuration.
-   * @param retryTime retry time.
-   * @param retryInterval retry interval.
-   * @param isHAEnabled is HA enabled.
-   * @return RetryPolicy.
    */
   protected static RetryPolicy createRetryPolicy(Configuration conf,
       long retryTime, long retryInterval, boolean isHAEnabled) {

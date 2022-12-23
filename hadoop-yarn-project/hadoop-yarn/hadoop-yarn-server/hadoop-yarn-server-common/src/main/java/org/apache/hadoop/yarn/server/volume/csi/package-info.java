@@ -19,8 +19,9 @@
 /**
  * This package contains common volume related classes.
  */
-@Private
-@Unstable
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 package org.apache.hadoop.yarn.server.volume.csi;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

@@ -31,9 +31,9 @@ import org.apache.hadoop.thirdparty.protobuf.TextFormat;
 @Private
 @Unstable
 public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
-  private RefreshNodesRequestProto proto = RefreshNodesRequestProto.getDefaultInstance();
-  private RefreshNodesRequestProto.Builder builder = null;
-  private boolean viaProto = false;
+  RefreshNodesRequestProto proto = RefreshNodesRequestProto.getDefaultInstance();
+  RefreshNodesRequestProto.Builder builder = null;
+  boolean viaProto = false;
   private DecommissionType decommissionType;
 
   public RefreshNodesRequestPBImpl() {
@@ -121,22 +121,6 @@ public class RefreshNodesRequestPBImpl extends RefreshNodesRequest {
   public synchronized Integer getDecommissionTimeout() {
     RefreshNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
     return p.hasDecommissionTimeout()? p.getDecommissionTimeout() : null;
-  }
-
-  @Override
-  public synchronized String getSubClusterId() {
-    RefreshNodesRequestProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.hasSubClusterId()) ? p.getSubClusterId() : null;
-  }
-
-  @Override
-  public synchronized void setSubClusterId(String subClusterId) {
-    maybeInitBuilder();
-    if (subClusterId == null) {
-      builder.clearSubClusterId();
-      return;
-    }
-    builder.setSubClusterId(subClusterId);
   }
 
   private DecommissionType convertFromProtoFormat(DecommissionTypeProto p) {

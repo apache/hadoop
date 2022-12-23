@@ -80,7 +80,7 @@ public class DefaultNoHARMFailoverProxyProvider<T>
 
   /**
    * PerformFailover does nothing in this class.
-   * @param currentProxy currentProxy.
+   * @param currentProxy
    */
   @Override
   public void performFailover(T currentProxy) {
@@ -89,7 +89,7 @@ public class DefaultNoHARMFailoverProxyProvider<T>
 
   /**
    * Close the current proxy.
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   @Override
   public void close() throws IOException {

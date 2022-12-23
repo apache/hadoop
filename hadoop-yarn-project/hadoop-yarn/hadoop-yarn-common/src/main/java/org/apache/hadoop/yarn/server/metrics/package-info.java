@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 /** Yarn Common Metrics package. **/
-@Private
+@InterfaceAudience.Private
 package org.apache.hadoop.yarn.server.metrics;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
 

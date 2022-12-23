@@ -53,9 +53,6 @@ public abstract class RegisterApplicationMasterRequest {
    *  <li>trackingUrl: null</li>
    * </ul>
    * The port is allowed to be any integer larger than or equal to -1.
-   * @param host host on which the ApplicationMaster is running.
-   * @param port the RPC port  on which the ApplicationMaster is responding.
-   * @param trackingUrl tracking URL for the ApplicationMaster.
    * @return the new instance of <code>RegisterApplicationMasterRequest</code>
    */
   @Public

@@ -194,13 +194,8 @@ public class TestDebugAdmin {
     cluster.waitActive();
     DistributedFileSystem fs = cluster.getFileSystem();
 
-    assertEquals("ret: 1, verifyEC -file <file> [-blockId <blk_Id>] " +
-        "[-skipFailureBlocks]  -file Verify HDFS erasure coding on all block groups of the file." +
-        "  -skipFailureBlocks specify will skip any block group failures during verify," +
-        "  and continues verify all block groups of the file," +
-        "  the default is not to skip failure blocks." +
-        "  -blockId specify blk_Id to verify for a specific one block group.",
-        runCmd(new String[]{"verifyEC"}));
+    assertEquals("ret: 1, verifyEC -file <file>  Verify HDFS erasure coding on " +
+        "all block groups of the file.", runCmd(new String[]{"verifyEC"}));
 
     assertEquals("ret: 1, File /bar does not exist.",
         runCmd(new String[]{"verifyEC", "-file", "/bar"}));
@@ -275,41 +270,6 @@ public class TestDebugAdmin {
         "-out", metaFile.getAbsolutePath()});
     assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_corrupt"})
         .contains("Status: ERROR, message: EC compute result not match."));
-
-    // Specify -blockId.
-    Path newFile = new Path(ecDir, "foo_new");
-    DFSTestUtil.createFile(fs, newFile, (int) k, 6 * m, m, repl, seed);
-    blocks = DFSTestUtil.getAllBlocks(fs, newFile);
-    assertEquals(2, blocks.size());
-    blockGroup = (LocatedStripedBlock) blocks.get(0);
-    String blockName = blockGroup.getBlock().getBlockName();
-    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-blockId", blockName})
-        .contains("ret: 0, Checking EC block group: " + blockName + "Status: OK"));
-
-    // Specify -verifyAllFailures.
-    indexedBlocks = StripedBlockUtil.parseStripedBlockGroup(blockGroup,
-        ecPolicy.getCellSize(), ecPolicy.getNumDataUnits(), ecPolicy.getNumParityUnits());
-    // Try corrupt block 0 in block group.
-    toCorruptLocatedBlock = indexedBlocks[0];
-    toCorruptBlock = toCorruptLocatedBlock.getBlock();
-    datanode = cluster.getDataNode(toCorruptLocatedBlock.getLocations()[0].getIpcPort());
-    blockFile = getBlockFile(datanode.getFSDataset(),
-        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
-    metaFile = getMetaFile(datanode.getFSDataset(),
-        toCorruptBlock.getBlockPoolId(), toCorruptBlock.getLocalBlock());
-    metaFile.delete();
-    // Write error bytes to block file and re-generate meta checksum.
-    errorBytes = new byte[1048576];
-    new Random(0x12345678L).nextBytes(errorBytes);
-    FileUtils.writeByteArrayToFile(blockFile, errorBytes);
-    runCmd(new String[]{"computeMeta", "-block", blockFile.getAbsolutePath(),
-        "-out", metaFile.getAbsolutePath()});
-    // VerifyEC and set skipFailureBlocks.
-    LocatedStripedBlock blockGroup2 = (LocatedStripedBlock) blocks.get(1);
-    assertTrue(runCmd(new String[]{"verifyEC", "-file", "/ec/foo_new", "-skipFailureBlocks"})
-        .contains("ret: 1, Checking EC block group: " + blockGroup.getBlock().getBlockName() +
-            "Status: ERROR, message: EC compute result not match." +
-            "Checking EC block group: " + blockGroup2.getBlock().getBlockName() + "Status: OK"));
   }
 
 }

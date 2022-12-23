@@ -88,11 +88,10 @@ public class ApplicationACLsManager {
    * <li>For all other users/groups application-acls are checked</li>
    * </ul>
    * 
-   * @param callerUGI UserGroupInformation for the user.
-   * @param applicationAccessType Application Access Type.
-   * @param applicationOwner Application Owner.
-   * @param applicationId ApplicationId.
-   * @return true if the user has permission, false otherwise.
+   * @param callerUGI
+   * @param applicationAccessType
+   * @param applicationOwner
+   * @param applicationId
    */
   public boolean checkAccess(UserGroupInformation callerUGI,
       ApplicationAccessType applicationAccessType, String applicationOwner,

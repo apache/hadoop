@@ -91,11 +91,6 @@ public final class AuditConstants {
   public static final String PARAM_PROCESS = "ps";
 
   /**
-   * Header: Range for GET request data: {@value}.
-   */
-  public static final String PARAM_RANGE = "rg";
-
-  /**
    * Task Attempt ID query header: {@value}.
    */
   public static final String PARAM_TASK_ATTEMPT_ID = "ta";

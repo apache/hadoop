@@ -19,12 +19,10 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.net.HttpURLConnection;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
@@ -40,89 +38,35 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
  * and sleeps just enough to minimize errors, allowing optimal ingress and/or
  * egress throughput.
  */
-public final class AbfsClientThrottlingIntercept implements AbfsThrottlingIntercept {
+public final class AbfsClientThrottlingIntercept {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsClientThrottlingIntercept.class);
   private static final String RANGE_PREFIX = "bytes=";
-  private static AbfsClientThrottlingIntercept singleton; // singleton, initialized in static initialization block
-  private static final ReentrantLock LOCK = new ReentrantLock();
-  private final AbfsClientThrottlingAnalyzer readThrottler;
-  private final AbfsClientThrottlingAnalyzer writeThrottler;
-  private final String accountName;
+  private static AbfsClientThrottlingIntercept singleton = null;
+  private AbfsClientThrottlingAnalyzer readThrottler = null;
+  private AbfsClientThrottlingAnalyzer writeThrottler = null;
+  private static boolean isAutoThrottlingEnabled = false;
 
   // Hide default constructor
-  public AbfsClientThrottlingIntercept(String accountName, AbfsConfiguration abfsConfiguration) {
-    this.accountName = accountName;
-    this.readThrottler = setAnalyzer("read " + accountName, abfsConfiguration);
-    this.writeThrottler = setAnalyzer("write " + accountName, abfsConfiguration);
-    LOG.debug("Client-side throttling is enabled for the ABFS file system for the account : {}", accountName);
+  private AbfsClientThrottlingIntercept() {
+    readThrottler = new AbfsClientThrottlingAnalyzer("read");
+    writeThrottler = new AbfsClientThrottlingAnalyzer("write");
   }
 
-  // Hide default constructor
-  private AbfsClientThrottlingIntercept(AbfsConfiguration abfsConfiguration) {
-    //Account name is kept as empty as same instance is shared across all accounts
-    this.accountName = "";
-    this.readThrottler = setAnalyzer("read", abfsConfiguration);
-    this.writeThrottler = setAnalyzer("write", abfsConfiguration);
-    LOG.debug("Client-side throttling is enabled for the ABFS file system using singleton intercept");
-  }
-
-  /**
-   * Sets the analyzer for the intercept.
-   * @param name Name of the analyzer.
-   * @param abfsConfiguration The configuration.
-   * @return AbfsClientThrottlingAnalyzer instance.
-   */
-  private AbfsClientThrottlingAnalyzer setAnalyzer(String name, AbfsConfiguration abfsConfiguration) {
-    return new AbfsClientThrottlingAnalyzer(name, abfsConfiguration);
-  }
-
-  /**
-   * Returns the analyzer for read operations.
-   * @return AbfsClientThrottlingAnalyzer for read.
-   */
-  AbfsClientThrottlingAnalyzer getReadThrottler() {
-    return readThrottler;
-  }
-
-  /**
-   * Returns the analyzer for write operations.
-   * @return AbfsClientThrottlingAnalyzer for write.
-   */
-  AbfsClientThrottlingAnalyzer getWriteThrottler() {
-    return writeThrottler;
-  }
-
-  /**
-   * Creates a singleton object of the AbfsClientThrottlingIntercept.
-   * which is shared across all filesystem instances.
-   * @param abfsConfiguration configuration set.
-   * @return singleton object of intercept.
-   */
-  static AbfsClientThrottlingIntercept initializeSingleton(AbfsConfiguration abfsConfiguration) {
-    if (singleton == null) {
-      LOCK.lock();
-      try {
-        if (singleton == null) {
-          singleton = new AbfsClientThrottlingIntercept(abfsConfiguration);
-          LOG.debug("Client-side throttling is enabled for the ABFS file system.");
-        }
-      } finally {
-        LOCK.unlock();
-      }
+  public static synchronized void initializeSingleton(boolean enableAutoThrottling) {
+    if (!enableAutoThrottling) {
+      return;
     }
-    return singleton;
+    if (singleton == null) {
+      singleton = new AbfsClientThrottlingIntercept();
+      isAutoThrottlingEnabled = true;
+      LOG.debug("Client-side throttling is enabled for the ABFS file system.");
+    }
   }
 
-  /**
-   * Updates the metrics for successful and failed read and write operations.
-   * @param operationType Only applicable for read and write operations.
-   * @param abfsHttpOperation Used for status code and data transferred.
-   */
-  @Override
-  public void updateMetrics(AbfsRestOperationType operationType,
-      AbfsHttpOperation abfsHttpOperation) {
-    if (abfsHttpOperation == null) {
+  static void updateMetrics(AbfsRestOperationType operationType,
+                            AbfsHttpOperation abfsHttpOperation) {
+    if (!isAutoThrottlingEnabled || abfsHttpOperation == null) {
       return;
     }
 
@@ -138,7 +82,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
       case Append:
         contentLength = abfsHttpOperation.getBytesSent();
         if (contentLength > 0) {
-          writeThrottler.addBytesTransferred(contentLength,
+          singleton.writeThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -146,7 +90,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
-          readThrottler.addBytesTransferred(contentLength,
+          singleton.readThrottler.addBytesTransferred(contentLength,
               isFailedOperation);
         }
         break;
@@ -160,18 +104,21 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    * uses this to suspend the request, if necessary, to minimize errors and
    * maximize throughput.
    */
-  @Override
-  public void sendingRequest(AbfsRestOperationType operationType,
+  static void sendingRequest(AbfsRestOperationType operationType,
       AbfsCounters abfsCounters) {
+    if (!isAutoThrottlingEnabled) {
+      return;
+    }
+
     switch (operationType) {
       case ReadFile:
-        if (readThrottler.suspendIfNecessary()
+        if (singleton.readThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.READ_THROTTLES, 1);
         }
         break;
       case Append:
-        if (writeThrottler.suspendIfNecessary()
+        if (singleton.writeThrottler.suspendIfNecessary()
             && abfsCounters != null) {
           abfsCounters.incrementCounter(AbfsStatistic.WRITE_THROTTLES, 1);
         }

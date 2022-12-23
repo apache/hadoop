@@ -1825,41 +1825,28 @@ public class DatanodeManager {
     // Allocate _approximately_ maxTransfers pending tasks to DataNode.
     // NN chooses pending tasks based on the ratio between the lengths of
     // replication and erasure-coded block queues.
-    int replicationBlocks = nodeinfo.getNumberOfReplicateBlocks();
-    int ecBlocksToBeReplicated = nodeinfo.getNumberOfECBlocksToBeReplicated();
-    int ecBlocksToBeErasureCoded = nodeinfo.getNumberOfBlocksToBeErasureCoded();
-    int totalBlocks = replicationBlocks + ecBlocksToBeReplicated + ecBlocksToBeErasureCoded;
+    int totalReplicateBlocks = nodeinfo.getNumberOfReplicateBlocks();
+    int totalECBlocks = nodeinfo.getNumberOfBlocksToBeErasureCoded();
+    int totalBlocks = totalReplicateBlocks + totalECBlocks;
     if (totalBlocks > 0) {
-      int maxTransfers = blockManager.getMaxReplicationStreams() - xmitsInProgress;
-      int maxECReplicatedTransfers;
+      int maxTransfers;
       if (nodeinfo.isDecommissionInProgress()) {
-        maxECReplicatedTransfers = blockManager.getReplicationStreamsHardLimit()
+        maxTransfers = blockManager.getReplicationStreamsHardLimit()
             - xmitsInProgress;
       } else {
-        maxECReplicatedTransfers = maxTransfers;
+        maxTransfers = blockManager.getMaxReplicationStreams()
+            - xmitsInProgress;
       }
       int numReplicationTasks = (int) Math.ceil(
-          (double) (replicationBlocks * maxTransfers) / totalBlocks);
-      int numEcReplicatedTasks = (int) Math.ceil(
-              (double) (ecBlocksToBeReplicated * maxECReplicatedTransfers) / totalBlocks);
-      int numECReconstructedTasks = (int) Math.ceil(
-          (double) (ecBlocksToBeErasureCoded * maxTransfers) / totalBlocks);
-      LOG.debug("Pending replication tasks: {} ec to be replicated tasks: {} " +
-                      "ec reconstruction tasks: {}.",
-          numReplicationTasks, numEcReplicatedTasks, numECReconstructedTasks);
+          (double) (totalReplicateBlocks * maxTransfers) / totalBlocks);
+      int numECTasks = (int) Math.ceil(
+          (double) (totalECBlocks * maxTransfers) / totalBlocks);
+      LOG.debug("Pending replication tasks: {} erasure-coded tasks: {}.",
+          numReplicationTasks, numECTasks);
       // check pending replication tasks
-      List<BlockTargetPair> pendingReplicationList = nodeinfo.getReplicationCommand(
+      List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
           numReplicationTasks);
-      List<BlockTargetPair> pendingECReplicatedList = nodeinfo.getECReplicatedCommand(
-              numEcReplicatedTasks);
-      List<BlockTargetPair> pendingList = new ArrayList<BlockTargetPair>();
-      if(pendingReplicationList != null && !pendingReplicationList.isEmpty()) {
-        pendingList.addAll(pendingReplicationList);
-      }
-      if(pendingECReplicatedList != null && !pendingECReplicatedList.isEmpty()) {
-        pendingList.addAll(pendingECReplicatedList);
-      }
-      if (!pendingList.isEmpty()) {
+      if (pendingList != null && !pendingList.isEmpty()) {
         // If the block is deleted, the block size will become
         // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't
         // need
@@ -1881,7 +1868,7 @@ public class DatanodeManager {
       }
       // check pending erasure coding tasks
       List<BlockECReconstructionInfo> pendingECList = nodeinfo
-          .getErasureCodeCommand(numECReconstructedTasks);
+          .getErasureCodeCommand(numECTasks);
       if (pendingECList != null && !pendingECList.isEmpty()) {
         cmds.add(new BlockECReconstructionCommand(
             DNA_ERASURE_CODING_RECONSTRUCTION, pendingECList));

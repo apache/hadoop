@@ -102,7 +102,7 @@ public class HAUtil {
   /**
    * Verify configuration for Resource Manager HA.
    * @param conf Configuration
-   * @throws YarnRuntimeException thrown by a remote service.
+   * @throws YarnRuntimeException
    */
   public static void verifyAndSetConfiguration(Configuration conf)
     throws YarnRuntimeException {
@@ -320,10 +320,7 @@ public class HAUtil {
   }
 
   /**
-   * Add non-empty and non-null suffix to a key.
-   *
-   * @param key key.
-   * @param suffix suffix.
+   * Add non empty and non null suffix to a key.
    * @return the suffixed key
    */
   public static String addSuffix(String key, String suffix) {

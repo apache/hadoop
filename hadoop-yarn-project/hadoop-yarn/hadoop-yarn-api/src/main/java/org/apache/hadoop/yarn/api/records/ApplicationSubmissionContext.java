@@ -516,7 +516,7 @@ public abstract class ApplicationSubmissionContext {
       List<ResourceRequest> requests);
 
   /**
-   * Get the attemptFailuresValidityInterval in milliseconds for the application.
+   * Get the attemptFailuresValidityInterval in milliseconds for the application
    *
    * @return the attemptFailuresValidityInterval
    */
@@ -525,8 +525,8 @@ public abstract class ApplicationSubmissionContext {
   public abstract long getAttemptFailuresValidityInterval();
 
   /**
-   * Set the attemptFailuresValidityInterval in milliseconds for the application.
-   * @param attemptFailuresValidityInterval attempt failures validity interval.
+   * Set the attemptFailuresValidityInterval in milliseconds for the application
+   * @param attemptFailuresValidityInterval
    */
   @Public
   @Stable

@@ -36,7 +36,7 @@ public interface CsiAdaptorPlugin extends CsiAdaptorProtocol {
    * customized configuration from yarn-site.xml.
    * @param driverName the name of the csi-driver.
    * @param conf configuration.
-   * @throws YarnException exceptions from yarn servers.
+   * @throws YarnException
    */
   void init(String driverName, Configuration conf) throws YarnException;
 

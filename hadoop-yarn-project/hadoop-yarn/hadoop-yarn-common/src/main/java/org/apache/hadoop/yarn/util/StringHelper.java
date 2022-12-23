@@ -67,7 +67,7 @@ public final class StringHelper {
   }
 
   /**
-   * Join on dot.
+   * Join on dot
    * @param args to join
    * @return args joined by dot
    */
@@ -76,7 +76,7 @@ public final class StringHelper {
   }
 
   /**
-   * Join on underscore.
+   * Join on underscore
    * @param args to join
    * @return args joined underscore
    */
@@ -85,7 +85,7 @@ public final class StringHelper {
   }
 
   /**
-   * Join on slash.
+   * Join on slash
    * @param args to join
    * @return args joined with slash
    */
@@ -103,8 +103,8 @@ public final class StringHelper {
   }
 
   /**
-   * Join without separator.
-   * @param args to join.
+   * Join without separator
+   * @param args
    * @return joined args with no separator
    */
   public static String join(Object... args) {
@@ -131,7 +131,7 @@ public final class StringHelper {
   }
 
   /**
-   * Split on _ and trim results.
+   * Split on _ and trim results
    * @param s the string to split
    * @return an iterable of strings
    */
@@ -140,7 +140,7 @@ public final class StringHelper {
   }
 
   /**
-   * Check whether a url is absolute or note.
+   * Check whether a url is absolute or note
    * @param url to check
    * @return true if url starts with scheme:// or //
    */
@@ -149,7 +149,7 @@ public final class StringHelper {
   }
 
   /**
-   * Join url components.
+   * Join url components
    * @param pathPrefix for relative urls
    * @param args url components to join
    * @return an url string

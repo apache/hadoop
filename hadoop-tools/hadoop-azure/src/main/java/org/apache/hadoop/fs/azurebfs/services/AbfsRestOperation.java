@@ -45,8 +45,6 @@ public class AbfsRestOperation {
   private final AbfsRestOperationType operationType;
   // Blob FS client, which has the credentials, retry policy, and logs.
   private final AbfsClient client;
-  // Return intercept instance
-  private final AbfsThrottlingIntercept intercept;
   // the HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE)
   private final String method;
   // full URL including query parameters
@@ -147,7 +145,6 @@ public class AbfsRestOperation {
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
-    this.intercept = client.getIntercept();
   }
 
   /**
@@ -244,8 +241,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation;
-
+    AbfsHttpOperation httpOperation = null;
     try {
       // initialize the HTTP request and open the connection
       httpOperation = new AbfsHttpOperation(url, method, requestHeaders);
@@ -282,7 +278,8 @@ public class AbfsRestOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getConnection().getRequestProperties());
-      intercept.sendingRequest(operationType, abfsCounters);
+      AbfsClientThrottlingIntercept.sendingRequest(operationType, abfsCounters);
+
       if (hasRequestBody) {
         // HttpUrlConnection requires
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
@@ -320,7 +317,7 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      intercept.updateMetrics(operationType, httpOperation);
+      AbfsClientThrottlingIntercept.updateMetrics(operationType, httpOperation);
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);

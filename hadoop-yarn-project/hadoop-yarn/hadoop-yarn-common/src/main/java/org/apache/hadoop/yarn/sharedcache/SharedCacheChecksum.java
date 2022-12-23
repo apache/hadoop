@@ -37,7 +37,7 @@ public interface SharedCacheChecksum {
    *
    * @param in <code>InputStream</code> to be checksumed
    * @return the message digest of the input stream
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   public String computeChecksum(InputStream in) throws IOException;
 }

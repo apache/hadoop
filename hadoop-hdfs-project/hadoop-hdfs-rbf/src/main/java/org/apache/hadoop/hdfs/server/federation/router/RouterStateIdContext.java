@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.LongAccumulator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.federation.protocol.proto.HdfsServerFederationProtos;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RouterFederatedStateProto;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.ipc.RetriableException;
@@ -83,9 +83,10 @@ class RouterStateIdContext implements AlignmentContext {
     if (namespaceIdMap.isEmpty()) {
       return;
     }
-    RouterFederatedStateProto.Builder builder = RouterFederatedStateProto.newBuilder();
-    namespaceIdMap.forEach((k, v) -> builder.putNamespaceStateIds(k, v.get()));
-    headerBuilder.setRouterFederatedState(builder.build().toByteString());
+    HdfsServerFederationProtos.RouterFederatedStateProto.Builder federatedStateBuilder =
+        HdfsServerFederationProtos.RouterFederatedStateProto.newBuilder();
+    namespaceIdMap.forEach((k, v) -> federatedStateBuilder.putNamespaceStateIds(k, v.get()));
+    headerBuilder.setRouterFederatedState(federatedStateBuilder.build().toByteString());
   }
 
   public LongAccumulator getNamespaceStateId(String nsId) {
@@ -101,9 +102,9 @@ class RouterStateIdContext implements AlignmentContext {
    */
   public static Map<String, Long> getRouterFederatedStateMap(ByteString byteString) {
     if (byteString != null) {
-      RouterFederatedStateProto federatedState;
+      HdfsServerFederationProtos.RouterFederatedStateProto federatedState;
       try {
-        federatedState = RouterFederatedStateProto.parseFrom(byteString);
+        federatedState = HdfsServerFederationProtos.RouterFederatedStateProto.parseFrom(byteString);
       } catch (InvalidProtocolBufferException e) {
         throw new RuntimeException(e);
       }

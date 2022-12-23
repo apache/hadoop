@@ -165,8 +165,7 @@ public final class PlacementConstraintParser {
 
     /**
      * Validate the schema before actual parsing the expression.
-     * @throws PlacementConstraintParseException when the placement constraint parser
-     * fails to parse an expression.
+     * @throws PlacementConstraintParseException
      */
     default void validate() throws PlacementConstraintParseException {
       // do nothing
@@ -634,10 +633,9 @@ public final class PlacementConstraintParser {
 
     /**
      * Parses source tags from expression "sourceTags(numOfAllocations)".
-     * @param expr expression string.
+     * @param expr
      * @return source tags, see {@link SourceTags}
-     * @throws PlacementConstraintParseException when the placement constraint parser
-     * fails to parse an expression.
+     * @throws PlacementConstraintParseException
      */
     public static SourceTags parseFrom(String expr)
         throws PlacementConstraintParseException {
@@ -720,8 +718,7 @@ public final class PlacementConstraintParser {
    * </ul>
    * @param expression expression string.
    * @return a map of source tags to placement constraint mapping.
-   * @throws PlacementConstraintParseException when the placement constraint parser
-   * fails to parse an expression.
+   * @throws PlacementConstraintParseException
    */
   public static Map<SourceTags, PlacementConstraint> parsePlacementSpec(
       String expression) throws PlacementConstraintParseException {

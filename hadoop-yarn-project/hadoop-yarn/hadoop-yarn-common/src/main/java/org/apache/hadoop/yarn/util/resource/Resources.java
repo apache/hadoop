@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.util.resource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -31,7 +31,7 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
  * Resources is a computation class which provides a set of apis to do
  * mathematical operations on Resource object.
  */
-@LimitedPrivate({ "YARN", "MapReduce" })
+@InterfaceAudience.LimitedPrivate({ "YARN", "MapReduce" })
 @Unstable
 public class Resources {
 
@@ -316,11 +316,7 @@ public class Resources {
 
   /**
    * Multiply {@code rhs} by {@code by}, and add the result to {@code lhs}
-   * without creating any new {@link Resource} object.
-   * @param lhs {@link Resource} to subtract from.
-   * @param rhs {@link Resource} to subtract.
-   * @param by multiplier.
-   * @return instance of Resource.
+   * without creating any new {@link Resource} object
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {

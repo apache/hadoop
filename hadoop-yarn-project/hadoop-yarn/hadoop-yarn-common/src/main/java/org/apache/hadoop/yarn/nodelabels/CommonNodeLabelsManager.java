@@ -337,11 +337,10 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
 
   /**
-   * Add multiple node labels to repository.
+   * Add multiple node labels to repository
    *
    * @param labels
    *          new node labels added
-   * @throws IOException io error occur.
    */
   @VisibleForTesting
   public void addToCluserNodeLabelsWithDefaultExclusivity(Set<String> labels)
@@ -395,10 +394,9 @@ public class CommonNodeLabelsManager extends AbstractService {
   }
   
   /**
-   * add more labels to nodes.
+   * add more labels to nodes
    * 
    * @param addedLabelsToNode node {@literal ->} labels map
-   * @throws IOException io error occur.
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
@@ -468,7 +466,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    * 
    * @param labelsToRemove
    *          node labels to remove
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   public void removeFromClusterNodeLabels(Collection<String> labelsToRemove)
       throws IOException {
@@ -709,7 +707,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     
     if (null != dispatcher && isCentralizedNodeLabelConfiguration) {
       // In case of DistributedNodeLabelConfiguration or
-      // DelegatedCentralizedNodeLabelConfiguration, no need to save the
+      // DelegatedCentralizedNodeLabelConfiguration, no need to save the the
       // NodeLabels Mapping to the back-end store, as on RM restart/failover
       // NodeLabels are collected from NM through Register/Heartbeat again
       // in case of DistributedNodeLabelConfiguration and collected from
@@ -729,10 +727,9 @@ public class CommonNodeLabelsManager extends AbstractService {
   
   /**
    * remove labels from nodes, labels being removed most be contained by these
-   * nodes.
+   * nodes
    * 
    * @param removeLabelsFromNode node {@literal ->} labels map
-   * @throws IOException io error occur.
    */
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
@@ -787,7 +784,6 @@ public class CommonNodeLabelsManager extends AbstractService {
    * replace labels to nodes
    * 
    * @param replaceLabelsToNode node {@literal ->} labels map
-   * @throws IOException io error occur.
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {

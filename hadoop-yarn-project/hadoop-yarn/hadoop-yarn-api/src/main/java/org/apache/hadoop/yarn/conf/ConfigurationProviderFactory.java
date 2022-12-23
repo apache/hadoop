@@ -33,8 +33,8 @@ public class ConfigurationProviderFactory {
   /**
    * Creates an instance of {@link ConfigurationProvider} using given
    * configuration.
-   * @param bootstrapConf bootstrap configuration.
-   * @return configurationProvider configuration provider.
+   * @param bootstrapConf
+   * @return configurationProvider
    */
   @SuppressWarnings("unchecked")
   public static ConfigurationProvider

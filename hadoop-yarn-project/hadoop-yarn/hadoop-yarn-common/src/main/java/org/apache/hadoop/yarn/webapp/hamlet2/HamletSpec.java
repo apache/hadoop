@@ -1251,7 +1251,7 @@ public class HamletSpec {
 
     /**
      * Add a TEXTAREA element.
-     * @param selector the css selector in the form of (#id)*(.class)*
+     * @param selector
      * @return a new TEXTAREA element builder
      */
     TEXTAREA textarea(String selector);
@@ -2080,13 +2080,13 @@ public class HamletSpec {
    */
   public interface INS extends Attrs, Flow, _Child {
     /** info on reason for change
-     * @param uri the URI.
+     * @param uri
      * @return the current element builder
      */
     INS $cite(String uri);
 
     /** date and time of change
-     * @param datetime the time.
+     * @param datetime
      * @return the current element builder
      */
     INS $datetime(String datetime);
@@ -2103,7 +2103,7 @@ public class HamletSpec {
     DEL $cite(String uri);
 
     /** date and time of change
-     * @param datetime the time.
+     * @param datetime the time
      * @return the current element builder
      */
     DEL $datetime(String datetime);
@@ -2205,13 +2205,13 @@ public class HamletSpec {
   public interface FORM extends Attrs, _Child, /* (%block;|SCRIPT)+ -(FORM) */
                                 _Script, _Block, _FieldSet {
     /** server-side form handler
-     * @param uri the URI.
+     * @param uri
      * @return the current element builder
      */
     FORM $action(String uri);
 
     /** HTTP method used to submit the form
-     * @param method method.
+     * @param method
      * @return the current element builder
      */
     FORM $method(Method method);
@@ -2220,37 +2220,37 @@ public class HamletSpec {
      * contentype for "POST" method.
      * The default is "application/x-www-form-urlencoded".
      * Use "multipart/form-data" for input type=file
-     * @param enctype enctype.
+     * @param enctype
      * @return the current element builder
      */
     FORM $enctype(String enctype);
 
     /** list of MIME types for file upload
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     FORM $accept(String cdata);
 
     /** name of form for scripting
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     FORM $name(String cdata);
 
     /** the form was submitted
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     FORM $onsubmit(String script);
 
     /** the form was reset
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     FORM $onreset(String script);
 
     /** (space and/or comma separated) list of supported charsets
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     FORM $accept_charset(String cdata);
@@ -2262,25 +2262,25 @@ public class HamletSpec {
   public interface LABEL extends Attrs, _Child, /* (%inline;)* -(LABEL) */
                                  PCData, FontStyle, Phrase, Special, _FormCtrl {
     /** matches field ID value
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     LABEL $for(String cdata);
 
     /** accessibility key character
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     LABEL $accesskey(String cdata);
 
     /** the element got the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     LABEL $onfocus(String script);
 
     /** the element lost the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     LABEL $onblur(String script);
@@ -2292,19 +2292,19 @@ public class HamletSpec {
   @Element(endTag=false)
   public interface INPUT extends Attrs, _Child {
     /** what kind of widget is needed. default is "text".
-     * @param inputType input value.
+     * @param inputType
      * @return the current element builder
      */
     INPUT $type(InputType inputType);
 
     /** submit as part of form
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     INPUT $name(String cdata);
 
     /** Specify for radio buttons and checkboxes
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     INPUT $value(String cdata);
@@ -2325,25 +2325,25 @@ public class HamletSpec {
     INPUT $readonly();
 
     /** specific to each type of field
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     INPUT $size(String cdata);
 
     /** max chars for text fields
-     * @param length max chars length.
+     * @param length
      * @return the current element builder
      */
     INPUT $maxlength(int length);
 
     /** for fields with images
-     * @param uri the URI.
+     * @param uri
      * @return the current element builder
      */
     INPUT $src(String uri);
 
     /** short description
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     INPUT $alt(String cdata);
@@ -2355,43 +2355,43 @@ public class HamletSpec {
     INPUT $ismap();
 
     /** position in tabbing order
-     * @param index the index
+     * @param index
      * @return the current element builder
      */
     INPUT $tabindex(int index);
 
     /** accessibility key character
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     INPUT $accesskey(String cdata);
 
     /** the element got the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     INPUT $onfocus(String script);
 
     /** the element lost the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     INPUT $onblur(String script);
 
     /** some text was selected
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     INPUT $onselect(String script);
 
     /** the element value was changed
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     INPUT $onchange(String script);
 
     /** list of MIME types for file upload (csv)
-     * @param contentTypes content types.
+     * @param contentTypes
      * @return the current element builder
      */
     INPUT $accept(String contentTypes);
@@ -2426,13 +2426,13 @@ public class HamletSpec {
     OPTGROUP optgroup();
 
     /** field name
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     SELECT $name(String cdata);
 
     /** rows visible
-     * @param rows number of rows.
+     * @param rows
      * @return the current element builder
      */
     SELECT $size(int rows);
@@ -2448,25 +2448,25 @@ public class HamletSpec {
     SELECT $disabled();
 
     /** position in tabbing order
-     * @param index the index
+     * @param index
      * @return the current element builder
      */
     SELECT $tabindex(int index);
 
     /** the element got the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     SELECT $onfocus(String script);
 
     /** the element lost the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     SELECT $onblur(String script);
 
     /** the element value was changed
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     SELECT $onchange(String script);
@@ -2482,7 +2482,7 @@ public class HamletSpec {
     OPTGROUP $disabled();
 
     /** for use in hierarchical menus
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     OPTGROUP $label(String cdata);
@@ -2504,13 +2504,13 @@ public class HamletSpec {
     OPTION $disabled();
 
     /** for use in hierarchical menus
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     OPTION $label(String cdata);
 
     /** defaults to element content
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     OPTION $value(String cdata);
@@ -2521,19 +2521,19 @@ public class HamletSpec {
    */
   public interface TEXTAREA extends Attrs, PCData, _Child {
     /** variable name for the text
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     TEXTAREA $name(String cdata);
 
     /** visible rows
-     * @param rows number of rows.
+     * @param rows
      * @return the current element builder
      */
     TEXTAREA $rows(int rows);
 
     /** visible columns
-     * @param cols number of cols.
+     * @param cols
      * @return the current element builder
      */
     TEXTAREA $cols(int cols);
@@ -2549,37 +2549,37 @@ public class HamletSpec {
     TEXTAREA $readonly();
 
     /** position in tabbing order
-     * @param index the index
+     * @param index
      * @return the current element builder
      */
     TEXTAREA $tabindex(int index);
 
     /** accessibility key character
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     TEXTAREA $accesskey(String cdata);
 
     /** the element got the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     TEXTAREA $onfocus(String script);
 
     /** the element lost the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     TEXTAREA $onblur(String script);
 
     /** some text was selected
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     TEXTAREA $onselect(String script);
 
     /** the element value was changed
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     TEXTAREA $onchange(String script);
@@ -2597,7 +2597,7 @@ public class HamletSpec {
 
     /**
      * Add a LEGEND element.
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     _Legend legend(String cdata);
@@ -2614,7 +2614,7 @@ public class HamletSpec {
    */
   public interface LEGEND extends Attrs, Inline, _Child {
     /** accessibility key character
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     LEGEND $accesskey(String cdata);
@@ -2626,19 +2626,19 @@ public class HamletSpec {
   public interface BUTTON extends /* (%flow;)* -(A|%formctrl|FORM|FIELDSET) */
       _Block, PCData, FontStyle, Phrase, _Special, _ImgObject, _SubSup, Attrs {
     /** name of the value
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     BUTTON $name(String cdata);
 
     /** sent to server when submitted
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     BUTTON $value(String cdata);
 
     /** for use as form button
-     * @param type button type.
+     * @param type
      * @return the current element builder
      */
     BUTTON $type(ButtonType type);
@@ -2649,25 +2649,25 @@ public class HamletSpec {
     BUTTON $disabled();
 
     /** position in tabbing order
-     * @param index the index
+     * @param index
      * @return the current element builder
      */
     BUTTON $tabindex(int index);
 
     /** accessibility key character
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     BUTTON $accesskey(String cdata);
 
     /** the element got the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     BUTTON $onfocus(String script);
 
     /** the element lost the focus
-     * @param script to invoke.
+     * @param script
      * @return the current element builder
      */
     BUTTON $onblur(String script);
@@ -2721,7 +2721,7 @@ public class HamletSpec {
 
     /**
      * Add a CAPTION element.
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     _Table caption(String cdata);
@@ -2813,7 +2813,7 @@ public class HamletSpec {
   @Element(endTag=false)
   public interface COLGROUP extends Attrs, _TableCol, _Child {
     /** default number of columns in group. default: 1
-     * @param cols number of cols.
+     * @param cols
      * @return the current element builder
      */
     COLGROUP $span(int cols);
@@ -2827,7 +2827,7 @@ public class HamletSpec {
   @Element(endTag=false)
   public interface COL extends Attrs, _Child {
     /** COL attributes affect N columns. default: 1
-     * @param cols number of cols.
+     * @param cols
      * @return the current element builder
      */
     COL $span(int cols);
@@ -2896,25 +2896,25 @@ public class HamletSpec {
     // use $title for elaberation, when appropriate.
     // $axis omitted. use scope.
     /** space-separated list of id's for header cells
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     _Cell $headers(String cdata);
 
     /** scope covered by header cells
-     * @param scope scope.
+     * @param scope
      * @return the current element builder
      */
     _Cell $scope(Scope scope);
 
     /** number of rows spanned by cell. default: 1
-     * @param rows number of rows.
+     * @param rows
      * @return the current element builder
      */
     _Cell $rowspan(int rows);
 
     /** number of cols spanned by cell. default: 1
-     * @param cols number of cols.
+     * @param cols
      * @return the current element builder
      */
     _Cell $colspan(int cols);
@@ -2959,7 +2959,7 @@ public class HamletSpec {
 
     /**
      * Add a complete BASE element.
-     * @param uri the URI.
+     * @param uri
      * @return the current element builder
      */
     _Head base(String uri);
@@ -2984,7 +2984,7 @@ public class HamletSpec {
   @Element(endTag=false)
   public interface BASE extends _Child {
     /** URI that acts as base URI
-     * @param uri the URI.
+     * @param uri
      * @return the current element builder
      */
     BASE $href(String uri);
@@ -2996,19 +2996,19 @@ public class HamletSpec {
   @Element(endTag=false)
   public interface META extends I18nAttrs, _Child {
     /** HTTP response header name
-     * @param header for the http-equiv attribute
+     * @param header
      * @return the current element builder
      */
     META $http_equiv(String header);
 
     /** metainformation name
-     * @param name of the meta element
+     * @param name
      * @return the current element builder
      */
     META $name(String name);
 
     /** associated information
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     META $content(String cdata);
@@ -3021,19 +3021,19 @@ public class HamletSpec {
    */
   public interface STYLE extends I18nAttrs, _Content, _Child {
     /** content type of style language
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     STYLE $type(String cdata);
 
     /** designed for use with these media
-     * @param media set of media.
+     * @param media
      * @return the current element builder
      */
     STYLE $media(EnumSet<Media> media);
 
     /** advisory title
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     STYLE $title(String cdata);
@@ -3044,25 +3044,25 @@ public class HamletSpec {
    */
   public interface SCRIPT extends _Content, _Child {
     /** char encoding of linked resource
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     SCRIPT $charset(String cdata);
 
     /** content type of script language
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     SCRIPT $type(String cdata);
 
     /** URI for an external script
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     SCRIPT $src(String cdata);
 
     /** UA may defer execution of script
-     * @param cdata the content of the element.
+     * @param cdata
      * @return the current element builder
      */
     SCRIPT $defer(String cdata);

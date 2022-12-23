@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,7 @@
  * The old package is using _ as a one-character identifier,
  * which is banned from JDK9.
  */
-@LimitedPrivate({"YARN", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 package org.apache.hadoop.yarn.webapp.hamlet2;
-import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience;
 

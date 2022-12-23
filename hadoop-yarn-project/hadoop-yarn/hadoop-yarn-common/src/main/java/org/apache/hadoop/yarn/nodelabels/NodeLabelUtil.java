@@ -133,8 +133,8 @@ public final class NodeLabelUtil {
    *   <li>Missing prefix: the attribute doesn't have prefix defined</li>
    *   <li>Malformed attribute prefix: the prefix is not in valid format</li>
    * </ul>
-   * @param attributeSet node attribute set.
-   * @throws IOException io error occur.
+   * @param attributeSet
+   * @throws IOException
    */
   public static void validateNodeAttributes(Set<NodeAttribute> attributeSet)
       throws IOException {
@@ -179,9 +179,6 @@ public final class NodeLabelUtil {
 
   /**
    * Are these two input node attributes the same.
-   *
-   * @param leftNodeAttributes left node attribute.
-   * @param rightNodeAttributes right node attribute.
    * @return true if they are the same
    */
   public static boolean isNodeAttributesEquals(

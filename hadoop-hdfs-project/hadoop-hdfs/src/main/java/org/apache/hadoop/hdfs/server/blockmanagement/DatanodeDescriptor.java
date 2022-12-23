@@ -197,10 +197,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /** A queue of blocks to be replicated by this datanode */
   private final BlockQueue<BlockTargetPair> replicateBlocks =
       new BlockQueue<>();
-  /** A queue of ec blocks to be replicated by this datanode. */
-  private final BlockQueue<BlockTargetPair> ecBlocksToBeReplicated = new BlockQueue<>();
-  /** A queue of ec blocks to be erasure coded by this datanode. */
-  private final BlockQueue<BlockECReconstructionInfo> ecBlocksToBeErasureCoded =
+  /** A queue of blocks to be erasure coded by this datanode */
+  private final BlockQueue<BlockECReconstructionInfo> erasurecodeBlocks =
       new BlockQueue<>();
   /** A queue of blocks to be recovered by this datanode */
   private final BlockQueue<BlockInfo> recoverBlocks = new BlockQueue<>();
@@ -360,8 +358,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
     this.recoverBlocks.clear();
     this.replicateBlocks.clear();
-    this.ecBlocksToBeReplicated.clear();
-    this.ecBlocksToBeErasureCoded.clear();
+    this.erasurecodeBlocks.clear();
     // pendingCached, cached, and pendingUncached are protected by the
     // FSN lock.
     this.pendingCached.clear();
@@ -682,15 +679,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * Store ec block to be replicated work.
-   */
-  @VisibleForTesting
-  public void addECBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
-    assert (block != null && targets != null && targets.length > 0);
-    ecBlocksToBeReplicated.offer(new BlockTargetPair(block, targets));
-  }
-
-  /**
    * Store block erasure coding work.
    */
   void addBlockToBeErasureCoded(ExtendedBlock block,
@@ -699,9 +687,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     assert (block != null && sources != null && sources.length > 0);
     BlockECReconstructionInfo task = new BlockECReconstructionInfo(block,
         sources, targets, liveBlockIndices, excludeReconstrutedIndices, ecPolicy);
-    ecBlocksToBeErasureCoded.offer(task);
+    erasurecodeBlocks.offer(task);
     BlockManager.LOG.debug("Adding block reconstruction task " + task + "to "
-        + getName() + ", current queue size is " + ecBlocksToBeErasureCoded.size());
+        + getName() + ", current queue size is " + erasurecodeBlocks.size());
   }
 
   /**
@@ -732,8 +720,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * The number of work items that are pending to be replicated.
    */
   int getNumberOfBlocksToBeReplicated() {
-    return pendingReplicationWithoutTargets + replicateBlocks.size()
-        + ecBlocksToBeReplicated.size();
+    return pendingReplicationWithoutTargets + replicateBlocks.size();
   }
 
   /**
@@ -741,15 +728,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   @VisibleForTesting
   public int getNumberOfBlocksToBeErasureCoded() {
-    return ecBlocksToBeErasureCoded.size();
-  }
-
-  /**
-   * The number of ec work items that are pending to be replicated.
-   */
-  @VisibleForTesting
-  public int getNumberOfECBlocksToBeReplicated() {
-    return ecBlocksToBeReplicated.size();
+    return erasurecodeBlocks.size();
   }
 
   @VisibleForTesting
@@ -761,13 +740,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return replicateBlocks.poll(maxTransfers);
   }
 
-  List<BlockTargetPair> getECReplicatedCommand(int maxTransfers) {
-    return ecBlocksToBeReplicated.poll(maxTransfers);
-  }
-
   public List<BlockECReconstructionInfo> getErasureCodeCommand(
       int maxTransfers) {
-    return ecBlocksToBeErasureCoded.poll(maxTransfers);
+    return erasurecodeBlocks.poll(maxTransfers);
   }
 
   public BlockInfo[] getLeaseRecoveryCommand(int maxTransfers) {
@@ -1019,11 +994,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (repl > 0) {
       sb.append(" ").append(repl).append(" blocks to be replicated;");
     }
-    int ecRepl = ecBlocksToBeReplicated.size();
-    if (ecRepl > 0) {
-      sb.append(" ").append(ecRepl).append(" ec blocks to be replicated;");
-    }
-    int ec = ecBlocksToBeErasureCoded.size();
+    int ec = erasurecodeBlocks.size();
     if(ec > 0) {
       sb.append(" ").append(ec).append(" blocks to be erasure coded;");
     }

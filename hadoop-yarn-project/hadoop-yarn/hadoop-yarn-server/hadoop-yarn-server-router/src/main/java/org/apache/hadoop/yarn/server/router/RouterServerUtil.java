@@ -18,18 +18,21 @@
 
 package org.apache.hadoop.yarn.server.router;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +41,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.EnumSet;
+import java.util.Map;
+import java.util.Random;
 import java.io.IOException;
 
 /**
@@ -56,6 +60,8 @@ public final class RouterServerUtil {
   private static final String CONTAINER_PREFIX = "container_";
 
   private static final String EPOCH_PREFIX = "e";
+
+  private static Random rand = new Random(System.currentTimeMillis());
 
   /** Disable constructor. */
   private RouterServerUtil() {
@@ -473,25 +479,40 @@ public final class RouterServerUtil {
     }
   }
 
-  public static boolean isAllowedDelegationTokenOp() throws IOException {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      return EnumSet.of(UserGroupInformation.AuthenticationMethod.KERBEROS,
-          UserGroupInformation.AuthenticationMethod.KERBEROS_SSL,
-          UserGroupInformation.AuthenticationMethod.CERTIFICATE)
-          .contains(UserGroupInformation.getCurrentUser()
-          .getRealAuthenticationMethod());
-    } else {
-      return true;
-    }
-  }
+  /**
+   * Randomly pick ActiveSubCluster.
+   * During the selection process, we will exclude SubClusters from the blacklist.
+   *
+   * @param activeSubClusters List of active subClusters.
+   * @param blackList blacklist.
+   * @return Active SubClusterId.
+   * @throws YarnException When there is no Active SubCluster,
+   * an exception will be thrown (No active SubCluster available to submit the request.)
+   */
+  public static SubClusterId getRandomActiveSubCluster(
+      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
+      throws YarnException {
 
-  public static String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)
-      throws IOException {
-    UserGroupInformation user = UserGroupInformation.getCurrentUser();
-    UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-    // we can always renew our own tokens
-    return loginUser.getUserName().equals(user.getUserName())
-        ? token.decodeIdentifier().getRenewer().toString() : user.getShortUserName();
+    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
+    if (MapUtils.isEmpty(activeSubClusters)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+
+    // Change activeSubClusters to List
+    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
+
+    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
+    if (CollectionUtils.isNotEmpty(blackList)) {
+      subClusterIds.removeAll(blackList);
+    }
+
+    // Check there are still active subcluster after removing the blacklist
+    if (CollectionUtils.isEmpty(subClusterIds)) {
+      logAndThrowException(FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE, null);
+    }
+
+    // Randomly choose a SubCluster
+    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
   }
 
   public static UserGroupInformation setupUser(final String userName) {

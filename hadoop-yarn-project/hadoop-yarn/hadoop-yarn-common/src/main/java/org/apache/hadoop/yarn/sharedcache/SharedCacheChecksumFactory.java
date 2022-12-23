@@ -58,9 +58,8 @@ public class SharedCacheChecksumFactory {
   /**
    * Get a new <code>SharedCacheChecksum</code> object based on the configurable
    * algorithm implementation
-   * (see <code>yarn.sharedcache.checksum.algo.impl</code>).
+   * (see <code>yarn.sharedcache.checksum.algo.impl</code>)
    *
-   * @param conf configuration.
    * @return <code>SharedCacheChecksum</code> object
    */
   public static SharedCacheChecksum getChecksum(Configuration conf) {

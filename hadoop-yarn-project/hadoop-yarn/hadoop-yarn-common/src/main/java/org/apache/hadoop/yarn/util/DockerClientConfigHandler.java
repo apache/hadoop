@@ -131,7 +131,6 @@ public final class DockerClientConfigHandler {
    *
    * @param tokens the Tokens from the ContainerLaunchContext.
    * @return the Credentials object populated from the Tokens.
-   * @throws IOException io error occur.
    */
   public static Credentials getCredentialsFromTokensByteBuffer(
       ByteBuffer tokens) throws IOException {

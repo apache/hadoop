@@ -34,7 +34,7 @@ public interface StoreOp<W, R, M> {
    *
    * @param write write to be done to
    * @param mgr manager used by store
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   void write(W write, M mgr) throws IOException;
 
@@ -43,7 +43,7 @@ public interface StoreOp<W, R, M> {
    *
    * @param read read to be done from
    * @param mgr  manager used by store
-   * @throws IOException io error occur.
+   * @throws IOException
    */
   void recover(R read, M mgr) throws IOException;
 }

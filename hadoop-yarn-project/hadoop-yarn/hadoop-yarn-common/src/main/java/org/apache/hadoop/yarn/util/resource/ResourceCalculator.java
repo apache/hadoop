@@ -91,13 +91,13 @@ public abstract class ResourceCalculator {
 
   /**
    * Divides lhs by rhs.
-   *
-   * @param lhs left number.
-   * @param rhs right number.
-   * @return If both lhs and rhs are having a value of 0, then we return 0.
+   * If both lhs and rhs are having a value of 0, then we return 0.
    * This is to avoid division by zero and return NaN as a result.
    * If lhs is zero but rhs is not, Float.infinity will be returned
    * as the result.
+   * @param lhs
+   * @param rhs
+   * @return
    */
   public static float divideSafelyAsFloat(long lhs, long rhs) {
     if (lhs == 0 && rhs == 0) {
@@ -263,9 +263,6 @@ public abstract class ResourceCalculator {
   
   /**
    * Check if a smaller resource can be contained by bigger resource.
-   * @param smaller smaller resource.
-   * @param bigger bigger resource.
-   * @return if true, smaller resource can be contained by bigger resource; false otherwise.
    */
   public abstract boolean fitsIn(Resource smaller, Resource bigger);
 

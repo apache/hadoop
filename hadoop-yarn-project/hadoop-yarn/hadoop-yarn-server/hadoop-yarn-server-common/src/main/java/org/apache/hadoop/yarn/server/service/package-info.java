@@ -19,8 +19,9 @@
  * Package org.apache.hadoop.yarn.server.service contains service related
  * classes.
  */
-@Private
-@Unstable
+@InterfaceAudience.Private @InterfaceStability.Unstable
+
 package org.apache.hadoop.yarn.server.service;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

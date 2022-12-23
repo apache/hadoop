@@ -86,8 +86,7 @@ public abstract class StartContainersResponse {
 
   /**
    * Set the containerId-to-exception map in which the exception indicates error
-   * from per container for failed requests.
-   * @param failedContainers container for failed requests.
+   * from per container for failed requests
    */
   @Private
   @Unstable

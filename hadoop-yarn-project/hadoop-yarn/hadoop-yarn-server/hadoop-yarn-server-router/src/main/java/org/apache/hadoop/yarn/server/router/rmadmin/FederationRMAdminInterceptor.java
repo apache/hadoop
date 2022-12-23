@@ -145,23 +145,6 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
        + "is correct");
   }
 
-  /**
-   * Refresh queue requests.
-   *
-   * The Router supports refreshing all SubCluster queues at once,
-   * and also supports refreshing queues by SubCluster.
-   *
-   * @param request RefreshQueuesRequest, If subClusterId is not empty,
-   * it means that we want to refresh the queue of the specified subClusterId.
-   * If subClusterId is empty, it means we want to refresh all queues.
-   *
-   * @return RefreshQueuesResponse, There is no specific information in the response,
-   * as long as it is not empty, it means that the request is successful.
-   *
-   * @throws StandbyException exception thrown by non-active server.
-   * @throws YarnException indicates exceptions from yarn servers.
-   * @throws IOException io error occurs.
-   */
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
       throws StandbyException, YarnException, IOException {
@@ -178,9 +161,8 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
       RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
            new Class[] {RefreshQueuesRequest.class}, new Object[] {request});
 
-      String subClusterId = request.getSubClusterId();
       Collection<RefreshQueuesResponse> refreshQueueResps =
-          remoteMethod.invokeConcurrent(this, RefreshQueuesResponse.class, subClusterId);
+          remoteMethod.invokeConcurrent(this, RefreshQueuesResponse.class);
 
       // If we get the return result from refreshQueueResps,
       // it means that the call has been successful,
@@ -190,66 +172,19 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
         routerMetrics.succeededRefreshQueuesRetrieved(stopTime - startTime);
         return RefreshQueuesResponse.newInstance();
       }
-    } catch (YarnException e) {
+    } catch (Exception e) {
       routerMetrics.incrRefreshQueuesFailedRetrieved();
-      RouterServerUtil.logAndThrowException(e, "Unable to refreshQueue due to exception.");
+      RouterServerUtil.logAndThrowException("Unable to refreshQueue to exception.", e);
     }
 
     routerMetrics.incrRefreshQueuesFailedRetrieved();
     throw new YarnException("Unable to refreshQueue.");
   }
 
-  /**
-   * Refresh node requests.
-   *
-   * The Router supports refreshing all SubCluster nodes at once,
-   * and also supports refreshing node by SubCluster.
-   *
-   * @param request RefreshNodesRequest, If subClusterId is not empty,
-   * it means that we want to refresh the node of the specified subClusterId.
-   * If subClusterId is empty, it means we want to refresh all nodes.
-   *
-   * @return RefreshNodesResponse, There is no specific information in the response,
-   * as long as it is not empty, it means that the request is successful.
-   *
-   * @throws StandbyException exception thrown by non-active server.
-   * @throws YarnException indicates exceptions from yarn servers.
-   * @throws IOException io error occurs.
-   */
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws StandbyException, YarnException, IOException {
-
-    // parameter verification.
-    // We will not check whether the DecommissionType is empty,
-    // because this parameter has a default value at the proto level.
-    if (request == null) {
-      routerMetrics.incrRefreshNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException("Missing RefreshNodes request.", null);
-    }
-
-    // call refreshNodes of activeSubClusters.
-    try {
-      long startTime = clock.getTime();
-      RMAdminProtocolMethod remoteMethod = new RMAdminProtocolMethod(
-          new Class[] {RefreshNodesRequest.class}, new Object[] {request});
-
-      String subClusterId = request.getSubClusterId();
-      Collection<RefreshNodesResponse> refreshNodesResps =
-          remoteMethod.invokeConcurrent(this, RefreshNodesResponse.class, subClusterId);
-
-      if (CollectionUtils.isNotEmpty(refreshNodesResps)) {
-        long stopTime = clock.getTime();
-        routerMetrics.succeededRefreshNodesRetrieved(stopTime - startTime);
-        return RefreshNodesResponse.newInstance();
-      }
-    } catch (YarnException e) {
-      routerMetrics.incrRefreshNodesFailedRetrieved();
-      RouterServerUtil.logAndThrowException(e, "Unable to refreshNodes due to exception.");
-    }
-
-    routerMetrics.incrRefreshNodesFailedRetrieved();
-    throw new YarnException("Unable to refreshNodes.");
+    throw new NotImplementedException();
   }
 
   @Override

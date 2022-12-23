@@ -1117,7 +1117,7 @@ public class BlockManager implements BlockStatsMXBean {
     return minReplicationToBeInMaintenance;
   }
 
-  short getMinMaintenanceStorageNum(BlockInfo block) {
+  private short getMinMaintenanceStorageNum(BlockInfo block) {
     if (block.isStriped()) {
       return ((BlockInfoStriped) block).getRealDataBlockNum();
     } else {
@@ -2599,8 +2599,7 @@ public class BlockManager implements BlockStatsMXBean {
 
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
-          && node.getNumberOfBlocksToBeReplicated() +
-          node.getNumberOfBlocksToBeErasureCoded() >= maxReplicationStreams) {
+          && node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);
@@ -2610,8 +2609,7 @@ public class BlockManager implements BlockStatsMXBean {
         continue; // already reached replication limit
       }
 
-      if (node.getNumberOfBlocksToBeReplicated() +
-          node.getNumberOfBlocksToBeErasureCoded() >= replicationStreamsHardLimit) {
+      if (node.getNumberOfBlocksToBeReplicated() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
           liveBusyBlockIndices.add(blockIndex);

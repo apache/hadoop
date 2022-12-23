@@ -42,7 +42,7 @@ public abstract class GetClusterNodeAttributesResponse {
   /**
    * Create instance of GetClusterNodeAttributesResponse.
    *
-   * @param attributes Map of Node attributeKey to Type.
+   * @param attributes
    * @return GetClusterNodeAttributesResponse.
    */
   public static GetClusterNodeAttributesResponse newInstance(

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +18,6 @@
 /**
  * API related to protobuf objects that are not backed by PBImpl classes.
  */
-@Private
+@InterfaceAudience.Private
 package org.apache.hadoop.yarn.api.pb;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience;
