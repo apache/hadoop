@@ -516,33 +516,37 @@ public final class TestAbfsClient extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getoffset(),
         appendRequestParameters.getLength(), null));
 
-    AbfsHttpOperation abfsHttpOperation = new AbfsHttpOperation(url,
-        HTTP_METHOD_PUT, requestHeaders);
-
-    // Create a mock of UrlConnection class.
-    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
+    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url,
+        HTTP_METHOD_PUT, requestHeaders));
 
     // Sets the expect request property if expect header is enabled.
     if (appendRequestParameters.isExpectHeaderEnabled()) {
-      Mockito.doReturn(HUNDRED_CONTINUE).when(urlConnection)
-          .getRequestProperty(EXPECT);
+      Mockito.doReturn(HUNDRED_CONTINUE).when(abfsHttpOperation)
+          .getConnProperty(EXPECT);
     }
+
+    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
     Mockito.doNothing().when(urlConnection).setRequestProperty(Mockito
         .any(), Mockito.any());
+    Mockito.doReturn(HTTP_METHOD_PUT).when(urlConnection).getRequestMethod();
     Mockito.doReturn(url).when(urlConnection).getURL();
+    Mockito.doReturn(urlConnection).when(abfsHttpOperation).getConnection();
+
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito
+        .any(), Mockito.any());
+    Mockito.doReturn(url).when(abfsHttpOperation).getConnUrl();
 
     // Give user error code 404 when processResponse is called.
-    Mockito.doReturn(HTTP_METHOD_PUT).when(urlConnection).getRequestMethod();
-    Mockito.doReturn(HTTP_NOT_FOUND).when(urlConnection).getResponseCode();
+    Mockito.doReturn(HTTP_METHOD_PUT).when(abfsHttpOperation).getConnRequestMethod();
+    Mockito.doReturn(HTTP_NOT_FOUND).when(abfsHttpOperation).getConnResponseCode();
     Mockito.doReturn("Resource Not Found")
-        .when(urlConnection)
-        .getResponseMessage();
+        .when(abfsHttpOperation)
+        .getConnResponseMessage();
 
     // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
     Mockito.doThrow(new ProtocolException("Server rejected Operation"))
-        .when(urlConnection)
-        .getOutputStream();
-    abfsHttpOperation.setConnection(urlConnection);
+        .when(abfsHttpOperation)
+        .getConnOutputStream();
 
     // Sets the httpOperation for the rest operation.
     Mockito.doReturn(abfsHttpOperation)

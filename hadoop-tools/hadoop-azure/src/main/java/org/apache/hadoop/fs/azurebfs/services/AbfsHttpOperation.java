@@ -114,10 +114,6 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     return connection;
   }
 
-  void setConnection(final HttpURLConnection connection) {
-    this.connection = connection;
-  }
-
   public String getMethod() {
     return method;
   }
@@ -294,7 +290,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
-      this.connection.setRequestProperty(header.getName(), header.getValue());
+      setRequestProperty(header.getName(), header.getValue());
     }
   }
 
@@ -336,14 +332,14 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
            expect header enabled we return back without throwing an exception
            for the correct response code processing.
          */
-        outputStream = this.connection.getOutputStream();
+        outputStream = getConnOutputStream();
       } catch (IOException e) {
         /* If getOutputStream fails with an exception and expect header
            is enabled, we return back without throwing an exception to
            the caller. The caller is responsible for setting the correct status code.
            If expect header is not enabled, we throw back the exception.
          */
-        String expectHeader = this.connection.getRequestProperty(EXPECT);
+        String expectHeader = getConnProperty(EXPECT);
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
           LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
           return;
@@ -387,13 +383,13 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       startTime = System.nanoTime();
     }
 
-    this.statusCode = this.connection.getResponseCode();
+    this.statusCode = getConnResponseCode();
 
     if (this.isTraceEnabled) {
       this.recvResponseTimeMs = elapsedTimeMs(startTime);
     }
 
-    this.statusDescription = this.connection.getResponseMessage();
+    this.statusDescription = getConnResponseMessage();
 
     this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
@@ -584,6 +580,58 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
+  }
+
+  /**
+   * Gets the connection request property for a key.
+   * @param key The request property key.
+   * @return request peoperty value.
+   */
+  String getConnProperty(String key) {
+    return connection.getRequestProperty(key);
+  }
+
+  /**
+   * Gets the connection url.
+   * @return url.
+   */
+  URL getConnUrl() {
+    return connection.getURL();
+  }
+
+  /**
+   * Gets the connection request method.
+   * @return request method.
+   */
+  String getConnRequestMethod() {
+    return connection.getRequestMethod();
+  }
+
+  /**
+   * Gets the connection response code.
+   * @return response code.
+   * @throws IOException
+   */
+  Integer getConnResponseCode() throws IOException {
+    return connection.getResponseCode();
+  }
+
+  /**
+   * Gets the connection output stream.
+   * @return output stream.
+   * @throws IOException
+   */
+  OutputStream getConnOutputStream() throws IOException {
+    return connection.getOutputStream();
+  }
+
+  /**
+   * Gets the connection response message.
+   * @return response message.
+   * @throws IOException
+   */
+  String getConnResponseMessage() throws IOException {
+    return connection.getResponseMessage();
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

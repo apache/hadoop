@@ -201,21 +201,26 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getoffset(),
         appendRequestParameters.getLength(), null));
 
-    AbfsHttpOperation abfsHttpOperation = new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders);
-
-    // Create a mock of UrlConnection class.
-    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
+    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders));
 
     // Sets the expect request property if expect header is enabled.
     if (expectHeaderEnabled) {
       Mockito.doReturn(HUNDRED_CONTINUE)
-          .when(urlConnection)
-          .getRequestProperty(EXPECT);
+          .when(abfsHttpOperation)
+          .getConnProperty(EXPECT);
     }
+
+    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
     Mockito.doNothing().when(urlConnection).setRequestProperty(Mockito
         .any(), Mockito.any());
-    Mockito.doReturn(url).when(urlConnection).getURL();
     Mockito.doReturn(HTTP_METHOD_PUT).when(urlConnection).getRequestMethod();
+    Mockito.doReturn(url).when(urlConnection).getURL();
+    Mockito.doReturn(urlConnection).when(abfsHttpOperation).getConnection();
+
+    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito
+        .any(), Mockito.any());
+    Mockito.doReturn(url).when(abfsHttpOperation).getConnUrl();
+    Mockito.doReturn(HTTP_METHOD_PUT).when(abfsHttpOperation).getConnRequestMethod();
 
     switch (errorType) {
     case OUTPUTSTREAM:
@@ -223,13 +228,13 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // enabled, it returns back to processResponse and hence we have
       // mocked the response code and the response message to check different
       // behaviour based on response code.
-      Mockito.doReturn(responseCode).when(urlConnection).getResponseCode();
+      Mockito.doReturn(responseCode).when(abfsHttpOperation).getConnResponseCode();
       Mockito.doReturn(responseMessage)
-          .when(urlConnection)
-          .getResponseMessage();
+          .when(abfsHttpOperation)
+          .getConnResponseMessage();
       Mockito.doThrow(new ProtocolException("Server rejected Operation"))
-          .when(urlConnection)
-          .getOutputStream();
+          .when(abfsHttpOperation)
+          .getConnOutputStream();
       break;
     case WRITE:
       // If write() throws IOException and Expect Header is
@@ -239,7 +244,7 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         public void write(final int i) throws IOException {
         }
       });
-      Mockito.doReturn(outputStream).when(urlConnection).getOutputStream();
+      Mockito.doReturn(outputStream).when(abfsHttpOperation).getConnOutputStream();
       Mockito.doThrow(new IOException())
           .when(outputStream)
           .write(buffer, appendRequestParameters.getoffset(),
@@ -248,9 +253,6 @@ public class TestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     default:
       break;
     }
-
-    // Sets the urlConnection for the httpOperation.
-    abfsHttpOperation.setConnection(urlConnection);
 
     // Sets the httpOperation for the rest operation.
     Mockito.doReturn(abfsHttpOperation)
