@@ -165,6 +165,21 @@ public class TestNamenodeResolver {
     assertEquals(FederationNamenodeServiceState.OBSERVER, observerList2.get(1).getState());
     assertEquals(FederationNamenodeServiceState.ACTIVE, observerList2.get(2).getState());
     assertEquals(FederationNamenodeServiceState.STANDBY, observerList2.get(3).getState());
+
+    // Test shuffler
+    List<? extends FederationNamenodeContext> observerList3;
+    boolean hit = false;
+    for (int i = 0; i < 1000; i++) {
+      observerList3 = namenodeResolver.getNamenodesForNameserviceId(NAMESERVICES[0], true);
+      assertEquals(FederationNamenodeServiceState.OBSERVER, observerList3.get(0).getState());
+      assertEquals(FederationNamenodeServiceState.OBSERVER, observerList3.get(1).getState());
+      if (observerList3.get(0).getNamenodeId().equals(observerList2.get(1).getNamenodeId()) &&
+          observerList3.get(1).getNamenodeId().equals(observerList2.get(0).getNamenodeId())) {
+        hit = true;
+        break;
+      }
+    }
+    assertTrue(hit);
   }
 
   @Test
