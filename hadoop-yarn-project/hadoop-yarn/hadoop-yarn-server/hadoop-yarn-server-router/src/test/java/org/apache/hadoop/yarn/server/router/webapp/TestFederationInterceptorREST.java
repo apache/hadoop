@@ -130,7 +130,7 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY;
-import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
+
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.DURATION;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.NUM_CONTAINERS;
 import static org.mockito.Mockito.mock;
@@ -155,9 +155,9 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private FederationStateStoreTestUtil stateStoreUtil;
   private List<SubClusterId> subClusters;
   private static final String TEST_RENEWER = "test-renewer";
-  
+
   public void setUp() throws YarnException, IOException {
-  
+
     super.setUpConfig();
     interceptor = new TestableFederationInterceptorREST();
 

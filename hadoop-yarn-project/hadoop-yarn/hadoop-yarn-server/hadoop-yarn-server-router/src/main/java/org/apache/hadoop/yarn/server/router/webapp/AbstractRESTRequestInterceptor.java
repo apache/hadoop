@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 
-import java.io.IOException;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
 /**
