@@ -1389,7 +1389,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // During startup, we're already open for write during initialization.
         editLog.initJournalsForWrite();
         // May need to recover
-        editLog.recoverUnclosedStreams();
+        editLog.recoverUnclosedStreams(true);
         
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
