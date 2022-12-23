@@ -16,12 +16,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAPPING_RULE_FORMAT_JSON;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.FSQueueConverter.QUEUE_MAX_AM_SHARE_DISABLED;
 
 import java.io.ByteArrayOutputStream;
@@ -315,7 +313,7 @@ public class FSConfigToCSConfigConverter {
         .withPercentages(usePercentages)
         .build();
 
-    emitDefaultUserLimitFactor(fsLeafQueue);
+    queueConverter.emitDefaultUserLimitFactor(fsLeafQueue, capacitySchedulerConfig);
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
   }
@@ -417,19 +415,6 @@ public class FSConfigToCSConfigConverter {
             MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT,
           queueMaxAMShareDefault);
     }
-  }
-
-  private void emitDefaultUserLimitFactor(Collection<FSLeafQueue> fsLeafQueue) {
-    fsLeafQueue
-        .forEach((leafQueue) -> {
-          if (!capacitySchedulerConfig.
-                isAutoQueueCreationV2Enabled(leafQueue.getName())) {
-            capacitySchedulerConfig.setFloat(
-                    CapacitySchedulerConfiguration.
-                            PREFIX + leafQueue.getName() + DOT + USER_LIMIT_FACTOR,
-                    -1.0f);
-          }
-        });
   }
 
   private void emitDisablePreemptionForObserveOnlyMode() {

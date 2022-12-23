@@ -191,10 +191,12 @@ public class TestFSConfigToCSConfigConverter {
     converter.convert(config);
 
     Configuration conf = converter.getCapacitySchedulerConfig();
-    String userLimitFactor =
-            conf.get(PREFIX + "root.default." + USER_LIMIT_FACTOR);
 
-    assertEquals("Default user limit factor", "-1.0", userLimitFactor);
+    assertNull("root.users user-limit-factor should be null",
+            conf.get(PREFIX + "root.users." + USER_LIMIT_FACTOR));
+
+    assertEquals("root.default user-limit-factor", "-1.0",
+            conf.get(PREFIX + "root.default.user-limit-factor"));
 
     assertEquals("root.users.joe user-limit-factor", "-1.0",
             conf.get(PREFIX + "root.users.joe.user-limit-factor"));

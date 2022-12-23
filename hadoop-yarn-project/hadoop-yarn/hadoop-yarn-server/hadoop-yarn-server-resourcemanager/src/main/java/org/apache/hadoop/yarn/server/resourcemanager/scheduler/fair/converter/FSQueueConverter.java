@@ -17,12 +17,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
@@ -213,6 +217,19 @@ public class FSQueueConverter {
       capacitySchedulerConfig.set(PREFIX + queueName + ".disable_preemption",
           "true");
     }
+  }
+
+  public void emitDefaultUserLimitFactor(Collection<FSLeafQueue> fsLeafQueue, CapacitySchedulerConfiguration config) {
+    fsLeafQueue
+          .forEach((leafQueue) -> {
+            if (!config.
+                    isAutoQueueCreationV2Enabled(leafQueue.getName())) {
+              config.setFloat(
+                      CapacitySchedulerConfiguration.
+                              PREFIX + leafQueue.getName() + DOT + USER_LIMIT_FACTOR,
+                      -1.0f);
+            }
+          });
   }
 
   /**
