@@ -1215,8 +1215,8 @@ public class MockDefaultRequestInterceptorREST
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
     try {
-      ResourceManager mockRM = CapacitySchedulerTestUtilities.createResourceManager();
-      CapacityScheduler cs = (CapacityScheduler) mockRM.getResourceScheduler();
+      ResourceManager resourceManager = CapacitySchedulerTestUtilities.createResourceManager();
+      CapacityScheduler cs = (CapacityScheduler) resourceManager.getResourceScheduler();
       CSQueue root = cs.getRootQueue();
       SchedulerInfo schedulerInfo = new CapacitySchedulerInfo(root, cs);
       return new SchedulerTypeInfo(schedulerInfo);
