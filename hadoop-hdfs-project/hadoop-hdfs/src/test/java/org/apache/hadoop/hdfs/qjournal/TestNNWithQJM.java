@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -197,10 +196,9 @@ public class TestNNWithQJM {
           .manageNameDfsDirs(false).format(false).checkExitOnShutdown(false)
           .build();
       fail("New NN with different namespace should have been rejected");
-    } catch (ExitException ee) {
+    } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
-          "Unable to start log segment 1: too few journals", ee);
-      assertTrue("Didn't terminate properly ", ExitUtil.terminateCalled());
+          "recoverUnfinalizedSegments failed for too many journals", ioe);
     }
   }
 }
