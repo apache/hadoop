@@ -35,8 +35,14 @@ static void (*dlsym_EVP_CIPHER_CTX_init)(EVP_CIPHER_CTX *);
 #endif
 static int (*dlsym_EVP_CIPHER_CTX_set_padding)(EVP_CIPHER_CTX *, int);
 static int (*dlsym_EVP_CIPHER_CTX_test_flags)(const EVP_CIPHER_CTX *, int);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static int (*dlsym_EVP_CIPHER_CTX_get_block_size)(const EVP_CIPHER_CTX *);
+#else
 static int (*dlsym_EVP_CIPHER_CTX_block_size)(const EVP_CIPHER_CTX *);
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static int (*dlsym_EVP_CIPHER_CTX_is_encrypting)(const EVP_CIPHER_CTX *);
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 static int (*dlsym_EVP_CIPHER_CTX_encrypting)(const EVP_CIPHER_CTX *);
 #endif
 static int (*dlsym_EVP_CipherInit_ex)(EVP_CIPHER_CTX *, const EVP_CIPHER *,  \
@@ -63,8 +69,14 @@ typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_cleanup)(EVP_CIPHER_CTX *);
 typedef void (__cdecl *__dlsym_EVP_CIPHER_CTX_init)(EVP_CIPHER_CTX *);
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_set_padding)(EVP_CIPHER_CTX *, int);
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_test_flags)(const EVP_CIPHER_CTX *, int);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_get_block_size)(const EVP_CIPHER_CTX *);
+#else
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_block_size)(const EVP_CIPHER_CTX *);
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_is_encrypting)(const EVP_CIPHER_CTX *);
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_encrypting)(const EVP_CIPHER_CTX *);
 #endif
 typedef int (__cdecl *__dlsym_EVP_CipherInit_ex)(EVP_CIPHER_CTX *,  \
@@ -82,8 +94,14 @@ static __dlsym_EVP_CIPHER_CTX_cleanup dlsym_EVP_CIPHER_CTX_cleanup;
 static __dlsym_EVP_CIPHER_CTX_init dlsym_EVP_CIPHER_CTX_init;
 static __dlsym_EVP_CIPHER_CTX_set_padding dlsym_EVP_CIPHER_CTX_set_padding;
 static __dlsym_EVP_CIPHER_CTX_test_flags dlsym_EVP_CIPHER_CTX_test_flags;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static __dlsym_EVP_CIPHER_CTX_get_block_size dlsym_EVP_CIPHER_CTX_get_block_size;
+#else
 static __dlsym_EVP_CIPHER_CTX_block_size dlsym_EVP_CIPHER_CTX_block_size;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static __dlsym_EVP_CIPHER_CTX_is_encrypting dlsym_EVP_CIPHER_CTX_is_encrypting;
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
 static __dlsym_EVP_CIPHER_CTX_encrypting dlsym_EVP_CIPHER_CTX_encrypting;
 #endif
 static __dlsym_EVP_CipherInit_ex dlsym_EVP_CipherInit_ex;
@@ -169,9 +187,17 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
                       "EVP_CIPHER_CTX_set_padding");
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_test_flags, env, openssl,  \
                       "EVP_CIPHER_CTX_test_flags");
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_get_block_size, env, openssl,  \
+                      "EVP_CIPHER_CTX_get_block_size");
+#else
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_block_size, env, openssl,  \
                       "EVP_CIPHER_CTX_block_size");
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_is_encrypting, env, openssl,  \
+                      "EVP_CIPHER_CTX_is_encrypting");
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(dlsym_EVP_CIPHER_CTX_encrypting, env, openssl,  \
                       "EVP_CIPHER_CTX_encrypting");
 #endif
@@ -207,10 +233,20 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_test_flags,  \
                       dlsym_EVP_CIPHER_CTX_test_flags, env,  \
                       openssl, "EVP_CIPHER_CTX_test_flags");
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_get_block_size,  \
+                      dlsym_EVP_CIPHER_CTX_get_block_size, env,  \
+                      openssl, "EVP_CIPHER_CTX_get_block_size");
+#else
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_block_size,  \
                       dlsym_EVP_CIPHER_CTX_block_size, env,  \
                       openssl, "EVP_CIPHER_CTX_block_size");
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_is_encrypting,  \
+                      dlsym_EVP_CIPHER_CTX_is_encrypting, env,  \
+                      openssl, "EVP_CIPHER_CTX_is_encrypting");
+#elif OPENSSL_VERSION_NUMBER >= 0x10100000L
   LOAD_DYNAMIC_SYMBOL(__dlsym_EVP_CIPHER_CTX_encrypting,  \
                       dlsym_EVP_CIPHER_CTX_encrypting, env,  \
                       openssl, "EVP_CIPHER_CTX_encrypting");
@@ -405,11 +441,17 @@ static int check_update_max_output_len(EVP_CIPHER_CTX *context, int input_len,
     }
     return 0;
   } else {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     int b = dlsym_EVP_CIPHER_CTX_block_size(context);
+#else
+    int b = dlsym_EVP_CIPHER_CTX_get_block_size(context);
+#endif
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
     if (context->encrypt) {
-#else
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
     if (dlsym_EVP_CIPHER_CTX_encrypting(context)) {
+#else
+    if (dlsym_EVP_CIPHER_CTX_is_encrypting(context)) {
 #endif
       if (max_output_len >= input_len + b - 1) {
         return 1;
@@ -464,7 +506,11 @@ static int check_doFinal_max_output_len(EVP_CIPHER_CTX *context,
   if (  dlsym_EVP_CIPHER_CTX_test_flags(context, EVP_CIPH_NO_PADDING) ) {
     return 1;
   } else {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
     int b = dlsym_EVP_CIPHER_CTX_block_size(context);
+#else
+    int b = dlsym_EVP_CIPHER_CTX_get_block_size(context);
+#endif
     if (max_output_len >= b) {
       return 1;
     }
