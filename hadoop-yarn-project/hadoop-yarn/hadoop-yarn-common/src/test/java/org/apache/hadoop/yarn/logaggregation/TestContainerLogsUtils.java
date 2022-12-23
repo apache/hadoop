@@ -38,10 +38,10 @@ import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileCo
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
  * This class contains several utility functions for log aggregation tests.
+ * Any assertion libraries shouldn't be used here because this class is used by
+ * multiple modules including MapReduce.
  */
 public final class TestContainerLogsUtils {
 
@@ -75,12 +75,16 @@ public final class TestContainerLogsUtils {
     if (fs.exists(rootLogDirPath)) {
       fs.delete(rootLogDirPath, true);
     }
-    assertThat(fs.mkdirs(rootLogDirPath)).isTrue();
+    fs.mkdirs(rootLogDirPath);
+    // Make sure the target dir is created. If not, FileNotFoundException is thrown
+    fs.getFileStatus(rootLogDirPath);
     Path appLogsDir = new Path(rootLogDirPath, appId.toString());
     if (fs.exists(appLogsDir)) {
       fs.delete(appLogsDir, true);
     }
-    assertThat(fs.mkdirs(appLogsDir)).isTrue();
+    fs.mkdirs(appLogsDir);
+    // Make sure the target dir is created. If not, FileNotFoundException is thrown
+    fs.getFileStatus(appLogsDir);
     createContainerLogInLocalDir(appLogsDir, containerToContent, fs, fileName);
     // upload container logs to remote log dir
 
@@ -94,7 +98,9 @@ public final class TestContainerLogsUtils {
     if (fs.exists(path) && deleteRemoteLogDir) {
       fs.delete(path, true);
     }
-    assertThat(fs.mkdirs(path)).isTrue();
+    fs.mkdirs(path);
+    // Make sure the target dir is created. If not, FileNotFoundException is thrown
+    fs.getFileStatus(path);
     uploadContainerLogIntoRemoteDir(ugi, conf, rootLogDirList, nodeId, appId,
         containerToContent.keySet(), path);
   }
@@ -110,7 +116,9 @@ public final class TestContainerLogsUtils {
       if (fs.exists(containerLogsDir)) {
         fs.delete(containerLogsDir, true);
       }
-      assertThat(fs.mkdirs(containerLogsDir)).isTrue();
+      fs.mkdirs(containerLogsDir);
+      // Make sure the target dir is created. If not, FileNotFoundException is thrown
+      fs.getFileStatus(containerLogsDir);
       Writer writer =
           new FileWriter(new File(containerLogsDir.toString(), fileName));
       writer.write(content);
