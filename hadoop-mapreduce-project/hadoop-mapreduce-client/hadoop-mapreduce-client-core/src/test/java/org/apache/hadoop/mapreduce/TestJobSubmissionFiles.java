@@ -150,18 +150,18 @@ public class TestJobSubmissionFiles {
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "700");
     MiniDFSCluster dfsCluster = null;
     try {
-        dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-        FileSystem fs = dfsCluster.getFileSystem();
-        UserGroupInformation user = UserGroupInformation
-            .createUserForTesting(USER_1_SHORT_NAME, GROUP_NAMES);
-        Path stagingPath = new Path(fs.getUri().toString() + "/testDirPermission");
-        when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
-        Path res = JobSubmissionFiles.getStagingDir(cluster, conf, user);
-        assertEquals(new FsPermission(0700), fs.getFileStatus(res).getPermission());
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      FileSystem fs = dfsCluster.getFileSystem();
+      UserGroupInformation user = UserGroupInformation
+          .createUserForTesting(USER_1_SHORT_NAME, GROUP_NAMES);
+      Path stagingPath = new Path(fs.getUri().toString() + "/testDirPermission");
+      when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
+      Path res = JobSubmissionFiles.getStagingDir(cluster, conf, user);
+      assertEquals(new FsPermission(0700), fs.getFileStatus(res).getPermission());
     } finally {
-        if (dfsCluster != null) {
-            dfsCluster.shutdown();
-        }
+      if (dfsCluster != null) {
+        dfsCluster.shutdown();
+      }
     }
   }
 }
