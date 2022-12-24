@@ -553,7 +553,9 @@ public class TestObserverWithRouter {
   public void testStateIdProgressionInRouter() throws Exception {
     Path rootPath = new Path("/");
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
-    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer().getRouterStateIdContext();
+    RouterStateIdContext routerStateIdContext = routerContext
+        .getRouterRpcServer()
+        .getRouterStateIdContext();
     for (int i =0; i < 10; i++) {
       fileSystem.create(new Path(rootPath, "file" + i)).close();
     }
