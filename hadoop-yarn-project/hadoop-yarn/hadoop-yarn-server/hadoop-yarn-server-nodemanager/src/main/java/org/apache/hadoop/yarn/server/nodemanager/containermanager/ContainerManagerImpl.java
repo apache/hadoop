@@ -538,7 +538,7 @@ public class ContainerManagerImpl extends CompositeService implements
     if (conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
       return new LogAggregationService(this.dispatcher, context,
-          deletionService, dirsHandler);
+          deletionService, dirsHandler, metrics);
     } else {
       return new NonAggregatingLogHandler(this.dispatcher, deletionService,
                                           dirsHandler,

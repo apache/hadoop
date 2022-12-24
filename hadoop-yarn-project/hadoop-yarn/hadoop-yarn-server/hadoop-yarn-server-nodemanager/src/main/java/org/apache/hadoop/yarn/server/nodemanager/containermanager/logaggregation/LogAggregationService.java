@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -77,6 +78,7 @@ public class LogAggregationService extends AbstractService implements
   private static final String NM_LOG_AGGREGATION_DEBUG_ENABLED
       = YarnConfiguration.NM_PREFIX + "log-aggregation.debug-enabled";
   private long rollingMonitorInterval;
+  private final NodeManagerMetrics nmMetrics;
 
   private final Context context;
   private final DeletionService deletionService;
@@ -86,22 +88,27 @@ public class LogAggregationService extends AbstractService implements
   private NodeId nodeId;
 
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
+  private final ConcurrentMap<ApplicationId, Runnable> appLogAggregatorWrappers;
+  private final ConcurrentMap<ApplicationId, Long> timeStartedWaitingForThread;
 
   // Holds applications whose aggregation is disable due to invalid Token
   private final Set<ApplicationId> invalidTokenApps;
 
   @VisibleForTesting
   ExecutorService threadPool;
-  
+
   public LogAggregationService(Dispatcher dispatcher, Context context,
-      DeletionService deletionService, LocalDirsHandlerService dirsHandler) {
+      DeletionService deletionService, LocalDirsHandlerService dirsHandler,  NodeManagerMetrics nmMetrics) {
     super(LogAggregationService.class.getName());
     this.dispatcher = dispatcher;
     this.context = context;
     this.deletionService = deletionService;
     this.dirsHandler = dirsHandler;
+    this.nmMetrics = nmMetrics;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
+    this.appLogAggregatorWrappers = new ConcurrentHashMap<ApplicationId, Runnable>();
+    this.timeStartedWaitingForThread = new ConcurrentHashMap<ApplicationId, Long>();
     this.invalidTokenApps = ConcurrentHashMap.newKeySet();
   }
 
@@ -170,14 +177,14 @@ public class LogAggregationService extends AbstractService implements
     this.nodeId = this.context.getNodeId();
     super.serviceStart();
   }
-  
+
   @Override
   protected void serviceStop() throws Exception {
     LOG.info(this.getName() + " waiting for pending aggregation during exit");
     stopAggregators();
     super.serviceStop();
   }
-   
+
   private void stopAggregators() {
     threadPool.shutdown();
     boolean supervised = getConfig().getBoolean(
@@ -213,17 +220,20 @@ public class LogAggregationService extends AbstractService implements
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void initApp(final ApplicationId appId, String user,
       Credentials credentials, Map<ApplicationAccessType, String> appAcls,
       LogAggregationContext logAggregationContext,
       long recoveredLogInitedTime) {
     ApplicationEvent eventResponse;
+
     try {
       initAppAggregator(appId, user, credentials, appAcls,
           logAggregationContext, recoveredLogInitedTime);
       eventResponse = new ApplicationEvent(appId,
           ApplicationEventType.APPLICATION_LOG_HANDLING_INITED);
+      if(appLogAggregators.get(appId)  != null && appLogAggregators.get(appId).isLogAggregationInRolling()) {
+        scheduleAggregator(appId);
+      }
     } catch (YarnRuntimeException e) {
       LOG.warn("Application failed to init aggregation", e);
       eventResponse = new ApplicationEvent(appId,
@@ -231,7 +241,7 @@ public class LogAggregationService extends AbstractService implements
     }
     this.dispatcher.getEventHandler().handle(eventResponse);
   }
-  
+
   FileContext getLocalFileContext(Configuration conf) {
     try {
       return FileContext.getLocalFSFileContext(conf);
@@ -262,7 +272,7 @@ public class LogAggregationService extends AbstractService implements
             logAggregationFileController.getRemoteNodeLogFileForApp(appId,
             user, nodeId), appAcls, logAggregationContext, this.context,
             getLocalFileContext(getConfig()), this.rollingMonitorInterval,
-            recoveredLogInitedTime, logAggregationFileController);
+            recoveredLogInitedTime, logAggregationFileController, nmMetrics);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
       throw new YarnRuntimeException("Duplicate initApp for " + appId);
     }
@@ -291,15 +301,31 @@ public class LogAggregationService extends AbstractService implements
     // Schedule the aggregator.
     Runnable aggregatorWrapper = new Runnable() {
       public void run() {
+        nmMetrics.appStartedLogAggr();
+        long threadStartTime = System.currentTimeMillis();
+        long threadWaitTime = threadStartTime - timeStartedWaitingForThread.get(appId);
+        nmMetrics.addLogAggregationThreadWaitTime(threadWaitTime);
+
         try {
           appLogAggregator.run();
         } finally {
           appLogAggregators.remove(appId);
           closeFileSystems(userUgi);
+          appLogAggregatorWrappers.remove(appId);
+          timeStartedWaitingForThread.remove(appId);
+
+          // set metrics
+          nmMetrics.appLogAggregationFinished();
+          long threadEndTime = System.currentTimeMillis();
+          long threadHoldTime =  threadEndTime- threadStartTime;
+          nmMetrics.addLogAggregationThreadHoldTime(threadHoldTime);
         }
       }
     };
-    this.threadPool.execute(aggregatorWrapper);
+
+    if (this.appLogAggregatorWrappers.putIfAbsent(appId, aggregatorWrapper) != null) {
+      throw new YarnRuntimeException("Duplicate runnable for " + appId);
+    }
 
     if (appDirException != null) {
       throw appDirException;
@@ -351,6 +377,9 @@ public class LogAggregationService extends AbstractService implements
         return;
       }
       aggregator.finishLogAggregation();
+      if(!aggregator.isLogAggregationInRolling()) {
+        scheduleAggregator(appId);
+      }
     } finally {
       // Remove invalid Token Apps
       invalidTokenApps.remove(appId);
@@ -363,6 +392,7 @@ public class LogAggregationService extends AbstractService implements
       case APPLICATION_STARTED:
         LogHandlerAppStartedEvent appStartEvent =
             (LogHandlerAppStartedEvent) event;
+        LOG.info("LogAggregationService received APPLICATION_STARTED event for "  + appStartEvent.getApplicationId() );
         initApp(appStartEvent.getApplicationId(), appStartEvent.getUser(),
             appStartEvent.getCredentials(),
             appStartEvent.getApplicationAcls(),
@@ -379,6 +409,7 @@ public class LogAggregationService extends AbstractService implements
       case APPLICATION_FINISHED:
         LogHandlerAppFinishedEvent appFinishedEvent =
             (LogHandlerAppFinishedEvent) event;
+        LOG.info("LogAggregationService received APPLICATION_FINISHED event for "  + appFinishedEvent.getApplicationId() );
         stopApp(appFinishedEvent.getApplicationId());
         break;
       case LOG_AGG_TOKEN_UPDATE:
@@ -387,7 +418,19 @@ public class LogAggregationService extends AbstractService implements
       default:
         ; // Ignore
     }
+  }
 
+  public void scheduleAggregator(ApplicationId appId){
+      this.nmMetrics.appReadyForLogAggregation();
+      this.timeStartedWaitingForThread.put(appId, System.currentTimeMillis());
+      Runnable runnable = appLogAggregatorWrappers.get(appId);
+      try {
+        LOG.info("Scheduling aggregator for " + appId);
+        this.threadPool.execute(runnable);
+      } catch (RuntimeException e) {
+        LOG.warn("RuntimeException while executing runnable " + runnable + " with " +
+                "executor " + threadPool, e);
+      }
   }
 
   private void checkAndEnableAppAggregators() {
