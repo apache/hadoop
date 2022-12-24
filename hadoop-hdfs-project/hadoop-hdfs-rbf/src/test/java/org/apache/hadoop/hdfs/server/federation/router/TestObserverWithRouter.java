@@ -556,7 +556,7 @@ public class TestObserverWithRouter {
     RouterStateIdContext routerStateIdContext = routerContext
         .getRouterRpcServer()
         .getRouterStateIdContext();
-    for (int i =0; i < 10; i++) {
+    for (int i = 0; i < 10; i++) {
       fileSystem.create(new Path(rootPath, "file" + i)).close();
     }
 
