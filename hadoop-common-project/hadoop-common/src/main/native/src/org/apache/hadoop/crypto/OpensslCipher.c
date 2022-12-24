@@ -35,11 +35,13 @@ static void (*dlsym_EVP_CIPHER_CTX_init)(EVP_CIPHER_CTX *);
 #endif
 static int (*dlsym_EVP_CIPHER_CTX_set_padding)(EVP_CIPHER_CTX *, int);
 static int (*dlsym_EVP_CIPHER_CTX_test_flags)(const EVP_CIPHER_CTX *, int);
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 static int (*dlsym_EVP_CIPHER_CTX_get_block_size)(const EVP_CIPHER_CTX *);
 #else
 static int (*dlsym_EVP_CIPHER_CTX_block_size)(const EVP_CIPHER_CTX *);
 #endif
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 static int (*dlsym_EVP_CIPHER_CTX_is_encrypting)(const EVP_CIPHER_CTX *);
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -69,11 +71,13 @@ typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_cleanup)(EVP_CIPHER_CTX *);
 typedef void (__cdecl *__dlsym_EVP_CIPHER_CTX_init)(EVP_CIPHER_CTX *);
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_set_padding)(EVP_CIPHER_CTX *, int);
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_test_flags)(const EVP_CIPHER_CTX *, int);
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_get_block_size)(const EVP_CIPHER_CTX *);
 #else
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_block_size)(const EVP_CIPHER_CTX *);
 #endif
+// name changed in OpenSSL 3 ABI - see History section in EVP_EncryptInit(3)
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 typedef int (__cdecl *__dlsym_EVP_CIPHER_CTX_is_encrypting)(const EVP_CIPHER_CTX *);
 #elif OPENSSL_VERSION_NUMBER >= 0x10100000L
