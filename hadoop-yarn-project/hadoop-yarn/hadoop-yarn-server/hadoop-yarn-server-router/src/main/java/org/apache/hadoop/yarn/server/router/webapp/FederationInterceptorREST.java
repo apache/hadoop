@@ -44,7 +44,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -2295,7 +2295,8 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
     // Send the requests in parallel.
-    CompletionService<Pair<R, Exception>> compSvc = new ExecutorCompletionService<>(threadpool);
+    CompletionService<Triple<SubClusterInfo, R, Exception>> compSvc =
+        new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
     // We use Pair to store related information. The left value of the Pair is the response,
@@ -2311,36 +2312,41 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return Pair.of(ret, null);
+          return Triple.of(info, ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return Pair.of(null, e);
+          return Triple.of(info, null, e);
         }
       });
     }
 
-    clusterIds.stream().forEach(clusterId -> {
+    for (int i = 0; i < clusterIds.size(); i++) {
+      SubClusterInfo subClusterInfo = null;
       try {
-        Future<Pair<R, Exception>> future = compSvc.take();
-        Pair<R, Exception> pair = future.get();
-        R response = pair.getKey();
+        Future<Triple<SubClusterInfo, R, Exception>> future = compSvc.take();
+        Triple<SubClusterInfo, R, Exception> triple = future.get();
+        subClusterInfo = triple.getLeft();
+
+        R response = triple.getMiddle();
         if (response != null) {
-          results.put(clusterId, response);
+          results.put(subClusterInfo, response);
         }
-        Exception exception = pair.getValue();
+
+        Exception exception = triple.getRight();
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
         if (!allowPartialResult && exception != null) {
           throw exception;
         }
+
       } catch (Throwable e) {
         String msg = String.format("SubCluster %s failed to %s report.",
-            clusterId.getSubClusterId(), request.getMethodName());
+            subClusterInfo.getSubClusterId(), request.getMethodName());
         LOG.error(msg, e);
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
-    });
+    }
 
     return results;
   }
