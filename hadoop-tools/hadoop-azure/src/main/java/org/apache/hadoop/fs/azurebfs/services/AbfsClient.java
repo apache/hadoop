@@ -691,13 +691,15 @@ public class AbfsClient implements Closeable {
     try {
       op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
-      // If the http response code indicates a user error we retry
-      // the same append request with expect header disabled.
-      // When "100-continue" header is enabled but a non Http 100 response comes,
-      // JDK fails to provide all response headers.
-      // This handling is to avoid breaking of backward compatibility
-      // if someone has taken dependency on the exception message,
-      // which is created using the error string present in the response header.
+      /*
+         If the http response code indicates a user error we retry
+         the same append request with expect header disabled.
+         When "100-continue" header is enabled but a non Http 100 response comes,
+         the response message might not get set correctly by the server.
+         So, this handling is to avoid breaking of backward compatibility
+         if someone has taken dependency on the exception message,
+         which is created using the error string present in the response header.
+      */
       int responseStatusCode = ((AbfsRestOperationException) e).getStatusCode();
       if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
         LOG.debug("User error, retrying without 100 continue enabled");
