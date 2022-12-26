@@ -411,8 +411,9 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("setReplication",
         new Class<?>[] {String.class, short.class}, new RemoteParam(),
         replication);
-    if (rpcServer.isPathAll(src)) {
-      return rpcClient.invokeAll(locations, method);
+    if (rpcServer.isInvokeConcurrent(src)) {
+      return !rpcClient.invokeConcurrent(locations, method, Boolean.class)
+          .containsValue(false);
     } else {
       return rpcClient.invokeSequential(locations, method, Boolean.class,
           Boolean.TRUE);
