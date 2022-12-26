@@ -21,7 +21,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
-import java.util.Collection;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -83,6 +82,7 @@ public class FSQueueConverter {
     emitMaxParallelApps(queueName, queue);
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
+    emitDefaultUserLimitFactor(queueName, children);
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
@@ -219,17 +219,13 @@ public class FSQueueConverter {
     }
   }
 
-  public void emitDefaultUserLimitFactor(Collection<FSLeafQueue> fsLeafQueue, CapacitySchedulerConfiguration config) {
-    fsLeafQueue
-          .forEach((leafQueue) -> {
-            if (!config.
-                    isAutoQueueCreationV2Enabled(leafQueue.getName())) {
-              config.setFloat(
-                      CapacitySchedulerConfiguration.
-                              PREFIX + leafQueue.getName() + DOT + USER_LIMIT_FACTOR,
-                      -1.0f);
-            }
-          });
+  public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
+    if (children.isEmpty()) {
+      capacitySchedulerConfig.setFloat(
+              CapacitySchedulerConfiguration.
+                      PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
+              -1.0f);
+    }
   }
 
   /**

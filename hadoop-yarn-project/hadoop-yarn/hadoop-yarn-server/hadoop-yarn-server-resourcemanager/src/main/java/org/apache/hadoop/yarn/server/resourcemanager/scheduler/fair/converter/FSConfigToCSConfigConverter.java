@@ -29,7 +29,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +48,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfigurationException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.ConfigurableResource;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -293,7 +291,6 @@ public class FSConfigToCSConfigConverter {
 
   private void convertCapacitySchedulerXml(FairScheduler fs) {
     FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
-    Collection<FSLeafQueue> fsLeafQueue = fs.getQueueManager().getLeafQueues();
     emitDefaultQueueMaxParallelApplications();
     emitDefaultUserMaxParallelApplications();
     emitUserMaxParallelApplications();
@@ -313,7 +310,6 @@ public class FSConfigToCSConfigConverter {
         .withPercentages(usePercentages)
         .build();
 
-    queueConverter.emitDefaultUserLimitFactor(fsLeafQueue, capacitySchedulerConfig);
     queueConverter.convertQueueHierarchy(rootQueue);
     emitACLs(fs);
   }
@@ -416,7 +412,6 @@ public class FSConfigToCSConfigConverter {
           queueMaxAMShareDefault);
     }
   }
-
   private void emitDisablePreemptionForObserveOnlyMode() {
     if (preemptionMode == FSConfigToCSConfigConverterParams
             .PreemptionMode.OBSERVE_ONLY) {
