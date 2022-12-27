@@ -191,7 +191,8 @@ public class XMLUtils {
    * logs the issue at debug level.
    *
    * @param transformerFactory to update
-   * @param flag that indicates whether to do the update and the flag can be set to false if an update fails
+   * @param flag that indicates whether to do the update and the flag can be set to
+   *             <code>false</code> if an update fails
    * @param name of the attribute to set
    * @param value to set on the attribute
    */
