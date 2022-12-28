@@ -2341,9 +2341,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
           throw exception;
         }
       } catch (Throwable e) {
-        String msg = String.format("SubCluster %s failed to %s report.", subClusterInfo,
-            request.getMethodName());
-        LOG.error(msg, e);
+        String subClusterId = subClusterInfo != null ?
+            subClusterInfo.getSubClusterId().getId() : "UNKNOWN";
+        LOG.error("SubCluster {} failed to {} report.", subClusterId, request.getMethodName(), e);
         throw new YarnRuntimeException(e.getCause().getMessage(), e);
       }
     }
@@ -2416,5 +2416,18 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
   public void setAllowPartialResult(boolean allowPartialResult) {
     this.allowPartialResult = allowPartialResult;
+  }
+
+  @VisibleForTesting
+  public Map<SubClusterInfo, NodesInfo> invokeConcurrentGetNodeLabel()
+      throws IOException, YarnException {
+    NodesInfo nodes = new NodesInfo();
+    Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+    Class[] argsClasses = new Class[]{String.class};
+    Object[] args = new Object[]{null};
+    ClientMethod remoteMethod = new ClientMethod("getNodes", argsClasses, args);
+    Map<SubClusterInfo, NodesInfo> nodesMap =
+        invokeConcurrent(subClustersActive.values(), remoteMethod, NodesInfo.class);
+    return nodesMap;
   }
 }

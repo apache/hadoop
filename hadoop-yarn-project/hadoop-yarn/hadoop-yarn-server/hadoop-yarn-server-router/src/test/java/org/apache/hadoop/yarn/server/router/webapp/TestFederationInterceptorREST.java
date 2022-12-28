@@ -1485,4 +1485,32 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(interceptorREST.getClient());
     Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
   }
+
+  @Test
+  public void testInvokeConcurrent() throws IOException, YarnException {
+
+    // We design such a test case, we call the interceptor's getNodes interface,
+    // this interface will generate the following test data
+    // subCluster0 Node 0
+    // subCluster1 Node 1
+    // subCluster2 Node 2
+    // subCluster3 Node 3
+    // We use the returned data to verify whether the subClusterId
+    // of the multi-thread call can match the node data
+    Map<SubClusterInfo, NodesInfo> subClusterInfoNodesInfoMap =
+        interceptor.invokeConcurrentGetNodeLabel();
+    Assert.assertNotNull(subClusterInfoNodesInfoMap);
+    Assert.assertEquals(4, subClusterInfoNodesInfoMap.size());
+
+    subClusterInfoNodesInfoMap.forEach((subClusterInfo, nodesInfo) -> {
+      String subClusterId = subClusterInfo.getSubClusterId().getId();
+      List<NodeInfo> nodeInfos = nodesInfo.getNodes();
+      Assert.assertNotNull(nodeInfos);
+      Assert.assertEquals(1, nodeInfos.size());
+
+      String expectNodeId = "Node " + subClusterId;
+      String nodeId = nodeInfos.get(0).getNodeId();
+      Assert.assertEquals(expectNodeId, nodeId);
+    });
+  }
 }
