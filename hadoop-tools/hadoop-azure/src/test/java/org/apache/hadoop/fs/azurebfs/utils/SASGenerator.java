@@ -90,9 +90,12 @@ public abstract class SASGenerator {
 
   protected String getCanonicalAccountName(String accountName) throws InvalidConfigurationValueException {
     // returns the account name without the endpoint
+    // given accountnames with endpoint have the format accountname.endpoint
+    // For example, input of xyz.dfs.core.windows.net should return "xyz" only
     int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
     if (dotIndex == 0) {
       // case when accountname starts with a ".": endpoint is present, accountName is null
+      // for example .dfs.azure.com, which is invalid
       throw new InvalidConfigurationValueException("Account Name is not fully qualified");
     }
     if (dotIndex > 0) {

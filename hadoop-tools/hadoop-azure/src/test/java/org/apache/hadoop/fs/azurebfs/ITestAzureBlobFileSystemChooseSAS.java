@@ -83,6 +83,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
         // testing a file system level operation
         TracingContext tracingContext = getTestTracingContext(newTestFs, true);
         // expected to fail in the ideal case, as delegation SAS will be chosen, provider class is given preference when both are configured
+        // this expectation is because filesystem level operations are beyond the scope of Delegation SAS Token
         intercept(SASTokenProviderException.class,
              () -> {
                     newTestFs.getAbfsStore().getFilesystemProperties(tracingContext);
