@@ -457,6 +457,7 @@ final public class StateMachineFactory
         implements StateMachine<STATE, EVENTTYPE, EVENT> {
     private final OPERAND operand;
     private STATE currentState;
+    private STATE previousState;
     private final StateTransitionListener<OPERAND, EVENT, STATE> listener;
 
     InternalStateMachine(OPERAND operand, STATE initialState) {
@@ -480,13 +481,18 @@ final public class StateMachineFactory
     }
 
     @Override
+    public synchronized STATE getPreviousState() {
+      return previousState;
+    }
+
+    @Override
     public synchronized STATE doTransition(EVENTTYPE eventType, EVENT event)
          throws InvalidStateTransitionException  {
       listener.preTransition(operand, currentState, event);
-      STATE oldState = currentState;
+      previousState = currentState;
       currentState = StateMachineFactory.this.doTransition
           (operand, currentState, eventType, event);
-      listener.postTransition(operand, oldState, currentState, event);
+      listener.postTransition(operand, previousState, currentState, event);
       return currentState;
     }
   }
