@@ -915,8 +915,6 @@ public class AbfsConfiguration{
   }
 
   /**
-   * @return sasTokenProvider object
-   * @throws AzureBlobFileSystemException
    * The following method chooses between a configured fixed sas token, and a user implementation of the SASTokenProvider interface,
    * depending on which one is available. In case a user SASTokenProvider implementation is not present, and a fixed token is configured,
    * it simply returns null, to set the sasTokenProvider object for current configuration instance to null.
@@ -928,6 +926,8 @@ public class AbfsConfiguration{
    * primarily to avoid using any tokenProvider class/interface. Also,implementing the SASTokenProvider requires relying on the raw configurations.
    * It is more stable to depend on the AbfsConfiguration with which a filesystem is initialized,
    * and eliminate chances of dynamic modifications and spurious situations.
+   * @return sasTokenProvider object
+   * @throws AzureBlobFileSystemException
    */
 
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
@@ -942,7 +942,7 @@ public class AbfsConfiguration{
                       SASTokenProvider.class);
       String configuredFixedToken = this.rawConfig.get(FS_AZURE_SAS_FIXED_TOKEN, null);
 
-      Preconditions.checkArgument(sasTokenProviderImplementation != null || configuredFixedToken != null,
+      Preconditions.checkArgument(!(sasTokenProviderImplementation == null && configuredFixedToken == null),
               String.format("The value for both \"%s\" and \"%s\" cannot be invalid.", FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
 
       if (sasTokenProviderImplementation != null) {
