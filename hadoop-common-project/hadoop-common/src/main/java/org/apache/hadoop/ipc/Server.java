@@ -153,6 +153,13 @@ public abstract class Server {
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
   private AlignmentContext alignmentContext;
+
+  /**
+   * Allow server to do force Kerberos re-login once after failure irrespective
+   * of the last login time.
+   */
+  private boolean canTryForceLogin = true;
+
   /**
    * Logical name of the server used in metrics and monitor.
    */
@@ -2207,17 +2214,29 @@ public abstract class Server {
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
           if (!UserGroupInformation.getLoginUser().isLoginSuccess()) {
-            LOG.info("Initiating re-login from IPC Server");
-            if (UserGroupInformation.isLoginKeytabBased()) {
-              UserGroupInformation.getLoginUser().reloginFromKeytab();
-            } else if (UserGroupInformation.isLoginTicketBased()) {
-              UserGroupInformation.getLoginUser().reloginFromTicketCache();
+            LOG.warn("Initiating re-login from IPC Server");
+            if (canTryForceLogin) {
+              canTryForceLogin = false;
+              if (UserGroupInformation.isLoginKeytabBased()) {
+                UserGroupInformation.getLoginUser().forceReloginFromKeytab();
+              } else if (UserGroupInformation.isLoginTicketBased()) {
+                UserGroupInformation.getLoginUser().forceReloginFromTicketCache();
+              }
+            } else {
+              if (UserGroupInformation.isLoginKeytabBased()) {
+                UserGroupInformation.getLoginUser().reloginFromKeytab();
+              } else if (UserGroupInformation.isLoginTicketBased()) {
+                UserGroupInformation.getLoginUser().reloginFromTicketCache();
+              }
             }
             try {
               // try processing message again
+              LOG.debug("Reprocessing sasl message for {}:{} after re-login",
+                  this.toString(), attemptingUser);
               saslResponse = processSaslMessage(saslMessage);
-              AUDITLOG.info("Retry " + AUTH_SUCCESSFUL_FOR + this.toString()
-                  + ":" + attemptingUser + " after failure");
+              AUDITLOG.info("Retry {}{}:{} after failure", AUTH_SUCCESSFUL_FOR,
+                  this.toString(), attemptingUser);
+              canTryForceLogin = true;
             } catch (IOException exp) {
               tce = (IOException) getTrueCause(e);
               throw tce;
