@@ -1109,8 +1109,9 @@ public class AbfsClient implements Closeable {
     // chooses the SAS token provider class if it is configured, otherwise reads the configured fixed token
     if (sasTokenProvider == null) {
       return abfsConfiguration.get(ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN);
+    } else {
+      return sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
     }
-    return sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
   }
 
   /**
@@ -1182,7 +1183,7 @@ public class AbfsClient implements Closeable {
     } catch (AzureBlobFileSystemException ex) {
       LOG.debug("Unexpected error.", ex);
       throw new InvalidUriException(path);
-    }
+     }
 
     final StringBuilder sb = new StringBuilder();
     sb.append(base);
