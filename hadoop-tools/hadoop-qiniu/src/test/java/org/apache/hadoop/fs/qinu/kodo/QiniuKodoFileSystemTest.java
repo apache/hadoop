@@ -14,19 +14,17 @@ import org.junit.Test;
 import java.net.URI;
 import java.util.Map;
 
-public class QiniuKodoFileSystemTest extends AbstractFSContractTestBase {
-    @Override
-    protected AbstractFSContract createContract(Configuration conf) {
-        return new QiniuKodoContract(conf);
-    }
-
+public class QiniuKodoFileSystemTest {
     private QiniuKodoFileSystem createFileSystem() throws Exception {
         QiniuKodoFileSystem fs = new QiniuKodoFileSystem();
-        Configuration conf = getContract().getConf();
+        Configuration conf = new Configuration();
+        conf.addResource("core-site.xml");
+        conf.addResource("contract-test-options.xml");
         Map<String, String> env = System.getenv();
         conf.setIfUnset(Constants.QINIU_PARAMETER_ACCESS_KEY, env.get("QSHELL_AK"));
         conf.setIfUnset(Constants.QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
-        fs.initialize(new URI("qiniu://qshell-hadoop"), conf);
+        String testUri = conf.get("fs.contract.test.fs.qiniu");
+        fs.initialize(URI.create(testUri != null ? testUri : "qiniu://qshell-hadoop"), conf);
         return fs;
     }
 
