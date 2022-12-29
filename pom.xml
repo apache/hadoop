@@ -139,6 +139,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <module>hadoop-client-modules</module>
     <module>hadoop-build-tools</module>
     <module>hadoop-cloud-storage-project</module>
+      <module>hadoop-tools/hadoop-qiniu</module>
   </modules>
 
   <build>
