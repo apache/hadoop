@@ -50,6 +50,11 @@ public class EncryptionAdapter {
    * convert the string into a byte-array. The converted byte-array would be used
    * by the implementation of EncryptionContextProvider to create byte-array of
    * encryptionKey.
+   * @param provider developer's implementation of {@link EncryptionContextProvider}
+   * @param path Path for which encryptionContext and encryptionKeys to be stored
+   * in the object
+   * @param encryptionContext encryptionContext for the path stored in the backend
+   * @throws IOException
    * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       byte[] encryptionContext) throws IOException {
@@ -67,6 +72,10 @@ public class EncryptionAdapter {
    * on the server, encryptionContext is not there for the path. Implementation
    * of the EncryptionContextProvider would be used to create encryptionContext
    * from the path.
+   * @param provider developer's implementation of {@link EncryptionContextProvider}
+   * @param path file path for which encryptionContext and encryptionKeys to be
+   * created and stored
+   * @throws IOException
    * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
       throws IOException {

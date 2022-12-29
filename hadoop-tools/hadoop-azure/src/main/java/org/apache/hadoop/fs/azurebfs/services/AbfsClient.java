@@ -421,6 +421,10 @@ public class AbfsClient implements Closeable {
    * {@link org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider}
    * @param tracingContext: Object of {@link org.apache.hadoop.fs.azurebfs.utils.TracingContext}
    * correlating to the current fs.create() request.
+   * @return object of {@link AbfsRestOperation} which contain all the information
+   * about the communication with the server. The information is in
+   * {@link AbfsRestOperation#getResult()}
+   * @throws IOException
    * */
   public AbfsRestOperation createPath(final String path, final boolean isFile,
       final boolean overwrite, final Permissions permissions,
@@ -1293,8 +1297,8 @@ public class AbfsClient implements Closeable {
   private synchronized Boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if (isNamespaceEnabled == null) {
-      isNamespaceEnabled = NamespaceUtil.isNamespaceEnabled(this,
-          tracingContext);
+      setIsNamespaceEnabled(NamespaceUtil.isNamespaceEnabled(this,
+          tracingContext));
     }
     return isNamespaceEnabled;
   }
