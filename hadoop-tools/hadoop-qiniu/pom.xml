@@ -9,13 +9,40 @@
         <version>3.4.0-SNAPSHOT</version>
         <relativePath>../../hadoop-project</relativePath>
     </parent>
+
     <artifactId>hadoop-qiniu</artifactId>
     <name>Apache Hadoop Qiniu Kodo support</name>
     <packaging>jar</packaging>
+
     <properties>
         <file.encoding>UTF-8</file.encoding>
         <downloadSources>true</downloadSources>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>tests-off</id>
+            <activation>
+                <file>
+                    <missing>src/test/resources/auth-keys.xml</missing>
+                </file>
+            </activation>
+            <properties>
+                <maven.test.skip>true</maven.test.skip>
+            </properties>
+        </profile>
+        <profile>
+            <id>tests-on</id>
+            <activation>
+                <file>
+                    <exists>src/test/resources/auth-keys.xml</exists>
+                </file>
+            </activation>
+            <properties>
+                <maven.test.skip>false</maven.test.skip>
+            </properties>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
@@ -132,5 +159,4 @@
             <type>jar</type>
         </dependency>
     </dependencies>
-
 </project>
