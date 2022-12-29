@@ -1216,11 +1216,6 @@ public class TestIPC {
   @Test(timeout=30000)
   public void testInterrupted() {
     Client client = new Client(LongWritable.class, conf);
-    Client.getClientExecutor().submit(new Runnable() {
-      public void run() {
-        while(true);
-      }
-    });
     Thread.currentThread().interrupt();
     client.stop();
     try {

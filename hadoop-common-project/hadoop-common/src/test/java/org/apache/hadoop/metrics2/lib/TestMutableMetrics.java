@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.lib;
 
+import static org.apache.hadoop.metrics2.impl.MsInfo.Context;
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.mockito.AdditionalMatchers.eq;
@@ -290,6 +291,27 @@ public class TestMutableMetrics {
     }
   }
 
+  /**
+   * MutableStat should output 0 instead of the previous state when there is no change.
+   */
+  @Test public void testMutableWithoutChanged() {
+    MetricsRecordBuilder builderWithChange = mockMetricsRecordBuilder();
+    MetricsRecordBuilder builderWithoutChange = mockMetricsRecordBuilder();
+    MetricsRegistry registry = new MetricsRegistry("test");
+    MutableStat stat = registry.newStat("Test", "Test", "Ops", "Val", true);
+    stat.add(1000, 1000);
+    stat.add(1000, 2000);
+    registry.snapshot(builderWithChange, true);
+
+    assertCounter("TestNumOps", 2000L, builderWithChange);
+    assertGauge("TestINumOps", 2000L, builderWithChange);
+    assertGauge("TestAvgVal", 1.5, builderWithChange);
+
+    registry.snapshot(builderWithoutChange, true);
+    assertGauge("TestINumOps", 0L, builderWithoutChange);
+    assertGauge("TestAvgVal", 0.0, builderWithoutChange);
+  }
+
   @Test
   public void testDuplicateMetrics() {
     MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
@@ -478,5 +500,16 @@ public class TestMutableMetrics {
     quantiles.snapshot(mb, false);
     verify(mb, times(2)).addGauge(
         info("FooNumOps", "Number of ops for stat with 5s interval"), (long) 0);
+  }
+
+  /**
+   * Test {@link MutableGaugeFloat#incr()}.
+   */
+  @Test(timeout = 30000)
+  public void testMutableGaugeFloat() {
+    MutableGaugeFloat mgf = new MutableGaugeFloat(Context, 3.2f);
+    assertEquals(3.2f, mgf.value(), 0.0);
+    mgf.incr();
+    assertEquals(4.2f, mgf.value(), 0.0);
   }
 }

@@ -4061,6 +4061,17 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_MAX_APPLICATIONS = 1000;
 
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-count";
+
+  public static final int DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_COUNT = 1;
+
+  public static final String FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      FEDERATION_PREFIX + "state-store.clean-up-retry-sleep-time";
+
+  public static final long DEFAULT_FEDERATION_STATESTORE_CLEANUP_RETRY_SLEEP_TIME =
+      TimeUnit.SECONDS.toMillis(1);
+
   public static final String ROUTER_PREFIX = YARN_PREFIX + "router.";
 
   public static final String ROUTER_BIND_HOST = ROUTER_PREFIX + "bind-host";
@@ -4107,6 +4118,14 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_ROUTER_CLIENTRM_SUBMIT_RETRY = 3;
 
   /**
+   * GetNewApplication and SubmitApplication request retry interval time.
+   */
+  public static final String ROUTER_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      ROUTER_PREFIX + "submit.interval.time";
+  public static final long DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME =
+      TimeUnit.MILLISECONDS.toMillis(10);
+
+  /**
    * The interceptor class used in FederationClientInterceptor should return
    * partial ApplicationReports.
    */
@@ -4117,10 +4136,86 @@ public class YarnConfiguration extends Configuration {
 
   public static final String ROUTER_WEBAPP_PREFIX = ROUTER_PREFIX + "webapp.";
 
+  /**
+   * This configurable that controls the thread pool size of the threadpool of the interceptor.
+   * The corePoolSize(minimumPoolSize) and maximumPoolSize of the thread pool
+   * are controlled by this configurable.
+   * In order to control the thread pool more accurately, this parameter is deprecated.
+   *
+   * corePoolSize(minimumPoolSize) use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE}
+   *
+   * maximumPoolSize use
+   * {@link YarnConfiguration#ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE}
+   *
+   * This configurable will be deprecated.
+   */
   public static final String ROUTER_USER_CLIENT_THREADS_SIZE =
       ROUTER_PREFIX + "interceptor.user.threadpool-size";
 
+  /**
+   * The default value is 5.
+   * which means that the corePoolSize(minimumPoolSize) and maximumPoolSize
+   * of the thread pool are both 5s.
+   *
+   * corePoolSize(minimumPoolSize) default value use
+   * {@link YarnConfiguration#DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE}
+   *
+   * maximumPoolSize default value use
+   * {@link YarnConfiguration#DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE}
+   */
   public static final int DEFAULT_ROUTER_USER_CLIENT_THREADS_SIZE = 5;
+
+  /**
+   * This configurable is used to set the corePoolSize(minimumPoolSize)
+   * of the thread pool of the interceptor.
+   *
+   * corePoolSize the number of threads to keep in the pool, even if they are idle.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.minimum-pool-size";
+
+  /**
+   * This configuration is used to set the default value of corePoolSize (minimumPoolSize)
+   * of the thread pool of the interceptor.
+   *
+   * Default is 5.
+   */
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MINIMUM_POOL_SIZE = 5;
+
+  /**
+   * This configurable is used to set the maximumPoolSize of the thread pool of the interceptor.
+   *
+   * maximumPoolSize the maximum number of threads to allow in the pool.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.maximum-pool-size";
+
+  /**
+   * This configuration is used to set the default value of maximumPoolSize
+   * of the thread pool of the interceptor.
+   *
+   * Default is 5.
+   */
+  public static final int DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_MAXIMUM_POOL_SIZE = 5;
+
+  /**
+   * This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
+   *
+   * keepAliveTime when the number of threads is greater than the core,
+   * this is the maximum time that excess idle threads will wait for new tasks before terminating.
+   */
+  public static final String ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
+      ROUTER_PREFIX + "interceptor.user-thread-pool.keep-alive-time";
+
+  /**
+   * This configurable is used to set the default time of keepAliveTime
+   * of the thread pool of the interceptor.
+   *
+   * the default value is 0s.
+   */
+  public static final long DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME =
+      TimeUnit.SECONDS.toMillis(0); // 0s
 
   /** The address of the Router web application. */
   public static final String ROUTER_WEBAPP_ADDRESS =
@@ -4193,6 +4288,11 @@ public class YarnConfiguration extends Configuration {
   public static final String ROUTER_APPSINFO_CACHED_COUNT =
       ROUTER_WEBAPP_PREFIX + "appsinfo-cached-count";
   public static final int DEFAULT_ROUTER_APPSINFO_CACHED_COUNT = 100;
+
+  /** Enable cross origin (CORS) support. **/
+  public static final String ROUTER_WEBAPP_ENABLE_CORS_FILTER =
+      ROUTER_PREFIX + "webapp.cross-origin.enabled";
+  public static final boolean DEFAULT_ROUTER_WEBAPP_ENABLE_CORS_FILTER = false;
 
   ////////////////////////////////
   // CSI Volume configs

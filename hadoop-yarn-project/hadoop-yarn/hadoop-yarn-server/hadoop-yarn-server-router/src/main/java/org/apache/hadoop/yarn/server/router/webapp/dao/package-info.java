@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.metrics;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.metrics2.MetricsCollector;
-import org.apache.hadoop.metrics2.annotation.Metrics;
-
-@InterfaceAudience.Private
-@Metrics(context="yarn")
-public class DisableEventTypeMetrics implements EventTypeMetrics {
-  @Override
-  public void increment(Enum type, long processingTimeUs) {
-    //nop
-    return;
-  }
-  @Override
-  public void getMetrics(MetricsCollector collector, boolean all) {
-    //nop
-    return;
-  }
-
-  @Override
-  public long get(Enum type) {
-    return 0;
-  }
-}
+/** Router Web Dao package. **/
+package org.apache.hadoop.yarn.server.router.webapp.dao;

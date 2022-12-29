@@ -447,7 +447,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_ADDRESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_ADDRESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -484,7 +484,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_UPDATERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_UPDATERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -530,7 +530,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
 
     SQLFederationStateStore sqlFederationStateStore = (SQLFederationStateStore) stateStore;
 
-    Connection conn =  sqlFederationStateStore.conn;
+    Connection conn =  sqlFederationStateStore.getConn();
     conn.prepareStatement(SP_DROP_DELETERESERVATIONHOMESUBCLUSTER).execute();
     conn.prepareStatement(SP_DELETERESERVATIONHOMESUBCLUSTER2).execute();
 
@@ -571,5 +571,25 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   @Test(expected = NotImplementedException.class)
   public void testRemoveStoredMasterKey() throws YarnException, IOException {
     super.testRemoveStoredMasterKey();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testStoreNewToken() throws IOException, YarnException {
+    super.testStoreNewToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testUpdateStoredToken() throws IOException, YarnException {
+    super.testUpdateStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testRemoveStoredToken() throws IOException, YarnException {
+    super.testRemoveStoredToken();
+  }
+
+  @Test(expected = NotImplementedException.class)
+  public void testGetTokenByRouterStoreToken() throws IOException, YarnException {
+    super.testGetTokenByRouterStoreToken();
   }
 }

@@ -20,39 +20,38 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.IOException;
 
-import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  * A JUnit test to test {@link YarnVersionInfo}
  */
 public class TestYarnVersionInfo {
-  
+
   /**
    * Test the yarn version info routines.
    * @throws IOException
    */
   @Test
-  public void versionInfoGenerated() throws IOException {
+  void versionInfoGenerated() throws IOException {
 
     // can't easily know what the correct values are going to be so just
     // make sure they aren't Unknown
-    assertNotEquals("getVersion returned Unknown",
-        "Unknown", YarnVersionInfo.getVersion());
-    assertNotEquals("getUser returned Unknown",
-        "Unknown", YarnVersionInfo.getUser());
-    assertNotEquals("getSrcChecksum returned Unknown",
-        "Unknown", YarnVersionInfo.getSrcChecksum());
+    assertNotEquals("Unknown", YarnVersionInfo.getVersion(), "getVersion returned Unknown");
+    assertNotEquals("Unknown", YarnVersionInfo.getUser(), "getUser returned Unknown");
+    assertNotEquals("Unknown", YarnVersionInfo.getSrcChecksum(), "getSrcChecksum returned Unknown");
 
     // these could be Unknown if the VersionInfo generated from code not in svn or git
     // so just check that they return something
-    assertNotNull("getUrl returned null", YarnVersionInfo.getUrl());
-    assertNotNull("getRevision returned null", YarnVersionInfo.getRevision());
-    assertNotNull("getBranch returned null", YarnVersionInfo.getBranch());
+    assertNotNull(YarnVersionInfo.getUrl(), "getUrl returned null");
+    assertNotNull(YarnVersionInfo.getRevision(), "getRevision returned null");
+    assertNotNull(YarnVersionInfo.getBranch(), "getBranch returned null");
 
-    assertTrue("getBuildVersion check doesn't contain: source checksum",
-               YarnVersionInfo.getBuildVersion().contains("source checksum"));
+    assertTrue(YarnVersionInfo.getBuildVersion().contains("source checksum"),
+        "getBuildVersion check doesn't contain: source checksum");
 
   }
 }

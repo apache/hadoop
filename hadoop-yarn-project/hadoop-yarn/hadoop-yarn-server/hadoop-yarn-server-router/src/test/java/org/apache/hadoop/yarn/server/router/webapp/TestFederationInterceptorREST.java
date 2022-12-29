@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -27,9 +28,12 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.Time;
@@ -41,8 +45,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.policies.manager.UniformBroadcastPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -79,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppPriority;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
@@ -88,6 +96,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationRequestInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
@@ -98,6 +107,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.QUEUE_DEDICATED_FULL;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Extends the {@code BaseRouterClientRMTest} and overrides methods in order to
@@ -634,23 +645,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainersNotExists() {
+  public void testGetContainersNotExists() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ContainersInfo response = interceptor.getContainers(null, null, appId.toString(), null);
-    Assert.assertTrue(response.getContainers().isEmpty());
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the appAttemptId is empty or null.",
+        () -> interceptor.getContainers(null, null, appId.toString(), null));
   }
 
   @Test
-  public void testGetContainersWrongFormat() {
-    ContainersInfo response = interceptor.getContainers(null, null, "Application_wrong_id", null);
-
-    Assert.assertNotNull(response);
-    Assert.assertTrue(response.getContainers().isEmpty());
-
+  public void testGetContainersWrongFormat() throws Exception {
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    response = interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id");
+    ApplicationAttemptId appAttempt = ApplicationAttemptId.newInstance(appId, 1);
 
-    Assert.assertTrue(response.getContainers().isEmpty());
+    // Test Case 1: appId is wrong format, appAttemptId is accurate.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid ApplicationId prefix: Application_wrong_id. " +
+        "The valid ApplicationId should start with prefix application",
+        () -> interceptor.getContainers(null, null, "Application_wrong_id", appAttempt.toString()));
+
+    // Test Case2: appId is accurate, appAttemptId is wrong format.
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Invalid AppAttemptId prefix: AppAttempt_wrong_id",
+        () -> interceptor.getContainers(null, null, appId.toString(), "AppAttempt_wrong_id"));
   }
 
   @Test
@@ -739,20 +755,28 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   }
 
   @Test
-  public void testGetContainer()
-      throws IOException, InterruptedException, YarnException {
-    // Submit application to multiSubCluster
+  public void testGetContainer() throws Exception {
+    //
     ApplicationId appId = ApplicationId.newInstance(Time.now(), 1);
-    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
-    context.setApplicationId(appId.toString());
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId appContainerId = ContainerId.newContainerId(appAttemptId, 1);
+    String applicationId = appId.toString();
+    String attemptId = appAttemptId.toString();
+    String containerId = appContainerId.toString();
 
+    // Submit application to multiSubCluster
+    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    context.setApplicationId(applicationId);
     Assert.assertNotNull(interceptor.submitApplication(context, null));
 
-    ApplicationAttemptId appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
+    // Test Case1: Wrong ContainerId
+    LambdaTestUtils.intercept(IllegalArgumentException.class, "Invalid ContainerId prefix: 0",
+        () -> interceptor.getContainer(null, null, applicationId, attemptId, "0"));
 
-    ContainerInfo containerInfo = interceptor.getContainer(null, null,
-        appId.toString(), appAttemptId.toString(), "0");
+    // Test Case2: Correct ContainerId
+
+    ContainerInfo containerInfo = interceptor.getContainer(null, null, applicationId,
+        attemptId, containerId);
     Assert.assertNotNull(containerInfo);
   }
 
@@ -800,9 +824,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     // Generate ApplicationAttemptId information
     Assert.assertNotNull(interceptor.submitApplication(context, null));
     ApplicationAttemptId expectAppAttemptId = ApplicationAttemptId.newInstance(appId, 1);
+    String appAttemptId = expectAppAttemptId.toString();
 
     org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo
-        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), "1");
+        appAttemptInfo = interceptor.getAppAttempt(null, null, appId.toString(), appAttemptId);
 
     Assert.assertNotNull(appAttemptInfo);
     Assert.assertEquals(expectAppAttemptId.toString(), appAttemptInfo.getAppAttemptId());
@@ -1153,5 +1178,102 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     String webAppAddressWithScheme2 =
         WebAppUtils.getHttpSchemePrefix(this.getConf()) + webAppAddress;
     Assert.assertEquals(expectedHttpsWebAddress, webAppAddressWithScheme2);
+  }
+
+  @Test
+  public void testCheckUserAccessToQueue() throws Exception {
+
+    // Case 1: Only queue admin user can access other user's information
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("non-admin");
+    String errorMsg1 = "User=non-admin doesn't haven access to queue=queue " +
+        "so it cannot check ACLs for other users.";
+    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg1,
+        () -> interceptor.checkUserAccessToQueue("queue", "jack",
+        QueueACL.SUBMIT_APPLICATIONS.name(), mockHsr));
+
+    // Case 2: request an unknown ACL causes BAD_REQUEST
+    HttpServletRequest mockHsr1 = mockHttpServletRequestByUserName("admin");
+    String errorMsg2 = "Specified queueAclType=XYZ_ACL is not a valid type, " +
+        "valid queue acl types={SUBMIT_APPLICATIONS/ADMINISTER_QUEUE}";
+    LambdaTestUtils.intercept(YarnRuntimeException.class, errorMsg2,
+        () -> interceptor.checkUserAccessToQueue("queue", "jack", "XYZ_ACL", mockHsr1));
+
+    // We design a test, admin user has ADMINISTER_QUEUE, SUBMIT_APPLICATIONS permissions,
+    // yarn user has SUBMIT_APPLICATIONS permissions, other users have no permissions
+
+    // Case 3: get FORBIDDEN for rejected ACL
+    checkUserAccessToQueueFailed("queue", "jack", QueueACL.SUBMIT_APPLICATIONS, "admin");
+    checkUserAccessToQueueFailed("queue", "jack", QueueACL.ADMINISTER_QUEUE, "admin");
+
+    // Case 4: get OK for listed ACLs
+    checkUserAccessToQueueSuccess("queue", "admin", QueueACL.ADMINISTER_QUEUE, "admin");
+    checkUserAccessToQueueSuccess("queue", "admin", QueueACL.SUBMIT_APPLICATIONS, "admin");
+
+    // Case 5: get OK only for SUBMIT_APP acl for "yarn" user
+    checkUserAccessToQueueFailed("queue", "yarn", QueueACL.ADMINISTER_QUEUE, "admin");
+    checkUserAccessToQueueSuccess("queue", "yarn", QueueACL.SUBMIT_APPLICATIONS, "admin");
+  }
+
+  private void checkUserAccessToQueueSuccess(String queue, String userName,
+      QueueACL queueACL, String mockUser) throws AuthorizationException {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
+    RMQueueAclInfo aclInfo =
+        interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
+    Assert.assertNotNull(aclInfo);
+    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    FederationRMQueueAclInfo fedAclInfo = FederationRMQueueAclInfo.class.cast(aclInfo);
+    List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
+    Assert.assertNotNull(aclInfos);
+    Assert.assertEquals(4, aclInfos.size());
+    for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
+      Assert.assertTrue(rMQueueAclInfo.isAllowed());
+    }
+  }
+
+  private void checkUserAccessToQueueFailed(String queue, String userName,
+      QueueACL queueACL, String mockUser) throws AuthorizationException {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName(mockUser);
+    RMQueueAclInfo aclInfo =
+        interceptor.checkUserAccessToQueue(queue, userName, queueACL.name(), mockHsr);
+    Assert.assertNotNull(aclInfo);
+    Assert.assertTrue(aclInfo instanceof FederationRMQueueAclInfo);
+    FederationRMQueueAclInfo fedAclInfo = FederationRMQueueAclInfo.class.cast(aclInfo);
+    List<RMQueueAclInfo> aclInfos = fedAclInfo.getList();
+    Assert.assertNotNull(aclInfos);
+    Assert.assertEquals(4, aclInfos.size());
+    for (RMQueueAclInfo rMQueueAclInfo : aclInfos) {
+      Assert.assertFalse(rMQueueAclInfo.isAllowed());
+      String expectDiagnostics = "User=" + userName +
+          " doesn't have access to queue=queue with acl-type=" + queueACL.name();
+      Assert.assertEquals(expectDiagnostics, rMQueueAclInfo.getDiagnostics());
+    }
+  }
+
+  private HttpServletRequest mockHttpServletRequestByUserName(String username) {
+    HttpServletRequest mockHsr = mock(HttpServletRequest.class);
+    when(mockHsr.getRemoteUser()).thenReturn(username);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(username);
+    when(mockHsr.getUserPrincipal()).thenReturn(principal);
+    return mockHsr;
+  }
+
+  @Test
+  public void testCheckFederationInterceptorRESTClient() {
+    SubClusterId subClusterId = SubClusterId.newInstance("SC-1");
+    String webAppSocket = "SC-1:WebAddress";
+    String webAppAddress = "http://" + webAppSocket;
+
+    Configuration configuration = new Configuration();
+    FederationInterceptorREST rest = new FederationInterceptorREST();
+    rest.setConf(configuration);
+    rest.init("router");
+
+    DefaultRequestInterceptorREST interceptorREST =
+        rest.getOrCreateInterceptorForSubCluster(subClusterId, webAppSocket);
+
+    Assert.assertNotNull(interceptorREST);
+    Assert.assertNotNull(interceptorREST.getClient());
+    Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
   }
 }

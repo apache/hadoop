@@ -82,6 +82,12 @@ public class TestAbfsInputStream extends
       REDUCED_READ_BUFFER_AGE_THRESHOLD * 10; // 30 sec
   private static final int ALWAYS_READ_BUFFER_SIZE_TEST_FILE_SIZE = 16 * ONE_MB;
 
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    ReadBufferManager.getBufferManager().testResetReadBufferManager();
+  }
+
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
     AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
@@ -491,6 +497,69 @@ public class TestAbfsInputStream extends
     // Stub will throw exception for client.read() for 4th and later calls
     // if not using the read-ahead buffer exception will be thrown on read
     checkEvictedStatus(inputStream, 0, true);
+  }
+
+  /**
+   * This test expects InProgressList is not purged by the inputStream close.
+   */
+  @Test
+  public void testStreamPurgeDuringReadAheadCallExecuting() throws Exception {
+    AbfsClient client = getMockAbfsClient();
+    AbfsRestOperation successOp = getMockRestOp();
+    final Long serverCommunicationMockLatency = 3_000L;
+    final Long readBufferTransferToInProgressProbableTime = 1_000L;
+    final Integer readBufferQueuedCount = 3;
+
+    Mockito.doAnswer(invocationOnMock -> {
+          //sleeping thread to mock the network latency from client to backend.
+          Thread.sleep(serverCommunicationMockLatency);
+          return successOp;
+        })
+        .when(client)
+        .read(any(String.class), any(Long.class), any(byte[].class),
+            any(Integer.class), any(Integer.class), any(String.class),
+            any(String.class), any(TracingContext.class));
+
+    final ReadBufferManager readBufferManager
+        = ReadBufferManager.getBufferManager();
+
+    final int readBufferTotal = readBufferManager.getNumBuffers();
+    final int expectedFreeListBufferCount = readBufferTotal
+        - readBufferQueuedCount;
+
+    try (AbfsInputStream inputStream = getAbfsInputStream(client,
+        "testSuccessfulReadAhead.txt")) {
+      // As this is try-with-resources block, the close() method of the created
+      // abfsInputStream object shall be called on the end of the block.
+      queueReadAheads(inputStream);
+
+      //Sleeping to give ReadBufferWorker to pick the readBuffers for processing.
+      Thread.sleep(readBufferTransferToInProgressProbableTime);
+
+      Assertions.assertThat(readBufferManager.getInProgressCopiedList())
+          .describedAs(String.format("InProgressList should have %d elements",
+              readBufferQueuedCount))
+          .hasSize(readBufferQueuedCount);
+      Assertions.assertThat(readBufferManager.getFreeListCopy())
+          .describedAs(String.format("FreeList should have %d elements",
+              expectedFreeListBufferCount))
+          .hasSize(expectedFreeListBufferCount);
+      Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
+          .describedAs("CompletedList should have 0 elements")
+          .hasSize(0);
+    }
+
+    Assertions.assertThat(readBufferManager.getInProgressCopiedList())
+        .describedAs(String.format("InProgressList should have %d elements",
+            readBufferQueuedCount))
+        .hasSize(readBufferQueuedCount);
+    Assertions.assertThat(readBufferManager.getFreeListCopy())
+        .describedAs(String.format("FreeList should have %d elements",
+            expectedFreeListBufferCount))
+        .hasSize(expectedFreeListBufferCount);
+    Assertions.assertThat(readBufferManager.getCompletedReadListCopy())
+        .describedAs("CompletedList should have 0 elements")
+        .hasSize(0);
   }
 
   /**

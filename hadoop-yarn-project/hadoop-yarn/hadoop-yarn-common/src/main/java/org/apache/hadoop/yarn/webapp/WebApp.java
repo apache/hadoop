@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.util.Lists;
@@ -299,4 +300,8 @@ public abstract class WebApp extends ServletModule {
 
   public abstract void setup();
 
+  @VisibleForTesting
+  public HttpServer2 getHttpServer() {
+    return httpServer;
+  }
 }

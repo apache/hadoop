@@ -16,32 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timeline;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
+/**
+ * An interface for Abfs Throttling Interface.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TimelineVersionWatcher extends TestWatcher {
-  static final float DEFAULT_TIMELINE_VERSION = 1.0f;
-  private TimelineVersion version;
-
-  @Override
-  protected void starting(Description description) {
-    version = description.getAnnotation(TimelineVersion.class);
-  }
+public interface AbfsThrottlingIntercept {
 
   /**
-   * @return the version number of timeline server for the current test (using
-   * timeline server v1.0 by default)
+   * Updates the metrics for successful and failed read and write operations.
+   * @param operationType Only applicable for read and write operations.
+   * @param abfsHttpOperation Used for status code and data transferred.
    */
-  public float getTimelineVersion() {
-    if(version == null) {
-      return DEFAULT_TIMELINE_VERSION;
-    }
-    return version.value();
-  }
+  void updateMetrics(AbfsRestOperationType operationType,
+      AbfsHttpOperation abfsHttpOperation);
+
+  /**
+   * Called before the request is sent.  Client-side throttling
+   * uses this to suspend the request, if necessary, to minimize errors and
+   * maximize throughput.
+   * @param operationType Only applicable for read and write operations.
+   * @param abfsCounters Used for counters.
+   */
+  void sendingRequest(AbfsRestOperationType operationType,
+      AbfsCounters abfsCounters);
+
 }

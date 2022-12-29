@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.HashMap;
@@ -70,10 +71,10 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       outOfServiceNodeBlocks = new HashMap<>();
 
   /**
-   * The numbe of blocks to process when moving blocks to pendingReplication
+   * The number of blocks to process when moving blocks to pendingReplication
    * before releasing and reclaiming the namenode lock.
    */
-  private int blocksPerLock;
+  private volatile int blocksPerLock;
 
   /**
    * The number of blocks that have been checked on this tick.
@@ -82,7 +83,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
   /**
    * The maximum number of blocks to hold in PendingRep at any time.
    */
-  private int pendingRepLimit;
+  private volatile int pendingRepLimit;
 
   /**
    * The list of blocks which have been placed onto the replication queue
@@ -799,6 +800,26 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       return true;
     }
     return false;
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getPendingRepLimit() {
+    return pendingRepLimit;
+  }
+
+  public void setPendingRepLimit(int pendingRepLimit) {
+    this.pendingRepLimit = pendingRepLimit;
+  }
+
+  @VisibleForTesting
+  @Override
+  public int getBlocksPerLock() {
+    return blocksPerLock;
+  }
+
+  public void setBlocksPerLock(int blocksPerLock) {
+    this.blocksPerLock = blocksPerLock;
   }
 
   static class BlockStats {

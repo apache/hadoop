@@ -9034,9 +9034,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private void checkBlockLocationsWhenObserver(LocatedBlocks blocks, String src)
       throws ObserverRetryOnActiveException {
-    for (LocatedBlock b : blocks.getLocatedBlocks()) {
-      if (b.getLocations() == null || b.getLocations().length == 0) {
-        throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+    if (blocks == null) {
+      return;
+    }
+    List<LocatedBlock> locatedBlockList = blocks.getLocatedBlocks();
+    if (locatedBlockList != null) {
+      for (LocatedBlock b : locatedBlockList) {
+        if (b.getLocations() == null || b.getLocations().length == 0) {
+          throw new ObserverRetryOnActiveException("Zero blocklocations for " + src);
+        }
       }
     }
   }
