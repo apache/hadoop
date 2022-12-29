@@ -3,23 +3,30 @@ package org.apache.hadoop.fs.qinu.kodo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.qiniu.kodo.Constants;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.apache.hadoop.fs.qinu.kodo.contract.QiniuKodoContract;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.net.URI;
 import java.util.Map;
 
-public class QiniuKodoFileSystemTest {
+public class QiniuKodoFileSystemTest extends AbstractFSContractTestBase {
+    @Override
+    protected AbstractFSContract createContract(Configuration conf) {
+        return new QiniuKodoContract(conf);
+    }
 
-    private static QiniuKodoFileSystem createFileSystem() throws Exception {
+    private QiniuKodoFileSystem createFileSystem() throws Exception {
         QiniuKodoFileSystem fs = new QiniuKodoFileSystem();
-        Configuration configuration = new Configuration();
+        Configuration conf = getContract().getConf();
         Map<String, String> env = System.getenv();
-        configuration.set(Constants.QINIU_PARAMETER_ACCESS_KEY, env.get("QSHELL_AK"));
-        configuration.set(Constants.QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
-        fs.initialize(new URI("qiniu://qshell-hadoop"), configuration);
+        conf.setIfUnset(Constants.QINIU_PARAMETER_ACCESS_KEY, env.get("QSHELL_AK"));
+        conf.setIfUnset(Constants.QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
+        fs.initialize(new URI("qiniu://qshell-hadoop"), conf);
         return fs;
     }
 
