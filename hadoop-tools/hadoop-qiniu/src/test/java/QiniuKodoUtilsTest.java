@@ -16,8 +16,8 @@ public class QiniuKodoUtilsTest {
     }
 
     @Test
-    public void testKeyToPath() throws URISyntaxException {
-        URI uri = new URI("qiniu://bucket/user/user1");
+    public void testKeyToPath() {
+        URI uri = URI.create("qiniu://bucket/user/user1");
         assertEquals(new Path("qiniu://bucket/p1/c1"), keyToPath(uri, new Path("qiniu://bucket/user/user1"), "p1/c1"));
         assertEquals(new Path("qiniu://bucket/p1/c1"), keyToPath(uri, new Path("/bucket/user/user1"), "p1/c1"));
     }
