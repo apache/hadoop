@@ -520,7 +520,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), nullable(EncryptionAdapter.class),
+            any(TracingContext.class));
 
     final ReadBufferManager readBufferManager
         = ReadBufferManager.getBufferManager();
