@@ -81,7 +81,7 @@ class QiniuKodoClient {
         String marker = null;
         FileListing fileListing = null;
         while (true) {
-            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, withDelimiter ? utils.PATH_SEPARATOR : "");
+            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, withDelimiter ? QiniuKodoUtils.PATH_SEPARATOR : "");
 
             if (fileListing.items != null) {
                 for (FileInfo file : fileListing.items) {
