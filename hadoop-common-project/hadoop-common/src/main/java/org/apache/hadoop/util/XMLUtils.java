@@ -18,11 +18,20 @@
 
 package org.apache.hadoop.util;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.*;
+import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.stream.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import java.io.*;
 
@@ -33,6 +42,23 @@ import java.io.*;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class XMLUtils {
+
+  private static final Logger LOG =
+          LoggerFactory.getLogger(XMLUtils.class);
+
+  public static final String DISALLOW_DOCTYPE_DECL =
+      "http://apache.org/xml/features/disallow-doctype-decl";
+  public static final String LOAD_EXTERNAL_DECL =
+      "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+  public static final String EXTERNAL_GENERAL_ENTITIES =
+      "http://xml.org/sax/features/external-general-entities";
+  public static final String EXTERNAL_PARAMETER_ENTITIES =
+      "http://xml.org/sax/features/external-parameter-entities";
+  public static final String CREATE_ENTITY_REF_NODES =
+      "http://apache.org/xml/features/dom/create-entity-ref-nodes";
+  public static final String VALIDATION =
+      "http://xml.org/sax/features/validation";
+
   /**
    * Transform input xml given a stylesheet.
    * 
@@ -49,7 +75,7 @@ public class XMLUtils {
                                ) 
     throws TransformerConfigurationException, TransformerException {
     // Instantiate a TransformerFactory
-    TransformerFactory tFactory = TransformerFactory.newInstance();
+    TransformerFactory tFactory = newSecureTransformerFactory();
 
     // Use the TransformerFactory to process the  
     // stylesheet and generate a Transformer
@@ -60,5 +86,104 @@ public class XMLUtils {
     // Use the Transformer to transform an XML Source 
     // and send the output to a Result object.
     transformer.transform(new StreamSource(xml), new StreamResult(out));
+  }
+
+  /**
+   * This method should be used if you need a {@link DocumentBuilderFactory}. Use this method
+   * instead of {@link DocumentBuilderFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
+   *
+   * @return a {@link DocumentBuilderFactory} with secure configuration enabled
+   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the
+   * secure configuration
+   */
+  public static DocumentBuilderFactory newSecureDocumentBuilderFactory()
+          throws ParserConfigurationException {
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    dbf.setFeature(DISALLOW_DOCTYPE_DECL, true);
+    dbf.setFeature(LOAD_EXTERNAL_DECL, false);
+    dbf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+    dbf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+    dbf.setFeature(CREATE_ENTITY_REF_NODES, false);
+    return dbf;
+  }
+
+  /**
+   * This method should be used if you need a {@link SAXParserFactory}. Use this method
+   * instead of {@link SAXParserFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
+   *
+   * @return a {@link SAXParserFactory} with secure configuration enabled
+   * @throws ParserConfigurationException if the {@code JAXP} parser does not support the
+   * secure configuration
+   * @throws SAXException if there are another issues when creating the factory
+   */
+  public static SAXParserFactory newSecureSAXParserFactory()
+          throws SAXException, ParserConfigurationException {
+    SAXParserFactory spf = SAXParserFactory.newInstance();
+    spf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    spf.setFeature(DISALLOW_DOCTYPE_DECL, true);
+    spf.setFeature(LOAD_EXTERNAL_DECL, false);
+    spf.setFeature(EXTERNAL_GENERAL_ENTITIES, false);
+    spf.setFeature(EXTERNAL_PARAMETER_ENTITIES, false);
+    return spf;
+  }
+
+  /**
+   * This method should be used if you need a {@link TransformerFactory}. Use this method
+   * instead of {@link TransformerFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
+   *
+   * @return a {@link TransformerFactory} with secure configuration enabled
+   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not
+   * support the secure configuration
+   */
+  public static TransformerFactory newSecureTransformerFactory()
+          throws TransformerConfigurationException {
+    TransformerFactory trfactory = TransformerFactory.newInstance();
+    trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    return trfactory;
+  }
+
+  /**
+   * This method should be used if you need a {@link SAXTransformerFactory}. Use this method
+   * instead of {@link SAXTransformerFactory#newInstance()}. The factory that is returned has
+   * secure configuration enabled.
+   *
+   * @return a {@link SAXTransformerFactory} with secure configuration enabled
+   * @throws TransformerConfigurationException if the {@code JAXP} transformer does not
+   * support the secure configuration
+   */
+  public static SAXTransformerFactory newSecureSAXTransformerFactory()
+          throws TransformerConfigurationException {
+    SAXTransformerFactory trfactory = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
+    trfactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    bestEffortSetAttribute(trfactory, XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+    return trfactory;
+  }
+
+  /**
+   * Set an attribute value on a {@link TransformerFactory}. If the TransformerFactory
+   * does not support the attribute, the method just returns <code>false</code> and
+   * logs the issue at debug level.
+   *
+   * @param transformerFactory to update
+   * @param name of the attribute to set
+   * @param value to set on the attribute
+   * @return whether the attribute was successfully set
+   */
+  static boolean bestEffortSetAttribute(TransformerFactory transformerFactory,
+                                        String name, Object value) {
+    try {
+      transformerFactory.setAttribute(name, value);
+      return true;
+    } catch (Throwable t) {
+      LOG.debug("Issue setting TransformerFactory attribute {}: {}", name, t.toString());
+    }
+    return false;
   }
 }

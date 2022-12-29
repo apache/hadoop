@@ -262,9 +262,15 @@ public class LogThrottlingHelper {
     if (primaryRecorderName.equals(recorderName) &&
         currentTimeMs - minLogPeriodMs >= lastLogTimestampMs) {
       lastLogTimestampMs = currentTimeMs;
-      for (LoggingAction log : currentLogs.values()) {
-        log.setShouldLog();
-      }
+      currentLogs.replaceAll((key, log) -> {
+        LoggingAction newLog = log;
+        if (log.hasLogged()) {
+          // create a fresh log since the old one has already been logged
+          newLog = new LoggingAction(log.getValueCount());
+        }
+        newLog.setShouldLog();
+        return newLog;
+      });
     }
     if (currentLog.shouldLog()) {
       currentLog.setHasLogged();
@@ -355,6 +361,10 @@ public class LogThrottlingHelper {
 
     private void setHasLogged() {
       hasLogged = true;
+    }
+
+    private int getValueCount() {
+      return stats.length;
     }
 
     private void recordValues(double... values) {

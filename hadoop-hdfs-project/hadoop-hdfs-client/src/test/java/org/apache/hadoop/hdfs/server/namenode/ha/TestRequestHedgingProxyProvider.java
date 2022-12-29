@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.io.retry.MultiException;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -101,6 +103,8 @@ public class TestRequestHedgingProxyProvider {
     RequestHedgingProxyProvider<ClientProtocol> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri, ClientProtocol.class,
             createFactory(badMock, goodMock));
+    Assert.assertTrue(Proxy.getInvocationHandler(
+        provider.getProxy().proxy) instanceof RpcInvocationHandler);
     long[] stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Mockito.verify(badMock).getStats();

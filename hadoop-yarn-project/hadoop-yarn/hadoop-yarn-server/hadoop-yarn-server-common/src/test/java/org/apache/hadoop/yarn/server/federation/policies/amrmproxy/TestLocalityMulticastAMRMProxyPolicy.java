@@ -19,8 +19,6 @@
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -79,9 +77,9 @@ public class TestLocalityMulticastAMRMProxyPolicy
       SubClusterIdInfo sc = new SubClusterIdInfo("subcluster" + i);
       // sub-cluster 3 is not active
       if (i != 3) {
-        SubClusterInfo sci = mock(SubClusterInfo.class);
-        when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-        when(sci.getSubClusterId()).thenReturn(sc.toId());
+        SubClusterInfo sci = SubClusterInfo.newInstance(
+            sc.toId(), "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+            System.currentTimeMillis(), "something");
         getActiveSubclusters().put(sc.toId(), sci);
       }
 
@@ -330,11 +328,14 @@ public class TestLocalityMulticastAMRMProxyPolicy
    * use as the default for when nodes or racks are unknown.
    */
   private void addHomeSubClusterAsActive() {
-    SubClusterInfo sci = mock(SubClusterInfo.class);
-    when(sci.getState()).thenReturn(SubClusterState.SC_RUNNING);
-    when(sci.getSubClusterId()).thenReturn(getHomeSubCluster());
-    getActiveSubclusters().put(getHomeSubCluster(), sci);
-    SubClusterIdInfo sc = new SubClusterIdInfo(getHomeSubCluster().getId());
+
+    SubClusterId homeSubCluster = getHomeSubCluster();
+    SubClusterInfo sci = SubClusterInfo.newInstance(
+        homeSubCluster, "dns1:80", "dns1:81", "dns1:82", "dns1:83", SubClusterState.SC_RUNNING,
+        System.currentTimeMillis(), "something");
+
+    getActiveSubclusters().put(homeSubCluster, sci);
+    SubClusterIdInfo sc = new SubClusterIdInfo(homeSubCluster.getId());
 
     getPolicyInfo().getRouterPolicyWeights().put(sc, 0.1f);
     getPolicyInfo().getAMRMPolicyWeights().put(sc, 0.1f);

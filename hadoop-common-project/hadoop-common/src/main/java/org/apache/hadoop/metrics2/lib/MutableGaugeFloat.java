@@ -69,7 +69,7 @@ public class MutableGaugeFloat extends MutableGauge {
 
   private void incr(float delta) {
     while (true) {
-      float current = value.get();
+      float current = Float.intBitsToFloat(value.get());
       float next = current + delta;
       if (compareAndSet(current, next)) {
         setChanged();

@@ -370,7 +370,23 @@ public class HttpFSServer {
       break;
     }
     case GETFILEBLOCKLOCATIONS: {
-      response = Response.status(Response.Status.BAD_REQUEST).build();
+      long offset = 0;
+      long len = Long.MAX_VALUE;
+      Long offsetParam = params.get(OffsetParam.NAME, OffsetParam.class);
+      Long lenParam = params.get(LenParam.NAME, LenParam.class);
+      AUDIT_LOG.info("[{}] offset [{}] len [{}]", path, offsetParam, lenParam);
+      if (offsetParam != null && offsetParam > 0) {
+        offset = offsetParam;
+      }
+      if (lenParam != null && lenParam > 0) {
+        len = lenParam;
+      }
+      FSOperations.FSFileBlockLocations command =
+          new FSOperations.FSFileBlockLocations(path, offset, len);
+      @SuppressWarnings("rawtypes")
+      Map locations = fsExecute(user, command);
+      final String json = JsonUtil.toJsonString("BlockLocations", locations);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
     case GETACLSTATUS: {
@@ -508,6 +524,26 @@ public class HttpFSServer {
       String js = fsExecute(user, command);
       AUDIT_LOG.info("[{}]", path);
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GET_BLOCK_LOCATIONS: {
+      long offset = 0;
+      long len = Long.MAX_VALUE;
+      Long offsetParam = params.get(OffsetParam.NAME, OffsetParam.class);
+      Long lenParam = params.get(LenParam.NAME, LenParam.class);
+      AUDIT_LOG.info("[{}] offset [{}] len [{}]", path, offsetParam, lenParam);
+      if (offsetParam != null && offsetParam > 0) {
+        offset = offsetParam;
+      }
+      if (lenParam != null && lenParam > 0) {
+        len = lenParam;
+      }
+      FSOperations.FSFileBlockLocationsLegacy command =
+          new FSOperations.FSFileBlockLocationsLegacy(path, offset, len);
+      @SuppressWarnings("rawtypes")
+      Map locations = fsExecute(user, command);
+      final String json = JsonUtil.toJsonString("LocatedBlocks", locations);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
     default: {

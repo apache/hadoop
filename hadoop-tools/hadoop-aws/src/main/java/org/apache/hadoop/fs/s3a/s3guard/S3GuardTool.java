@@ -82,7 +82,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
  * CLI to manage S3Guard Metadata Store.
- * <p></p>
+ * <p>
  * Some management tools invoke this class directly.
  */
 @InterfaceAudience.LimitedPrivate("management tools")
@@ -526,7 +526,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
      * Validate the marker options.
      * @param out output stream
      * @param fs filesystem
-     * @param path test path
      * @param marker desired marker option -may be null.
      */
     private void processMarkerOption(final PrintStream out,

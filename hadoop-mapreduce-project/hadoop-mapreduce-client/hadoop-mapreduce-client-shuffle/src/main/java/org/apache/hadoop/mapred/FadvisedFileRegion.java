@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
+import io.netty.channel.DefaultFileRegion;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -32,8 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.io.nativeio.NativeIO.POSIX.POSIX_FADV_DONTNEED;
-
-import org.jboss.netty.channel.DefaultFileRegion;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
@@ -77,8 +76,8 @@ public class FadvisedFileRegion extends DefaultFileRegion {
       throws IOException {
     if (readaheadPool != null && readaheadLength > 0) {
       readaheadRequest = readaheadPool.readaheadStream(identifier, fd,
-          getPosition() + position, readaheadLength,
-          getPosition() + getCount(), readaheadRequest);
+          position() + position, readaheadLength,
+          position() + count(), readaheadRequest);
     }
     
     if(this.shuffleTransferToAllowed) {
@@ -147,11 +146,11 @@ public class FadvisedFileRegion extends DefaultFileRegion {
 
   
   @Override
-  public void releaseExternalResources() {
+  protected void deallocate() {
     if (readaheadRequest != null) {
       readaheadRequest.cancel();
     }
-    super.releaseExternalResources();
+    super.deallocate();
   }
   
   /**
@@ -159,10 +158,10 @@ public class FadvisedFileRegion extends DefaultFileRegion {
    * we don't need the region to be cached anymore.
    */
   public void transferSuccessful() {
-    if (manageOsCache && getCount() > 0) {
+    if (manageOsCache && count() > 0) {
       try {
         NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
-            fd, getPosition(), getCount(), POSIX_FADV_DONTNEED);
+            fd, position(), count(), POSIX_FADV_DONTNEED);
       } catch (Throwable t) {
         LOG.warn("Failed to manage OS cache for " + identifier, t);
       }

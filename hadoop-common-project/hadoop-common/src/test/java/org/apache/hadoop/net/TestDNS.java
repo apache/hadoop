@@ -25,10 +25,12 @@ import java.net.InetAddress;
 
 import javax.naming.CommunicationException;
 import javax.naming.NameNotFoundException;
+import javax.naming.ServiceUnavailableException;
 
 import org.apache.hadoop.util.Time;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,7 +169,7 @@ public class TestDNS {
     try {
       String s = DNS.reverseDns(localhost, null);
       LOG.info("Local reverse DNS hostname is " + s);
-    } catch (NameNotFoundException | CommunicationException e) {
+    } catch (NameNotFoundException | CommunicationException | ServiceUnavailableException e) {
       if (!localhost.isLinkLocalAddress() || localhost.isLoopbackAddress()) {
         //these addresses probably won't work with rDNS anyway, unless someone
         //has unusual entries in their DNS server mapping 1.0.0.127 to localhost
@@ -176,6 +178,7 @@ public class TestDNS {
                 + " Loopback=" + localhost.isLoopbackAddress()
                 + " Linklocal=" + localhost.isLinkLocalAddress());
       }
+      Assume.assumeNoException(e);
     }
   }
 

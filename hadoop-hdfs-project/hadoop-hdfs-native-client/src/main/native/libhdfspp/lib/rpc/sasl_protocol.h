@@ -19,11 +19,11 @@
 #ifndef LIB_RPC_SASLPROTOCOL_H
 #define LIB_RPC_SASLPROTOCOL_H
 
+#include "RpcHeader.pb.h"
+
 #include <memory>
 #include <mutex>
 #include <functional>
-
-#include <RpcHeader.pb.h>
 
 #include "hdfspp/status.h"
 #include "common/auth_info.h"

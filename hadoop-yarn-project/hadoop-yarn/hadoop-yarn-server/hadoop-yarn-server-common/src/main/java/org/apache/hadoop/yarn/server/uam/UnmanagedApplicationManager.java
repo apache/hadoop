@@ -382,8 +382,13 @@ public class UnmanagedApplicationManager {
   protected Token<AMRMTokenIdentifier> initializeUnmanagedAM(
       ApplicationId appId) throws IOException, YarnException {
     try {
-      UserGroupInformation appSubmitter =
-          UserGroupInformation.createRemoteUser(this.submitter);
+      UserGroupInformation appSubmitter;
+      if (UserGroupInformation.isSecurityEnabled()) {
+        appSubmitter = UserGroupInformation.createProxyUser(this.submitter,
+            UserGroupInformation.getLoginUser());
+      } else {
+        appSubmitter = UserGroupInformation.createRemoteUser(this.submitter);
+      }
       this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
           appSubmitter, null);
 

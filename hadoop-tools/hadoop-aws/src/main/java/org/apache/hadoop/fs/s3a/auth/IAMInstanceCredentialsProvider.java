@@ -40,9 +40,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * as a non-recoverable failure.
  * <p>
  * It is implicitly public; marked evolving as we can change its semantics.
+ *
+ * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
+ * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class IAMInstanceCredentialsProvider
     implements AWSCredentialsProvider, Closeable {
 

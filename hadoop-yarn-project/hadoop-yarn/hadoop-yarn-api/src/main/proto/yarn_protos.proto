@@ -572,6 +572,8 @@ message YarnClusterMetricsProto {
   optional int32 num_lost_nms = 4;
   optional int32 num_unhealthy_nms = 5;
   optional int32 num_rebooted_nms = 6;
+  optional int32 num_decommissioning_nms = 7;
+  optional int32 num_shutdown_nms = 8;
 }
 
 enum QueueStateProto {

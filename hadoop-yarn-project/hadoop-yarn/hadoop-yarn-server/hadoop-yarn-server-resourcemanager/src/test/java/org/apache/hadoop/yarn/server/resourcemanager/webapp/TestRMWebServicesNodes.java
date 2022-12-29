@@ -49,6 +49,7 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
@@ -578,10 +579,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
           response.getType().toString());
       String msg = response.getEntity(String.class);
       System.out.println(msg);
-      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
       DocumentBuilder db = dbf.newDocumentBuilder();
-      InputSource is = new InputSource();
-      is.setCharacterStream(new StringReader(msg));
+      InputSource is = new InputSource(new StringReader(msg));
       Document dom = db.parse(is);
       NodeList nodes = dom.getElementsByTagName("RemoteException");
       Element element = (Element) nodes.item(0);
@@ -646,10 +646,9 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
-    InputSource is = new InputSource();
-    is.setCharacterStream(new StringReader(xml));
+    InputSource is = new InputSource(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodesApps = dom.getElementsByTagName("nodes");
     assertEquals("incorrect number of elements", 1, nodesApps.getLength());
@@ -672,7 +671,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getType().toString());
     String xml = response.getEntity(String.class);
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));
@@ -694,7 +693,7 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
         response.getType().toString());
     String xml = response.getEntity(String.class);
 
-    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
     DocumentBuilder db = dbf.newDocumentBuilder();
     InputSource is = new InputSource();
     is.setCharacterStream(new StringReader(xml));

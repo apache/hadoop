@@ -15,15 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "rpc_engine.h"
-#include "rpc_connection_impl.h"
-#include "sasl_protocol.h"
 
 #include "RpcHeader.pb.h"
 #include "ProtobufRpcEngine.pb.h"
 #include "IpcConnectionContext.pb.h"
 
+#include "rpc_engine.h"
+#include "rpc_connection_impl.h"
+#include "sasl_protocol.h"
+
 #include <boost/asio/error.hpp>
+#include <boost/system/error_code.hpp>
 
 namespace hdfs {
 

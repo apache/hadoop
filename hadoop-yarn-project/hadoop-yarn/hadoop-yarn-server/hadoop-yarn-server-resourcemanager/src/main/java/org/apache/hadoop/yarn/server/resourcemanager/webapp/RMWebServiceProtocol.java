@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 /**
  * <p>
@@ -323,6 +324,8 @@ public interface RMWebServiceProtocol {
    * @throws IOException if an IOException happened
    */
   NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr) throws IOException;
+
+  NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException;
 
   /**
    * This method retrieves all the node within multiple node labels in the
@@ -745,4 +748,31 @@ public interface RMWebServiceProtocol {
    */
   Response signalToContainer(String containerId, String command,
       HttpServletRequest req) throws AuthorizationException;
+
+  /**
+   * This method updates the Scheduler configuration, and it is reachable by
+   * using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param mutationInfo th information for making scheduler configuration
+   *        changes (supports adding, removing, or updating a queue, as well
+   *        as global scheduler conf changes)
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method
+   * @throws InterruptedException if interrupted
+   */
+  Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr) throws AuthorizationException, InterruptedException;
+
+  /**
+   * This method retrieves all the Scheduler configuration, and it is reachable
+   * by using {@link RMWSConsts#SCHEDULER_CONF}.
+   *
+   * @param hsr the servlet request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *         method.
+   */
+  Response getSchedulerConfiguration(HttpServletRequest hsr) throws AuthorizationException;
 }

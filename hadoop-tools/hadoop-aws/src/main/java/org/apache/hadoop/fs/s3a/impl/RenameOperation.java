@@ -53,16 +53,16 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * A parallelized rename operation.
- * <p></p>
+ * <p>
  * The parallel execution is in groups of size
  * {@link InternalConstants#RENAME_PARALLEL_LIMIT}; it is only
  * after one group completes that the next group is initiated.
- * <p></p>
+ * <p>
  * Once enough files have been copied that they meet the
  * {@link InternalConstants#MAX_ENTRIES_TO_DELETE} threshold, a delete
  * is initiated.
  * If it succeeds, the rename continues with the next group of files.
- * <p></p>
+ * <p>
  * Directory Markers which have child entries are never copied; only those
  * which represent empty directories are copied in the rename.
  * The {@link DirMarkerTracker} tracks which markers must be copied, and
@@ -71,10 +71,10 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  * the copied tree. This is to ensure that even if a directory tree
  * is copied from an authoritative path to a non-authoritative one
  * there is never any contamination of the non-auth path with markers.
- * <p></p>
+ * <p>
  * The rename operation implements the classic HDFS rename policy of
  * rename(file, dir) renames the file under the directory.
- * <p></p>
+ * <p>
  *
  * There is <i>no</i> validation of input and output paths.
  * Callers are required to themselves verify that destination is not under
@@ -178,7 +178,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Queue an object for deletion.
-   * <p></p>
+   * <p>
    * This object will be deleted when the next page of objects to delete
    * is posted to S3. Therefore, the COPY must have finished
    * before that deletion operation takes place.
@@ -204,9 +204,9 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Queue a list of markers for deletion.
-   * <p></p>
+   * <p>
    * no-op if the list is empty.
-   * <p></p>
+   * <p>
    * See {@link #queueToDelete(Path, String)} for
    * details on safe use of this method.
    *
@@ -221,7 +221,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Queue a single marker for deletion.
-   * <p></p>
+   * <p>
    * See {@link #queueToDelete(Path, String)} for
    * details on safe use of this method.
    *
@@ -427,7 +427,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
 
   /**
    * Operations to perform at the end of every loop iteration.
-   * <p></p>
+   * <p>
    * This may block the thread waiting for copies to complete
    * and/or delete a page of data.
    */
@@ -448,11 +448,11 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
   /**
    * Process all directory markers at the end of the rename.
    * All leaf markers are queued to be copied in the store;
-   * <p></p>
+   * <p>
    * Why not simply create new markers? All the metadata
    * gets copied too, so if there was anything relevant then
    * it would be preserved.
-   * <p></p>
+   * <p>
    * At the same time: markers aren't valued much and may
    * be deleted without any safety checks -so if there was relevant
    * data it is at risk of destruction at any point.
@@ -461,7 +461,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * Be advised though: the costs of the copy not withstanding,
    * it is a lot easier to have one single type of scheduled copy operation
    * than have copy and touch calls being scheduled.
-   * <p></p>
+   * <p>
    * The duration returned is the time to initiate all copy/delete operations,
    * including any blocking waits for active copies and paged deletes
    * to execute. There may still be outstanding operations

@@ -104,6 +104,7 @@ public class AbfsClient implements Closeable {
   private final AbfsCounters abfsCounters;
   private EncryptionContextProvider encryptionContextProvider = null;
   private EncryptionType encryptionType = EncryptionType.NONE;
+  private final AbfsThrottlingIntercept intercept;
 
   private final ListeningScheduledExecutorService executorService;
   private Boolean isNamespaceEnabled;
@@ -126,6 +127,7 @@ public class AbfsClient implements Closeable {
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
+    this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
@@ -214,8 +216,13 @@ public class AbfsClient implements Closeable {
   public void setEncryptionType(EncryptionType encryptionType) {
     this.encryptionType = encryptionType;
   }
+
   public EncryptionType getEncryptionType() {
     return encryptionType;
+  }
+
+  AbfsThrottlingIntercept getIntercept() {
+    return intercept;
   }
 
   List<AbfsHttpHeader> createDefaultHeaders() {
@@ -1216,6 +1223,10 @@ public class AbfsClient implements Closeable {
           sasToken = cachedSasToken;
           LOG.trace("Using cached SAS token.");
         }
+        // if SAS Token contains a prefix of ?, it should be removed
+        if (sasToken.charAt(0) == '?') {
+          sasToken = sasToken.substring(1);
+        }
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
@@ -1386,6 +1397,14 @@ public class AbfsClient implements Closeable {
     return xMsVersion;
   }
 
+  /**
+   * Getter for abfsConfiguration from AbfsClient.
+   * @return AbfsConfiguration instance
+   */
+  protected AbfsConfiguration getAbfsConfiguration() {
+    return abfsConfiguration;
+  }
+
   public int getNumLeaseThreads() {
     return abfsConfiguration.getNumLeaseThreads();
   }
@@ -1401,5 +1420,10 @@ public class AbfsClient implements Closeable {
 
   public <V> void addCallback(ListenableFuture<V> future, FutureCallback<V> callback) {
     Futures.addCallback(future, callback, executorService);
+  }
+
+  @VisibleForTesting
+  protected AccessTokenProvider getTokenProvider() {
+    return tokenProvider;
   }
 }

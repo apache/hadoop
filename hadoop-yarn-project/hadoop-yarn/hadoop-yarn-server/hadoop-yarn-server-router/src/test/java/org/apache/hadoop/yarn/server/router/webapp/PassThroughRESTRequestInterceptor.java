@@ -60,10 +60,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
+import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 /**
- * Mock intercepter that does not do anything other than forwarding it to the
- * next intercepter in the chain.
+ * Mock interceptor that does not do anything other than forwarding it to the
+ * next interceptor in the chain.
  */
 public class PassThroughRESTRequestInterceptor
     extends AbstractRESTRequestInterceptor {
@@ -214,6 +215,11 @@ public class PassThroughRESTRequestInterceptor
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
     return getNextInterceptor().getNodeToLabels(hsr);
+  }
+
+  @Override
+  public NodeLabelsInfo getRMNodeLabels(HttpServletRequest hsr) throws IOException {
+    return getNextInterceptor().getRMNodeLabels(hsr);
   }
 
   @Override
@@ -378,5 +384,18 @@ public class PassThroughRESTRequestInterceptor
   public Response signalToContainer(String containerId,
       String command, HttpServletRequest req) throws AuthorizationException {
     return getNextInterceptor().signalToContainer(containerId, command, req);
+  }
+
+  @Override
+  public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
+      HttpServletRequest hsr)
+      throws AuthorizationException, InterruptedException {
+    return getNextInterceptor().updateSchedulerConfiguration(mutationInfo, hsr);
+  }
+
+  @Override
+  public Response getSchedulerConfiguration(HttpServletRequest hsr)
+      throws AuthorizationException {
+    return getNextInterceptor().getSchedulerConfiguration(hsr);
   }
 }

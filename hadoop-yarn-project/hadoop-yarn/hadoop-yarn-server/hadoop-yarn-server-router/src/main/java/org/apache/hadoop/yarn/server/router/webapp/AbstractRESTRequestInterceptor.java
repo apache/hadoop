@@ -19,16 +19,19 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 
 /**
  * Extends the RequestInterceptor class and provides common functionality which
- * can be used and/or extended by other concrete intercepter classes.
+ * can be used and/or extended by other concrete interceptor classes.
  */
 public abstract class AbstractRESTRequestInterceptor
     implements RESTRequestInterceptor {
 
   private Configuration conf;
   private RESTRequestInterceptor nextInterceptor;
+  private UserGroupInformation user = null;
 
   /**
    * Sets the {@link RESTRequestInterceptor} in the chain.
@@ -62,9 +65,10 @@ public abstract class AbstractRESTRequestInterceptor
    * Initializes the {@link RESTRequestInterceptor}.
    */
   @Override
-  public void init(String user) {
+  public void init(String userName) {
+    this.user = RouterServerUtil.setupUser(userName);
     if (this.nextInterceptor != null) {
-      this.nextInterceptor.init(user);
+      this.nextInterceptor.init(userName);
     }
   }
 
@@ -86,4 +90,7 @@ public abstract class AbstractRESTRequestInterceptor
     return this.nextInterceptor;
   }
 
+  public UserGroupInformation getUser() {
+    return user;
+  }
 }

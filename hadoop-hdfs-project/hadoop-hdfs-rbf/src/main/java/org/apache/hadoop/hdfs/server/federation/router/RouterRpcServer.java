@@ -252,18 +252,18 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /**
    * Construct a router RPC server.
    *
-   * @param configuration HDFS Configuration.
+   * @param conf HDFS Configuration.
    * @param router A router using this RPC server.
    * @param nnResolver The NN resolver instance to determine active NNs in HA.
    * @param fileResolver File resolver to resolve file paths to subclusters.
    * @throws IOException If the RPC server could not be created.
    */
-  public RouterRpcServer(Configuration configuration, Router router,
+  public RouterRpcServer(Configuration conf, Router router,
       ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
 
-    this.conf = configuration;
+    this.conf = conf;
     this.router = router;
     this.namenodeResolver = nnResolver;
     this.subclusterResolver = fileResolver;
@@ -321,6 +321,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -331,6 +332,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         .setnumReaders(readerCount)
         .setQueueSizePerHandler(handlerQueueSize)
         .setVerbose(false)
+        .setAlignmentContext(routerStateIdContext)
         .setSecretManager(this.securityManager.getSecretManager())
         .build();
 
@@ -384,7 +386,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create the client
     this.rpcClient = new RouterRpcClient(this.conf, this.router,
-        this.namenodeResolver, this.rpcMonitor);
+        this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
 
     // Initialize modules
     this.quotaCall = new Quota(this.router, this);
@@ -405,7 +407,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
                 .asMap()
                 .keySet()
                 .parallelStream()
-                .forEach((key) -> this.dnCache.refresh(key)),
+                .forEach(this.dnCache::refresh),
             0,
             dnCacheExpire, TimeUnit.MILLISECONDS);
     initRouterFedRename();
@@ -581,7 +583,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @param op Category of the operation to check.
    * @param supported If the operation is supported or not. If not, it will
    *                  throw an UnsupportedOperationException.
-   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   * @throws StandbyException If the Router is in safe mode and cannot serve
    *                           client requests.
    * @throws UnsupportedOperationException If the operation is not supported.
    */
@@ -604,7 +606,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * UNCHECKED. This function should be called by all ClientProtocol functions.
    *
    * @param op Category of the operation to check.
-   * @throws SafeModeException If the Router is in safe mode and cannot serve
+   * @throws StandbyException If the Router is in safe mode and cannot serve
    *                           client requests.
    */
   void checkOperation(OperationCategory op)
@@ -980,8 +982,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // ClientProtocol
-  public void renewLease(String clientName) throws IOException {
-    clientProto.renewLease(clientName);
+  public void renewLease(String clientName, List<String> namespaces)
+      throws IOException {
+    clientProto.renewLease(clientName, namespaces);
   }
 
   @Override // ClientProtocol
@@ -1328,7 +1331,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     clientProto.modifyAclEntries(src, aclSpec);
   }
 
-  @Override // ClienProtocol
+  @Override // ClientProtocol
   public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     clientProto.removeAclEntries(src, aclSpec);
@@ -1730,8 +1733,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       final PathLocation location =
           this.subclusterResolver.getDestinationForPath(path);
       if (location == null) {
-        throw new IOException("Cannot find locations for " + path + " in " +
-            this.subclusterResolver.getClass().getSimpleName());
+        throw new NoLocationException(path, this.subclusterResolver.getClass());
       }
 
       // We may block some write operations
@@ -1763,6 +1765,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         if (!disabled.contains(loc.getNameserviceId())) {
           locs.add(loc);
         }
+      }
+      if (locs.isEmpty()) {
+        throw new NoLocationException(path, this.subclusterResolver.getClass());
       }
       return locs;
     } catch (IOException ioe) {

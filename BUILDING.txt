@@ -492,39 +492,66 @@ Building on CentOS 8
 
 ----------------------------------------------------------------------------------
 
-Building on Windows
+Building on Windows 10
 
 ----------------------------------------------------------------------------------
 Requirements:
 
-* Windows System
+* Windows 10
 * JDK 1.8
-* Maven 3.0 or later
-* Boost 1.72
-* Protocol Buffers 3.7.1
-* CMake 3.19 or newer
-* Visual Studio 2010 Professional or Higher
-* Windows SDK 8.1 (if building CPU rate control for the container executor)
-* zlib headers (if building native code bindings for zlib)
+* Maven 3.0 or later (maven.apache.org)
+* Boost 1.72 (boost.org)
+* Protocol Buffers 3.7.1 (https://github.com/protocolbuffers/protobuf/releases)
+* CMake 3.19 or newer (cmake.org)
+* Visual Studio 2019 (visualstudio.com)
+* Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
+                   http://msdn.microsoft.com/en-us/windows/bg162891.aspx)
+* Zlib (zlib.net, if building native code bindings for zlib)
+* Git (preferably, get this from https://git-scm.com/download/win since the package also contains
+       Unix command-line tools that are needed during packaging).
+* Python (python.org, for generation of docs using 'mvn site')
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
-* Unix command-line tools from GnuWin32: sh, mkdir, rm, cp, tar, gzip. These
-  tools must be present on your PATH.
-* Python ( for generation of docs using 'mvn site')
-
-Unix command-line tools are also included with the Windows Git package which
-can be downloaded from http://git-scm.com/downloads
-
-If using Visual Studio, it must be Professional level or higher.
-Do not use Visual Studio Express.  It does not support compiling for 64-bit,
-which is problematic if running a 64-bit system.
-
-The Windows SDK 8.1 is available to download at:
-
-http://msdn.microsoft.com/en-us/windows/bg162891.aspx
-
-Cygwin is not required.
 
 ----------------------------------------------------------------------------------
+
+Building guidelines:
+
+Hadoop repository provides the Dockerfile for building Hadoop on Windows 10, located at
+dev-support/docker/Dockerfile_windows_10. It is highly recommended to use this and create the
+Docker image for building Hadoop on Windows 10, since you don't have to install anything else
+other than Docker and no additional steps are required in terms of aligning the environment with
+the necessary paths etc.
+
+However, if you still prefer taking the route of not using Docker, this Dockerfile_windows_10 will
+still be immensely useful as a raw guide for all the steps involved in creating the environment
+needed to build Hadoop on Windows 10.
+
+Building using the Docker:
+We first need to build the Docker image for building Hadoop on Windows 10. Run this command from
+the root of the Hadoop repository.
+> docker build -t hadoop-windows-10-builder -f .\dev-support\docker\Dockerfile_windows_10 .\dev-support\docker\
+
+Start the container with the image that we just built.
+> docker run --rm -it hadoop-windows-10-builder
+
+You can now clone the Hadoop repo inside this container and proceed with the build.
+
+NOTE:
+While one may perceive the idea of mounting the locally cloned (on the host filesystem) Hadoop
+repository into the container (using the -v option), we have seen the build to fail owing to some
+files not being able to be located by Maven. Thus, we suggest cloning the Hadoop repository to a
+non-mounted folder inside the container and proceed with the build. When the build is completed,
+you may use the "docker cp" command to copy the built Hadoop tar.gz file from the docker container
+to the host filesystem. If you still would like to mount the Hadoop codebase, a workaround would
+be to copy the mounted Hadoop codebase into another folder (which doesn't point to a mount) in the
+container's filesystem and use this for building.
+
+However, we noticed no build issues when the Maven repository from the host filesystem was mounted
+into the container. One may use this to greatly reduce the build time. Assuming that the Maven
+repository is located at D:\Maven\Repository in the host filesystem, one can use the following
+command to mount the same onto the default Maven repository location while launching the container.
+> docker run --rm -v D:\Maven\Repository:C:\Users\ContainerAdministrator\.m2\repository -it hadoop-windows-10-builder
+
 Building:
 
 Keep the source code tree in a short path to avoid running into problems related
@@ -539,6 +566,24 @@ configure the bit-ness of the build, and set several optional components.
 
 Several tests require that the user must have the Create Symbolic Links
 privilege.
+
+To simplify the installation of Boost, Protocol buffers, OpenSSL and Zlib dependencies we can use
+vcpkg (https://github.com/Microsoft/vcpkg.git). Upon cloning the vcpkg repo, checkout the commit
+7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d to get the required versions of the dependencies
+mentioned above.
+> git clone https://github.com/Microsoft/vcpkg.git
+> cd vcpkg
+> git checkout 7ffa425e1db8b0c3edf9c50f2f3a0f25a324541d
+> .\bootstrap-vcpkg.bat
+> .\vcpkg.exe install boost:x64-windows
+> .\vcpkg.exe install protobuf:x64-windows
+> .\vcpkg.exe install openssl:x64-windows
+> .\vcpkg.exe install zlib:x64-windows
+
+Set the following environment variables -
+(Assuming that vcpkg was checked out at C:\vcpkg)
+> set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
+> set MAVEN_OPTS=-Xmx2048M -Xss128M
 
 All Maven goals are the same as described above with the exception that
 native code is built by enabling the 'native-win' Maven profile. -Pnative-win
@@ -556,6 +601,24 @@ with zlib 1.2.7, built using Visual Studio 2010 out of contrib\vstudio\vc10 in
 the zlib 1.2.7 source tree.
 
 http://www.zlib.net/
+
+
+Build command:
+The following command builds all the modules in the Hadoop project and generates the tar.gz file in
+hadoop-dist/target upon successful build. Run these commands from an
+"x64 Native Tools Command Prompt for VS 2019" which can be found under "Visual Studio 2019" in the
+Windows start menu. If you're using the Docker image from Dockerfile_windows_10, you'll be
+logged into "x64 Native Tools Command Prompt for VS 2019" automatically when you start the
+container.
+
+> set classpath=
+> set PROTOBUF_HOME=C:\vcpkg\installed\x64-windows
+> mvn clean package -Dhttps.protocols=TLSv1.2 -DskipTests -DskipDocs -Pnative-win,dist^
+    -Drequire.openssl -Drequire.test.libhadoop -Pyarn-ui -Dshell-executable=C:\Git\bin\bash.exe^
+    -Dtar -Dopenssl.prefix=C:\vcpkg\installed\x64-windows^
+    -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
+    -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo^
+    -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
 
 ----------------------------------------------------------------------------------
 Building distributions:

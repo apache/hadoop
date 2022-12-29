@@ -19,17 +19,6 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.collector;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +26,11 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -47,14 +41,22 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorCon
 import org.apache.hadoop.yarn.server.api.protocolrecords.GetTimelineCollectorContextResponse;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineWriterImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestNMTimelineCollectorManager {
   private NodeTimelineCollectorManager collectorManager;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     collectorManager = createCollectorManager();
     Configuration conf = new YarnConfiguration();
@@ -66,7 +68,7 @@ public class TestNMTimelineCollectorManager {
     collectorManager.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (collectorManager != null) {
       collectorManager.stop();
@@ -74,12 +76,12 @@ public class TestNMTimelineCollectorManager {
   }
 
   @Test
-  public void testStartingWriterFlusher() throws Exception {
+  void testStartingWriterFlusher() throws Exception {
     assertTrue(collectorManager.writerFlusherRunning());
   }
 
   @Test
-  public void testStartWebApp() throws Exception {
+  void testStartWebApp() throws Exception {
     assertNotNull(collectorManager.getRestServerBindAddress());
     String address = collectorManager.getRestServerBindAddress();
     String[] parts = address.split(":");
@@ -89,8 +91,9 @@ public class TestNMTimelineCollectorManager {
         Integer.valueOf(parts[1]) <= 30100);
   }
 
-  @Test(timeout=60000)
-  public void testMultithreadedAdd() throws Exception {
+  @Test
+  @Timeout(60000)
+  void testMultithreadedAdd() throws Exception {
     final int numApps = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < numApps; i++) {
@@ -107,7 +110,7 @@ public class TestNMTimelineCollectorManager {
     ExecutorService executor = Executors.newFixedThreadPool(numApps);
     try {
       List<Future<Boolean>> futures = executor.invokeAll(tasks);
-      for (Future<Boolean> future: futures) {
+      for (Future<Boolean> future : futures) {
         assertTrue(future.get());
       }
     } finally {
@@ -121,7 +124,7 @@ public class TestNMTimelineCollectorManager {
   }
 
   @Test
-  public void testMultithreadedAddAndRemove() throws Exception {
+  void testMultithreadedAddAndRemove() throws Exception {
     final int numApps = 5;
     List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
     for (int i = 0; i < numApps; i++) {
@@ -140,7 +143,7 @@ public class TestNMTimelineCollectorManager {
     ExecutorService executor = Executors.newFixedThreadPool(numApps);
     try {
       List<Future<Boolean>> futures = executor.invokeAll(tasks);
-      for (Future<Boolean> future: futures) {
+      for (Future<Boolean> future : futures) {
         assertTrue(future.get());
       }
     } finally {

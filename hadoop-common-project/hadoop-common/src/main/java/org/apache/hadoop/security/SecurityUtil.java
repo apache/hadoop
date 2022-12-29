@@ -44,6 +44,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DomainNameResolverFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -81,6 +83,8 @@ public final class SecurityUtil {
   @VisibleForTesting
   static HostResolver hostResolver;
 
+  private static DomainNameResolver domainNameResolver;
+
   private static boolean logSlowLookups;
   private static int slowLookupThresholdMs;
 
@@ -112,6 +116,9 @@ public final class SecurityUtil {
             .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_KEY,
         CommonConfigurationKeys
             .HADOOP_SECURITY_DNS_LOG_SLOW_LOOKUPS_THRESHOLD_MS_DEFAULT);
+
+    domainNameResolver = DomainNameResolverFactory.newInstance(conf,
+        CommonConfigurationKeys.HADOOP_SECURITY_RESOLVER_IMPL);
   }
 
   /**
@@ -212,7 +219,7 @@ public final class SecurityUtil {
         throw new IOException("Can't replace " + HOSTNAME_PATTERN
             + " pattern since client address is null");
       }
-      return replacePattern(components, addr.getCanonicalHostName());
+      return replacePattern(components, domainNameResolver.getHostnameByIP(addr));
     }
   }
   

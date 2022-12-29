@@ -59,7 +59,7 @@ Copies source paths to stdout.
 
 Options
 
-* The `-ignoreCrc` option disables checkshum verification.
+* The `-ignoreCrc` option disables checksum verification.
 
 Example:
 
@@ -73,18 +73,19 @@ Returns 0 on success and -1 on error.
 checksum
 --------
 
-Usage: `hadoop fs -checksum [-v] URI`
+Usage: `hadoop fs -checksum [-v] URI [URI ...]`
 
-Returns the checksum information of a file.
+Returns the checksum information of the file(s).
 
 Options
 
-* The `-v` option displays blocks size for the file.
+* The `-v` option displays blocks size for the file(s).
 
 Example:
 
 * `hadoop fs -checksum hdfs://nn1.example.com/file1`
 * `hadoop fs -checksum file:///etc/hosts`
+* `hadoop fs -checksum file:///etc/hosts hdfs://nn1.example.com/file1`
 
 chgrp
 -----
@@ -177,7 +178,7 @@ Returns 0 on success and -1 on error.
 cp
 ----
 
-Usage: `hadoop fs -cp [-f] [-p | -p[topax]] [-t <thread count>] [-q <thread pool queue size>] URI [URI ...] <dest>`
+Usage: `hadoop fs -cp [-f] [-p | -p[topax]] [-d] [-t <thread count>] [-q <thread pool queue size>] URI [URI ...] <dest>`
 
 Copy files from source to destination. This command allows multiple sources as well in which case the destination must be a directory.
 
@@ -187,13 +188,14 @@ Options:
 
 * `-f` : Overwrite the destination if it already exists.
 * `-d` : Skip creation of temporary file with the suffix `._COPYING_`.
-* `-p` : Preserve file attributes [topx] (timestamps, ownership, permission, ACL, XAttr). If -p is specified with no *arg*, then preserves timestamps, ownership, permission. If -pa is specified, then preserves permission also because ACL is a super-set of permission. Determination of whether raw namespace extended attributes are preserved is independent of the -p flag.
+* `-p` : Preserve file attributes [topax] (timestamps, ownership, permission, ACL, XAttr). If -p is specified with no *arg*, then preserves timestamps, ownership, permission. If -pa is specified, then preserves permission also because ACL is a super-set of permission. Determination of whether raw namespace extended attributes are preserved is independent of the -p flag.
 * `-t <thread count>` : Number of threads to be used, default is 1. Useful when copying directories containing more than 1 file.
 * `-q <thread pool queue size>` : Thread pool queue size to be used, default is 1024. It takes effect only when thread count greater than 1.
 
 Example:
 
 * `hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2`
+* `hadoop fs -cp -f -d /user/hadoop/file1 /user/hadoop/file2`
 * `hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
 * `hadoop fs -cp -t 5 /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
 * `hadoop fs -cp -t 10 -q 2048 /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir`
@@ -403,7 +405,7 @@ Returns 0 on success and non-zero on error.
 getmerge
 --------
 
-Usage: `hadoop fs -getmerge [-nl] <src> <localdst>`
+Usage: `hadoop fs -getmerge [-nl] [-skip-empty-file] <src> <localdst>`
 
 Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally -nl can be set to enable adding a newline character (LF) at the end of each file.
 -skip-empty-file can be used to avoid unwanted newline characters in case of empty files.
@@ -412,6 +414,7 @@ Examples:
 
 * `hadoop fs -getmerge -nl  /src  /opt/output.txt`
 * `hadoop fs -getmerge -nl  /src/file1.txt /src/file2.txt  /output.txt`
+* `hadoop fs -getmerge -nl -skip-empty-file /src/file1.txt /src/file2.txt /output.txt`
 
 Exit Code:
 
@@ -852,7 +855,7 @@ Return the help for an individual command.
 ====================================================
 
 The Hadoop FileSystem shell works with Object Stores such as Amazon S3,
-Azure WASB and OpenStack Swift.
+Azure ABFS and Google GCS.
 
 
 

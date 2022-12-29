@@ -144,7 +144,8 @@ public class FSDataInputStream extends DataInputStream
    *
    * @return the underlying input stream
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS"})
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public InputStream getWrappedStream() {
     return in;
   }

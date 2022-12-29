@@ -37,11 +37,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.TestAbfsClient;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
 import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
@@ -150,6 +152,17 @@ public abstract class AbstractAbfsIntegrationTest extends
     return fs.getIsNamespaceEnabled(getTestTracingContext(fs, false));
   }
 
+  public static TracingContext getSampleTracingContext(AzureBlobFileSystem fs,
+      boolean needsPrimaryReqId) {
+    String correlationId, fsId;
+    TracingHeaderFormat format;
+    correlationId = "test-corr-id";
+    fsId = "test-filesystem-id";
+    format = TracingHeaderFormat.ALL_ID_FORMAT;
+    return new TracingContext(correlationId, fsId,
+        FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
+  }
+
   public TracingContext getTestTracingContext(AzureBlobFileSystem fs,
       boolean needsPrimaryReqId) {
     String correlationId, fsId;
@@ -167,7 +180,6 @@ public abstract class AbstractAbfsIntegrationTest extends
     return new TracingContext(correlationId, fsId,
         FSOperationType.TEST_OP, needsPrimaryReqId, format, null);
   }
-
 
   @Before
   public void setup() throws Exception {
@@ -243,6 +255,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     }
   }
 
+  public AccessTokenProvider getAccessTokenProvider(final AzureBlobFileSystem fs) {
+    return TestAbfsClient.getAccessTokenProvider(fs.getAbfsStore().getClient());
+  }
 
   public void loadConfiguredFileSystem() throws Exception {
       // disable auto-creation of filesystem

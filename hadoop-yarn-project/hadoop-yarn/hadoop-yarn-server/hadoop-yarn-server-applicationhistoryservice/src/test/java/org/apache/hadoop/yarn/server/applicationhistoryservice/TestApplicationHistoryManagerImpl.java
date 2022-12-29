@@ -21,39 +21,43 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 import java.io.IOException;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestApplicationHistoryManagerImpl extends
     ApplicationHistoryStoreTestUtils {
-  ApplicationHistoryManagerImpl applicationHistoryManagerImpl = null;
+  private ApplicationHistoryManagerImpl applicationHistoryManagerImpl = null;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration config = new Configuration();
     config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
-      MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
+        MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     applicationHistoryManagerImpl = new ApplicationHistoryManagerImpl();
     applicationHistoryManagerImpl.init(config);
     applicationHistoryManagerImpl.start();
     store = applicationHistoryManagerImpl.getHistoryStore();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     applicationHistoryManagerImpl.stop();
   }
 
   @Test
-  public void testApplicationReport() throws IOException, YarnException {
+  void testApplicationReport() throws IOException, YarnException {
     ApplicationId appId = null;
     appId = ApplicationId.newInstance(0, 1);
     writeApplicationStartData(appId);
@@ -64,17 +68,17 @@ public class TestApplicationHistoryManagerImpl extends
     writeApplicationAttemptFinishData(appAttemptId);
     ApplicationReport appReport =
         applicationHistoryManagerImpl.getApplication(appId);
-    Assert.assertNotNull(appReport);
-    Assert.assertEquals(appId, appReport.getApplicationId());
-    Assert.assertEquals(appAttemptId,
-      appReport.getCurrentApplicationAttemptId());
-    Assert.assertEquals(appAttemptId.toString(), appReport.getHost());
-    Assert.assertEquals("test type", appReport.getApplicationType().toString());
-    Assert.assertEquals("test queue", appReport.getQueue().toString());
+    assertNotNull(appReport);
+    assertEquals(appId, appReport.getApplicationId());
+    assertEquals(appAttemptId,
+        appReport.getCurrentApplicationAttemptId());
+    assertEquals(appAttemptId.toString(), appReport.getHost());
+    assertEquals("test type", appReport.getApplicationType().toString());
+    assertEquals("test queue", appReport.getQueue().toString());
   }
 
   @Test
-  public void testApplications() throws IOException {
+  void testApplications() throws IOException {
     ApplicationId appId1 = ApplicationId.newInstance(0, 1);
     ApplicationId appId2 = ApplicationId.newInstance(0, 2);
     ApplicationId appId3 = ApplicationId.newInstance(0, 3);
@@ -86,10 +90,10 @@ public class TestApplicationHistoryManagerImpl extends
     writeApplicationFinishData(appId3);
     Map<ApplicationId, ApplicationReport> reports =
         applicationHistoryManagerImpl.getApplications(2, 2000L, 5000L);
-    Assert.assertNotNull(reports);
-    Assert.assertEquals(2, reports.size());
-    Assert.assertNull(reports.get("1"));
-    Assert.assertNull(reports.get("2"));
-    Assert.assertNull(reports.get("3"));
+    assertNotNull(reports);
+    assertEquals(2, reports.size());
+    assertNull(reports.get("1"));
+    assertNull(reports.get("2"));
+    assertNull(reports.get("3"));
   }
 }

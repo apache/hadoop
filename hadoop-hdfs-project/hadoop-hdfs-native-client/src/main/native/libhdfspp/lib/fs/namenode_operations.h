@@ -18,16 +18,18 @@
 #ifndef LIBHDFSPP_LIB_FS_NAMENODEOPERATIONS_H_
 #define LIBHDFSPP_LIB_FS_NAMENODEOPERATIONS_H_
 
+#include "ClientNamenodeProtocol.pb.h"
+
 #include "rpc/rpc_engine.h"
 #include "hdfspp/statinfo.h"
 #include "hdfspp/fsinfo.h"
 #include "hdfspp/content_summary.h"
 #include "common/namenode_info.h"
-#include "ClientNamenodeProtocol.pb.h"
-#include "ClientNamenodeProtocol.hrpc.inl"
 
 #include <memory>
 #include <string>
+
+#include "ClientNamenodeProtocol.hrpc.inl"
 
 namespace hdfs {
 

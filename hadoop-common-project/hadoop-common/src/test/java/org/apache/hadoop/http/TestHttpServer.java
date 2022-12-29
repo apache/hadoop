@@ -29,7 +29,6 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.test.Whitebox;
 
 import org.assertj.core.api.Assertions;
 import org.eclipse.jetty.server.ServerConnector;
@@ -663,8 +662,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServer2 server = createServer(host, port);
     try {
       // not bound, ephemeral should return requested port (0 for ephemeral)
-      List<?> listeners = (List<?>) Whitebox.getInternalState(server,
-          "listeners");
+      List<ServerConnector> listeners = server.getListeners();
       ServerConnector listener = (ServerConnector)listeners.get(0);
 
       assertEquals(port, listener.getPort());
@@ -740,10 +738,19 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer2.HTTP_SOCKET_BACKLOG_SIZE_KEY, backlogSize);
     HttpServer2 srv = createServer("test", conf);
-    List<?> listeners = (List<?>) Whitebox.getInternalState(srv,
-            "listeners");
+    List<ServerConnector> listeners = srv.getListeners();
     ServerConnector listener = (ServerConnector)listeners.get(0);
     assertEquals(backlogSize, listener.getAcceptQueueSize());
+  }
+
+  @Test
+  public void testBacklogSize2() throws Exception
+  {
+    Configuration conf = new Configuration();
+    HttpServer2 srv = createServer("test", conf);
+    List<ServerConnector> listeners = srv.getListeners();
+    ServerConnector listener = (ServerConnector)listeners.get(0);
+    assertEquals(500, listener.getAcceptQueueSize());
   }
 
   @Test

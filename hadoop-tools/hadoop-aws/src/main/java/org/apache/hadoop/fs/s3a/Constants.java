@@ -140,6 +140,7 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
+  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
@@ -211,6 +212,8 @@ public final class Constants {
   public static final String PROXY_PASSWORD = "fs.s3a.proxy.password";
   public static final String PROXY_DOMAIN = "fs.s3a.proxy.domain";
   public static final String PROXY_WORKSTATION = "fs.s3a.proxy.workstation";
+  /** Is the proxy secured(proxyProtocol = HTTPS)? */
+  public static final String PROXY_SECURED = "fs.s3a.proxy.ssl.enabled";
 
   /**
    * Number of times the AWS client library should retry errors before
@@ -248,12 +251,12 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // seconds until we give up trying to establish a connection to s3
+  // milliseconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
-  // seconds until we give up on a connection to s3
+  // milliseconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
@@ -732,6 +735,7 @@ public final class Constants {
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
+  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1203,4 +1207,52 @@ public final class Constants {
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
   public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Maximum number of range reads a single input stream can have
+   * active (downloading, or queued) to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS}
+   */
+  public static final String AWS_S3_VECTOR_ACTIVE_RANGE_READS =
+          "fs.s3a.vectored.active.ranged.reads";
+
+  /**
+   * Limit of queued range data download operations during vectored
+   * read. Value: {@value}
+   */
+  public static final int DEFAULT_AWS_S3_VECTOR_ACTIVE_RANGE_READS = 4;
+
+  /**
+   * Prefix of auth classes in AWS SDK V1.
+   */
+  public static final String AWS_AUTH_CLASS_PREFIX = "com.amazonaws.auth";
+
+  /**
+   * Controls whether the prefetching input stream is enabled.
+   */
+  public static final String PREFETCH_ENABLED_KEY = "fs.s3a.prefetch.enabled";
+
+  /**
+   * Default option as to whether the prefetching input stream is enabled.
+   */
+  public static final boolean  PREFETCH_ENABLED_DEFAULT = false;
+
+  // If the default values are used, each file opened for reading will consume
+  // 64 MB of heap space (8 blocks x 8 MB each).
+
+  /**
+   * The size of a single prefetched block in number of bytes.
+   */
+  public static final String PREFETCH_BLOCK_SIZE_KEY = "fs.s3a.prefetch.block.size";
+  public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 8 * 1024 * 1024;
+
+  /**
+   * Maximum number of blocks prefetched at any given time.
+   */
+  public static final String PREFETCH_BLOCK_COUNT_KEY = "fs.s3a.prefetch.block.count";
+  public static final int PREFETCH_BLOCK_DEFAULT_COUNT = 8;
 }
