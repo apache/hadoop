@@ -37,7 +37,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         bucket = name.getHost();
         LOG.info("== bucket:" + bucket);
 
-        uri = java.net.URI.create(name.getScheme() + "://" + name.getAuthority());
+        uri = URI.create(name.getScheme() + "://" + name.getAuthority());
         LOG.info("== uri:" + uri);
 
         username = UserGroupInformation.getCurrentUser().getShortUserName();
