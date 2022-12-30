@@ -17,7 +17,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-class QiniuKodoClient {
+public class QiniuKodoClient {
 
     // 仅有一个 bucket
     private String bucket;
@@ -29,7 +29,7 @@ class QiniuKodoClient {
     private UploadManager uploadManager;
     private BucketManager bucketManager;
 
-    QiniuKodoClient(Auth auth, Configuration configuration, String bucket) {
+    public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) {
         this.client = new Client(configuration);
         this.auth = auth;
         this.uploadManager = new UploadManager(configuration);
@@ -37,7 +37,8 @@ class QiniuKodoClient {
         this.bucket = bucket;
     }
 
-    QiniuKodoOutputStream create(String key, int bufferSize, boolean overwrite) throws IOException {
+
+    public QiniuKodoOutputStream create(String key, int bufferSize, boolean overwrite) throws IOException {
         StringMap policy = new StringMap();
         policy.put("insertOnly", overwrite ? "0" : "1");
         String token = auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
@@ -76,7 +77,7 @@ class QiniuKodoClient {
         }
     }
 
-    List<FileInfo> listStatus(String key, boolean withDelimiter) throws IOException {
+    public List<FileInfo> listStatus(String key, boolean withDelimiter) throws IOException {
         List<FileInfo> retFiles = new ArrayList<>();
         String marker = null;
         FileListing fileListing = null;
@@ -156,52 +157,55 @@ class QiniuKodoClient {
         return throwExceptionWhileResponseNotSuccess(response);
     }
 
-    boolean deleteKey(String key) throws IOException {
+    /**
+     * 仅删除一层 key
+     */
+    public boolean deleteKey(String key) throws IOException {
         Response response = bucketManager.delete(bucket, key);
         return throwExceptionWhileResponseNotSuccess(response);
     }
 
-    boolean deleteKeys(String prefix) throws IOException {
+    /**
+     * 删除该前缀的所有文件夹
+     */
+    public boolean deleteKeys(String prefix) throws IOException {
         boolean hasPrefixObject = false;
-        String marker = null;
-        FileListing fileListing = null;
-        BucketManager.BatchOperations operations = null;
-        while (true) {
-            fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
-            if (fileListing.isEOF()) {
-                break;
-            }
 
+        FileListing fileListing;
+
+        // 为分页遍历提供下一次的遍历标志
+        String marker = null;
+
+        do {
+            fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
             if (fileListing.items != null) {
-                operations = new BucketManager.BatchOperations();
-                for (FileInfo file : fileListing.items) {
-                    // oldPrefix 最后处理
-                    if (file == null || file.key.equals(prefix)) {
+                BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
+                for (FileInfo file: fileListing.items) {
+                    if (file.key.equals(prefix)) {
+                        // 标记一下 prefix 本身留到最后再去删除
                         hasPrefixObject = true;
                         continue;
                     }
                     operations.addDeleteOp(bucket, file.key);
                 }
-
                 Response response = bucketManager.batch(operations);
-                if (!throwExceptionWhileResponseNotSuccess(response)) {
-                    return false;
-                }
+                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
-
             marker = fileListing.marker;
-        }
+        } while(!fileListing.isEOF());
 
-        if (!hasPrefixObject) {
-            return true;
+        if (hasPrefixObject) {
+            Response response = bucketManager.delete(bucket, prefix);
+            return throwExceptionWhileResponseNotSuccess(response);
         }
-
-        // 处理 oldPrefix
-        Response response = bucketManager.delete(bucket, prefix);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return true;
     }
 
-    boolean mkdir(String key) throws IOException {
+    /**
+     * 使用对象存储模拟文件系统，文件夹只是作为一个空白文件，仅用于表示文件夹的存在性与元数据的存储
+     * 该 mkdir 仅创建一层空文件代表文件夹
+     */
+    public boolean mkdir(String key) throws IOException {
         byte[] content = new byte[]{};
         String token = auth.uploadToken(bucket, null, 3 * 3600L, null);
         Response response = uploadManager.put(content, key, token);
@@ -211,7 +215,7 @@ class QiniuKodoClient {
     /**
      * 不存在不抛异常，返回为空，只有在其他错误时抛异常
      */
-    FileInfo getFileStatus(String key) throws IOException {
+    public FileInfo getFileStatus(String key) throws IOException {
         try {
             FileInfo fileInfo = bucketManager.stat(bucket, key);
             if (fileInfo != null) {
@@ -226,7 +230,7 @@ class QiniuKodoClient {
         }
     }
 
-    boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {
+    private boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {
         if (response == null) {
             return false;
         }
