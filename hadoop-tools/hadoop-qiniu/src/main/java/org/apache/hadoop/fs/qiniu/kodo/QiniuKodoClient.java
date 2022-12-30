@@ -20,14 +20,14 @@ import java.util.List;
 public class QiniuKodoClient {
 
     // 仅有一个 bucket
-    private String bucket;
+    private final String bucket;
 
-    private Auth auth;
+    private final Auth auth;
 
-    private Client client;
+    private final Client client;
 
-    private UploadManager uploadManager;
-    private BucketManager bucketManager;
+    private final UploadManager uploadManager;
+    private final BucketManager bucketManager;
 
     public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) {
         this.client = new Client(configuration);
@@ -77,22 +77,27 @@ public class QiniuKodoClient {
         }
     }
 
-    public List<FileInfo> listStatus(String key, boolean withDelimiter) throws IOException {
+    /**
+     * 若 withDelimiter 为 true, 则列举出分级的目录效果
+     * 否则，将呈现出所有前缀为key的对象
+     */
+    public List<FileInfo> listStatus(String key, boolean useDirectory) throws IOException {
         List<FileInfo> retFiles = new ArrayList<>();
-        String marker = null;
-        FileListing fileListing = null;
-        while (true) {
-            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, withDelimiter ? QiniuKodoUtils.PATH_SEPARATOR : "");
 
+        String marker = null;
+        FileListing fileListing;
+        do {
+            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+
+            // 列举出除自身外的所有对象
             if (fileListing.items != null) {
                 for (FileInfo file : fileListing.items) {
-                    if (file == null || key.equals(file.key)) {
-                        continue;
-                    }
+                    if (key.equals(file.key)) continue;
                     retFiles.add(file);
                 }
             }
 
+            // 列举出目录
             if (fileListing.commonPrefixes != null) {
                 for (String dirPath : fileListing.commonPrefixes) {
                     FileInfo dir = new FileInfo();
@@ -100,13 +105,8 @@ public class QiniuKodoClient {
                     retFiles.add(dir);
                 }
             }
-
-            if (fileListing.isEOF()) {
-                break;
-            }
-
             marker = fileListing.marker;
-        }
+        } while (!fileListing.isEOF());
 
         return retFiles;
     }
@@ -116,45 +116,38 @@ public class QiniuKodoClient {
         return throwExceptionWhileResponseNotSuccess(response);
     }
 
-    boolean renameKeys(String oldPrefix, String newKeyPrefix) throws IOException {
+    boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
         boolean hasPrefixObject = false;
-        String marker = null;
-        FileListing fileListing = null;
-        BucketManager.BatchOperations operations = null;
-        while (true) {
-            fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
-            if (fileListing.isEOF()) {
-                break;
-            }
 
+        FileListing fileListing;
+
+        // 为分页遍历提供下一次的遍历标志
+        String marker = null;
+
+        do {
+            fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
-                operations = new BucketManager.BatchOperations();
-                for (FileInfo file : fileListing.items) {
-                    // oldPrefix 最后处理
-                    if (file == null || file.key.equals(oldPrefix)) {
+                BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
+                for (FileInfo file: fileListing.items) {
+                    if (file.key.equals(oldPrefix)) {
+                        // 标记一下 prefix 本身留到最后再去修改
                         hasPrefixObject = true;
                         continue;
                     }
-                    String destKey = file.key.replaceFirst(oldPrefix, newKeyPrefix);
+                    String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
-
                 Response response = bucketManager.batch(operations);
-                if (!throwExceptionWhileResponseNotSuccess(response)) {
-                    return false;
-                }
+                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
-
             marker = fileListing.marker;
-        }
+        } while(!fileListing.isEOF());
 
-        if (!hasPrefixObject) {
-            return true;
+        if (hasPrefixObject) {
+            Response response = bucketManager.rename(bucket, oldPrefix, newPrefix);
+            return throwExceptionWhileResponseNotSuccess(response);
         }
-
-        // 处理 oldPrefix
-        Response response = bucketManager.rename(bucket, oldPrefix, newKeyPrefix);
-        return throwExceptionWhileResponseNotSuccess(response);
+        return true;
     }
 
     /**
