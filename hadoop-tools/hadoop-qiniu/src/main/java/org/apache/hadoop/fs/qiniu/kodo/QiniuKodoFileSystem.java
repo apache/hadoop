@@ -152,13 +152,13 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (file.isDirectory()) {
             return deleteDir(key, recursive);
         } else {
-            return deleteFile(key, recursive);
+            return deleteFile(key);
         }
     }
 
-    private boolean deleteFile(String fileKey, boolean recursive) throws IOException {
+    private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
-        LOG.info("== delete, fileKey:" + fileKey + " recursive:" + recursive);
+        LOG.info("== delete, fileKey:" + fileKey);
 
         return kodoClient.deleteKey(fileKey);
     }
@@ -178,7 +178,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     }
 
     @Override
-    public FileStatus[] listStatus(Path path) throws FileNotFoundException, IOException {
+    public FileStatus[] listStatus(Path path) throws IOException {
         LOG.info("== listStatus, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
@@ -210,7 +210,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
         while (path != null) {
             LOG.info("== mkdirs, path:" + path + " permission:" + permission);
-            mkdir(path, permission);
+            mkdir(path);
             path = path.getParent();
         }
         return true;
@@ -219,8 +219,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     /**
      * 仅仅只创建当前路径文件夹
      */
-    private boolean mkdir(Path path, FsPermission permission) throws IOException {
-        LOG.info("== mkdir, path:" + path + " permission:" + permission);
+    private boolean mkdir(Path path) throws IOException {
+        LOG.info("== mkdir, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.info("== mkdir 01, key:" + key);
@@ -244,7 +244,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         // 3. 创建路径
-        return kodoClient.mkdir(key);
+        return kodoClient.makeEmptyObject(key);
     }
 
     /**
@@ -256,34 +256,24 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         // 未处理文件总大小
 
-        // 1. 可能是文件或路径
+        // 1. key 可能是实际文件或文件夹, 也可能是中间路径
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.info("== getFileStatus 01, key:" + key);
 
+        // 先尝试查找 key
         FileInfo file = kodoClient.getFileStatus(key);
-        if (file != null) {
-            return fileInfoToFileStatus(file);
-        }
 
-        if (QiniuKodoUtils.isKeyDir(key)) {
-            throw new FileNotFoundException("can't find file:" + path);
-        }
+        // 能查找到, 直接返回文件信息
+        if (file != null) return fileInfoToFileStatus(file);
 
         // 2. 非路径 key，转路径
         key = QiniuKodoUtils.keyToDirKey(key);
         LOG.info("== getFileStatus 02, key:" + key);
 
         file = kodoClient.getFileStatus(key);
-        if (file != null) {
-            return fileInfoToFileStatus(file);
-        }
+        if (file != null) return fileInfoToFileStatus(file);
 
         throw new FileNotFoundException("can't find file:" + path);
-    }
-
-    @Override
-    public long getBlockSize(Path f) throws IOException {
-        return blockSize;
     }
 
     /**

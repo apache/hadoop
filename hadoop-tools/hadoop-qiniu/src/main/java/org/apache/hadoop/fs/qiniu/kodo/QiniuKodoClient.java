@@ -196,9 +196,9 @@ public class QiniuKodoClient {
 
     /**
      * 使用对象存储模拟文件系统，文件夹只是作为一个空白文件，仅用于表示文件夹的存在性与元数据的存储
-     * 该 mkdir 仅创建一层空文件代表文件夹
+     * 该 makeEmptyObject 仅创建一层空文件
      */
-    public boolean mkdir(String key) throws IOException {
+    public boolean makeEmptyObject(String key) throws IOException {
         byte[] content = new byte[]{};
         String token = auth.uploadToken(bucket, null, 3 * 3600L, null);
         Response response = uploadManager.put(content, key, token);
