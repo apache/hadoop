@@ -57,7 +57,11 @@ class QiniuKodoClient {
     }
 
     QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
-        String publicUrl = "/" + key;
+        String[] domains = domains();
+        if (domains == null || domains.length == 0) {
+            throw new IOException("can't get bucket domain");
+        }
+        String publicUrl = domains[0] + "/" + key;
         String url = auth.privateDownloadUrl(publicUrl, 7 * 24 * 3600);
         return new QiniuKodoInputStream(this, url, bufferSize);
     }
@@ -224,6 +228,10 @@ class QiniuKodoClient {
             }
             throw e;
         }
+    }
+
+    String[] domains() throws IOException {
+        return bucketManager.domainList(bucket);
     }
 
     boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {

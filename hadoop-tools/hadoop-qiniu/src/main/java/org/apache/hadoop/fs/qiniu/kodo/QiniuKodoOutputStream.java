@@ -1,8 +1,6 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
-import com.qiniu.common.QiniuException;
 import com.qiniu.http.Response;
-import com.qiniu.storage.UploadManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

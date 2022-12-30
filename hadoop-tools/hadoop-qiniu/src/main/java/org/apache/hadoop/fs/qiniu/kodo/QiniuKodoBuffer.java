@@ -1,18 +1,27 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.EOFException;
 import java.io.IOException;
 
 class QiniuKodoBuffer {
+
+    private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoBuffer.class);
 
     private volatile boolean isClosed;
 
     private final byte[] bytes;
 
     private int readOffsetFull;
+
+    // 已读的 byte 偏移量
     private int readOffset;
 
     private int writeOffsetFull;
+
+    // 已写的 byte 偏移量
     private int writeOffset;
 
     QiniuKodoBuffer(int bufferSize) {
@@ -21,10 +30,10 @@ class QiniuKodoBuffer {
         }
         this.isClosed = false;
         this.bytes = new byte[bufferSize];
-        this.readOffset = 0;
-        this.readOffsetFull = 0;
-        this.writeOffset = 0;
-        this.writeOffsetFull = 0;
+        this.readOffset = -1;
+        this.readOffsetFull = -1;
+        this.writeOffset = -1;
+        this.writeOffsetFull = -1;
     }
 
     // 读一个 byte, 0~255
@@ -37,12 +46,16 @@ class QiniuKodoBuffer {
                     if (this.readOffset >= bytes.length) {
                         this.readOffset = 0;
                     }
+                    LOG.info("buff read:" + this.bytes[this.readOffset]);
                     return this.bytes[this.readOffset];
                 }
 
                 if (isClosed) {
+                    LOG.info("buff read: but close");
                     return -1;
                 }
+
+                LOG.info("buff read: wait");
             }
 
             // 无数据可读，等待
@@ -59,6 +72,7 @@ class QiniuKodoBuffer {
         for (; ; ) {
             synchronized (this) {
                 if (isClosed) {
+                    LOG.info("buff write: but close");
                     throw new IOException("qiniu buffer is closed:" + this);
                 }
 
@@ -68,8 +82,11 @@ class QiniuKodoBuffer {
                     if (this.writeOffset >= bytes.length) {
                         this.writeOffset = 0;
                     }
+                    LOG.info("buff write:" + b);
                     this.bytes[this.writeOffset] = (byte) (b & 0xFF);
                 }
+
+                LOG.info("buff write: wait");
             }
 
             // 无地方可写，等待
