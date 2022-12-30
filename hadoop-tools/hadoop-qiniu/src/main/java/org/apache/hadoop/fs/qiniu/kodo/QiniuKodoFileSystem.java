@@ -226,6 +226,7 @@ public class QiniuKodoFileSystem extends FileSystem {
      * 仅仅只创建当前路径文件夹
      */
     private boolean mkdir(Path path) throws IOException {
+        if (path.isRoot()) return true;
         LOG.info("== mkdir, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);

@@ -35,9 +35,9 @@ public class QiniuKodoFileSystemTest {
     }
 
     @Test
-    public void testMKDir() throws Exception {
-        boolean success = fs.mkdirs(new Path("01/02/03/04/05"), null);
-        assertTrue(success);
+    public void testMkdir() throws Exception {
+        assertTrue(fs.mkdirs(new Path("01/02/03/04/05")));
+        assertTrue(fs.mkdirs(new Path(fs.getWorkingDirectory(), "01/02/03/04/05")));
     }
 
     @Test
