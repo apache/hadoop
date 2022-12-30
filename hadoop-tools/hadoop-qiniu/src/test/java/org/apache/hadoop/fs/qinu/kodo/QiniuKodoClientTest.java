@@ -5,11 +5,14 @@ import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.qiniu.kodo.Constants;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoClient;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoInputStream;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoOutputStream;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 public class QiniuKodoClientTest {
     QiniuKodoClient client;
@@ -26,6 +29,24 @@ public class QiniuKodoClientTest {
         Auth auth = Auth.create(accessKey, secretKey);
         String bucket = URI.create(conf.get("fs.contract.test.fs.qiniu")).getHost();
         client = new QiniuKodoClient(auth, qiniuConfig, bucket);
+    }
+
+    @Test
+    public void testCreate() throws IOException {
+        QiniuKodoOutputStream os = client.create("abcd", 1024, true);
+        os.write("HelloWorld".getBytes(StandardCharsets.UTF_8));
+        os.close();
+    }
+
+    @Test
+    public void testOpen() throws IOException {
+        QiniuKodoInputStream is = client.open("abcd", 1024);
+        int ch;
+        do{
+            ch = is.read();
+            System.out.print(ch+" ");
+        }while (ch != -1);
+        is.close();
     }
 
     @Test

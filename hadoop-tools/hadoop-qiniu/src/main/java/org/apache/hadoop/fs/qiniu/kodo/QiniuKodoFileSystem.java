@@ -30,10 +30,11 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private QiniuKodoClient kodoClient;
 
+    private Configuration conf;
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
-
+        this.conf = conf;
         bucket = name.getHost();
         LOG.info("== bucket:" + bucket);
 
@@ -68,6 +69,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         Auth auth = Auth.create(accessKey, secretKey);
         kodoClient = new QiniuKodoClient(auth, qiniuConfig, bucket);
 
+    }
+
+    @Override
+    public Configuration getConf() {
+        return this.conf;
     }
 
     @Override
