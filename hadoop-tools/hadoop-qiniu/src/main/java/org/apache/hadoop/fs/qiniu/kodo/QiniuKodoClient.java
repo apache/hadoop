@@ -11,6 +11,7 @@ import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
+import org.apache.http.impl.io.EmptyInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +41,7 @@ public class QiniuKodoClient {
 
     public QiniuKodoOutputStream create(String key, int bufferSize, boolean overwrite) throws IOException {
         StringMap policy = new StringMap();
-        policy.put("insertOnly", overwrite ? "0" : "1");
+//        policy.put("insertOnly", overwrite ? "0" : "1");
         String token = auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
         return new QiniuKodoOutputStream(this, key, token, bufferSize);
     }
@@ -56,8 +57,19 @@ public class QiniuKodoClient {
             }
         }
     }
+    Response upload(byte[] bs, String key, String token) throws IOException {
+        try {
+            return uploadManager.put(bs, key, token);
+        } catch (QiniuException e) {
+            if (e.response != null) {
+                return e.response;
+            } else {
+                throw e;
+            }
+        }
+    }
 
-    QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
+    public QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
         String publicUrl = "/" + key;
         String url = auth.privateDownloadUrl(publicUrl, 7 * 24 * 3600);
         return new QiniuKodoInputStream(this, url, bufferSize);
@@ -128,15 +140,18 @@ public class QiniuKodoClient {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
+                boolean shouldExecBatch = false;
                 for (FileInfo file: fileListing.items) {
                     if (file.key.equals(oldPrefix)) {
                         // 标记一下 prefix 本身留到最后再去修改
                         hasPrefixObject = true;
                         continue;
                     }
+                    shouldExecBatch = true;
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
+                if (!shouldExecBatch) continue;
                 Response response = bucketManager.batch(operations);
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
@@ -173,14 +188,17 @@ public class QiniuKodoClient {
             fileListing = bucketManager.listFilesV2(bucket, prefix, marker, 100, "");
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
+                boolean shouldExecBatch = false;
                 for (FileInfo file: fileListing.items) {
                     if (file.key.equals(prefix)) {
                         // 标记一下 prefix 本身留到最后再去删除
                         hasPrefixObject = true;
                         continue;
                     }
+                    shouldExecBatch = true;
                     operations.addDeleteOp(bucket, file.key);
                 }
+                if (!shouldExecBatch) continue;
                 Response response = bucketManager.batch(operations);
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
