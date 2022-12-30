@@ -484,7 +484,7 @@ public class RouterClientProtocol implements ClientProtocol {
         favoredNodes, addBlockFlags);
 
     if (previous != null) {
-      return rpcClient.invokeSingle(previous, method, LocatedBlock.class);
+      return rpcClient.invokeSingle(previous, method, LocatedBlock.class, src);
     }
 
     final List<RemoteLocation> locations =
@@ -514,7 +514,7 @@ public class RouterClientProtocol implements ClientProtocol {
         numAdditionalNodes, clientName);
 
     if (blk != null) {
-      return rpcClient.invokeSingle(blk, method, LocatedBlock.class);
+      return rpcClient.invokeSingle(blk, method, LocatedBlock.class, src);
     }
 
     final List<RemoteLocation> locations =
@@ -532,7 +532,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {ExtendedBlock.class, long.class, String.class,
             String.class},
         b, fileId, new RemoteParam(), holder);
-    rpcClient.invokeSingle(b, method);
+    rpcClient.invokeSingle(b, method, src);
   }
 
   @Override
@@ -546,7 +546,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new RemoteParam(), clientName, last, fileId);
 
     if (last != null) {
-      return rpcClient.invokeSingle(last, method, Boolean.class);
+      return rpcClient.invokeSingle(last, method, Boolean.class, src);
     }
 
     final List<RemoteLocation> locations =
@@ -563,7 +563,7 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("updateBlockForPipeline",
         new Class<?>[] {ExtendedBlock.class, String.class},
         block, clientName);
-    return rpcClient.invokeSingle(block, method, LocatedBlock.class);
+    return rpcClient.invokeSingle(block, method, LocatedBlock.class, "");
   }
 
   /**
@@ -580,7 +580,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, ExtendedBlock.class, ExtendedBlock.class,
             DatanodeID[].class, String[].class},
         clientName, oldBlock, newBlock, newNodes, newStorageIDs);
-    rpcClient.invokeSingle(oldBlock, method);
+    rpcClient.invokeSingle(oldBlock, method, "");
   }
 
   @Override
@@ -805,7 +805,7 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, List.class}, clientName, null);
     List<FederationNamespaceInfo> nss = getRenewLeaseNSs(namespaces);
     if (nss.size() == 1) {
-      rpcClient.invokeSingle(nss.get(0).getNameserviceId(), method);
+      rpcClient.invokeSingle(nss.get(0).getNameserviceId(), method, "");
     } else {
       rpcClient.invokeConcurrent(nss, method, false, false);
     }
@@ -1811,7 +1811,7 @@ public class RouterClientProtocol implements ClientProtocol {
       RemoteMethod method = new RemoteMethod("reportBadBlocks",
           new Class<?>[] {LocatedBlock[].class},
           new Object[] {bpBlocksArray});
-      rpcClient.invokeSingleBlockPool(bpId, method);
+      rpcClient.invokeSingleBlockPool(bpId, method, "");
     }
   }
 

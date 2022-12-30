@@ -201,7 +201,7 @@ public class TestRouter {
 
     intercept(IOException.class, "Router-0",
         () -> router.getRpcServer().getRPCClient()
-            .invokeSingle("ns0", remoteMethod));
+            .invokeSingle("ns0", remoteMethod, ""));
 
     router.stop();
     router.close();

@@ -81,7 +81,7 @@ public class RouterNamenodeProtocol implements NamenodeProtocol {
           NamenodeProtocol.class, "getBlocks", new Class<?>[]
           {DatanodeInfo.class, long.class, long.class, long.class},
           datanode, size, minBlockSize, hotBlockTimeInterval);
-      return rpcClient.invokeSingle(nsId, method, BlocksWithLocations.class);
+      return rpcClient.invokeSingle(nsId, method, BlocksWithLocations.class, "");
     }
     return null;
   }

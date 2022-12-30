@@ -830,13 +830,14 @@ public class RouterRpcClient {
    *
    * @param block Block used to determine appropriate nameservice.
    * @param method The remote method and parameters to invoke.
+   * @param src file path, pass "" if not have.
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
-  public Object invokeSingle(final ExtendedBlock block, RemoteMethod method)
+  public Object invokeSingle(final ExtendedBlock block, RemoteMethod method, String src)
       throws IOException {
     String bpId = block.getBlockPoolId();
-    return invokeSingleBlockPool(bpId, method);
+    return invokeSingleBlockPool(bpId, method, src);
   }
 
   /**
@@ -848,13 +849,14 @@ public class RouterRpcClient {
    *
    * @param bpId Block pool identifier.
    * @param method The remote method and parameters to invoke.
+   * @param src file path, pass "" if not have.
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
-  public Object invokeSingleBlockPool(final String bpId, RemoteMethod method)
+  public Object invokeSingleBlockPool(final String bpId, RemoteMethod method, String src)
       throws IOException {
     String nsId = getNameserviceForBlockPoolId(bpId);
-    return invokeSingle(nsId, method);
+    return invokeSingle(nsId, method, src);
   }
 
   /**
@@ -865,10 +867,11 @@ public class RouterRpcClient {
    *
    * @param nsId Target namespace for the method.
    * @param method The remote method and parameters to invoke.
+   * @param src file path, pass "" if not have.
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
-  public Object invokeSingle(final String nsId, RemoteMethod method)
+  public Object invokeSingle(final String nsId, RemoteMethod method, String src)
       throws IOException {
     UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
     RouterRpcFairnessPolicyController controller = getRouterRpcFairnessPolicyController();
@@ -876,7 +879,12 @@ public class RouterRpcClient {
     try {
       boolean isObserverRead = isObserverReadEligible(nsId, method.getMethod());
       List<? extends FederationNamenodeContext> nns = getOrderedNamenodes(nsId, isObserverRead);
-      RemoteLocationContext loc = new RemoteLocation(nsId, "/", "/");
+      RemoteLocationContext loc;
+      if (org.apache.commons.lang3.StringUtils.isBlank(src)) {
+        loc = new RemoteLocation(nsId, "/", "/");
+      } else {
+        loc = new RemoteLocation(nsId, src, "/");
+      }
       Class<?> proto = method.getProtocol();
       Method m = method.getMethod();
       Object[] params = method.getParams(loc);
@@ -896,13 +904,14 @@ public class RouterRpcClient {
    * @param nsId Target namespace for the method.
    * @param method The remote method and parameters to invoke.
    * @param clazz Class for the return type.
+   * @param src file path, pass "" if not have.
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
   public <T> T invokeSingle(final String nsId, RemoteMethod method,
-      Class<T> clazz) throws IOException {
+      Class<T> clazz, String src) throws IOException {
     @SuppressWarnings("unchecked")
-    T ret = (T)invokeSingle(nsId, method);
+    T ret = (T)invokeSingle(nsId, method, src);
     return ret;
   }
 
@@ -916,14 +925,15 @@ public class RouterRpcClient {
    * @param extendedBlock Target extendedBlock for the method.
    * @param method The remote method and parameters to invoke.
    * @param clazz Class for the return type.
+   * @param src file path
    * @return The result of invoking the method.
    * @throws IOException If the invoke generated an error.
    */
   public <T> T invokeSingle(final ExtendedBlock extendedBlock,
-      RemoteMethod method, Class<T> clazz) throws IOException {
+                            RemoteMethod method, Class<T> clazz, String src) throws IOException {
     String nsId = getNameserviceForBlockPoolId(extendedBlock.getBlockPoolId());
     @SuppressWarnings("unchecked")
-    T ret = (T)invokeSingle(nsId, method);
+    T ret = (T)invokeSingle(nsId, method, src);
     return ret;
   }
 

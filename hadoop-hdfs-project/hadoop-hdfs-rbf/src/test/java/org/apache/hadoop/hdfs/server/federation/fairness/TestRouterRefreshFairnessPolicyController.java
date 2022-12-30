@@ -220,7 +220,7 @@ public class TestRouterRefreshFairnessPolicyController {
     for (int i = 0; i < nThreads; i++) {
       Thread threadAcquirePermit = new Thread(() -> {
         try {
-          client.invokeSingle(namespace, dummyMethod);
+          client.invokeSingle(namespace, dummyMethod, "");
         } catch (IOException e) {
           e.printStackTrace();
         }
