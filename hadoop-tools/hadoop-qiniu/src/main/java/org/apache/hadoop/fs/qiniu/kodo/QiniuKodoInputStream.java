@@ -6,7 +6,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-class QiniuKodoInputStream extends FSInputStream {
+public class QiniuKodoInputStream extends FSInputStream {
 
     private volatile boolean closed;
 

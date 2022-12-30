@@ -22,10 +22,8 @@ public class QiniuKodo extends DelegateToFileSystem {
 
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Qiniu{");
-        sb.append("URI =").append(fsImpl.getUri());
-        sb.append("; fsImpl=").append(fsImpl);
-        sb.append('}');
-        return sb.toString();
+        return "Qiniu{" + "URI =" + fsImpl.getUri() +
+                "; fsImpl=" + fsImpl +
+                '}';
     }
 }
