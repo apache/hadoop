@@ -6,12 +6,15 @@ import com.qiniu.http.Client;
 import com.qiniu.http.Response;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.storage.Configuration;
+import com.qiniu.storage.DownloadUrl;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
 import org.apache.http.impl.io.EmptyInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class QiniuKodoClient {
+    private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
 
     // 仅有一个 bucket
     private final String bucket;
@@ -29,13 +33,16 @@ public class QiniuKodoClient {
 
     private final UploadManager uploadManager;
     private final BucketManager bucketManager;
-
-    public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) {
+    private final String domain;
+    private final Configuration configuration;
+    public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) throws QiniuException {
         this.client = new Client(configuration);
         this.auth = auth;
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
         this.bucket = bucket;
+        this.domain = bucketManager.domainList(bucket)[0];
+        this.configuration = configuration;
     }
 
 
@@ -70,8 +77,8 @@ public class QiniuKodoClient {
     }
 
     public QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
-        String publicUrl = "/" + key;
-        String url = auth.privateDownloadUrl(publicUrl, 7 * 24 * 3600);
+        DownloadUrl downloadUrl = new DownloadUrl(domain, false, key);
+        String url = auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
         return new QiniuKodoInputStream(this, url, bufferSize);
     }
 
@@ -149,6 +156,7 @@ public class QiniuKodoClient {
                     }
                     shouldExecBatch = true;
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
+                    LOG.info(" == rename old: {} new: {}", file.key, destKey);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
                 if (!shouldExecBatch) continue;

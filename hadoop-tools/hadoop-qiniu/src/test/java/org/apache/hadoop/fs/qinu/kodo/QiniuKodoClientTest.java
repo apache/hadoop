@@ -1,5 +1,6 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
+import com.qiniu.common.QiniuException;
 import com.qiniu.storage.Region;
 import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
@@ -17,7 +18,7 @@ import java.nio.charset.StandardCharsets;
 public class QiniuKodoClientTest {
     QiniuKodoClient client;
     @Before
-    public void setup() {
+    public void setup() throws QiniuException {
         Configuration conf = new Configuration();
         conf.addResource("contract-test-options.xml");
 
@@ -42,10 +43,9 @@ public class QiniuKodoClientTest {
     public void testOpen() throws IOException {
         QiniuKodoInputStream is = client.open("abcd", 1024);
         int ch;
-        do{
-            ch = is.read();
-            System.out.print(ch+" ");
-        }while (ch != -1);
+        while((ch = is.read()) != -1) {
+            System.out.print(ch + " ");
+        }
         is.close();
     }
 

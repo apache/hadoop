@@ -1,9 +1,7 @@
 package org.apache.hadoop.fs.qinu.kodo;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.qiniu.kodo.Constants;
@@ -13,6 +11,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
@@ -54,5 +53,13 @@ public class QiniuKodoFileSystemTest {
         }
         assertNotNull(fileStatusList);
         assertTrue(fileStatusList.length > 0);
+    }
+
+    @Test
+    public void testRename() throws IOException {
+        FSDataOutputStream is = fs.create(new Path("/abc"));
+        is.write(12);
+        is.close();
+        fs.rename(new Path("/abc"), new Path("/abc_new"));
     }
 }

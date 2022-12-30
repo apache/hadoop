@@ -124,6 +124,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             return false;
         }
 
+
         // 判断是否是文件
         FileStatus file = getFileStatus(src);
         if (file == null) {
