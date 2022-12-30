@@ -40,6 +40,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         uri = URI.create(name.getScheme() + "://" + name.getAuthority());
         LOG.info("== uri:" + uri);
 
+        // 构造工作目录路径，工作目录路径为用户使用相对目录时所相对的路径
         username = UserGroupInformation.getCurrentUser().getShortUserName();
         LOG.info("== username:" + username);
 
@@ -74,6 +75,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         return uri;
     }
 
+    /**
+     * 打开一个文件，返回一个可以被读取的输入流
+     */
     @Override
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
         LOG.info("== open, path:" + path);
@@ -84,6 +88,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new FSDataInputStream(kodoClient.open(key, bufferSize));
     }
 
+    /**
+     * 创建一个文件，返回一个可以被写入的输出流
+     */
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
         LOG.info("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
@@ -240,6 +247,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         return kodoClient.mkdir(key);
     }
 
+    /**
+     * 获取一个路径的文件详情
+     */
     @Override
     public FileStatus getFileStatus(Path path) throws IOException {
         LOG.info("== getFileStatus, path:" + path);
@@ -276,16 +286,29 @@ public class QiniuKodoFileSystem extends FileSystem {
         return blockSize;
     }
 
+    /**
+     * 七牛SDK的文件信息转换为 hadoop fs 的文件信息
+     */
     private FileStatus fileInfoToFileStatus(FileInfo file) {
-        if (file == null) {
-            return null;
-        }
+        if (file == null) return null;
 
         LOG.info("== file conv, key:" + file.key);
-        long putTime = file.putTime / 10000;
-        return new FileStatus(file.fsize, QiniuKodoUtils.isKeyDir(file.key),
-                blockSize, Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE,
-                putTime, putTime, null, null, null,
-                null, QiniuKodoUtils.keyToPath(uri, workingDir, file.key));
+        // 七牛的文件上传时间记录的单位为100ns
+        // hadoop的文件上传时间记录的单位为1ms即1000ns
+        long putTime = file.putTime / 10;
+
+        return new FileStatus(
+                file.fsize, // 文件大小
+                QiniuKodoUtils.isKeyDir(file.key),
+                blockSize,
+                Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE,
+                putTime, // modification time
+                putTime, // access time
+                null,   // permission
+                username,   // owner
+                username,   // group
+                null,   // symlink
+                QiniuKodoUtils.keyToPath(uri, workingDir, file.key) // 将 key 还原成 hadoop 绝对路径
+        );
     }
 }
