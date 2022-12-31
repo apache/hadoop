@@ -1248,7 +1248,7 @@ public final class Constants {
    * The size of a single prefetched block in number of bytes.
    */
   public static final String PREFETCH_BLOCK_SIZE_KEY = "fs.s3a.prefetch.block.size";
-  public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 2 * 1024 * 1024;
+  public static final int PREFETCH_BLOCK_DEFAULT_SIZE = 8 * 1024 * 1024;
 
   /**
    * Maximum number of blocks prefetched at any given time.

@@ -306,28 +306,23 @@ public abstract class CachingBlockManager extends BlockManager {
         readBlock(data, false, BufferData.State.BLANK);
       }
       catch(Exception e){
-        String message = String.format("error during readBlock(%s) for read", data.getBlockNumber());
+        String message = String.format("error reading block(%s)", data.getBlockNumber());
         LOG.error(message, e);
+        throw e;
       }
     }
   }
 
-  private void prefetch(BufferData data, Instant taskQueuedStartTime) {
+  private void prefetch(BufferData data, Instant taskQueuedStartTime) throws IOException {
     synchronized (data) {
       prefetchingStatistics.executorAcquired(
           Duration.between(taskQueuedStartTime, Instant.now()));
-      try {
-        readBlock(
-            data,
-            true,
-            BufferData.State.PREFETCHING,
-            BufferData.State.CACHING);
-      }
-      catch (Exception e) {
-        String message = String.format("error during readBlock(%s) for prefetch", data.getBlockNumber());
-        LOG.info(message, e.getMessage());
-        LOG.debug(message, e);
-      }
+
+      readBlock(
+          data,
+          true,
+          BufferData.State.PREFETCHING,
+          BufferData.State.CACHING);
     }
   }
 
@@ -379,7 +374,6 @@ public abstract class CachingBlockManager extends BlockManager {
           tracker.failed();
         }
 
-
         numReadErrors.incrementAndGet();
         data.setDone();
         throw e;
@@ -414,7 +408,13 @@ public abstract class CachingBlockManager extends BlockManager {
 
     @Override
     public Void get() {
-      blockManager.prefetch(data, taskQueuedStartTime);
+      try{
+        blockManager.prefetch(data, taskQueuedStartTime);
+      } catch (Exception e) {
+        String message = String.format("error prefetching block(%s)", data.getBlockNumber());
+        LOG.info(message, e.getMessage());
+        LOG.debug(message, e);
+      }
       return null;
     }
   }

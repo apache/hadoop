@@ -331,8 +331,7 @@ public class SingleFilePerBlockCache implements BlockCache {
       Files.deleteIfExists(cacheFilePath);
       return fileSize < freeSpace;
     } catch (IOException e) {
-      LOG.info("isCacheSpaceAvailable {}", e.getMessage());
-      LOG.debug("isCacheAvailable", e);
+      LOG.error("isCacheSpaceAvailable", e);
       return false;
     }
   }
