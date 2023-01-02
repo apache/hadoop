@@ -532,7 +532,7 @@ public class UserGroupInformation {
   /** This method checks for a successful Kerberos login
     * and returns true by default if it is not using Kerberos.
     *
-    * @return true on successful login 
+    * @return true on successful login
    */
   public boolean isLoginSuccess() {
     LoginContext login = user.getLogin();
