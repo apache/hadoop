@@ -530,7 +530,9 @@ public class UserGroupInformation {
   }
 
   /** This method checks for a successful Kerberos login
-      and returns true by default if it is not using Kerberos.
+    * and returns true by default if it is not using Kerberos.
+    *
+    * @return true on successful login 
    */
   public boolean isLoginSuccess() {
     LoginContext login = user.getLogin();
@@ -1317,8 +1319,9 @@ public class UserGroupInformation {
     reloginFromTicketCache(false);
   }
 
-  private void reloginFromTicketCache(boolean ignoreLastLoginTime) throws IOException {
-     if (!shouldRelogin() || !isFromTicket()) {
+  private void reloginFromTicketCache(boolean ignoreLastLoginTime)
+      throws IOException {
+    if (!shouldRelogin() || !isFromTicket()) {
       return;
     }
     HadoopLoginContext login = getLogin();
