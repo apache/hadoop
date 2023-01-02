@@ -424,7 +424,8 @@ public class AbfsClient implements Closeable {
    * @return object of {@link AbfsRestOperation} which contain all the information
    * about the communication with the server. The information is in
    * {@link AbfsRestOperation#getResult()}
-   * @throws IOException
+   * @throws IOException throws back the exception it receives from the
+   * {@link AbfsRestOperation#execute(TracingContext)} method call.
    * */
   public AbfsRestOperation createPath(final String path, final boolean isFile,
       final boolean overwrite, final Permissions permissions,

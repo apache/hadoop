@@ -54,7 +54,8 @@ public class EncryptionAdapter {
    * @param path Path for which encryptionContext and encryptionKeys to be stored
    * in the object
    * @param encryptionContext encryptionContext for the path stored in the backend
-   * @throws IOException
+   * @throws IOException throws back the exception it receives from the
+   * {@link EncryptionAdapter#computeKeys()} method call.
    * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path,
       byte[] encryptionContext) throws IOException {
@@ -75,7 +76,8 @@ public class EncryptionAdapter {
    * @param provider developer's implementation of {@link EncryptionContextProvider}
    * @param path file path for which encryptionContext and encryptionKeys to be
    * created and stored
-   * @throws IOException
+   * @throws IOException throws back the exception it receives from the method call
+   * to {@link EncryptionContextProvider} object.
    * */
   public EncryptionAdapter(EncryptionContextProvider provider, String path)
       throws IOException {

@@ -59,7 +59,10 @@ public class NamespaceUtil {
    * @param tracingContext object to correlate Store requests.
    * @return if the account corresponding to the given client is namespace-enabled
    * or not.
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException throws back the exception the method receives
+   * from the {@link AbfsClient#getAclStatus(String, TracingContext)}. In case it gets
+   * {@link AbfsRestOperationException}, it checks if the exception statusCode is
+   * BAD_REQUEST or not. If not, then it will pass the exception to the calling method.
    * */
   public static Boolean isNamespaceEnabled(final AbfsClient abfsClient,
       final TracingContext tracingContext)
