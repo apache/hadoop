@@ -28,6 +28,10 @@ import java.util.Base64;
  * */
 public final class EncodingHelper {
 
+  private EncodingHelper() {
+
+  }
+
   public static byte[] getSHA256Hash(byte[] key) {
     try {
       final MessageDigest digester = MessageDigest.getInstance("SHA-256");

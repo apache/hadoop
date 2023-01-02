@@ -204,7 +204,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
             .isEqualTo(cpkSHAEncoded);
       }
     } else {
-      if(isCpkResponseKeyExpected) {
+      if (isCpkResponseKeyExpected) {
         if (requestEncryptionType == ENCRYPTION_CONTEXT) {
           String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
           String expectedKeySHA = EncodingHelper.getBase64EncodedString(
@@ -348,7 +348,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   private EncryptionAdapter createEncryptionAdapterFromServerStoreContext(final String path,
       final TracingContext tracingContext,
       final AbfsClient client) throws IOException {
-    if(client.getEncryptionType() != ENCRYPTION_CONTEXT) {
+    if (client.getEncryptionType() != ENCRYPTION_CONTEXT) {
       return null;
     }
     final String responseHeaderEncryptionContext = client.getPathStatus(path,
@@ -452,7 +452,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   @Override
   public void teardown() throws Exception {
     super.teardown();
-    for(AzureBlobFileSystem azureBlobFileSystem : fileSystemsOpenedInTest) {
+    for (AzureBlobFileSystem azureBlobFileSystem : fileSystemsOpenedInTest) {
       azureBlobFileSystem.close();
     }
   }

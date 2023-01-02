@@ -545,7 +545,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       final AbfsRestOperation op = client
           .setPathProperties(getRelativePath(path), commaSeparatedProperties,
               tracingContext, encryptionAdapter);
-      if(encryptionAdapter != null) {
+      if (encryptionAdapter != null) {
         encryptionAdapter.destroy();
       }
       perfInfo.registerResult(op.getResult()).registerSuccess(true);

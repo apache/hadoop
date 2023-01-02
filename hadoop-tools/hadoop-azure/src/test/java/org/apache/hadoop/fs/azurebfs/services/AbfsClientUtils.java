@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
-public class AbfsClientUtils {
+public final class AbfsClientUtils {
   private AbfsClientUtils() {
 
   }

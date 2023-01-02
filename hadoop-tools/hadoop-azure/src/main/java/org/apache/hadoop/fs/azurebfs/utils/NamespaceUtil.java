@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
  * Utility class to provide method which can return if the account is namespace
  * enabled or not.
  * */
-public class NamespaceUtil {
+public final class NamespaceUtil {
 
   public static final Logger LOG = LoggerFactory.getLogger(NamespaceUtil.class);
 
