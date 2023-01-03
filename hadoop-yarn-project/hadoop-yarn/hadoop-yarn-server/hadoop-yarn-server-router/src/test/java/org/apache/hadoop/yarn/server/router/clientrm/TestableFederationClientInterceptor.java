@@ -224,17 +224,20 @@ public class TestableFederationClientInterceptor
   public RouterDelegationTokenSecretManager createRouterRMDelegationTokenSecretManager(
       Configuration conf) {
 
-    long secretKeyInterval = conf.getLong(
+    long secretKeyInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY,
-        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+        YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
-    long tokenMaxLifetime = conf.getLong(
+    long tokenMaxLifetime = conf.getTimeDuration(
         YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY,
-        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+        YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
-    long tokenRenewInterval = conf.getLong(
+    long tokenRenewInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
-        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+        YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT,
+        TimeUnit.MILLISECONDS);
 
     long removeScanInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
