@@ -203,7 +203,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** Router using this RPC server. */
   private final Router router;
 
-  /** RouterStateIdContext for this RPC server. */
+  /** Alignment context storing state IDs for all namespaces this router serves. */
   private final RouterStateIdContext routerStateIdContext;
 
   /** The RPC server that listens to requests from clients. */
@@ -518,7 +518,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * @return routerStateIdContext
    */
   @VisibleForTesting
-  public RouterStateIdContext getRouterStateIdContext() {
+  protected RouterStateIdContext getRouterStateIdContext() {
     return routerStateIdContext;
   }
 
