@@ -11,7 +11,7 @@ public class QiniuKodo extends DelegateToFileSystem {
 
     public QiniuKodo(URI theUri, Configuration conf)
             throws IOException, URISyntaxException {
-        super(theUri, new QiniuKodoFileSystem(), conf, "qiniu", false);
+        super(theUri, new QiniuKodoFileSystem(), conf, Constants.SCHEME, false);
     }
 
     @Override

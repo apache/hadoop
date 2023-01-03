@@ -1,6 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
 public class Constants {
+    public static final String SCHEME = "kodo";
 
     /**
      * Qiniu access key
