@@ -116,32 +116,88 @@ public class QiniuKodoFileSystem extends FileSystem {
 
 
     @Override
-    public boolean rename(Path src, Path dst) throws IOException {
-        LOG.debug("== rename, SrcPath:" + src + " dstPath:" + dst);
-
-        if (src.isRoot()) {
-            LOG.debug("== cannot rename the root of a filesystem");
+    public boolean rename(Path srcPath, Path dstPath) throws IOException {
+        if (srcPath.isRoot()) {
+            // Cannot rename root of file system
+            LOG.debug("Cannot rename the root of a filesystem");
             return false;
         }
-
-        // 判断是否是文件
-        FileStatus file = getFileStatus(src);
-        if (file == null) {
-            throw new FileNotFoundException("can't find file:" + src);
+        Path parent = dstPath.getParent();
+        while (parent != null && !srcPath.equals(parent)) {
+            parent = parent.getParent();
         }
-
-        String srcKey = QiniuKodoUtils.pathToKey(workingDir, src);
-        String dstKey = QiniuKodoUtils.pathToKey(workingDir, dst);
-
-        if (file.isDirectory()) {
-            LOG.debug("== rename file, srcKey:" + srcKey + " dstKey:" + dstKey);
-            return kodoClient.renameKeys(srcKey, dstKey);
+        if (parent != null) {
+            return false;
+        }
+        FileStatus srcStatus = getFileStatus(srcPath);
+        FileStatus dstStatus;
+        try {
+            dstStatus = getFileStatus(dstPath);
+        } catch (FileNotFoundException fnde) {
+            dstStatus = null;
+        }
+        if (dstStatus == null) {
+            // If dst doesn't exist, check whether dst dir exists or not
+            dstStatus = getFileStatus(dstPath.getParent());
+            if (!dstStatus.isDirectory()) {
+                throw new IOException(String.format(
+                        "Failed to rename %s to %s, %s is a file", srcPath, dstPath,
+                        dstPath.getParent()));
+            }
         } else {
-            LOG.debug("== rename dir, srcKey:" + srcKey + " dstKey:" + dstKey);
-            return kodoClient.renameKey(srcKey, dstKey);
+            if (srcStatus.getPath().equals(dstStatus.getPath())) {
+                return !srcStatus.isDirectory();
+            } else if (dstStatus.isDirectory()) {
+                // If dst is a directory
+                dstPath = new Path(dstPath, srcPath.getName());
+                FileStatus[] statuses;
+                try {
+                    statuses = listStatus(dstPath);
+                } catch (FileNotFoundException fnde) {
+                    statuses = null;
+                }
+                if (statuses != null && statuses.length > 0) {
+                    // If dst exists and not a directory / not empty
+                    throw new FileAlreadyExistsException(String.format(
+                            "Failed to rename %s to %s, file already exists or not empty!",
+                            srcPath, dstPath));
+                }
+            } else {
+                // If dst is not a directory
+                throw new FileAlreadyExistsException(String.format(
+                        "Failed to rename %s to %s, file already exists!", srcPath,
+                        dstPath));
+            }
         }
+
+        boolean succeed;
+        if (srcStatus.isDirectory()) {
+            succeed = copyDirectory(srcPath, dstPath);
+        } else {
+            succeed = copyFile(srcPath, dstPath);
+        }
+
+        return srcPath.equals(dstPath) || (succeed && delete(srcPath, true));
     }
 
+    private boolean copyFile(Path srcPath, Path dstPath) throws IOException {
+        String srcKey = QiniuKodoUtils.pathToKey(workingDir, srcPath);
+        String dstKey = QiniuKodoUtils.pathToKey(workingDir, dstPath);
+        return kodoClient.copyKey(srcKey, dstKey);
+    }
+
+    private boolean copyDirectory(Path srcPath, Path dstPath) throws IOException {
+        String srcKey = QiniuKodoUtils.pathToKey(workingDir, srcPath);
+        srcKey = QiniuKodoUtils.keyToDirKey(srcKey);
+        String dstKey = QiniuKodoUtils.pathToKey(workingDir, dstPath);
+        dstKey = QiniuKodoUtils.keyToDirKey(dstKey);
+
+        if (dstKey.startsWith(srcKey)) {
+            LOG.warn("Cannot rename a directory to a subdirectory of self");
+            return false;
+        }
+        return kodoClient.copyKeys(srcKey, dstKey);
+    }
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
         LOG.debug("== delete, path:" + path + " recursive:" + recursive);

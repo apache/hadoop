@@ -134,6 +134,39 @@ public class QiniuKodoClient {
         return retFiles;
     }
 
+    boolean copyKey(String oldKey, String newKey) throws IOException {
+        Response response = bucketManager.copy(bucket, oldKey, bucket, newKey);
+        return throwExceptionWhileResponseNotSuccess(response);
+    }
+
+
+    boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
+        boolean hasPrefixObject = false;
+
+        FileListing fileListing;
+
+        // 为分页遍历提供下一次的遍历标志
+        String marker = null;
+
+        do {
+            fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
+            if (fileListing.items != null) {
+                BucketManager.BatchOperations operations = null;
+                for (FileInfo file: fileListing.items) {
+                    if (operations == null) operations = new BucketManager.BatchOperations();
+                    String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
+                    LOG.debug(" == copy old: {} new: {}", file.key, destKey);
+                    operations.addCopyOp(bucket, file.key, bucket, destKey);
+                }
+                if (operations == null) continue;
+                Response response = bucketManager.batch(operations);
+                if (!throwExceptionWhileResponseNotSuccess(response)) return false;
+            }
+            marker = fileListing.marker;
+        } while(!fileListing.isEOF());
+        return true;
+    }
+
     boolean renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) return true;
         Response response = bucketManager.rename(bucket, oldKey, newKey);
@@ -151,20 +184,19 @@ public class QiniuKodoClient {
         do {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
-                BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
-                boolean shouldExecBatch = false;
+                BucketManager.BatchOperations operations = null;
                 for (FileInfo file: fileListing.items) {
                     if (file.key.equals(oldPrefix)) {
                         // 标记一下 prefix 本身留到最后再去修改
                         hasPrefixObject = true;
                         continue;
                     }
-                    shouldExecBatch = true;
+                    if (operations == null) operations = new BucketManager.BatchOperations();
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     LOG.debug(" == rename old: {} new: {}", file.key, destKey);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
-                if (!shouldExecBatch) continue;
+                if (operations == null) continue;
                 Response response = bucketManager.batch(operations);
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
