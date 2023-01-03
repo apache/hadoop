@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class QiniuKodoClient {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoClient.class);
@@ -134,6 +135,7 @@ public class QiniuKodoClient {
     }
 
     boolean renameKey(String oldKey, String newKey) throws IOException {
+        if (Objects.equals(oldKey, newKey)) return true;
         Response response = bucketManager.rename(bucket, oldKey, newKey);
         return throwExceptionWhileResponseNotSuccess(response);
     }
