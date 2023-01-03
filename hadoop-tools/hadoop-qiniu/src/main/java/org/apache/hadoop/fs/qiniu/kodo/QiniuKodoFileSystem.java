@@ -322,11 +322,12 @@ public class QiniuKodoFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path path) throws IOException {
         LOG.debug("== getFileStatus, path:" + path);
 
-        // 未处理文件总大小
+        Path qualifiedPath = path.makeQualified(uri, workingDir);
+        String key = QiniuKodoUtils.pathToKey(workingDir, qualifiedPath);
+        // Root always exists
+        if (key.length() == 0) return new FileStatus(0, true, 1, 0, 0, 0, null, username, username, qualifiedPath);
 
         // 1. key 可能是实际文件或文件夹, 也可能是中间路径
-        String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.debug("== getFileStatus 01, key:" + key);
 
         // 先尝试查找 key
         FileInfo file = kodoClient.getFileStatus(key);
@@ -343,6 +344,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         throw new FileNotFoundException("can't find file:" + path);
     }
+
 
     /**
      * 七牛SDK的文件信息转换为 hadoop fs 的文件信息
