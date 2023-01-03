@@ -36,20 +36,20 @@ public class QiniuKodoFileSystem extends FileSystem {
         super.initialize(name, conf);
         this.conf = conf;
         bucket = name.getHost();
-        LOG.info("== bucket:" + bucket);
+        LOG.debug("== bucket:" + bucket);
 
         uri = URI.create(name.getScheme() + "://" + name.getAuthority());
-        LOG.info("== uri:" + uri);
+        LOG.debug("== uri:" + uri);
 
         // 构造工作目录路径，工作目录路径为用户使用相对目录时所相对的路径
         username = UserGroupInformation.getCurrentUser().getShortUserName();
-        LOG.info("== username:" + username);
+        LOG.debug("== username:" + username);
 
         workingDir = new Path("/user", username).makeQualified(uri, null);
-        LOG.info("== workingDir:" + workingDir);
+        LOG.debug("== workingDir:" + workingDir);
 
         blockSize = conf.getInt(Constants.QINIU_PARAMETER_BLOCK_SIZE, Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE);
-        LOG.info("== blockSize:" + blockSize);
+        LOG.debug("== blockSize:" + blockSize);
 
         com.qiniu.storage.Configuration qiniuConfig = new com.qiniu.storage.Configuration();
         qiniuConfig.region = Region.autoRegion();
@@ -86,10 +86,10 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
-        LOG.info("== open, path:" + path);
+        LOG.debug("== open, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.info("== open, key:" + key);
+        LOG.debug("== open, key:" + key);
 
         return new FSDataInputStream(kodoClient.open(key, bufferSize));
     }
@@ -99,10 +99,10 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
-        LOG.info("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+        LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.info("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+        LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
         return new FSDataOutputStream(kodoClient.create(key, bufferSize, overwrite), null);
     }
@@ -115,11 +115,11 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean rename(Path src, Path dst) throws IOException {
-        LOG.info("== rename, SrcPath:" + src + " dstPath:" + dst);
+        LOG.debug("== rename, SrcPath:" + src + " dstPath:" + dst);
 
         if (src.isRoot()) {
             if (LOG.isDebugEnabled()) {
-                LOG.info("== cannot rename the root of a filesystem");
+                LOG.debug("== cannot rename the root of a filesystem");
             }
             return false;
         }
@@ -135,17 +135,17 @@ public class QiniuKodoFileSystem extends FileSystem {
         String dstKey = QiniuKodoUtils.pathToKey(workingDir, dst);
 
         if (file.isDirectory()) {
-            LOG.info("== rename file, srcKey:" + srcKey + " dstKey:" + dstKey);
+            LOG.debug("== rename file, srcKey:" + srcKey + " dstKey:" + dstKey);
             return kodoClient.renameKeys(srcKey, dstKey);
         } else {
-            LOG.info("== rename dir, srcKey:" + srcKey + " dstKey:" + dstKey);
+            LOG.debug("== rename dir, srcKey:" + srcKey + " dstKey:" + dstKey);
             return kodoClient.renameKey(srcKey, dstKey);
         }
     }
 
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
-        LOG.info("== delete, path:" + path + " recursive:" + recursive);
+        LOG.debug("== delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件
         FileStatus file = getFileStatus(path);
@@ -154,7 +154,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.info("== delete, key:" + key);
+        LOG.debug("== delete, key:" + key);
 
         if (file.isDirectory()) {
             return deleteDir(key, recursive);
@@ -165,14 +165,14 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     private boolean deleteFile(String fileKey) throws IOException {
         fileKey = QiniuKodoUtils.keyToFileKey(fileKey);
-        LOG.info("== delete, fileKey:" + fileKey);
+        LOG.debug("== delete, fileKey:" + fileKey);
 
         return kodoClient.deleteKey(fileKey);
     }
 
     private boolean deleteDir(String dirKey, boolean recursive) throws IOException {
         dirKey = QiniuKodoUtils.keyToDirKey(dirKey);
-        LOG.info("== deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
+        LOG.debug("== deleteDir, dirKey:" + dirKey + " recursive:" + recursive);
 
         List<FileInfo> files = kodoClient.listStatus(dirKey, false);
 
@@ -186,11 +186,11 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public FileStatus[] listStatus(Path path) throws IOException {
-        LOG.info("== listStatus, path:" + path);
+        LOG.debug("== listStatus, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.info("== listStatus, key:" + key);
+        LOG.debug("== listStatus, key:" + key);
 
         List<FileInfo> files = kodoClient.listStatus(key, true);
         List<FileStatus> fileStatuses = new ArrayList<>();
@@ -204,7 +204,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public void setWorkingDirectory(Path newPath) {
-        LOG.info("== setWorkingDirectory, path:" + newPath);
+        LOG.debug("== setWorkingDirectory, path:" + newPath);
         workingDir = newPath;
     }
 
@@ -216,7 +216,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
         while (path != null) {
-            LOG.info("== mkdirs, path:" + path + " permission:" + permission);
+            LOG.debug("== mkdirs, path:" + path + " permission:" + permission);
             mkdir(path);
             path = path.getParent();
         }
@@ -228,14 +228,14 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     private boolean mkdir(Path path) throws IOException {
         if (path.isRoot()) return true;
-        LOG.info("== mkdir, path:" + path);
+        LOG.debug("== mkdir, path:" + path);
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.info("== mkdir 01, key:" + key);
+        LOG.debug("== mkdir 01, key:" + key);
 
         // 1. 检查是否存在同名文件
         key = QiniuKodoUtils.keyToFileKey(key);
-        LOG.info("== mkdir file, key:" + key);
+        LOG.debug("== mkdir file, key:" + key);
 
         FileInfo file = kodoClient.getFileStatus(key);
         if (file != null) {
@@ -244,7 +244,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         // 2. 检查是否存在同名路径
         key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.info("== mkdir dir, key:" + key);
+        LOG.debug("== mkdir dir, key:" + key);
 
         file = kodoClient.getFileStatus(key);
         if (file != null) {
@@ -260,13 +260,13 @@ public class QiniuKodoFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path path) throws IOException {
-        LOG.info("== getFileStatus, path:" + path);
+        LOG.debug("== getFileStatus, path:" + path);
 
         // 未处理文件总大小
 
         // 1. key 可能是实际文件或文件夹, 也可能是中间路径
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        LOG.info("== getFileStatus 01, key:" + key);
+        LOG.debug("== getFileStatus 01, key:" + key);
 
         // 先尝试查找 key
         FileInfo file = kodoClient.getFileStatus(key);
@@ -276,7 +276,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         // 2. 非路径 key，转路径
         key = QiniuKodoUtils.keyToDirKey(key);
-        LOG.info("== getFileStatus 02, key:" + key);
+        LOG.debug("== getFileStatus 02, key:" + key);
 
         file = kodoClient.getFileStatus(key);
         if (file != null) return fileInfoToFileStatus(file);
@@ -290,7 +290,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private FileStatus fileInfoToFileStatus(FileInfo file) {
         if (file == null) return null;
 
-        LOG.info("== file conv, key:" + file.key);
+        LOG.debug("== file conv, key:" + file.key);
         // 七牛的文件上传时间记录的单位为100ns
         // hadoop的文件上传时间记录的单位为1ms即1000ns
         long putTime = file.putTime / 10;

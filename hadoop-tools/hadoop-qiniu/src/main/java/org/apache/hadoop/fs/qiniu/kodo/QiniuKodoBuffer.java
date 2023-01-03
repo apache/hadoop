@@ -46,16 +46,16 @@ class QiniuKodoBuffer {
                     if (this.readOffset >= bytes.length) {
                         this.readOffset = 0;
                     }
-                    LOG.info("buff read:" + this.bytes[this.readOffset]);
+                    LOG.debug("buff read:" + this.bytes[this.readOffset]);
                     return this.bytes[this.readOffset];
                 }
 
                 if (isClosed) {
-                    LOG.info("buff read: but close");
+                    LOG.debug("buff read: but close");
                     return -1;
                 }
 
-                LOG.info("buff read: wait");
+                LOG.debug("buff read: wait");
             }
 
             // 无数据可读，等待
@@ -72,7 +72,7 @@ class QiniuKodoBuffer {
         for (; ; ) {
             synchronized (this) {
                 if (isClosed) {
-                    LOG.info("buff write: but close");
+                    LOG.debug("buff write: but close");
                     throw new IOException("qiniu buffer is closed:" + this);
                 }
 
@@ -82,11 +82,11 @@ class QiniuKodoBuffer {
                     if (this.writeOffset >= bytes.length) {
                         this.writeOffset = 0;
                     }
-                    LOG.info("buff write:" + b);
+                    LOG.debug("buff write:" + b);
                     this.bytes[this.writeOffset] = (byte) (b & 0xFF);
                 }
 
-                LOG.info("buff write: wait");
+                LOG.debug("buff write: wait");
             }
 
             // 无地方可写，等待

@@ -178,7 +178,7 @@ public class QiniuKodoClient {
                     }
                     shouldExecBatch = true;
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
-                    LOG.info(" == rename old: {} new: {}", file.key, destKey);
+                    LOG.debug(" == rename old: {} new: {}", file.key, destKey);
                     operations.addRenameOp(bucket, file.key, destKey);
                 }
                 if (!shouldExecBatch) continue;

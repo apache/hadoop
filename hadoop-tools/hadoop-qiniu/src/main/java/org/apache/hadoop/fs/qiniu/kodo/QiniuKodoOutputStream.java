@@ -26,20 +26,20 @@ public class QiniuKodoOutputStream extends OutputStream {
         }
 
         void upload(InputStream is) throws IOException {
-            LOG.info("create QiniuKodoOutputStream start, key:" + key + " token:" + token);
+            LOG.debug("create QiniuKodoOutputStream start, key:" + key + " token:" + token);
             Response response = client.upload(is, key, token);
 
             if (response != null) {
-                LOG.info("create QiniuKodoOutputStream end01, key:" + key + " token:" + token + " response:" + response);
+                LOG.debug("create QiniuKodoOutputStream end01, key:" + key + " token:" + token + " response:" + response);
                 throw new IOException(response + "");
             } else {
-                LOG.info("create QiniuKodoOutputStream end01, key:" + key + " token:" + token);
+                LOG.debug("create QiniuKodoOutputStream end01, key:" + key + " token:" + token);
                 throw new IOException("qiniu uploader, unknown error");
             }
         }
 
         void upload(byte[] bs) throws IOException {
-            LOG.info(" == Upload file {}", key);
+            LOG.debug(" == Upload file {}", key);
             client.upload(bs, key, token);
         }
     }
