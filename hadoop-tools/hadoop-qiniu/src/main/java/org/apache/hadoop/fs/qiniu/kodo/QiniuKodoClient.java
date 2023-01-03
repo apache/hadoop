@@ -74,7 +74,7 @@ public class QiniuKodoClient {
         }
     }
 
-    QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
+    public QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
         String[] domains = domains();
         if (domains == null || domains.length == 0) {
             throw new IOException("can't get bucket domain");
@@ -116,7 +116,26 @@ public class QiniuKodoClient {
                 for (FileInfo file : fileListing.items) {
                     if (key.equals(file.key)) continue;
                     retFiles.add(file);
+                }            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+
+                // 列举出除自身外的所有对象
+                if (fileListing.items != null) {
+                    for (FileInfo file : fileListing.items) {
+                        if (key.equals(file.key)) continue;
+                        retFiles.add(file);
+                    }
                 }
+
+                // 列举出目录
+                if (fileListing.commonPrefixes != null) {
+                    for (String dirPath : fileListing.commonPrefixes) {
+                        FileInfo dir = new FileInfo();
+                        dir.key = dirPath;
+                        retFiles.add(dir);
+                    }
+                }
+                marker = fileListing.marker;
+
             }
 
             // 列举出目录
