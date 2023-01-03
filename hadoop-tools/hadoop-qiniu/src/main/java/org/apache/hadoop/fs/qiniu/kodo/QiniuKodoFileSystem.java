@@ -164,9 +164,10 @@ public class QiniuKodoFileSystem extends FileSystem {
                 }
             } else {
                 // If dst is not a directory
-                throw new FileAlreadyExistsException(String.format(
+                LOG.warn(String.format(
                         "Failed to rename %s to %s, file already exists!", srcPath,
                         dstPath));
+                return false;
             }
         }
 
