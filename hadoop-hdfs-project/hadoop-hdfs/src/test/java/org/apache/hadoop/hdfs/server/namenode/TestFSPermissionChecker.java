@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -445,5 +446,21 @@ public class TestFSPermissionChecker {
       PREFERRED_BLOCK_SIZE);
     parent.addChild(inodeFile);
     return inodeFile;
+  }
+
+  @Test
+  public void testCheckAccessControlEnforcerSlowness() throws Exception {
+    final long thresholdMs = 10;
+    final String message = FSPermissionChecker.runCheckPermission(() -> {
+      try {
+        Thread.sleep(20);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }, elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
+        elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
+        false, "/foo", "mkdir", "client"));
+
+    Assert.assertNotNull(message);
   }
 }

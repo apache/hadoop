@@ -87,6 +87,8 @@ import java.util.concurrent.RecursiveAction;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_QUOTA_BY_STORAGETYPE_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PROTECTED_SUBDIRECTORIES_ENABLE;
@@ -181,6 +183,8 @@ public class FSDirectory implements Closeable {
    * ACL-related operations.
    */
   private final boolean aclsEnabled;
+  /** Threshold to print a warning. */
+  private final long accessControlEnforcerReportingThresholdMs;
   /**
    * Support for POSIX ACL inheritance. Not final for testing purpose.
    */
@@ -387,6 +391,12 @@ public class FSDirectory implements Closeable {
     this.isProtectedSubDirectoriesEnable = conf.getBoolean(
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE,
         DFS_PROTECTED_SUBDIRECTORIES_ENABLE_DEFAULT);
+
+    final long readLockThresholdMs = conf.getLong(
+        DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+        DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT);
+    // use half of read lock threshold
+    this.accessControlEnforcerReportingThresholdMs = (readLockThresholdMs + 1)/2;
 
     Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
         "Cannot set a negative limit on the number of xattrs per inode (%s).",
@@ -1869,7 +1879,8 @@ public class FSDirectory implements Closeable {
       UserGroupInformation ugi) throws AccessControlException {
     return new FSPermissionChecker(
         fsOwner, superGroup, ugi, getUserFilteredAttributeProvider(ugi),
-        useAuthorizationWithContextAPI);
+        useAuthorizationWithContextAPI,
+        accessControlEnforcerReportingThresholdMs);
   }
 
   void checkOwner(FSPermissionChecker pc, INodesInPath iip)
