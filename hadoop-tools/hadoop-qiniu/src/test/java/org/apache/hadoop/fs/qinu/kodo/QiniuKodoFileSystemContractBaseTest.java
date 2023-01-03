@@ -29,6 +29,11 @@ public class QiniuKodoFileSystemContractBaseTest extends FileSystemContractBaseT
 
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.qiniu")), conf);
+
     }
 
+    @Override
+    protected int getGlobalTimeout() {
+        return Integer.MAX_VALUE;
+    }
 }

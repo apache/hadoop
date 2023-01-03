@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
@@ -69,6 +70,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         Auth auth = Auth.create(accessKey, secretKey);
         kodoClient = new QiniuKodoClient(auth, qiniuConfig, bucket);
 
+        mkdir(workingDir);
     }
 
     @Override
@@ -118,12 +120,9 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== rename, SrcPath:" + src + " dstPath:" + dst);
 
         if (src.isRoot()) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("== cannot rename the root of a filesystem");
-            }
+            LOG.debug("== cannot rename the root of a filesystem");
             return false;
         }
-
 
         // 判断是否是文件
         FileStatus file = getFileStatus(src);
@@ -180,7 +179,6 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (files != null && files.size() > 0 && !recursive) {
             throw new IOException("file is not empty");
         }
-
         return kodoClient.deleteKeys(dirKey);
     }
 
@@ -215,10 +213,14 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public boolean mkdirs(Path path, FsPermission permission) throws IOException {
+        Stack<Path> stack = new Stack<>();
         while (path != null) {
             LOG.debug("== mkdirs, path:" + path + " permission:" + permission);
-            mkdir(path);
+            stack.push(path);
             path = path.getParent();
+        }
+        while (!stack.isEmpty()) {
+            mkdir(stack.pop());
         }
         return true;
     }
@@ -254,6 +256,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         // 3. 创建路径
         return kodoClient.makeEmptyObject(key);
     }
+
 
     /**
      * 获取一个路径的文件详情
