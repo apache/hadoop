@@ -129,7 +129,13 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (parent != null) {
             return false;
         }
-        FileStatus srcStatus = getFileStatus(srcPath);
+        FileStatus srcStatus;
+        try {
+            srcStatus = getFileStatus(srcPath);
+        }catch (FileNotFoundException e) {
+            LOG.info(e.toString());
+            return false;
+        }
         FileStatus dstStatus;
         try {
             dstStatus = getFileStatus(dstPath);
