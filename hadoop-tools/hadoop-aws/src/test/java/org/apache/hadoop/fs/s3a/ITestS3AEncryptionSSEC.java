@@ -63,7 +63,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
 
   private static final String SERVICE_AMAZON_S3_STATUS_CODE_403
-      = "Service: Amazon S3; Status Code: 403;";
+      = "Service: S3, Status Code: 403";
   private static final String KEY_1
       = "4niV/jPK5VFRHY+KNb6wtqYd4xXyMgdJ9XQJpcQUVbs=";
   private static final String KEY_2

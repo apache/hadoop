@@ -217,22 +217,11 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   @Override
-  public S3TransferManager createS3TransferManager(
-      final URI uri,
-      final S3ClientCreationParameters parameters)
+  public S3TransferManager createS3TransferManager(final S3AsyncClient s3AsyncClient)
       throws IOException {
-    Configuration conf = getConf();
-    String bucket = uri.getHost();
-    Region region = getS3Region(conf.getTrimmed(AWS_REGION), bucket,
-        parameters.getCredentialSet());
+    // TODO: Can't set minimum part size on the async client.
     return S3TransferManager.builder()
-        .s3ClientConfiguration(clientConfiguration ->
-            clientConfiguration
-                .minimumPartSizeInBytes(parameters.getMinimumPartSize())
-                .credentialsProvider(parameters.getCredentialSet())
-                .region(region))
-        .transferConfiguration(transferConfiguration ->
-            transferConfiguration.executor(parameters.getTransferManagerExecutor()))
+        .s3Client(s3AsyncClient)
         .build();
   }
 

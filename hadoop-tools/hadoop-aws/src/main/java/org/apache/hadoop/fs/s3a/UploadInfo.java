@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import software.amazon.awssdk.transfer.s3.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
 
 /**
  * Simple struct that contains information about a S3 upload.

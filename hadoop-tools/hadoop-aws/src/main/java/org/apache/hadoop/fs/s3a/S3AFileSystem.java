@@ -89,18 +89,17 @@ import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandl
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import software.amazon.awssdk.transfer.s3.CompletedCopy;
-import software.amazon.awssdk.transfer.s3.CompletedFileUpload;
-import software.amazon.awssdk.transfer.s3.Copy;
-import software.amazon.awssdk.transfer.s3.CopyRequest;
-import software.amazon.awssdk.transfer.s3.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
+import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
+import software.amazon.awssdk.transfer.s3.model.Copy;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
-import software.amazon.awssdk.transfer.s3.UploadFileRequest;
+import software.amazon.awssdk.transfer.s3.model.CopyRequest;
+import software.amazon.awssdk.transfer.s3.model.FileUpload;
+import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -992,7 +991,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3ClientV2(getUri(), parameters);
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
-    transferManager =  clientFactory.createS3TransferManager(getUri(), parameters);
+    transferManager =  clientFactory.createS3TransferManager(s3AsyncClient);
   }
 
   /**

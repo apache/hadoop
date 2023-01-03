@@ -97,13 +97,11 @@ public interface S3ClientFactory {
   /**
    * Creates a new {@link S3TransferManager}.
    *
-   * @param uri S3A file system URI
-   * @param parameters parameter object
+   * @param s3AsyncClient the s3 client the TM should use
    * @return S3 transfer manager
    * @throws IOException on any IO problem
    */
-  S3TransferManager createS3TransferManager(URI uri,
-      S3ClientCreationParameters parameters) throws IOException;
+  S3TransferManager createS3TransferManager(S3AsyncClient s3AsyncClient) throws IOException;
 
   /**
    * Settings for the S3 Client.
