@@ -144,7 +144,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
         if (dstStatus == null) {
             // If dst doesn't exist, check whether dst dir exists or not
-            dstStatus = getFileStatus(dstPath.getParent());
+            try {
+                dstStatus = getFileStatus(dstPath.getParent());
+            }catch (FileNotFoundException e) {
+                return false;
+            }
             if (!dstStatus.isDirectory()) {
                 throw new IOException(String.format(
                         "Failed to rename %s to %s, %s is a file", srcPath, dstPath,
@@ -210,9 +214,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件
-        FileStatus file = getFileStatus(path);
-        if (file == null) {
-            throw new FileNotFoundException("can't find file:" + path);
+        FileStatus file;
+        try{
+            file = getFileStatus(path);
+        }catch (FileNotFoundException e) {
+            return false;
         }
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
