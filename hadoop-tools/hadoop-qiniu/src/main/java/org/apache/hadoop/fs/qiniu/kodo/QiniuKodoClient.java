@@ -51,33 +51,15 @@ public class QiniuKodoClient {
 
     public String getUploadToken(String key, boolean overwrite) {
         StringMap policy = new StringMap();
-//        policy.put("insertOnly", overwrite ? "0" : "1");
-        String token = auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
-        return token;
+        policy.put("insertOnly", overwrite ? 0 : 1);
+        return auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
     }
 
     Response upload(InputStream stream, String key, String token) throws IOException {
         try {
             return uploadManager.put(stream, key, token, null, null);
         } catch (QiniuException e) {
-            if (e.response != null) return e.response;
-            throw e;
-        }
-    }
-    Response upload(byte[] bs, String key, String token) throws IOException {
-        try {
-            return uploadManager.put(bs, key, token);
-        } catch (QiniuException e) {
-            if (e.response != null) return e.response;
-            throw e;
-        }
-    }
-
-    public Response upload(String key, File file, String token) throws IOException {
-        try {
-            return uploadManager.put(file, key, token);
-        } catch (QiniuException e) {
-            if (e.response != null) return e.response;
+            if (e.response != null && e.response.statusCode != 614) return e.response;
             throw e;
         }
     }

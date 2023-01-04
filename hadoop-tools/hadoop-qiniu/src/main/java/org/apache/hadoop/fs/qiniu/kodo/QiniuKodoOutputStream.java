@@ -14,6 +14,8 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private final Thread thread;
 
+    private IOException uploadException;
+
     public QiniuKodoOutputStream(QiniuKodoClient client, String key, String token) {
         this.pos = new PipedOutputStream();
         try {
@@ -22,7 +24,7 @@ public class QiniuKodoOutputStream extends OutputStream {
                 try {
                     client.upload(pis, key, token);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    this.uploadException = e;
                 }
             });
             this.thread.start();
@@ -43,6 +45,8 @@ public class QiniuKodoOutputStream extends OutputStream {
             thread.join();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } finally {
+            if (uploadException != null) throw uploadException;
         }
     }
 }
