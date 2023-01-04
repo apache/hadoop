@@ -34,6 +34,9 @@ public class QiniuKodoClient {
     private final UploadManager uploadManager;
     private final BucketManager bucketManager;
     private final Configuration configuration;
+
+    private String domain;
+
     public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) throws QiniuException {
         this.client = new Client(configuration);
         this.auth = auth;
@@ -74,15 +77,31 @@ public class QiniuKodoClient {
         }
     }
 
-    public QiniuKodoInputStream open(String key, int bufferSize) throws IOException {
-        String[] domains = domains();
-        if (domains == null || domains.length == 0) {
-            throw new IOException("can't get bucket domain");
+    private String getFileUrlByKey(String key) throws IOException {
+        if (domain == null) {
+            String[] domains = domains();
+            if (domains == null || domains.length == 0) {
+                throw new IOException("can't get bucket domain");
+            }
+            this.domain = domains[0];
         }
-        String domain = domains[0];
-        DownloadUrl downloadUrl = new DownloadUrl(domain, false, key);
-        String url = auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
-        return new QiniuKodoInputStream(client, url, bufferSize);
+        DownloadUrl downloadUrl = new DownloadUrl(this.domain, false, key);
+        return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
+    }
+
+    InputStream fetch(String key, long from, long to) throws IOException {
+        try {
+            StringMap header = new StringMap();
+            header.put("Range", String.format("bytes=%d-%d", from, to));
+            Response response = this.client.get(getFileUrlByKey(key), header);
+            return response.bodyStream();
+        } catch (QiniuException e) {
+            if (e.response != null) {
+                throw new IOException(e.response + "");
+            } else {
+                throw e;
+            }
+        }
     }
 
     /**

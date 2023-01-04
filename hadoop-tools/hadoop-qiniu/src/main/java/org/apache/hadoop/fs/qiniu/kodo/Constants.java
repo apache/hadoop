@@ -33,4 +33,9 @@ public class Constants {
      * Qiniu 存储块大小,
      */
     public static final String QINIU_PARAMETER_BLOCK_SIZE = "fs.qiniu.block.size";
+
+    public static final String MULTIPART_DOWNLOAD_SIZE_KEY =
+            "fs.qiniu.multipart.download.size";
+
+    public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 512 * 1024;
 }

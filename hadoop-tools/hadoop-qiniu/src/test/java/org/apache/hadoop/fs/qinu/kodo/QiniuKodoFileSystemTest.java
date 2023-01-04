@@ -6,6 +6,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.fs.qiniu.kodo.Constants;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
+import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoInputStream;
 import org.apache.hadoop.fs.qinu.kodo.contract.QiniuKodoContract;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -61,5 +62,15 @@ public class QiniuKodoFileSystemTest {
         is.write(12);
         is.close();
         fs.rename(new Path("/abc"), new Path("/abc_new"));
+    }
+
+    @Test
+    public void testOpen() throws IOException {
+        FSDataInputStream is = fs.open(new Path("/abcd"));
+        int ch;
+        while((ch = is.read()) != -1) {
+            System.out.print(ch + " ");
+        }
+        is.close();
     }
 }

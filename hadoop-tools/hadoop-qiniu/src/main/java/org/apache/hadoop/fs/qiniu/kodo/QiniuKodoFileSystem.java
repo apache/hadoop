@@ -7,7 +7,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +19,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
@@ -32,6 +36,21 @@ public class QiniuKodoFileSystem extends FileSystem {
     private QiniuKodoClient kodoClient;
 
     private Configuration conf;
+
+    private ExecutorService boundedThreadPool;
+
+    private ExecutorService boundedCopyThreadPool;
+
+    @Override
+    public void close() throws IOException {
+        try{
+            boundedThreadPool.shutdown();
+            boundedCopyThreadPool.shutdown();
+        }finally {
+            super.close();
+        }
+    }
+
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
@@ -51,6 +70,15 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         blockSize = conf.getInt(Constants.QINIU_PARAMETER_BLOCK_SIZE, Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE);
         LOG.debug("== blockSize:" + blockSize);
+
+        this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+                10, 128, 60, TimeUnit.SECONDS,
+                "kodo-transfer-shared");
+
+        this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
+                25, 10485760, 60L,
+                TimeUnit.SECONDS, "kodo-copy-unbounded");
+        setConf(conf);
 
         com.qiniu.storage.Configuration qiniuConfig = new com.qiniu.storage.Configuration();
         qiniuConfig.region = Region.autoRegion();
@@ -90,10 +118,16 @@ public class QiniuKodoFileSystem extends FileSystem {
     public FSDataInputStream open(Path path, int bufferSize) throws IOException {
         LOG.debug("== open, path:" + path);
 
+        final FileStatus fileStatus = getFileStatus(path);
+        if (fileStatus.isDirectory()) {
+            throw new FileNotFoundException("Can't open " + path +
+                    " because it is a directory");
+        }
+
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== open, key:" + key);
 
-        return new FSDataInputStream(kodoClient.open(key, bufferSize));
+        return new FSDataInputStream(new QiniuKodoInputStream(this.conf, new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true), 4, kodoClient, key, fileStatus.getLen(), statistics));
     }
 
     /**

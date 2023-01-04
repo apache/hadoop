@@ -41,12 +41,7 @@ public class QiniuKodoClientTest {
 
     @Test
     public void testOpen() throws IOException {
-        QiniuKodoInputStream is = client.open("abcd", 1024);
-        int ch;
-        while((ch = is.read()) != -1) {
-            System.out.print(ch + " ");
-        }
-        is.close();
+
     }
 
     @Test
