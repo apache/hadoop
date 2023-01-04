@@ -123,6 +123,7 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
@@ -158,7 +159,7 @@ public abstract class Server {
    * Allow server to do force Kerberos re-login once after failure irrespective
    * of the last login time.
    */
-  private boolean canTryForceLogin = true;
+  private AtomicBoolean canTryForceLogin = new AtomicBoolean(true);
 
   /**
    * Logical name of the server used in metrics and monitor.
@@ -2214,21 +2215,7 @@ public abstract class Server {
               + attemptingUser + " (" + e.getLocalizedMessage()
               + ") with true cause: (" + tce.getLocalizedMessage() + ")");
           if (!UserGroupInformation.getLoginUser().isLoginSuccess()) {
-            LOG.warn("Initiating re-login from IPC Server");
-            if (canTryForceLogin) {
-              canTryForceLogin = false;
-              if (UserGroupInformation.isLoginKeytabBased()) {
-                UserGroupInformation.getLoginUser().forceReloginFromKeytab();
-              } else if (UserGroupInformation.isLoginTicketBased()) {
-                UserGroupInformation.getLoginUser().forceReloginFromTicketCache();
-              }
-            } else {
-              if (UserGroupInformation.isLoginKeytabBased()) {
-                UserGroupInformation.getLoginUser().reloginFromKeytab();
-              } else if (UserGroupInformation.isLoginTicketBased()) {
-                UserGroupInformation.getLoginUser().reloginFromTicketCache();
-              }
-            }
+            doKerberosRelogin();
             try {
               // try processing message again
               LOG.debug("Reprocessing sasl message for {}:{} after re-login",
@@ -2236,7 +2223,7 @@ public abstract class Server {
               saslResponse = processSaslMessage(saslMessage);
               AUDITLOG.info("Retry {}{}:{} after failure", AUTH_SUCCESSFUL_FOR,
                   this.toString(), attemptingUser);
-              canTryForceLogin = true;
+              canTryForceLogin.set(true);
             } catch (IOException exp) {
               tce = (IOException) getTrueCause(e);
               throw tce;
@@ -3357,6 +3344,27 @@ public abstract class Server {
             .build());
     this.scheduledExecutorService.scheduleWithFixedDelay(new MetricsUpdateRunner(),
         metricsUpdaterInterval, metricsUpdaterInterval, TimeUnit.MILLISECONDS);
+  }
+
+  private synchronized void doKerberosRelogin() throws IOException {
+    if(UserGroupInformation.getLoginUser().isLoginSuccess()){
+      return;
+    }
+    LOG.warn("Initiating re-login from IPC Server");
+    if (canTryForceLogin.get()) {
+      canTryForceLogin.set(false);
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().forceReloginFromTicketCache();
+      }
+    } else {
+      if (UserGroupInformation.isLoginKeytabBased()) {
+        UserGroupInformation.getLoginUser().reloginFromKeytab();
+      } else if (UserGroupInformation.isLoginTicketBased()) {
+        UserGroupInformation.getLoginUser().reloginFromTicketCache();
+      }
+    }
   }
 
   public synchronized void addAuxiliaryListener(int auxiliaryPort)
