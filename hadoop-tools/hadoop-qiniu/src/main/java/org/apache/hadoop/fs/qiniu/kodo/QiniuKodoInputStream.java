@@ -1,5 +1,9 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import com.qiniu.common.QiniuException;
+import com.qiniu.http.Client;
+import com.qiniu.http.Response;
+import com.qiniu.util.StringMap;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 
@@ -13,11 +17,12 @@ public class QiniuKodoInputStream extends FSInputStream {
     private volatile long offset;
 
     private String url;
-    private QiniuKodoClient client;
+
+    private final Client client;
 
     private InputStream inputStream;
 
-    QiniuKodoInputStream(QiniuKodoClient client, String url, int bufferSize) throws IOException {
+    QiniuKodoInputStream(Client client, String url, int bufferSize) throws IOException {
         this.client = client;
         this.url = url;
         this.inputStream = open();
@@ -60,7 +65,22 @@ public class QiniuKodoInputStream extends FSInputStream {
         }
     }
 
+
+    InputStream get(String url, long from, long to) throws IOException {
+        try {
+            StringMap header = new StringMap();
+            Response response = this.client.get(url, header);
+            return response.bodyStream();
+        } catch (QiniuException e) {
+            if (e.response != null) {
+                throw new IOException(e.response + "");
+            } else {
+                throw e;
+            }
+        }
+    }
+
     private InputStream open() throws IOException {
-        return client.get(url, offset, 0);
+        return get(url, offset, 0);
     }
 }

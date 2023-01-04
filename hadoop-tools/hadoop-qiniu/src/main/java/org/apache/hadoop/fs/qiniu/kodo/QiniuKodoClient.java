@@ -12,7 +12,6 @@ import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
-import org.apache.http.impl.io.EmptyInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,21 +82,7 @@ public class QiniuKodoClient {
         String domain = domains[0];
         DownloadUrl downloadUrl = new DownloadUrl(domain, false, key);
         String url = auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
-        return new QiniuKodoInputStream(this, url, bufferSize);
-    }
-
-    InputStream get(String url, long from, long to) throws IOException {
-        try {
-            StringMap header = new StringMap();
-            Response response = this.client.get(url, header);
-            return response.bodyStream();
-        } catch (QiniuException e) {
-            if (e.response != null) {
-                throw new IOException(e.response + "");
-            } else {
-                throw e;
-            }
-        }
+        return new QiniuKodoInputStream(client, url, bufferSize);
     }
 
     /**
@@ -286,7 +271,7 @@ public class QiniuKodoClient {
         }
     }
 
-    String[] domains() throws IOException {
+    private String[] domains() throws IOException {
         //TODO: 此处增加全局缓存
         return bucketManager.domainList(bucket);
     }
