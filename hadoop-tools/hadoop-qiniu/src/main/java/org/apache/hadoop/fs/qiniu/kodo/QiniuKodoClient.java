@@ -12,9 +12,12 @@ import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -46,34 +49,36 @@ public class QiniuKodoClient {
         this.configuration = configuration;
     }
 
-
-    public QiniuKodoOutputStream create(String key, int bufferSize, boolean overwrite) throws IOException {
+    public String getUploadToken(String key, boolean overwrite) {
         StringMap policy = new StringMap();
 //        policy.put("insertOnly", overwrite ? "0" : "1");
         String token = auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
-        return new QiniuKodoOutputStream(this, key, token, bufferSize);
+        return token;
     }
 
     Response upload(InputStream stream, String key, String token) throws IOException {
         try {
             return uploadManager.put(stream, key, token, null, null);
         } catch (QiniuException e) {
-            if (e.response != null) {
-                return e.response;
-            } else {
-                throw e;
-            }
+            if (e.response != null) return e.response;
+            throw e;
         }
     }
     Response upload(byte[] bs, String key, String token) throws IOException {
         try {
             return uploadManager.put(bs, key, token);
         } catch (QiniuException e) {
-            if (e.response != null) {
-                return e.response;
-            } else {
-                throw e;
-            }
+            if (e.response != null) return e.response;
+            throw e;
+        }
+    }
+
+    public Response upload(String key, File file, String token) throws IOException {
+        try {
+            return uploadManager.put(file, key, token);
+        } catch (QiniuException e) {
+            if (e.response != null) return e.response;
+            throw e;
         }
     }
 

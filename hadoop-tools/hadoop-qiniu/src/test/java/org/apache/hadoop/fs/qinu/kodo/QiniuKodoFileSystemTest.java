@@ -73,4 +73,12 @@ public class QiniuKodoFileSystemTest {
         }
         is.close();
     }
+
+    @Test
+    public void testWrite() throws IOException {
+        FSDataOutputStream os = fs.create(new Path("/zzq123"));
+        String s = "HelloWorld Qiniu";
+        os.writeUTF(s);
+        os.close();
+    }
 }

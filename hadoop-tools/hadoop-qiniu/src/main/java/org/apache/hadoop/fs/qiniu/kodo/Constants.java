@@ -38,4 +38,7 @@ public class Constants {
             "fs.qiniu.multipart.download.size";
 
     public static final long MULTIPART_DOWNLOAD_SIZE_DEFAULT = 512 * 1024;
+
+    public static final String BUFFER_DIR_KEY = "fs.qiniu.buffer.dir";
+
 }

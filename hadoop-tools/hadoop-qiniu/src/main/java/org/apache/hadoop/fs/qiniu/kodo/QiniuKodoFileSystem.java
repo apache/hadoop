@@ -43,10 +43,10 @@ public class QiniuKodoFileSystem extends FileSystem {
 
     @Override
     public void close() throws IOException {
-        try{
+        try {
             boundedThreadPool.shutdown();
             boundedCopyThreadPool.shutdown();
-        }finally {
+        } finally {
             super.close();
         }
     }
@@ -140,7 +140,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
-        return new FSDataOutputStream(kodoClient.create(key, bufferSize, overwrite), null);
+        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, kodoClient.getUploadToken(key, overwrite)), statistics);
     }
 
     @Override
@@ -166,7 +166,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         FileStatus srcStatus;
         try {
             srcStatus = getFileStatus(srcPath);
-        }catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             LOG.info(e.toString());
             return false;
         }
@@ -180,7 +180,7 @@ public class QiniuKodoFileSystem extends FileSystem {
             // If dst doesn't exist, check whether dst dir exists or not
             try {
                 dstStatus = getFileStatus(dstPath.getParent());
-            }catch (FileNotFoundException e) {
+            } catch (FileNotFoundException e) {
                 return false;
             }
             if (!dstStatus.isDirectory()) {
@@ -243,15 +243,16 @@ public class QiniuKodoFileSystem extends FileSystem {
         }
         return kodoClient.copyKeys(srcKey, dstKey);
     }
+
     @Override
     public boolean delete(Path path, boolean recursive) throws IOException {
         LOG.debug("== delete, path:" + path + " recursive:" + recursive);
 
         // 判断是否是文件
         FileStatus file;
-        try{
+        try {
             file = getFileStatus(path);
-        }catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             return false;
         }
 
