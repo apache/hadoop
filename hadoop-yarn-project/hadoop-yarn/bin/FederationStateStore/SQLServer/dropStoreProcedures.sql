@@ -21,34 +21,44 @@
 USE [FederationStateStore]
 GO
 
-DROP PROCEDURE IF EXISTS [sp_addApplicationHomeSubCluster];
+IF OBJECT_ID ( '[sp_addApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_addApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_updateApplicationHomeSubCluster];
+IF OBJECT_ID ( '[sp_updateApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_updateApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getApplicationsHomeSubCluster];
+IF OBJECT_ID ( '[sp_getApplicationsHomeSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_getApplicationsHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getApplicationHomeSubCluster];
+IF OBJECT_ID ( '[sp_getApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_getApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deleteApplicationHomeSubCluster];
+IF OBJECT_ID ( '[sp_deleteApplicationHomeSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_deleteApplicationHomeSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_registerSubCluster];
+IF OBJECT_ID ( '[sp_registerSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_registerSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getSubClusters];
+IF OBJECT_ID ( '[sp_getSubClusters]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_getSubClusters];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_getSubCluster];
+IF OBJECT_ID ( '[sp_getSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE [sp_getSubCluster];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_subClusterHeartbeat];
+IF OBJECT_ID ( '[sp_subClusterHeartbeat]', 'P' ) IS NOT NULL
+  DROP PROCEDURE IF EXISTS [sp_subClusterHeartbeat];
 GO
 
-DROP PROCEDURE IF EXISTS [sp_deregisterSubCluster];
+IF OBJECT_ID ( '[sp_deregisterSubCluster]', 'P' ) IS NOT NULL
+  DROP PROCEDURE IF EXISTS [sp_deregisterSubCluster];
 GO
 
 DROP PROCEDURE IF EXISTS [sp_setPolicyConfiguration];
@@ -73,27 +83,6 @@ DROP PROCEDURE IF EXISTS [sp_getReservationHomeSubCluster];
 GO
 
 DROP PROCEDURE IF EXISTS [sp_deleteReservationHomeSubCluster];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_addMasterKey];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_getMasterKey];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_deleteMasterKey];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_addDelegationToken];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_getDelegationToken];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_updateDelegationToken];
-GO
-
-DROP PROCEDURE IF EXISTS [sp_deleteDelegationToken];
 GO
 
 DROP PROCEDURE IF EXISTS [sp_addMasterKey];

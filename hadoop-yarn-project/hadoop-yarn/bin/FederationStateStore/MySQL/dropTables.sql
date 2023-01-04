@@ -32,6 +32,4 @@ DROP TABLE masterKeys;
 
 DROP TABLE delegationTokens;
 
-DROP TABLE masterKeys;
-
-DROP TABLE delegationTokens;
+DROP TABLE sequenceTable;

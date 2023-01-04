@@ -280,3 +280,33 @@ ELSE
     PRINT 'Table delegationTokens exists, no operation required...'
     GO
 GO
+
+IF NOT EXISTS ( SELECT * FROM [FederationStateStore].sys.tables
+    WHERE name = 'sequenceTable'
+    AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN
+        PRINT 'Table sequenceTable does not exist, create it...'
+
+        SET ANSI_NULLS ON
+
+        SET QUOTED_IDENTIFIER ON
+
+        SET ANSI_PADDING ON
+
+        CREATE TABLE [dbo].[sequenceTable](
+            sequenceName VARCHAR(255) NOT NULL,
+            nextVal bigint NOT NULL
+            CONSTRAINT [pk_sequenceName] PRIMARY KEY
+            (
+                [sequenceName]
+            )
+        )
+
+        SET ANSI_PADDING OFF
+
+        PRINT 'Table sequenceTable created.'
+    END
+ELSE
+    PRINT 'Table sequenceTable exists, no operation required...'
+    GO
+GO
