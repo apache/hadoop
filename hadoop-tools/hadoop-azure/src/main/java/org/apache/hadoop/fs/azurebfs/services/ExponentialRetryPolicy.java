@@ -57,6 +57,20 @@ public class ExponentialRetryPolicy {
   private static final double MAX_RANDOM_RATIO = 1.2;
 
   /**
+   * Qualifies for retry based on
+   * https://docs.microsoft.com/en-in/azure/virtual-machines/linux/
+   * instance-metadata-service?tabs=windows#errors-and-debugging
+   */
+  private static final int HTTP_GONE = 410;
+
+  /**
+   * Qualifies for retry based on
+   * https://learn.microsoft.com/en-us/azure/active-directory/
+   * managed-identities-azure-resources/how-to-use-vm-token#error-handling
+   */
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
+
+  /**
    *  Holds the random number generator used to calculate randomized backoff intervals
    */
   private final Random randRef = new Random();
@@ -128,9 +142,11 @@ public class ExponentialRetryPolicy {
     return retryCount < this.retryCount
         && (statusCode == -1
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
+        || statusCode == HTTP_GONE
+        || statusCode == HTTP_TOO_MANY_REQUESTS
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
-            && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
-            && statusCode != HttpURLConnection.HTTP_VERSION));
+        && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
+        && statusCode != HttpURLConnection.HTTP_VERSION));
   }
 
   /**
