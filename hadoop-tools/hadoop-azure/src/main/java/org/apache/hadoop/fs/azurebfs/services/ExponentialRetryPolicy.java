@@ -145,8 +145,8 @@ public class ExponentialRetryPolicy {
         || statusCode == HTTP_GONE
         || statusCode == HTTP_TOO_MANY_REQUESTS
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
-        && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
-        && statusCode != HttpURLConnection.HTTP_VERSION));
+            && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
+            && statusCode != HttpURLConnection.HTTP_VERSION));
   }
 
   /**
