@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateSt
 import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,8 +77,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
-    conf.setBoolean(StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_CLIENT_CONCURRENT,
-        true);
+    conf.setInt(StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE, 10);
 
     baseZNode = conf.get(FEDERATION_STORE_ZK_PARENT_PATH,
         FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
@@ -154,6 +154,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     long endAsync = Time.now();
     System.out.printf("Sync mode total running time is %d ms, and async mode total running time is %d ms",
         endSync - startSync, endAsync - startAsync);
+    assertTrue((endSync - startSync) > (endAsync - startAsync) * 5);
   }
 
   @Test

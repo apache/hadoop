@@ -74,10 +74,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "parent-path";
   public static final String FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE =
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "client.size";
-  public static final int FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT = 10;
-  public static final String FEDERATION_STORE_ZK_CLIENT_CONCURRENT =
-      FEDERATION_STORE_ZK_DRIVER_PREFIX + "client.concurrent";
-  public static final boolean FEDERATION_STORE_ZK_CLIENT_CONCURRENT_DEFAULT = false;
+  public static final int FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT = -1;
   public static final String FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT =
       "/hdfs-federation";
   /** Service to get/update zk state. */
@@ -102,19 +99,19 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     baseZNode = conf.get(
         FEDERATION_STORE_ZK_PARENT_PATH,
         FEDERATION_STORE_ZK_PARENT_PATH_DEFAULT);
-    this.enableConcurrent = conf.getBoolean(
-        FEDERATION_STORE_ZK_CLIENT_CONCURRENT,
-        FEDERATION_STORE_ZK_CLIENT_CONCURRENT_DEFAULT
-    );
-    if(enableConcurrent) {
-      int numThreads = conf.getInt(
-          FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE,
-          FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT);
+    int numThreads = conf.getInt(
+        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE,
+        FEDERATION_STORE_ZK_CLIENT_THREADS_SIZE_DEFAULT);
+    enableConcurrent = numThreads > 0;
+    if (enableConcurrent) {
       ThreadFactory threadFactory = new ThreadFactoryBuilder()
           .setNameFormat("StateStore ZK Client-%d")
           .build();
       this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
           0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), threadFactory);
+      LOG.info("Init StateStoreZookeeperImpl by async mode with {} threads.", numThreads);
+    } else {
+      LOG.info("Init StateStoreZookeeperImpl by sync mode.");
     }
     try {
       this.zkManager = new ZKCuratorManager(conf);
@@ -178,12 +175,8 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     try {
       List<String> children = zkManager.getChildren(znode);
       List<Callable<T>> callables = new ArrayList<>();
-      if(enableConcurrent) {
-        children.forEach(child ->
-            callables.add(
-                () -> getRecord(clazz, znode, child)
-            )
-        );
+      if (enableConcurrent) {
+        children.forEach(child -> callables.add(() -> getRecord(clazz, znode, child)));
         List<Future<T>> futures = executorService.invokeAll(callables);
         for (Future<T> future : futures) {
           if (future.get() != null) {
@@ -193,7 +186,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       } else {
         children.forEach(child -> {
           T record = getRecord(clazz, znode, child);
-          if(record != null) {
+          if (record != null) {
             ret.add(record);
           }
         });
@@ -239,8 +232,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       }
 
       if (corrupted) {
-        LOG.error("Cannot get data for {} at {}, cleaning corrupted data",
-            child, path);
+        LOG.error("Cannot get data for {} at {}, cleaning corrupted data", child, path);
         zkManager.delete(path);
       }
     } catch (Exception e) {
@@ -264,7 +256,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
 
     long start = monotonicNow();
     final AtomicBoolean status = new AtomicBoolean(true);
-    if(enableConcurrent){
+    if (enableConcurrent) {
       List<Callable<Void>> callables = new ArrayList<>();
       records.forEach(record ->
           callables.add(
@@ -272,7 +264,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
                 String primaryKey = getPrimaryKey(record);
                 String recordZNode = getNodePath(znode, primaryKey);
                 byte[] data = serialize(record);
-                if(!writeNode(recordZNode, data, update, error)) {
+                if (!writeNode(recordZNode, data, update, error)) {
                   status.set(false);
                 }
                 return null;
@@ -290,7 +282,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
         String primaryKey = getPrimaryKey(record);
         String recordZNode = getNodePath(znode, primaryKey);
         byte[] data = serialize(record);
-        if(!writeNode(recordZNode, data, update, error)) {
+        if (!writeNode(recordZNode, data, update, error)) {
           status.set(false);
         }
       });
