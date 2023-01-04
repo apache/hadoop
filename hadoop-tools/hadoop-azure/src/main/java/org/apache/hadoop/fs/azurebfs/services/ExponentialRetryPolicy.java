@@ -58,13 +58,6 @@ public class ExponentialRetryPolicy {
 
   /**
    * Qualifies for retry based on
-   * https://docs.microsoft.com/en-in/azure/virtual-machines/linux/
-   * instance-metadata-service?tabs=windows#errors-and-debugging
-   */
-  private static final int HTTP_GONE = 410;
-
-  /**
-   * Qualifies for retry based on
    * https://learn.microsoft.com/en-us/azure/active-directory/
    * managed-identities-azure-resources/how-to-use-vm-token#error-handling
    */
@@ -133,6 +126,9 @@ public class ExponentialRetryPolicy {
   /**
    * Returns if a request should be retried based on the retry count, current response,
    * and the current strategy.
+   * HTTP status code 410 qualifies for retry based on
+   * https://docs.microsoft.com/en-in/azure/virtual-machines/linux/
+   * instance-metadata-service?tabs=windows#errors-and-debugging
    *
    * @param retryCount The current retry attempt count.
    * @param statusCode The status code of the response, or -1 for socket error.
@@ -142,7 +138,7 @@ public class ExponentialRetryPolicy {
     return retryCount < this.retryCount
         && (statusCode == -1
         || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
-        || statusCode == HTTP_GONE
+        || statusCode == HttpURLConnection.HTTP_GONE
         || statusCode == HTTP_TOO_MANY_REQUESTS
         || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
             && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
