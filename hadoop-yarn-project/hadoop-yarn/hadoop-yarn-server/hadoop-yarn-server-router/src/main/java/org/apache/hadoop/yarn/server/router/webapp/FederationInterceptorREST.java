@@ -2622,7 +2622,6 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   @VisibleForTesting
   public Map<SubClusterInfo, NodesInfo> invokeConcurrentGetNodeLabel()
       throws IOException, YarnException {
-    NodesInfo nodes = new NodesInfo();
     Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
     Class[] argsClasses = new Class[]{String.class};
     Object[] args = new Object[]{null};
