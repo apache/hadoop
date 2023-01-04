@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebAppUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -127,6 +128,7 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -1145,10 +1147,59 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     throw new NotImplementedException("Code is not implemented");
   }
 
+  /**
+   * This method dumps the scheduler logs for the time got in input, and it is
+   * reachable by using {@link RMWSConsts#SCHEDULER_LOGS}.
+   *
+   * @param time the period of time. It is a FormParam.
+   * @param hsr the servlet request
+   * @return the result of the operation
+   * @throws IOException when it cannot create dump log file
+   */
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
-    throw new NotImplementedException("Code is not implemented");
+
+    if (StringUtils.isBlank(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("Parameter error, the time is empty or null.");
+    }
+
+    int period = Integer.parseInt(time);
+    if (period <= 0) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new BadRequestException("Period must be greater than 0");
+    }
+
+    try {
+      long startTime = clock.getTime();
+      Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
+      final HttpServletRequest hsrCopy = clone(hsr);
+      Class[] argsClasses = new Class[]{String.class, HttpServletRequest.class};
+      Object[] args = new Object[]{time, hsrCopy};
+      ClientMethod remoteMethod = new ClientMethod("dumpSchedulerLogs", argsClasses, args);
+      Map<SubClusterInfo, String> dumpSchedulerLogsMap = invokeConcurrent(
+          subClustersActive.values(), remoteMethod, String.class);
+      StringBuilder stringBuilder = new StringBuilder();
+      dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
+        SubClusterId subClusterId = subClusterInfo.getSubClusterId();
+        stringBuilder.append(subClusterId + " : " + msg);
+      });
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);
+      return stringBuilder.toString();
+    } catch (IllegalArgumentException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "Unable to dump SchedulerLogs by time: %s.", time);
+    } catch (YarnException e) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      RouterServerUtil.logAndThrowRunTimeException(e,
+          "dumpSchedulerLogs by time = %s error .", time);
+    }
+
+    routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+    throw new RuntimeException("dumpSchedulerLogs Failed.");
   }
 
   @Override

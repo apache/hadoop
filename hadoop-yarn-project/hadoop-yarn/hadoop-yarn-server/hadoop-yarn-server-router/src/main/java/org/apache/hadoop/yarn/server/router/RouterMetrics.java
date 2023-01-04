@@ -135,6 +135,8 @@ public final class RouterMetrics {
   private MutableGaugeInt numRenewDelegationTokenFailedRetrieved;
   @Metric("# of renewDelegationToken failed to be retrieved")
   private MutableGaugeInt numCancelDelegationTokenFailedRetrieved;
+  @Metric("# of dumpSchedulerLogs failed to be retrieved")
+  private MutableGaugeInt numDumpSchedulerLogsFailedRetrieved;
 
   // Aggregate metrics are shared, and don't have to be looked up per call
   @Metric("Total number of successful Submitted apps and latency(ms)")
@@ -231,6 +233,8 @@ public final class RouterMetrics {
   private MutableRate totalSucceededRenewDelegationTokenRetrieved;
   @Metric("Total number of successful Retrieved CancelDelegationToken and latency(ms)")
   private MutableRate totalSucceededCancelDelegationTokenRetrieved;
+  @Metric("Total number of successful Retrieved DumpSchedulerLogs and latency(ms)")
+  private MutableRate totalSucceededDumpSchedulerLogsRetrieved;
 
   /**
    * Provide quantile counters for all latencies.
@@ -282,6 +286,7 @@ public final class RouterMetrics {
   private MutableQuantiles getDelegationTokenLatency;
   private MutableQuantiles renewDelegationTokenLatency;
   private MutableQuantiles cancelDelegationTokenLatency;
+  private MutableQuantiles dumpSchedulerLogsLatency;
 
   private static volatile RouterMetrics instance = null;
   private static MetricsRegistry registry;
@@ -455,6 +460,9 @@ public final class RouterMetrics {
 
     cancelDelegationTokenLatency = registry.newQuantiles("cancelDelegationTokenLatency",
         "latency of cancel delegation token timeouts", "ops", "latency", 10);
+
+    dumpSchedulerLogsLatency = registry.newQuantiles("dumpSchedulerLogsLatency",
+        "latency of dump scheduler logs timeouts", "ops", "latency", 10);
 
   }
 
@@ -1157,6 +1165,10 @@ public final class RouterMetrics {
     return numCancelDelegationTokenFailedRetrieved.value();
   }
 
+  public int getDumpSchedulerLogsFailedRetrieved() {
+    return numDumpSchedulerLogsFailedRetrieved.value();
+  }
+
   public void succeededAppsCreated(long duration) {
     totalSucceededAppsCreated.add(duration);
     getNewApplicationLatency.add(duration);
@@ -1392,6 +1404,11 @@ public final class RouterMetrics {
     cancelDelegationTokenLatency.add(duration);
   }
 
+  public void succeededDumpSchedulerLogsRetrieved(long duration) {
+    totalSucceededDumpSchedulerLogsRetrieved.add(duration);
+    dumpSchedulerLogsLatency.add(duration);
+  }
+
   public void incrAppsFailedCreated() {
     numAppsFailedCreated.incr();
   }
@@ -1578,5 +1595,9 @@ public final class RouterMetrics {
 
   public void incrCancelDelegationTokenFailedRetrieved() {
     numCancelDelegationTokenFailedRetrieved.incr();
+  }
+
+  public void incrDumpSchedulerLogsFailedRetrieved() {
+    numDumpSchedulerLogsFailedRetrieved.incr();
   }
 }
