@@ -399,9 +399,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (file == null) return null;
 
         LOG.debug("== file conv, key:" + file.key);
-        // 七牛的文件上传时间记录的单位为100ns
-        // hadoop的文件上传时间记录的单位为1ms即1000ns
-        long putTime = file.putTime / 10;
+
+        long putTime = file.putTime / 10000;
 
         return new FileStatus(
                 file.fsize, // 文件大小
