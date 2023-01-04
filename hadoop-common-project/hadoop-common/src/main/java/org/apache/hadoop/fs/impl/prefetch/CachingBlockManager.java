@@ -306,7 +306,7 @@ public abstract class CachingBlockManager extends BlockManager {
         readBlock(data, false, BufferData.State.BLANK);
       }
       catch(Exception e){
-        String message = String.format("error reading block(%s)", data.getBlockNumber());
+        String message = String.format("error reading block %s", data.getBlockNumber());
         LOG.error(message, e);
         throw e;
       }
@@ -408,10 +408,10 @@ public abstract class CachingBlockManager extends BlockManager {
 
     @Override
     public Void get() {
-      try{
+      try {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
-        String message = String.format("error prefetching block(%s)", data.getBlockNumber());
+        String message = String.format("error prefetching block %s", data.getBlockNumber());
         LOG.info(message, e.getMessage());
         LOG.debug(message, e);
       }
