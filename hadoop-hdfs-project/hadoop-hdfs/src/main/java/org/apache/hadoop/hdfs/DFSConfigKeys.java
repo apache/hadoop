@@ -628,6 +628,12 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY =
       "dfs.namenode.read-lock-reporting-threshold-ms";
   public static final long    DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_DEFAULT = 5000L;
+
+  public static final String DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_KEY
+      = "dfs.namenode.access-control-enforcer-reporting-threshold-ms";
+  public static final long   DFS_NAMENODE_ACCESS_CONTROL_ENFORCER_REPORTING_THRESHOLD_MS_DEFAULT
+      = 1000L;
+
   // Threshold for how long the lock warnings must be suppressed
   public static final String DFS_LOCK_SUPPRESS_WARNING_INTERVAL_KEY =
       "dfs.lock.suppress.warning.interval";

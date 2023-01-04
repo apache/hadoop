@@ -205,14 +205,14 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return new AccessControlEnforcer() {
       @Override
       public void checkPermission(
-          String fsOwner, String supergroup, UserGroupInformation callerUgi,
+          String filesystemOwner, String superGroup, UserGroupInformation ugi,
           INodeAttributes[] inodeAttrs, INode[] inodes, byte[][] pathByNameArr,
           int snapshotId, String path, int ancestorIndex, boolean doCheckOwner,
           FsAction ancestorAccess, FsAction parentAccess, FsAction access,
           FsAction subAccess, boolean ignoreEmptyDir)
           throws AccessControlException {
         runCheckPermission(
-            () -> e.checkPermission(fsOwner, supergroup, callerUgi,
+            () -> e.checkPermission(filesystemOwner, superGroup, ugi,
                 inodeAttrs, inodes, pathByNameArr, snapshotId, path,
                 ancestorIndex, doCheckOwner, ancestorAccess, parentAccess,
                 access, subAccess, ignoreEmptyDir),

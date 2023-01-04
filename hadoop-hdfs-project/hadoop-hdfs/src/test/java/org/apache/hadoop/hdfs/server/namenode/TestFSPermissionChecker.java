@@ -40,6 +40,7 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.function.LongFunction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -451,16 +452,25 @@ public class TestFSPermissionChecker {
   @Test
   public void testCheckAccessControlEnforcerSlowness() throws Exception {
     final long thresholdMs = 10;
-    final String message = FSPermissionChecker.runCheckPermission(() -> {
+    final LongFunction<String> checkAccessControlEnforcerSlowness =
+    elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
+        elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
+        false, "/foo", "mkdir", "client");
+
+    final String m1 = FSPermissionChecker.runCheckPermission(
+        () -> FSPermissionChecker.LOG.info("Fast runner"),
+        checkAccessControlEnforcerSlowness);
+    Assert.assertNull(m1);
+
+    final String m2 = FSPermissionChecker.runCheckPermission(() -> {
+      FSPermissionChecker.LOG.info("Slow runner");
       try {
         Thread.sleep(20);
       } catch (InterruptedException e) {
-        throw new RuntimeException(e);
+        Thread.currentThread().interrupt();
+        throw new IllegalStateException(e);
       }
-    }, elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
-        elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
-        false, "/foo", "mkdir", "client"));
-
-    Assert.assertNotNull(message);
+    }, checkAccessControlEnforcerSlowness);
+    Assert.assertNotNull(m2);
   }
 }
