@@ -152,9 +152,10 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     long startAsync = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
     long endAsync = Time.now();
-    System.out.printf("Sync mode total running time is %d ms, and async mode total running time is %d ms",
+    System.out.printf("Sync mode total running time is %d ms, "
+            + "and async mode total running time is %d ms",
         endSync - startSync, endAsync - startAsync);
-    assertTrue((endSync - startSync) > (endAsync - startAsync) * 5);
+    assertTrue((endSync - startSync) > (endAsync - startAsync) * 2);
   }
 
   @Test

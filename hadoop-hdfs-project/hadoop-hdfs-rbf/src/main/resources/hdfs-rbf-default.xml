@@ -379,7 +379,7 @@
 
   <property>
     <name>dfs.federation.router.store.driver.zk.client.size</name>
-    <value></value>
+    <value>-1</value>
     <description>
       Client threads size of StateStoreZooKeeperImpl in async mode.
       The only class currently being supported:
