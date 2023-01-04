@@ -16,11 +16,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -82,13 +84,13 @@ public class FSQueueConverter {
     emitMaxParallelApps(queueName, queue);
     emitMaxAllocations(queueName, queue);
     emitPreemptionDisabled(queueName, queue);
-    emitDefaultUserLimitFactor(queueName, children);
 
     emitChildCapacity(queue);
     emitMaximumCapacity(queueName, queue);
     emitSizeBasedWeight(queueName);
     emitOrderingPolicy(queueName, queue);
     checkMaxChildCapacitySetting(queue);
+    emitDefaultUserLimitFactor(queueName, children);
 
     for (FSQueue childQueue : children) {
       convertQueueHierarchy(childQueue);
@@ -220,7 +222,7 @@ public class FSQueueConverter {
   }
 
   public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
-    if (children.isEmpty()) {
+    if (children.isEmpty() && checkAutoQueueCreationV2Disabled(queueName)) {
       capacitySchedulerConfig.setFloat(
               CapacitySchedulerConfiguration.
                       PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
@@ -307,6 +309,11 @@ public class FSQueueConverter {
         ruleHandler.handleMaxChildCapacity();
       }
     }
+  }
+
+  private boolean checkAutoQueueCreationV2Disabled(String queueName) {
+    return !Objects.equals(capacitySchedulerConfig.get(
+        PREFIX + queueName + DOT + AUTO_QUEUE_CREATION_V2_ENABLED), "true");
   }
 
   private String getQueueShortName(String queueName) {
