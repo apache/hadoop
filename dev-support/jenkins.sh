@@ -196,6 +196,9 @@ function run_ci() {
 #  YETUS_ARGS+=("--debug")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
+
+  echo "Showing trunk install output"
+  cat "/c/out/branch-mvninstall-root.txt"
 }
 
 ## @description  Cleans up the processes started by YETUS
