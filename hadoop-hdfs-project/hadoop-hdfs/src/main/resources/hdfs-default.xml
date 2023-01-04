@@ -5457,8 +5457,6 @@
 </property>
 
 <property>
-  <name>dfs.storage.policy.satisfier.enabled</name>
-  <value>false</value>
   <name>dfs.storage.policy.satisfier.mode</name>
   <value>none</value>
   <description>
