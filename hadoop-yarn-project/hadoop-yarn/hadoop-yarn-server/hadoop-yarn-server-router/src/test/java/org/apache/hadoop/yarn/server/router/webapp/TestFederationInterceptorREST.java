@@ -1553,7 +1553,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
       Assert.assertEquals(expectNodeId, nodeId);
     });
   }
-  
+
   @Test
   public void testPostDelegationTokenErrorHsr() throws Exception {
     // Prepare delegationToken data
