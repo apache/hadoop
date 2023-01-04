@@ -52,6 +52,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -132,6 +134,7 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -164,6 +167,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int GET_SET_AGGREGATE_COUNT = 2;
+  private ThreadPoolExecutor unboundedThreadPool;
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
 
   private final Map<AbfsLease, Object> leaseRefs;
 
@@ -266,6 +272,29 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
+    this.unboundedThreadPool = new ThreadPoolExecutor(
+        abfsConfiguration.getWriteMaxConcurrentRequestCount(), Integer.MAX_VALUE,
+        10L, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<>(),
+        BlockingThreadPoolExecutorService.newDaemonThreadFactory(
+            "abfs-unbounded"));
+    unboundedThreadPool.allowCoreThreadTimeOut(true);
+    this.vectoredIOContext = populateVectoredIOContext(abfsConfiguration);
+  }
+
+  /**
+   * Populates the configurations related to vectored IO operation
+   * in the context which has to passed down to input streams.
+   * @param configuration configuration object.
+   * @return VectoredIOContext.
+   */
+  private VectoredIOContext populateVectoredIOContext(AbfsConfiguration configuration) {
+    final int minSeekVectored = configuration.getVectoredReadMinSeekSize();
+    final int maxReadSizeVectored = configuration.getVectoredReadMaxReadSize();
+    return new VectoredIOContext()
+        .setMinSeekForVectoredReads(minSeekVectored)
+        .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
+        .build();
   }
 
   /**
@@ -795,7 +824,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       return new AbfsInputStream(client, statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
           parameters.map(OpenFileParameters::getOptions)),
-          eTag, tracingContext);
+          eTag, tracingContext, unboundedThreadPool);
     }
   }
 
@@ -817,6 +846,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
                 abfsConfiguration.shouldReadBufferSizeAlways())
             .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
+            .withVectoredIOContext(requireNonNull(vectoredIOContext, "vectoredIOContext"))
             .build();
   }
 

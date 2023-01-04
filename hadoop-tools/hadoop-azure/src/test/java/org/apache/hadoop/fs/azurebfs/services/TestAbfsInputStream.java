@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
@@ -109,6 +110,11 @@ public class TestAbfsInputStream extends
     return client;
   }
 
+  private ThreadPoolExecutor getThreadPoolExecutor() {
+    ThreadPoolExecutor threadPoolExecutor = Mockito.mock(ThreadPoolExecutor.class);
+    return threadPoolExecutor;
+  }
+
   private AbfsInputStream getAbfsInputStream(AbfsClient mockAbfsClient,
       String fileName) throws IOException {
     AbfsInputStreamContext inputStreamContext = new AbfsInputStreamContext(-1);
@@ -120,7 +126,7 @@ public class TestAbfsInputStream extends
         THREE_KB,
         inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
         "eTag",
-        getTestTracingContext(null, false));
+        getTestTracingContext(null, false), getThreadPoolExecutor());
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());
@@ -148,7 +154,7 @@ public class TestAbfsInputStream extends
             .withShouldReadBufferSizeAlways(alwaysReadBufferSize)
             .withReadAheadBlockSize(readAheadBlockSize),
         eTag,
-        getTestTracingContext(getFileSystem(), false));
+        getTestTracingContext(getFileSystem(), false), getThreadPoolExecutor());
 
     inputStream.setCachedSasToken(
         TestCachedSASToken.getTestCachedSASTokenInstance());

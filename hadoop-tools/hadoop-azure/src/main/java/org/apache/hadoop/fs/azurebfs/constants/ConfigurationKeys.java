@@ -39,6 +39,9 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
   public static final String FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = "fs.azure.account.throttling.enabled";
+  public static final String FS_AZURE_VECTOR_READS_MIN_SEEK_SIZE = "fs.azure.vector.reads.min.seek.size";
+  public static final String FS_AZURE_VECTOR_READS_MAX_SEEK_SIZE = "fs.azure.vector.reads.max.seek.size";
+
 
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";

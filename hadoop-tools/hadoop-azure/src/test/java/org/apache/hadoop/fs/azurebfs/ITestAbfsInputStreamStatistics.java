@@ -19,9 +19,13 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.assertj.core.api.Assertions;
+import org.eclipse.jetty.util.thread.ThreadPool;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -286,7 +290,7 @@ public class ITestAbfsInputStreamStatistics
       in = new AbfsInputStream(fs.getAbfsClient(), null,
           nullStatFilePath.toUri().getPath(), ONE_KB, abfsInputStreamContext,
           abfsRestOperation.getResult().getResponseHeader("ETag"),
-          getTestTracingContext(fs, false));
+          getTestTracingContext(fs, false), Mockito.mock(ThreadPoolExecutor.class));
 
       // Verifying that AbfsInputStream Operations works with null statistics.
       assertNotEquals("AbfsInputStream read() with null statistics should "

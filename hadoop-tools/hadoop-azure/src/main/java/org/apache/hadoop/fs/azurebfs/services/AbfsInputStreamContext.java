@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.fs.azurebfs.VectoredIOContext;
 import org.apache.hadoop.util.Preconditions;
 
 /**
@@ -51,8 +53,19 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private boolean bufferedPreadDisabled;
 
+  /**
+   * Vectored IO context for vectored read api
+   * in {@code S3AInputStream#readVectored(List, IntFunction)}.
+   */
+  private VectoredIOContext vectoredIOContext;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
+  }
+
+  public AbfsInputStreamContext withVectoredIOContext(final VectoredIOContext vectoredIOContext) {
+    this.vectoredIOContext = vectoredIOContext;
+    return this;
   }
 
   public AbfsInputStreamContext withReadBufferSize(final int readBufferSize) {
@@ -179,5 +192,9 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   public boolean isBufferedPreadDisabled() {
     return bufferedPreadDisabled;
+  }
+
+  public VectoredIOContext getVectoredIOContext() {
+    return vectoredIOContext;
   }
 }

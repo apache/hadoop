@@ -121,6 +121,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED)
   private boolean accountThrottlingEnabled;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_VECTOR_READS_MIN_SEEK_SIZE,
+      DefaultValue = DEFAULT_FS_AZURE_VECTOR_READS_MIN_SEEK_SIZE)
+  private int vectoredReadMinSeekSize;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_VECTOR_READS_MAX_SEEK_SIZE,
+      DefaultValue = DEFAULT_FS_AZURE_VECTOR_READS_MAX_MERGED_READ_SIZE)
+  private int vectoredReadMaxReadSize;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_READ_BUFFER_SIZE,
       MinValue = MIN_BUFFER_SIZE,
       MaxValue = MAX_BUFFER_SIZE,
@@ -135,7 +143,8 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MIN_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MIN_BACKOFF_INTERVAL)
-  private int minBackoffInterval;
+  private int
+      minBackoffInterval;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_MAX_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
@@ -708,6 +717,14 @@ public class AbfsConfiguration{
 
   public boolean accountThrottlingEnabled() {
     return accountThrottlingEnabled;
+  }
+
+  public int getVectoredReadMinSeekSize() {
+    return vectoredReadMinSeekSize;
+  }
+
+  public int getVectoredReadMaxReadSize() {
+    return vectoredReadMaxReadSize;
   }
 
   public String getAzureInfiniteLeaseDirs() {

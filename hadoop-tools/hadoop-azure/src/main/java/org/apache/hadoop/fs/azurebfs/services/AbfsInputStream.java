@@ -21,11 +21,22 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.HttpURLConnection;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntFunction;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.VectoredReadUtils;
+import org.apache.hadoop.fs.azurebfs.VectoredIOContext;
+import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -48,6 +59,10 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
+import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
@@ -121,6 +136,21 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   private long nextReadPos;
 
+  /**
+   * Thread pool used for vectored IO operation.
+   */
+  private final ThreadPoolExecutor unboundedThreadPool;
+
+  /** Vectored IO context. */
+  private final VectoredIOContext vectoredIOContext;
+
+  /**
+   * Atomic boolean variable to stop all ongoing vectored read operation
+   * for this input stream. This will be set to true when the stream is
+   * closed or unbuffer is called.
+   */
+  private final AtomicBoolean stopVectoredIOOperations = new AtomicBoolean(false);
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -128,7 +158,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           final long contentLength,
           final AbfsInputStreamContext abfsInputStreamContext,
           final String eTag,
-          TracingContext tracingContext) {
+          TracingContext tracingContext,
+          ThreadPoolExecutor unboundedThreadPool) {
     this.client = client;
     this.statistics = statistics;
     this.path = path;
@@ -151,6 +182,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext.setOperation(FSOperationType.READ);
     this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
+    this.unboundedThreadPool = unboundedThreadPool;
+    this.vectoredIOContext = context.getVectoredIOContext();
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
 
     // Propagate the config values to ReadBufferManager so that the first instance
@@ -167,6 +200,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private String createInputStreamId() {
     return StringUtils.right(UUID.randomUUID().toString(), STREAM_ID_LEN);
+  }
+
+  /**
+   * {@inheritDoc}.
+   */
+  @Override
+  public int minSeekForVectorReads() {
+    return vectoredIOContext.getMinSeekForVectorReads();
+  }
+
+  /**
+   * {@inheritDoc}.
+   */
+  @Override
+  public int maxReadSizeForVectorReads() {
+    return vectoredIOContext.getMaxReadSizeForVectorReads();
   }
 
   @Override
@@ -273,6 +322,102 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     } while (lastReadBytes > 0);
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for AbfsInputStream.
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   * @throws IOException IOE if any.
+   */
+  @Override
+  public void readVectored(List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate) throws IOException {
+    LOG.debug("Starting vectored read on path {} for ranges {} ", path, ranges);
+    if (closed) {
+      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+    if (stopVectoredIOOperations.getAndSet(false)) {
+      LOG.debug("Reinstating vectored read operation for path {} ", path);
+    }
+    List<? extends FileRange> sortedRanges = validateNonOverlappingAndReturnSortedRanges(ranges);
+    for (FileRange range : ranges) {
+      validateRangeRequest(range);
+      CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
+      range.setData(result);
+    }
+
+    if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
+      LOG.debug("Not merging the ranges as they are disjoint");
+      for (FileRange range: sortedRanges) {
+        ByteBuffer buffer = allocate.apply(range.getLength());
+        unboundedThreadPool.submit(() -> readSingleRange(range, buffer));
+      }
+    } else {
+      LOG.debug("Trying to merge the ranges as they are not disjoint");
+      List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(sortedRanges,
+          1, minSeekForVectorReads(),
+          maxReadSizeForVectorReads());
+      LOG.debug("Number of original ranges size {} , Number of combined ranges {} ",
+          ranges.size(), combinedFileRanges.size());
+//      for (CombinedFileRange combinedFileRange: combinedFileRanges) {
+//        unboundedThreadPool.submit(
+//            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
+//      }
+    }
+    LOG.debug("Finished submitting vectored read to threadpool" +
+        " on path {} for ranges {} ", path, ranges);
+  }
+
+  /**
+   * Read data from S3 for this range and populate the buffer.
+   * @param range range of data to read.
+   * @param buffer buffer to fill.
+   */
+  private void readSingleRange(FileRange range, ByteBuffer buffer) {
+    LOG.debug("Start reading range {} from path {} ", range, path);
+    int offset = (int) range.getOffset();
+    int length = range.getLength();
+    try {
+      checkIfVectoredIOStopped();
+      read(buffer.array(), offset, length);
+      range.getData().complete(buffer);
+    }catch (Exception ex) {
+      LOG.warn("Exception while reading a range {} from path {} ", range, path, ex);
+      range.getData().completeExceptionally(ex);
+    }
+    LOG.debug("Finished reading range {} from path {} ", range, path);
+  }
+
+  /**
+   * Validates range parameters.
+   * In case of S3 we already have contentLength from the first GET request
+   * during an open file operation so failing fast here.
+   * @param range requested range.
+   * @throws EOFException end of file exception.
+   */
+  private void validateRangeRequest(FileRange range) throws EOFException {
+    VectoredReadUtils.validateRangeRequest(range);
+    if(range.getOffset() + range.getLength() > contentLength) {
+      LOG.warn("Requested range [{}, {}) is beyond EOF for path {}",
+          range.getOffset(), range.getLength(), path);
+      throw new EOFException("Requested range [" + range.getOffset() +", "
+          + range.getLength() + ") is beyond EOF for path " + path);
+    }
+  }
+
+  /**
+   * Check if vectored io operation has been stooped. This happens
+   * when the stream is closed or unbuffer is called.
+   * @throws InterruptedIOException throw InterruptedIOException such
+   *                                that all running vectored io is
+   *                                terminated thus releasing resources.
+   */
+  private void checkIfVectoredIOStopped() throws InterruptedIOException {
+    if (stopVectoredIOOperations.get()) {
+      throw new InterruptedIOException("Stream closed or unbuffer is called");
+    }
   }
 
   private boolean shouldReadFully() {
@@ -694,6 +839,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized void close() throws IOException {
+    stopVectoredIOOperations.set(true);
     LOG.debug("Closing {}", this);
     closed = true;
     buffer = null; // de-reference the buffer so it can be GC'ed sooner
