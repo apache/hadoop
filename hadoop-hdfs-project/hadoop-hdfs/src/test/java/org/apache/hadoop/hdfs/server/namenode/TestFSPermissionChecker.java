@@ -453,9 +453,9 @@ public class TestFSPermissionChecker {
   public void testCheckAccessControlEnforcerSlowness() throws Exception {
     final long thresholdMs = 10;
     final LongFunction<String> checkAccessControlEnforcerSlowness =
-    elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
-        elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
-        false, "/foo", "mkdir", "client");
+        elapsedMs -> FSPermissionChecker.checkAccessControlEnforcerSlowness(
+            elapsedMs, thresholdMs, INodeAttributeProvider.AccessControlEnforcer.class,
+            false, "/foo", "mkdir", "client");
 
     final String m1 = FSPermissionChecker.runCheckPermission(
         () -> FSPermissionChecker.LOG.info("Fast runner"),
