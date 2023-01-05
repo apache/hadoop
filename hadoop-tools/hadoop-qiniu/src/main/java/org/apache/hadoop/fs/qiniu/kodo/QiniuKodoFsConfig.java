@@ -22,9 +22,14 @@ public class QiniuKodoFsConfig {
         conf.setIfUnset(QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
     }
 
+    private String authAccessKey;
+
     public String getAuthAccessKey() throws AuthorizationException {
-        String accessKey = conf.get(QINIU_PARAMETER_ACCESS_KEY);
-        if (!StringUtils.isNullOrEmpty(accessKey)) return accessKey;
+        if (authAccessKey != null) return authAccessKey;
+
+        authAccessKey = conf.get(QINIU_PARAMETER_ACCESS_KEY);
+
+        if (!StringUtils.isNullOrEmpty(authAccessKey)) return authAccessKey;
 
         throw new AuthorizationException(String.format(
                 "Qiniu access key can't empty, you should set it with %s in core-site.xml",
@@ -32,17 +37,26 @@ public class QiniuKodoFsConfig {
         ));
     }
 
+    private String authSecretKey;
+
     public String getAuthSecretKey() throws AuthorizationException {
-        String secretKey = conf.get(QINIU_PARAMETER_SECRET_KEY);
-        if (!StringUtils.isNullOrEmpty(secretKey)) return secretKey;
+        if (authSecretKey != null) return authSecretKey;
+
+        authSecretKey = conf.get(QINIU_PARAMETER_SECRET_KEY);
+
+        if (!StringUtils.isNullOrEmpty(authSecretKey)) return authSecretKey;
+
         throw new AuthorizationException(String.format(
                 "Qiniu secret key can't empty, you should set it with %s in core-site.xml",
                 QINIU_PARAMETER_SECRET_KEY
         ));
     }
 
+    private Auth auth;
     public Auth createAuth() throws AuthorizationException {
-        return Auth.create(getAuthAccessKey(), getAuthSecretKey());
+        if (auth != null) return auth;
+        auth = Auth.create(getAuthAccessKey(), getAuthSecretKey());
+        return auth;
     }
 
     public String getRegionId() {
