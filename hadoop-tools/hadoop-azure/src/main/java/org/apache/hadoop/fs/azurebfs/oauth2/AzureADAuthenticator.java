@@ -29,7 +29,6 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
 import com.fasterxml.jackson.core.JsonFactory;
