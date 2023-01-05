@@ -1183,7 +1183,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       StringBuilder stringBuilder = new StringBuilder();
       dumpSchedulerLogsMap.forEach((subClusterInfo, msg) -> {
         SubClusterId subClusterId = subClusterInfo.getSubClusterId();
-        stringBuilder.append(subClusterId + " : " + msg);
+        stringBuilder.append("subClusterId" + subClusterId + " : " + msg + "; ");
       });
       long stopTime = clock.getTime();
       routerMetrics.succeededDumpSchedulerLogsRetrieved(stopTime - startTime);

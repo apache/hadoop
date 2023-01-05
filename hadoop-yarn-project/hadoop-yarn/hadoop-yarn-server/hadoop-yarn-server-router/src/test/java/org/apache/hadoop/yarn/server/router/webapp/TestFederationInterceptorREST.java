@@ -1685,4 +1685,23 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
   }
+
+  @Test
+  public void testDumpSchedulerLogs() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+    String dumpSchedulerLogsMsg = interceptor.dumpSchedulerLogs("1", mockHsr);
+
+    // We cannot guarantee the calling order of the sub-clusters,
+    // We guarantee that the returned result contains the information of each subCluster.
+    Assert.assertNotNull(dumpSchedulerLogsMsg);
+    subClusters.stream().forEach(subClusterId -> {
+      String subClusterMsg =
+          "subClusterId" + subClusterId + " : Capacity scheduler logs are being created.; ";
+      Assert.assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
+    });
+
+    LambdaTestUtils.intercept(BadRequestException.class,
+        "Period must be greater than 0",
+        () -> interceptor.dumpSchedulerLogs("-1", mockHsr));
+  }
 }
