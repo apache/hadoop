@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -213,7 +214,7 @@ public final class AzureADAuthenticator {
       return this.requestId;
     }
 
-    protected HttpException(
+    public HttpException(
         final int httpErrorCode,
         final String requestId,
         final String message,
@@ -341,7 +342,7 @@ public final class AzureADAuthenticator {
         || e instanceof FileNotFoundException);
   }
 
-  private static AzureADToken getTokenSingleCall(String authEndpoint,
+  public static AzureADToken getTokenSingleCall(String authEndpoint,
       String payload, Hashtable<String, String> headers, String httpMethod,
       boolean isMsi)
           throws IOException {
