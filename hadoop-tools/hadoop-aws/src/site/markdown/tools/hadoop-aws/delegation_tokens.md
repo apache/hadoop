@@ -79,7 +79,7 @@ After use, tokens may be revoked: this relies on services holding tables of
 valid tokens, either in memory or, for any HA service, in Apache Zookeeper or
 similar. Revoking tokens is used to clean up after jobs complete.
 
-Delegation support is tightly integrated with YARN: requests to launch
+Delegation Token support is tightly integrated with YARN: requests to launch
 containers and applications can include a list of delegation tokens to
 pass along. These tokens are serialized with the request, saved to a file
 on the node launching the container, and then loaded in to the credentials
@@ -103,7 +103,7 @@ S3A now supports delegation tokens, so allowing a caller to acquire tokens
 from a local S3A Filesystem connector instance and pass them on to
 applications to grant them equivalent or restricted access.
 
-These S3A Delegation Tokens are special in that they do not contain
+These S3A Delegation Tokens are special in a way that they do not contain
 password-protected data opaque to clients; they contain the secrets needed
 to access the relevant S3 buckets and associated services.
 
@@ -117,7 +117,7 @@ class, which then supports multiple "bindings" behind it, so supporting
 different variants of S3A Delegation Tokens.
 
 Because applications only collect Delegation Tokens in secure clusters,
-It does mean that to be able to submit delegation tokens in transient
+it does mean that to be able to submit delegation tokens in transient
 cloud-hosted Hadoop clusters, _these clusters must also have Kerberos enabled_.
 
 *Tip*: you should only be deploying Hadoop in public clouds with Kerberos enabled.
