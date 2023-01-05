@@ -1,6 +1,5 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
-import com.qiniu.storage.Region;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.util.Auth;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +37,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     private ExecutorService boundedCopyThreadPool;
 
     private QiniuKodoFsConfig fsConfig;
+
     @Override
     public void close() throws IOException {
         try {
@@ -104,7 +104,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
-                        getConf(),
+                        fsConfig,
                         new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true),
                         4, kodoClient,
                         key,
@@ -394,7 +394,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 0,
                 putTime, // modification time
                 putTime, // access time
-                isDir?new FsPermission(0715):null,   // permission
+                isDir ? new FsPermission(0715) : null,   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink

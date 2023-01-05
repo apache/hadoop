@@ -1,20 +1,18 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import org.apache.hadoop.fs.FSExceptionMessages;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSExceptionMessages;
-import org.apache.hadoop.fs.FSInputStream;
-
-import static org.apache.hadoop.fs.qiniu.kodo.Constants.*;
 
 public class QiniuKodoInputStream extends FSInputStream {
     public static final Logger LOG = LoggerFactory.getLogger(QiniuKodoInputStream.class);
@@ -34,7 +32,9 @@ public class QiniuKodoInputStream extends FSInputStream {
     private ExecutorService readAheadExecutorService;
     private Queue<ReadBuffer> readBufferQueue = new ArrayDeque<>();
 
-    public QiniuKodoInputStream(Configuration conf,
+    private QiniuKodoFsConfig fsConfig;
+
+    public QiniuKodoInputStream(QiniuKodoFsConfig fsConfig,
                                 ExecutorService readAheadExecutorService, int maxReadAheadPartNumber,
                                 QiniuKodoClient store, String key, Long contentLength,
                                 FileSystem.Statistics statistics) throws IOException {
@@ -43,11 +43,10 @@ public class QiniuKodoInputStream extends FSInputStream {
         this.store = store;
         this.key = key;
         this.statistics = statistics;
+        this.fsConfig = fsConfig;
         this.contentLength = contentLength;
-        downloadPartSize = conf.getLong(MULTIPART_DOWNLOAD_SIZE_KEY,
-                MULTIPART_DOWNLOAD_SIZE_DEFAULT);
         this.maxReadAheadPartNumber = maxReadAheadPartNumber;
-
+        this.downloadPartSize = fsConfig.getMultipartDownloadSize();
         this.expectNextPos = 0;
         this.lastByteStart = -1;
         reopen(0);
@@ -115,7 +114,7 @@ public class QiniuKodoInputStream extends FSInputStream {
             }
 
             long byteStart = lastByteStart + partSize * (i + 1);
-            long byteEnd = byteStart + partSize -1;
+            long byteEnd = byteStart + partSize - 1;
             if (byteEnd >= contentLength) {
                 byteEnd = contentLength - 1;
             }
@@ -166,7 +165,7 @@ public class QiniuKodoInputStream extends FSInputStream {
 
         int byteRead = -1;
         if (partRemaining != 0) {
-            byteRead = this.buffer[this.buffer.length - (int)partRemaining] & 0xFF;
+            byteRead = this.buffer[this.buffer.length - (int) partRemaining] & 0xFF;
         }
         if (byteRead >= 0) {
             position++;
@@ -213,7 +212,7 @@ public class QiniuKodoInputStream extends FSInputStream {
             }
 
             int bytes = 0;
-            for (int i = this.buffer.length - (int)partRemaining;
+            for (int i = this.buffer.length - (int) partRemaining;
                  i < this.buffer.length; i++) {
                 buf[off + bytesRead] = this.buffer[i];
                 bytes++;
@@ -261,7 +260,7 @@ public class QiniuKodoInputStream extends FSInputStream {
         if (remaining > Integer.MAX_VALUE) {
             return Integer.MAX_VALUE;
         }
-        return (int)remaining;
+        return (int) remaining;
     }
 
     @Override

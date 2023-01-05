@@ -31,73 +31,73 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class QiniuKodoFileReaderTask implements Runnable {
-  public static final Logger LOG =
-      LoggerFactory.getLogger(QiniuKodoFileReaderTask.class);
+    public static final Logger LOG =
+            LoggerFactory.getLogger(QiniuKodoFileReaderTask.class);
 
-  private String key;
-  private QiniuKodoClient store;
-  private ReadBuffer readBuffer;
-  private static final int MAX_RETRIES = 3;
-  private RetryPolicy retryPolicy;
+    private String key;
+    private QiniuKodoClient store;
+    private ReadBuffer readBuffer;
+    private static final int MAX_RETRIES = 3;
+    private RetryPolicy retryPolicy;
 
-  public QiniuKodoFileReaderTask(String key, QiniuKodoClient store,
-                                 ReadBuffer readBuffer) {
-    this.key = key;
-    this.store = store;
-    this.readBuffer = readBuffer;
-    RetryPolicy defaultPolicy =
-        RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-            MAX_RETRIES, 3, TimeUnit.SECONDS);
-    Map<Class<? extends Exception>, RetryPolicy> policies = new HashMap<>();
-    policies.put(IOException.class, defaultPolicy);
-    policies.put(IndexOutOfBoundsException.class,
-        RetryPolicies.TRY_ONCE_THEN_FAIL);
-    policies.put(NullPointerException.class,
-        RetryPolicies.TRY_ONCE_THEN_FAIL);
+    public QiniuKodoFileReaderTask(String key, QiniuKodoClient store,
+                                   ReadBuffer readBuffer) {
+        this.key = key;
+        this.store = store;
+        this.readBuffer = readBuffer;
+        RetryPolicy defaultPolicy =
+                RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+                        MAX_RETRIES, 3, TimeUnit.SECONDS);
+        Map<Class<? extends Exception>, RetryPolicy> policies = new HashMap<>();
+        policies.put(IOException.class, defaultPolicy);
+        policies.put(IndexOutOfBoundsException.class,
+                RetryPolicies.TRY_ONCE_THEN_FAIL);
+        policies.put(NullPointerException.class,
+                RetryPolicies.TRY_ONCE_THEN_FAIL);
 
-    this.retryPolicy = RetryPolicies.retryByException(defaultPolicy, policies);
-  }
-
-  @Override
-  public void run() {
-    int retries = 0;
-    readBuffer.lock();
-    try {
-      while (true) {
-        try (InputStream in = store.fetch(
-            key, readBuffer.getByteStart(), readBuffer.getByteEnd())) {
-          IOUtils.readFully(in, readBuffer.getBuffer(),
-              0, readBuffer.getBuffer().length);
-          readBuffer.setStatus(ReadBuffer.STATUS.SUCCESS);
-          break;
-        } catch (Exception e) {
-          LOG.warn("Exception thrown when retrieve key: "
-              + this.key + ", exception: " + e, e);
-          try {
-            RetryPolicy.RetryAction rc = retryPolicy.shouldRetry(
-                e, retries++, 0, true);
-            if (rc.action == RetryPolicy.RetryAction.RetryDecision.RETRY) {
-              Thread.sleep(rc.delayMillis);
-            } else {
-              //should not retry
-              break;
-            }
-          } catch (Exception ex) {
-            //FAIL
-            LOG.warn("Exception thrown when call shouldRetry, exception " + ex);
-            break;
-          }
-        }
-      }
-
-      if (readBuffer.getStatus() != ReadBuffer.STATUS.SUCCESS) {
-        readBuffer.setStatus(ReadBuffer.STATUS.ERROR);
-      }
-
-      //notify main thread which wait for this buffer
-      readBuffer.signalAll();
-    } finally {
-      readBuffer.unlock();
+        this.retryPolicy = RetryPolicies.retryByException(defaultPolicy, policies);
     }
-  }
+
+    @Override
+    public void run() {
+        int retries = 0;
+        readBuffer.lock();
+        try {
+            while (true) {
+                try (InputStream in = store.fetch(
+                        key, readBuffer.getByteStart(), readBuffer.getByteEnd())) {
+                    IOUtils.readFully(in, readBuffer.getBuffer(),
+                            0, readBuffer.getBuffer().length);
+                    readBuffer.setStatus(ReadBuffer.STATUS.SUCCESS);
+                    break;
+                } catch (Exception e) {
+                    LOG.warn("Exception thrown when retrieve key: "
+                            + this.key + ", exception: " + e, e);
+                    try {
+                        RetryPolicy.RetryAction rc = retryPolicy.shouldRetry(
+                                e, retries++, 0, true);
+                        if (rc.action == RetryPolicy.RetryAction.RetryDecision.RETRY) {
+                            Thread.sleep(rc.delayMillis);
+                        } else {
+                            //should not retry
+                            break;
+                        }
+                    } catch (Exception ex) {
+                        //FAIL
+                        LOG.warn("Exception thrown when call shouldRetry, exception " + ex);
+                        break;
+                    }
+                }
+            }
+
+            if (readBuffer.getStatus() != ReadBuffer.STATUS.SUCCESS) {
+                readBuffer.setStatus(ReadBuffer.STATUS.ERROR);
+            }
+
+            //notify main thread which wait for this buffer
+            readBuffer.signalAll();
+        } finally {
+            readBuffer.unlock();
+        }
+    }
 }

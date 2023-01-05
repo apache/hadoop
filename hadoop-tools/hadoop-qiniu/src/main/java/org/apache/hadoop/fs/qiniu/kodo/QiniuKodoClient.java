@@ -9,12 +9,9 @@ import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import com.qiniu.util.StringMap;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -71,7 +68,7 @@ public class QiniuKodoClient {
             }
             this.domain = domains[0];
         }
-        DownloadUrl downloadUrl = new DownloadUrl(bucket+".kodo-cn-south-1.qiniucs.com", false, key);
+        DownloadUrl downloadUrl = new DownloadUrl(bucket + ".kodo-cn-south-1.qiniucs.com", false, key);
         return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
     }
 
@@ -107,7 +104,8 @@ public class QiniuKodoClient {
                 for (FileInfo file : fileListing.items) {
                     if (key.equals(file.key)) continue;
                     retFiles.add(file);
-                }            fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
+                }
+                fileListing = bucketManager.listFilesV2(bucket, key, marker, 100, useDirectory ? QiniuKodoUtils.PATH_SEPARATOR : "");
             }
 
             // 列举出目录
@@ -142,7 +140,7 @@ public class QiniuKodoClient {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
-                for (FileInfo file: fileListing.items) {
+                for (FileInfo file : fileListing.items) {
                     if (operations == null) operations = new BucketManager.BatchOperations();
                     String destKey = file.key.replaceFirst(oldPrefix, newPrefix);
                     LOG.debug(" == copy old: {} new: {}", file.key, destKey);
@@ -153,7 +151,7 @@ public class QiniuKodoClient {
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
             marker = fileListing.marker;
-        } while(!fileListing.isEOF());
+        } while (!fileListing.isEOF());
         return true;
     }
 
@@ -175,7 +173,7 @@ public class QiniuKodoClient {
             fileListing = bucketManager.listFilesV2(bucket, oldPrefix, marker, 100, "");
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = null;
-                for (FileInfo file: fileListing.items) {
+                for (FileInfo file : fileListing.items) {
                     if (file.key.equals(oldPrefix)) {
                         // 标记一下 prefix 本身留到最后再去修改
                         hasPrefixObject = true;
@@ -191,7 +189,7 @@ public class QiniuKodoClient {
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
             marker = fileListing.marker;
-        } while(!fileListing.isEOF());
+        } while (!fileListing.isEOF());
 
         if (hasPrefixObject) {
             Response response = bucketManager.rename(bucket, oldPrefix, newPrefix);
@@ -224,7 +222,7 @@ public class QiniuKodoClient {
             if (fileListing.items != null) {
                 BucketManager.BatchOperations operations = new BucketManager.BatchOperations();
                 boolean shouldExecBatch = false;
-                for (FileInfo file: fileListing.items) {
+                for (FileInfo file : fileListing.items) {
                     if (file.key.equals(prefix)) {
                         // 标记一下 prefix 本身留到最后再去删除
                         hasPrefixObject = true;
@@ -238,7 +236,7 @@ public class QiniuKodoClient {
                 if (!throwExceptionWhileResponseNotSuccess(response)) return false;
             }
             marker = fileListing.marker;
-        } while(!fileListing.isEOF());
+        } while (!fileListing.isEOF());
 
         if (hasPrefixObject) {
             Response response = bucketManager.delete(bucket, prefix);

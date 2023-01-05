@@ -1,16 +1,11 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 
-import static org.apache.hadoop.fs.qiniu.kodo.Constants.BUFFER_DIR_KEY;
 
 public final class QiniuKodoUtils {
 
@@ -69,27 +64,5 @@ public final class QiniuKodoUtils {
         }
 
         return key.endsWith(PATH_SEPARATOR);
-    }
-
-    private static volatile LocalDirAllocator directoryAllocator;
-
-    public static File createTmpFileForWrite(String pathStr, long size,
-                                             Configuration conf) throws IOException {
-        if (conf.get(BUFFER_DIR_KEY) == null) {
-            conf.set(BUFFER_DIR_KEY, conf.get("hadoop.tmp.dir") + "/oss");
-        }
-        if (directoryAllocator == null) {
-            synchronized (QiniuKodoUtils.class) {
-                if (directoryAllocator == null) {
-                    directoryAllocator = new LocalDirAllocator(BUFFER_DIR_KEY);
-                }
-            }
-        }
-        Path path = directoryAllocator.getLocalPathForWrite(pathStr,
-                size, conf);
-        File dir = new File(path.getParent().toUri().getPath());
-        String prefix = path.getName();
-        // create a temp file on this directory
-        return File.createTempFile(prefix, null, dir);
     }
 }

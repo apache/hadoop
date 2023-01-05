@@ -6,13 +6,14 @@ import com.qiniu.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 
-import java.io.IOException;
 import java.util.Map;
 
 public class QiniuKodoFsConfig {
     public static final String QINIU_PARAMETER_ACCESS_KEY = "fs.qiniu.access.key";
 
     public static final String QINIU_PARAMETER_SECRET_KEY = "fs.qiniu.secret.key";
+
+    public static final String QINIU_PARAMETER_BUFFER_DIR_KEY = "fs.qiniu.buffer.dir";
     private final Configuration conf;
 
     public QiniuKodoFsConfig(Configuration conf) {
@@ -53,6 +54,7 @@ public class QiniuKodoFsConfig {
     }
 
     private Auth auth;
+
     public Auth createAuth() throws AuthorizationException {
         if (auth != null) return auth;
         auth = Auth.create(getAuthAccessKey(), getAuthSecretKey());
@@ -71,7 +73,11 @@ public class QiniuKodoFsConfig {
         return conf.getLong("fs.qiniu.multipart.download.size", 512 * 1024);
     }
 
+    private String bufferDir;
+
     public String getBufferDir() {
-        return conf.get("fs.qiniu.buffer.dir");
+        if (bufferDir != null) return bufferDir;
+        bufferDir = conf.get(QINIU_PARAMETER_BUFFER_DIR_KEY);
+        return bufferDir;
     }
 }

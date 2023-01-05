@@ -3,7 +3,10 @@ package org.apache.hadoop.fs.qiniu.kodo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 
 public class QiniuKodoOutputStream extends OutputStream {
 
@@ -20,7 +23,7 @@ public class QiniuKodoOutputStream extends OutputStream {
         this.pos = new PipedOutputStream();
         try {
             this.pis = new PipedInputStream(pos);
-            this.thread = new Thread(()->{
+            this.thread = new Thread(() -> {
                 try {
                     client.upload(pis, key, token);
                 } catch (IOException e) {
