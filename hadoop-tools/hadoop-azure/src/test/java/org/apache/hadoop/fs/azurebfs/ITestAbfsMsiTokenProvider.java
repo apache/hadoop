@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.HttpURLConnection;
 import java.util.Date;
 import org.junit.Test;
 import org.mockito.MockedStatic;
@@ -53,6 +54,8 @@ import static org.mockito.Mockito.times;
  */
 public final class ITestAbfsMsiTokenProvider
     extends AbstractAbfsIntegrationTest {
+
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   public ITestAbfsMsiTokenProvider() throws Exception {
     super();
@@ -103,7 +106,6 @@ public final class ITestAbfsMsiTokenProvider
    */
   @Test
   public void testRetryForThrottling() throws Exception {
-    final int HTTP_TOO_MANY_REQUESTS = 429;
     AbfsConfiguration conf = getConfiguration();
 
     // Exception to be thrown with throttling error code 429.
@@ -147,6 +149,59 @@ public final class ITestAbfsMsiTokenProvider
       // It being called multiple times verifies that the retry was done for the throttling status code 429.
       Mockito.verify(exponentialRetryPolicy,
               times(DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS + 1))
+          .shouldRetry(Mockito.anyInt(), Mockito.anyInt());
+    }
+  }
+
+  /**
+   * Test to verify that token fetch is not retried for resource not found errors.
+   * @throws Exception
+   */
+  @Test
+  public void testNoRetryForResourceNotFound() throws Exception {
+    AbfsConfiguration conf = getConfiguration();
+
+    // Exception to be thrown 404 error code.
+    AzureADAuthenticator.HttpException httpException
+        = new AzureADAuthenticator.HttpException(HttpURLConnection.HTTP_NOT_FOUND,
+        "abc", "abc", "abc", "abc", "abc");
+
+    String tenantGuid = "abcd";
+    String clientId = "abcd";
+    String authEndpoint = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+    String authority = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+
+    // Mock the getTokenSingleCall to throw exception.
+    try (MockedStatic<AzureADAuthenticator> adAuthenticator = Mockito.mockStatic(
+        AzureADAuthenticator.class, Mockito.CALLS_REAL_METHODS)) {
+      adAuthenticator.when(
+          () -> AzureADAuthenticator.getTokenSingleCall(Mockito.anyString(),
+              Mockito.anyString(), Mockito.any(), Mockito.anyString(),
+              Mockito.anyBoolean())).thenThrow(httpException);
+
+      // Mock the tokenFetchRetryPolicy to verify no retries.
+      ExponentialRetryPolicy exponentialRetryPolicy = Mockito.spy(
+          conf.getOauthTokenFetchRetryPolicy());
+      Field tokenFetchRetryPolicy = AzureADAuthenticator.class.getDeclaredField(
+          "tokenFetchRetryPolicy");
+      tokenFetchRetryPolicy.setAccessible(true);
+      tokenFetchRetryPolicy.set(ExponentialRetryPolicy.class,
+          exponentialRetryPolicy);
+
+      AccessTokenProvider tokenProvider = new MsiTokenProvider(authEndpoint,
+          tenantGuid, clientId, authority);
+      AzureADToken token = null;
+      intercept(AzureADAuthenticator.HttpException.class,
+          tokenProvider::getToken);
+
+      // If the status code doesn't qualify for retry shouldRetry returns false and the loop ends.
+      // It being called only once verifies that retry doesn't come into place..
+      Mockito.verify(exponentialRetryPolicy,
+              times(1))
           .shouldRetry(Mockito.anyInt(), Mockito.anyInt());
     }
   }
