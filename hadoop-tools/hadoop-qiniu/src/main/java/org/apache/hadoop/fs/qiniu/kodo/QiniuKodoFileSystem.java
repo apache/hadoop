@@ -127,7 +127,14 @@ public class QiniuKodoFileSystem extends FileSystem {
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== open, key:" + key);
 
-        return new FSDataInputStream(new QiniuKodoInputStream(this.conf, new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true), 4, kodoClient, key, fileStatus.getLen(), statistics));
+        return new FSDataInputStream(
+                new QiniuKodoInputStream(
+                        this.conf,
+                        new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true),
+                        4, kodoClient,
+                        key,
+                        fileStatus.getLen(),
+                        statistics));
     }
 
     /**
@@ -136,7 +143,7 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
         LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
-
+        mkdirs(path.getParent());
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
@@ -290,6 +297,8 @@ public class QiniuKodoFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path path) throws IOException {
         LOG.debug("== listStatus, path:" + path);
 
+        if (!path.isRoot() && getFileStatus(path.getParent()) == null) throw new FileNotFoundException(path.toString());
+
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         key = QiniuKodoUtils.keyToDirKey(key);
         LOG.debug("== listStatus, key:" + key);
@@ -402,15 +411,15 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== file conv, key:" + file.key);
 
         long putTime = file.putTime / 10000;
-
+        boolean isDir = QiniuKodoUtils.isKeyDir(file.key);
         return new FileStatus(
                 file.fsize, // 文件大小
-                QiniuKodoUtils.isKeyDir(file.key),
+                isDir,
                 blockSize,
                 Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE,
                 putTime, // modification time
                 putTime, // access time
-                null,   // permission
+                isDir?new FsPermission(0715):null,   // permission
                 username,   // owner
                 username,   // group
                 null,   // symlink

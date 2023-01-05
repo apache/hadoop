@@ -72,7 +72,7 @@ public class QiniuKodoFileReaderTask implements Runnable {
           break;
         } catch (Exception e) {
           LOG.warn("Exception thrown when retrieve key: "
-              + this.key + ", exception: " + e);
+              + this.key + ", exception: " + e, e);
           try {
             RetryPolicy.RetryAction rc = retryPolicy.shouldRetry(
                 e, retries++, 0, true);
