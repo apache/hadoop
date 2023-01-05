@@ -123,6 +123,7 @@ public class DelegationTokenRenewer extends AbstractService {
   private long tokenRenewerThreadTimeout;
   private long tokenRenewerThreadRetryInterval;
   private int tokenRenewerThreadRetryMaxAttempts;
+  private long tokenRenewerThreadIdleBackoffMs;
   private final Map<DelegationTokenRenewerEvent, Future<?>> futures =
       new ConcurrentHashMap<>();
   private boolean delegationTokenRenewerPoolTrackerFlag = true;
@@ -158,6 +159,10 @@ public class DelegationTokenRenewer extends AbstractService {
         conf.getTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_TIMEOUT,
             YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_TIMEOUT,
             TimeUnit.MILLISECONDS);
+    tokenRenewerThreadIdleBackoffMs =
+        conf.getTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS,
+            YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS,
+            TimeUnit.MICROSECONDS);
     tokenRenewerThreadRetryInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
         YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
@@ -999,10 +1004,9 @@ public class DelegationTokenRenewer extends AbstractService {
         if (futures.isEmpty()) {
           synchronized (this) {
             try {
-              // waiting for tokenRenewerThreadTimeout milliseconds
-              long waitingTimeMs = Math.min(10000, Math.max(500, tokenRenewerThreadTimeout));
-              LOG.info("Delegation token renewer pool is empty, waiting for {} ms.", waitingTimeMs);
-              wait(waitingTimeMs);
+              LOG.info("Delegation token renewer pool is empty, waiting for {} ms.",
+                  tokenRenewerThreadIdleBackoffMs);
+              wait(tokenRenewerThreadIdleBackoffMs);
             } catch (InterruptedException e) {
               LOG.warn("Delegation token renewer pool tracker waiting interrupt occurred.");
               Thread.currentThread().interrupt();

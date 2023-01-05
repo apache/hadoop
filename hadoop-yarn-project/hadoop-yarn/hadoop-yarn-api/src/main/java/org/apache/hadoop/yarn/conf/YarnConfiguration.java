@@ -819,6 +819,15 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_DT_RENEWER_THREAD_RETRY_MAX_ATTEMPTS =
       10;
 
+  /**
+   * The setting is used to control delegation token renewer thread perform backoff
+   * waiting when there are no renewer event futures to avoid CPU busy idling.
+   */
+  public static final String RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS =
+      RM_PREFIX + "delegation-token-renewer.thread-idle-backoff-ms";
+  public static final long DEFAULT_RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS =
+      TimeUnit.SECONDS.toMillis(3); // 3 Seconds
+
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 

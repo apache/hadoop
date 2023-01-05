@@ -1150,6 +1150,16 @@
 
   <property>
     <description>
+      The setting is used to control each RM DelegationTokenRenewer thread perform backoff
+      waiting when there are no renewer event futures to avoid CPU busy idling.
+      the default value is 3 seconds.
+    </description>
+    <name>yarn.resourcemanager.delegation-token-renewer.thread-idle-backoff-ms</name>
+    <value>3s</value>
+  </property>
+
+  <property>
+    <description>
     Thread pool size for RMApplicationHistoryWriter.
     </description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
