@@ -72,7 +72,7 @@ public class QiniuKodoClient {
             }
             this.domain = domains[0];
         }
-        DownloadUrl downloadUrl = new DownloadUrl(this.domain, false, key);
+        DownloadUrl downloadUrl = new DownloadUrl(bucket+".kodo-cn-south-1.qiniucs.com", false, key);
         return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
     }
 
