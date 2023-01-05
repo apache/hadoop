@@ -4,10 +4,7 @@ package org.apache.hadoop.fs.qiniu.kodo;
 import com.qiniu.common.QiniuException;
 import com.qiniu.http.Client;
 import com.qiniu.http.Response;
-import com.qiniu.storage.BucketManager;
-import com.qiniu.storage.Configuration;
-import com.qiniu.storage.DownloadUrl;
-import com.qiniu.storage.UploadManager;
+import com.qiniu.storage.*;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
@@ -40,13 +37,15 @@ public class QiniuKodoClient {
 
     private String domain;
 
-    public QiniuKodoClient(Auth auth, Configuration configuration, String bucket) throws QiniuException {
+    public QiniuKodoClient(Auth auth, String bucket) throws QiniuException {
+        this.configuration = new Configuration();
+        configuration.region = Region.autoRegion();
+
         this.client = new Client(configuration);
         this.auth = auth;
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
         this.bucket = bucket;
-        this.configuration = configuration;
     }
 
     public String getUploadToken(String key, boolean overwrite) {

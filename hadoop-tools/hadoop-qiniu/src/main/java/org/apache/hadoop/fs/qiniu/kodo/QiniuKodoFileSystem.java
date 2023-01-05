@@ -31,16 +31,13 @@ public class QiniuKodoFileSystem extends FileSystem {
     private String username;
     private Path workingDir;
 
-    private int blockSize = Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE;
-
     private QiniuKodoClient kodoClient;
-
-    private Configuration conf;
 
     private ExecutorService boundedThreadPool;
 
     private ExecutorService boundedCopyThreadPool;
 
+    private QiniuKodoFsConfig fsConfig;
     @Override
     public void close() throws IOException {
         try {
@@ -54,7 +51,9 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
         super.initialize(name, conf);
-        this.conf = conf;
+        setConf(conf);
+
+        this.fsConfig = new QiniuKodoFsConfig(getConf());
         bucket = name.getHost();
         LOG.debug("== bucket:" + bucket);
 
@@ -68,9 +67,6 @@ public class QiniuKodoFileSystem extends FileSystem {
         workingDir = new Path("/user", username).makeQualified(uri, null);
         LOG.debug("== workingDir:" + workingDir);
 
-        blockSize = conf.getInt(Constants.QINIU_PARAMETER_BLOCK_SIZE, Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE);
-        LOG.debug("== blockSize:" + blockSize);
-
         this.boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
                 10, 128, 60, TimeUnit.SECONDS,
                 "kodo-transfer-shared");
@@ -78,32 +74,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
                 25, 10485760, 60L,
                 TimeUnit.SECONDS, "kodo-copy-unbounded");
-        setConf(conf);
 
-        com.qiniu.storage.Configuration qiniuConfig = new com.qiniu.storage.Configuration();
-        qiniuConfig.region = Region.autoRegion();
-
-        String accessKey = conf.get(Constants.QINIU_PARAMETER_ACCESS_KEY);
-        if (accessKey == null || accessKey.length() == 0) {
-            throw new IOException("Qiniu access key can't empty, you should set it with "
-                    + Constants.QINIU_PARAMETER_ACCESS_KEY + " in core-site.xml");
-        }
-
-        String secretKey = conf.get(Constants.QINIU_PARAMETER_SECRET_KEY);
-        if (secretKey == null || secretKey.length() == 0) {
-            throw new IOException("Qiniu secret key can't empty, you should set it with "
-                    + Constants.QINIU_PARAMETER_SECRET_KEY + " in core-site.xml");
-        }
-
-        Auth auth = Auth.create(accessKey, secretKey);
-        kodoClient = new QiniuKodoClient(auth, qiniuConfig, bucket);
+        Auth auth = fsConfig.createAuth();
+        kodoClient = new QiniuKodoClient(auth, bucket);
 
         mkdir(workingDir);
-    }
-
-    @Override
-    public Configuration getConf() {
-        return this.conf;
     }
 
     @Override
@@ -129,7 +104,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         return new FSDataInputStream(
                 new QiniuKodoInputStream(
-                        this.conf,
+                        getConf(),
                         new SemaphoredDelegatingExecutor(boundedThreadPool, 4, true),
                         4, kodoClient,
                         key,
@@ -415,8 +390,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         return new FileStatus(
                 file.fsize, // 文件大小
                 isDir,
-                blockSize,
-                Constants.QINIU_DEFAULT_VALUE_BLOCK_SIZE,
+                0,
+                0,
                 putTime, // modification time
                 putTime, // access time
                 isDir?new FsPermission(0715):null,   // permission

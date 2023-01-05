@@ -2,12 +2,8 @@ package org.apache.hadoop.fs.qinu.kodo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.contract.AbstractFSContract;
-import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
-import org.apache.hadoop.fs.qiniu.kodo.Constants;
 import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoFileSystem;
-import org.apache.hadoop.fs.qiniu.kodo.QiniuKodoInputStream;
-import org.apache.hadoop.fs.qinu.kodo.contract.QiniuKodoContract;
+
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,9 +21,6 @@ public class QiniuKodoFileSystemTest {
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        Map<String, String> env = System.getenv();
-        conf.setIfUnset(Constants.QINIU_PARAMETER_ACCESS_KEY, env.get("QSHELL_AK"));
-        conf.setIfUnset(Constants.QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
         conf.setIfUnset("fs.contract.test.fs.qiniu", "qiniu://qshell-hadoop");
 
         fs = new QiniuKodoFileSystem();
