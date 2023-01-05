@@ -17,7 +17,7 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private final Thread thread;
 
-    private IOException uploadException;
+    private volatile IOException uploadException;
 
     public QiniuKodoOutputStream(QiniuKodoClient client, String key, String token) {
         this.pos = new PipedOutputStream();
