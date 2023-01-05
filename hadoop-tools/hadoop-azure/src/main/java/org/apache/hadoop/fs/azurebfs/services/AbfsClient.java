@@ -262,7 +262,6 @@ public class AbfsClient implements Closeable {
       return;
     }
     String encodedKey, encodedKeySHA256;
-    boolean encryptionAdapterCreated = false;
     switch (encryptionType) {
     case GLOBAL_KEY:
       encodedKey = clientProvidedEncryptionKey;
@@ -281,10 +280,6 @@ public class AbfsClient implements Closeable {
       break;
 
     default: return; // no client-provided encryption keys
-    }
-
-    if (encryptionAdapterCreated && encryptionAdapter != null) {
-      encryptionAdapter.destroy();
     }
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_ENCRYPTION_KEY, encodedKey));

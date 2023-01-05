@@ -500,7 +500,6 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       if (encryptionAdapter != null) {
         encryptionAdapter.destroy();
       }
-
       if (hasLease()) {
         lease.free();
         lease = null;

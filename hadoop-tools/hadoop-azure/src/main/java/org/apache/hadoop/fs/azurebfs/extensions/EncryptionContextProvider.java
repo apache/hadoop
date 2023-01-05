@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.azurebfs.security.ABFSKey;
  * */
 public interface EncryptionContextProvider extends Destroyable {
   /**
-   * Initialize instance
+   * Initialize instance.
    *
    * @param configuration rawConfig instance
    * @param accountName Account Name (with domain)
@@ -47,7 +47,7 @@ public interface EncryptionContextProvider extends Destroyable {
   void initialize(Configuration configuration, String accountName, String fileSystem) throws IOException;
 
   /**
-   * Fetch encryption context for a given path
+   * Fetch encryption context for a given path.
    *
    * @param path file path from filesystem root
    * @return encryptionContext key
@@ -56,7 +56,7 @@ public interface EncryptionContextProvider extends Destroyable {
   ABFSKey getEncryptionContext(String path) throws IOException;
 
   /**
-   * Fetch encryption key in-exchange for encryption context
+   * Fetch encryption key in-exchange for encryption context.
    *
    * @param path file path from filesystem root
    * @param encryptionContext encryptionContext fetched from server
