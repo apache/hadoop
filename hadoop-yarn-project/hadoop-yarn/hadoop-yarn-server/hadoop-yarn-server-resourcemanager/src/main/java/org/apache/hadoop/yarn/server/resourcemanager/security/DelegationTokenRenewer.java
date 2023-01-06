@@ -162,7 +162,7 @@ public class DelegationTokenRenewer extends AbstractService {
     tokenRenewerThreadIdleBackoffMs =
         conf.getTimeDuration(YarnConfiguration.RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS,
             YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_IDLE_BACKOFF_MS,
-            TimeUnit.MICROSECONDS);
+            TimeUnit.MILLISECONDS);
     tokenRenewerThreadRetryInterval = conf.getTimeDuration(
         YarnConfiguration.RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
         YarnConfiguration.DEFAULT_RM_DT_RENEWER_THREAD_RETRY_INTERVAL,
