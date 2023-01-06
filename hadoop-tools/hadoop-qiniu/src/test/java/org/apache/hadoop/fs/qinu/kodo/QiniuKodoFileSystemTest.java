@@ -21,7 +21,7 @@ public class QiniuKodoFileSystemTest {
         conf.addResource("core-site.xml");
         conf.addResource("contract-test-options.xml");
 
-        conf.setIfUnset("fs.contract.test.fs.qiniu", "qiniu://qshell-hadoop");
+        conf.setIfUnset("fs.contract.test.fs.qiniu", "kodo://qshell-hadoop");
 
         fs = new QiniuKodoFileSystem();
         fs.initialize(URI.create(conf.get("fs.contract.test.fs.qiniu")), conf);
