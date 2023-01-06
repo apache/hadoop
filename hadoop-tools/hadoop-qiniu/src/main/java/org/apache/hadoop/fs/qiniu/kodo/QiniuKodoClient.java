@@ -32,11 +32,25 @@ public class QiniuKodoClient {
     private final BucketManager bucketManager;
     private final Configuration configuration;
 
+    private final QiniuKodoFsConfig fsConfig;
     private String domain;
 
-    public QiniuKodoClient(Auth auth, String bucket) throws QiniuException {
+    public QiniuKodoClient(Auth auth, String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException {
+        this.fsConfig = fsConfig;
+
+
         this.configuration = new Configuration();
-        configuration.region = Region.autoRegion();
+
+        String region = fsConfig.getRegionId();
+        if (region == null) {
+            configuration.region = Region.autoRegion();
+        }else {
+            try {
+                configuration.region = (Region) Region.class.getDeclaredMethod(region).invoke(null);
+            } catch (Exception e) {
+                throw new QiniuException(e);
+            }
+        }
 
         this.client = new Client(configuration);
         this.auth = auth;

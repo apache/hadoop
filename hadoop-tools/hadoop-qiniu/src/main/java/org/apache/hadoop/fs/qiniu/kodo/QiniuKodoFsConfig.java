@@ -61,6 +61,9 @@ public class QiniuKodoFsConfig {
         return auth;
     }
 
+    /**
+     * 获取bucket的region配置信息，若为空则自动获取region
+     */
     public String getRegionId() {
         return conf.get("fs.qiniu.region.id");
     }

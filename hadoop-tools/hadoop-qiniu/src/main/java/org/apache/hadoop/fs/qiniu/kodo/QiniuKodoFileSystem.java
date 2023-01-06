@@ -76,7 +76,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 TimeUnit.SECONDS, "kodo-copy-unbounded");
 
         Auth auth = fsConfig.createAuth();
-        kodoClient = new QiniuKodoClient(auth, bucket);
+        kodoClient = new QiniuKodoClient(auth, bucket, fsConfig);
 
         mkdir(workingDir);
     }
