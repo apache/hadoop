@@ -159,7 +159,7 @@ public abstract class Server {
    * Allow server to do force Kerberos re-login once after failure irrespective
    * of the last login time.
    */
-  private AtomicBoolean canTryForceLogin = new AtomicBoolean(true);
+  private final AtomicBoolean canTryForceLogin = new AtomicBoolean(true);
 
   /**
    * Logical name of the server used in metrics and monitor.
@@ -3351,8 +3351,7 @@ public abstract class Server {
       return;
     }
     LOG.warn("Initiating re-login from IPC Server");
-    if (canTryForceLogin.get()) {
-      canTryForceLogin.set(false);
+    if (canTryForceLogin.compareAndSet(true, false)) {
       if (UserGroupInformation.isLoginKeytabBased()) {
         UserGroupInformation.getLoginUser().forceReloginFromKeytab();
       } else if (UserGroupInformation.isLoginTicketBased()) {
