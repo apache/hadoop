@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UserInfo;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)

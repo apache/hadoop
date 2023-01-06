@@ -21,16 +21,17 @@ import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.usermanagement.UsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class CapacityHeadroomProvider {
-  
+
   UsersManager.User user;
   AbstractLeafQueue queue;
   FiCaSchedulerApp application;
   AbstractLeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo;
-  
+
   public CapacityHeadroomProvider(UsersManager.User user, AbstractLeafQueue queue,
       FiCaSchedulerApp application,
       AbstractLeafQueue.QueueResourceLimitsInfo queueResourceLimitsInfo) {
@@ -40,7 +41,7 @@ public class CapacityHeadroomProvider {
     this.application = application;
     this.queueResourceLimitsInfo = queueResourceLimitsInfo;
   }
-  
+
   public Resource getHeadroom() {
 
     Resource queueCurrentLimit;
