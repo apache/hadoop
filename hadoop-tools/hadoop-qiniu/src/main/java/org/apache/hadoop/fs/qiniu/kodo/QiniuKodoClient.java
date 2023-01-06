@@ -5,6 +5,7 @@ import com.qiniu.common.QiniuException;
 import com.qiniu.http.Client;
 import com.qiniu.http.Response;
 import com.qiniu.storage.*;
+import com.qiniu.storage.model.BucketInfo;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
@@ -30,33 +31,36 @@ public class QiniuKodoClient {
 
     private final UploadManager uploadManager;
     private final BucketManager bucketManager;
-    private final Configuration configuration;
 
-    private final QiniuKodoFsConfig fsConfig;
-    private String domain;
+    private QiniuKodoRegionManager.QiniuKodoRegion region;
+
+    private final boolean useHttps;
+
+    private String downloadDomain;
 
     public QiniuKodoClient(Auth auth, String bucket, QiniuKodoFsConfig fsConfig) throws QiniuException {
-        this.fsConfig = fsConfig;
+        this.bucket = bucket;
+        this.auth = auth;
 
+        Configuration configuration = new Configuration();
 
-        this.configuration = new Configuration();
+        // 如果找不到区域配置，那就auto
+        String regionIdConfig = fsConfig.getRegionId();
+        if (regionIdConfig != null) region = QiniuKodoRegionManager.getRegionById(regionIdConfig);
 
-        String region = fsConfig.getRegionId();
-        if (region == null) {
-            configuration.region = Region.autoRegion();
-        }else {
-            try {
-                configuration.region = (Region) Region.class.getDeclaredMethod(region).invoke(null);
-            } catch (Exception e) {
-                throw new QiniuException(e);
-            }
-        }
+        configuration.region = region == null ? Region.autoRegion() : region.getRegion();
+        this.useHttps = fsConfig.useHttps();
+        configuration.useHttpsDomains = this.useHttps;
 
         this.client = new Client(configuration);
-        this.auth = auth;
         this.uploadManager = new UploadManager(configuration);
         this.bucketManager = new BucketManager(auth, configuration, this.client);
-        this.bucket = bucket;
+
+        // 如果找不到区域配置，那就发起请求获取区域信息
+        if (region == null) region = QiniuKodoRegionManager.getRegionById(bucketManager.getBucketInfo(bucket).getRegion());
+
+        // 设置下载域名，若未配置，则走源站
+        if ((downloadDomain = fsConfig.getDownloadDomain()) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
     }
 
     public String getUploadToken(String key, boolean overwrite) {
@@ -75,14 +79,7 @@ public class QiniuKodoClient {
     }
 
     private String getFileUrlByKey(String key) throws IOException {
-        if (domain == null) {
-            String[] domains = domains();
-            if (domains == null || domains.length == 0) {
-                throw new IOException("can't get bucket domain");
-            }
-            this.domain = domains[0];
-        }
-        DownloadUrl downloadUrl = new DownloadUrl(bucket + ".kodo-cn-south-1.qiniucs.com", false, key);
+        DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
         return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
     }
 
@@ -286,11 +283,6 @@ public class QiniuKodoClient {
             }
             throw e;
         }
-    }
-
-    private String[] domains() throws IOException {
-        //TODO: 此处增加全局缓存
-        return bucketManager.domainList(bucket);
     }
 
     private boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {

@@ -14,6 +14,11 @@ public class QiniuKodoFsConfig {
     public static final String QINIU_PARAMETER_SECRET_KEY = "fs.qiniu.secret.key";
 
     public static final String QINIU_PARAMETER_BUFFER_DIR_KEY = "fs.qiniu.buffer.dir";
+
+    public static final String QINIU_PARAMETER_REGION_ID_KEY = "fs.qiniu.region.id";
+
+    public static final String QINIU_PARAMETER_DOWNLOAD_DOMAIN_KEY = "fs.qiniu.download.domain";
+    public static final String QINIU_PARAMETER_USE_HTTPS_KEY = "fs.qiniu.useHttps";
     private final Configuration conf;
 
     public QiniuKodoFsConfig(Configuration conf) {
@@ -23,12 +28,9 @@ public class QiniuKodoFsConfig {
         conf.setIfUnset(QINIU_PARAMETER_SECRET_KEY, env.get("QSHELL_SK"));
     }
 
-    private String authAccessKey;
 
     public String getAuthAccessKey() throws AuthorizationException {
-        if (authAccessKey != null) return authAccessKey;
-
-        authAccessKey = conf.get(QINIU_PARAMETER_ACCESS_KEY);
+        String authAccessKey = conf.get(QINIU_PARAMETER_ACCESS_KEY);
 
         if (!StringUtils.isNullOrEmpty(authAccessKey)) return authAccessKey;
 
@@ -38,12 +40,9 @@ public class QiniuKodoFsConfig {
         ));
     }
 
-    private String authSecretKey;
 
     public String getAuthSecretKey() throws AuthorizationException {
-        if (authSecretKey != null) return authSecretKey;
-
-        authSecretKey = conf.get(QINIU_PARAMETER_SECRET_KEY);
+        String authSecretKey = conf.get(QINIU_PARAMETER_SECRET_KEY);
 
         if (!StringUtils.isNullOrEmpty(authSecretKey)) return authSecretKey;
 
@@ -53,11 +52,9 @@ public class QiniuKodoFsConfig {
         ));
     }
 
-    private Auth auth;
 
     public Auth createAuth() throws AuthorizationException {
-        if (auth != null) return auth;
-        auth = Auth.create(getAuthAccessKey(), getAuthSecretKey());
+        Auth auth = Auth.create(getAuthAccessKey(), getAuthSecretKey());
         return auth;
     }
 
@@ -65,7 +62,18 @@ public class QiniuKodoFsConfig {
      * 获取bucket的region配置信息，若为空则自动获取region
      */
     public String getRegionId() {
-        return conf.get("fs.qiniu.region.id");
+        return conf.get(QINIU_PARAMETER_REGION_ID_KEY);
+    }
+
+    public boolean useHttps() {
+        return conf.getBoolean(QINIU_PARAMETER_USE_HTTPS_KEY, true);
+    }
+
+    /**
+     * 若返回空，则默认走源站
+     */
+    public String getDownloadDomain() {
+        return conf.get(QINIU_PARAMETER_DOWNLOAD_DOMAIN_KEY);
     }
 
     public int getBlockSize() {
