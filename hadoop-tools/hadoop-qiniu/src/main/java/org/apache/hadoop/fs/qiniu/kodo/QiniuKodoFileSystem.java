@@ -387,6 +387,7 @@ public class QiniuKodoFileSystem extends FileSystem {
 
         long putTime = file.putTime / 10000;
         boolean isDir = QiniuKodoUtils.isKeyDir(file.key);
+
         return new FileStatus(
                 file.fsize, // 文件大小
                 isDir,

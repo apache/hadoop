@@ -34,11 +34,11 @@ public class QiniuKodoFileReaderTask implements Runnable {
     public static final Logger LOG =
             LoggerFactory.getLogger(QiniuKodoFileReaderTask.class);
 
-    private String key;
-    private QiniuKodoClient store;
-    private ReadBuffer readBuffer;
+    private final String key;
+    private final QiniuKodoClient store;
+    private final ReadBuffer readBuffer;
     private static final int MAX_RETRIES = 3;
-    private RetryPolicy retryPolicy;
+    private final RetryPolicy retryPolicy;
 
     public QiniuKodoFileReaderTask(String key, QiniuKodoClient store,
                                    ReadBuffer readBuffer) {

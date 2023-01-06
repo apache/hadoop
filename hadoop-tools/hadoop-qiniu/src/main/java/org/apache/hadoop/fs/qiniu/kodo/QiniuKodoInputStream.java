@@ -17,22 +17,21 @@ import java.util.concurrent.ExecutorService;
 public class QiniuKodoInputStream extends FSInputStream {
     public static final Logger LOG = LoggerFactory.getLogger(QiniuKodoInputStream.class);
     private final long downloadPartSize;
-    private QiniuKodoClient store;
+    private final QiniuKodoClient store;
     private final String key;
-    private FileSystem.Statistics statistics;
+    private final FileSystem.Statistics statistics;
+    private final long contentLength;
+    private final int maxReadAheadPartNumber;
+    private final ExecutorService readAheadExecutorService;
+    private final Queue<ReadBuffer> readBufferQueue = new ArrayDeque<>();
+
     private boolean closed;
-    private long contentLength;
     private long position;
     private long partRemaining;
     private byte[] buffer;
-    private int maxReadAheadPartNumber;
     private long expectNextPos;
     private long lastByteStart;
 
-    private ExecutorService readAheadExecutorService;
-    private Queue<ReadBuffer> readBufferQueue = new ArrayDeque<>();
-
-    private QiniuKodoFsConfig fsConfig;
 
     public QiniuKodoInputStream(QiniuKodoFsConfig fsConfig,
                                 ExecutorService readAheadExecutorService, int maxReadAheadPartNumber,
@@ -43,7 +42,6 @@ public class QiniuKodoInputStream extends FSInputStream {
         this.store = store;
         this.key = key;
         this.statistics = statistics;
-        this.fsConfig = fsConfig;
         this.contentLength = contentLength;
         this.maxReadAheadPartNumber = maxReadAheadPartNumber;
         this.downloadPartSize = fsConfig.getMultipartDownloadSize();
@@ -186,9 +184,8 @@ public class QiniuKodoInputStream extends FSInputStream {
      * @throws IOException if the connection is closed.
      */
     private void checkNotClosed() throws IOException {
-        if (closed) {
-            throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-        }
+        if (!closed) return;
+        throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
 
     @Override
@@ -231,23 +228,16 @@ public class QiniuKodoInputStream extends FSInputStream {
             }
         }
 
-        if (statistics != null && bytesRead > 0) {
-            statistics.incrementBytesRead(bytesRead);
-        }
+        if (statistics != null && bytesRead > 0) statistics.incrementBytesRead(bytesRead);
 
         // Read nothing, but attempt to read something
-        if (bytesRead == 0 && len > 0) {
-            return -1;
-        } else {
-            return bytesRead;
-        }
+        return bytesRead == 0 ? -1 : bytesRead;
     }
 
     @Override
     public synchronized void close() throws IOException {
-        if (closed) {
-            return;
-        }
+        if (closed) return;
+
         closed = true;
         this.buffer = null;
     }
@@ -266,9 +256,9 @@ public class QiniuKodoInputStream extends FSInputStream {
     @Override
     public synchronized void seek(long pos) throws IOException {
         checkNotClosed();
-        if (position == pos) {
-            return;
-        } else if (pos > position && pos < position + partRemaining) {
+        if (position == pos) return;
+
+        if (pos > position && pos < position + partRemaining) {
             long len = pos - position;
             position = pos;
             partRemaining -= len;
@@ -287,9 +277,5 @@ public class QiniuKodoInputStream extends FSInputStream {
     public boolean seekToNewSource(long targetPos) throws IOException {
         checkNotClosed();
         return false;
-    }
-
-    public long getExpectNextPos() {
-        return this.expectNextPos;
     }
 }
