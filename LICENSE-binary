@@ -347,7 +347,7 @@ org.apache.kerby:token-provider:1.0.1
 org.apache.yetus:audience-annotations:0.5.0
 org.apache.zookeeper:zookeeper:3.5.6
 org.apache.zookeeper:zookeeper-jute:3.5.6
-org.codehaus.jettison:jettison:1.5.1
+org.codehaus.jettison:jettison:1.5.3
 org.eclipse.jetty:jetty-annotations:9.4.48.v20220622
 org.eclipse.jetty:jetty-http:9.4.48.v20220622
 org.eclipse.jetty:jetty-io:9.4.48.v20220622
