@@ -33,6 +33,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -108,6 +109,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NewReservation;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
@@ -1684,5 +1687,44 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Response cancelResponse = interceptor.cancelDelegationToken(request);
     Assert.assertNotNull(cancelResponse);
     Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
+  }
+
+  @Test
+  public void testGetActivitiesNormal() {
+    ActivitiesInfo activitiesInfo = interceptor.getActivities(null, "1", "DIAGNOSTIC");
+    Assert.assertNotNull(activitiesInfo);
+
+    String nodeId = activitiesInfo.getNodeId();
+    Assert.assertNotNull(nodeId);
+    Assert.assertEquals("1", nodeId);
+
+    String diagnostic = activitiesInfo.getDiagnostic();
+    Assert.assertNotNull(diagnostic);
+    Assert.assertTrue(StringUtils.contains(diagnostic, "Diagnostic"));
+
+    long timestamp = activitiesInfo.getTimestamp();
+    Assert.assertEquals(1673081972L, timestamp);
+
+    List<NodeAllocationInfo> allocationInfos = activitiesInfo.getAllocations();
+    Assert.assertNotNull(allocationInfos);
+    Assert.assertEquals(1, allocationInfos.size());
+  }
+
+  @Test
+  public void testGetActivitiesError() throws Exception {
+    // nodeId is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'nodeId' must not be empty.",
+        () -> interceptor.getActivities(null, "", "DIAGNOSTIC"));
+
+    // groupBy is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'groupBy' must not be empty.",
+        () -> interceptor.getActivities(null, "1", ""));
+
+    // groupBy value is wrong
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Got invalid groupBy: TEST1, valid groupBy types: [DIAGNOSTIC]",
+        () -> interceptor.getActivities(null, "1", "TEST1"));
   }
 }
