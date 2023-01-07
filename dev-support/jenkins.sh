@@ -197,8 +197,8 @@ function run_ci() {
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 
-  echo "Showing trunk install output"
-  cat "/c/out/branch-mvninstall-root.txt"
+  echo "Showing shadedclient output"
+  cat "/c/out/branch-shadedclient.txt"
 }
 
 ## @description  Cleans up the processes started by YETUS
