@@ -1241,6 +1241,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.access-control-enforcer-reporting-threshold-ms</name>
+  <value>1000</value>
+  <description>
+    If an external AccessControlEnforcer runs for a long time to check permission with the FSnamesystem lock,
+    this will be logged as the lock is released. This sets how long the lock must be held for logging to occur.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.plugins</name>
   <value></value>
   <description>Comma-separated list of datanode plug-ins to be activated.
