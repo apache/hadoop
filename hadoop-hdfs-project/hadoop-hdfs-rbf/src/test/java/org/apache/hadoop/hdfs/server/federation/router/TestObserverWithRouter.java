@@ -569,14 +569,15 @@ public class TestObserverWithRouter {
   @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
   public void testSharedStateInRouterStateIdContext() throws Exception {
     Path rootPath = new Path("/");
-    long poolCleanUpPeriodMs = 1000;
+    long cleanupPeriodMs = 1000;
 
-    Configuration confOverride = new Configuration(false);
-    confOverride.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, poolCleanUpPeriodMs);
-    confOverride.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, poolCleanUpPeriodMs / 10);
-    startUpCluster(1, confOverride);
+    Configuration conf = new Configuration(false);
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_POOL_CLEAN, cleanupPeriodMs);
+    conf.setLong(RBFConfigKeys.DFS_ROUTER_NAMENODE_CONNECTION_CLEAN_MS, cleanupPeriodMs / 10);
+    startUpCluster(1, conf);
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
-    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer().getRouterStateIdContext();
+    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
+        .getRouterStateIdContext();
 
     // First read goes to active and creates connection pool for this user to active
     fileSystem.listStatus(rootPath);
@@ -586,9 +587,10 @@ public class TestObserverWithRouter {
     LongAccumulator namespaceStateId1  = routerStateIdContext.getNamespaceStateId("ns0");
 
     // Wait for connection pools to expire and be cleaned up.
-    Thread.sleep(poolCleanUpPeriodMs * 2);
+    Thread.sleep(cleanupPeriodMs * 2);
 
-    // Third read goes to observer. New connection pool to observer is created since existing one expired.
+    // Third read goes to observer.
+    // New connection pool to observer is created since existing one expired.
     fileSystem.listStatus(rootPath);
     fileSystem.close();
     // Get object storing state of the namespace in the shared RouterStateIdContext
@@ -620,7 +622,8 @@ public class TestObserverWithRouter {
 
     startUpCluster(1, confOverride);
     fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
-    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer().getRouterStateIdContext();
+    RouterStateIdContext routerStateIdContext = routerContext.getRouterRpcServer()
+        .getRouterStateIdContext();
 
     fileSystem.listStatus(rootPath);
     List<String> namespace1 = routerStateIdContext.getNamespaces();
@@ -632,7 +635,7 @@ public class TestObserverWithRouter {
     Thread.sleep(recordExpiry * 2);
 
     List<String> namespace2 = routerStateIdContext.getNamespaces();
-    assertEquals("There should be a single namespace in the routerStateIdContext", 1, namespace1.size());
+    assertEquals(1, namespace1.size());
     assertEquals("ns0", namespace1.get(0));
     assertTrue(namespace2.isEmpty());
   }
