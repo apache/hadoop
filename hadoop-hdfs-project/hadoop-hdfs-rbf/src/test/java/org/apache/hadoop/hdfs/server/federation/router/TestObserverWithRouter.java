@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThrows;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAccumulator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -91,6 +93,7 @@ public class TestObserverWithRouter {
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
     conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
     if (confOverrides != null) {
       conf.addResource(confOverrides);
     }
@@ -544,5 +547,21 @@ public class TestObserverWithRouter {
         clientGSIContext.getRouterFederatedState());
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+  }
+
+  @Test
+  public void testStateIdProgressionInRouter() throws Exception {
+    Path rootPath = new Path("/");
+    fileSystem  = routerContext.getFileSystem(getConfToEnableObserverReads());
+    RouterStateIdContext routerStateIdContext = routerContext
+        .getRouterRpcServer()
+        .getRouterStateIdContext();
+    for (int i = 0; i < 10; i++) {
+      fileSystem.create(new Path(rootPath, "file" + i)).close();
+    }
+
+    // Get object storing state of the namespace in the shared RouterStateIdContext
+    LongAccumulator namespaceStateId  = routerStateIdContext.getNamespaceStateId("ns0");
+    assertEquals("Router's shared should have progressed.", 21, namespaceStateId.get());
   }
 }
