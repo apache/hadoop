@@ -927,11 +927,6 @@ public class RMContainerAllocator extends RMContainerRequestor
       int normalMapRequestLimit = Math.min(
           maxRequestedMaps - failedMapRequestLimit,
           numScheduledMaps - numScheduledFailMaps);
-      if (normalMapRequestLimit == 0) {
-        if (numScheduledMaps == 1) {
-          normalMapRequestLimit = 1;
-        }
-      }
       setRequestLimit(PRIORITY_FAST_FAIL_MAP, mapResourceRequest,
           failedMapRequestLimit);
       setRequestLimit(PRIORITY_MAP, mapResourceRequest, normalMapRequestLimit);
