@@ -264,55 +264,13 @@ pipeline {
 
             steps {
                 withCredentials(getGithubCreds()) {                       
-                       bat 'docker --version'
-                       bat 'docker image ls'
-                       bat 'docker container ls'
-                       bat 'docker ps -a'
+//                     bat 'if exist %WORKSPACE%\\out5 rmdir /s /q %WORKSPACE%\\out5'
+//                     bat 'mkdir %WORKSPACE%\\out5'
 
-                       bat 'if exist %WORKSPACE%\\out5 rmdir /s /q %WORKSPACE%\\out5'
-                       bat 'mkdir %WORKSPACE%\\out5'
-
-                       bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
-                       bat 'echo "BUILDMODE=%BUILDMODE%"'
-                       bat 'echo "JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%"'
-                       bat 'echo "CHANGE_URL=%CHANGE_URL%"'
-
-                       bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
-//                        bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "cd" "C:\\hadoop" "&&" "git" "log" "-n" "10"'
-
-                       bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e PATCH_OR_ISSUE=%CHANGE_URL% -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''
-
-                       bat '''
-                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
-                       C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${WORKSPACE}/jenkins.sh"
-                       '''
-
-//                       bat  'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${WORKSPACE}/jenkins.sh run_ci"'
-
-
-//                     sh '''#!/usr/bin/env bash
-//
-//                     chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-//                     "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
-//                     '''
-//                     bat 'dir \\'
-//                     bat 'cd'
-//                     bat 'dir F:'
-//                     bat 'dir F:\\jenkins'
-//                     bat 'dir F:\\jenkins\\tools'
-//                     bat 'dir \\Microsoft'
-//                     bat 'dir \\"Program Files"'
-//                     bat 'dir \\"Program Files (x86)"'
-//                     bat 'dir \\"Program Files (x86)\\Microsoft Visual Studio"'
-//                     bat 'echo %PATH%'
-//                     bat 'where git'
-//                     bat 'where powershell.exe'
-//                     bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe --version'
-//                     bat 'dir F:\\jenkins\\tools\\docker\\resources\\bin'
-//                     bat 'F:\\jenkins\\tools\\docker\\resources\\bin\\docker.exe --version'
-//                     bat 'where docker.exe'
-//                     bat 'where docker'
-//                     bat 'docker --version'
+                    bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
+                    bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
+//                     bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e PATCH_OR_ISSUE=%CHANGE_URL% -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''
+                    bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e PATCH_OR_ISSUE=%CHANGE_URL% -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "rmdir" "/s" "/q" "%WORKSPACE%\\out*"'
                 }
             }
 
@@ -336,7 +294,7 @@ pipeline {
 //                         }
 
                         // YETUS output
-                        archiveArtifacts "out5/**"
+//                         archiveArtifacts "out5/**"
 
 //                         // Publish the HTML report so that it can be looked at
 //                         // Has to be relative to WORKSPACE.

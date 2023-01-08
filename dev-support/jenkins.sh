@@ -196,11 +196,6 @@ function run_ci() {
 #  YETUS_ARGS+=("--debug")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
-
-  echo "Showing shadedclient output"
-  cat "/c/out/branch-shadedclient.txt"
-  echo "Showing asflicense output"
-  cat "/c/out/patch-asflicense-root.txt"
 }
 
 ## @description  Cleans up the processes started by YETUS
