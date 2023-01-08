@@ -256,7 +256,7 @@ pipeline {
         stage ('precommit-run Windows 10') {
             environment {
                 SOURCEDIR = "${WORKSPACE}/src"
-                PATCHDIR = "${WORKSPACE}/out4"
+                PATCHDIR = "${WORKSPACE}/out5"
                 DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
                 IS_OPTIONAL = 0
                 DOCKER_BUILDKIT = 0
@@ -269,8 +269,8 @@ pipeline {
                        bat 'docker container ls'
                        bat 'docker ps -a'
 
-                       bat 'if exist %WORKSPACE%\\out4 rmdir /s /q %WORKSPACE%\\out4'
-                       bat 'mkdir %WORKSPACE%\\out4'
+                       bat 'if exist %WORKSPACE%\\out5 rmdir /s /q %WORKSPACE%\\out5'
+                       bat 'mkdir %WORKSPACE%\\out5'
 
                        bat 'C:\\PROGRA~1\\Git\\bin\\bash.exe -c "mkdir -p /f/yetus/m2"'
                        bat 'echo "BUILDMODE=%BUILDMODE%"'
@@ -278,9 +278,9 @@ pipeline {
                        bat 'echo "CHANGE_URL=%CHANGE_URL%"'
 
                        bat 'docker build --label org.apache.yetus="" --label org.apache.yetus.testpatch.project=hadoop --tag yetus/hadoop:5694d7e25f9 -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'
-//                        bat 'docker run --rm -v %WORKSPACE%\\out4:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "cd" "C:\\hadoop" "&&" "git" "log" "-n" "10"'
+//                        bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "cd" "C:\\hadoop" "&&" "git" "log" "-n" "10"'
 
-                       bat 'docker run --rm -v %WORKSPACE%\\out4:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e PATCH_OR_ISSUE=%CHANGE_URL% -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''
+                       bat 'docker run --rm -v %WORKSPACE%\\out5:C:\\out -v %WORKSPACE%\\src:C:\\src -v %WORKSPACE%\\yetus:C:\\yetus -v F:\\yetus\\m2:C:\\mvn-repository -e PATCH_OR_ISSUE=%CHANGE_URL% -e MAVEN_REPO_DIR=/c/mvn-repository -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY% -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER% yetus/hadoop:5694d7e25f9 "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop" "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\''
 
                        bat '''
                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "cp ${SOURCEDIR}/dev-support/jenkins.sh ${WORKSPACE}/jenkins.sh"
@@ -317,8 +317,8 @@ pipeline {
             }
 
             post {
-//                 always {
-//                     script {
+                always {
+                    script {
 //                         // Publish status if it was missed (YETUS-1059)
 //                         withCredentials(
 //                             [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
@@ -327,17 +327,17 @@ pipeline {
 //                             sh '''#!/usr/bin/env bash
 //
 //                             # Copy the artifacts of Ubuntu focal build to workspace
-//                             cp -Rp "${WORKSPACE}/out4" "${WORKSPACE}"
+//                             cp -Rp "${WORKSPACE}/out5" "${WORKSPACE}"
 //
 //                             # Send Github status
 //                             chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
 //                             "${SOURCEDIR}/dev-support/jenkins.sh" github_status_recovery
 //                             '''
 //                         }
-//
-//                         // YETUS output
-//                         archiveArtifacts "out/**"
-//
+
+                        // YETUS output
+                        archiveArtifacts "out5/**"
+
 //                         // Publish the HTML report so that it can be looked at
 //                         // Has to be relative to WORKSPACE.
 //                         publishHTML (target: [
@@ -351,9 +351,9 @@ pipeline {
 //                         ])
 //
 //                         publishJUnitResults()
-//                     }
-//                 }
-//
+                    }
+                }
+
                 cleanup() {
                     script {
                         bat '''

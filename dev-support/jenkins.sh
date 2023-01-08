@@ -199,6 +199,8 @@ function run_ci() {
 
   echo "Showing shadedclient output"
   cat "/c/out/branch-shadedclient.txt"
+  echo "Showing asflicense output"
+  cat "/c/out/patch-asflicense-root.txt"
 }
 
 ## @description  Cleans up the processes started by YETUS
