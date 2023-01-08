@@ -275,8 +275,8 @@ pipeline {
             }
 
             post {
-                always {
-                    script {
+//                 always {
+//                     script {
 //                         // Publish status if it was missed (YETUS-1059)
 //                         withCredentials(
 //                             [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
@@ -309,8 +309,8 @@ pipeline {
 //                         ])
 //
 //                         publishJUnitResults()
-                    }
-                }
+//                     }
+//                 }
 
                 cleanup() {
                     script {
