@@ -551,14 +551,26 @@ function shadedclient_rebuild
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
-      -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
+      -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true \
+      -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Drequire.test.libhadoop \
+      -Dshell-executable=/c/Git/bin/bash.exe -Dopenssl.prefix=/c/vcpkg/installed/x64-windows \
+      -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows \
+      -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake \
+      -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off \
+      -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
-      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true
+      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true \
+      -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Drequire.test.libhadoop \
+      -Dshell-executable=/c/Git/bin/bash.exe -Dopenssl.prefix=/c/vcpkg/installed/x64-windows \
+      -Dcmake.prefix.path=/c/vcpkg/installed/x64-windows \
+      -Dwindows.cmake.toolchain.file=/c/vcpkg/scripts/buildsystems/vcpkg.cmake \
+      -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off \
+      -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then
