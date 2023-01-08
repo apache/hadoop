@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -69,6 +70,11 @@ public class TestCSMappingPlacementRule {
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
+  
+  @Before
+  public void setUp() {
+    setLoggerToDebug();
+  }
 
   private Map<String, Set<String>> userGroups =
       ImmutableMap.<String, Set<String>>builder()
@@ -89,6 +95,7 @@ public class TestCSMappingPlacementRule {
         .withQueue("root.user.alice")
         .withQueue("root.user.bob")
         .withQueue("root.user.test_dot_user")
+        .withQueue("root.user.testuser")
         .withQueue("root.groups.main_dot_grp")
         .withQueue("root.groups.sec_dot_test_dot_grp")
         .withQueue("root.secondaryTests.unique")
@@ -862,18 +869,12 @@ public class TestCSMappingPlacementRule {
   }
 
   @Test
-  public void testUserNameSetDefaultAndPlaceWith2Rules() throws IOException {
-    Log log = LogFactory.getLog("org.apache.hadoop.yarn.server.resourcemanager.placement");
-    if (log instanceof Log4JLogger) {
-      org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
-      logger.setLevel(Level.DEBUG);
-    }
-
+  public void testOriginalUserNameWithDotCanBeUsedInMatchExpression() throws IOException {
     List<MappingRule> rules = new ArrayList<>();
     rules.add(
             new MappingRule(
                     MappingRuleMatchers.createUserMatcher("test.user"),
-                    (MappingRuleActions.createUpdateDefaultAction("root.user"))
+                    (MappingRuleActions.createUpdateDefaultAction("root.user.testuser"))
                             .setFallbackSkip()));
     rules.add(new MappingRule(
             MappingRuleMatchers.createUserMatcher("test.user"),
@@ -884,34 +885,35 @@ public class TestCSMappingPlacementRule {
     ApplicationSubmissionContext app = createApp("app");
     assertPlace(
             "test.user should be placed to root.user",
-            engine, app, "test.user", "root.user");
+            engine, app, "test.user", "root.user.testuser");
   }
 
   @Test
-  public void testUserNameSetDefaultAndPlaceWith2RulesUsernameReplacedWithDot() throws IOException {
+  public void testOriginalGroupNameWithDotCanBeUsedInMatchExpression() throws IOException {
+    List<MappingRule> rules = new ArrayList<>();
+    rules.add(
+        new MappingRule(
+            MappingRuleMatchers.createUserGroupMatcher("sec.test.grp"),
+            (MappingRuleActions.createUpdateDefaultAction("root.user.testuser"))
+                .setFallbackSkip()));
+    rules.add(new MappingRule(
+        MappingRuleMatchers.createUserMatcher("test.user"),
+        (MappingRuleActions.createPlaceToDefaultAction())
+            .setFallbackReject()));
+
+    CSMappingPlacementRule engine = setupEngine(true, rules);
+    ApplicationSubmissionContext app = createApp("app");
+    assertPlace(
+        "test.user should be placed to root.user",
+        engine, app, "test.user", "root.user.testuser");
+  }
+
+  private static void setLoggerToDebug() {
     Log log = LogFactory.getLog("org.apache.hadoop.yarn.server.resourcemanager.placement");
     if (log instanceof Log4JLogger) {
       org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
       logger.setLevel(Level.DEBUG);
     }
-
-
-    ArrayList<MappingRule> rules = new ArrayList<>();
-    rules.add(
-            new MappingRule(
-                    MappingRuleMatchers.createUserMatcher("test_dot_user"),
-                    (MappingRuleActions.createUpdateDefaultAction("root.user.bob"))
-                            .setFallbackSkip()));
-    rules.add(new MappingRule(
-            MappingRuleMatchers.createUserMatcher("test_dot_user"),
-            (MappingRuleActions.createPlaceToDefaultAction())
-                    .setFallbackReject()));
-
-    CSMappingPlacementRule engine = setupEngine(true, rules);
-    ApplicationSubmissionContext app = createApp("app");
-    assertPlace(
-            "test.user should be placed to root.user.bob",
-            engine, app, "test.user", "root.user.bob");
   }
 
   private CSMappingPlacementRule initPlacementEngine(CapacityScheduler cs) throws IOException {
