@@ -23,8 +23,6 @@
 # Hadoop builds across the supported platforms whenever there's a change
 # in any of the C/C++ files, C/C++ build files or platform changes.
 
-#set -x
-
 ## @description  Check if the given extension is related to C/C++
 ## @param        seeking
 ## @return       0 if yes
@@ -116,6 +114,12 @@ function check_ci_run() {
 function run_ci() {
   TESTPATCHBIN="${WORKSPACE}/${YETUS}/precommit/src/main/shell/test-patch.sh"
 
+  # this must be clean for every run
+  if [[ -d "${PATCHDIR}" ]]; then
+    rm -rf "${PATCHDIR:?}"
+  fi
+  mkdir -p "${PATCHDIR}"
+
   # if given a JIRA issue, process it. If CHANGE_URL is set
   # (e.g., Github Branch Source plugin), process it.
   # otherwise exit, because we don't want Hadoop to do a
@@ -128,7 +132,6 @@ function run_ci() {
     exit 0
   fi
 
-#  YETUS_ARGS+=("--empty-patch")
   YETUS_ARGS+=("--patch-dir=${PATCHDIR}")
 
   # where the source is located
@@ -153,7 +156,6 @@ function run_ci() {
   # changing these to higher values may cause problems
   # with other jobs on systemd-enabled machines
   YETUS_ARGS+=("--proclimit=5500")
-#  YETUS_ARGS+=("--dockermemlimit=22g")
 
   # -1 spotbugs issues that show up prior to the patch being applied
   YETUS_ARGS+=("--spotbugs-strict-precheck")
@@ -172,10 +174,6 @@ function run_ci() {
   # much attention to them
   YETUS_ARGS+=("--tests-filter=checkstyle")
 
-  # run in docker mode and specifically point to our
-  # Dockerfile since we don't want to use the auto-pulled version.
-#  YETUS_ARGS+=("--docker")
-#  YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
   YETUS_ARGS+=("--mvn-custom-repos")
   YETUS_ARGS+=("--mvn-custom-repos-dir=${MAVEN_REPO_DIR}")
 
@@ -185,15 +183,12 @@ function run_ci() {
   # help keep the ASF boxes clean
   YETUS_ARGS+=("--sentinel")
 
-#  YETUS_ARGS+=("--multijdktests=compile")
-
   # custom javadoc goals
   YETUS_ARGS+=("--mvn-javadoc-goals=process-sources,javadoc:javadoc-no-fork")
 
   # write Yetus report as GitHub comment (YETUS-1102)
   YETUS_ARGS+=("--github-write-comment")
   YETUS_ARGS+=("--github-use-emoji-vote")
-#  YETUS_ARGS+=("--debug")
 
   "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 }
