@@ -290,7 +290,7 @@ pipeline {
 //                         }
 
                         // YETUS output
-//                         archiveArtifacts "out5/**"
+                        archiveArtifacts "out/**"
 
 //                         // Publish the HTML report so that it can be looked at
 //                         // Has to be relative to WORKSPACE.
