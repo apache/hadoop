@@ -26,8 +26,31 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 public interface StateMachine
                  <STATE extends Enum<STATE>,
                   EVENTTYPE extends Enum<EVENTTYPE>, EVENT> {
-  public STATE getCurrentState();
-  public STATE getPreviousState();
-  public STATE doTransition(EVENTTYPE eventType, EVENT event)
-        throws InvalidStateTransitionException;
+  /**
+   * Return the current state
+   * @return the current state, default null
+   */
+  default public STATE getCurrentState() {
+    return null;
+  }
+
+  /**
+   * Return the previous state
+   * @return the previous state, default null
+   */
+  default public STATE getPreviousState() {
+    return null;
+  }
+
+  /**
+   * Do transition to another state.
+   * @param eventType type of the event
+   * @param event the event what was triggered
+   * @return the new state of the machine, default null
+   * @throws InvalidStateTransitionException if the state transition is invalid
+   */
+  default public STATE doTransition(EVENTTYPE eventType, EVENT event)
+        throws InvalidStateTransitionException {
+    return null;
+  }
 }
