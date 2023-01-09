@@ -69,13 +69,8 @@ public class QiniuKodoClient {
         return auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
     }
 
-    Response upload(InputStream stream, String key, String token) throws IOException {
-        try {
-            return uploadManager.put(stream, key, token, null, null);
-        } catch (QiniuException e) {
-            if (e.response != null && e.response.statusCode != 614) return e.response;
-            throw e;
-        }
+    Response upload(InputStream stream, String key, String token) throws QiniuException {
+        return uploadManager.put(stream, key, token, null, null);
     }
 
     private String getFileUrlByKey(String key) throws IOException {

@@ -1,5 +1,7 @@
 package org.apache.hadoop.fs.qiniu.kodo;
 
+import com.qiniu.common.QiniuException;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,21 +14,23 @@ public class QiniuKodoOutputStream extends OutputStream {
 
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoOutputStream.class);
 
+    private final String key;
     private final PipedOutputStream pos;
     private final PipedInputStream pis;
 
     private final Thread thread;
 
-    private volatile IOException uploadException;
+    private volatile QiniuException uploadException;
 
     public QiniuKodoOutputStream(QiniuKodoClient client, String key, String token) {
+        this.key = key;
         this.pos = new PipedOutputStream();
         try {
             this.pis = new PipedInputStream(pos);
             this.thread = new Thread(() -> {
                 try {
                     client.upload(pis, key, token);
-                } catch (IOException e) {
+                } catch (QiniuException e) {
                     this.uploadException = e;
                 }
             });
@@ -46,10 +50,14 @@ public class QiniuKodoOutputStream extends OutputStream {
         pos.close();
         try {
             thread.join();
+            if (uploadException != null) {
+                if (uploadException.response.statusCode == 614) {
+                    throw new FileAlreadyExistsException("key exists " + key);
+                }
+                throw uploadException;
+            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (uploadException != null) throw uploadException;
         }
     }
 }
