@@ -122,6 +122,7 @@ import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.SubClusterResult;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -2496,7 +2497,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     // If there is a sub-cluster access error,
     // we should choose whether to throw exception information according to user configuration.
     // Send the requests in parallel.
-    CompletionService<Triple<SubClusterInfo, R, Exception>> compSvc =
+    CompletionService<SubClusterResult<R>> compSvc =
         new ExecutorCompletionService<>(threadpool);
 
     // This part of the code should be able to expose the accessed Exception information.
@@ -2513,11 +2514,11 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
               getMethod(request.getMethodName(), request.getTypes());
           Object retObj = method.invoke(interceptor, request.getParams());
           R ret = clazz.cast(retObj);
-          return Triple.of(info, ret, null);
+          return new SubClusterResult<>(info, ret, null);
         } catch (Exception e) {
           LOG.error("SubCluster {} failed to call {} method.",
               info.getSubClusterId(), request.getMethodName(), e);
-          return Triple.of(info, null, e);
+          return new SubClusterResult<>(info, null, e);
         }
       });
     }
@@ -2525,16 +2526,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     for (int i = 0; i < clusterIds.size(); i++) {
       SubClusterInfo subClusterInfo = null;
       try {
-        Future<Triple<SubClusterInfo, R, Exception>> future = compSvc.take();
-        Triple<SubClusterInfo, R, Exception> triple = future.get();
-        subClusterInfo = triple.getLeft();
+        Future<SubClusterResult<R>> future = compSvc.take();
+        SubClusterResult<R> result = future.get();
+        subClusterInfo = result.getSubClusterInfo();
 
-        R response = triple.getMiddle();
+        R response = result.getResponse();
         if (response != null) {
           results.put(subClusterInfo, response);
         }
 
-        Exception exception = triple.getRight();
+        Exception exception = result.getException();
 
         // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
         // an exception will be thrown directly.
