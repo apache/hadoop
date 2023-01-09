@@ -118,6 +118,9 @@ public class QiniuKodoFileSystem extends FileSystem {
     @Override
     public FSDataOutputStream create(Path path, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
         LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+
+        if (path.isRoot()) throw new IOException("Cannot create file named /");
+
         mkdirs(path.getParent());
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
