@@ -314,8 +314,11 @@ public class QiniuKodoFileSystem extends FileSystem {
         return workingDir;
     }
 
+    /**
+     * 线程安全的递归式创建文件夹
+     */
     @Override
-    public boolean mkdirs(Path path, FsPermission permission) throws IOException {
+    public synchronized boolean mkdirs(Path path, FsPermission permission) throws IOException {
         Stack<Path> stack = new Stack<>();
         while (path != null) {
             LOG.debug("== mkdirs, path:" + path + " permission:" + permission);
