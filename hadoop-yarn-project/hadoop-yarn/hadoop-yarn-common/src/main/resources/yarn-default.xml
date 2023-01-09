@@ -2460,6 +2460,24 @@
   </property>
 
   <property>
+    <description>Provide local directory which includes the related jar file as well as all the dependencies’
+      jar file. We could specify the single jar file or use ${local_dir_to_jar}/* to load all
+      jars under the dep directory.</description>
+    <name>yarn.nodemanager.aux-services.%s.classpath</name>
+    <value>NONE</value>
+  </property>
+
+  <property>
+    <description>Normally this configuration shouldn't be manually set. The class would be loaded from customized
+      classpath if it does not belong to system-classes. By default, the package org.apache.hadoop is part of the
+      system-classes. If for example the class CustomAuxService is in the package org.apache.hadoop, it will not be
+      loaded from the customized classpath. To solve this, either the package of CustomAuxService could be changed,
+      or a separate system-classes could be configured which excludes the package org.apache.hadoop.</description>
+    <name>yarn.nodemanager.aux-services.%s.system-classes</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
     <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
     <value>250</value>
