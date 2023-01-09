@@ -111,9 +111,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdat
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
+import org.apache.hadoop.yarn.server.router.webapp.dao.FederationBulkActivitiesInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
@@ -1726,5 +1728,47 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     LambdaTestUtils.intercept(IllegalArgumentException.class,
         "Got invalid groupBy: TEST1, valid groupBy types: [DIAGNOSTIC]",
         () -> interceptor.getActivities(null, "1", "TEST1"));
+  }
+
+  @Test
+  public void testGetBulkActivitiesNormal() throws InterruptedException {
+    BulkActivitiesInfo bulkActivitiesInfo =
+        interceptor.getBulkActivities(null, "DIAGNOSTIC", 5);
+    Assert.assertNotNull(bulkActivitiesInfo);
+
+    Assert.assertTrue(bulkActivitiesInfo instanceof FederationBulkActivitiesInfo);
+
+    FederationBulkActivitiesInfo federationBulkActivitiesInfo =
+        FederationBulkActivitiesInfo.class.cast(bulkActivitiesInfo);
+    Assert.assertNotNull(federationBulkActivitiesInfo);
+
+    List<BulkActivitiesInfo> activitiesInfos = federationBulkActivitiesInfo.getList();
+    Assert.assertNotNull(activitiesInfos);
+    Assert.assertTrue(activitiesInfos.size() == 4);
+
+    for (BulkActivitiesInfo activitiesInfo : activitiesInfos) {
+      Assert.assertNotNull(activitiesInfo);
+      List<ActivitiesInfo> activitiesInfoList = activitiesInfo.getActivities();
+      Assert.assertNotNull(activitiesInfoList);
+      Assert.assertTrue(activitiesInfoList.size() == 5);
+    }
+  }
+
+  @Test
+  public void testGetBulkActivitiesError() throws Exception {
+    // activitiesCount < 0
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'activitiesCount' must not be negative.",
+        () -> interceptor.getBulkActivities(null, "DIAGNOSTIC", -1));
+
+    // groupBy value is wrong
+    LambdaTestUtils.intercept(YarnRuntimeException.class,
+        "Got invalid groupBy: TEST1, valid groupBy types: [DIAGNOSTIC]",
+        () -> interceptor.getBulkActivities(null, "TEST1", 1));
+
+    // groupBy is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "'groupBy' must not be empty.",
+        () -> interceptor.getBulkActivities(null, "", 1));
   }
 }

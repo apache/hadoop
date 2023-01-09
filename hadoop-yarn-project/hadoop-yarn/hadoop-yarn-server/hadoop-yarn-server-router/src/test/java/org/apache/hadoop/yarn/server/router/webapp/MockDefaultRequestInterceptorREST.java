@@ -136,6 +136,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationReque
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ActivitiesInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.BulkActivitiesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeAllocationInfo;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -1213,9 +1214,9 @@ public class MockDefaultRequestInterceptorREST
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId, String groupBy) {
     if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
-      String errMesasge = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+      String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
           + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
-      throw new IllegalArgumentException(errMesasge);
+      throw new IllegalArgumentException(errMessage);
     }
 
     SubClusterId subClusterId = getSubClusterId();
@@ -1232,5 +1233,41 @@ public class MockDefaultRequestInterceptorREST
     allocationInfos.add(nodeAllocationInfo);
     Mockito.when(activitiesInfo.getAllocations()).thenReturn(allocationInfos);
     return activitiesInfo;
+  }
+
+  @Override
+  public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
+      String groupBy, int activitiesCount) {
+
+    if (activitiesCount <= 0) {
+      throw new IllegalArgumentException("activitiesCount needs to be greater than 0.");
+    }
+
+    if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class, groupBy.toUpperCase())) {
+      String errMessage = "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+          + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
+      throw new IllegalArgumentException(errMessage);
+    }
+
+    BulkActivitiesInfo bulkActivitiesInfo = new BulkActivitiesInfo();
+
+    for (int i = 0; i < activitiesCount; i++) {
+      SubClusterId subClusterId = getSubClusterId();
+      ActivitiesInfo activitiesInfo = mock(ActivitiesInfo.class);
+      Mockito.when(activitiesInfo.getNodeId()).thenReturn(subClusterId + "-nodeId-" + i);
+      Mockito.when(activitiesInfo.getTimestamp()).thenReturn(1673081972L);
+      Mockito.when(activitiesInfo.getDiagnostic()).thenReturn("Diagnostic:" + subClusterId.getId());
+
+      List<NodeAllocationInfo> allocationInfos = new ArrayList<>();
+      NodeAllocationInfo nodeAllocationInfo = mock(NodeAllocationInfo.class);
+      Mockito.when(nodeAllocationInfo.getPartition()).thenReturn("p" + subClusterId.getId());
+      Mockito.when(nodeAllocationInfo.getFinalAllocationState()).thenReturn("ALLOCATED");
+
+      allocationInfos.add(nodeAllocationInfo);
+      Mockito.when(activitiesInfo.getAllocations()).thenReturn(allocationInfos);
+      bulkActivitiesInfo.getActivities().add(activitiesInfo);
+    }
+
+    return bulkActivitiesInfo;
   }
 }

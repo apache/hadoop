@@ -1221,7 +1221,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       // Step2. Call the interface of subCluster concurrently and get the returned result.
       Map<SubClusterId, SubClusterInfo> subClustersActive = getActiveSubclusters();
       final HttpServletRequest hsrCopy = clone(hsr);
-      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class, Integer.class};
+      Class[] argsClasses = new Class[]{HttpServletRequest.class, String.class, int.class};
       Object[] args = new Object[]{hsrCopy, groupBy, activitiesCount};
       ClientMethod remoteMethod = new ClientMethod("getBulkActivities", argsClasses, args);
       Map<SubClusterInfo, BulkActivitiesInfo> appStatisticsMap = invokeConcurrent(
