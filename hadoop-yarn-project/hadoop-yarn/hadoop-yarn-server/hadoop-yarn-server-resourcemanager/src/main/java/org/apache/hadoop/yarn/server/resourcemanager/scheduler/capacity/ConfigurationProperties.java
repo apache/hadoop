@@ -216,9 +216,9 @@ public class ConfigurationProperties {
   }
 
   /**
-   * Finds the node that matches the whole key or create it, if it does not exist.
+   * Finds the node that matches the whole key or create it if it does not exist.
    * @param name name of the property
-   * @return the found or created node, if the name is empty, than return with null
+   * @return the found or newly created node, otherwise return null if the name is empty
    */
   private PrefixNode getNode(String name) {
     List<String> propertyKeyParts = splitPropertyByDelimiter(name);
