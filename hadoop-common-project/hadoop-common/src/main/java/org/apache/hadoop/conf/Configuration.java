@@ -882,8 +882,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       BiConsumer<String, String> propertiesAddListener,
       Consumer<String> propertiesRemoveListener
   ) {
-    assert propertiesAddListener != null : "propertiesAddListener can not be null";
-    assert propertiesRemoveListener != null : "propertiesRemoveListener cannot be null";
     this.properties = null;
     this.propertiesAddListener = propertiesAddListener;
     this.propertiesRemoveListener = propertiesRemoveListener;
