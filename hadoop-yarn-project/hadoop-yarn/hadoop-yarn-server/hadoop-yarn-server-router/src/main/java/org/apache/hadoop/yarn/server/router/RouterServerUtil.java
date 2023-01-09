@@ -624,4 +624,33 @@ public final class RouterServerUtil {
 
     return definition;
   }
+
+  /**
+   * Determines whether the given string is a number.
+   *
+   * RouterServerUtil.isNumericInteger(null)   = false
+   * RouterServerUtil.isNumericInteger("")     = false
+   * RouterServerUtil.isNumericInteger("  ")   = false
+   * RouterServerUtil.isNumericInteger("123")  = true
+   * RouterServerUtil.isNumericInteger("\u0967\u0968\u0969")  = true
+   * RouterServerUtil.isNumericInteger("12 3") = false
+   * RouterServerUtil.isNumericInteger("ab2c") = false
+   * RouterServerUtil.isNumericInteger("12-3") = false
+   * RouterServerUtil.isNumericInteger("12.3") = false
+   * RouterServerUtil.isNumericInteger("-123") = true
+   * RouterServerUtil.isNumericInteger("+123") = false
+   *
+   * @param str string parameter.
+   * @return Returns true if it is a number, false if not.
+   */
+  public static boolean isNumericInteger(String str) {
+    String cloneStr = str;
+    if (org.apache.commons.lang3.StringUtils.isBlank(str)) {
+      return false;
+    }
+    if (cloneStr.charAt(0) == '-') {
+      cloneStr = cloneStr.substring(1);
+    }
+    return org.apache.commons.lang3.StringUtils.isNumeric(cloneStr);
+  }
 }

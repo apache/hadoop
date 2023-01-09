@@ -95,6 +95,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.router.RouterServerUtil;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
 import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
 import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
@@ -120,7 +121,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
@@ -1699,9 +1699,43 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
           "subClusterId" + subClusterId + " : Capacity scheduler logs are being created.; ";
       Assert.assertTrue(dumpSchedulerLogsMsg.contains(subClusterMsg));
     });
+  }
 
-    LambdaTestUtils.intercept(BadRequestException.class,
-        "Period must be greater than 0",
+  @Test
+  public void testDumpSchedulerLogsError() throws Exception {
+    HttpServletRequest mockHsr = mockHttpServletRequestByUserName("admin");
+
+    // time is empty
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the time is empty or null.",
+        () -> interceptor.dumpSchedulerLogs(null, mockHsr));
+
+    // time is negative
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be greater than 0.",
         () -> interceptor.dumpSchedulerLogs("-1", mockHsr));
+
+    // time is non-numeric
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "time must be a number.",
+        () -> interceptor.dumpSchedulerLogs("abc", mockHsr));
+  }
+
+  @Test
+  public void testCheckNumericInteger() {
+    // Check if a number is negative.
+    Assert.assertFalse(RouterServerUtil.isNumericInteger(null));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger(""));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("  "));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("12 3"));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("ab2c"));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("12-3"));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("12.3"));
+    Assert.assertFalse(RouterServerUtil.isNumericInteger("+123"));
+
+    // Check if a string is a number.
+    Assert.assertTrue(RouterServerUtil.isNumericInteger("\u0967\u0968\u0969"));
+    Assert.assertTrue(RouterServerUtil.isNumericInteger("123"));
+    Assert.assertTrue(RouterServerUtil.isNumericInteger("-123"));
   }
 }

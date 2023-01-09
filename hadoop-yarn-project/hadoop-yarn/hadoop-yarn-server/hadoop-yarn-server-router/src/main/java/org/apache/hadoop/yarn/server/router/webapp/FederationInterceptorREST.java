@@ -128,7 +128,6 @@ import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
-import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
@@ -1165,10 +1164,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
       throw new IllegalArgumentException("Parameter error, the time is empty or null.");
     }
 
+    if (!RouterServerUtil.isNumericInteger(time)) {
+      routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
+      throw new IllegalArgumentException("time must be a number.");
+    }
+
     int period = Integer.parseInt(time);
     if (period <= 0) {
       routerMetrics.incrDumpSchedulerLogsFailedRetrieved();
-      throw new BadRequestException("Period must be greater than 0");
+      throw new IllegalArgumentException("time must be greater than 0.");
     }
 
     try {

@@ -721,6 +721,11 @@ public final class RouterMetrics {
   }
 
   @VisibleForTesting
+  public long getNumSucceededDumpSchedulerLogsRetrieved() {
+    return totalSucceededDumpSchedulerLogsRetrieved.lastStat().numSamples();
+  }
+
+  @VisibleForTesting
   public double getLatencySucceededAppsCreated() {
     return totalSucceededAppsCreated.lastStat().mean();
   }
@@ -953,6 +958,11 @@ public final class RouterMetrics {
   @VisibleForTesting
   public double getLatencySucceededCancelDelegationTokenRetrieved() {
     return totalSucceededCancelDelegationTokenRetrieved.lastStat().mean();
+  }
+
+  @VisibleForTesting
+  public double getLatencySucceededDumpSchedulerLogsRetrieved() {
+    return totalSucceededDumpSchedulerLogsRetrieved.lastStat().mean();
   }
 
   @VisibleForTesting
