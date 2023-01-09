@@ -328,9 +328,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== mkdir file, key:" + key);
 
         FileInfo file = kodoClient.getFileStatus(key);
-        if (file != null) {
-            throw new IOException("file already exist:" + path);
-        }
+        if (file != null) throw new FileAlreadyExistsException(path.toString());
 
         // 2. 检查是否存在同名路径
         key = QiniuKodoUtils.keyToDirKey(key);
