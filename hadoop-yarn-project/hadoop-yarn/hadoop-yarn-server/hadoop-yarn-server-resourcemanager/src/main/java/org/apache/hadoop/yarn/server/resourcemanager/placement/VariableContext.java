@@ -156,8 +156,7 @@ public class VariableContext {
   }
   
   public String getOriginal(String name) {
-    String ret = originalVariables.get(name);
-    return ret;
+    return originalVariables.get(name);
   }
 
   /**
