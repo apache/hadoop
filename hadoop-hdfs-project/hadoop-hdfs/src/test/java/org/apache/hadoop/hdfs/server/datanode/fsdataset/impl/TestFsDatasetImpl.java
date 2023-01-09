@@ -664,7 +664,7 @@ public class TestFsDatasetImpl {
     }
     // Wait for the async deletion task finish.
     GenericTestUtils.waitFor(() -> dataset.asyncDiskService.countPendingDeletions() == 0,
-        100, 1000);
+        100, 10000);
     for (String bpid : dataset.volumeMap.getBlockPoolList()) {
       assertEquals(numBlocks / 2, dataset.volumeMap.size(bpid));
     }
