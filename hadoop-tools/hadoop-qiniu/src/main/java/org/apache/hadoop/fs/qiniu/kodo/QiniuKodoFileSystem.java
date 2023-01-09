@@ -16,6 +16,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Stack;
 import java.util.concurrent.ExecutorService;
@@ -126,6 +127,23 @@ public class QiniuKodoFileSystem extends FileSystem {
         LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
 
         return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, kodoClient.getUploadToken(key, overwrite)), statistics);
+
+    }
+
+    @Override
+    public FSDataOutputStream createNonRecursive(Path path, FsPermission permission,
+                                                 EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+                                                 Progressable progress) throws IOException {
+        boolean overwrite = flags.contains(CreateFlag.OVERWRITE);
+        LOG.debug("== create, path:" + path + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+
+        if (path.isRoot()) throw new IOException("Cannot create file named /");
+
+        String key = QiniuKodoUtils.pathToKey(workingDir, path);
+        LOG.debug("== create, key:" + key + " permission:" + permission + " overwrite:" + overwrite + " bufferSize:" + bufferSize + " replication:" + replication + " blockSize:" + blockSize);
+
+        return new FSDataOutputStream(new QiniuKodoOutputStream(kodoClient, key, kodoClient.getUploadToken(key, overwrite)), statistics);
+
     }
 
     @Override
@@ -148,13 +166,8 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (parent != null) {
             return false;
         }
-        FileStatus srcStatus;
-        try {
-            srcStatus = getFileStatus(srcPath);
-        } catch (FileNotFoundException e) {
-            LOG.info(e.toString());
-            return false;
-        }
+        FileStatus srcStatus = getFileStatus(srcPath);
+
         FileStatus dstStatus;
         try {
             dstStatus = getFileStatus(dstPath);
@@ -169,7 +182,7 @@ public class QiniuKodoFileSystem extends FileSystem {
                 return false;
             }
             if (!dstStatus.isDirectory()) {
-                throw new IOException(String.format(
+                throw new FileAlreadyExistsException(String.format(
                         "Failed to rename %s to %s, %s is a file", srcPath, dstPath,
                         dstPath.getParent()));
             }
@@ -193,10 +206,9 @@ public class QiniuKodoFileSystem extends FileSystem {
                 }
             } else {
                 // If dst is not a directory
-                LOG.warn(String.format(
-                        "Failed to rename %s to %s, file already exists!", srcPath,
-                        dstPath));
-                return false;
+                throw new FileAlreadyExistsException(String.format(
+                        "Failed to rename %s to %s, file already exists!",
+                        srcPath, dstPath));
             }
         }
 
