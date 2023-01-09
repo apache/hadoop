@@ -17,7 +17,7 @@ public class QiniuKodoContract extends AbstractBondedFSContract {
 
     @Override
     public String getScheme() {
-        return "qiniu";
+        return "kodo";
     }
 
     public synchronized static Configuration getConfiguration() {
