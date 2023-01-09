@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -92,7 +93,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationListI
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodeIDsInfo;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService;
+import org.apache.hadoop.yarn.server.router.clientrm.RouterClientRMService.RequestInterceptorChainWrapper;
+import org.apache.hadoop.yarn.server.router.clientrm.TestableFederationClientInterceptor;
+import org.apache.hadoop.yarn.server.router.security.RouterDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.router.webapp.cache.RouterAppInfoCacheKey;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationStatisticsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
@@ -108,11 +114,22 @@ import org.apache.hadoop.yarn.server.router.webapp.dao.FederationRMQueueAclInfo;
 import org.apache.hadoop.yarn.util.LRUCacheHashMap;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY;
 
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.DURATION;
 import static org.apache.hadoop.yarn.server.router.webapp.MockDefaultRequestInterceptorREST.NUM_CONTAINERS;
@@ -137,9 +154,10 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
   private MemoryFederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreUtil;
   private List<SubClusterId> subClusters;
+  private static final String TEST_RENEWER = "test-renewer";
 
-  @Override
   public void setUp() throws YarnException, IOException {
+
     super.setUpConfig();
     interceptor = new TestableFederationInterceptorREST();
 
@@ -154,16 +172,37 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     subClusters = new ArrayList<>();
 
-    try {
-      for (int i = 0; i < NUM_SUBCLUSTER; i++) {
-        SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
-        stateStoreUtil.registerSubCluster(sc);
-        subClusters.add(sc);
-      }
-    } catch (YarnException e) {
-      LOG.error(e.getMessage());
-      Assert.fail();
+    for (int i = 0; i < NUM_SUBCLUSTER; i++) {
+      SubClusterId sc = SubClusterId.newInstance(Integer.toString(i));
+      stateStoreUtil.registerSubCluster(sc);
+      subClusters.add(sc);
     }
+
+    RouterClientRMService routerClientRMService = new RouterClientRMService();
+    routerClientRMService.initUserPipelineMap(getConf());
+    long secretKeyInterval = this.getConf().getLong(
+        RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY, RM_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+    long tokenMaxLifetime = this.getConf().getLong(
+        RM_DELEGATION_TOKEN_MAX_LIFETIME_KEY, RM_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+    long tokenRenewInterval = this.getConf().getLong(
+        RM_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, RM_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+    long removeScanInterval = this.getConf().getTimeDuration(
+        RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
+        RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+    RouterDelegationTokenSecretManager tokenSecretManager = new RouterDelegationTokenSecretManager(
+        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+    tokenSecretManager.startThreads();
+    routerClientRMService.setRouterDTSecretManager(tokenSecretManager);
+
+    TestableFederationClientInterceptor clientInterceptor =
+        new TestableFederationClientInterceptor();
+    clientInterceptor.setConf(this.getConf());
+    clientInterceptor.init(TEST_RENEWER);
+    clientInterceptor.setTokenSecretManager(tokenSecretManager);
+    RequestInterceptorChainWrapper wrapper = new RequestInterceptorChainWrapper();
+    wrapper.init(clientInterceptor);
+    routerClientRMService.getUserPipelineMap().put(TEST_RENEWER, wrapper);
+    interceptor.setRouterClientRMService(routerClientRMService);
 
     for (SubClusterId subCluster : subClusters) {
       SubClusterInfo subClusterInfo = stateStoreUtil.querySubClusterInfo(subCluster);
@@ -172,6 +211,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     }
 
     interceptor.setupResourceManager();
+
   }
 
   @Override
@@ -1484,5 +1524,165 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
     Assert.assertNotNull(interceptorREST);
     Assert.assertNotNull(interceptorREST.getClient());
     Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
+  }
+
+  @Test
+  public void testPostDelegationTokenErrorHsr() throws Exception {
+    // Prepare delegationToken data
+    DelegationToken token = new DelegationToken();
+    token.setRenewer(TEST_RENEWER);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+
+    // If we don't set token
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the tokenData or hsr is null.",
+        () -> interceptor.postDelegationToken(null, request));
+
+    // If we don't set hsr
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the tokenData or hsr is null.",
+        () -> interceptor.postDelegationToken(token, null));
+
+    // If we don't set renewUser, we will get error message.
+    LambdaTestUtils.intercept(AuthorizationException.class,
+        "Unable to obtain user name, user not authenticated",
+        () -> interceptor.postDelegationToken(token, request));
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_RENEWER);
+    when(request.getRemoteUser()).thenReturn(TEST_RENEWER);
+    when(request.getUserPrincipal()).thenReturn(principal);
+
+    // If we don't set the authentication type, we will get error message.
+    Response response = interceptor.postDelegationToken(token, request);
+    Assert.assertNotNull(response);
+    Assert.assertEquals(response.getStatus(), Status.FORBIDDEN.getStatusCode());
+    String errMsg = "Delegation token operations can only be carried out on a " +
+        "Kerberos authenticated channel. Expected auth type is kerberos, got type null";
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof String);
+    String entityMsg = String.valueOf(entity);
+    Assert.assertTrue(errMsg.contains(entityMsg));
+  }
+
+  @Test
+  public void testPostDelegationToken() throws Exception {
+    Long now = Time.now();
+
+    DelegationToken token = new DelegationToken();
+    token.setRenewer(TEST_RENEWER);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_RENEWER);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRemoteUser()).thenReturn(TEST_RENEWER);
+    when(request.getUserPrincipal()).thenReturn(principal);
+    when(request.getAuthType()).thenReturn("kerberos");
+
+    Response response = interceptor.postDelegationToken(token, request);
+    Assert.assertNotNull(response);
+
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof DelegationToken);
+
+    DelegationToken dtoken = DelegationToken.class.cast(entity);
+    Assert.assertEquals(TEST_RENEWER, dtoken.getRenewer());
+    Assert.assertEquals(TEST_RENEWER, dtoken.getOwner());
+    Assert.assertEquals("RM_DELEGATION_TOKEN", dtoken.getKind());
+    Assert.assertNotNull(dtoken.getToken());
+    Assert.assertTrue(dtoken.getNextExpirationTime() > now);
+  }
+
+  @Test
+  public void testPostDelegationTokenExpirationError() throws Exception {
+
+    // If we don't set hsr
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        "Parameter error, the hsr is null.",
+        () -> interceptor.postDelegationTokenExpiration(null));
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_RENEWER);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRemoteUser()).thenReturn(TEST_RENEWER);
+    when(request.getUserPrincipal()).thenReturn(principal);
+    when(request.getAuthType()).thenReturn("kerberos");
+
+    // If we don't set the header.
+    String errorMsg = "Header 'Hadoop-YARN-RM-Delegation-Token' containing encoded token not found";
+    LambdaTestUtils.intercept(BadRequestException.class, errorMsg,
+        () -> interceptor.postDelegationTokenExpiration(request));
+  }
+
+  @Test
+  public void testPostDelegationTokenExpiration() throws Exception {
+
+    DelegationToken token = new DelegationToken();
+    token.setRenewer(TEST_RENEWER);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_RENEWER);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRemoteUser()).thenReturn(TEST_RENEWER);
+    when(request.getUserPrincipal()).thenReturn(principal);
+    when(request.getAuthType()).thenReturn("kerberos");
+
+    Response response = interceptor.postDelegationToken(token, request);
+    Assert.assertNotNull(response);
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof DelegationToken);
+    DelegationToken dtoken = DelegationToken.class.cast(entity);
+
+    final String yarnTokenHeader = "Hadoop-YARN-RM-Delegation-Token";
+    when(request.getHeader(yarnTokenHeader)).thenReturn(dtoken.getToken());
+
+    Response renewResponse = interceptor.postDelegationTokenExpiration(request);
+    Assert.assertNotNull(renewResponse);
+
+    Object renewEntity = renewResponse.getEntity();
+    Assert.assertNotNull(renewEntity);
+    Assert.assertTrue(renewEntity instanceof DelegationToken);
+
+    // renewDelegation, we only return renewDate, other values are NULL.
+    DelegationToken renewDToken = DelegationToken.class.cast(renewEntity);
+    Assert.assertNull(renewDToken.getRenewer());
+    Assert.assertNull(renewDToken.getOwner());
+    Assert.assertNull(renewDToken.getKind());
+    Assert.assertTrue(renewDToken.getNextExpirationTime() > dtoken.getNextExpirationTime());
+  }
+
+  @Test
+  public void testCancelDelegationToken() throws Exception {
+    DelegationToken token = new DelegationToken();
+    token.setRenewer(TEST_RENEWER);
+
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn(TEST_RENEWER);
+
+    HttpServletRequest request = mock(HttpServletRequest.class);
+    when(request.getRemoteUser()).thenReturn(TEST_RENEWER);
+    when(request.getUserPrincipal()).thenReturn(principal);
+    when(request.getAuthType()).thenReturn("kerberos");
+
+    Response response = interceptor.postDelegationToken(token, request);
+    Assert.assertNotNull(response);
+    Object entity = response.getEntity();
+    Assert.assertNotNull(entity);
+    Assert.assertTrue(entity instanceof DelegationToken);
+    DelegationToken dtoken = DelegationToken.class.cast(entity);
+
+    final String yarnTokenHeader = "Hadoop-YARN-RM-Delegation-Token";
+    when(request.getHeader(yarnTokenHeader)).thenReturn(dtoken.getToken());
+
+    Response cancelResponse = interceptor.cancelDelegationToken(request);
+    Assert.assertNotNull(cancelResponse);
+    Assert.assertEquals(response.getStatus(), Status.OK.getStatusCode());
   }
 }

@@ -203,6 +203,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /** Router using this RPC server. */
   private final Router router;
 
+  /** Alignment context storing state IDs for all namespaces this router serves. */
+  private final RouterStateIdContext routerStateIdContext;
+
   /** The RPC server that listens to requests from clients. */
   private final Server rpcServer;
   /** The address for this RPC server. */
@@ -321,7 +324,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
     // Create security manager
     this.securityManager = new RouterSecurityManager(this.conf);
-    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
+    routerStateIdContext = new RouterStateIdContext(conf);
 
     this.rpcServer = new RPC.Builder(this.conf)
         .setProtocol(ClientNamenodeProtocolPB.class)
@@ -508,6 +511,15 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   BalanceProcedureScheduler getFedRenameScheduler() {
     return this.fedRenameScheduler;
+  }
+
+  /**
+   * Get the routerStateIdContext used by this server.
+   * @return routerStateIdContext
+   */
+  @VisibleForTesting
+  protected RouterStateIdContext getRouterStateIdContext() {
+    return routerStateIdContext;
   }
 
   /**
