@@ -548,6 +548,7 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
+  export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-3.4.0-SNAPSHOT"
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
