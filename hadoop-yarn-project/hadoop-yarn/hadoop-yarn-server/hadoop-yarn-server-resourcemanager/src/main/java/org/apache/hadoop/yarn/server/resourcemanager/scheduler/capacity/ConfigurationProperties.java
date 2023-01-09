@@ -60,7 +60,7 @@ public class ConfigurationProperties {
 
   /**
    * A constructor defined in order to conform to the type used by
-   * {@code Configuration}. It must only be called by String keys and values.
+   * {@code Configuration}. It must only be called with String keys and values.
    * @param props properties to store
    * @param whiteListPrefix only those properties will be in the nodes
    *                        which starts with one of the provided prefixes.
