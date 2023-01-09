@@ -2933,10 +2933,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
 
-    // TODO: Something not right with the TM listener, fix
     FileUpload upload = transferManager.uploadFile(
-        UploadFileRequest.builder().putObjectRequest(putObjectRequest).source(file).build());
-          //  .overrideConfiguration(o -> o.addListener(listener)).build());
+            UploadFileRequest.builder()
+                .putObjectRequest(putObjectRequest)
+                .source(file)
+                .addTransferListener(listener)
+                .build());
 
     return new UploadInfo(upload, len);
   }
