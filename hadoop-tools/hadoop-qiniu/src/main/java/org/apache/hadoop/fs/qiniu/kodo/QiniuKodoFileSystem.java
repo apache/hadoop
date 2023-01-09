@@ -78,7 +78,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         Auth auth = fsConfig.createAuth();
         kodoClient = new QiniuKodoClient(auth, bucket, fsConfig);
 
-        mkdir(workingDir);
+        mkdirs(workingDir);
     }
 
     @Override
