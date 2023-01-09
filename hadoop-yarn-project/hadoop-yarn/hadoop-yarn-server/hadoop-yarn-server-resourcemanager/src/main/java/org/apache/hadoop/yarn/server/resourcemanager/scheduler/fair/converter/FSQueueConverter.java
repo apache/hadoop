@@ -16,13 +16,15 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_CREATE_CHILD_QUEUE_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.AUTO_QUEUE_CREATION_V2_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DEFAULT_AUTO_QUEUE_CREATION_ENABLED;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.USER_LIMIT_FACTOR;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.Configuration;
@@ -222,7 +224,8 @@ public class FSQueueConverter {
   }
 
   public void emitDefaultUserLimitFactor(String queueName, List<FSQueue> children) {
-    if (children.isEmpty() && checkAutoQueueCreationV2Disabled(queueName)) {
+    if (children.isEmpty() && checkAutoQueueCreationV2Disabled(queueName) &&
+        checkAutoCreateChildQueueDisabled(queueName)) {
       capacitySchedulerConfig.setFloat(
               CapacitySchedulerConfiguration.
                       PREFIX + queueName + DOT + USER_LIMIT_FACTOR,
@@ -312,8 +315,15 @@ public class FSQueueConverter {
   }
 
   private boolean checkAutoQueueCreationV2Disabled(String queueName) {
-    return !Objects.equals(capacitySchedulerConfig.get(
-        PREFIX + queueName + DOT + AUTO_QUEUE_CREATION_V2_ENABLED), "true");
+    return !capacitySchedulerConfig.getBoolean(
+        PREFIX + queueName + DOT + AUTO_QUEUE_CREATION_V2_ENABLED,
+        DEFAULT_AUTO_QUEUE_CREATION_ENABLED);
+  }
+
+  private boolean checkAutoCreateChildQueueDisabled(String queueName) {
+    return !capacitySchedulerConfig.getBoolean(
+        PREFIX + queueName + DOT + AUTO_CREATE_CHILD_QUEUE_ENABLED,
+        DEFAULT_AUTO_CREATE_CHILD_QUEUE_ENABLED);
   }
 
   private String getQueueShortName(String queueName) {
