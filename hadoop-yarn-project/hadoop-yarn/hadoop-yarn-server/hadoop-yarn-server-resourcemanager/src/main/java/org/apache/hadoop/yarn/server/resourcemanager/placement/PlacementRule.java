@@ -36,6 +36,7 @@ public abstract class PlacementRule {
   /**
    * Set the config based on the passed in argument. This construct is used to
    * not pollute this abstract class with implementation specific references.
+   * @param initArg initialization arguments.
    */
   public void setConfig(Object initArg) {
     // Default is a noop

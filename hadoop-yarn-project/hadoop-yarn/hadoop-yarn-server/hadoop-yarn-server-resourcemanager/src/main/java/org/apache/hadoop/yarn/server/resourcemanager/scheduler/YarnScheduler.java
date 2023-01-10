@@ -355,15 +355,18 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   List<Container> getTransferredContainers(ApplicationAttemptId appAttemptId);
 
   /**
-   * Set the cluster max priority
+   * Set the cluster max priority.
    * 
-   * @param conf
+   * @param conf Configuration.
    * @throws YarnException
    */
   void setClusterMaxPriority(Configuration conf) throws YarnException;
 
   /**
-   * @param attemptId
+   * Get pending resource request for specified application attempt.
+   *
+   * @param attemptId the id of the application attempt
+   * @return pending resource requests.
    */
   List<ResourceRequest> getPendingResourceRequestsForAttempt(
       ApplicationAttemptId attemptId);

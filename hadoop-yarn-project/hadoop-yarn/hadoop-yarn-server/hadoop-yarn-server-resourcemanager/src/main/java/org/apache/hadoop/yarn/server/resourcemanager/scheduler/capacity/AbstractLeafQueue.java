@@ -320,6 +320,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   /**
    * Used only by tests.
+   * @return minimumAllocationFactor.
    */
   @Private
   public float getMinimumAllocationFactor() {
@@ -328,6 +329,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   /**
    * Used only by tests.
+   * @return maxAMResourcePerQueuePercent.
    */
   @Private
   public float getMaxAMResourcePerQueuePercent() {
@@ -2056,6 +2058,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   /**
    * Obtain (read-only) collection of pending applications.
+   * @return collection of pending applications.
    */
   public Collection<FiCaSchedulerApp> getPendingApplications() {
     return Collections.unmodifiableCollection(pendingOrderingPolicy
@@ -2064,6 +2067,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   /**
    * Obtain (read-only) collection of active applications.
+   *
+   * @return collection of active applications.
    */
   public Collection<FiCaSchedulerApp> getApplications() {
     return Collections.unmodifiableCollection(orderingPolicy
@@ -2072,6 +2077,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   /**
    * Obtain (read-only) collection of all applications.
+   *
+   * @return collection of all applications.
    */
   public Collection<FiCaSchedulerApp> getAllApplications() {
     Collection<FiCaSchedulerApp> apps = new HashSet<FiCaSchedulerApp>(
