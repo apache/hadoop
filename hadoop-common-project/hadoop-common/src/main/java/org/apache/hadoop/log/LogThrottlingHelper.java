@@ -65,7 +65,7 @@ import org.apache.hadoop.util.Timer;
  * <p/>This class can also be used to coordinate multiple logging points; see
  * {@link #record(String, long, double...)} for more details.
  *
- * <p/>This class is not thread-safe.
+ * <p/>This class is thread-safe.
  */
 public class LogThrottlingHelper {
 
@@ -190,7 +190,7 @@ public class LogThrottlingHelper {
    * @return A LogAction indicating whether or not the caller should write to
    *         its log.
    */
-  public LogAction record(double... values) {
+  public synchronized LogAction record(double... values) {
     return record(DEFAULT_RECORDER_NAME, timer.monotonicNow(), values);
   }
 
@@ -242,7 +242,7 @@ public class LogThrottlingHelper {
    *
    * @see #record(double...)
    */
-  public LogAction record(String recorderName, long currentTimeMs,
+  public synchronized LogAction record(String recorderName, long currentTimeMs,
       double... values) {
     if (primaryRecorderName == null) {
       primaryRecorderName = recorderName;
@@ -279,7 +279,7 @@ public class LogThrottlingHelper {
    * @param idx The index value.
    * @return The summary information.
    */
-  public SummaryStatistics getCurrentStats(String recorderName, int idx) {
+  public synchronized SummaryStatistics getCurrentStats(String recorderName, int idx) {
     LoggingAction currentLog = currentLogs.get(recorderName);
     if (currentLog != null) {
       return currentLog.getStats(idx);
@@ -304,6 +304,13 @@ public class LogThrottlingHelper {
     } else {
       return "";
     }
+  }
+
+  @VisibleForTesting
+  public synchronized void reset() {
+    primaryRecorderName = null;
+    currentLogs.clear();
+    lastLogTimestampMs = Long.MIN_VALUE;
   }
 
   /**
