@@ -63,22 +63,27 @@ public class QiniuKodoClient {
         if ((downloadDomain = fsConfig.getDownloadDomain()) == null) downloadDomain = bucket + "." + region.getRegionEndpoint();
     }
 
+    /**
+     * 根据key和overwrite生成上传token
+     */
     public String getUploadToken(String key, boolean overwrite) {
         StringMap policy = new StringMap();
         policy.put("insertOnly", overwrite ? 0 : 1);
         return auth.uploadToken(bucket, key, 7 * 24 * 3600, policy);
     }
 
-    Response upload(InputStream stream, String key, String token) throws QiniuException {
+    /**
+     * 给定一个输入流将读取并上传对应文件
+     */
+    public Response upload(InputStream stream, String key, String token) throws QiniuException {
         return uploadManager.put(stream, key, token, null, null);
     }
 
-    private String getFileUrlByKey(String key) throws IOException {
-        DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
-        return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
-    }
 
-    InputStream fetch(String key, long from, long to) throws IOException {
+    /**
+     * 根据指定的key和文件大小获取一个输入流
+     */
+    public InputStream fetch(String key, long from, long to) throws IOException {
         try {
             StringMap header = new StringMap();
             header.put("Range", String.format("bytes=%d-%d", from, to));
@@ -128,15 +133,18 @@ public class QiniuKodoClient {
         return retFiles;
     }
 
-    boolean copyKey(String oldKey, String newKey) throws IOException {
+    /**
+     * 复制对象
+     */
+    public boolean copyKey(String oldKey, String newKey) throws IOException {
         Response response = bucketManager.copy(bucket, oldKey, bucket, newKey);
         return throwExceptionWhileResponseNotSuccess(response);
     }
 
-
-    boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
-        boolean hasPrefixObject = false;
-
+    /**
+     * 批量复制对象
+     */
+    public boolean copyKeys(String oldPrefix, String newPrefix) throws IOException {
         FileListing fileListing;
 
         // 为分页遍历提供下一次的遍历标志
@@ -161,13 +169,19 @@ public class QiniuKodoClient {
         return true;
     }
 
-    boolean renameKey(String oldKey, String newKey) throws IOException {
+    /**
+     * 重命名指定 key 的对象
+     */
+    public boolean renameKey(String oldKey, String newKey) throws IOException {
         if (Objects.equals(oldKey, newKey)) return true;
         Response response = bucketManager.rename(bucket, oldKey, newKey);
         return throwExceptionWhileResponseNotSuccess(response);
     }
 
-    boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
+    /**
+     * 批量重命名 key 为指定前缀的对象
+     */
+    public boolean renameKeys(String oldPrefix, String newPrefix) throws IOException {
         boolean hasPrefixObject = false;
 
         FileListing fileListing;
@@ -278,6 +292,15 @@ public class QiniuKodoClient {
             }
             throw e;
         }
+    }
+
+
+    /**
+     * 构造某个文件的下载url
+     */
+    private String getFileUrlByKey(String key) throws IOException {
+        DownloadUrl downloadUrl = new DownloadUrl(downloadDomain, useHttps, key);
+        return auth.privateDownloadUrl(downloadUrl.buildURL(), 7 * 24 * 3600);
     }
 
     private boolean throwExceptionWhileResponseNotSuccess(Response response) throws IOException {

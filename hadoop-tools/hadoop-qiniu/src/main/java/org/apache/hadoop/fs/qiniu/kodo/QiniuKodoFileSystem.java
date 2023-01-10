@@ -15,12 +15,10 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class QiniuKodoFileSystem extends FileSystem {
 
@@ -290,17 +288,15 @@ public class QiniuKodoFileSystem extends FileSystem {
         if (!path.isRoot() && getFileStatus(path.getParent()) == null) throw new FileNotFoundException(path.toString());
 
         String key = QiniuKodoUtils.pathToKey(workingDir, path);
-        key = QiniuKodoUtils.keyToDirKey(key);
+//        key = QiniuKodoUtils.keyToDirKey(key);
         LOG.debug("== listStatus, key:" + key);
 
         List<FileInfo> files = kodoClient.listStatus(key, true);
-        List<FileStatus> fileStatuses = new ArrayList<>();
-        for (FileInfo file : files) {
-            if (file != null) {
-                fileStatuses.add(fileInfoToFileStatus(file));
-            }
-        }
-        return fileStatuses.toArray(new FileStatus[0]);
+
+        return files.stream()
+                .filter(Objects::nonNull)
+                .map(this::fileInfoToFileStatus)
+                .toArray(FileStatus[]::new);
     }
 
     @Override
