@@ -29,26 +29,32 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_BIND_HOST_KE
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
+import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -155,6 +161,43 @@ public class TestNameNodeRpcServer {
       }
       // Reset the config
       conf.unset(DFS_NAMENODE_IP_PROXY_USERS);
+    }
+  }
+
+  @Test
+  @Timeout(30000)
+  public void testObserverHandleAddBlock() throws Exception {
+    String baseDir = GenericTestUtils.getRandomizedTempPath();
+    Configuration conf = new HdfsConfiguration();
+    MiniQJMHACluster.Builder builder = new MiniQJMHACluster.Builder(conf).setNumNameNodes(3);
+    builder.getDfsBuilder().numDataNodes(3);
+    try (MiniQJMHACluster qjmhaCluster = builder.baseDir(baseDir).build()) {
+      MiniDFSCluster dfsCluster = qjmhaCluster.getDfsCluster();
+      dfsCluster.waitActive();
+      dfsCluster.transitionToActive(0);
+      dfsCluster.transitionToObserver(2);
+
+      NameNode activeNN = dfsCluster.getNameNode(0);
+      NameNode observerNN = dfsCluster.getNameNode(2);
+
+      // Stop the editLogTailer of Observer NameNode
+      observerNN.getNamesystem().getEditLogTailer().stop();
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+
+      Path testPath = new Path("/testObserverHandleAddBlock/file.txt");
+      try (FSDataOutputStream ignore = dfs.create(testPath)) {
+        HdfsFileStatus fileStatus = activeNN.getRpcServer().getFileInfo(testPath.toUri().getPath());
+        assertNotNull(fileStatus);
+        assertNull(observerNN.getRpcServer().getFileInfo(testPath.toUri().getPath()));
+
+        LambdaTestUtils.intercept(ObserverRetryOnActiveException.class, () -> {
+          observerNN.getRpcServer().addBlock(testPath.toUri().getPath(),
+              dfs.getClient().getClientName(), null, null,
+              fileStatus.getFileId(), null, EnumSet.noneOf(AddBlockFlag.class));
+        });
+      } finally {
+        dfs.delete(testPath, true);
+      }
     }
   }
 

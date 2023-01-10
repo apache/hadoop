@@ -31,7 +31,7 @@
 
   <properties>
     <!-- Set the Release year during release -->
-    <release-year>2022</release-year>
+    <release-year>2023</release-year>
 
     <failIfNoTests>false</failIfNoTests>
     <!--Whether to proceed to next module if any test failures exist-->
@@ -123,7 +123,7 @@
     <commons-logging.version>1.1.3</commons-logging.version>
     <commons-logging-api.version>1.1</commons-logging-api.version>
     <commons-math3.version>3.6.1</commons-math3.version>
-    <commons-net.version>3.8.0</commons-net.version>
+    <commons-net.version>3.9.0</commons-net.version>
     <commons-text.version>1.10.0</commons-text.version>
 
     <kerby.version>2.0.2</kerby.version>
@@ -1529,7 +1529,7 @@
       <dependency>
         <groupId>org.codehaus.jettison</groupId>
         <artifactId>jettison</artifactId>
-        <version>1.5.1</version>
+        <version>1.5.3</version>
         <exclusions>
           <exclusion>
             <groupId>stax</groupId>

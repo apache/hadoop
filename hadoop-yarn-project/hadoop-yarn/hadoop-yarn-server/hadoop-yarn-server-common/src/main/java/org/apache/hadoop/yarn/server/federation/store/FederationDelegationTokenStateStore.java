@@ -112,4 +112,39 @@ public interface FederationDelegationTokenStateStore {
    */
   RouterRMTokenResponse getTokenByRouterStoreToken(RouterRMTokenRequest request)
       throws YarnException, IOException;
+
+  /**
+   * The Router Supports incrementDelegationTokenSeqNum.
+   *
+   * @return DelegationTokenSeqNum.
+   */
+  int incrementDelegationTokenSeqNum();
+
+  /**
+   * The Router Supports getDelegationTokenSeqNum.
+   *
+   * @return DelegationTokenSeqNum.
+   */
+  int getDelegationTokenSeqNum();
+
+  /**
+   * The Router Supports setDelegationTokenSeqNum.
+   *
+   * @param seqNum DelegationTokenSeqNum.
+   */
+  void setDelegationTokenSeqNum(int seqNum);
+
+  /**
+   * The Router Supports getCurrentKeyId.
+   *
+   * @return CurrentKeyId.
+   */
+  int getCurrentKeyId();
+
+  /**
+   * The Router Supports incrementCurrentKeyId.
+   *
+   * @return CurrentKeyId.
+   */
+  int incrementCurrentKeyId();
 }
