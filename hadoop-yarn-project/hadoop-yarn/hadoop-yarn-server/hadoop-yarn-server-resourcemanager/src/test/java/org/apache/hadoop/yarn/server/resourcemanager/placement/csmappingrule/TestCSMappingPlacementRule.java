@@ -36,8 +36,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.apache.log4j.Level;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -71,11 +69,6 @@ public class TestCSMappingPlacementRule {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   
-  @Before
-  public void setUp() {
-    setLoggerToDebug();
-  }
-
   private Map<String, Set<String>> userGroups =
       ImmutableMap.<String, Set<String>>builder()
       .put("alice", ImmutableSet.of("p_alice", "unique", "user"))
@@ -906,14 +899,6 @@ public class TestCSMappingPlacementRule {
     assertPlace(
         "test.user should be placed to root.user",
         engine, app, "test.user", "root.user.testuser");
-  }
-
-  private static void setLoggerToDebug() {
-    Log log = LogFactory.getLog("org.apache.hadoop.yarn.server.resourcemanager.placement");
-    if (log instanceof Log4JLogger) {
-      org.apache.log4j.Logger logger = ((Log4JLogger) log).getLogger();
-      logger.setLevel(Level.DEBUG);
-    }
   }
 
   private CSMappingPlacementRule initPlacementEngine(CapacityScheduler cs) throws IOException {
