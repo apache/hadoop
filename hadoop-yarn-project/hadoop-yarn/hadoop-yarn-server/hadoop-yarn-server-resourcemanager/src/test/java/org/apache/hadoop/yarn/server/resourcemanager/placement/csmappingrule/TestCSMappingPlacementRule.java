@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
