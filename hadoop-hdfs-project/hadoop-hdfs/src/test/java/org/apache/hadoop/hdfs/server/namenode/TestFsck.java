@@ -2450,6 +2450,68 @@ public class TestFsck {
     assertTrue(outStr.contains("has 1 CORRUPT blocks"));
   }
 
+  @Test
+  public void testFsckECBlockIdRedundantInternalBlocks() throws Exception {
+    final int dataBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumDataUnits();
+    final int parityBlocks = StripedFileTestUtil.getDefaultECPolicy().getNumParityUnits();
+    final int cellSize = StripedFileTestUtil.getDefaultECPolicy().getCellSize();
+    final short groupSize = (short) (dataBlocks + parityBlocks);
+    final File builderBaseDir = new File(GenericTestUtils.getRandomizedTempPath());
+    final Path dirPath = new Path("/ec_dir");
+    final Path filePath = new Path(dirPath, "file");
+
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_INTERVAL_SECONDS_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf, builderBaseDir).numDataNodes(groupSize + 1).build();
+    cluster.waitActive();
+
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.enableErasureCodingPolicy(
+        StripedFileTestUtil.getDefaultECPolicy().getName());
+
+    try {
+      fs.mkdirs(dirPath);
+      fs.setErasureCodingPolicy(dirPath, StripedFileTestUtil.getDefaultECPolicy().getName());
+      DFSTestUtil.createFile(fs, filePath, cellSize * dataBlocks * 2, (short) 1, 0L);
+      LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      Assert.assertEquals(groupSize, block.getLocations().length);
+
+      //general test.
+      String runFsckResult = runFsck(conf, 0, true, "/",
+          "-blockId", block.getBlock().getBlockName());
+      assertTrue(runFsckResult.contains(block.getBlock().getBlockName()));
+      assertTrue(runFsckResult.contains("No. of Expected Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of live Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of redundant Replica: " + 0));
+
+      // stop a dn.
+      DatanodeInfo dnToStop = block.getLocations()[0];
+      MiniDFSCluster.DataNodeProperties dnProp = cluster.stopDataNode(dnToStop.getXferAddr());
+      cluster.setDataNodeDead(dnToStop);
+
+      // wait for reconstruction to happen.
+      DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
+
+      // bring the dn back: 10 internal blocks now.
+      cluster.restartDataNode(dnProp);
+      cluster.waitActive();
+
+      blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
+      block = (LocatedStripedBlock) blks.getLastLocatedBlock();
+      Assert.assertEquals(groupSize + 1, block.getLocations().length);
+
+      //general test, number of redundant internal block replicas.
+      runFsckResult = runFsck(conf, 0, true, "/",
+          "-blockId", block.getBlock().getBlockName());
+      assertTrue(runFsckResult.contains(block.getBlock().getBlockName()));
+      assertTrue(runFsckResult.contains("No. of Expected Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of live Replica: " + groupSize));
+      assertTrue(runFsckResult.contains("No. of redundant Replica: " + 1));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   private void waitForUnrecoverableBlockGroup(Configuration configuration)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
