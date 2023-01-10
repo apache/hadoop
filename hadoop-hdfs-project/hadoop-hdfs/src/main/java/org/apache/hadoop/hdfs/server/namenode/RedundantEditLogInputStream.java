@@ -47,7 +47,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
 
   /** Limit logging about fast forwarding the stream to every 5 seconds max. */
   private static final long FAST_FORWARD_LOGGING_INTERVAL_MS = 5000;
-  private final LogThrottlingHelper fastForwardLoggingHelper =
+  private static final LogThrottlingHelper FAST_FORWARD_LOGGING_HELPER =
       new LogThrottlingHelper(FAST_FORWARD_LOGGING_INTERVAL_MS);
 
   /**
@@ -182,7 +182,7 @@ class RedundantEditLogInputStream extends EditLogInputStream {
       case SKIP_UNTIL:
        try {
           if (prevTxId != HdfsServerConstants.INVALID_TXID) {
-            LogAction logAction = fastForwardLoggingHelper.record();
+            LogAction logAction = FAST_FORWARD_LOGGING_HELPER.record();
             if (logAction.shouldLog()) {
               LOG.info("Fast-forwarding stream '" + streams[curIdx].getName() +
                   "' to transaction ID " + (prevTxId + 1) +
