@@ -25,7 +25,6 @@ public class QiniuKodoFileSystem extends FileSystem {
     private static final Logger LOG = LoggerFactory.getLogger(QiniuKodoFileSystem.class);
 
     private URI uri;
-    private String bucket;
     private String username;
     private Path workingDir;
 
@@ -53,7 +52,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         setConf(conf);
 
         this.fsConfig = new QiniuKodoFsConfig(getConf());
-        bucket = name.getHost();
+        String bucket = name.getHost();
         LOG.debug("== bucket:" + bucket);
 
         uri = URI.create(name.getScheme() + "://" + name.getAuthority());
@@ -77,6 +76,7 @@ public class QiniuKodoFileSystem extends FileSystem {
         Auth auth = fsConfig.createAuth();
         kodoClient = new QiniuKodoClient(auth, bucket, fsConfig);
 
+        // 工作目录为相对路径使用的目录，其必须得存在，故需要预创建
         mkdirs(workingDir);
     }
 

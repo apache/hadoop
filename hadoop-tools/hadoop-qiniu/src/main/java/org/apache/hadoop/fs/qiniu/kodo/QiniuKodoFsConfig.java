@@ -54,8 +54,7 @@ public class QiniuKodoFsConfig {
 
 
     public Auth createAuth() throws AuthorizationException {
-        Auth auth = Auth.create(getAuthAccessKey(), getAuthSecretKey());
-        return auth;
+        return Auth.create(getAuthAccessKey(), getAuthSecretKey());
     }
 
     /**
@@ -76,12 +75,12 @@ public class QiniuKodoFsConfig {
         return conf.get(QINIU_PARAMETER_DOWNLOAD_DOMAIN_KEY);
     }
 
-    public int getBlockSize() {
-        return conf.getInt("fs.qiniu.block.size", 4 * 1024 * 1024);
-    }
-
-    public long getMultipartDownloadSize() {
-        return conf.getLong("fs.qiniu.multipart.download.size", 512 * 1024);
+    /**
+     * 读取文件时下载块大小
+     * 默认为4M
+     */
+    public int getDownloadBlockSize() {
+        return conf.getInt("fs.qiniu.download.block.size", 4 * 1024 * 1024);
     }
 
     private String bufferDir;
