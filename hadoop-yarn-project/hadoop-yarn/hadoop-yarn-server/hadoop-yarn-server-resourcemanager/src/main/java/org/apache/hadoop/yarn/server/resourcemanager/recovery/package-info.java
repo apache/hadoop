@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+/**
+ * This package contains classes to recovery the resourcemanager.
+ */
+@Private
+@Unstable
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;

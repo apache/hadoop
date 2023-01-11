@@ -20,9 +20,9 @@
  * This package contains classes to pre process the application submission
  * context with server side configs.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Private
+@Unstable
 package org.apache.hadoop.yarn.server.resourcemanager.preprocessor;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
