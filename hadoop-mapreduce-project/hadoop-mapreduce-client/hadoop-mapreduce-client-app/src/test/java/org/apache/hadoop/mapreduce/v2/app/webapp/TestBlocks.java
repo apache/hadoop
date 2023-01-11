@@ -26,7 +26,7 @@ import java.util.Map;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.yarn.webapp.View;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block;
 
 import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestBlocks {
   private ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -61,7 +61,7 @@ public class TestBlocks {
    * Test rendering for ConfBlock
    */
   @Test
-  public void testConfigurationBlock() throws Exception {
+  void testConfigurationBlock() throws Exception {
     AppContext ctx = mock(AppContext.class);
     Job job = mock(Job.class);
     Path path = new Path("conf");
@@ -100,7 +100,7 @@ public class TestBlocks {
    * Test rendering for TasksBlock
    */
   @Test
-  public void testTasksBlock() throws Exception {
+  void testTasksBlock() throws Exception {
 
     ApplicationId appId = ApplicationIdPBImpl.newInstance(0, 1);
     JobId jobId = new JobIdPBImpl();
@@ -155,7 +155,7 @@ public class TestBlocks {
    * test AttemptsBlock's rendering.
    */
   @Test
-  public void testAttemptsBlock() {
+  void testAttemptsBlock() {
     AppContext ctx = mock(AppContext.class);
     AppForTest app = new AppForTest(ctx);
 
@@ -214,7 +214,7 @@ public class TestBlocks {
   }
 
   @Test
-  public void testSingleCounterBlock() {
+  void testSingleCounterBlock() {
     AppContext appCtx = mock(AppContext.class);
     View.ViewContext ctx = mock(View.ViewContext.class);
     JobId jobId = new JobIdPBImpl();

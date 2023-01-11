@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -61,9 +61,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 
 /**
@@ -78,13 +79,13 @@ import org.junit.Test;
    private final static RecordFactory recordFactory = RecordFactoryProvider.
        getRecordFactory(null);
 
-   @After
+   @AfterEach
    public void tearDown() {
      conf.setBoolean(MRJobConfig.PRESERVE_FAILED_TASK_FILES, false);
    }
 
    @Test
-   public void testDeletionofStagingOnUnregistrationFailure()
+   void testDeletionofStagingOnUnregistrationFailure()
        throws IOException {
      testDeletionofStagingOnUnregistrationFailure(2, false);
      testDeletionofStagingOnUnregistrationFailure(1, false);
@@ -121,7 +122,7 @@ import org.junit.Test;
    }
 
    @Test
-   public void testDeletionofStaging() throws IOException {
+   void testDeletionofStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
@@ -135,7 +136,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
          JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -146,8 +147,9 @@ import org.junit.Test;
      verify(fs).delete(stagingJobPath, true);
    }
 
-   @Test (timeout = 30000)
-   public void testNoDeletionofStagingOnReboot() throws IOException {
+   @Test
+   @Timeout(30000)
+   void testNoDeletionofStagingOnReboot() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class),anyBoolean())).thenReturn(true);
@@ -158,7 +160,7 @@ import org.junit.Test;
          0);
      ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
          JobStateInternal.REBOOT, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -197,8 +199,9 @@ import org.junit.Test;
      verify(fs).delete(stagingJobPath, true);
    }
    
-   @Test (timeout = 30000)
-   public void testDeletionofStagingOnKill() throws IOException {
+   @Test
+   @Timeout(30000)
+   void testDeletionofStagingOnKill() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      fs = mock(FileSystem.class);
      when(fs.delete(any(Path.class), anyBoolean())).thenReturn(true);
@@ -215,7 +218,7 @@ import org.junit.Test;
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc);
      appMaster.init(conf);
      //simulate the process being killed
-     MRAppMaster.MRAppMasterShutdownHook hook = 
+     MRAppMaster.MRAppMasterShutdownHook hook =
        new MRAppMaster.MRAppMasterShutdownHook(appMaster);
      hook.run();
      verify(fs, times(0)).delete(stagingJobPath, true);
@@ -242,18 +245,19 @@ import org.junit.Test;
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc); //no retry
      appMaster.init(conf);
-     assertTrue("appMaster.isLastAMRetry() is false", appMaster.isLastAMRetry());
+     assertTrue(appMaster.isLastAMRetry(),
+         "appMaster.isLastAMRetry() is false");
      //simulate the process being killed
      MRAppMaster.MRAppMasterShutdownHook hook = 
        new MRAppMaster.MRAppMasterShutdownHook(appMaster);
      hook.run();
-     assertTrue("MRAppMaster isn't stopped",
-                appMaster.isInState(Service.STATE.STOPPED));
+     assertTrue(appMaster.isInState(Service.STATE.STOPPED),
+         "MRAppMaster isn't stopped");
      verify(fs).delete(stagingJobPath, true);
    }
 
    @Test
-   public void testByPreserveFailedStaging() throws IOException {
+   void testByPreserveFailedStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      // TODO: Decide which failed task files that should
      // be kept are in application log directory.
@@ -270,7 +274,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
              JobStateInternal.FAILED, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -282,7 +286,7 @@ import org.junit.Test;
    }
 
    @Test
-   public void testPreservePatternMatchedStaging() throws IOException {
+   void testPreservePatternMatchedStaging() throws IOException {
      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
      // The staging files that are matched to the pattern
      // should not be deleted
@@ -298,7 +302,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-     Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+     Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
              JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
      appMaster.init(conf);
@@ -310,7 +314,7 @@ import org.junit.Test;
    }
 
   @Test
-  public void testNotPreserveNotPatternMatchedStaging() throws IOException {
+  void testNotPreserveNotPatternMatchedStaging() throws IOException {
     conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
     conf.set(MRJobConfig.PRESERVE_FILES_PATTERN, "NotMatching");
     fs = mock(FileSystem.class);
@@ -324,7 +328,7 @@ import org.junit.Test;
     JobId jobid = recordFactory.newRecordInstance(JobId.class);
     jobid.setAppId(appId);
     ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
             JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     appMaster.init(conf);
@@ -338,7 +342,7 @@ import org.junit.Test;
   }
 
   @Test
-  public void testPreservePatternMatchedAndFailedStaging() throws IOException {
+  void testPreservePatternMatchedAndFailedStaging() throws IOException {
     conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, stagingJobDir);
     // When RESERVE_FILES_PATTERN and PRESERVE_FAILED_TASK_FILES are set,
     // files in staging dir are always kept.
@@ -355,7 +359,7 @@ import org.junit.Test;
     JobId jobid = recordFactory.newRecordInstance(JobId.class);
     jobid.setAppId(appId);
     ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
-    Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
+    Assertions.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
     MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
             JobStateInternal.RUNNING, MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     appMaster.init(conf);
@@ -583,8 +587,9 @@ import org.junit.Test;
     };
   }
 
-  @Test(timeout=20000)
-  public void testStagingCleanupOrder() throws Exception {
+  @Test
+  @Timeout(20000)
+  void testStagingCleanupOrder() throws Exception {
     MRAppTestCleanup app = new MRAppTestCleanup(1, 1, true,
         this.getClass().getName(), true);
     JobImpl job = (JobImpl)app.submit(new Configuration());
@@ -598,7 +603,7 @@ import org.junit.Test;
     }
 
     // assert ContainerAllocatorStopped and then tagingDirCleanedup
-    Assert.assertEquals(1, app.ContainerAllocatorStopped);
-    Assert.assertEquals(2, app.stagingDirCleanedup);
+    Assertions.assertEquals(1, app.ContainerAllocatorStopped);
+    Assertions.assertEquals(2, app.stagingDirCleanedup);
   }
  }

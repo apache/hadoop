@@ -21,8 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -36,7 +36,7 @@ public class TestYarnChild {
   final static private String KILL_LIMIT_EXCEED_CONF_NAME =
       "mapreduce.job.dfs.storage.capacity.kill-limit-exceed";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     task = mock(Task.class);
     umbilical = mock(TaskUmbilicalProtocol.class);
@@ -45,7 +45,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionNotHappenByDefault()
+  void testReportErrorWhenCapacityExceptionNotHappenByDefault()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
 
@@ -53,7 +53,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionNotHappenAndFastFailDisabled()
+  void testReportErrorWhenCapacityExceptionNotHappenAndFastFailDisabled()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
     conf.setBoolean(KILL_LIMIT_EXCEED_CONF_NAME, false);
@@ -62,7 +62,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionNotHappenAndFastFailEnabled()
+  void testReportErrorWhenCapacityExceptionNotHappenAndFastFailEnabled()
       throws IOException {
     Exception exception = new RuntimeException(new IOException());
     conf.setBoolean(KILL_LIMIT_EXCEED_CONF_NAME, true);
@@ -71,7 +71,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionHappenByDefault()
+  void testReportErrorWhenCapacityExceptionHappenByDefault()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -80,7 +80,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionHappenAndFastFailDisabled()
+  void testReportErrorWhenCapacityExceptionHappenAndFastFailDisabled()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -90,7 +90,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionHappenAndFastFailEnabled()
+  void testReportErrorWhenCapacityExceptionHappenAndFastFailEnabled()
       throws IOException {
     Exception exception =
         new RuntimeException(new ClusterStorageCapacityExceededException());
@@ -100,7 +100,7 @@ public class TestYarnChild {
   }
 
   @Test
-  public void testReportErrorWhenCapacityExceptionHappenInThirdOfExceptionChain()
+  void testReportErrorWhenCapacityExceptionHappenInThirdOfExceptionChain()
       throws IOException {
     Exception exception = new RuntimeException(new IllegalStateException(
         new ClusterStorageCapacityExceededException()));

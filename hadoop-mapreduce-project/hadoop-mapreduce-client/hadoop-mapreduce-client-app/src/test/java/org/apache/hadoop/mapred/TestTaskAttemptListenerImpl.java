@@ -19,19 +19,18 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -67,14 +66,15 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
@@ -87,7 +87,7 @@ import static org.mockito.Mockito.when;
 /**
  * Tests the behavior of TaskAttemptListenerImpl.
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestTaskAttemptListenerImpl {
   private static final String ATTEMPT1_ID =
       "attempt_123456789012_0001_m_000001_0";
@@ -172,7 +172,7 @@ public class TestTaskAttemptListenerImpl {
     }
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     if (listener != null) {
       listener.close();
@@ -180,8 +180,9 @@ public class TestTaskAttemptListenerImpl {
     }
   }
 
-  @Test  (timeout=5000)
-  public void testGetTask() throws IOException {
+  @Test
+  @Timeout(5000)
+  void testGetTask() throws IOException {
     configureMocks();
     startListener(false);
 
@@ -189,12 +190,12 @@ public class TestTaskAttemptListenerImpl {
     //The JVM ID has not been registered yet so we should kill it.
     JvmContext context = new JvmContext();
 
-    context.jvmId = id; 
+    context.jvmId = id;
     JvmTask result = listener.getTask(context);
     assertNotNull(result);
     assertTrue(result.shouldDie);
 
-    // Verify ask after registration but before launch. 
+    // Verify ask after registration but before launch.
     // Don't kill, should be null.
     //Now put a task with the ID
     listener.registerPendingTask(task, wid);
@@ -238,8 +239,9 @@ public class TestTaskAttemptListenerImpl {
 
   }
 
-  @Test (timeout=5000)
-  public void testJVMId() {
+  @Test
+  @Timeout(5000)
+  void testJVMId() {
 
     JVMId jvmid = new JVMId("test", 1, true, 2);
     JVMId jvmid1 = JVMId.forName("jvm_test_0001_m_000002");
@@ -247,8 +249,9 @@ public class TestTaskAttemptListenerImpl {
     assertEquals(0, jvmid.compareTo(jvmid1));
   }
 
-  @Test (timeout=10000)
-  public void testGetMapCompletionEvents() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testGetMapCompletionEvents() throws IOException {
     TaskAttemptCompletionEvent[] empty = {};
     TaskAttemptCompletionEvent[] taskEvents = {
         createTce(0, true, TaskAttemptCompletionEventStatus.OBSOLETE),
@@ -257,12 +260,6 @@ public class TestTaskAttemptListenerImpl {
         createTce(3, false, TaskAttemptCompletionEventStatus.FAILED) };
     TaskAttemptCompletionEvent[] mapEvents = { taskEvents[0], taskEvents[2] };
     Job mockJob = mock(Job.class);
-    when(mockJob.getTaskAttemptCompletionEvents(0, 100))
-      .thenReturn(taskEvents);
-    when(mockJob.getTaskAttemptCompletionEvents(0, 2))
-      .thenReturn(Arrays.copyOfRange(taskEvents, 0, 2));
-    when(mockJob.getTaskAttemptCompletionEvents(2, 100))
-      .thenReturn(Arrays.copyOfRange(taskEvents, 2, 4));
     when(mockJob.getMapAttemptCompletionEvents(0, 100)).thenReturn(
         TypeConverter.fromYarn(mapEvents));
     when(mockJob.getMapAttemptCompletionEvents(0, 2)).thenReturn(
@@ -312,8 +309,9 @@ public class TestTaskAttemptListenerImpl {
     return tce;
   }
 
-  @Test (timeout=10000)
-  public void testCommitWindow() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testCommitWindow() throws IOException {
     SystemClock clock = SystemClock.getInstance();
 
     configureMocks();
@@ -353,7 +351,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testCheckpointIDTracking()
+  void testCheckpointIDTracking()
     throws IOException, InterruptedException{
     configureMocks();
     listener = new MockTaskAttemptListenerImpl(
@@ -409,7 +407,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testStatusUpdateProgress()
+  void testStatusUpdateProgress()
       throws IOException, InterruptedException {
     configureMocks();
     startListener(true);
@@ -430,7 +428,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testPingUpdateProgress() throws IOException, InterruptedException {
+  void testPingUpdateProgress() throws IOException, InterruptedException {
     configureMocks();
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_TASK_ENABLE_PING_FOR_LIVELINESS_CHECK, true);
@@ -447,7 +445,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testSingleStatusUpdate()
+  void testSingleStatusUpdate()
       throws IOException, InterruptedException {
     configureMocks();
     startListener(true);
@@ -465,7 +463,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testStatusUpdateEventCoalescing()
+  void testStatusUpdateEventCoalescing()
       throws IOException, InterruptedException {
     configureMocks();
     startListener(true);
@@ -486,7 +484,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testCoalescedStatusUpdatesCleared()
+  void testCoalescedStatusUpdatesCleared()
       throws IOException, InterruptedException {
     // First two events are coalesced, the third is not
     configureMocks();
@@ -510,7 +508,7 @@ public class TestTaskAttemptListenerImpl {
   }
 
   @Test
-  public void testStatusUpdateFromUnregisteredTask() throws Exception {
+  void testStatusUpdateFromUnregisteredTask() throws Exception {
     configureMocks();
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);

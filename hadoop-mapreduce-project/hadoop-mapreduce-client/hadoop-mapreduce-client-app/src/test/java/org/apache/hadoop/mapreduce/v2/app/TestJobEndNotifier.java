@@ -59,8 +59,8 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests job end notification
@@ -74,18 +74,18 @@ public class TestJobEndNotifier extends JobEndNotifier {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "0");
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "10");
     setConf(conf);
-    Assert.assertTrue("Expected numTries to be 0, but was " + numTries,
-      numTries == 0 );
+    Assertions.assertTrue(numTries == 0,
+        "Expected numTries to be 0, but was " + numTries);
 
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "1");
     setConf(conf);
-    Assert.assertTrue("Expected numTries to be 1, but was " + numTries,
-      numTries == 1 );
+    Assertions.assertTrue(numTries == 1,
+        "Expected numTries to be 1, but was " + numTries);
 
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "20");
     setConf(conf);
-    Assert.assertTrue("Expected numTries to be 11, but was " + numTries,
-      numTries == 11 ); //11 because number of _retries_ is 10
+    Assertions.assertTrue(numTries == 11 , "Expected numTries to be 11, but was "
+            + numTries); //11 because number of _retries_ is 10
   }
 
   //Test maximum retry interval is capped by
@@ -94,53 +94,53 @@ public class TestJobEndNotifier extends JobEndNotifier {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "5000");
     conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "1000");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 1000, but was "
-      + waitInterval, waitInterval == 1000);
+    Assertions.assertTrue(waitInterval == 1000,
+        "Expected waitInterval to be 1000, but was " + waitInterval);
 
     conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "10000");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 5000, but was "
-      + waitInterval, waitInterval == 5000);
+    Assertions.assertTrue(waitInterval == 5000,
+        "Expected waitInterval to be 5000, but was " + waitInterval);
 
     //Test negative numbers are set to default
     conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "-10");
     setConf(conf);
-    Assert.assertTrue("Expected waitInterval to be 5000, but was "
-      + waitInterval, waitInterval == 5000);
+    Assertions.assertTrue(waitInterval == 5000,
+        "Expected waitInterval to be 5000, but was " + waitInterval);
   }
 
   private void testTimeout(Configuration conf) {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_TIMEOUT, "1000");
     setConf(conf);
-    Assert.assertTrue("Expected timeout to be 1000, but was "
-      + timeout, timeout == 1000);
+    Assertions.assertTrue(timeout == 1000,
+        "Expected timeout to be 1000, but was " + timeout);
   }
 
   private void testProxyConfiguration(Configuration conf) {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost");
     setConf(conf);
-    Assert.assertTrue("Proxy shouldn't be set because port wasn't specified",
-      proxyToUse.type() == Proxy.Type.DIRECT);
+    Assertions.assertTrue(proxyToUse.type() == Proxy.Type.DIRECT,
+        "Proxy shouldn't be set because port wasn't specified");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost:someport");
     setConf(conf);
-    Assert.assertTrue("Proxy shouldn't be set because port wasn't numeric",
-      proxyToUse.type() == Proxy.Type.DIRECT);
+    Assertions.assertTrue(proxyToUse.type() == Proxy.Type.DIRECT,
+        "Proxy shouldn't be set because port wasn't numeric");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "somehost:1000");
     setConf(conf);
-    Assert.assertEquals("Proxy should have been set but wasn't ",
-      "HTTP @ somehost:1000", proxyToUse.toString());
+    Assertions.assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
+        "Proxy should have been set but wasn't ");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "socks@somehost:1000");
     setConf(conf);
-    Assert.assertEquals("Proxy should have been socks but wasn't ",
-      "SOCKS @ somehost:1000", proxyToUse.toString());
+    Assertions.assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
+        "Proxy should have been socks but wasn't ");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "SOCKS@somehost:1000");
     setConf(conf);
-    Assert.assertEquals("Proxy should have been socks but wasn't ",
-      "SOCKS @ somehost:1000", proxyToUse.toString());
+    Assertions.assertEquals("SOCKS @ somehost:1000", proxyToUse.toString(),
+        "Proxy should have been socks but wasn't ");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY, "sfafn@somehost:1000");
     setConf(conf);
-    Assert.assertEquals("Proxy should have been http but wasn't ",
-      "HTTP @ somehost:1000", proxyToUse.toString());
+    Assertions.assertEquals("HTTP @ somehost:1000", proxyToUse.toString(),
+        "Proxy should have been http but wasn't ");
     
   }
 
@@ -148,7 +148,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
    * Test that setting parameters has the desired effect
    */
   @Test
-  public void checkConfiguration() {
+  void checkConfiguration() {
     Configuration conf = new Configuration();
     testNumRetries(conf);
     testWaitInterval(conf);
@@ -166,7 +166,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
 
   //Check retries happen as intended
   @Test
-  public void testNotifyRetries() throws InterruptedException {
+  void testNotifyRetries() throws InterruptedException {
     JobConf conf = new JobConf();
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "0");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "1");
@@ -181,10 +181,10 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.setConf(conf);
     this.notify(jobReport);
     long endTime = System.currentTimeMillis();
-    Assert.assertEquals("Only 1 try was expected but was : "
-      + this.notificationCount, 1, this.notificationCount);
-    Assert.assertTrue("Should have taken more than 5 seconds it took "
-      + (endTime - startTime), endTime - startTime > 5000);
+    Assertions.assertEquals(1, this.notificationCount,
+        "Only 1 try was expected but was : " + this.notificationCount);
+    Assertions.assertTrue(endTime - startTime > 5000,
+        "Should have taken more than 5 seconds it took " + (endTime - startTime));
 
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "3");
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "3");
@@ -196,10 +196,10 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.setConf(conf);
     this.notify(jobReport);
     endTime = System.currentTimeMillis();
-    Assert.assertEquals("Only 3 retries were expected but was : "
-      + this.notificationCount, 3, this.notificationCount);
-    Assert.assertTrue("Should have taken more than 9 seconds it took "
-      + (endTime - startTime), endTime - startTime > 9000);
+    Assertions.assertEquals(3, this.notificationCount,
+        "Only 3 retries were expected but was : " + this.notificationCount);
+    Assertions.assertTrue(endTime - startTime > 9000,
+        "Should have taken more than 9 seconds it took " + (endTime - startTime));
 
   }
 
@@ -222,28 +222,28 @@ public class TestJobEndNotifier extends JobEndNotifier {
       doThrow(runtimeException).when(app).stop();
     }
     app.shutDownJob();
-    Assert.assertTrue(app.isLastAMRetry());
-    Assert.assertEquals(1, JobEndServlet.calledTimes);
-    Assert.assertEquals("jobid=" + job.getID() + "&status=SUCCEEDED",
+    Assertions.assertTrue(app.isLastAMRetry());
+    Assertions.assertEquals(1, JobEndServlet.calledTimes);
+    Assertions.assertEquals("jobid=" + job.getID() + "&status=SUCCEEDED",
         JobEndServlet.requestUri.getQuery());
-    Assert.assertEquals(JobState.SUCCEEDED.toString(),
+    Assertions.assertEquals(JobState.SUCCEEDED.toString(),
         JobEndServlet.foundJobState);
     server.stop();
   }
 
   @Test
-  public void testNotificationOnLastRetryNormalShutdown() throws Exception {
+  void testNotificationOnLastRetryNormalShutdown() throws Exception {
     testNotificationOnLastRetry(false);
   }
 
   @Test
-  public void testNotificationOnLastRetryShutdownWithRuntimeException()
+  void testNotificationOnLastRetryShutdownWithRuntimeException()
       throws Exception {
     testNotificationOnLastRetry(true);
   }
 
   @Test
-  public void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
+  void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
       throws Exception {
     HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
@@ -262,15 +262,15 @@ public class TestJobEndNotifier extends JobEndNotifier {
     app.shutDownJob();
     // Not the last AM attempt. So user should that the job is still running.
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertFalse(app.isLastAMRetry());
-    Assert.assertEquals(0, JobEndServlet.calledTimes);
-    Assert.assertNull(JobEndServlet.requestUri);
-    Assert.assertNull(JobEndServlet.foundJobState);
+    Assertions.assertFalse(app.isLastAMRetry());
+    Assertions.assertEquals(0, JobEndServlet.calledTimes);
+    Assertions.assertNull(JobEndServlet.requestUri);
+    Assertions.assertNull(JobEndServlet.foundJobState);
     server.stop();
   }
 
   @Test
-  public void testNotificationOnLastRetryUnregistrationFailure()
+  void testNotificationOnLastRetryUnregistrationFailure()
       throws Exception {
     HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
@@ -294,16 +294,16 @@ public class TestJobEndNotifier extends JobEndNotifier {
     // Unregistration fails: isLastAMRetry is recalculated, this is
     ///reboot will stop service internally, we don't need to shutdown twice
     app.waitForServiceToStop(10000);
-    Assert.assertFalse(app.isLastAMRetry());
+    Assertions.assertFalse(app.isLastAMRetry());
     // Since it's not last retry, JobEndServlet didn't called
-    Assert.assertEquals(0, JobEndServlet.calledTimes);
-    Assert.assertNull(JobEndServlet.requestUri);
-    Assert.assertNull(JobEndServlet.foundJobState);
+    Assertions.assertEquals(0, JobEndServlet.calledTimes);
+    Assertions.assertNull(JobEndServlet.requestUri);
+    Assertions.assertNull(JobEndServlet.foundJobState);
     server.stop();
   }
 
   @Test
-  public void testCustomNotifierClass() throws InterruptedException {
+  void testCustomNotifierClass() throws InterruptedException {
     JobConf conf = new JobConf();
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL,
              "http://example.com?jobId=$jobId&jobStatus=$jobStatus");
@@ -321,7 +321,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.notify(jobReport);
     final URL urlToNotify = CustomNotifier.urlToNotify;
 
-    Assert.assertEquals("http://example.com?jobId=mock-Id&jobStatus=SUCCEEDED",
+    Assertions.assertEquals("http://example.com?jobId=mock-Id&jobStatus=SUCCEEDED",
                         urlToNotify.toString());
   }
 

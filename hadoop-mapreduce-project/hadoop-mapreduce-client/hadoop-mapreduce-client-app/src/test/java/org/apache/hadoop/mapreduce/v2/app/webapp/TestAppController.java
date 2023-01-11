@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.MimeType;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.junit.Assert.*;
 
 public class TestAppController {
@@ -48,7 +48,7 @@ public class TestAppController {
   private Job job;
   private static final String taskId = "task_01_01_m_01";
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     AppContext context = mock(AppContext.class);
     when(context.getApplicationID()).thenReturn(
@@ -82,14 +82,14 @@ public class TestAppController {
    * test bad request should be status 400...
    */
   @Test
-  public void testBadRequest() {
+  void testBadRequest() {
     String message = "test string";
     appController.badRequest(message);
     verifyExpectations(message);
   }
 
   @Test
-  public void testBadRequestWithNullMessage() {
+  void testBadRequestWithNullMessage() {
     // It should not throw NullPointerException
     appController.badRequest(null);
     verifyExpectations(StringUtils.EMPTY);
@@ -108,7 +108,7 @@ public class TestAppController {
    * Test the method 'info'.
    */
   @Test
-  public void testInfo() {
+  void testInfo() {
 
     appController.info();
     Iterator<ResponseInfo.Item> iterator = appController.getResponseInfo()
@@ -134,7 +134,7 @@ public class TestAppController {
    *  Test method 'job'. Should print message about error or set JobPage class for rendering
    */
   @Test
-  public void testGetJob() {
+  void testGetJob() {
     when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
         .thenReturn(false);
 
@@ -161,7 +161,7 @@ public class TestAppController {
    *  Test method 'jobCounters'. Should print message about error or set CountersPage class for rendering
    */
   @Test
-  public void testGetJobCounters() {
+  void testGetJobCounters() {
 
     when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
         .thenReturn(false);
@@ -189,7 +189,7 @@ public class TestAppController {
    *  Test method 'taskCounters'. Should print message about error or set CountersPage class for rendering
    */
   @Test
-  public void testGetTaskCounters() {
+  void testGetTaskCounters() {
 
     when(job.checkAccess(any(UserGroupInformation.class), any(JobACL.class)))
         .thenReturn(false);
@@ -218,7 +218,7 @@ public class TestAppController {
    */
 
   @Test
-  public void testGetSingleJobCounter() throws IOException {
+  void testGetSingleJobCounter() throws IOException {
     appController.singleJobCounter();
     assertEquals(SingleCounterPage.class, appController.getClazz());
   }
@@ -238,7 +238,7 @@ public class TestAppController {
    */
 
   @Test
-  public void testTasks() {
+  void testTasks() {
  
     appController.tasks();
  
@@ -248,7 +248,7 @@ public class TestAppController {
    *  Test method 'task'. Should set TaskPage class for rendering and information for title
    */
   @Test
-  public void testTask() {
+  void testTask() {
  
     appController.task();
     assertEquals("Attempts for " + taskId ,
@@ -261,7 +261,7 @@ public class TestAppController {
    *   Test method 'conf'. Should set JobConfPage class for rendering
    */
   @Test
-  public void testConfiguration() {
+  void testConfiguration() {
  
     appController.conf();
 
@@ -272,7 +272,7 @@ public class TestAppController {
    * Test downloadConf request handling.
    */
   @Test
-  public void testDownloadConfiguration() {
+  void testDownloadConfiguration() {
     appController.downloadConf();
     String jobConfXml = appController.getData();
     assertTrue("Error downloading the job configuration file.",
@@ -283,7 +283,7 @@ public class TestAppController {
    *   Test method 'conf'. Should set AttemptsPage class for rendering or print information about error
    */
   @Test
-  public void testAttempts() {
+  void testAttempts() {
 
     appController.getProperty().remove(AMParams.TASK_TYPE);
 
